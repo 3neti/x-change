@@ -11,7 +11,8 @@
     ],
     "autoload": {
         "psr-4": {
-            "LBHurtado\\Voucher\\": "src/"
+            "LBHurtado\\Voucher\\": "src/",
+            "LBHurtado\\Voucher\\Database\\Factories\\": "database/factories/"
         }
     },
     "autoload-dev": {
@@ -29,7 +30,8 @@
     "require": {
         "frittenkeez/laravel-vouchers": "^0.6.0",
         "spatie/laravel-data": "^4.15",
-        "lorisleiva/laravel-actions": "^2.9"
+        "lorisleiva/laravel-actions": "^2.9",
+        "brick/money": "^0.10.1"
     },
     "require-dev": {
         "orchestra/testbench": "^10.3",

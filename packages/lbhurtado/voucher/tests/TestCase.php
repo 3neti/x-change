@@ -40,7 +40,11 @@ abstract class TestCase extends BaseTestCase
             \Spatie\LaravelData\Normalizers\JsonNormalizer::class,
         ]);
 
+        // Run the published voucher migration from the vendor
         $migration = include 'vendor/frittenkeez/laravel-vouchers/publishes/migrations/2018_06_12_000000_create_voucher_tables.php';
         $migration->up();
+        // Run the cash migration from the local package
+        $cashMigration = include __DIR__ . '/../database/migrations/2024_08_02_317537_create_cash_table.php';
+        $cashMigration->up();
     }
 }
