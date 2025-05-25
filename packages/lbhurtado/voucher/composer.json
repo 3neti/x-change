@@ -1,0 +1,46 @@
+{
+    "name": "lbhurtado/voucher",
+    "description": "Digital voucher module for issuance, redemption, and lifecycle management",
+    "type": "library",
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "Lester Hurtado",
+            "email": "lester@hurtado.ph"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "LBHurtado\\Voucher\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "LBHurtado\\Voucher\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "LBHurtado\\Voucher\\VoucherServiceProvider"
+            ]
+        }
+    },
+    "require": {
+        "frittenkeez/laravel-vouchers": "^0.6.0",
+        "spatie/laravel-data": "^4.15",
+        "lorisleiva/laravel-actions": "^2.9"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^10.3",
+        "pestphp/pest": "^3.8"
+    },
+    "scripts": {
+        "test": "vendor/bin/pest"
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
+}

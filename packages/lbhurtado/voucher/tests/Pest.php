@@ -11,7 +11,9 @@
 |
 */
 
-pest()->extend(Tests\TestCase::class)
+use LBHurtado\Voucher\Tests\TestCase;
+
+pest()->extend(TestCase::class)
  // ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
     ->in('Unit', 'Feature');
 
