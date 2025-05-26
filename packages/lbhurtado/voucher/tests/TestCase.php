@@ -50,5 +50,7 @@ abstract class TestCase extends BaseTestCase
         $cashMigration->up();
         $statusMigration = include __DIR__ . '/../database/migrations/2024_08_03_202500_create_statuses_table.php';
         $statusMigration->up();
+        $tagMigration = include __DIR__ . '/../database/migrations/2024_08_04_202500_create_tag_tables.php';
+        $tagMigration->up();
     }
 }

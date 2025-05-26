@@ -7,10 +7,13 @@ use LBHurtado\Voucher\Database\Factories\CashFactory;
 use Illuminate\Database\Eloquent\Casts\AsArrayObject;
 use Illuminate\Database\Eloquent\Casts\ArrayObject;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use LBHurtado\Voucher\Enums\CashStatus;
+use Illuminate\Support\Facades\Hash;
 use Spatie\ModelStatus\HasStatuses;
 use Illuminate\Support\Number;
+use Spatie\Tags\HasTags;
 use Brick\Money\Money;
 
 /**
@@ -21,7 +24,10 @@ use Brick\Money\Money;
  * @property string      $currency
  * @property Model       $reference
  * @property ArrayObject $meta
+ * @property string      $secret
+ * @property \DateTime   $expires_on
  * @property string      $status
+ * @property Collection  $tags
  *
  * @method int getKey()
  */
@@ -30,8 +36,8 @@ class Cash extends Model
     use HasStatuses {
         HasStatuses::setStatus as traitSetStatus; // Rename the HasStatuses method to traitSetStatus
     }
-
     use HasFactory;
+    use HasTags;
 
     protected $table = 'cash';
 
@@ -47,6 +53,7 @@ class Cash extends Model
 
     protected $casts = [
         'meta' => AsArrayObject::class,
+        'expires_on' => 'datetime',
     ];
 
     public static function newFactory(): CashFactory
@@ -61,7 +68,7 @@ class Cash extends Model
         });
     }
 
-    public function reference()
+    public function reference(): \Illuminate\Database\Eloquent\Relations\MorphTo
     {
         return $this->morphTo();
     }
@@ -179,5 +186,35 @@ class Cash extends Model
     {
         return $this->getAttribute('expires_on')
             && $this->getAttribute('expires_on') <= now();
+    }
+
+    // Mutator to hash the secret before saving it into the database
+    public function setSecretAttribute($value): void
+    {
+        $this->attributes['secret'] = Hash::make($value);
+    }
+
+    /**
+     * Verify if the provided secret matches the hashed secret.
+     *
+     * @param  string  $providedSecret
+     * @return bool
+     */
+    public function verifySecret(string $providedSecret): bool
+    {
+        return Hash::check($providedSecret, $this->secret);
+    }
+
+    /**
+     * Determine if the cash can be redeemed.
+     *
+     * @param  string  $providedSecret
+     * @return bool
+     */
+    public function canRedeem(string $providedSecret): bool
+    {
+        // Check if it is not expired and the provided secret matches
+        return (!$this->expires_on || !$this->expires_on->isPast()) // Not expired
+            && $this->verifySecret($providedSecret); // Secret is valid
     }
 }

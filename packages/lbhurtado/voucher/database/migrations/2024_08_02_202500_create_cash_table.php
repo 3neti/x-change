@@ -17,7 +17,6 @@ return new class extends Migration {
             $table->string('secret')->nullable();
             $table->timestamp('expires_on')->nullable();
             $table->timestamps();
-
             $table->index(['reference_type', 'reference_id'], 'cash_reference_index');
         });
     }
