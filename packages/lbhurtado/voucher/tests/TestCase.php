@@ -39,12 +39,16 @@ abstract class TestCase extends BaseTestCase
             \Spatie\LaravelData\Normalizers\ArrayNormalizer::class,
             \Spatie\LaravelData\Normalizers\JsonNormalizer::class,
         ]);
+        config()->set('model-status.status_model', \Spatie\ModelStatus\Status::class);
 
         // Run the published voucher migration from the vendor
         $migration = include 'vendor/frittenkeez/laravel-vouchers/publishes/migrations/2018_06_12_000000_create_voucher_tables.php';
         $migration->up();
+
         // Run the cash migration from the local package
-        $cashMigration = include __DIR__ . '/../database/migrations/2024_08_02_317537_create_cash_table.php';
+        $cashMigration = include __DIR__ . '/../database/migrations/2024_08_02_202500_create_cash_table.php';
         $cashMigration->up();
+        $statusMigration = include __DIR__ . '/../database/migrations/2024_08_03_202500_create_statuses_table.php';
+        $statusMigration->up();
     }
 }

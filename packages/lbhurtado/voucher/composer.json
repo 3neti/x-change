@@ -31,7 +31,8 @@
         "frittenkeez/laravel-vouchers": "^0.6.0",
         "spatie/laravel-data": "^4.15",
         "lorisleiva/laravel-actions": "^2.9",
-        "brick/money": "^0.10.1"
+        "brick/money": "^0.10.1",
+        "spatie/laravel-model-status": "^1.18"
     },
     "require-dev": {
         "orchestra/testbench": "^10.3",
