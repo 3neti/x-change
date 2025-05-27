@@ -2,36 +2,50 @@
 
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Enums\VoucherInputField;
+use Carbon\CarbonInterval;
 
 it('validates and serializes voucher instructions data', function () {
     $data = VoucherInstructionsData::from([
         'cash' => [
-            'amount' => 1000,
-            'currency' => 'PHP',
+            'amount' => 1500,
+            'currency' => 'USD',
             'validation' => [
-                'secret' => '123456',
-                'mobile' => '09171234567',
-                'country' => 'PH',
-                'location' => 'Makati City',
-                'radius' => '1000m',
+                'secret' => '654321',
+                'mobile' => '09179876543',
+                'country' => 'US',
+                'location' => 'New York',
+                'radius' => '5000m',
             ],
         ],
         'inputs' => [
             'fields' => ['email', 'mobile', 'reference_code'],
         ],
         'feedback' => [
-            'email' => 'feedback@acme.com',
-            'mobile' => '09171234567',
-            'webhook' => 'https://acme.com/webhook',
+            'email' => 'support@company.com',
+            'mobile' => '09179876543',
+            'webhook' => 'https://company.com/webhook',
         ],
         'rider' => [
-            'message' => 'Thanks for using our service!',
-            'url' => 'https://acme.com/rider',
+            'message' => 'Welcome to our company!',
+            'url' => 'https://company.com/rider-url',
         ],
+        'count' => 3, // New field for count
+        'prefix' => 'PROMO', // New field for prefix
+        'mask' => '****-****-****', // New field for mask
+        'ttl' => CarbonInterval::hours(24), // New field for ttl
     ]);
 
-    expect($data->cash->amount)->toBe(1000);
+    // Validate nested properties
+    expect($data->cash->amount)->toBe(1500);
+    expect($data->cash->currency)->toBe('USD');
+    expect($data->cash->validation->country)->toBe('US');
     expect($data->inputs->fields)->toContain(VoucherInputField::EMAIL);
-    expect($data->feedback->email)->toBe('feedback@acme.com');
-    expect($data->rider->message)->toBe('Thanks for using our service!');
+    expect($data->feedback->email)->toBe('support@company.com');
+    expect($data->rider->message)->toBe('Welcome to our company!');
+
+    // Validate new properties
+    expect($data->count)->toBe(3);
+    expect($data->prefix)->toBe('PROMO');
+    expect($data->mask)->toBe('****-****-****');
+    expect($data->ttl)->toEqual(CarbonInterval::hours(24));
 });

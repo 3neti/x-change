@@ -12,7 +12,7 @@ use LBHurtado\Voucher\Enums\VoucherInputField;
 use LBHurtado\Voucher\Data\InputFieldsData;
 use FrittenKeeZ\Vouchers\Models\Voucher;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Str;
+use Carbon\CarbonInterval;
 
 uses(RefreshDatabase::class);
 
@@ -20,7 +20,8 @@ beforeEach(function () {
     Event::fake();
 });
 
-it('generates multiple vouchers using default count, prefix, mask, and TTL', function () {
+it('generates multiple vouchers using default values', function () {
+    // Arrange: Set up default instructions with no custom prefix, mask, or TTL
     $instructions = new VoucherInstructionsData(
         cash: new CashInstructionData(
             amount: 1000,
@@ -45,20 +46,29 @@ it('generates multiple vouchers using default count, prefix, mask, and TTL', fun
         rider: new RiderInstructionData(
             message: 'Welcome!',
             url: 'https://acme.com/rider',
-        )
+        ),
+        count: 1, // Default count
+        prefix: null, // Use default prefix from config
+        mask: null,   // Use default mask from config
+        ttl: null     // Use default TTL (12 hours) from action
     );
 
+    // Act: Run the GenerateVouchers action
     $vouchers = GenerateVouchers::run($instructions);
 
+    // Assert: Check if the vouchers and metadata match expectations
     expect($vouchers)->toHaveCount(1);
     expect($vouchers->first())->toBeInstanceOf(Voucher::class);
     expect($vouchers->first()->metadata['instructions']['cash']['amount'])->toBe(1000);
+
+    // Assert: Ensure VouchersGenerated event was dispatched
     Event::assertDispatched(VouchersGenerated::class, function ($event) use ($vouchers) {
         return $event->getVouchers()->count() === 1;
     });
 });
 
-it('generates vouchers with custom prefix, mask, and TTL', function () {
+it('generates vouchers with custom parameters', function () {
+    // Arrange: Instructions with custom prefix, mask, TTL, and count
     $instructions = new VoucherInstructionsData(
         cash: new CashInstructionData(
             amount: 500,
@@ -83,20 +93,31 @@ it('generates vouchers with custom prefix, mask, and TTL', function () {
         rider: new RiderInstructionData(
             message: 'Claim in USD only',
             url: 'https://us.example.com/rules',
+        ),
+        count: 2,                 // Custom count
+        prefix: 'AA',             // Custom prefix
+        mask: '****',             // Custom mask
+        ttl: CarbonInterval::hours(12) // Custom TTL (12 hours)
+    );
+
+    // Act: Run the GenerateVouchers action
+    $vouchers = GenerateVouchers::run($instructions);
+
+    // Assert: Check voucher count and prefix
+    expect($vouchers)->toHaveCount(2)
+        ->and($vouchers->first()->code)->toStartWith('AA')
+        ->and($vouchers->first()->code) // Add assertion to test mask
+        ->toMatch('/^'
+            . $instructions->prefix // Escape the prefix
+            . config('vouchers.separator') // Add the separator after the prefix
+            . str_replace('*', '.', $instructions->mask) // Replace '*' with '.' and escape everything else
+            . '$/' // Ensure the entire code matches
         )
-    );
+        ->and($vouchers->first()->metadata['instructions']['cash']['currency'])->toBe('USD');
 
-    $vouchers = GenerateVouchers::run(
-        data: $instructions,
-        count: 2,
-        prefix: 'AA',
-        mask: '****',
-        ttl: 'PT12H'
-    );
+    // Assert: Check metadata
 
-    expect($vouchers)->toHaveCount(2);
-    expect(Str::startsWith($vouchers->first()->code, 'AA'))->toBeTrue();
-    expect($vouchers->first()->metadata['instructions']['cash']['currency'])->toBe('USD');
+    // Assert: Event dispatching
     Event::assertDispatched(VouchersGenerated::class, function ($event) use ($vouchers) {
         return $event->getVouchers()->count() === 2;
     });

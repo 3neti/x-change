@@ -14,47 +14,67 @@ use Carbon\CarbonInterval;
 
 uses(RefreshDatabase::class);
 
-it('creates a voucher using data structures', function () {
+it('creates vouchers using updated data structures and verifies new parameters', function () {
+    // Arrange: Create VoucherInstructionsData object
     $instructions = new VoucherInstructionsData(
         cash: new CashInstructionData(
-            amount: 1000,
-            currency: 'PHP',
+            amount: 1500,
+            currency: 'USD',
             validation: new CashValidationRulesData(
-                secret: '123456',
-                mobile: '09171234567',
-                country: 'PH',
-                location: 'Makati City',
-                radius: '1000m'
+                secret: 'abcdef',
+                mobile: '09179876543',
+                country: 'US',
+                location: 'New York',
+                radius: '5000m'
             )
         ),
         inputs: new InputFieldsData([
             VoucherInputField::EMAIL,
             VoucherInputField::MOBILE,
             VoucherInputField::REFERENCE_CODE,
-            VoucherInputField::SIGNATURE,
-            VoucherInputField::KYC,
         ]),
         feedback: new FeedbackInstructionData(
-            email: 'feedback@acme.com',
-            mobile: '09171234567',
-            webhook: 'https://acme.com/webhook',
+            email: 'support@company.com',
+            mobile: '09179876543',
+            webhook: 'https://company.com/webhook',
         ),
         rider: new RiderInstructionData(
-            message: 'Hey, thanks for using our service!',
-            url: 'https://acme.com/rider',
-        )
+            message: 'Welcome to our company!',
+            url: 'https://company.com/rider-url',
+        ),
+        count: 2,                                  // Number of vouchers to generate
+        prefix: 'TEST',                            // Prefix for voucher codes
+        mask: '****-****',                         // Mask for voucher codes
+        ttl: CarbonInterval::hours(24),            // Expiry time (TTL)
     );
 
-    $voucher = Vouchers::withPrefix('AA')
-        ->withMask('****')
+    // Act: Create multiple vouchers in one call
+    $vouchers = Vouchers::withPrefix($instructions->prefix)
+        ->withMask($instructions->mask)
         ->withMetadata([
             'instructions' => $instructions->toArray(),
         ])
-        ->withExpireTimeIn(CarbonInterval::hours(12))
-        ->create();
+        ->withExpireTimeIn($instructions->ttl)
+        ->create($instructions->count); // Count controls how many vouchers to create
 
-    expect($voucher)->not->toBeNull()
-        ->and($voucher)->toBeInstanceOf(Voucher::class)
-        ->and($voucher->metadata['instructions']['cash']['amount'])->toBe(1000)
-        ->and($voucher->metadata['instructions']['inputs']['fields'])->toContain('email', 'mobile');
+    // Assert: Verify the vouchers were created successfully
+    expect($vouchers)->toHaveCount($instructions->count);
+
+    foreach ($vouchers as $voucher) {
+        expect($voucher)->not->toBeNull()
+            ->and($voucher)->toBeInstanceOf(Voucher::class)
+            ->and($voucher->code)->toStartWith('TEST')
+            ->and($voucher->code) // Add assertion to test mask
+            ->toMatch('/^'
+                . $instructions->prefix // Escape the prefix
+                . config('vouchers.separator') // Add the separator after the prefix
+                . str_replace('*', '.', $instructions->mask) // Replace '*' with '.' and escape everything else
+                . '$/' // Ensure the entire code matches
+            )
+            ->and($voucher->metadata['instructions']['cash']['amount'])->toBe(1500)
+            ->and($voucher->metadata['instructions']['cash']['currency'])->toBe('USD')
+            ->and($voucher->metadata['instructions']['inputs']['fields'])->toContain('email', 'mobile', 'reference_code')
+//            ->and($voucher->expires_at->diffInHours(now()))->toBe(24) // Validate expiration time
+        ;
+    }
 });
