@@ -1,80 +1,124 @@
 <?php
 
-use LBHurtado\Voucher\Data\VoucherInstructionsData;
-use LBHurtado\Voucher\Data\CashValidationRulesData;
-use LBHurtado\Voucher\Data\FeedbackInstructionData;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use LBHurtado\Voucher\Data\RiderInstructionData;
-use LBHurtado\Voucher\Data\CashInstructionData;
-use LBHurtado\Voucher\Enums\VoucherInputField;
-use LBHurtado\Voucher\Data\InputFieldsData;
+use Carbon\Exceptions\InvalidFormatException;
 use FrittenKeeZ\Vouchers\Facades\Vouchers;
-use FrittenKeeZ\Vouchers\Models\Voucher;
+use LBHurtado\Voucher\Models\Voucher;
 use Carbon\CarbonInterval;
 
 uses(RefreshDatabase::class);
 
-it('creates vouchers using updated data structures and verifies new parameters', function () {
-    // Arrange: Create VoucherInstructionsData object
-    $instructions = new VoucherInstructionsData(
-        cash: new CashInstructionData(
-            amount: 1500,
-            currency: 'USD',
-            validation: new CashValidationRulesData(
-                secret: 'abcdef',
-                mobile: '09179876543',
-                country: 'US',
-                location: 'New York',
-                radius: '5000m'
-            )
-        ),
-        inputs: new InputFieldsData([
-            VoucherInputField::EMAIL,
-            VoucherInputField::MOBILE,
-            VoucherInputField::REFERENCE_CODE,
-        ]),
-        feedback: new FeedbackInstructionData(
-            email: 'support@company.com',
-            mobile: '09179876543',
-            webhook: 'https://company.com/webhook',
-        ),
-        rider: new RiderInstructionData(
-            message: 'Welcome to our company!',
-            url: 'https://company.com/rider-url',
-        ),
-        count: 2,                                  // Number of vouchers to generate
-        prefix: 'TEST',                            // Prefix for voucher codes
-        mask: '****-****',                         // Mask for voucher codes
-        ttl: CarbonInterval::hours(24),            // Expiry time (TTL)
-    );
+it('can set and get processed attribute correctly', function () {
+    // Arrange: Create a voucher using the Vouchers facade
+    $instructions = [
+        'prefix' => 'TEST',
+        'mask' => '***-***',
+        'metadata' => ['type' => 'test'],
+        'ttl' => CarbonInterval::hours(1),
+        'count' => 1,
+    ];
 
-    // Act: Create multiple vouchers in one call
-    $vouchers = Vouchers::withPrefix($instructions->prefix)
-        ->withMask($instructions->mask)
-        ->withMetadata([
-            'instructions' => $instructions->toArray(),
-        ])
-        ->withExpireTimeIn($instructions->ttl)
-        ->create($instructions->count); // Count controls how many vouchers to create
+    $vouchers = Vouchers::withPrefix($instructions['prefix'])
+        ->withMask($instructions['mask'])
+        ->withMetadata($instructions['metadata'])
+        ->withExpireTimeIn($instructions['ttl'])
+        ->create($instructions['count']);
 
-    // Assert: Verify the vouchers were created successfully
-    expect($vouchers)->toHaveCount($instructions->count);
+    /** @var Voucher $voucher */
+    $voucher = $vouchers->first();
 
-    foreach ($vouchers as $voucher) {
-        expect($voucher)->not->toBeNull()
-            ->and($voucher)->toBeInstanceOf(Voucher::class)
-            ->and($voucher->code)->toStartWith('TEST')
-            ->and($voucher->code) // Add assertion to test mask
-            ->toMatch('/^'
-                . $instructions->prefix // Escape the prefix
-                . config('vouchers.separator') // Add the separator after the prefix
-                . str_replace('*', '.', $instructions->mask) // Replace '*' with '.' and escape everything else
-                . '$/' // Ensure the entire code matches
-            )
-            ->and($voucher->metadata['instructions']['cash']['amount'])->toBe(1500)
-            ->and($voucher->metadata['instructions']['cash']['currency'])->toBe('USD')
-            ->and($voucher->metadata['instructions']['inputs']['fields'])->toContain('email', 'mobile', 'reference_code')
-//            ->and($voucher->expires_at->diffInHours(now()))->toBe(24) // Validate expiration time
-        ;
-    }
+    // Set processed to true
+    $voucher->processed = true;
+    $voucher->save();
+
+    // Verify the processed column and processed_on timestamp
+    expect($voucher->processed)->toBeTrue();
+    expect($voucher->processed_on)->toBeInstanceOf(\DateTime::class);
+    expect($voucher->processed_on->format('Y-m-d H:i:s'))->toBe((string)now()->format('Y-m-d H:i:s'));
+
+    // Mark voucher as unprocessed
+    $voucher->processed = false;
+    $voucher->save();
+
+    // Verify the processed column and processed_on is null
+    expect($voucher->processed)->toBeFalse();
+    expect($voucher->processed_on)->toBeNull();
+});
+
+it('raises an InvalidFormatException for invalid processed_on values', function () {
+    // Arrange: Create a voucher using the Vouchers facade
+    $instructions = [
+        'prefix' => 'TEST',
+        'mask' => '***-***',
+        'metadata' => ['type' => 'test'],
+        'ttl' => CarbonInterval::hours(1),
+        'count' => 1,
+    ];
+
+    $vouchers = Vouchers::withPrefix($instructions['prefix'])
+        ->withMask($instructions['mask'])
+        ->withMetadata($instructions['metadata'])
+        ->withExpireTimeIn($instructions['ttl'])
+        ->create($instructions['count']);
+
+    /** @var Voucher $voucher */
+    $voucher = $vouchers->first();
+
+    // Act & Assert: Ensure InvalidFormatException is raised
+    $voucher->processed_on = 'invalid-date';
+    $voucher->save();
+})->throws(InvalidFormatException::class);
+
+it('handles valid processed_on values correctly', function () {
+    // Arrange: Create a voucher using the Vouchers facade
+    $instructions = [
+        'prefix' => 'TEST',
+        'mask' => '***-***',
+        'metadata' => ['type' => 'test'],
+        'ttl' => CarbonInterval::hours(1),
+        'count' => 1,
+    ];
+
+    $vouchers = Vouchers::withPrefix($instructions['prefix'])
+        ->withMask($instructions['mask'])
+        ->withMetadata($instructions['metadata'])
+        ->withExpireTimeIn($instructions['ttl'])
+        ->create($instructions['count']);
+
+    /** @var Voucher $voucher */
+    $voucher = $vouchers->first();
+
+    // Set processed_on to a valid datetime string
+    $now = now();
+    $voucher->processed_on = $now->format('Y-m-d H:i:s');
+    $voucher->save();
+
+    // Verify the processed_on attribute and processed are set correctly
+    expect($voucher->processed_on)->toBeInstanceOf(\DateTime::class);
+    expect($voucher->processed_on->format('Y-m-d H:i:s'))->toBe($now->format('Y-m-d H:i:s'));
+    expect($voucher->processed)->toBeTrue();
+});
+
+it('processed_on should return null if column is null', function () {
+    // Arrange: Create a voucher using the Vouchers facade
+    $instructions = [
+        'prefix' => 'TEST',
+        'mask' => '***-***',
+        'metadata' => ['type' => 'test'],
+        'ttl' => CarbonInterval::hours(1),
+        'count' => 1,
+    ];
+
+    $vouchers = Vouchers::withPrefix($instructions['prefix'])
+        ->withMask($instructions['mask'])
+        ->withMetadata($instructions['metadata'])
+        ->withExpireTimeIn($instructions['ttl'])
+        ->create($instructions['count']);
+
+    /** @var Voucher $voucher */
+    $voucher = $vouchers->first();
+
+    // Confirm processed_on is null and processed is false
+    expect($voucher->processed_on)->toBeNull();
+    expect($voucher->processed)->toBeFalse();
 });

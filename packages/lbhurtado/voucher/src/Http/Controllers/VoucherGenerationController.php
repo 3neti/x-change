@@ -2,11 +2,11 @@
 
 namespace LBHurtado\Voucher\Http\Controllers;
 
+use LBHurtado\Voucher\Data\VoucherInstructionsData;
+use LBHurtado\Voucher\Actions\GenerateVouchers;
+use FrittenKeeZ\Vouchers\Models\Voucher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use LBHurtado\Voucher\Actions\GenerateVouchers;
-use LBHurtado\Voucher\Data\VoucherInstructionsData;
-use FrittenKeeZ\Vouchers\Models\Voucher;
 
 class VoucherGenerationController
 {

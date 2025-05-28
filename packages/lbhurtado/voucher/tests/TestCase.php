@@ -40,10 +40,11 @@ abstract class TestCase extends BaseTestCase
             \Spatie\LaravelData\Normalizers\JsonNormalizer::class,
         ]);
         config()->set('model-status.status_model', \Spatie\ModelStatus\Status::class);
+        config()->set('vouchers.models.voucher', \LBHurtado\Voucher\Models\Voucher::class);
 
         // Run the published voucher migration from the vendor
-        $migration = include 'vendor/frittenkeez/laravel-vouchers/publishes/migrations/2018_06_12_000000_create_voucher_tables.php';
-        $migration->up();
+        $baseVoucherMigration = include 'vendor/frittenkeez/laravel-vouchers/publishes/migrations/2018_06_12_000000_create_voucher_tables.php';
+        $baseVoucherMigration->up();
 
         // Run the cash migration from the local package
         $cashMigration = include __DIR__ . '/../database/migrations/2024_08_02_202500_create_cash_table.php';
@@ -52,5 +53,7 @@ abstract class TestCase extends BaseTestCase
         $statusMigration->up();
         $tagMigration = include __DIR__ . '/../database/migrations/2024_08_04_202500_create_tag_tables.php';
         $tagMigration->up();
+        $voucherMigration = include __DIR__ . '/../database/migrations/2024_08_26_202500_add_processed_on_to_vouchers_table.php';
+        $voucherMigration->up();
     }
 }
