@@ -6,7 +6,7 @@ use LBHurtado\Voucher\Notifications\VouchersGeneratedNotification;
 use Illuminate\Support\Facades\Notification;
 use Closure;
 
-class NotifyCreatorOfVoucherBatch
+class NotifyBatchCreator
 {
     public function handle($vouchers, Closure $next)
     {

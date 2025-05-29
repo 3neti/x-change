@@ -4,7 +4,7 @@ namespace LBHurtado\Voucher\Pipelines;
 
 use Closure;
 
-class NormalizeVoucherMetadata
+class NormalizeMetadata
 {
     public function handle($vouchers, Closure $next)
     {

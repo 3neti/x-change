@@ -5,7 +5,7 @@ namespace LBHurtado\Voucher\Pipelines;
 use Illuminate\Support\Facades\Log;
 use Closure;
 
-class LogVoucherAuditTrail
+class LogAuditTrail
 {
     public function handle($vouchers, Closure $next)
     {

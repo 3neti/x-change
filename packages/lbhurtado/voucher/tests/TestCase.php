@@ -72,6 +72,8 @@ abstract class TestCase extends BaseTestCase
         // Run the cash migration from the local package
         $userMigration = include __DIR__ . '/../database/migrations/0001_01_01_000000_create_users_table.php';
         $userMigration->up();
+        $moneyIssuerMigration = include __DIR__ . '/../database/migrations/2024_07_02_202500_create_money_issuers_table.php';
+        $moneyIssuerMigration->up();
         $cashMigration = include __DIR__ . '/../database/migrations/2024_08_02_202500_create_cash_table.php';
         $cashMigration->up();
         $statusMigration = include __DIR__ . '/../database/migrations/2024_08_03_202500_create_statuses_table.php';

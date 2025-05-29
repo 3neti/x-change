@@ -3,6 +3,7 @@
 namespace LBHurtado\Voucher\Models;
 
 use FrittenKeeZ\Vouchers\Models\Voucher as BaseVoucher;
+use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Scopes\RedeemedScope;
 
 class Voucher extends BaseVoucher
@@ -26,5 +27,10 @@ class Voucher extends BaseVoucher
     {
         return $this->getAttribute('processed_on')
             && $this->getAttribute('processed_on') <= now();
+    }
+
+    public function getInstructionsAttribute(): VoucherInstructionsData
+    {
+        return VoucherInstructionsData::from($this->metadata['instructions']);
     }
 }

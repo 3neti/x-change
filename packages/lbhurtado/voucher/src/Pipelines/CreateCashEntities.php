@@ -2,15 +2,15 @@
 
 namespace LBHurtado\Voucher\Pipelines;
 
+use LBHurtado\Voucher\Actions\MintCash;
 use Closure;
 
-class MarkVouchersAsProcessed
+class CreateCashEntities
 {
     public function handle($vouchers, Closure $next)
     {
         $vouchers->each(function ($voucher) {
-            $voucher->processed = true;
-            $voucher->save();
+            MintCash::run($voucher);
         });
 
         return $next($vouchers);

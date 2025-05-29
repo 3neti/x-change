@@ -51,7 +51,7 @@ it('generates vouchers successfully via the named route', function () {
         "count" => 2, // Number of vouchers to generate
         "prefix" => "TEST", // Prefix for voucher codes
         "mask" => "****-****", // Mask for voucher codes
-        "ttl" => Carbon\CarbonInterval::hours(24)->forHumans(), // Expiry Time (TTL in ISO format)
+        "ttl" => '24h', // Expiry Time (TTL in ISO format)
     ];
 
     // Act: Send a POST request via the named route
@@ -72,6 +72,7 @@ it('generates vouchers successfully via the named route', function () {
     // Assert: Validate each voucher
     collect($responseData)->each(function ($voucherData) use ($payload) {
         // Check that the metadata in the response matches the payload
+//        dd($voucherData['metadata']['instructions']);
         expect($voucherData['metadata']['instructions'])->toMatchArray($payload);
 
         // Fetch the voucher from the database

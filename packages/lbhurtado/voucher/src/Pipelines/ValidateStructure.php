@@ -4,7 +4,7 @@ namespace LBHurtado\Voucher\Pipelines;
 
 use Closure;
 
-class ValidateVoucherStructure
+class ValidateStructure
 {
     public function handle($vouchers, Closure $next)
     {
