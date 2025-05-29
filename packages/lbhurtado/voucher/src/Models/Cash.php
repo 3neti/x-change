@@ -26,6 +26,7 @@ use Brick\Money\Money;
  * @property ArrayObject $meta
  * @property string      $secret
  * @property \DateTime   $expires_on
+ * @property bool        $expired
  * @property string      $status
  * @property Collection  $tags
  *
@@ -45,8 +46,6 @@ class Cash extends Model
         'amount',
         'value',
         'currency',
-        'reference_type',
-        'reference_id',
         'meta',
         'expires_on',
     ];
@@ -68,6 +67,7 @@ class Cash extends Model
         });
     }
 
+    /** @deprecated  */
     public function reference(): \Illuminate\Database\Eloquent\Relations\MorphTo
     {
         return $this->morphTo();

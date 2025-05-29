@@ -2,8 +2,16 @@
 
 namespace LBHurtado\Voucher\Listeners;
 
-use LBHurtado\Voucher\Pipelines\MarkVoucherAsProcessed;
+use LBHurtado\Voucher\Pipelines\TriggerPostGenerationWorkflows;
+use LBHurtado\Voucher\Pipelines\NotifyCreatorOfVoucherBatch;
+use LBHurtado\Voucher\Pipelines\NormalizeVoucherMetadata;
+use LBHurtado\Voucher\Pipelines\ValidateVoucherStructure;
+use LBHurtado\Voucher\Pipelines\CheckFundsAvailability;
+use LBHurtado\Voucher\Pipelines\MarkVouchersAsProcessed;
+use LBHurtado\Voucher\Pipelines\LogVoucherAuditTrail;
+use LBHurtado\Voucher\Pipelines\ApplyUsageLimits;
 use LBHurtado\Voucher\Pipelines\CreateCashEntity;
+use LBHurtado\Voucher\Pipelines\RunFraudChecks;
 use LBHurtado\Voucher\Events\VouchersGenerated;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\{DB, Log};
@@ -25,8 +33,16 @@ class HandleGeneratedVouchers implements ShouldQueue
                 app(Pipeline::class)
                     ->send($unprocessedVouchers)
                     ->through([
+                        ValidateVoucherStructure::class,
+                        NormalizeVoucherMetadata::class,
+                        CheckFundsAvailability::class,
+                        RunFraudChecks::class,
+                        ApplyUsageLimits::class,
                         CreateCashEntity::class,
-                        MarkVoucherAsProcessed::class, // Ensure processed flag is set at the end
+                        NotifyCreatorOfVoucherBatch::class,
+                        LogVoucherAuditTrail::class,
+                        MarkVouchersAsProcessed::class,
+                        TriggerPostGenerationWorkflows::class,
                     ])
                     ->thenReturn();
             });

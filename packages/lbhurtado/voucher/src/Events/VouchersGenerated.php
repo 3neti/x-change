@@ -7,6 +7,7 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Collection;
+
 class VouchersGenerated
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
