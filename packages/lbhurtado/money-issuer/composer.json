@@ -1,0 +1,51 @@
+{
+    "name": "lbhurtado/money-issuer",
+    "description": "Electronic Money Issuer",
+    "type": "library",
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "Lester Hurtado",
+            "email": "lester@hurtado.ph"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "LBHurtado\\MoneyIssuer\\": "src/",
+            "LBHurtado\\MoneyIssuer\\Database\\Factories\\": "database/factories/"
+        },
+        "files": [
+            "src/Support/Helpers.php"
+        ]
+
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "LBHurtado\\MoneyIssuer\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "LBHurtado\\MoneyIssuer\\MoneyIssuerServiceProvider"
+            ]
+        }
+    },
+    "require": {
+        "spatie/laravel-data": "^4.15",
+        "lorisleiva/laravel-actions": "^2.9",
+        "brick/money": "^0.10.1"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^10.3",
+        "pestphp/pest": "^3.8"
+    },
+    "scripts": {
+        "test": "vendor/bin/pest"
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
+}

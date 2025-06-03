@@ -1,0 +1,53 @@
+{
+    "name": "lbhurtado/payment-gateway",
+    "description": "Payment Gateway",
+    "type": "library",
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "Lester Hurtado",
+            "email": "lester@hurtado.ph"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "LBHurtado\\PaymentGateway\\": "src/",
+            "LBHurtado\\PaymentGateway\\Database\\Factories\\": "database/factories/"
+        },
+        "files": [
+            "src/Support/Helpers.php"
+        ]
+
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "LBHurtado\\PaymentGateway\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "LBHurtado\\PaymentGateway\\PaymentGatewayServiceProvider"
+            ]
+        }
+    },
+    "require": {
+        "spatie/laravel-data": "^4.15",
+        "lorisleiva/laravel-actions": "^2.9",
+        "brick/money": "^0.10.1",
+        "bavix/laravel-wallet": "^11.4",
+        "propaganistas/laravel-phone": "^6.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^10.3",
+        "pestphp/pest": "^3.8"
+    },
+    "scripts": {
+        "test": "vendor/bin/pest"
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
+}

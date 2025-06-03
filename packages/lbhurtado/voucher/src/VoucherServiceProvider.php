@@ -2,8 +2,9 @@
 
 namespace LBHurtado\Voucher;
 
-use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Number;
+use Illuminate\Support\ServiceProvider;
+use LBHurtado\MoneyIssuer\Services\MoneyIssuerManager;
 
 class VoucherServiceProvider extends ServiceProvider
 {
@@ -12,7 +13,7 @@ class VoucherServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-
+        $this->app->singleton(MoneyIssuerManager::class, fn () => new MoneyIssuerManager(app()));
     }
 
     /**

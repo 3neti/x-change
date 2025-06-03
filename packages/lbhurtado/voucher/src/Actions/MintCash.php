@@ -2,9 +2,14 @@
 
 namespace LBHurtado\Voucher\Actions;
 
+use LBHurtado\Voucher\Pipelines\Voucher\CheckBalance;
+use LBHurtado\Voucher\Pipelines\Voucher\EscrowAction;
+use LBHurtado\Voucher\Pipelines\Voucher\PersistCash;
 use Lorisleiva\Actions\Concerns\AsAction;
+use Illuminate\Support\Facades\{DB, Log};
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\Models\Cash;
+use Illuminate\Pipeline\Pipeline;
 
 class MintCash
 {
@@ -12,16 +17,26 @@ class MintCash
 
     public function handle(Voucher $voucher): Cash
     {
-        $instructions = $voucher->instructions;
-        $cash = Cash::create([
-            'amount' => $instructions->cash->amount,
-            'currency' => $instructions->cash->currency,
-            'meta' => ['dispatched_by' => 'VouchersGenerated'],
-        ]);
+        try {
+            $callback = fn () => app(Pipeline::class)
+                ->send($voucher)
+                ->through([
+                    CheckBalance::class,
+                    EscrowAction::class,
+                    PersistCash::class,
+                ])
+                ->thenReturn();
 
-        $entities = ['cash' => $cash];
-        $voucher->addEntities(...$entities);
+            if (DB::transactionLevel() > 0) {
+                $callback(); // Already inside a transaction
+            } else {
+                DB::transaction($callback); // Run with transaction safety
+            }
 
-        return $cash;
+            return $voucher->getEntities(Cash::class)->first();
+        } catch (\Throwable $th) {
+            Log::error("Failed to mint cash for voucher ID {$voucher->id}. Error: {$th->getMessage()}");
+            throw $th;
+        }
     }
 }

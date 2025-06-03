@@ -3,7 +3,7 @@
 use Illuminate\Pipeline\Pipeline;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use LBHurtado\Voucher\Pipelines\CheckFundsAvailability;
+use LBHurtado\Voucher\Pipelines\GeneratedVouchers\CheckFundsAvailability;
 
 it('proceeds when funds are sufficient', function () {
     // Mock the external API response for sufficient funds
