@@ -12,20 +12,24 @@ class ConfirmDisbursementController extends Controller
 
     public function __invoke(Request $request): Response
     {
-//        $operationId = $request->validated('operationId');
-        $operationId = $request->validate([
-            'operationId' => ['required', 'string'],
-        ])['operationId'];
+        try {
+            $operationId = $request->validate([
+                'operationId' => ['required', 'string'],
+            ])['operationId'];
 
 
-        /** @var PaymentGatewayInterface $gateway */
-        $gateway = app(PaymentGatewayInterface::class);
+            /** @var PaymentGatewayInterface $gateway */
+            $gateway = app(PaymentGatewayInterface::class);
 
-        $success = $gateway->confirmDisbursement($operationId);
+            $success = $gateway->confirmDisbursement($operationId);
 
-        return $success
-            ? response('Disbursement confirmed!', 200)
-            : response('Disbursement confirmation failed.', 500);
+            return $success
+                ? response('Disbursement confirmed!', 200)
+                : response('Disbursement confirmation failed.', Response::HTTP_BAD_GATEWAY);
+        }
+        catch (\Throwable $e) {
+            return response('Disbursement confirmation failed.', Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
 
 //        return response()->noContent();
     }

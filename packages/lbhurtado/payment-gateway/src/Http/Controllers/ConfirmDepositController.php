@@ -10,6 +10,7 @@ class ConfirmDepositController extends Controller
 {
     public function __construct(protected PaymentGatewayInterface $gateway){}
 
+    //TODO: refactor this, DepositResponseData is better, if there's time
     public function __invoke(Request $request): Response
     {
         $validated = $request->validate([

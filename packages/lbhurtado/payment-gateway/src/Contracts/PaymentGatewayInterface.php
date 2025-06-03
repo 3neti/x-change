@@ -4,7 +4,7 @@ namespace LBHurtado\PaymentGateway\Contracts;
 
 use Brick\Money\Money;
 
-use LBHurtado\PaymentGateway\Data\GatewayResponseData;
+use LBHurtado\PaymentGateway\Data\Netbank\GatewayResponseData;
 use Bavix\Wallet\Interfaces\Wallet;
 
 interface PaymentGatewayInterface

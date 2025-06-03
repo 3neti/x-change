@@ -23,7 +23,7 @@ trait CanGenerate
             'merchant_city' => $user->merchant->city,
             'qr_type' => $amount->isZero() ? 'Static' : 'Dynamic',
             'qr_transaction_type' => 'P2M',
-            'destination_account' => $this->formatDestinationAccount($account, $user->merchant_code),
+            'destination_account' => $this->formatDestinationAccount($account, $user->merchant->code),
             'resolution' => 480,
             'amount' => [
                 'cur' => 'PHP',

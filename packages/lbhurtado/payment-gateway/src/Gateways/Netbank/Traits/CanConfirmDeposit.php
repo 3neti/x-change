@@ -2,14 +2,15 @@
 
 namespace LBHurtado\PaymentGateway\Gateways\Netbank\Traits;
 
+use LBHurtado\PaymentGateway\Data\Netbank\DepositResponseData;
 use LBHurtado\PaymentGateway\Actions\TopupWalletAction;
-use LBHurtado\PaymentGateway\Data\DepositResponseData;
 use LBHurtado\PaymentGateway\Events\DepositConfirmed;
 use Bavix\Wallet\Interfaces\Wallet;
 use Illuminate\Support\Facades\Log;
 
 trait CanConfirmDeposit
 {
+    //TODO: use DepositResponseData instead of array
     public function confirmDeposit(array $payload): bool
     {
         $response = DepositResponseData::from($payload);
@@ -43,5 +44,4 @@ trait CanConfirmDeposit
 
         DepositConfirmed::dispatch($transfer->deposit);
     }
-
 }

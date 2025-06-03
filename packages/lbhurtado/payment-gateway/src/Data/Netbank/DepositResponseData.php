@@ -1,7 +1,9 @@
 <?php
 
-namespace LBHurtado\PaymentGateway\Data;
+namespace LBHurtado\PaymentGateway\Data\Netbank;
 
+use LBHurtado\PaymentGateway\Data\Netbank\DepositMerchantDetailsData;
+use LBHurtado\PaymentGateway\Data\Netbank\DepositSenderData;
 use Spatie\LaravelData\Optional;
 use Spatie\LaravelData\Data;
 

@@ -1,13 +1,12 @@
 <?php
 
+use LBHurtado\PaymentGateway\Data\Netbank\{DepositMerchantDetailsData, GatewayResponseData};
+use LBHurtado\PaymentGateway\Data\{Netbank\DepositResponseData, Netbank\DepositSenderData};
 use LBHurtado\PaymentGateway\Events\{DepositConfirmed, DisbursementConfirmed};
-use LBHurtado\PaymentGateway\Data\{DepositResponseData, DepositSenderData};
 use LBHurtado\PaymentGateway\Gateways\Netbank\NetbankPaymentGateway;
 use LBHurtado\PaymentGateway\Services\SystemUserResolverService;
-use LBHurtado\PaymentGateway\Data\DepositMerchantDetailsData;
 use Illuminate\Support\Facades\{Config, Event, Http, Log};
 use LBHurtado\PaymentGateway\Actions\TopupWalletAction;
-use LBHurtado\PaymentGateway\Data\GatewayResponseData;
 use LBHurtado\PaymentGateway\Tests\Models\User;
 use Bavix\Wallet\Models\Transaction;
 use Illuminate\Support\Str;
