@@ -1,11 +1,10 @@
 <?php
 
-
 use LBHurtado\PaymentGateway\Events\{DepositConfirmed, DisbursementConfirmed};
 use LBHurtado\PaymentGateway\Data\{DepositResponseData, DepositSenderData};
+use LBHurtado\PaymentGateway\Gateways\Netbank\NetbankPaymentGateway;
 use LBHurtado\PaymentGateway\Services\SystemUserResolverService;
 use LBHurtado\PaymentGateway\Data\DepositMerchantDetailsData;
-use LBHurtado\PaymentGateway\Gateways\NetbankPaymentGateway;
 use Illuminate\Support\Facades\{Config, Event, Http, Log};
 use LBHurtado\PaymentGateway\Actions\TopupWalletAction;
 use LBHurtado\PaymentGateway\Data\GatewayResponseData;
