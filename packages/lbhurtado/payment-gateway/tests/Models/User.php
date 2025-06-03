@@ -12,8 +12,10 @@ use LBHurtado\PaymentGateway\Traits\HasMerchant;
 use LBHurtado\PaymentGateway\Traits\HasChannels;
 use LBHurtado\PaymentGateway\Models\Merchant;
 use Illuminate\Notifications\Notifiable;
+use Bavix\Wallet\Interfaces\Confirmable;
 use Bavix\Wallet\Traits\HasWalletFloat;
 use Bavix\Wallet\Interfaces\Wallet;
+use Bavix\Wallet\Traits\CanConfirm;
 
 /**
  * Class User.
@@ -25,13 +27,14 @@ use Bavix\Wallet\Interfaces\Wallet;
  *
  * @method int getKey()
  */
-class User extends Authenticatable implements HasMerchantInterface, Wallet
+class User extends Authenticatable implements HasMerchantInterface, Wallet, Confirmable
 {
     use HasWalletFloat;
     use HasChannels;
     use HasMerchant;
     use HasFactory;
     use Notifiable;
+    use CanConfirm;
 
     /**
      * The attributes that are mass assignable.

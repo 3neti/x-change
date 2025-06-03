@@ -1,13 +1,17 @@
 <?php
 
+
+use LBHurtado\PaymentGateway\Events\{DepositConfirmed, DisbursementConfirmed};
 use LBHurtado\PaymentGateway\Data\{DepositResponseData, DepositSenderData};
 use LBHurtado\PaymentGateway\Services\SystemUserResolverService;
 use LBHurtado\PaymentGateway\Data\DepositMerchantDetailsData;
 use LBHurtado\PaymentGateway\Gateways\NetbankPaymentGateway;
 use Illuminate\Support\Facades\{Config, Event, Http, Log};
 use LBHurtado\PaymentGateway\Actions\TopupWalletAction;
-use LBHurtado\PaymentGateway\Events\DepositConfirmed;
+use LBHurtado\PaymentGateway\Data\GatewayResponseData;
 use LBHurtado\PaymentGateway\Tests\Models\User;
+use Bavix\Wallet\Models\Transaction;
+use Illuminate\Support\Str;
 use Brick\Money\Money;
 
 beforeEach(function () {
@@ -228,3 +232,172 @@ it('tests confirmDeposit with valid payload and updates balances', function (Use
     $user->wallet->refreshBalance();
     expect((float) $user->balanceFloat)->toBe(1000.00); // User gains 1,000
 })->with('user', 'response');
+
+dataset('disbursement', function () {
+    return [
+        [fn () => [
+            'reference' => 'REF123',
+            'via' => 'instapay',
+            'amount' => 1000,
+            'bank' => 'NBANK',
+            'account_number' => '1234567890',
+        ]],
+    ];
+});
+
+it('successfully disburses funds to a bank account', function (User $user, array $validated) {
+    // Arrange
+    $this->withoutExceptionHandling();
+
+    $system = app(SystemUserResolverService::class)->resolve();
+    $user = auth()->user();
+    $user instanceof User;
+
+    expect((float) $system->balanceFloat)->toBe(10000.00);
+    expect((float) $user->balanceFloat)->toBe(0.00);
+
+    TopupWalletAction::run($user, 3000.00);
+    $system->wallet->refreshBalance();
+    expect((float) $system->balanceFloat)->toBe(7000.00);
+    $user->wallet->refreshBalance();
+    expect((float) $user->balanceFloat)->toBe(3000.00);
+
+    Http::fake([
+        config('disbursement.server.token-end-point') => Http::response(['access_token' => 'fake-token'], 200),
+        config('disbursement.server.end-point') => Http::response([
+            'transaction_id' => 'TXN-987654',
+            'status' => 'PENDING'
+        ], 200),
+    ]);
+
+    Log::spy();
+
+    $gateway = new NetbankPaymentGateway();
+
+    // Act
+    $result = $gateway->disburse($user, $validated);
+
+    // Assert
+    expect($result)->toBeInstanceOf(GatewayResponseData::class);
+    expect($result->transaction_id)->toBe('TXN-987654');
+    expect($result->status)->toBe('PENDING');
+
+    $user->wallet->refreshBalance();
+    expect((float) $user->balanceFloat)->toBe(3000.00)
+        ->and($result->uuid)->not->toBeEmpty();
+
+    $operationId = $result->transaction_id;
+    $transaction = Transaction::whereJsonContains('meta->operationId', $operationId)->firstOrFail();
+
+    expect($transaction->confirmed)->toBeFalse();
+    $payable = $transaction->payable;
+    $payable->confirm($transaction);
+
+    expect($transaction->confirmed)->toBeTrue();
+    $user->wallet->refreshBalance();
+    expect((float) $user->balanceFloat)->toBe(2000.00);
+
+    Http::assertSent(fn ($request) =>
+        $request->url() === config('disbursement.server.end-point') &&
+        $request->hasHeader('Authorization', 'Bearer fake-token') &&
+        $request['reference_id'] === $validated['reference']
+    );
+
+    Log::shouldHaveReceived('info')->with('NetbankPaymentGateway@disburse', \Mockery::any());
+})->with('user', 'disbursement');
+
+it('confirms disbursement and deducts from user wallet', function (User $user, array $validated) {
+    // Arrange
+    Event::fake();
+    $this->withoutExceptionHandling();
+
+    $system = app(SystemUserResolverService::class)->resolve();
+    $system->wallet->refreshBalance();
+    $user->wallet->refreshBalance();
+
+    expect((float) $user->balanceFloat)->toBe(0.00);
+    TopupWalletAction::run($user, 3000.00);
+    $user->wallet->refreshBalance();
+    expect((float) $user->balanceFloat)->toBe(3000.00);
+
+    Http::fake([
+        config('disbursement.server.token-end-point') => Http::response(['access_token' => 'fake-token'], 200),
+        config('disbursement.server.end-point') => Http::response([
+            'transaction_id' => 'CONFIRM-TXN-001',
+            'status' => 'PENDING'
+        ], 200),
+    ]);
+
+    $gateway = new NetbankPaymentGateway();
+    $response = $gateway->disburse($user, $validated);
+    $operationId = $response->transaction_id;
+
+    $transaction = Transaction::whereJsonContains('meta->operationId', $operationId)->firstOrFail();
+    expect($transaction->confirmed)->toBeFalse();
+
+    // Act
+    $result = $gateway->confirmDisbursement($operationId);
+
+    // Assert
+    expect($result)->toBeTrue();
+
+    $transaction->refresh();
+    expect($transaction->confirmed)->toBeTrue();
+
+    $user->wallet->refreshBalance();
+    expect((float) $user->balanceFloat)->toBe(2000.00); // Wallet deducted upon confirmation
+
+    Event::assertDispatched(DisbursementConfirmed::class, function (DisbursementConfirmed $event) use ($transaction) {
+        return $event->transaction->is($transaction);
+    });
+})->with('user', 'disbursement');
+
+it('sends a live disbursement transaction to Netbank', function () {
+    // Fetch the authenticated user (ensure a valid user is set up in the test environment)
+    $user = auth()->user();
+    TopupWalletAction::run($user, 3000.00);
+
+    // Ensure the user exists
+    expect($user)->not->toBeNull();
+    expect($user->name)->not->toBeNull();
+    expect($user->email)->not->toBeNull();
+
+    // Define the validated input (disbursement data)
+//    $validated = [
+//        'reference'         => Str::random(4) . '-09173011987',  // Unique reference for this transaction
+//        'amount'            => 53.17,                            // Transaction amount
+//        'account_number'    => '09173011987',                    // Destination bank account
+//        'bank'              => 'GXCHPHM2XXX',                    // GCash Bank Code
+//        'via'               => 'INSTAPAY'
+//    ];
+
+    $validated = [
+        'reference'         => Str::random(4) . '-09173011987',  // Unique reference for this transaction
+        'amount'            => 53.17,                            // Transaction amount
+        'account_number'    => '09173011987',                    // Destination bank account
+        'bank'              => 'PAPHPHM1XXX',                    // Maya Bank Code
+        'via'               => 'INSTAPAY'
+    ];
+
+    // Create an instance of NetbankPaymentGateway
+    $gateway = new NetbankPaymentGateway();
+
+    try {
+        // Send the live disbursement request
+        $response = $gateway->disburse($user, $validated);
+
+        // Log the response for debugging purposes
+        dump('Disbursement Response:', $response);
+
+        // Assert the response is valid and contains expected keys
+        expect($response)->toBeInstanceOf(GatewayResponseData::class);
+        expect($response->transaction_id)->not->toBeNull();
+//        expect($response->status)->toBeOneOf(['PENDING', 'SUCCESS']);
+
+    } catch (\Throwable $e) {
+        // Catch and log any potential errors returned by Netbank or the gateway
+        dump('Error:', $e->getMessage());
+        throw $e; // Rethrow the exception for assertion purposes
+    }
+})->skip();
+

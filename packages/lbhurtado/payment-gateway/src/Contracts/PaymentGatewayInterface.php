@@ -4,6 +4,9 @@ namespace LBHurtado\PaymentGateway\Contracts;
 
 use Brick\Money\Money;
 
+use LBHurtado\PaymentGateway\Data\GatewayResponseData;
+use Bavix\Wallet\Interfaces\Wallet;
+
 interface PaymentGatewayInterface
 {
     public function generate(string $account, Money $amount): string;
@@ -15,4 +18,22 @@ interface PaymentGatewayInterface
      * @return bool Whether the confirmation was successful.
      */
     public function confirmDeposit(array $payload): bool;
+
+
+    /**
+     * Initiates a disbursement to the given wallet/account.
+     *
+     * @param Wallet $user       The user initiating the disbursement.
+     * @param array $validated   The validated disbursement payload.
+     * @return GatewayResponseData|bool
+     */
+    public function disburse(Wallet $user, array $validated): GatewayResponseData|bool;
+
+    /**
+     * Confirm a disbursement operation via its operation ID.
+     *
+     * @param string $operationId
+     * @return bool
+     */
+    public function confirmDisbursement(string $operationId): bool;
 }
