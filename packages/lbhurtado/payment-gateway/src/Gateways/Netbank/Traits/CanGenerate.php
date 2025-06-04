@@ -33,7 +33,7 @@ trait CanGenerate
 
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $token,
-            'Content-Type' => 'application/json',
+            'Content-Type'  => 'application/json',
         ])->post(config('disbursement.server.qr-end-point'), $payload);
 
         return 'data:image/png;base64,' . $response->json('qr_code');

@@ -4,7 +4,7 @@ namespace LBHurtado\PaymentGateway\Contracts;
 
 use Brick\Money\Money;
 
-use LBHurtado\PaymentGateway\Data\Netbank\GatewayResponseData;
+use LBHurtado\PaymentGateway\Data\Netbank\Disburse\DisburseResponseData;
 use Bavix\Wallet\Interfaces\Wallet;
 
 interface PaymentGatewayInterface
@@ -25,9 +25,9 @@ interface PaymentGatewayInterface
      *
      * @param Wallet $user       The user initiating the disbursement.
      * @param array $validated   The validated disbursement payload.
-     * @return GatewayResponseData|bool
+     * @return DisburseResponseData|bool
      */
-    public function disburse(Wallet $user, array $validated): GatewayResponseData|bool;
+    public function disburse(Wallet $user, array $validated): DisburseResponseData|bool;
 
     /**
      * Confirm a disbursement operation via its operation ID.

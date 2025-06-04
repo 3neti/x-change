@@ -4,6 +4,8 @@ return [
     'system_user' => [
         'identifier' => env('SYSTEM_USER_ID', 'lester@hurtado.ph'),
         'identifier_column' => 'email',
-        'model' => \LBHurtado\PaymentGateway\Tests\Models\User::class,
+        'model' => class_exists(App\Models\User::class)
+            ? App\Models\User::class
+            : LBHurtado\PaymentGateway\Tests\Models\User::class,
     ],
 ];

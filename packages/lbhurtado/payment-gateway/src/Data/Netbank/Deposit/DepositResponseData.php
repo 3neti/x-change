@@ -1,6 +1,6 @@
 <?php
 
-namespace LBHurtado\PaymentGateway\Data\Netbank;
+namespace LBHurtado\PaymentGateway\Data\Netbank\Deposit;
 
 use Spatie\LaravelData\Optional;
 use Spatie\LaravelData\Data;

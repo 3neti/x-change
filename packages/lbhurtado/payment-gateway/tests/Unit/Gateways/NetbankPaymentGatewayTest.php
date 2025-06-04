@@ -1,7 +1,7 @@
 <?php
 
-use LBHurtado\PaymentGateway\Data\Netbank\{DepositMerchantDetailsData, GatewayResponseData};
-use LBHurtado\PaymentGateway\Data\{Netbank\DepositResponseData, Netbank\DepositSenderData};
+use LBHurtado\PaymentGateway\Data\{Netbank\Deposit\DepositResponseData, Netbank\Deposit\DepositSenderData};
+use LBHurtado\PaymentGateway\Data\Netbank\{Deposit\DepositMerchantDetailsData, Disburse\DisburseResponseData};
 use LBHurtado\PaymentGateway\Events\{DepositConfirmed, DisbursementConfirmed};
 use LBHurtado\PaymentGateway\Gateways\Netbank\NetbankPaymentGateway;
 use LBHurtado\PaymentGateway\Services\SystemUserResolverService;
@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\{Config, Event, Http, Log};
 use LBHurtado\PaymentGateway\Actions\TopupWalletAction;
 use LBHurtado\PaymentGateway\Tests\Models\User;
 use Bavix\Wallet\Models\Transaction;
+use Bavix\Wallet\Interfaces\Wallet;
 use Illuminate\Support\Str;
 use Brick\Money\Money;
 
@@ -23,7 +24,7 @@ beforeEach(function () {
         'email' => 'system@dev-asiana.io',
     ]);
     $system->wallet; // Explicitly create the wallet
-    $system->depositFloat(10000.00); // Start with a balance of 10,000
+    $system->depositFloat(10_000.00); // Start with a balance of 10,000
 });
 
 it('tests the NetbankPaymentGateway generate method', function () {
@@ -53,7 +54,7 @@ it('tests the NetbankPaymentGateway generate method', function () {
     $gateway = new NetbankPaymentGateway();
 
     // Define the transaction amount for generating the QR code
-    $amount = Money::of(1000, 'PHP'); // Example amount: 1000 PHP
+    $amount = Money::of(1_000, 'PHP'); // Example amount: 1000 PHP
 
     // Call the generate method to get the QR code response
     $response = $gateway->generate('1234567890', $amount);
@@ -98,7 +99,7 @@ it('sends a live QR transaction to Netbank', function () {
     $gateway = new NetbankPaymentGateway();
 
     // Define the transaction amount (adjust as needed)
-    $amount = Money::of(1000, 'PHP'); // Example amount: 1000 PHP
+    $amount = Money::of(1_000, 'PHP'); // Example amount: 1000 PHP
 
     try {
         // Call the generate method to send the transaction
@@ -132,7 +133,7 @@ dataset('response', function () {
     return [
         [fn() => new DepositResponseData(
             alias: 'TEST_ALIAS',
-            amount: 1000, // Deposit amount
+            amount: 1_000, // Deposit amount
             channel: 'TestChannel',
             commandId: 'COMMAND123',
             externalTransferStatus: 'SUCCESS',
@@ -173,7 +174,7 @@ it('tests confirmDeposit function in NetbankPaymentGateway', function (User $use
         ->andReturn($user) // Set the transaction's payable relationship to the user
         ->shouldReceive('getAttribute')
         ->with('amount')
-        ->andReturn(1000 * 100); // Set the transaction's amount in minor units
+        ->andReturn(1_000 * 100); // Set the transaction's amount in minor units
 
     // Optional: Add other attributes if needed
     $transaction->shouldReceive('getAttribute')
@@ -236,7 +237,7 @@ dataset('disbursement', function () {
         [fn () => [
             'reference' => 'REF123',
             'via' => 'instapay',
-            'amount' => 1000,
+            'amount' => 1_000,
             'bank' => 'NBANK',
             'account_number' => '1234567890',
         ]],
@@ -249,16 +250,17 @@ it('successfully disburses funds to a bank account', function (User $user, array
 
     $system = app(SystemUserResolverService::class)->resolve();
     $user = auth()->user();
-    $user instanceof User;
+    expect($user instanceof User)->toBeTrue();
+    expect($user instanceof Wallet)->toBeTrue();
 
-    expect((float) $system->balanceFloat)->toBe(10000.00);
+    expect((float) $system->balanceFloat)->toBe(10_000.00);
     expect((float) $user->balanceFloat)->toBe(0.00);
 
-    TopupWalletAction::run($user, 3000.00);
+    TopupWalletAction::run($user, 3_000.00);
     $system->wallet->refreshBalance();
-    expect((float) $system->balanceFloat)->toBe(7000.00);
+    expect((float) $system->balanceFloat)->toBe(7_000.00);
     $user->wallet->refreshBalance();
-    expect((float) $user->balanceFloat)->toBe(3000.00);
+    expect((float) $user->balanceFloat)->toBe(3_000.00);
 
     Http::fake([
         config('disbursement.server.token-end-point') => Http::response(['access_token' => 'fake-token'], 200),
@@ -276,7 +278,7 @@ it('successfully disburses funds to a bank account', function (User $user, array
     $result = $gateway->disburse($user, $validated);
 
     // Assert
-    expect($result)->toBeInstanceOf(GatewayResponseData::class);
+    expect($result)->toBeInstanceOf(DisburseResponseData::class);
     expect($result->transaction_id)->toBe('TXN-987654');
     expect($result->status)->toBe('PENDING');
 
@@ -314,9 +316,9 @@ it('confirms disbursement and deducts from user wallet', function (User $user, a
     $user->wallet->refreshBalance();
 
     expect((float) $user->balanceFloat)->toBe(0.00);
-    TopupWalletAction::run($user, 3000.00);
+    TopupWalletAction::run($user, 3_000.00);
     $user->wallet->refreshBalance();
-    expect((float) $user->balanceFloat)->toBe(3000.00);
+    expect((float) $user->balanceFloat)->toBe(3_000.00);
 
     Http::fake([
         config('disbursement.server.token-end-point') => Http::response(['access_token' => 'fake-token'], 200),
@@ -343,7 +345,7 @@ it('confirms disbursement and deducts from user wallet', function (User $user, a
     expect($transaction->confirmed)->toBeTrue();
 
     $user->wallet->refreshBalance();
-    expect((float) $user->balanceFloat)->toBe(2000.00); // Wallet deducted upon confirmation
+    expect((float) $user->balanceFloat)->toBe(2_000.00); // Wallet deducted upon confirmation
 
     Event::assertDispatched(DisbursementConfirmed::class, function (DisbursementConfirmed $event) use ($transaction) {
         return $event->transaction->is($transaction);
@@ -353,7 +355,7 @@ it('confirms disbursement and deducts from user wallet', function (User $user, a
 it('sends a live disbursement transaction to Netbank', function () {
     // Fetch the authenticated user (ensure a valid user is set up in the test environment)
     $user = auth()->user();
-    TopupWalletAction::run($user, 3000.00);
+    TopupWalletAction::run($user, 3_000.00);
 
     // Ensure the user exists
     expect($user)->not->toBeNull();
@@ -388,7 +390,7 @@ it('sends a live disbursement transaction to Netbank', function () {
         dump('Disbursement Response:', $response);
 
         // Assert the response is valid and contains expected keys
-        expect($response)->toBeInstanceOf(GatewayResponseData::class);
+        expect($response)->toBeInstanceOf(DisburseResponseData::class);
         expect($response->transaction_id)->not->toBeNull();
 //        expect($response->status)->toBeOneOf(['PENDING', 'SUCCESS']);
 

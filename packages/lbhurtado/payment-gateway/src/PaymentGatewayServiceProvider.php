@@ -13,6 +13,11 @@ class PaymentGatewayServiceProvider extends ServiceProvider
     {
         $this->app->singleton(BankRegistry::class, fn () => new BankRegistry());
         $this->mergeConfigFrom(
+            __DIR__ . '/../config/account.php',
+            'account'
+        );
+
+        $this->mergeConfigFrom(
             __DIR__ . '/../config/disbursement.php',
             'disbursement'
         );

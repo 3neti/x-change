@@ -1,7 +1,7 @@
 <?php
 
 use LBHurtado\PaymentGateway\Contracts\PaymentGatewayInterface;
-use LBHurtado\PaymentGateway\Data\Netbank\GatewayResponseData;
+use LBHurtado\PaymentGateway\Data\Netbank\Disburse\DisburseResponseData;
 use LBHurtado\PaymentGateway\Tests\Models\AnotherUser;
 use Illuminate\Support\Str;
 
@@ -23,7 +23,7 @@ it('returns a JSON response for disbursement requests via XHR', function () {
         'via' => 'INSTAPAY',
     ];
 
-    $expectedResponse = new GatewayResponseData(
+    $expectedResponse = new DisburseResponseData(
         uuid: 'fake-uuid',
         transaction_id: 'TXN-1001',
         status: 'PENDING'
@@ -60,7 +60,7 @@ it('redirects with event data when called from Vue (Inertia)', function () {
         'via' => 'INSTAPAY',
     ];
 
-    $expectedResponse = new GatewayResponseData(
+    $expectedResponse = new DisburseResponseData(
         uuid: 'fake-uuid',
         transaction_id: 'TXN-1002',
         status: 'PENDING'
@@ -97,7 +97,7 @@ it('redirects for standard form posts', function () {
         'via' => 'INSTAPAY',
     ];
 
-    $expectedResponse = new GatewayResponseData(
+    $expectedResponse = new DisburseResponseData(
         uuid: 'fake-uuid',
         transaction_id: 'TXN-1003',
         status: 'PENDING'

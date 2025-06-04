@@ -2,7 +2,7 @@
 
 namespace LBHurtado\PaymentGateway\Gateways\Netbank\Traits;
 
-use LBHurtado\PaymentGateway\Data\Netbank\DepositResponseData;
+use LBHurtado\PaymentGateway\Data\Netbank\Deposit\DepositResponseData;
 use LBHurtado\PaymentGateway\Actions\TopupWalletAction;
 use LBHurtado\PaymentGateway\Events\DepositConfirmed;
 use Bavix\Wallet\Interfaces\Wallet;

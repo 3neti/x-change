@@ -1,6 +1,6 @@
 <?php
 
-namespace LBHurtado\PaymentGateway\Data;
+namespace LBHurtado\PaymentGateway\Data\Netbank\Generate;
 
 use LBHurtado\PaymentGateway\Data\Transformers\MoneyToFloatTransformer;
 use Spatie\LaravelData\Attributes\{WithCast, WithTransformer};

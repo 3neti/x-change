@@ -3,7 +3,7 @@
 namespace LBHurtado\PaymentGateway\Http\Controllers;
 
 use LBHurtado\PaymentGateway\Contracts\PaymentGatewayInterface;
-use LBHurtado\PaymentGateway\Data\GenerateInputData;
+use LBHurtado\PaymentGateway\Data\Netbank\Generate\GenerateInputData;
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 

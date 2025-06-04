@@ -2,7 +2,7 @@
 
 namespace LBHurtado\PaymentGateway\Gateways\Netbank\Traits;
 
-use LBHurtado\PaymentGateway\Data\Netbank\GatewayResponseData;
+use LBHurtado\PaymentGateway\Data\Netbank\Disburse\DisburseResponseData;
 use LBHurtado\PaymentGateway\Events\DisbursementConfirmed;
 use Illuminate\Support\Facades\{DB, Http, Log};
 use LBHurtado\PaymentGateway\Support\Address;
@@ -14,7 +14,7 @@ use Brick\Money\Money;
 
 trait CanDisburse
 {
-    public function disburse(Wallet $user, array $validated): GatewayResponseData|bool
+    public function disburse(Wallet $user, array $validated): DisburseResponseData|bool
     {
         // Parse the transaction amount into minor units (e.g., cents)
         $credits = Money::of(Arr::get($validated, 'amount'), 'PHP');
@@ -32,13 +32,13 @@ trait CanDisburse
 
             // Step 2: Prepare the disbursement payload
             $payload = [
-                'reference_id'         => $reference = Arr::get($validated, 'reference'),
-                'settlement_rail'      => Arr::get($validated, 'via'),
-                'amount'               => $this->getAmountArray($validated),
+                'reference_id'          => $reference = Arr::get($validated, 'reference'),
+                'settlement_rail'       => Arr::get($validated, 'via'),
+                'amount'                => $this->getAmountArray($validated),
                 'source_account_number' => config('disbursement.source.account_number'),
-                'sender'               => config('disbursement.source.sender'),
-                'destination_account'  => $this->getDestinationAccount($validated),
-                'recipient'            => $this->getRecipient($validated),
+                'sender'                => config('disbursement.source.sender'),
+                'destination_account'   => $this->getDestinationAccount($validated),
+                'recipient'             => $this->getRecipient($validated),
             ];
 
             // Log the disbursement payload
@@ -55,10 +55,10 @@ trait CanDisburse
                 // Attach metadata to the transaction
                 $transaction->meta = [
                     'operationId' => $response->json('transaction_id'),
-                    'request'     => [
-                        'user_id' => $user->getKey(),
-                        'payload' => $payload
-                    ],
+                        'request' => [
+                            'user_id' => $user->getKey(),
+                            'payload' => $payload
+                        ],
                 ];
                 $transaction->save();
 
@@ -66,7 +66,7 @@ trait CanDisburse
                 DB::commit();
 
                 // Create and return response data object
-                return GatewayResponseData::from(
+                return DisburseResponseData::from(
                     array_merge(['uuid' => $transaction->uuid], $response->json())
                 );
             }
@@ -93,11 +93,11 @@ trait CanDisburse
         $settlement_rails = config('disbursement.settlement_rails');
 
         return [
-            'reference' => ['required', 'string', 'min:2', 'unique:references,code'],
-            'bank' => ['required', 'string'],
+            'reference'      => ['required', 'string', 'min:2', 'unique:references,code'],
+            'bank'           => ['required', 'string'],
             'account_number' => ['required', 'string'],
-            'via' => ['required', 'string', Rule::in($settlement_rails)],
-            'amount' => ['required', 'integer', $min_rule, $max_rule],
+            'via'            => ['required', 'string', Rule::in($settlement_rails)],
+            'amount'         => ['required', 'integer', $min_rule, $max_rule],
         ];
     }
 
@@ -113,7 +113,7 @@ trait CanDisburse
     {
         return [
             'name'    => Arr::get($validated, 'account_number'), // Or fetch user-provided "name"
-            'address' => Address::generate(),                   // Address generation logic
+            'address' => Address::generate(),                    // Address generation logic
         ];
     }
 

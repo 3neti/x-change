@@ -2,7 +2,9 @@
 
 return [
     'models' => [
-        'user' => \LBHurtado\PaymentGateway\Tests\Models\User::class,
+        'user' => class_exists(App\Models\User::class)
+            ? App\Models\User::class
+            : LBHurtado\PaymentGateway\Tests\Models\User::class,
     ],
     'default' => env('PAYMENT_GATEWAY', 'netbank'),
 
