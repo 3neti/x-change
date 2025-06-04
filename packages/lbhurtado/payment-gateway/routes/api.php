@@ -2,6 +2,7 @@
 
 use LBHurtado\PaymentGateway\Http\Controllers\ConfirmDisbursementController;
 use LBHurtado\PaymentGateway\Http\Controllers\ConfirmDepositController;
+use LBHurtado\PaymentGateway\Http\Controllers\DisburseController;
 use LBHurtado\PaymentGateway\Http\Controllers\GenerateController;
 use Illuminate\Support\Facades\Route;
 
@@ -13,3 +14,6 @@ Route::post('confirm-disbursement', ConfirmDisbursementController::class)
 
 Route::post('generate-qrcode', GenerateController::class)
     ->name('generate-qrcode');
+
+Route::post('disburse-funds', DisburseController::class)
+    ->name('disburse-funds');
