@@ -2,8 +2,8 @@
 
 namespace LBHurtado\PaymentGateway\Services;
 
+use LBHurtado\PaymentGateway\Gateways\Netbank\NetbankPaymentGateway;
 use LBHurtado\PaymentGateway\Contracts\PaymentGatewayInterface;
-use LBHurtado\PaymentGateway\Gateways\NetbankPaymentGateway;
 use Illuminate\Support\Manager;
 
 class PaymentGatewayManager extends Manager

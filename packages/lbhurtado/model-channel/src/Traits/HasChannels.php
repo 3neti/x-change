@@ -1,14 +1,11 @@
 <?php
 
-namespace LBHurtado\PaymentGateway\Traits;
+namespace LBHurtado\ModelChannel\Traits;
 
 use Illuminate\Database\Eloquent\Relations\MorphMany;
-use LBHurtado\PaymentGateway\Enums\Channel;
+use LBHurtado\ModelChannel\Enums\Channel;
 use Illuminate\Support\Facades\Validator;
-use libphonenumber\NumberParseException;
-use libphonenumber\PhoneNumberUtil;
-use phpDocumentor\Reflection\Exception;
-use Illuminate\Database\Eloquent\Model;
+use \Exception;
 
 trait HasChannels
 {
@@ -78,7 +75,7 @@ trait HasChannels
 
     protected function getChannelModelClassName(): string
     {
-        return config('model-channel.channel_model') ?? \LBHurtado\PaymentGateway\Models\Channel::class;
+        return config('model-channel.channel_model') ?? \LBHurtado\ModelChannel\Models\Channel::class;
     }
 
     public function __get($key)

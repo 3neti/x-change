@@ -3,7 +3,6 @@
 namespace LBHurtado\PaymentGateway\Data\Netbank;
 
 use Spatie\LaravelData\Data;
-
 class DepositSenderData extends Data
 {
     public function __construct(

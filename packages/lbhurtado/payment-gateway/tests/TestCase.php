@@ -2,12 +2,11 @@
 
 namespace LBHurtado\PaymentGateway\Tests;
 
-use Bavix\Wallet\WalletServiceProvider;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use LBHurtado\PaymentGateway\Models\Merchant;
 use Orchestra\Testbench\TestCase as BaseTestCase;
 use LBHurtado\PaymentGateway\Tests\Models\User;
-use Dotenv\Dotenv;
+use LBHurtado\PaymentGateway\Models\Merchant;
+use Bavix\Wallet\WalletServiceProvider;
 
 abstract class TestCase extends BaseTestCase
 {

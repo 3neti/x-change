@@ -9,7 +9,7 @@ use LBHurtado\PaymentGateway\Contracts\HasMerchantInterface;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use LBHurtado\PaymentGateway\Traits\HasMerchant;
-use LBHurtado\PaymentGateway\Traits\HasChannels;
+use LBHurtado\ModelChannel\Traits\HasChannels;
 use LBHurtado\PaymentGateway\Models\Merchant;
 use Illuminate\Notifications\Notifiable;
 use Bavix\Wallet\Interfaces\Confirmable;

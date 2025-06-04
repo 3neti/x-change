@@ -20,7 +20,7 @@ class GenerateInputData extends Data
     public static function rules(): array
     {
         return [
-            'account' => ['required', 'string', 'starts_with:0', 'max_digits:11'],
+            'account' => ['required', 'string', 'starts_with:0', 'max_digits:11'], //TODO: rationalize this
             'amount' => ['required', 'numeric', 'min:0', 'max:100'],
         ];
     }

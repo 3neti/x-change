@@ -6,7 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /** @deprecated  */
     public function up(): void
     {
         Schema::create('channels', function (Blueprint $table) {

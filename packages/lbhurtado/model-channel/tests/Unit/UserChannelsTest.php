@@ -1,7 +1,7 @@
 <?php
 
-use LBHurtado\PaymentGateway\Tests\Models\User;
-use LBHurtado\PaymentGateway\Enums\Channel;
+use LBHurtado\ModelChannel\Tests\Models\User;
+use LBHurtado\ModelChannel\Enums\Channel;
 
 it('can retrieve user channels', function () {
     // Arrange

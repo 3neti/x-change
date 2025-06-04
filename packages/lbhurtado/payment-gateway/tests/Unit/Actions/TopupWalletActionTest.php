@@ -1,14 +1,11 @@
 <?php
 
-use Illuminate\Support\Facades\Config;
 use LBHurtado\PaymentGateway\Services\SystemUserResolverService;
 use LBHurtado\PaymentGateway\Actions\TopupWalletAction;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use LBHurtado\PaymentGateway\Tests\Models\User;
+use Illuminate\Support\Facades\Config;
 use Bavix\Wallet\Interfaces\Wallet;
 use Bavix\Wallet\Models\Transfer;
-use LBHurtado\PaymentGateway\Tests\Models\User;
-
-//uses(RefreshDatabase::class);
 
 beforeEach(function () {
     Config::set('account.system_user.identifier', 'system@dev-asiana.io');

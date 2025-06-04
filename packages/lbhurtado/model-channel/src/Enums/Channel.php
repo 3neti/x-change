@@ -1,6 +1,6 @@
 <?php
 
-namespace LBHurtado\PaymentGateway\Enums;
+namespace LBHurtado\ModelChannel\Enums;
 
 use Illuminate\Support\Facades\Config;
 
@@ -21,12 +21,4 @@ enum Channel: string
 
         return $rules;
     }
-
-//    public function rules(): array
-//    {
-//        return match ($this) {
-//            self::MOBILE => ['required', (new Phone)->country('PH')->type('mobile')],
-//            self::WEBHOOK => ['required', 'url'],
-//        };
-//    }
 }

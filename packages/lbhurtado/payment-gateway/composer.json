@@ -3,6 +3,12 @@
     "description": "Payment Gateway",
     "type": "library",
     "license": "proprietary",
+    "repositories": [
+        {
+            "type": "path",
+            "url": "./../model-channel"
+        }
+    ],
     "authors": [
         {
             "name": "Lester Hurtado",
@@ -36,6 +42,7 @@
         "lorisleiva/laravel-actions": "^2.9",
         "brick/money": "^0.10.1",
         "bavix/laravel-wallet": "^11.4",
+        "lbhurtado/laravel-model-channel": "dev-main",
         "propaganistas/laravel-phone": "^6.0"
     },
     "require-dev": {

@@ -2,20 +2,16 @@
 
 declare(strict_types=1);
 
-namespace LBHurtado\PaymentGateway\Tests\Models;
+namespace LBHurtado\ModelChannel\Tests\Models;
 
-use LBHurtado\PaymentGateway\Database\Factories\AnotherUserFactory;
+use LBHurtado\ModelChannel\Database\Factories\UserFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use LBHurtado\PaymentGateway\Traits\HasMerchant;
 use LBHurtado\ModelChannel\Traits\HasChannels;
-use LBHurtado\PaymentGateway\Models\Merchant;
 use Illuminate\Notifications\Notifiable;
-use Bavix\Wallet\Traits\HasWalletFloat;
-use Bavix\Wallet\Traits\CanConfirm;
 
 /**
- * AnotherClass User.
+ * Class User.
  *
  * @property int        $id
  * @property string     $name
@@ -24,14 +20,11 @@ use Bavix\Wallet\Traits\CanConfirm;
  *
  * @method int getKey()
  */
-class AnotherUser extends Authenticatable
+class User extends Authenticatable
 {
-    use HasWalletFloat;
     use HasChannels;
-    use HasMerchant;
     use HasFactory;
     use Notifiable;
-    use CanConfirm;
 
     /**
      * The attributes that are mass assignable.
@@ -55,8 +48,8 @@ class AnotherUser extends Authenticatable
         'remember_token',
     ];
 
-    public static function newFactory(): AnotherUserFactory
+    public static function newFactory(): UserFactory
     {
-        return AnotherUserFactory::new();
+        return UserFactory::new();
     }
 }

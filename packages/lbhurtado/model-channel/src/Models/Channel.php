@@ -1,6 +1,6 @@
 <?php
 
-namespace LBHurtado\PaymentGateway\Models;
+namespace LBHurtado\ModelChannel\Models;
 
 use LBHurtado\PaymentGateway\Database\Factories\ChannelFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

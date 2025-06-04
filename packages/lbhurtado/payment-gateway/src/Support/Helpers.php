@@ -1,6 +1,5 @@
 <?php
 
-
 if (! function_exists('documents_path')) {
     function documents_path(?string $path = null): string
     {

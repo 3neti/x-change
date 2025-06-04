@@ -1,9 +1,9 @@
 <?php
 
-namespace LBHurtado\PaymentGateway\Database\Factories;
+namespace LBHurtado\ModelChannel\Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use LBHurtado\PaymentGateway\Models\Channel;
+use LBHurtado\ModelChannel\Models\Channel;
 
 class ChannelFactory extends Factory
 {
