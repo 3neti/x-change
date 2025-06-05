@@ -2,6 +2,10 @@
 
 namespace LBHurtado\PaymentGateway\Gateways\Netbank\Traits;
 
+use LBHurtado\PaymentGateway\Data\Netbank\Common\PayloadAmountData;
+use LBHurtado\PaymentGateway\Data\Netbank\Disburse\DisbursePayloadData;
+use LBHurtado\PaymentGateway\Data\Netbank\Disburse\DisbursePayloadDestinationAccountData;
+use LBHurtado\PaymentGateway\Data\Netbank\Disburse\DisbursePayloadRecipientData;
 use LBHurtado\PaymentGateway\Data\Netbank\Disburse\DisburseResponseData;
 use LBHurtado\PaymentGateway\Events\DisbursementConfirmed;
 use Illuminate\Support\Facades\{DB, Http, Log};
@@ -11,11 +15,16 @@ use Bavix\Wallet\Interfaces\Wallet;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Arr;
 use Brick\Money\Money;
+use LBHurtado\PaymentGateway\Data\Netbank\Disburse\DisburseInputData;
 
 trait CanDisburse
 {
-    public function disburse(Wallet $user, array $validated): DisburseResponseData|bool
+    public function disburse(Wallet $user, DisburseInputData|array $validated): DisburseResponseData|bool
     {
+        $validated = $validated instanceof DisburseInputData
+            ? $validated->toArray()
+            : $validated;
+
         // Parse the transaction amount into minor units (e.g., cents)
         $credits = Money::of(Arr::get($validated, 'amount'), 'PHP');
 
@@ -30,16 +39,20 @@ trait CanDisburse
                 false
             );
 
+            $payload_data = DisbursePayloadData::fromValidated($validated);
+
+            $payload = $payload_data->toArray();
+
             // Step 2: Prepare the disbursement payload
-            $payload = [
-                'reference_id'          => $reference = Arr::get($validated, 'reference'),
-                'settlement_rail'       => Arr::get($validated, 'via'),
-                'amount'                => $this->getAmountArray($validated),
-                'source_account_number' => config('disbursement.source.account_number'),
-                'sender'                => config('disbursement.source.sender'),
-                'destination_account'   => $this->getDestinationAccount($validated),
-                'recipient'             => $this->getRecipient($validated),
-            ];
+//            $payload = [
+//                'reference_id'          => $reference = Arr::get($validated, 'reference'),
+//                'settlement_rail'       => Arr::get($validated, 'via'),
+//                'amount'                => $this->getAmountArray($validated),
+//                'source_account_number' => config('disbursement.source.account_number'),
+//                'sender'                => config('disbursement.source.sender'),
+//                'destination_account'   => $this->getDestinationAccount($validated),
+//                'recipient'             => $this->getRecipient($validated),
+//            ];
 
             // Log the disbursement payload
             Log::info('NetbankPaymentGateway@disburse', compact('payload'));
@@ -101,38 +114,38 @@ trait CanDisburse
         ];
     }
 
-    protected function getDestinationAccount(array $validated): array
-    {
-        return [
-            'bank_code'      => Arr::get($validated, 'bank'),
-            'account_number' => Arr::get($validated, 'account_number'),
-        ];
-    }
-
-    protected function getRecipient(array $validated): array
-    {
-        return [
-            'name'    => Arr::get($validated, 'account_number'), // Or fetch user-provided "name"
-            'address' => Address::generate(),                    // Address generation logic
-        ];
-    }
-
-    protected function getAmountArray(array $validated): array
-    {
-        // Parse the amount into minor units (e.g., cents)
-        $minor = Money::of(Arr::get($validated, 'amount'), 'PHP')
-            ->getMinorAmount()
-            ->toInt();
-
-        // Add a small variance (randomized amount) for operational reasons
-        $variance = rand(config('disbursement.variance.min'), config('disbursement.variance.max'));
-        $minor += $variance;
-
-        return [
-            'cur' => 'PHP',      // Currency code (PHP for Philippine Peso)
-            'num' => (string) $minor,
-        ];
-    }
+//    protected function getDestinationAccount(array $validated): array
+//    {
+//        return [
+//            'bank_code'      => Arr::get($validated, 'bank'),
+//            'account_number' => Arr::get($validated, 'account_number'),
+//        ];
+//    }
+//
+//    protected function getRecipient(array $validated): array
+//    {
+//        return [
+//            'name'    => Arr::get($validated, 'account_number'), // Or fetch user-provided "name"
+//            'address' => Address::generate(),                    // Address generation logic
+//        ];
+//    }
+//
+//    protected function getAmountArray(array $validated): array
+//    {
+//        // Parse the amount into minor units (e.g., cents)
+//        $minor = Money::of(Arr::get($validated, 'amount'), 'PHP')
+//            ->getMinorAmount()
+//            ->toInt();
+//
+//        // Add a small variance (randomized amount) for operational reasons
+//        $variance = rand(config('disbursement.variance.min'), config('disbursement.variance.max'));
+//        $minor += $variance;
+//
+//        return [
+//            'cur' => 'PHP',      // Currency code (PHP for Philippine Peso)
+//            'num' => (string) $minor,
+//        ];
+//    }
 
     public function confirmDisbursement(string $operationId): bool
     {

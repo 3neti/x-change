@@ -2,8 +2,8 @@
 
 namespace LBHurtado\PaymentGateway\Http\Controllers;
 
-use LBHurtado\PaymentGateway\Contracts\PaymentGatewayInterface;
 use LBHurtado\PaymentGateway\Data\Netbank\Generate\GenerateInputData;
+use LBHurtado\PaymentGateway\Contracts\PaymentGatewayInterface;
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 

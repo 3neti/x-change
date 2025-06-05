@@ -1,6 +1,8 @@
 <?php
 
 use LBHurtado\PaymentGateway\Contracts\PaymentGatewayInterface;
+use LBHurtado\PaymentGateway\Data\Netbank\Disburse\DisburseInputData;
+use LBHurtado\PaymentGateway\Data\Netbank\Disburse\DisbursePayloadData;
 use LBHurtado\PaymentGateway\Data\Netbank\Disburse\DisburseResponseData;
 use LBHurtado\PaymentGateway\Tests\Models\AnotherUser;
 use Illuminate\Support\Str;

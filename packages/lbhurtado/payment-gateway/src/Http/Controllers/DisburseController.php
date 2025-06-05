@@ -24,7 +24,9 @@ class DisburseController extends Controller
 
         try {
             $response = $this->gateway->disburse($user, $inputData->toArray());
+
         } catch (\Exception $e) {
+
             return response()->json(['message' => 'Failed to initiate disbursement', 'error' => $e->getMessage()], 500);
         }
 

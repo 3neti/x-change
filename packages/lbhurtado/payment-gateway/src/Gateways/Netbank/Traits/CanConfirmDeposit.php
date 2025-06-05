@@ -18,10 +18,10 @@ trait CanConfirmDeposit
 
         $user = app(config('payment-gateway.models.user'))::findByMobile($response->referenceCode);
 
+        //TODO: check this out
         if (!$user && ($merchant_code = $response->merchant_details->merchant_code ?? null) && strlen($merchant_code) === 1) {
             $user = app(config('payment-gateway.models.user'))
-                ->where('meta->merchant->code', $merchant_code)->first();
-//            $user = User::where('meta->merchant->code', $merchant_code)->firstOrFail();
+                ->where('merchant->code', $merchant_code)->first();
         }
 
         if (!$user) {

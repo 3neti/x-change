@@ -2,6 +2,7 @@
 
 namespace LBHurtado\PaymentGateway\Gateways\Netbank\Traits;
 
+use LBHurtado\PaymentGateway\Data\Netbank\Generate\GeneratePayloadData;
 use LBHurtado\PaymentGateway\Contracts\HasMerchantInterface;
 use Illuminate\Support\Facades\Http;
 use Brick\Money\Money;
@@ -17,19 +18,8 @@ trait CanGenerate
         }
 
         $token = $this->getAccessToken();
-
-        $payload = [
-            'merchant_name' => $user->merchant->name,
-            'merchant_city' => $user->merchant->city,
-            'qr_type' => $amount->isZero() ? 'Static' : 'Dynamic',
-            'qr_transaction_type' => 'P2M',
-            'destination_account' => $this->formatDestinationAccount($account, $user->merchant->code),
-            'resolution' => 480,
-            'amount' => [
-                'cur' => 'PHP',
-                'num' => $amount->isZero() ? '' : (string) $amount->getMinorAmount()->toInt(),
-            ],
-        ];
+        $payload_data = GeneratePayloadData::fromUserAccountAmount($user, $account, $amount);
+        $payload = $payload_data->toArray();
 
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $token,
@@ -37,13 +27,5 @@ trait CanGenerate
         ])->post(config('disbursement.server.qr-end-point'), $payload);
 
         return 'data:image/png;base64,' . $response->json('qr_code');
-    }
-
-    protected function formatDestinationAccount(string $account, ?string $merchantCode): string
-    {
-        return __(':alias:account', [
-            'alias' => config('disbursement.client.alias'),
-            'account' => $merchantCode ? $merchantCode[0] . substr($account, 1) : $account,
-        ]);
     }
 }
