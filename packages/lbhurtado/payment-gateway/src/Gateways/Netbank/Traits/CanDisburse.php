@@ -2,20 +2,15 @@
 
 namespace LBHurtado\PaymentGateway\Gateways\Netbank\Traits;
 
-use LBHurtado\PaymentGateway\Data\Netbank\Common\PayloadAmountData;
-use LBHurtado\PaymentGateway\Data\Netbank\Disburse\DisbursePayloadData;
-use LBHurtado\PaymentGateway\Data\Netbank\Disburse\DisbursePayloadDestinationAccountData;
-use LBHurtado\PaymentGateway\Data\Netbank\Disburse\DisbursePayloadRecipientData;
-use LBHurtado\PaymentGateway\Data\Netbank\Disburse\DisburseResponseData;
+use LBHurtado\PaymentGateway\Data\Netbank\Disburse\{DisbursePayloadData, DisburseResponseData};
+use LBHurtado\PaymentGateway\Data\Netbank\Disburse\DisburseInputData;
 use LBHurtado\PaymentGateway\Events\DisbursementConfirmed;
 use Illuminate\Support\Facades\{DB, Http, Log};
-use LBHurtado\PaymentGateway\Support\Address;
 use Bavix\Wallet\Models\Transaction;
 use Bavix\Wallet\Interfaces\Wallet;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Arr;
 use Brick\Money\Money;
-use LBHurtado\PaymentGateway\Data\Netbank\Disburse\DisburseInputData;
 
 trait CanDisburse
 {

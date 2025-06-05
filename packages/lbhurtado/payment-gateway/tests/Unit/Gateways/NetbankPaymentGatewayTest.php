@@ -1,7 +1,9 @@
 <?php
 
 use LBHurtado\PaymentGateway\Data\{Netbank\Deposit\DepositResponseData, Netbank\Deposit\DepositSenderData};
-use LBHurtado\PaymentGateway\Data\Netbank\{Deposit\DepositMerchantDetailsData, Disburse\DisburseResponseData};
+use LBHurtado\PaymentGateway\Data\Netbank\{Deposit\DepositMerchantDetailsData,
+    Disburse\DisburseInputData,
+    Disburse\DisburseResponseData};
 use LBHurtado\PaymentGateway\Events\{DepositConfirmed, DisbursementConfirmed};
 use LBHurtado\PaymentGateway\Gateways\Netbank\NetbankPaymentGateway;
 use LBHurtado\PaymentGateway\Services\SystemUserResolverService;
@@ -236,9 +238,9 @@ dataset('disbursement', function () {
     return [
         [fn () => [
             'reference' => 'REF123',
-            'via' => 'instapay',
+            'via' => 'INSTAPAY',
             'amount' => 1_000,
-            'bank' => 'NBANK',
+            'bank' => 'ALKBPHM2XXX',
             'account_number' => '1234567890',
         ]],
     ];
@@ -274,8 +276,10 @@ it('successfully disburses funds to a bank account', function (User $user, array
 
     $gateway = new NetbankPaymentGateway();
 
+    $data = DisburseInputData::from($validated);
+
     // Act
-    $result = $gateway->disburse($user, $validated);
+    $result = $gateway->disburse($user, $data);
 
     // Assert
     expect($result)->toBeInstanceOf(DisburseResponseData::class);
@@ -283,7 +287,7 @@ it('successfully disburses funds to a bank account', function (User $user, array
     expect($result->status)->toBe('PENDING');
 
     $user->wallet->refreshBalance();
-    expect((float) $user->balanceFloat)->toBe(3000.00)
+    expect((float) $user->balanceFloat)->toBe(3_000.00)
         ->and($result->uuid)->not->toBeEmpty();
 
     $operationId = $result->transaction_id;

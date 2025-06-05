@@ -43,4 +43,15 @@ class BankRegistry
     {
         return collect($this->banks);
     }
+
+    /**
+     * Get a list of all indices (keys) in the banks array.
+     *
+     * @return array
+     */
+    public function indices(): array
+    {
+        return array_keys($this->banks);
+    }
+
 }

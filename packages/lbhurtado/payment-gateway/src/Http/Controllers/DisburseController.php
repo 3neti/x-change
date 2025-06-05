@@ -2,8 +2,8 @@
 
 namespace LBHurtado\PaymentGateway\Http\Controllers;
 
-use LBHurtado\PaymentGateway\Contracts\PaymentGatewayInterface;
 use LBHurtado\PaymentGateway\Data\Netbank\Disburse\DisburseInputData;
+use LBHurtado\PaymentGateway\Contracts\PaymentGatewayInterface;
 use Bavix\Wallet\Interfaces\Wallet;
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;

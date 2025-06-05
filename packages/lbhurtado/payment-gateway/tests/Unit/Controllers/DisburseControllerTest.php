@@ -6,6 +6,7 @@ use LBHurtado\PaymentGateway\Data\Netbank\Disburse\DisbursePayloadData;
 use LBHurtado\PaymentGateway\Data\Netbank\Disburse\DisburseResponseData;
 use LBHurtado\PaymentGateway\Tests\Models\AnotherUser;
 use Illuminate\Support\Str;
+use LBHurtado\PaymentGateway\Support\BankRegistry;
 
 beforeEach(function () {
     $this->gatewayMock = mock(PaymentGatewayInterface::class);
@@ -21,7 +22,7 @@ it('returns a JSON response for disbursement requests via XHR', function () {
         'reference' => 'REF-' . Str::random(5),
         'amount' => 100,
         'account_number' => '09171234567',
-        'bank' => 'NBANK',
+        'bank' => 'ALKBPHM2XXX',
         'via' => 'INSTAPAY',
     ];
 
@@ -58,7 +59,7 @@ it('redirects with event data when called from Vue (Inertia)', function () {
         'reference' => 'REF-' . Str::random(5),
         'amount' => 100,
         'account_number' => '09171234567',
-        'bank' => 'NBANK',
+        'bank' => 'ALKBPHM2XXX',
         'via' => 'INSTAPAY',
     ];
 
@@ -95,7 +96,7 @@ it('redirects for standard form posts', function () {
         'reference' => 'REF-' . Str::random(5),
         'amount' => 100,
         'account_number' => '09171234567',
-        'bank' => 'NBANK',
+        'bank' => 'ALKBPHM2XXX',
         'via' => 'INSTAPAY',
     ];
 
@@ -125,7 +126,7 @@ it('returns 403 if user does not support Wallet interface', function () {
         'reference' => 'FAIL-REF',
         'amount' => 100,
         'account_number' => '09171234567',
-        'bank' => 'NBANK',
+        'bank' => 'ALKBPHM2XXX',
         'via' => 'INSTAPAY',
     ]);
 
