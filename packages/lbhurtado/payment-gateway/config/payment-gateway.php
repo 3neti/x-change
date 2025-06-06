@@ -18,4 +18,6 @@ return [
             'api_key' => env('ICASH_API_KEY'),
         ],
     ],
+
+    'gateway' => LBHurtado\PaymentGateway\Gateways\Netbank\NetbankPaymentGateway::class,
 ];
