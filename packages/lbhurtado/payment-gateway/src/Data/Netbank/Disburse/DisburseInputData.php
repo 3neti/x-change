@@ -2,7 +2,7 @@
 
 namespace LBHurtado\PaymentGateway\Data\Netbank\Disburse;
 
-use LBHurtado\PaymentGateway\Support\BankRegistry;
+use LBHurtado\PaymentGateway\Data\SettlementBanksData;
 use Illuminate\Validation\Rule;
 use Spatie\LaravelData\Data;
 
@@ -18,13 +18,11 @@ class DisburseInputData extends Data
 
     public static function rules(): array
     {
-        $indices = app(BankRegistry::class)->indices();
-
         return [
             'reference' => ['required', 'string', 'min:2'],
             'amount' => ['required', 'numeric', 'min:1', 'max:100000'],
             'account_number' => ['required', 'string'],
-            'bank' => ['required', 'string', Rule::in($indices)],
+            'bank' => ['required', 'string', Rule::in(SettlementBanksData::indices())],
             'via' => ['required', 'string', 'in:' . implode(',', config('disbursement.settlement_rails', []))],
         ];
     }

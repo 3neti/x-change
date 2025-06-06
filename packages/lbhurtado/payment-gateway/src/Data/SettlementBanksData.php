@@ -86,4 +86,13 @@ class SettlementBanksData extends Data
     {
         cache()->tags(['banks'])->forget('settlement_banks_data');
     }
+
+    public static function indices(): array
+    {
+        return static::cached()
+            ->banks
+            ->toCollection()
+            ->pluck('code')
+            ->all();
+    }
 }
