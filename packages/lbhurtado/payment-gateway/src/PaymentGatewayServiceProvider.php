@@ -64,10 +64,57 @@ class PaymentGatewayServiceProvider extends ServiceProvider
     }
 
 
+//    protected function registerRoutes(): void
+//    {
+//        Route::middleware('api') // Apply `api` middleware group
+//        ->prefix('api')      // Optional: prefix with `/api` like Laravel default
+//        ->group(__DIR__ . '/../routes/api.php');
+//    }
+
+//    protected function registerRoutes(): void
+//    {
+//        Route::group([
+//            'prefix' => config('payment-gateway.routes.prefix'),
+//            'middleware' => config('payment-gateway.routes.middleware'),
+//        ], function () {
+//            $this->loadRoutesFrom(__DIR__ . '/../routes/api.php');
+//        });
+//    }
+
+//    protected function registerRoutes(): void
+//    {
+//        if (!config('payment-gateway.routes.enabled', true)) {
+//            return;
+//        }
+//
+//        Route::group([
+//            'prefix' => config('payment-gateway.routes.prefix'),
+//            'middleware' => config('payment-gateway.routes.middleware'),
+//        ], function () {
+//            $this->loadRoutesFrom(__DIR__ . '/../routes/api.php');
+//        });
+//    }
+
     protected function registerRoutes(): void
     {
-        Route::middleware('api') // Apply `api` middleware group
-        ->prefix('api')      // Optional: prefix with `/api` like Laravel default
-        ->group(__DIR__ . '/../routes/api.php');
+        if (!config('payment-gateway.routes.enabled', true)) {
+            return;
+        }
+
+        $version = trim(config('payment-gateway.routes.version', ''), '/');
+        $prefix = trim(config('payment-gateway.routes.prefix', ''), '/');
+
+        $fullPrefix = collect([$version, $prefix])
+            ->filter()
+            ->implode('/');
+
+        Route::group([
+            'prefix' => $fullPrefix,
+            'middleware' => config('payment-gateway.routes.middleware', ['api']),
+            'as' => config('payment-gateway.routes.name_prefix', 'pg.'),
+            'domain' => config('payment-gateway.routes.domain'),
+        ], function () {
+            $this->loadRoutesFrom(__DIR__ . '/../routes/api.php');
+        });
     }
 }

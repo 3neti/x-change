@@ -20,4 +20,19 @@ return [
     ],
 
     'gateway' => LBHurtado\PaymentGateway\Gateways\Netbank\NetbankPaymentGateway::class,
+
+
+    'routes' => [
+        'enabled' => env('PAYMENT_GATEWAY_ROUTES_ENABLED', true),
+
+        'prefix' => env('PAYMENT_GATEWAY_ROUTE_PREFIX', 'api'),
+
+        'middleware' => ['api'],
+
+        'name_prefix' => env('PAYMENT_GATEWAY_ROUTE_NAME_PREFIX', ), // e.g., 'pg.'
+
+        'version' => env('PAYMENT_GATEWAY_ROUTE_VERSION',), // e.g., 'v1'
+
+        'domain' => env('PAYMENT_GATEWAY_DOMAIN'), // optional
+    ],
 ];
