@@ -31,6 +31,7 @@ abstract class TestCase extends BaseTestCase
     {
         return [
         \LBHurtado\PaymentGateway\PaymentGatewayServiceProvider::class,
+            \LBHurtado\Wallet\WalletServiceProvider::class,
             WalletServiceProvider::class,
         ];
     }
@@ -115,10 +116,10 @@ abstract class TestCase extends BaseTestCase
             require __DIR__ . '/../config/payment-gateway.php'
         );
 
-        $this->app['config']->set(
-            'wallet',
-            require __DIR__ . '/../config/wallet.php'
-        );
+//        $this->app['config']->set(
+//            'wallet',
+//            require __DIR__ . '/../config/wallet.php'
+//        );
 
         $this->app['config']->set(
             'model-channel',

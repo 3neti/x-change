@@ -1,6 +1,6 @@
 <?php
 
-namespace LBHurtado\PaymentGateway\Services;
+namespace LBHurtado\Wallet\Services;
 
 use Illuminate\Support\Facades\Config;
 use Bavix\Wallet\Interfaces\Wallet;

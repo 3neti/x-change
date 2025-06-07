@@ -2,7 +2,6 @@
 
 namespace LBHurtado\Wallet\Tests;
 
-use Bavix\Wallet\WalletServiceProvider;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Orchestra\Testbench\TestCase as BaseTestCase;
 use LBHurtado\Wallet\Tests\Models\User;
@@ -30,7 +29,7 @@ abstract class TestCase extends BaseTestCase
     {
         return [
             \LBHurtado\Wallet\WalletServiceProvider::class,
-            WalletServiceProvider::class,
+            \Bavix\Wallet\WalletServiceProvider::class,
         ];
     }
 

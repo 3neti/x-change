@@ -1,8 +1,8 @@
 <?php
 
-use LBHurtado\PaymentGateway\Services\WalletProvisioningService;
+use LBHurtado\Wallet\Services\WalletProvisioningService;
 use LBHurtado\PaymentGateway\Tests\Models\User;
-use LBHurtado\PaymentGateway\Enums\WalletType;
+use LBHurtado\Wallet\Enums\WalletType;
 
 it('creates wallets for all WalletType enums upon user creation', function () {
     $user = User::factory()->create();

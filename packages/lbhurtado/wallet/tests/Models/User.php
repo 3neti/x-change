@@ -21,7 +21,6 @@ use LBHurtado\Wallet\Services\WalletProvisioningService;
  * @property int        $id
  * @property string     $name
  * @property string     $email
- * @property Merchant   $merchant
  *
  * @method int getKey()
  */

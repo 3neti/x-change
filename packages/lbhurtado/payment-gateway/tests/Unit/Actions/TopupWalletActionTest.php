@@ -1,6 +1,6 @@
 <?php
 
-use LBHurtado\PaymentGateway\Services\SystemUserResolverService;
+use LBHurtado\Wallet\Services\SystemUserResolverService;
 use LBHurtado\PaymentGateway\Actions\TopupWalletAction;
 use LBHurtado\PaymentGateway\Tests\Models\User;
 use Illuminate\Support\Facades\Config;

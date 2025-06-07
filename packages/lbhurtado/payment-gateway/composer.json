@@ -7,6 +7,10 @@
         {
             "type": "path",
             "url": "./../model-channel"
+        },
+        {
+            "type": "path",
+            "url": "./../wallet"
         }
     ],
     "authors": [
@@ -41,8 +45,8 @@
         "spatie/laravel-data": "^4.15",
         "lorisleiva/laravel-actions": "^2.9",
         "brick/money": "^0.10.1",
-        "bavix/laravel-wallet": "^11.4",
         "lbhurtado/laravel-model-channel": "dev-main",
+        "lbhurtado/wallet": "dev-main",
         "propaganistas/laravel-phone": "^6.0"
     },
     "require-dev": {

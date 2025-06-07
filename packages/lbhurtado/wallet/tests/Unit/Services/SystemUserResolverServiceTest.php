@@ -1,7 +1,7 @@
 <?php
 
 use LBHurtado\Wallet\Services\SystemUserResolverService;
-use LBHurtado\PaymentGateway\Tests\Models\User;
+use LBHurtado\Wallet\Tests\Models\User;
 use Illuminate\Support\Facades\Config;
 
 it('resolves the system user based on config/account.php', function () {

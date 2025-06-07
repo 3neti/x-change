@@ -2,7 +2,7 @@
 
 namespace LBHurtado\PaymentGateway\Actions;
 
-use LBHurtado\PaymentGateway\Services\SystemUserResolverService;
+use LBHurtado\Wallet\Services\SystemUserResolverService;
 use Lorisleiva\Actions\Concerns\AsAction;
 use Bavix\Wallet\Interfaces\Wallet;
 

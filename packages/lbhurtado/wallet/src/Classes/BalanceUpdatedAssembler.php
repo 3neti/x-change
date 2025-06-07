@@ -4,7 +4,7 @@ namespace LBHurtado\Wallet\Classes;
 
 use Bavix\Wallet\Internal\Assembler\BalanceUpdatedEventAssemblerInterface;
 use Bavix\Wallet\Internal\Events\BalanceUpdatedEventInterface;
-use LBHurtado\PaymentGateway\Events\BalanceUpdated;
+use LBHurtado\Wallet\Events\BalanceUpdated;
 use Bavix\Wallet\Models\Wallet;
 use DateTimeImmutable;
 

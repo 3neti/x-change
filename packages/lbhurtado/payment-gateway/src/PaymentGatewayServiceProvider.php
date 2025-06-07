@@ -2,12 +2,12 @@
 
 namespace LBHurtado\PaymentGateway;
 
-use Illuminate\Support\Facades\Route;
 use LBHurtado\PaymentGateway\Gateways\Netbank\NetbankPaymentGateway;
-use LBHurtado\PaymentGateway\Services\SystemUserResolverService;
 use LBHurtado\PaymentGateway\Contracts\PaymentGatewayInterface;
+use LBHurtado\Wallet\Services\SystemUserResolverService;
 use LBHurtado\MoneyIssuer\Support\BankRegistry;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Number;
 
 class PaymentGatewayServiceProvider extends ServiceProvider
@@ -15,10 +15,6 @@ class PaymentGatewayServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(BankRegistry::class, fn () => new BankRegistry());
-        $this->mergeConfigFrom(
-            __DIR__ . '/../config/account.php',
-            'account'
-        );
 
         $this->mergeConfigFrom(
             __DIR__ . '/../config/disbursement.php',
@@ -28,11 +24,6 @@ class PaymentGatewayServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(
             __DIR__ . '/../config/payment-gateway.php',
             'payment-gateway'
-        );
-
-        $this->mergeConfigFrom(
-            __DIR__ . '/../config/wallet.php',
-            'wallet'
         );
 
         $this->app->singleton(SystemUserResolverService::class, fn () => new SystemUserResolverService());
@@ -49,15 +40,10 @@ class PaymentGatewayServiceProvider extends ServiceProvider
 
         // Allow publishing the configuration files
         $this->publishes([
-            __DIR__ . '/../config/account.php' => config_path('account.php'),
             __DIR__ . '/../config/disbursement.php' => config_path('disbursement.php'),
             __DIR__ . '/../config/payment-gateway.php' => config_path('payment-gateway.php'),
 
         ], 'config');
-
-        $this->publishes([
-            __DIR__ . '/../config/wallet.php' => config_path('wallet.php'),
-        ], 'wallet-config');
 
         // Use PHP as the default currency globally
         Number::useCurrency('PHP');

@@ -16,8 +16,8 @@ use LBHurtado\PaymentGateway\Contracts\HasMerchantInterface;
 use LBHurtado\PaymentGateway\Database\Factories\UserFactory;
 use LBHurtado\PaymentGateway\Models\Merchant;
 use LBHurtado\PaymentGateway\Traits\HasMerchant;
-use LBHurtado\PaymentGateway\Traits\HasPlatformWallets;
-use LBHurtado\PaymentGateway\Services\WalletProvisioningService;
+use LBHurtado\Wallet\Traits\HasPlatformWallets;
+use LBHurtado\Wallet\Services\WalletProvisioningService;
 
 /**
  * Class User.
