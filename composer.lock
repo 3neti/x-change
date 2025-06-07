@@ -3025,12 +3025,12 @@
             "dist": {
                 "type": "path",
                 "url": "./packages/lbhurtado/payment-gateway",
-                "reference": "97ecf558b419a525e352c98d6fdd9cfd5c13e45d"
+                "reference": "254064e1b5fee9840c236ab8faa57634a054639f"
             },
             "require": {
-                "bavix/laravel-wallet": "^11.4",
                 "brick/money": "^0.10.1",
                 "lbhurtado/laravel-model-channel": "dev-main",
+                "lbhurtado/wallet": "dev-main",
                 "lorisleiva/laravel-actions": "^2.9",
                 "propaganistas/laravel-phone": "^6.0",
                 "spatie/laravel-data": "^4.15"
@@ -3135,6 +3135,62 @@
                 }
             ],
             "description": "Digital voucher module for issuance, redemption, and lifecycle management",
+            "transport-options": {
+                "relative": true
+            }
+        },
+        {
+            "name": "lbhurtado/wallet",
+            "version": "dev-main",
+            "dist": {
+                "type": "path",
+                "url": "./packages/lbhurtado/wallet",
+                "reference": "19e465bb6fe1eac6db4681ae6694938e59824c5a"
+            },
+            "require": {
+                "bavix/laravel-wallet": "^11.4",
+                "brick/money": "^0.10.1",
+                "lorisleiva/laravel-actions": "^2.9",
+                "spatie/laravel-data": "^4.15"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^10.3",
+                "pestphp/pest": "^3.8"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "LBHurtado\\Wallet\\WalletServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "LBHurtado\\Wallet\\": "src/",
+                    "LBHurtado\\Wallet\\Database\\Factories\\": "database/factories/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "LBHurtado\\Wallet\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "vendor/bin/pest"
+                ]
+            },
+            "license": [
+                "proprietary"
+            ],
+            "authors": [
+                {
+                    "name": "Lester Hurtado",
+                    "email": "lester@hurtado.ph"
+                }
+            ],
+            "description": "Custom wallet for X-Change",
             "transport-options": {
                 "relative": true
             }
@@ -4342,16 +4398,16 @@
         },
         {
             "name": "phpdocumentor/reflection",
-            "version": "6.2.1",
+            "version": "6.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phpDocumentor/Reflection.git",
-                "reference": "ab969af5e53c3bb400eea958b90b87ecc34f4dff"
+                "reference": "d91b3270832785602adcc24ae2d0974ba99a8ff8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpDocumentor/Reflection/zipball/ab969af5e53c3bb400eea958b90b87ecc34f4dff",
-                "reference": "ab969af5e53c3bb400eea958b90b87ecc34f4dff",
+                "url": "https://api.github.com/repos/phpDocumentor/Reflection/zipball/d91b3270832785602adcc24ae2d0974ba99a8ff8",
+                "reference": "d91b3270832785602adcc24ae2d0974ba99a8ff8",
                 "shasum": ""
             },
             "require": {
@@ -4408,9 +4464,9 @@
             ],
             "support": {
                 "issues": "https://github.com/phpDocumentor/Reflection/issues",
-                "source": "https://github.com/phpDocumentor/Reflection/tree/6.2.1"
+                "source": "https://github.com/phpDocumentor/Reflection/tree/6.3.0"
             },
-            "time": "2025-05-30T18:42:55+00:00"
+            "time": "2025-06-06T13:39:18+00:00"
         },
         {
             "name": "phpdocumentor/reflection-common",

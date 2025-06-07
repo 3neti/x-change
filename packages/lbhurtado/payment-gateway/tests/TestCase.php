@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Orchestra\Testbench\TestCase as BaseTestCase;
 use LBHurtado\PaymentGateway\Tests\Models\User;
 use LBHurtado\PaymentGateway\Models\Merchant;
-use Bavix\Wallet\WalletServiceProvider;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -32,7 +31,8 @@ abstract class TestCase extends BaseTestCase
         return [
         \LBHurtado\PaymentGateway\PaymentGatewayServiceProvider::class,
             \LBHurtado\Wallet\WalletServiceProvider::class,
-            WalletServiceProvider::class,
+            \LBHurtado\ModelChannel\ModelChannelServiceProvider::class,
+            \Bavix\Wallet\WalletServiceProvider::class,
         ];
     }
 
@@ -114,16 +114,6 @@ abstract class TestCase extends BaseTestCase
         $this->app['config']->set(
             'payment-gateway',
             require __DIR__ . '/../config/payment-gateway.php'
-        );
-
-//        $this->app['config']->set(
-//            'wallet',
-//            require __DIR__ . '/../config/wallet.php'
-//        );
-
-        $this->app['config']->set(
-            'model-channel',
-            require __DIR__ . '/../config/model-channel.php'
         );
     }
 
