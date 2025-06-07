@@ -54,8 +54,8 @@ use Bavix\Wallet\Services\TransactionService;
 use Bavix\Wallet\Services\TransferService;
 use Bavix\Wallet\Services\WalletService;
 
-use LBHurtado\PaymentGateway\Classes\BalanceUpdatedAssembler;
-use LBHurtado\PaymentGateway\Events\BalanceUpdated;
+use LBHurtado\Wallet\Classes\BalanceUpdatedAssembler;
+use LBHurtado\Wallet\Events\BalanceUpdated;
 
 return [
     /**

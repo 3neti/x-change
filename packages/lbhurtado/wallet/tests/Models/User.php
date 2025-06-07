@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace LBHurtado\PaymentGateway\Tests\Models;
+namespace LBHurtado\Wallet\Tests\Models;
 
 use Bavix\Wallet\Interfaces\Confirmable;
 use Bavix\Wallet\Interfaces\Wallet;
@@ -11,13 +11,9 @@ use Bavix\Wallet\Traits\HasWalletFloat;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use LBHurtado\ModelChannel\Traits\HasChannels;
-use LBHurtado\PaymentGateway\Contracts\HasMerchantInterface;
-use LBHurtado\PaymentGateway\Database\Factories\UserFactory;
-use LBHurtado\PaymentGateway\Models\Merchant;
-use LBHurtado\PaymentGateway\Traits\HasMerchant;
-use LBHurtado\PaymentGateway\Traits\HasPlatformWallets;
-use LBHurtado\PaymentGateway\Services\WalletProvisioningService;
+use LBHurtado\Wallet\Database\Factories\UserFactory;
+use LBHurtado\Wallet\Traits\HasPlatformWallets;
+use LBHurtado\Wallet\Services\WalletProvisioningService;
 
 /**
  * Class User.
@@ -29,12 +25,10 @@ use LBHurtado\PaymentGateway\Services\WalletProvisioningService;
  *
  * @method int getKey()
  */
-class User extends Authenticatable implements HasMerchantInterface, Wallet, Confirmable
+class User extends Authenticatable implements Wallet, Confirmable
 {
     use HasPlatformWallets;
     use HasWalletFloat;
-    use HasChannels;
-    use HasMerchant;
     use HasFactory;
     use Notifiable;
     use CanConfirm;

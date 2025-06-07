@@ -2,7 +2,6 @@
 
 namespace LBHurtado\PaymentGateway\Services;
 
-
 use Illuminate\Support\Facades\Config;
 use Bavix\Wallet\Interfaces\Wallet;
 
@@ -21,6 +20,5 @@ class SystemUserResolverService
         }
 
         return $user;
-
     }
 }
