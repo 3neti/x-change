@@ -3,7 +3,7 @@
 namespace LBHurtado\PaymentGateway\Gateways\Netbank\Traits;
 
 use LBHurtado\PaymentGateway\Data\Netbank\Generate\GeneratePayloadData;
-use LBHurtado\PaymentGateway\Contracts\HasMerchantInterface;
+use LBHurtado\PaymentGateway\Contracts\MerchantInterface;
 use Illuminate\Support\Facades\Http;
 use Brick\Money\Money;
 
@@ -13,7 +13,7 @@ trait CanGenerate
     {
         $user = auth()->user();
 
-        if (!$user instanceof HasMerchantInterface) {
+        if (!$user instanceof MerchantInterface) {
             throw new \LogicException('Authenticated user must implement HasMerchantInterface to use this functionality.');
         }
 

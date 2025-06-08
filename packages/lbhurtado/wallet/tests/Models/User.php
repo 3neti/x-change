@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace LBHurtado\Wallet\Tests\Models;
 
-use Bavix\Wallet\Interfaces\Confirmable;
-use Bavix\Wallet\Interfaces\Wallet;
-use Bavix\Wallet\Traits\CanConfirm;
-use Bavix\Wallet\Traits\HasWalletFloat;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use LBHurtado\Wallet\Services\WalletProvisioningService;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use LBHurtado\Wallet\Database\Factories\UserFactory;
 use LBHurtado\Wallet\Traits\HasPlatformWallets;
-use LBHurtado\Wallet\Services\WalletProvisioningService;
+use Illuminate\Notifications\Notifiable;
+use Bavix\Wallet\Interfaces\Confirmable;
+use Bavix\Wallet\Traits\HasWalletFloat;
+use Bavix\Wallet\Interfaces\Wallet;
+use Bavix\Wallet\Traits\CanConfirm;
 
 /**
  * Class User.

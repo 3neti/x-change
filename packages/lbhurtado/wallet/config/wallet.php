@@ -493,14 +493,14 @@ return [
              *
              * @var string
              */
-            'name' => env('WALLET_DEFAULT_WALLET_NAME', 'Platform Wallet'),
+            'name' => env('WALLET_DEFAULT_WALLET_NAME', \LBHurtado\Wallet\Enums\WalletType::default()->label()),
 
             /**
              * The slug of the default wallet.
              *
              * @var string
              */
-            'slug' => env('WALLET_DEFAULT_WALLET_SLUG', 'platform'),
+            'slug' => env('WALLET_DEFAULT_WALLET_SLUG', \LBHurtado\Wallet\Enums\WalletType::default()->value),
 
             /**
              * The meta information of the default wallet.

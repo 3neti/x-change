@@ -35,7 +35,7 @@ abstract class TestCase extends BaseTestCase
         $app['config']->set('auth.defaults.guard', 'web');
 
         // Run the migration from the local package
-        $userMigration = include __DIR__ . '/../database/migrations/0001_01_01_000000_create_users_table.php';
+        $userMigration = include __DIR__ . '/../database/migrations/test/0001_01_01_000000_create_users_table.php';
         $userMigration->up();
         $channelMigration = include __DIR__ . '/../database/migrations/2024_08_02_000000_create_channels_table.php';
         $channelMigration->up();

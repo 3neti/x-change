@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\ModelChannel\Tests\Models;
 
 use LBHurtado\ModelChannel\Database\Factories\UserFactory;
+use LBHurtado\ModelChannel\Contracts\ChannelsInterface;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use LBHurtado\ModelChannel\Traits\HasChannels;
@@ -20,7 +21,7 @@ use Illuminate\Notifications\Notifiable;
  *
  * @method int getKey()
  */
-class User extends Authenticatable
+class User extends Authenticatable implements ChannelsInterface
 {
     use HasChannels;
     use HasFactory;

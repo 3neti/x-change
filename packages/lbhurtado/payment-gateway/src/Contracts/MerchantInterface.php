@@ -4,7 +4,7 @@ namespace LBHurtado\PaymentGateway\Contracts;
 
 use LBHurtado\PaymentGateway\Models\Merchant;
 
-interface HasMerchantInterface
+interface MerchantInterface
 {
     /**
      * Get the associated merchant for the model.

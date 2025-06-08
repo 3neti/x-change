@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use LBHurtado\ModelChannel\Traits\HasChannels;
-use LBHurtado\PaymentGateway\Contracts\HasMerchantInterface;
+use LBHurtado\PaymentGateway\Contracts\MerchantInterface;
 use LBHurtado\PaymentGateway\Database\Factories\UserFactory;
 use LBHurtado\PaymentGateway\Models\Merchant;
 use LBHurtado\PaymentGateway\Traits\HasMerchant;
@@ -29,7 +29,7 @@ use LBHurtado\Wallet\Services\WalletProvisioningService;
  *
  * @method int getKey()
  */
-class User extends Authenticatable implements HasMerchantInterface, Wallet, Confirmable
+class User extends Authenticatable implements MerchantInterface, Wallet, Confirmable
 {
     use HasPlatformWallets;
     use HasWalletFloat;

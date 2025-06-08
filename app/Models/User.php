@@ -2,15 +2,47 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use LBHurtado\PaymentGateway\Contracts\MerchantInterface;
+use LBHurtado\ModelChannel\Contracts\ChannelsInterface;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use LBHurtado\PaymentGateway\Traits\HasMerchant;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
+use LBHurtado\Wallet\Traits\HasPlatformWallets;
+use LBHurtado\ModelChannel\Traits\HasChannels;
 use Illuminate\Notifications\Notifiable;
+use Bavix\Wallet\Interfaces\Confirmable;
+use Bavix\Wallet\Traits\HasWalletFloat;
+use Bavix\Wallet\Interfaces\Wallet;
+use Bavix\Wallet\Traits\CanConfirm;
+use App\Observers\UserObserver;
+use Parental\HasChildren;
+use App\Enums\ChildType;
 
-class User extends Authenticatable
+/**
+ * Class Agent.
+ *
+ * @property int                         $id
+ * @property string                      $name
+ * @property string                      $email
+ * @property string                      $type
+ * @property \Bavix\Wallet\Models\Wallet $wallet
+
+ * @method int getKey()
+ */
+
+#[ObservedBy([UserObserver::class])]
+class User extends Authenticatable implements MustVerifyEmail, Wallet, Confirmable, ChannelsInterface, MerchantInterface
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
+    use HasPlatformWallets;
+    use HasWalletFloat;
+    use HasChannels;
+    use HasMerchant;
+    use HasChildren;
+    use CanConfirm;
 
     /**
      * The attributes that are mass assignable.
@@ -21,6 +53,7 @@ class User extends Authenticatable
         'name',
         'email',
         'workos_id',
+        'type',
         'avatar',
     ];
 
@@ -32,6 +65,10 @@ class User extends Authenticatable
     protected $hidden = [
         'workos_id',
         'remember_token',
+    ];
+
+    protected $childTypes = [
+        ChildType::SYSTEM->value => System::class,
     ];
 
     /**

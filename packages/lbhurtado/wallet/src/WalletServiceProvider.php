@@ -2,6 +2,8 @@
 
 namespace LBHurtado\Wallet;
 
+use LBHurtado\Wallet\Exceptions\SystemUserNotFoundException;
+use LBHurtado\Wallet\Services\SystemUserResolverService;
 use Illuminate\Support\ServiceProvider;
 
 class WalletServiceProvider extends ServiceProvider

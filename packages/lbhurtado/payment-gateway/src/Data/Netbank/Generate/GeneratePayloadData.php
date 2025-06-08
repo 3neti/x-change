@@ -3,7 +3,7 @@
 namespace LBHurtado\PaymentGateway\Data\Netbank\Generate;
 
 use LBHurtado\PaymentGateway\Data\Netbank\Common\PayloadAmountData;
-use LBHurtado\PaymentGateway\Contracts\HasMerchantInterface;
+use LBHurtado\PaymentGateway\Contracts\MerchantInterface;
 use Spatie\LaravelData\Data;
 use Brick\Money\Money;
 
@@ -19,7 +19,7 @@ class GeneratePayloadData extends Data
         public PayloadAmountData $amount,
     ){}
 
-    public static function fromUserAccountAmount(HasMerchantInterface $user, string $account, Money $amount): self
+    public static function fromUserAccountAmount(MerchantInterface $user, string $account, Money $amount): self
     {
         return new self(
             merchant_name: $user->merchant->name,

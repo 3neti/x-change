@@ -21,6 +21,7 @@ class VoucherServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+
         Number::useCurrency('PHP');
         $this->loadRoutesFrom(__DIR__.'/../routes/api.php');
 //        Factory::guessFactoryNamesUsing(

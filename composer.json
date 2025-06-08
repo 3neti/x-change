@@ -23,6 +23,7 @@
         "laravel/workos": "^0.1.0",
         "lbhurtado/payment-gateway": "dev-main",
         "lbhurtado/voucher": "dev-main",
+        "tightenco/parental": "^1.4",
         "tightenco/ziggy": "^2.4"
     },
     "require-dev": {

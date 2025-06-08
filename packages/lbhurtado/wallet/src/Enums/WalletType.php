@@ -4,15 +4,20 @@ namespace LBHurtado\Wallet\Enums;
 
 enum WalletType: string
 {
-    case EXCHANGE = 'x-change';
+    case PLATFORM = 'platform';
     case REWARDS = 'rewards';
     case ESCROW = 'escrow';
     case COMMISSION = 'commission';
 
+    public static function default(): self
+    {
+        return WalletType::PLATFORM;
+    }
+
     public function label(): string
     {
         return match ($this) {
-            self::EXCHANGE => 'X-Change Wallet',
+            self::PLATFORM => 'Platform Wallet',
             self::REWARDS => 'Rewards Wallet',
             self::ESCROW => 'Escrow Wallet',
             self::COMMISSION => 'Commission Wallet',
@@ -22,7 +27,7 @@ enum WalletType: string
     public function defaultMeta(): array
     {
         return match ($this) {
-            self::EXCHANGE => ['description' => 'Main wallet for platform transactions.'],
+            self::PLATFORM => ['description' => 'Main wallet for platform transactions.'],
             self::REWARDS => ['description' => 'Wallet for loyalty points and rewards.'],
             self::ESCROW => ['description' => 'Wallet for held funds.'],
             self::COMMISSION => ['description' => 'Platform earnings.'],
