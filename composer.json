@@ -22,7 +22,9 @@
         "laravel/tinker": "^2.10.1",
         "laravel/workos": "^0.1.0",
         "lbhurtado/payment-gateway": "dev-main",
+        "lbhurtado/sms": "^2.4",
         "lbhurtado/voucher": "dev-main",
+        "resend/resend-php": "^0.18.0",
         "tightenco/parental": "^1.4",
         "tightenco/ziggy": "^2.4"
     },

@@ -7,16 +7,20 @@ use LBHurtado\ModelChannel\Contracts\ChannelsInterface;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use LBHurtado\PaymentGateway\Traits\HasMerchant;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use LBHurtado\Wallet\Traits\HasPlatformWallets;
 use LBHurtado\ModelChannel\Traits\HasChannels;
+use App\Notifications\BalanceNotification;
 use Illuminate\Notifications\Notifiable;
 use Bavix\Wallet\Interfaces\Confirmable;
 use Bavix\Wallet\Traits\HasWalletFloat;
+use LBHurtado\Wallet\Enums\WalletType;
 use Bavix\Wallet\Interfaces\Wallet;
 use Bavix\Wallet\Traits\CanConfirm;
 use App\Observers\UserObserver;
+use App\Actions\CheckBalance;
 use Parental\HasChildren;
 use App\Enums\ChildType;
 
@@ -33,7 +37,7 @@ use App\Enums\ChildType;
  */
 
 #[ObservedBy([UserObserver::class])]
-class User extends Authenticatable implements MustVerifyEmail, Wallet, Confirmable, ChannelsInterface, MerchantInterface
+class User extends Authenticatable implements Wallet, Confirmable, ChannelsInterface, MerchantInterface
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
@@ -82,5 +86,20 @@ class User extends Authenticatable implements MustVerifyEmail, Wallet, Confirmab
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function balanceAccessLogs(): HasMany
+    {
+        return $this->hasMany(BalanceAccessLog::class);
+    }
+
+    public function routeNotificationForEngageSpark(): string
+    {
+        return $this->mobile;
+    }
+
+    public function sendBalanceNotification(?WalletType $walletType = null): void
+    {
+        $this->notify(new BalanceNotification(CheckBalance::run($this, $walletType), $walletType));
     }
 }

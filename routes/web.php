@@ -17,3 +17,10 @@ Route::middleware([
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
+
+use App\Http\Controllers\WalletBalanceController;
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/wallet/balance', [WalletBalanceController::class, 'show'])
+        ->name('wallet.balance');
+});
