@@ -12,6 +12,7 @@ uses(RefreshDatabase::class);
 
 test('check balance returns main wallet balance', function () {
     $user = User::factory()->create();
+    $this->actingAs($user);
     $user->depositFloat(500); // Main/default wallet
 
     $balance = CheckBalance::run($user);
@@ -22,6 +23,7 @@ test('check balance returns main wallet balance', function () {
 
 test('check balance returns named wallet balance', function () {
     $user = User::factory()->create();
+    $this->actingAs($user);
     $wallet = $user->getWallet(WalletType::ESCROW->value);
 
     $wallet->depositFloat(750);
@@ -35,18 +37,19 @@ test('check balance returns named wallet balance', function () {
 test('balance logger is called once during CheckBalance handle()', function () {
     // Arrange
     $user = User::factory()->create();
+    $this->actingAs($user);
 
-    // Mock the logger
+    // Mock the logger and bind it into the container
     $mock = Mockery::mock(BalanceAccessLogger::class);
     App::instance(BalanceAccessLogger::class, $mock);
 
     // Expect logger to be called once with correct parameters
     $mock->shouldReceive('log')
         ->once()
-        ->withArgs(function ($passedUser, $passedFloat, $passedWalletType) use ($user) {
-            return $passedUser->is($user)
-                && is_float($passedFloat)
-                && ($passedWalletType === null || $passedWalletType instanceof WalletType);
+        ->withArgs(function ($wallet, $balance, $requestor) use ($user) {
+            return $wallet->holder->is($user) &&
+                $balance instanceof Money &&
+                $requestor->is($user);
         });
 
     // Act

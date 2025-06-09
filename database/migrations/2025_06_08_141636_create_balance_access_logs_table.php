@@ -13,10 +13,18 @@ return new class extends Migration
     {
         Schema::create('balance_access_logs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->string('wallet_type')->nullable();
-            $table->decimal('balance', 64, 0);
-            $table->string('accessed_by')->nullable(); // user-agent, IP, admin id, etc.
+
+            // Morph to wallet
+            $table->morphs('wallet');
+
+            // Amount and currency
+            $table->string('amount'); // Store as string to preserve precision
+            $table->string('currency', 3);
+
+            // Morph to requestor (admin, system user, vendor, etc.)
+            $table->morphs('requestor');
+
+            $table->timestamp('accessed_at')->nullable();
             $table->timestamps();
         });
     }

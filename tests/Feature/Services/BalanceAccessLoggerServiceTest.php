@@ -9,20 +9,23 @@ use App\Models\User;
 
 uses(RefreshDatabase::class);
 
-test('it logs balance access', function () {
+test('it logs balance access with wallet and requestor', function () {
     // Arrange
     $user = User::factory()->create();
-    $walletType = WalletType::PLATFORM;
+    $wallet = $user->wallet; // Bavix wallet model
     $balance = Money::of(123.45, 'PHP');
 
     // Act
-    app(BalanceAccessLogger::class)->log($user, $balance->getAmount()->toFloat(), $walletType);
+    app(BalanceAccessLogger::class)->log($wallet, $balance, $user);
 
     // Assert
     $log = BalanceAccessLog::first();
 
-    expect($log)->not()->toBeNull();
-    expect($log->user_id)->toBe($user->id);
-    expect($log->wallet_type)->toBe($walletType->value);
-    expect($log->balance)->toBe(123.45);
+    expect($log)->not()->toBeNull()
+        ->and($log->wallet->id)->toBe($wallet->id)
+        ->and($log->wallet_type)->toBe($wallet->getMorphClass())
+        ->and($log->requestor->id)->toBe($user->id)
+        ->and($log->requestor_type)->toBe($user->getMorphClass())
+        ->and((string) $log->balance->getAmount())->toBe('123.45')
+        ->and($log->balance->getCurrency()->getCurrencyCode())->toBe('PHP');
 });

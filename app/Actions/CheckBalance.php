@@ -17,14 +17,24 @@ class CheckBalance
         protected BalanceAccessLogger $logger
     ) {}
 
-    public function handle(User $user, WalletType $walletType = null): Money
+    public function handle(
+        User $user,
+        WalletType $walletType = null
+    ): Money
     {
-        $float = (float) is_null($walletType)
-            ? $user->balanceFloat
-            : $user->getWallet($walletType->value)->balanceFloat;
+        $slug = is_null($walletType) ? WalletType::default()->value : $walletType->value;
+        $wallet = $user->getWallet($slug);
+        $float = (float) $wallet->balanceFloat;
 
-        $this->logger->log($user, $float, $walletType);
+        $balance = Money::of($float, Number::defaultCurrency());
 
-        return Money::of($float, Number::defaultCurrency());
+        $requestor = auth()->user();
+        if (!$requestor instanceof \Illuminate\Database\Eloquent\Model) {
+            throw new \RuntimeException('Authenticated user is not a valid Eloquent model.');
+        }
+
+        $this->logger->log($wallet, $balance, $requestor);
+
+        return $balance;
     }
 }
