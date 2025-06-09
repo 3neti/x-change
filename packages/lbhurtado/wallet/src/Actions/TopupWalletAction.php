@@ -1,6 +1,6 @@
 <?php
 
-namespace LBHurtado\PaymentGateway\Actions;
+namespace LBHurtado\Wallet\Actions;
 
 use LBHurtado\Wallet\Services\SystemUserResolverService;
 use Lorisleiva\Actions\Concerns\AsAction;

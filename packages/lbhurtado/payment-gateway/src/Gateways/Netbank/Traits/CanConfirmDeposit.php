@@ -3,8 +3,8 @@
 namespace LBHurtado\PaymentGateway\Gateways\Netbank\Traits;
 
 use LBHurtado\PaymentGateway\Data\Netbank\Deposit\DepositResponseData;
-use LBHurtado\PaymentGateway\Actions\TopupWalletAction;
-use LBHurtado\PaymentGateway\Events\DepositConfirmed;
+use LBHurtado\Wallet\Actions\TopupWalletAction;
+use LBHurtado\Wallet\Events\DepositConfirmed;
 use Bavix\Wallet\Interfaces\Wallet;
 use Illuminate\Support\Facades\Log;
 

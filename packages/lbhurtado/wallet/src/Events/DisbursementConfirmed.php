@@ -1,6 +1,6 @@
 <?php
 
-namespace LBHurtado\PaymentGateway\Events;
+namespace LBHurtado\Wallet\Events;
 
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 

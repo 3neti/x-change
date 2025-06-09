@@ -1,8 +1,8 @@
 <?php
 
 use LBHurtado\Wallet\Services\SystemUserResolverService;
-use LBHurtado\PaymentGateway\Actions\TopupWalletAction;
-use LBHurtado\PaymentGateway\Tests\Models\User;
+use LBHurtado\Wallet\Actions\TopupWalletAction;
+use LBHurtado\Wallet\Tests\Models\User;
 use Illuminate\Support\Facades\Config;
 use Bavix\Wallet\Interfaces\Wallet;
 use Bavix\Wallet\Models\Transfer;

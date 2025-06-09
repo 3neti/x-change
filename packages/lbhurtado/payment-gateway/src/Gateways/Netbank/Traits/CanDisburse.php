@@ -4,7 +4,7 @@ namespace LBHurtado\PaymentGateway\Gateways\Netbank\Traits;
 
 use LBHurtado\PaymentGateway\Data\Netbank\Disburse\{DisbursePayloadData, DisburseResponseData};
 use LBHurtado\PaymentGateway\Data\Netbank\Disburse\DisburseInputData;
-use LBHurtado\PaymentGateway\Events\DisbursementConfirmed;
+use LBHurtado\Wallet\Events\DisbursementConfirmed;
 use Illuminate\Support\Facades\{DB, Http, Log};
 use Bavix\Wallet\Models\Transaction;
 use Bavix\Wallet\Interfaces\Wallet;

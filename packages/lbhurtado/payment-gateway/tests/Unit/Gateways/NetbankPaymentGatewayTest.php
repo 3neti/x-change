@@ -4,11 +4,11 @@ use LBHurtado\PaymentGateway\Data\{Netbank\Deposit\DepositResponseData, Netbank\
 use LBHurtado\PaymentGateway\Data\Netbank\{Deposit\DepositMerchantDetailsData,
     Disburse\DisburseInputData,
     Disburse\DisburseResponseData};
-use LBHurtado\PaymentGateway\Events\{DepositConfirmed, DisbursementConfirmed};
+use LBHurtado\Wallet\Events\{DisbursementConfirmed, DepositConfirmed};
 use LBHurtado\PaymentGateway\Gateways\Netbank\NetbankPaymentGateway;
 use Illuminate\Support\Facades\{Config, Event, Http, Log};
 use LBHurtado\Wallet\Services\SystemUserResolverService;
-use LBHurtado\PaymentGateway\Actions\TopupWalletAction;
+use LBHurtado\Wallet\Actions\TopupWalletAction;
 use LBHurtado\PaymentGateway\Tests\Models\User;
 use Bavix\Wallet\Models\Transaction;
 use Bavix\Wallet\Interfaces\Wallet;
