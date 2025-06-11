@@ -19,6 +19,7 @@ use Bavix\Wallet\Traits\HasWalletFloat;
 use LBHurtado\Wallet\Enums\WalletType;
 use Bavix\Wallet\Interfaces\Wallet;
 use Bavix\Wallet\Traits\CanConfirm;
+use Laravel\Sanctum\HasApiTokens;
 use App\Observers\UserObserver;
 use App\Actions\CheckBalance;
 use Parental\HasChildren;
@@ -43,6 +44,7 @@ class User extends Authenticatable implements Wallet, Confirmable, ChannelsInter
     use HasFactory, Notifiable;
     use HasPlatformWallets;
     use HasWalletFloat;
+    use HasApiTokens;
     use HasChannels;
     use HasMerchant;
     use HasChildren;

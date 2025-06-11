@@ -1,8 +1,8 @@
 <?php
 
+use Laravel\WorkOS\Http\Middleware\ValidateSessionWithWorkOS;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use Laravel\WorkOS\Http\Middleware\ValidateSessionWithWorkOS;
 
 Route::get('/', fn () => Inertia::render('Welcome'));
 
@@ -23,4 +23,11 @@ use App\Http\Controllers\WalletBalanceController;
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/wallet/balance', [WalletBalanceController::class, 'show'])
         ->name('wallet.balance');
+});
+
+use App\Http\Controllers\WalletController;
+
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/wallet/qr-code', [WalletController::class, 'generate'])
+        ->name('wallet.qr-code');
 });

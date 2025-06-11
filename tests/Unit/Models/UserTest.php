@@ -2,9 +2,9 @@
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
-use App\Models\User;
 use LBHurtado\ModelChannel\Models\Channel;
 use LBHurtado\Wallet\Enums\WalletType;
+use App\Models\User;
 
 uses(RefreshDatabase::class);
 

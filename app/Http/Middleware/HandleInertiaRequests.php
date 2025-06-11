@@ -4,8 +4,8 @@ namespace App\Http\Middleware;
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
-use Inertia\Middleware;
 use Tighten\Ziggy\Ziggy;
+use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -45,6 +45,12 @@ class HandleInertiaRequests extends Middleware
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
                 'user' => $request->user(),
+            ],
+            'flash' => [
+                'message' => fn () => $request->session()->get('message'),
+                'warning' => fn () => $request->session()->get('warning'),
+                'data' => fn () => $request->session()->get('data'),
+                'event' => fn () => $request->session()->get('event'),
             ],
             'ziggy' => [
                 ...(new Ziggy)->toArray(),

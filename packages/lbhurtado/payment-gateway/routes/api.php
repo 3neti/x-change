@@ -12,7 +12,8 @@ Route::post('confirm-deposit', ConfirmDepositController::class)
 Route::post('confirm-disbursement', ConfirmDisbursementController::class)
     ->name('confirm-disbursement');
 
-Route::post('generate-qrcode', GenerateController::class)
+Route::middleware(['auth:sanctum'])
+    ->post('generate-qrcode', GenerateController::class)
     ->name('generate-qrcode');
 
 Route::post('disburse-funds', DisburseController::class)
