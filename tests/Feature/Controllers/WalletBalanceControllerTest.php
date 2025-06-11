@@ -29,7 +29,7 @@ test('authenticated API user can get JSON wallet balance', function () {
     $user = User::factory()->create();
     actingAs($user, 'sanctum');
 
-    get('/api/wallet/balance', ['Accept' => 'application/json'])
+    get(route('wallet.balance'), ['Accept' => 'application/json'])
         ->assertOk()
         ->assertJsonStructure([
             'balance',
@@ -44,6 +44,6 @@ test('unauthenticated user cannot access inertia wallet balance', function () {
 });
 
 test('unauthenticated API user cannot access wallet balance JSON', function () {
-    get('/api/wallet/balance', ['Accept' => 'application/json'])
+    get(route('wallet.balance'), ['Accept' => 'application/json'])
         ->assertUnauthorized();
 });

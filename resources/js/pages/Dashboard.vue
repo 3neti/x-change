@@ -1,6 +1,8 @@
 <script setup lang="ts">
 
+import WalletBalanceDisplay from '@/components/domain/WalletBalanceDisplay.vue';
 import PlaceholderPattern from '../components/PlaceholderPattern.vue';
+import { useWalletBalance } from '@/composables/useWalletBalance';
 import QrDisplay from '@/components/domain/QrDisplay.vue';
 import { useQrCode } from '@/composables/useQrCode';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -17,6 +19,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 const amount = 150;
 const { qrCode, status, message, refresh } = useQrCode(amount);
 
+const { balance, currency, walletType, status: balStatus, message: balMessage, fetchBalance } =
+    useWalletBalance(); // or pass a specific type: useWalletBalance('platform');
 </script>
 
 <template>
@@ -34,8 +38,17 @@ const { qrCode, status, message, refresh } = useQrCode(amount);
                     </div>
                 </div>
                 <div class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-
-                    <PlaceholderPattern />
+                    <div class="max-w-md mx-auto mt-10">
+                        <WalletBalanceDisplay
+                            :balance="balance"
+                            :currency="currency"
+                            :type="walletType"
+                            :status="balStatus"
+                            :message="balMessage"
+                            :refresh="fetchBalance"
+                        />
+                    </div>
+<!--                    <PlaceholderPattern />-->
                 </div>
                 <div class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
                     <PlaceholderPattern />

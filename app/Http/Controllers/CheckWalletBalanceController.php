@@ -8,9 +8,9 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Inertia\Inertia;
 
-class WalletBalanceController extends Controller
+class CheckWalletBalanceController extends Controller
 {
-    public function show(Request $request)
+    public function __invoke(Request $request)
     {
         /** @var User $user */
         $user = $request->user();

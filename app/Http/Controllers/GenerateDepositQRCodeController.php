@@ -8,11 +8,11 @@ use Illuminate\Http\Request;
 use Brick\Money\Money;
 use App\Models\User;
 
-class WalletController extends Controller
+class GenerateDepositQRCodeController extends Controller
 {
     public function __construct(protected DepositQRCode $qrcode){}
 
-    public function generate(Request $request)
+    public function __invoke(Request $request)
     {
         $validated = $request->validate([
             'amount' => ['required', 'numeric', 'min:0'],
