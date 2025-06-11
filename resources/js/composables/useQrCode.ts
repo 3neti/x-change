@@ -1,7 +1,7 @@
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
 
-export function useQrCode(amount: number) {
+export function useQrCode(account: string, amount: number) {
     const qrCode = ref<string | null>(null);
     const status = ref<'idle'|'loading'|'success'|'error'>(amount>0 ? 'idle':'error');
     const message = ref('');
@@ -11,9 +11,14 @@ export function useQrCode(amount: number) {
         message.value = 'Generating QR code…';
 
         try {
-            const { data } = await axios.get(route('wallet.qr-code'), { params: { amount } });
-            if (data.success) {
-                qrCode.value = data.qr_code;
+            // const { data } = await axios.get(route('wallet.qr-code'), { params: { amount } });
+            const { data } = await axios.get(route('wallet.add-funds'), { params: { account, amount } });
+            // console.log(data);
+            // console.log(data.event.data);
+            // if (data.success) {
+            if (data.event.name == 'qrcode.generated') {
+                // qrCode.value = data.qr_code;
+                qrCode.value = data.event.data;
                 status.value = 'success';
                 message.value = 'QR code generated.';
             } else {

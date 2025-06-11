@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Tighten\Ziggy\Ziggy;
@@ -38,13 +39,29 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
+        $user = $request->user();
 
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
-                'user' => $request->user(),
+                'user' => function () use ($user) {
+                    if (!$user) {
+                        return null;
+                    }
+
+                    // Eager load necessary relationships
+//                    $user->load(['currentCampaign']);
+
+                    return array_merge($user->toArray(), [
+                        'balanceFloat' => (float) $user->balanceFloat,
+                        'balanceUpdatedAt' => $user->updated_at,
+                        'mobile' => $user->mobile
+                            ? phone($user->mobile, 'PH')->formatForMobileDialingInCountry('PH')
+                            : null
+                    ]);
+                },
             ],
             'flash' => [
                 'message' => fn () => $request->session()->get('message'),

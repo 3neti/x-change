@@ -1,10 +1,10 @@
 <?php
 
+use LBHurtado\PaymentGateway\Contracts\PaymentGatewayInterface;
+use Illuminate\Support\Facades\{Notification, Storage};
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Notifications\FundsRequestNotification;
-use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\Storage;
-use App\Services\DepositQRCode;
+use LBHurtado\PaymentGateway\Models\Merchant;
 use App\Actions\AddFunds;
 use Brick\Money\Money;
 use App\Models\User;
@@ -18,22 +18,24 @@ beforeEach(function () {
 
 test('AddFunds action generates QR, stores file and sends notification', function () {
     // Arrange
+    $merchant = Merchant::factory()->create();
     $user = User::factory()->create(['email'  => 'test@example.com']);
     $user->mobile = '09171234567';
+    $user->merchant = $merchant;
     $user->save();
     $this->actingAs($user);
 
     $amount = Money::of(250, 'PHP');
     $base64  = 'data:image/png;base64,' . base64_encode('dummy');
 
-    // Mock the DepositQRCode service
-    $service = Mockery::mock(DepositQRCode::class);
-    $service->shouldReceive('generate')
+    // Mock the PaymentGatewayInterface
+    $gateway = Mockery::mock(PaymentGatewayInterface::class);
+    $gateway->shouldReceive('generate')
         ->once()
-        ->with($user, $amount)
+        ->with($user->mobile, $amount)
         ->andReturn($base64);
 
-    app()->instance(DepositQRCode::class, $service);
+    app()->instance(PaymentGatewayInterface::class, $gateway);
 
     // Act
     $url = AddFunds::run($user, $amount);

@@ -7,8 +7,10 @@ import QrDisplay from '@/components/domain/QrDisplay.vue';
 import { useQrCode } from '@/composables/useQrCode';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/vue3';
+import { Head, usePage } from '@inertiajs/vue3';
 
+const user = usePage().props.auth.user;
+console.log(user.mobile);
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Dashboard',
@@ -16,8 +18,9 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
+const account = '09173011987';
 const amount = 150;
-const { qrCode, status, message, refresh } = useQrCode(amount);
+const { qrCode, status, message, refresh } = useQrCode(account, amount);
 
 const { balance, currency, walletType, status: balStatus, message: balMessage, fetchBalance } =
     useWalletBalance(); // or pass a specific type: useWalletBalance('platform');
@@ -48,7 +51,6 @@ const { balance, currency, walletType, status: balStatus, message: balMessage, f
                             :refresh="fetchBalance"
                         />
                     </div>
-<!--                    <PlaceholderPattern />-->
                 </div>
                 <div class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
                     <PlaceholderPattern />

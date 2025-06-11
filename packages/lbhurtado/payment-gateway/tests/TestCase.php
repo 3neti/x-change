@@ -33,6 +33,7 @@ abstract class TestCase extends BaseTestCase
             \LBHurtado\Wallet\WalletServiceProvider::class,
             \LBHurtado\ModelChannel\ModelChannelServiceProvider::class,
             \Bavix\Wallet\WalletServiceProvider::class,
+            \Laravel\Sanctum\SanctumServiceProvider::class,
 
         ];
     }

@@ -2,10 +2,10 @@
 
 namespace App\Actions;
 
+use LBHurtado\PaymentGateway\Contracts\PaymentGatewayInterface;
 use App\Notifications\FundsRequestNotification;
 use Lorisleiva\Actions\Concerns\AsAction;
 use Illuminate\Support\Facades\Storage;
-use App\Services\DepositQRCode;
 use Illuminate\Support\Str;
 use Brick\Money\Money;
 use App\Models\User;
@@ -15,12 +15,12 @@ class AddFunds
     use AsAction;
 
     public function __construct(
-        protected DepositQRCode $service
+        protected PaymentGatewayInterface $gateway,
     ) {}
 
     public function handle(User $user, Money $amount): string
     {
-        $qrBase64 = $this->service->generate(user: $user, amount: $amount);
+        $qrBase64 = $this->gateway->generate($user->mobile, $amount);
 
         // Save to disk and get a public URL
         $url = $this->processQRBase64AndGetUrl($qrBase64);
