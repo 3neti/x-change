@@ -137,9 +137,9 @@ dataset('response', function () {
             alias: 'TEST_ALIAS',
             amount: 1_000, // Deposit amount
             channel: 'TestChannel',
-            commandId: 'COMMAND123',
+            commandId: 123,//'COMMAND123',
             externalTransferStatus: 'SUCCESS',
-            operationId: 'OPID-456',
+            operationId: 456,//'OPID-456',
             productBranchCode: '1010',
             recipientAccountNumber: '09181234567',
             recipientAccountNumberBankFormat: '09181234567',

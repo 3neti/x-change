@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\{Notification, Storage};
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Notifications\FundsRequestNotification;
 use LBHurtado\PaymentGateway\Models\Merchant;
-use App\Actions\AddFunds;
+use App\Actions\RequestFunds;
 use Brick\Money\Money;
 use App\Models\User;
 
@@ -38,7 +38,7 @@ test('AddFunds action generates QR, stores file and sends notification', functio
     app()->instance(PaymentGatewayInterface::class, $gateway);
 
     // Act
-    $url = AddFunds::run($user, $amount);
+    $url = RequestFunds::run($user, $amount);
 
     // Assert the QR file was stored
     $path     = parse_url($url, PHP_URL_PATH);

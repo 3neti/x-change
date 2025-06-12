@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 use Brick\Money\Money;
 use App\Models\User;
 
-class AddFunds
+class RequestFunds
 {
     use AsAction;
 
