@@ -6,8 +6,8 @@ import { useWalletBalance } from '@/composables/useWalletBalance';
 import QrDisplay from '@/components/domain/QrDisplay.vue';
 import { useQrCode } from '@/composables/useQrCode';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem } from '@/types';
 import { Head, usePage } from '@inertiajs/vue3';
+import { type BreadcrumbItem } from '@/types';
 
 const user = usePage().props.auth.user;
 console.log(user.mobile);
@@ -18,8 +18,8 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-const account = '09173011987';
-const amount = 150;
+const account = user.mobile;
+const amount = 0;
 const { qrCode, status, message, refresh } = useQrCode(account, amount);
 
 const { balance, currency, walletType, status: balStatus, message: balMessage, fetchBalance } =
