@@ -19,7 +19,7 @@ class CheckBalance
 
     public function handle(
         User $user,
-        WalletType $walletType = null
+        WalletType|null $walletType = null
     ): Money
     {
         $slug = is_null($walletType) ? WalletType::default()->value : $walletType->value;
