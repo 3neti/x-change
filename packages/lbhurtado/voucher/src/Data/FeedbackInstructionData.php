@@ -2,16 +2,37 @@
 
 namespace LBHurtado\Voucher\Data;
 
+use LBHurtado\Voucher\Data\Traits\HasSafeDefaults;
 use Propaganistas\LaravelPhone\Rules\Phone;
 use Spatie\LaravelData\Data;
 
 class FeedbackInstructionData extends Data
 {
+    use HasSafeDefaults;
+
     public function __construct(
         public ?string $email = null,
         public ?string $mobile = null,
         public ?string $webhook = null,
-    ) {}
+    ) { $this->applyRulesAndDefaults(); }
+
+    protected function rulesAndDefaults(): array
+    {
+        return [
+            'email' => [
+                ['required', 'email'],
+                config('instructions.feedback.email')
+            ],
+            'mobile' => [
+                ['required', (new \Propaganistas\LaravelPhone\Rules\Phone)->country('PH')->type('mobile')],
+                config('instructions.feedback.mobile')
+            ],
+            'webhook' => [
+                ['required', 'url'],
+                config('instructions.feedback.webhook')
+            ]
+        ];
+    }
 
     /**
      * Define validation rules for the data.
@@ -97,4 +118,21 @@ class FeedbackInstructionData extends Data
             return false; // Return false if validation fails unexpectedly
         }
     }
+
+    public static function defaultEmail(): string
+    {
+        return config('instructions.feedback.email');
+    }
+
+    public static function defaultMobile(): string
+    {
+        return config('instructions.feedback.mobile');
+    }
+
+    public static function defaultWebhook(): string
+    {
+        return config('instructions.feedback.webhook');
+    }
+
+
 }

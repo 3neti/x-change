@@ -7,8 +7,11 @@ use LBHurtado\Voucher\Events\VouchersGenerated;
 use FrittenKeeZ\Vouchers\Facades\Vouchers;
 use Lorisleiva\Actions\Concerns\AsAction;
 use LBHurtado\Voucher\Models\Voucher;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Collection;
 use Carbon\CarbonInterval;
+use Illuminate\Support\Arr;
+use LBHurtado\Voucher\Models\Cash;
 
 class GenerateVouchers
 {
@@ -16,6 +19,9 @@ class GenerateVouchers
 
     public function handle(VoucherInstructionsData $instructions): Collection
     {
+        Log::debug('[GenerateVouchers] Received count=' . $instructions->count);
+        Log::debug('[GenerateVouchers] Raw DTO:', $instructions->toArray());
+
         // Extract parameters from instructions
         $count = $instructions->count ?? 1; // Use 'count' from instructions or default to 1
         $prefix = $instructions->prefix ?? config('lbhurtado-voucher.default-prefix', '');
@@ -23,6 +29,8 @@ class GenerateVouchers
         $ttl = $instructions->ttl instanceof CarbonInterval
             ? $instructions->ttl
             : CarbonInterval::hours(12); // Default TTL to 12 hours if missing
+
+        Log::debug('[GenerateVouchers] About to create', compact('count','prefix','mask','ttl'));
 
         $owner = auth()->user();
         if (is_null($owner)) {
@@ -36,9 +44,24 @@ class GenerateVouchers
             ->withOwner($owner)
             ->create($count)
         ;
+//dd((string) $vouchers->instructions->cash->getAmount());
+        Log::debug('[GenerateVouchers] Raw facade response', ['raw' => $vouchers]);
 
-        // Normalize the vouchers collection (for single vs. multiple)
-        $collection = collect($vouchers instanceof Voucher ? [$vouchers] : $vouchers);
+//        $array = [];
+//        array_push($array, $vouchers);
+//
+//        // Normalize the vouchers collection (for single vs. multiple)
+//        $collection = is_array($vouchers)
+//            ? collect($vouchers)
+//            : collect($array);
+
+        /** @var \Illuminate\Support\Collection<int, \FrittenKeeZ\Vouchers\Models\Voucher> $collection */
+        $collection = collect(is_array($vouchers) ? $vouchers : [$vouchers]);
+
+        Log::debug('[GenerateVouchers] Normalized voucher list', [
+            'count' => $collection->count(),
+            'codes' => $collection->pluck('code')->all(),
+        ]);
 
         // Dispatch the event with the generated vouchers
         VouchersGenerated::dispatch($collection);

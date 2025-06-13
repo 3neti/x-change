@@ -51,7 +51,7 @@ it('generates vouchers successfully via the named route', function () {
         "count" => 2, // Number of vouchers to generate
         "prefix" => "TEST", // Prefix for voucher codes
         "mask" => "****-****", // Mask for voucher codes
-        "ttl" => '24h', // Expiry Time (TTL in ISO format)
+        "ttl" => 'PT24H', // Expiry Time (TTL in ISO format)
     ];
 
     // Act: Send a POST request via the named route

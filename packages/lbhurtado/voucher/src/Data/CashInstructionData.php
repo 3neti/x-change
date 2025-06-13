@@ -2,21 +2,36 @@
 
 namespace LBHurtado\Voucher\Data;
 
+use LBHurtado\Voucher\Data\Traits\HasSafeDefaults;
 use Spatie\LaravelData\Data;
+use Brick\Money\Money;
+
 class CashInstructionData extends Data
 {
+    use HasSafeDefaults;
+
     public function __construct(
         public int $amount,
         public string $currency,
         public CashValidationRulesData $validation,
-    ) {}
+    ) { $this->applyRulesAndDefaults(); }
 
-    public static function rules(): array
+    protected function rulesAndDefaults(): array
     {
         return [
-            'amount' => ['required', 'integer', 'min:1'],
-            'currency' => ['required', 'string', 'size:3'], // ISO 4217 code, e.g., 'PHP'
-            'validation' => ['required', 'array'],
+            'amount' => [
+                ['required', 'integer', 'min:50'],
+                config('instructions.cash.amount')
+            ],
+            'currency' => [
+                ['required', 'string', 'size:3'],
+                config('instructions.cash.currency')
+            ]
         ];
+    }
+
+    public function getAmount(): Money
+    {
+        return Money::of($this->amount, $this->currency);
     }
 }

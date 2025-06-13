@@ -49,6 +49,10 @@ abstract class TestCase extends BaseTestCase
         config()->set('model-status.status_model', \Spatie\ModelStatus\Status::class);
         config()->set('vouchers.models.voucher', \LBHurtado\Voucher\Models\Voucher::class);
 
+        config()->set('instructions.feedback.mobile', '09171234567');
+        config()->set('instructions.feedback.email', 'example@example.com');
+        config()->set('instructions.feedback.webhook', 'http://example.com/webhook');
+
 //        // Configure the web guard for authentication
 //        $app['config']->set('auth.guards.web', [
 //            'driver' => 'session', // Use the session driver for web guard
