@@ -2,7 +2,7 @@
 
 namespace LBHurtado\ModelChannel\Models;
 
-use LBHurtado\PaymentGateway\Database\Factories\ChannelFactory;
+use LBHurtado\ModelChannel\Database\Factories\ChannelFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 

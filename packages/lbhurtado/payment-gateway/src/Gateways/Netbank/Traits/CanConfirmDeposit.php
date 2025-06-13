@@ -16,12 +16,13 @@ trait CanConfirmDeposit
         $response = DepositResponseData::from($payload);
         Log::info('Processing Netbank deposit confirmation', $response->toArray());
 
-        $user = app(config('payment-gateway.models.user'))::findByMobile($response->referenceCode);
+        $user = app(config('payment-gateway.models.user'))::findByMobile($response->merchant_details->merchant_account);
 
         //TODO: check this out
         if (!$user && ($merchant_code = $response->merchant_details->merchant_code ?? null) && strlen($merchant_code) === 1) {
-            $user = app(config('payment-gateway.models.user'))
-                ->where('merchant->code', $merchant_code)->first();
+            $user = app(config('payment-gateway.models.user'))->whereHas('merchant', function ($q) use ($merchant_code) {
+                $q->where('code', $merchant_code);
+            })->first();
         }
 
         if (!$user) {

@@ -1,5 +1,6 @@
 <?php
 
+use LBHurtado\PaymentGateway\Models\Merchant;
 use LBHurtado\PaymentGateway\Data\{Netbank\Deposit\DepositResponseData, Netbank\Deposit\DepositSenderData};
 use LBHurtado\PaymentGateway\Data\Netbank\{Deposit\DepositMerchantDetailsData,
     Disburse\DisburseInputData,
@@ -123,7 +124,8 @@ it('sends a live QR transaction to Netbank', function () {
 dataset('user', function () {
     return [
         [fn() => tap(auth()->user(), function (User $user) {
-            $user->mobile = '09171234567';
+            $user->mobile = '09173011987';
+            $user->merchant = Merchant::factory()->create(['code' => 1]);
             $user->save();
             $user->wallet; // Explicitly create the wallet
             $user->wallet->refreshBalance();
@@ -161,6 +163,37 @@ dataset('response', function () {
     ];
 });
 
+
+dataset('live_response', function () {
+    return [
+        [fn() => new DepositResponseData(
+            alias: '91500',
+            amount: 150,
+            channel: 'INSTAPAY',
+            commandId: 140787329,
+            externalTransferStatus: 'SETTLED',
+            operationId: 175192002,
+            productBranchCode: '000',
+            recipientAccountNumber: '9150019173011987',
+            recipientAccountNumberBankFormat: '113-001-00001-9',
+            referenceCode: '19173011987',
+            referenceNumber: '20250613GXCHPHM2XXXB000000005603644',
+            registrationTime: '2025-06-13T19:31:01.607',
+            remarks: 'InstaPay transfer #20250613GXCHPHM2XXXB000000005603644',
+            sender: new DepositSenderData(
+                accountNumber: '09175180722',
+                institutionCode: 'GXCHPHM2XXX',
+                name: 'RUTH APPLE HURTADO'
+            ),
+            transferType: 'QR_P2M',
+            merchant_details: new DepositMerchantDetailsData(
+                merchant_code: '1',
+                merchant_account: '09173011987'
+            )
+        )]
+    ];
+});
+
 it('tests confirmDeposit function in NetbankPaymentGateway', function (User $user, DepositResponseData $response) {
     // Arrange
     Event::fake();
@@ -176,7 +209,7 @@ it('tests confirmDeposit function in NetbankPaymentGateway', function (User $use
         ->andReturn($user) // Set the transaction's payable relationship to the user
         ->shouldReceive('getAttribute')
         ->with('amount')
-        ->andReturn(1_000 * 100); // Set the transaction's amount in minor units
+        ->andReturn(150 * 100); // Set the transaction's amount in minor units
 
     // Optional: Add other attributes if needed
     $transaction->shouldReceive('getAttribute')
@@ -210,7 +243,7 @@ it('tests confirmDeposit function in NetbankPaymentGateway', function (User $use
 
     // (Optional) Verify logging
     Log::shouldHaveReceived('info')->once();
-})->with('user', 'response');
+})->with('user', 'live_response');
 
 it('tests confirmDeposit with valid payload and updates balances', function (User $user, DepositResponseData $response) {
     // Arrange
@@ -229,10 +262,10 @@ it('tests confirmDeposit with valid payload and updates balances', function (Use
     // Assert
     expect($result)->toBeTrue(); // Ensure the confirmDeposit returned true
     $system->wallet->refreshBalance();
-    expect((float) $system->balanceFloat)->toBe(9000.00); // System loses 1,000
+    expect((float) $system->balanceFloat)->toBe(9_850.00); // System loses 1500
     $user->wallet->refreshBalance();
-    expect((float) $user->balanceFloat)->toBe(1000.00); // User gains 1,000
-})->with('user', 'response');
+    expect((float) $user->balanceFloat)->toBe(150.00); // User gains 1,000
+})->with('user', 'live_response');
 
 dataset('disbursement', function () {
     return [

@@ -5,6 +5,7 @@ namespace LBHurtado\ModelChannel\Traits;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use LBHurtado\ModelChannel\Enums\Channel;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Database\Eloquent\Builder;
 use \Exception;
 
 trait HasChannels
@@ -129,39 +130,66 @@ trait HasChannels
         return null; // No match
     }
 
-    public static function findByChannel(string $channelName, string $channelValue): ?static
+    public static function findByChannel(string $channelName, string $channelValue): ?self
     {
-        return static::whereHas('channels', function ($query) use ($channelName, $channelValue) {
+        return static::whereHas('channels', function (Builder $q) use ($channelName, $channelValue) {
+            $q->where('name', $channelName);
+
             if ($channelName === 'mobile') {
                 try {
-                    // Normalize the phone number to E.164 without "+"
-                    $phoneE164WithoutPlus = ltrim(phone($channelValue, 'PH')->formatE164(), '+');
+                    $e164 = ltrim(phone($channelValue, 'PH')->formatE164(), '+');
+                    $national = preg_replace('/\D+/', '', $channelValue);
+                    $dialable = phone($channelValue, 'PH')->formatForMobileDialingInCountry('PH');
+                    $dialable = preg_replace('/\D+/', '', $dialable);
 
-                    // Optional fallback formats
-                    $phone_normalized = preg_replace('/[^0-9]/', '', $channelValue); // Strip non-numeric
-                    $phone_national = str_replace(' ', '', phone($channelValue, 'PH')->formatForMobileDialingInCountry('PH'));
-
-                    // Additional fallback: remove leading '0's for LIKE
-                    $phone_normalized_like_fallback = ltrim($phone_normalized, '0');
-                } catch (\Exception $e) {
-                    // Return no result if the phone number cannot be normalized
-                    return $query->whereRaw('1 = 0'); // No match
-                }
-
-                // Match the normalized E.164 format or fallback formats
-                $query->where('name', $channelName)
-                    ->where(function ($subQuery) use ($phoneE164WithoutPlus, $phone_normalized, $phone_national, $phone_normalized_like_fallback) {
-                        $subQuery->where('value',  '=',  $phoneE164WithoutPlus) // Strict match for E.164
-                        ->orWhere('value', 'LIKE', '%' . $phone_normalized . '%')    // Relaxed match for normalized
-                        ->orWhere('value', 'LIKE', '%' . $phone_national . '%')     // Relaxed match for national
-                        ->orWhere('value', 'LIKE', '%' . $phone_normalized_like_fallback . '%'); // Fallback with leading "0"s removed
+                    $q->where(function ($sub) use ($e164, $national, $dialable) {
+                        $sub->where('value', $e164)
+                            ->orWhere('value', 'LIKE', "%{$national}%")
+                            ->orWhere('value', 'LIKE', "%{$dialable}%");
                     });
+                } catch (\Throwable $e) {
+                    // nothing will match
+                    $q->whereRaw('0 = 1');
+                }
             } else {
-                // Default matching behavior for non-mobile channels
-                $query->where('name', $channelName)->where('value', $channelValue);
+                $q->where('value', $channelValue);
             }
         })->first();
     }
+
+//    public static function findByChannel(string $channelName, string $channelValue): ?static
+//    {
+//        return static::whereHas('channels', function ($query) use ($channelName, $channelValue) {
+//            if ($channelName === 'mobile') {
+//                try {
+//                    // Normalize the phone number to E.164 without "+"
+//                    $phoneE164WithoutPlus = ltrim(phone($channelValue, 'PH')->formatE164(), '+');
+//
+//                    // Optional fallback formats
+//                    $phone_normalized = preg_replace('/[^0-9]/', '', $channelValue); // Strip non-numeric
+//                    $phone_national = str_replace(' ', '', phone($channelValue, 'PH')->formatForMobileDialingInCountry('PH'));
+//
+//                    // Additional fallback: remove leading '0's for LIKE
+//                    $phone_normalized_like_fallback = ltrim($phone_normalized, '0');
+//                } catch (\Exception $e) {
+//                    // Return no result if the phone number cannot be normalized
+//                    return $query->whereRaw('1 = 0'); // No match
+//                }
+//                // Match the normalized E.164 format or fallback formats
+//                $query->where('name', $channelName)
+//                    ->where(function ($subQuery) use ($phoneE164WithoutPlus, $phone_normalized, $phone_national, $phone_normalized_like_fallback) {
+//                        $subQuery->where('value',  '=',  $phoneE164WithoutPlus) // Strict match for E.164
+//                        ->orWhere('value', 'LIKE', '%' . $phone_normalized . '%')    // Relaxed match for normalized
+//                        ->orWhere('value', 'LIKE', '%' . $phone_national . '%')     // Relaxed match for national
+//                        ->orWhere('value', 'LIKE', '%' . $phone_normalized_like_fallback . '%'); // Fallback with leading "0"s removed
+//                    });
+//                dd($query->first());
+//            } else {
+//                // Default matching behavior for non-mobile channels
+//                $query->where('name', $channelName)->where('value', $channelValue);
+//            }
+//        })->first();
+//    }
 
     public static function __callStatic($method, $parameters)
     {
