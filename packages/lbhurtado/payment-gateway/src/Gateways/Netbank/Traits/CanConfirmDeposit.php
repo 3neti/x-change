@@ -20,6 +20,7 @@ trait CanConfirmDeposit
 
         //TODO: check this out
         if (!$user && ($merchant_code = $response->merchant_details->merchant_code ?? null) && strlen($merchant_code) === 1) {
+            Log::info('Alternative instantiation of user using merchant code', ['merchant_code' => $merchant_code]);
             $user = app(config('payment-gateway.models.user'))->whereHas('merchant', function ($q) use ($merchant_code) {
                 $q->where('code', $merchant_code);
             })->first();
