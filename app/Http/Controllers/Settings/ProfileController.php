@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers\Settings;
 
-use App\Http\Controllers\Controller;
-use App\Models\User;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Inertia\Response;
 use Laravel\WorkOS\Http\Requests\AuthKitAccountDeletionRequest;
+use Illuminate\Http\RedirectResponse;
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Inertia\Response;
+use App\Models\User;
+use Inertia\Inertia;
 
 class ProfileController extends Controller
 {
@@ -29,9 +29,18 @@ class ProfileController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'mobile' => ['nullable', (new \Propaganistas\LaravelPhone\Rules\Phone)->country('PH')->type('mobile')],
         ]);
 
-        $request->user()->update(['name' => $request->name]);
+        $user = $request->user();
+        $user->update([
+            'name' => $request->name
+        ]);
+
+        if ($request->has('mobile')) {
+            $user->mobile = $request->get('mobile');
+            $user->save();
+        }
 
         return to_route('profile.edit');
     }

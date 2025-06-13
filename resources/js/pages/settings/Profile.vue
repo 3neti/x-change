@@ -29,6 +29,7 @@ const user = page.props.auth.user as User;
 
 const form = useForm({
     name: user.name,
+    mobile: user.mobile,
     email: user.email,
 });
 
@@ -52,6 +53,12 @@ const submit = () => {
                         <Label for="name">Name</Label>
                         <Input id="name" class="mt-1 block w-full" v-model="form.name" required autocomplete="name" placeholder="Full name" />
                         <InputError class="mt-2" :message="form.errors.name" />
+                    </div>
+
+                    <div class="grid gap-2">
+                        <Label for="name">Mobile</Label>
+                        <Input id="name" class="mt-1 block w-full" v-model="form.mobile" required autocomplete="name" placeholder="Mobile Number" />
+                        <InputError class="mt-2" :message="form.errors.mobile" />
                     </div>
 
                     <div class="grid gap-2">
