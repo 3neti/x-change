@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Inertia\Response;
 use App\Models\User;
 use Inertia\Inertia;
+use LBHurtado\PaymentGateway\Models\Merchant;
 
 class ProfileController extends Controller
 {
@@ -30,6 +31,9 @@ class ProfileController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'mobile' => ['nullable', (new \Propaganistas\LaravelPhone\Rules\Phone)->country('PH')->type('mobile')],
+            'merchant_code' => ['nullable', 'string', 'min:1', 'max:1'],
+            'merchant_name' => ['nullable', 'string', 'max:255'],
+            'merchant_city' => ['nullable', 'string', 'max:255'],
         ]);
 
         $user = $request->user();
@@ -40,6 +44,17 @@ class ProfileController extends Controller
         if ($request->has('mobile')) {
             $user->mobile = $request->get('mobile');
             $user->save();
+        }
+
+        if ($request->has('merchant_code')) {
+            if ($merchant = $user->merchant) {
+                $merchant->update([
+                    'code' => $request->get('merchant_code'),
+                    'name' => $request->get('merchant_name'),
+                    'city' => $request->get('merchant_city'),
+                ]);
+//                $merchant->save();
+            }
         }
 
         return to_route('profile.edit');

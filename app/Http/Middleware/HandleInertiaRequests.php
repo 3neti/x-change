@@ -59,7 +59,8 @@ class HandleInertiaRequests extends Middleware
                         'balanceUpdatedAt' => $user->updated_at,
                         'mobile' => $user->mobile
                             ? phone($user->mobile, 'PH')->formatForMobileDialingInCountry('PH')
-                            : null
+                            : null,
+                        'merchant' => $user->merchant->toArray(),
                     ]);
                 },
             ],
