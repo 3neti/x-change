@@ -5,15 +5,45 @@ namespace LBHurtado\Voucher\Models;
 use FrittenKeeZ\Vouchers\Models\Voucher as BaseVoucher;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Scopes\RedeemedScope;
+use LBHurtado\Voucher\Data\VoucherData;
+use Spatie\LaravelData\WithData;
+use Illuminate\Support\Carbon;
 
+/**
+ * Class Voucher.
+ *
+ * @property int                                        $id
+ * @property string                                     $code
+ * @property \Illuminate\Database\Eloquent\Model        $owner
+ * @property array                                      $metadata
+ * @property Carbon                                     $starts_at
+ * @property Carbon                                     $expires_at
+ * @property Carbon                                     $redeemed_at
+ * @property Carbon                                     $processed_on
+ * @property bool                                       $processed
+ * @property VoucherInstructionsData                    $instructions
+ * @property \FrittenKeeZ\Vouchers\Models\Redeemer      $redeemer
+ * @property \Illuminate\Database\Eloquent\Collection   $voucherEntities
+ * @property \Illuminate\Database\Eloquent\Collection   $redeemers
+ *
+ * @method int getKey()
+ */
 class Voucher extends BaseVoucher
 {
+    use WithData;
+
+    protected string $dataClass = VoucherData::class;
+
     protected function casts(): array
     {
         // Include parent's casts and add/override
         return array_merge(parent::casts(), [
             'processed_on' => 'datetime:Y-m-d H:i:s',
         ]);
+    }
+
+    public function getRouteKeyName() {
+        return "code";
     }
 
     public function setProcessedAttribute(bool $value): self

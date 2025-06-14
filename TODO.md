@@ -16,3 +16,8 @@
 - action
 - user
 - transaction
+- voucher
+
+# Others
+- favicon
+- 

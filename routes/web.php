@@ -1,7 +1,6 @@
 <?php
 
 use Laravel\WorkOS\Http\Middleware\ValidateSessionWithWorkOS;
-//use App\Http\Controllers\GenerateDepositQRCodeController;
 use App\Http\Controllers\CheckWalletBalanceController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -25,5 +24,4 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         ->name('wallet.balance');
     Route::get('wallet/add-funds', LBHurtado\PaymentGateway\Http\Controllers\GenerateController::class)
         ->name('wallet.add-funds');
-
 });

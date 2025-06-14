@@ -26,7 +26,7 @@ use Parental\HasChildren;
 use App\Enums\ChildType;
 
 /**
- * Class Agent.
+ * Class User.
  *
  * @property int                         $id
  * @property string                      $name
