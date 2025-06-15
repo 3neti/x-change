@@ -60,7 +60,7 @@ class HandleInertiaRequests extends Middleware
                         'mobile' => $user->mobile
                             ? phone($user->mobile, 'PH')->formatForMobileDialingInCountry('PH')
                             : null,
-                        'merchant' => $user->merchant->toArray(),
+                        'merchant' => $user->merchant?->toArray(),
                     ]);
                 },
             ],

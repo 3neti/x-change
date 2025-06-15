@@ -1,8 +1,11 @@
 <?php
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use LBHurtado\Voucher\Models\Cash;
 use Illuminate\Support\Str;
+
+uses(RefreshDatabase::class);
 
 it('has a default null value for the secret', function () {
     $cash = Cash::factory()->create();

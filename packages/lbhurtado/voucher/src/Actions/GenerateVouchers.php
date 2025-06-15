@@ -6,12 +6,9 @@ use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Events\VouchersGenerated;
 use FrittenKeeZ\Vouchers\Facades\Vouchers;
 use Lorisleiva\Actions\Concerns\AsAction;
-use LBHurtado\Voucher\Models\Voucher;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Collection;
 use Carbon\CarbonInterval;
-use Illuminate\Support\Arr;
-use LBHurtado\Voucher\Models\Cash;
 
 class GenerateVouchers
 {
@@ -44,16 +41,7 @@ class GenerateVouchers
             ->withOwner($owner)
             ->create($count)
         ;
-//dd((string) $vouchers->instructions->cash->getAmount());
         Log::debug('[GenerateVouchers] Raw facade response', ['raw' => $vouchers]);
-
-//        $array = [];
-//        array_push($array, $vouchers);
-//
-//        // Normalize the vouchers collection (for single vs. multiple)
-//        $collection = is_array($vouchers)
-//            ? collect($vouchers)
-//            : collect($array);
 
         /** @var \Illuminate\Support\Collection<int, \FrittenKeeZ\Vouchers\Models\Voucher> $collection */
         $collection = collect(is_array($vouchers) ? $vouchers : [$vouchers]);

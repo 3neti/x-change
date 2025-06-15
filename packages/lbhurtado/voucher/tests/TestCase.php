@@ -74,18 +74,18 @@ abstract class TestCase extends BaseTestCase
         $baseVoucherMigration->up();
 
         // Run the cash migration from the local package
-        $userMigration = include __DIR__ . '/../database/migrations/0001_01_01_000000_create_users_table.php';
+        $userMigration = include __DIR__ . '/../database/migrations/test/0001_01_01_000000_create_users_table.php';
         $userMigration->up();
-        $moneyIssuerMigration = include __DIR__ . '/../database/migrations/2024_07_02_202500_create_money_issuers_table.php';
+        $moneyIssuerMigration = include __DIR__ . '/../database/migrations/test/2024_07_02_202500_create_money_issuers_table.php';
         $moneyIssuerMigration->up();
-        $cashMigration = include __DIR__ . '/../database/migrations/2024_08_02_202500_create_cash_table.php';
-        $cashMigration->up();
-        $statusMigration = include __DIR__ . '/../database/migrations/2024_08_03_202500_create_statuses_table.php';
+//        $cashMigration = include __DIR__ . '/../database/migrations/2024_08_02_202500_create_cash_table.php';
+//        $cashMigration->up();
+        $statusMigration = include __DIR__ . '/../database/migrations/test/2024_08_03_202500_create_statuses_table.php';
         $statusMigration->up();
-        $tagMigration = include __DIR__ . '/../database/migrations/2024_08_04_202500_create_tag_tables.php';
+        $tagMigration = include __DIR__ . '/../database/migrations/test/2024_08_04_202500_create_tag_tables.php';
         $tagMigration->up();
-        $voucherMigration = include __DIR__ . '/../database/migrations/2024_08_26_202500_add_processed_on_to_vouchers_table.php';
-        $voucherMigration->up();
+//        $voucherMigration = include __DIR__ . '/../database/migrations/2024_08_26_202500_add_processed_on_to_vouchers_table.php';
+//        $voucherMigration->up();
     }
 
     // Define a reusable method for logging in a user

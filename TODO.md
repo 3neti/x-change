@@ -20,4 +20,5 @@
 
 # Others
 - favicon
+- fix names of migration files, migrate:refresh in production
 - 

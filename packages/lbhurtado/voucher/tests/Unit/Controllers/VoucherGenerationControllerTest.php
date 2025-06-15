@@ -3,6 +3,8 @@
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use FrittenKeeZ\Vouchers\Models\Voucher;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Event;
+use LBHurtado\Voucher\Events\VouchersGenerated;
 
 uses(RefreshDatabase::class);
 
@@ -18,9 +20,10 @@ it('correctly resolves the vouchers.generate route', function () {
 });
 
 it('generates vouchers successfully via the named route', function () {
-    // Arrange: Ensure the route is registered
-    Route::post('/vouchers/generate', \LBHurtado\Voucher\Http\Controllers\VoucherGenerationController::class)
-        ->name('vouchers.generate');
+    Event::fake();
+//    // Arrange: Ensure the route is registered
+//    Route::post('/vouchers/generate', \LBHurtado\Voucher\Http\Controllers\VoucherGenerationController::class)
+//        ->name('vouchers.generate');
 
     // Example payload for VoucherInstructionsData
     $payload = [
@@ -56,7 +59,7 @@ it('generates vouchers successfully via the named route', function () {
 
     // Act: Send a POST request via the named route
     $response = $this->postJson(route('vouchers.generate'), $payload);
-
+//dd($response->json());
     // Assert: Check HTTP status and response structure
     $response->assertOk()
         ->assertJson([
@@ -90,4 +93,6 @@ it('generates vouchers successfully via the named route', function () {
                 . '$/' // Ensure the entire code matches
             );
     });
+
+    Event::assertDispatched(VouchersGenerated::class);
 });

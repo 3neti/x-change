@@ -6,6 +6,7 @@ use LBHurtado\Voucher\Models\MoneyIssuer;
 use Lorisleiva\Actions\Concerns\AsAction;
 use Brick\Money\Money;
 
+/** @deprecated  */
 class CheckBalance
 {
     use AsAction;
