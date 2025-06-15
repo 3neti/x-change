@@ -1,10 +1,10 @@
 <?php
 
-namespace LBHurtado\Voucher\Database\Factories;
+namespace LBHurtado\Cash\Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Model;
-use LBHurtado\Voucher\Models\Cash;
+use LBHurtado\Cash\Models\Cash;
 
 class CashFactory extends Factory
 {
@@ -27,3 +27,4 @@ class CashFactory extends Factory
         ]);
     }
 }
+

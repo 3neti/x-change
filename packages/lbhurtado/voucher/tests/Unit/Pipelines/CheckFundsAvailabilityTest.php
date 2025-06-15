@@ -1,9 +1,9 @@
 <?php
 
-use Illuminate\Pipeline\Pipeline;
+use LBHurtado\Voucher\Pipelines\GeneratedVouchers\CheckFundsAvailability;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use LBHurtado\Voucher\Pipelines\GeneratedVouchers\CheckFundsAvailability;
+use Illuminate\Pipeline\Pipeline;
 
 it('proceeds when funds are sufficient', function () {
     // Mock the external API response for sufficient funds

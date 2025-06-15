@@ -8,8 +8,8 @@ use LBHurtado\Voucher\Pipelines\Voucher\PersistCash;
 use Lorisleiva\Actions\Concerns\AsAction;
 use Illuminate\Support\Facades\{DB, Log};
 use LBHurtado\Voucher\Models\Voucher;
-use LBHurtado\Voucher\Models\Cash;
 use Illuminate\Pipeline\Pipeline;
+use LBHurtado\Cash\Models\Cash;
 
 class MintCash
 {

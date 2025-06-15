@@ -1,8 +1,8 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use LBHurtado\Voucher\Enums\CashStatus;
-use LBHurtado\Voucher\Models\Cash;
+use LBHurtado\Cash\Enums\CashStatus;
+use LBHurtado\Cash\Models\Cash;
 use Spatie\ModelStatus\Status;
 
 uses(RefreshDatabase::class);

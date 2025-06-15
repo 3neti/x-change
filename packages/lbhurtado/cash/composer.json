@@ -1,18 +1,8 @@
 {
-    "name": "lbhurtado/voucher",
-    "description": "Digital voucher module for issuance, redemption, and lifecycle management",
+    "name": "lbhurtado/cash",
+    "description": "A package to enable assigning cash to Eloquent Models",
     "type": "library",
     "license": "proprietary",
-    "repositories": [
-        {
-            "type": "path",
-            "url": "./../cash"
-        },
-        {
-            "type": "path",
-            "url": "./../contact"
-        }
-    ],
     "authors": [
         {
             "name": "Lester Hurtado",
@@ -21,29 +11,26 @@
     ],
     "autoload": {
         "psr-4": {
-            "LBHurtado\\Voucher\\": "src/",
-            "LBHurtado\\Voucher\\Database\\Factories\\": "database/factories/"
+            "LBHurtado\\Cash\\": "src/",
+            "LBHurtado\\Cash\\Database\\Factories\\": "database/factories/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "LBHurtado\\Voucher\\Tests\\": "tests/"
+            "LBHurtado\\Cash\\Tests\\": "tests/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "LBHurtado\\Voucher\\VoucherServiceProvider"
+                "LBHurtado\\Cash\\CashServiceProvider"
             ]
         }
     },
     "require": {
-        "frittenkeez/laravel-vouchers": "^0.6.0",
         "spatie/laravel-data": "^4.15",
         "lorisleiva/laravel-actions": "^2.9",
         "brick/money": "^0.10.1",
-        "lbhurtado/cash": "dev-main",
-        "lbhurtado/contact": "dev-main",
         "spatie/laravel-model-status": "^1.18",
         "spatie/laravel-tags": "^4.10",
         "propaganistas/laravel-phone": "^6.0"

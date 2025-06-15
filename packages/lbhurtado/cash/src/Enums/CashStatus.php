@@ -1,6 +1,6 @@
 <?php
 
-namespace LBHurtado\Voucher\Enums;
+namespace LBHurtado\Cash\Enums;
 
 enum CashStatus: string
 {

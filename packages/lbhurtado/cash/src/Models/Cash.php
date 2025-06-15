@@ -1,15 +1,15 @@
 <?php
 
-namespace LBHurtado\Voucher\Models;
+namespace LBHurtado\Cash\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use LBHurtado\Voucher\Database\Factories\CashFactory;
 use Illuminate\Database\Eloquent\Casts\AsArrayObject;
 use Illuminate\Database\Eloquent\Casts\ArrayObject;
+use LBHurtado\Cash\Database\Factories\CashFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
-use LBHurtado\Voucher\Enums\CashStatus;
+use LBHurtado\Cash\Enums\CashStatus;
 use Illuminate\Support\Facades\Hash;
 use Spatie\ModelStatus\HasStatuses;
 use Illuminate\Support\Number;

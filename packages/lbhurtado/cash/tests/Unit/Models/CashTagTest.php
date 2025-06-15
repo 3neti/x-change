@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use LBHurtado\Voucher\Models\Cash;
+use LBHurtado\Cash\Models\Cash;
 use Spatie\Tags\Tag;
 
 uses(RefreshDatabase::class);

@@ -3,22 +3,43 @@
 namespace LBHurtado\Voucher\Pipelines\Voucher;
 
 use Illuminate\Support\Facades\Log;
-use LBHurtado\Voucher\Models\Cash;
+use LBHurtado\Cash\Models\Cash;
 use Closure;
 
 class PersistCash
 {
     public function handle($voucher, Closure $next)
     {
-        $instructions = $voucher->instructions;
-        $cash = Cash::create([
-            'amount' => $instructions->cash->amount,
-            'currency' => $instructions->cash->currency,
-            'meta' => ['notes' => 'change this'],
+        Log::debug('[PersistCash] Starting PersistCash for voucher', [
+            'code' => $voucher->code,
+            'instructions' => $voucher->instructions->toArray(),
         ]);
+
+        $instructions = $voucher->instructions;
+        $amount       = $instructions->cash->amount;
+        $currency     = $instructions->cash->currency;
+
+        Log::debug('[PersistCash] Creating Cash record', compact('amount', 'currency'));
+
+        $cash = Cash::create([
+            'amount'   => $amount,
+            'currency' => $currency,
+            'meta'     => ['notes' => 'change this'],
+        ]);
+
+        Log::info('[PersistCash] Cash record created', [
+            'cash_id'  => $cash->getKey(),
+            'amount'   => $cash->amount,
+            'currency' => $cash->currency,
+        ]);
+
         $entities = ['cash' => $cash];
         $voucher->addEntities(...$entities);
-        Log::info('Cash entity persisted.');
+
+        Log::debug('[PersistCash] Attached cash entity to voucher', [
+            'voucher_code' => $voucher->code,
+            'attached'     => array_keys($entities),
+        ]);
 
         return $next($voucher);
     }

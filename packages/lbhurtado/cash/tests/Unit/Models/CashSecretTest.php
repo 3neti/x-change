@@ -2,7 +2,7 @@
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use LBHurtado\Voucher\Models\Cash;
+use LBHurtado\Cash\Models\Cash;
 use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);

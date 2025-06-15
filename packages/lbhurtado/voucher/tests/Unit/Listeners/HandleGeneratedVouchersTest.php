@@ -9,7 +9,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use FrittenKeeZ\Vouchers\Facades\Vouchers;
 use FrittenKeeZ\Vouchers\Models\Voucher;
 use Illuminate\Support\Facades\Http;
-use LBHurtado\Voucher\Models\Cash;
+use LBHurtado\Cash\Models\Cash;
 
 uses(RefreshDatabase::class);
 

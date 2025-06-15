@@ -2,26 +2,20 @@
 
 use Illuminate\Database\Eloquent\Casts\ArrayObject;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use FrittenKeeZ\Vouchers\Facades\Vouchers;
-use FrittenKeeZ\Vouchers\Models\Voucher;
-use LBHurtado\Voucher\Models\Cash;
+use LBHurtado\Cash\Models\Cash;
 use Brick\Money\Money;
 
 uses(RefreshDatabase::class);
 
 it('creates a cash record with meta and reference', function () {
-    $voucher = Vouchers::create();
 
-    $cash = Cash::factory()->forReference($voucher)->create([
+    $cash = Cash::factory()->create([
         'amount' => 1500.00,
         'currency' => 'PHP',
-        'reference_type' => $voucher::class,
-        'reference_id' => $voucher->id,
         'meta' => ['note' => 'Disbursed for transport support'],
     ]);
 
     expect($cash)->toBeInstanceOf(Cash::class)
-        ->and($cash->reference->is($voucher))->toBeTrue()
         ->and($cash->amount)->toBeInstanceOf(Money::class)
         ->and($cash->amount->getAmount()->toFloat())->toBe(1500.00)
         ->and($cash->amount->getMinorAmount()->toInt())->toBe(150000)
@@ -30,20 +24,15 @@ it('creates a cash record with meta and reference', function () {
         ->and($cash->meta)->toBeInstanceOf(ArrayObject::class)
         ->and($cash->meta->note)->toBe('Disbursed for transport support')
         ->and($cash->meta['note'])->toBe('Disbursed for transport support')
-        ->and($cash->reference)->toBeInstanceOf(Voucher::class)
-        ->and($cash->reference->id)->toBe($voucher->id);
+    ;
 });
 
 it('accepts a Money object and stores it as minor units', function () {
-    $voucher = Vouchers::create();
-
     $money = Money::of(1500.00, 'PHP'); // major units
 
     $cash = Cash::create([
         'amount' => $money, // uses the mutator
         'currency' => 'PHP',
-        'reference_type' => $voucher::class,
-        'reference_id' => $voucher->id,
         'meta' => ['note' => 'Funded via Money object'],
     ]);
 
@@ -68,7 +57,7 @@ it('proxies value attribute to amount for backward compatibility', function () {
 });
 
 use Illuminate\Support\Carbon;
-use LBHurtado\Voucher\Enums\CashStatus;
+use LBHurtado\Cash\Enums\CashStatus;
 
 it('sets and gets expired attribute correctly', function () {
     $cash = Cash::factory()->create();
