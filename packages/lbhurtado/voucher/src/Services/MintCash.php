@@ -1,10 +1,7 @@
 <?php
 
-namespace LBHurtado\Voucher\Actions;
+namespace LBHurtado\Voucher\Services;
 
-use LBHurtado\Voucher\Pipelines\Voucher\CheckBalance;
-use LBHurtado\Voucher\Pipelines\Voucher\EscrowAction;
-use LBHurtado\Voucher\Pipelines\Voucher\PersistCash;
 use Lorisleiva\Actions\Concerns\AsAction;
 use Illuminate\Support\Facades\{DB, Log};
 use LBHurtado\Voucher\Models\Voucher;
@@ -18,13 +15,10 @@ class MintCash
     public function handle(Voucher $voucher): Cash
     {
         try {
+            $mint_pipeline = config('voucher-pipeline.mint-cash');
             $callback = fn () => app(Pipeline::class)
                 ->send($voucher)
-                ->through([
-                    CheckBalance::class,
-                    EscrowAction::class,
-                    PersistCash::class,
-                ])
+                ->through($mint_pipeline)
                 ->thenReturn();
 
             if (DB::transactionLevel() > 0) {

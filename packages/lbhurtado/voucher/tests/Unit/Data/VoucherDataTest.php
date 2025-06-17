@@ -83,7 +83,7 @@ it('correctly maps a full Voucher model to VoucherData DTO', function () {
 //        ->processed_on->toDateTimeString()->toBe('2025-01-04 09:00:00')
         ->processed->toBeTrue()
         ->instructions->toBeInstanceOf(VoucherInstructionsData::class)
-        ->instructions->cash->amount->toBe(500)
+        ->instructions->cash->amount->toBe(500.0)
         ->instructions->count->toBe(2)
         ->instructions->prefix->toBe('PRE')
         ->instructions->mask->toBe('**MASK**')

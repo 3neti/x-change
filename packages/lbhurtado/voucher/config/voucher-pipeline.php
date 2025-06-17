@@ -12,7 +12,12 @@ return [
         \LBHurtado\Voucher\Pipelines\GeneratedVouchers\LogAuditTrail::class,
         \LBHurtado\Voucher\Pipelines\GeneratedVouchers\MarkAsProcessed::class,
         \LBHurtado\Voucher\Pipelines\GeneratedVouchers\TriggerPostGenerationWorkflows::class,
-    ]
+    ],
+    'mint-cash' => [
+        \LBHurtado\Voucher\Pipelines\Voucher\CheckBalance::class,
+        \LBHurtado\Voucher\Pipelines\Voucher\EscrowAction::class,
+        \LBHurtado\Voucher\Pipelines\Voucher\PersistCash::class,
+    ],
 ];
 
 // put this after NormalizeMetadata

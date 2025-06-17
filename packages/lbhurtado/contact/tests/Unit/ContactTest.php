@@ -1,49 +1,53 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use LBHurtado\Contact\Models\Cash;
+use LBHurtado\Contact\Models\Contact;
 
 uses(RefreshDatabase::class);
 
 it('has attributes', function () {
-   $contact = Cash::factory()->create();
-
-   expect($contact)->toBeInstanceOf(Cash::class);
-   expect($contact->mobile)->toBeString();
-   expect($contact->country)->toBeString();
+    $contact = Contact::factory()->create();
+    expect($contact)->toBeInstanceOf(Contact::class);
+    expect($contact->mobile)->toBeString();
+    expect($contact->country)->toBeString();
+    expect($contact->bank_code)->toBeString();
+    expect($contact->account_number)->toBeString();
 });
 
 it('defaults country to PH when not provided', function () {
     // Create without specifying country
-    /** @var Cash $c */
-    $c = Cash::create([
+    /** @var Contact $c */
+    $c = Contact::create([
         'mobile' => '09171234567',
         'country' => '',      // empty
     ]);
 
-    expect($c->country)->toBe(Cash::DEFAULT_COUNTRY);
+    $default_country = config('contact.default.country');
+    expect($c->country)->toBe($default_country);
 });
 
 it('respects an explicit country attribute', function () {
-    /** @var Cash $c */
-    $c = Cash::create([
+    /** @var Contact $c */
+    $c = Contact::create([
         'mobile'  => '09171234567',
-        'country' => 'US',
+        'country' => 'PH',
     ]);
 
-    expect($c->country)->toBe('US');
+    expect($c->country)->toBe('PH');
 });
 
 it('formats mobile on set using the HasMobile mutator and persists it normalized', function () {
     $raw = ' (0917) 123-4567 ';
-    /** @var Cash $c */
-    $c = Cash::create([
+    /** @var Contact $c */
+    $c = Contact::create([
         'mobile'  => $raw,
         'country' => '',
     ]);
 
-    $expected = phone($raw, Cash::DEFAULT_COUNTRY)
-        ->formatForMobileDialingInCountry(Cash::DEFAULT_COUNTRY);
+    $default_country = config('contact.default.country');
+
+    $expected = phone($raw, $default_country)
+        ->formatForMobileDialingInCountry($default_country);
 
     // Stored value in DB should equal the normalized version
     $this->assertDatabaseHas('contacts', [
@@ -64,13 +68,13 @@ it('formats mobile on get using the HasMobile accessor', function () {
         'updated_at' => now(),
     ]);
 
-    $c = Cash::first();
+    $c = Contact::first();
     expect($c->mobile)->toBe($formatted);
 });
 
 it('works with a non-default country (e.g. US)', function () {
     $raw = '202-555-0133';
-    $c = Cash::create([
+    $c = Contact::create([
         'mobile'  => $raw,
         'country' => 'US',
     ]);
@@ -81,3 +85,55 @@ it('works with a non-default country (e.g. US)', function () {
     expect($c->country)->toBe('US');
     expect($c->mobile)->toBe($expected);
 })->skip();
+
+
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Config;
+
+uses()->group('contact');
+
+beforeEach(function () {
+    // ensure default config in case you rely on it
+    Config::set('contact.default.country', 'PH');
+    Config::set('contact.default.bank_account', 'DEFAULTBANK');
+});
+
+it('splits bank_account into bank_code and account_number', function () {
+    $contact = Contact::make([
+        'mobile' => '09171234567',
+        'country' => 'PH',
+        // simulate a manual override
+        'bank_account' => 'MYBANK:1234567890',
+    ]);
+
+    // no need to save—the accessor works right away
+    expect($contact->bank_code)->toBe('MYBANK')
+        ->and($contact->account_number)->toBe('1234567890');
+});
+
+//it('falls back gracefully when no colon is present', function () {
+//    $contact = Contact::make([
+//        'mobile' => '09171234567',
+//        'country' => 'PH',
+//        'bank_account' => 'JUSTONESTRING',
+//    ]);
+//
+//    expect($contact->bank_code)->toBe('JUSTONESTRING')
+//        ->and($contact->account_number)->toBe('');
+//});
+
+it('booted creating() ensures default bank_account is applied', function () {
+    // clear any existing bank_account override
+    $c = Contact::create([
+        'mobile' => '09171234567',
+        'country' => null,
+    ]);
+
+    // after create(), country should be default and bank_account built
+    expect($c->country)->toBe('PH');
+    // default bank_account prefix from config + ":" + mobile
+    expect($c->bank_account)->toBe('GXCHPHM2XXX:09171234567');
+    // and our getters still work
+    expect($c->bank_code)->toBe('GXCHPHM2XXX')
+        ->and($c->account_number)->toBe('09171234567');
+});

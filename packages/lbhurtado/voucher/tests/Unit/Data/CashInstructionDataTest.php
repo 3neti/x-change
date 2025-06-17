@@ -16,7 +16,7 @@ it('validates and serializes cash instruction data', function () {
         ],
     ]);
 
-    expect($data->amount)->toBe(1000);
+    expect($data->amount)->toBe(1000.0);
     expect($data->currency)->toBe('PHP');
     expect($data->validation)->toBeInstanceOf(CashValidationRulesData::class);
     expect($data->validation->mobile)->toBe('09171234567');

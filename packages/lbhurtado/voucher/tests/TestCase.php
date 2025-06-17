@@ -17,6 +17,12 @@ abstract class TestCase extends BaseTestCase
         Factory::guessFactoryNamesUsing(
             fn (string $modelName) => 'LBHurtado\\Voucher\\Database\\Factories\\'.class_basename($modelName).'Factory'
         );
+        // Set the base path for the package
+        if (!defined('TESTING_PACKAGE_PATH')) {
+            define('TESTING_PACKAGE_PATH', __DIR__ . '/../resources/documents');
+        }
+        $this->loadEnvironment();
+        $this->loadConfig();
 //        Relation::morphMap([
 //            'User'  => User::class,
 //        ]);
@@ -28,6 +34,10 @@ abstract class TestCase extends BaseTestCase
 //            AuthServiceProvider::class,
             \FrittenKeeZ\Vouchers\VouchersServiceProvider::class,
             \LBHurtado\Voucher\VoucherServiceProvider::class,
+            \LBHurtado\Wallet\WalletServiceProvider::class,
+            \Bavix\Wallet\WalletServiceProvider::class,
+            \LBHurtado\PaymentGateway\PaymentGatewayServiceProvider::class,
+            \LBHurtado\Contact\ContactServiceProvider::class,
         ];
     }
 
@@ -78,14 +88,12 @@ abstract class TestCase extends BaseTestCase
         $userMigration->up();
         $moneyIssuerMigration = include __DIR__ . '/../database/migrations/test/2024_07_02_202500_create_money_issuers_table.php';
         $moneyIssuerMigration->up();
-//        $cashMigration = include __DIR__ . '/../database/migrations/2024_08_02_202500_create_cash_table.php';
-//        $cashMigration->up();
+        $channelsMigration = include __DIR__ . '/../database/migrations/test/2024_08_02_000000_create_channels_table.php';
+        $channelsMigration->up();
         $statusMigration = include __DIR__ . '/../database/migrations/test/2024_08_03_202500_create_statuses_table.php';
         $statusMigration->up();
         $tagMigration = include __DIR__ . '/../database/migrations/test/2024_08_04_202500_create_tag_tables.php';
         $tagMigration->up();
-//        $voucherMigration = include __DIR__ . '/../database/migrations/2024_08_26_202500_add_processed_on_to_vouchers_table.php';
-//        $voucherMigration->up();
     }
 
     // Define a reusable method for logging in a user
@@ -98,5 +106,27 @@ abstract class TestCase extends BaseTestCase
         ]);
 
         $this->actingAs($user); // Simulate authentication as this user
+    }
+
+    protected function loadConfig()
+    {
+        $this->app['config']->set(
+            'disbursement',
+            require __DIR__ . '/../config/disbursement.php'
+        );
+
+        $this->app['config']->set(
+            'payment-gateway',
+            require __DIR__ . '/../config/payment-gateway.php'
+        );
+    }
+
+    protected function loadEnvironment()
+    {
+        $path =__DIR__ . '/../.env';
+
+        if (file_exists($path)) {
+            \Dotenv\Dotenv::createImmutable(dirname($path), '.env')->load();
+        }
     }
 }

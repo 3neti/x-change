@@ -33,7 +33,7 @@ it('parses partial AI JSON and falls back to defaults', function () {
     $parser = app(InstructionParser::class);
     $data = $parser->fromText("Give me vouchers…");
 
-    expect($data->cash->amount)->toBe(500)
+    expect($data->cash->amount)->toBe(500.0)
         ->and($data->cash->currency)->toBe('EUR')
         ->and($data->count)->toBe(1)         // default
         ->and($data->ttl->totalHours)->toBe(12.0);

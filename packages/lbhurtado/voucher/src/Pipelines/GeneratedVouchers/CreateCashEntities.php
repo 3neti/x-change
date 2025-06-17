@@ -2,7 +2,7 @@
 
 namespace LBHurtado\Voucher\Pipelines\GeneratedVouchers;
 
-use LBHurtado\Voucher\Actions\MintCash;
+use LBHurtado\Voucher\Services\MintCash;
 use Closure;
 
 class CreateCashEntities

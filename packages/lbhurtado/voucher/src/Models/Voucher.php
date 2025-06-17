@@ -3,7 +3,9 @@
 namespace LBHurtado\Voucher\Models;
 
 use FrittenKeeZ\Vouchers\Models\Voucher as BaseVoucher;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
+use LBHurtado\Voucher\Observers\VoucherObserver;
 use LBHurtado\Voucher\Scopes\RedeemedScope;
 use LBHurtado\Voucher\Data\VoucherData;
 use Spatie\LaravelData\WithData;
@@ -28,6 +30,7 @@ use Illuminate\Support\Carbon;
  *
  * @method int getKey()
  */
+#[ObservedBy([VoucherObserver::class])]
 class Voucher extends BaseVoucher
 {
     use WithData;

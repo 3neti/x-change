@@ -36,7 +36,7 @@ it('validates and serializes voucher instructions data', function () {
     ]);
 
     // Validate nested properties
-    expect($data->cash->amount)->toBe(1500);
+    expect($data->cash->amount)->toBe(1500.0);
     expect($data->cash->currency)->toBe('USD');
     expect($data->cash->validation->country)->toBe('US');
     expect($data->inputs->fields)->toContain(VoucherInputField::EMAIL);

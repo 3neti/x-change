@@ -11,6 +11,18 @@
         {
             "type": "path",
             "url": "./../contact"
+        },
+        {
+            "type": "path",
+            "url": "./../model-channel"
+        },
+        {
+            "type": "path",
+            "url": "./../payment-gateway"
+        },
+        {
+            "type": "path",
+            "url": "./../wallet"
         }
     ],
     "authors": [
@@ -44,9 +56,11 @@
         "brick/money": "^0.10.1",
         "lbhurtado/cash": "dev-main",
         "lbhurtado/contact": "dev-main",
+        "lbhurtado/wallet": "dev-main",
         "spatie/laravel-model-status": "^1.18",
         "spatie/laravel-tags": "^4.10",
-        "propaganistas/laravel-phone": "^6.0"
+        "propaganistas/laravel-phone": "^6.0",
+        "lbhurtado/payment-gateway": "dev-main"
     },
     "require-dev": {
         "orchestra/testbench": "^10.3",
@@ -59,5 +73,7 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true
         }
-    }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
 }

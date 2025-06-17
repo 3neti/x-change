@@ -23,7 +23,7 @@ abstract class TestCase extends BaseTestCase
     protected function getPackageProviders($app)
     {
         return [
-        \LBHurtado\Contact\CashServiceProvider::class,
+        \LBHurtado\Contact\ContactServiceProvider::class,
         ];
     }
 
@@ -37,8 +37,6 @@ abstract class TestCase extends BaseTestCase
         // Run the migration from the local package
         $userMigration = include __DIR__ . '/../database/migrations/test/0001_01_01_000000_create_users_table.php';
         $userMigration->up();
-//        $channelMigration = include __DIR__ . '/../database/migrations/2024_08_02_000000_create_contacts_table.php';
-//        $channelMigration->up();
     }
 
     // Define a reusable method for logging in a user
@@ -60,7 +58,7 @@ abstract class TestCase extends BaseTestCase
     protected function loadConfig()
     {
         $this->app['config']->set(
-            'model-channel',
+            'contact',
             require __DIR__ . '/../config/contact.php'
         );
     }

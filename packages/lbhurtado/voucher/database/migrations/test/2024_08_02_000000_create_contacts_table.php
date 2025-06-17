@@ -12,7 +12,6 @@ return new class extends Migration
             $table->id();
             $table->string('mobile');
             $table->string('country');
-            $table->string('bank_account')->nullable();
             $table->timestamps();
         });
     }

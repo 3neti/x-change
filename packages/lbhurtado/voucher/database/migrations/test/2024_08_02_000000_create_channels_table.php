@@ -8,17 +8,17 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('contacts', function (Blueprint $table) {
+        Schema::create('channels', function (Blueprint $table) {
             $table->id();
-            $table->string('mobile');
-            $table->string('country');
-            $table->string('bank_account')->nullable();
+            $table->string('name');
+            $table->string('value');
+            $table->morphs('model');
             $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('contacts');
+        Schema::dropIfExists('channels');
     }
 };

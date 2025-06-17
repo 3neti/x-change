@@ -11,7 +11,7 @@ class CashInstructionData extends Data
     use HasSafeDefaults;
 
     public function __construct(
-        public int $amount,
+        public float $amount,
         public string $currency,
         public CashValidationRulesData $validation,
     ) { $this->applyRulesAndDefaults(); }
@@ -20,7 +20,7 @@ class CashInstructionData extends Data
     {
         return [
             'amount' => [
-                ['required', 'integer', 'min:50'],
+                ['required', 'numeric', 'min:50'],
                 config('instructions.cash.amount')
             ],
             'currency' => [

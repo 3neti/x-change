@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "99cf40b5ab6e8360c59b2f28c8f1cc40",
+    "content-hash": "555f26e13280301ae1f5f9e19b9ef02d",
     "packages": [
         {
             "name": "amphp/amp",
@@ -813,6 +813,99 @@
                 }
             ],
             "time": "2024-08-03T19:31:26+00:00"
+        },
+        {
+            "name": "bavix/laravel-wallet",
+            "version": "11.4.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/bavix/laravel-wallet.git",
+                "reference": "c0d4bb0ec958135fd65585b883e5460dd997e4d6"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/bavix/laravel-wallet/zipball/c0d4bb0ec958135fd65585b883e5460dd997e4d6",
+                "reference": "c0d4bb0ec958135fd65585b883e5460dd997e4d6",
+                "shasum": ""
+            },
+            "require": {
+                "brick/math": "~0.10",
+                "ext-json": "*",
+                "ext-pdo": "*",
+                "illuminate/contracts": "^11.0|^12.0",
+                "illuminate/database": "^11.0|^12.0",
+                "php": "^8.2",
+                "ramsey/uuid": "^4.0"
+            },
+            "require-dev": {
+                "driftingly/rector-laravel": "^2.0",
+                "ergebnis/phpstan-rules": "^2.1",
+                "infection/infection": "~0.27",
+                "larastan/larastan": "^3.0",
+                "laravel/cashier": "^15.0",
+                "nunomaduro/collision": "^8.0",
+                "orchestra/testbench": "^10.0",
+                "phpstan/phpstan": "^2.1",
+                "phpunit/phpunit": "^11.0",
+                "rector/rector": "^2.0",
+                "symplify/easy-coding-standard": "^12.1"
+            },
+            "suggest": {
+                "bavix/laravel-wallet-swap": "Addition to the laravel-wallet library for quick setting of exchange rates",
+                "bavix/laravel-wallet-uuid": "Addition to the laravel-wallet library uuid support in laravel-wallet",
+                "bavix/laravel-wallet-warmup": "Addition to the laravel-wallet library for refresh balance wallets"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Bavix\\Wallet\\WalletServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Bavix\\Wallet\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Babichev Maxim",
+                    "email": "info@babichev.net"
+                }
+            ],
+            "description": "It's easy to work with a virtual wallet.",
+            "homepage": "https://bavix.github.io/laravel-wallet/",
+            "keywords": [
+                "bavix",
+                "credits",
+                "currency",
+                "laravel",
+                "laravel-package",
+                "laravel-wallet",
+                "payments",
+                "virtual",
+                "wallet"
+            ],
+            "support": {
+                "issues": "https://github.com/bavix/laravel-wallet/issues",
+                "source": "https://github.com/bavix/laravel-wallet/tree/11.4.2"
+            },
+            "funding": [
+                {
+                    "url": "https://www.tinkoff.ru/cf/1OkIPwTvTLf",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://opencollective.com/laravel-wallet",
+                    "type": "open_collective"
+                }
+            ],
+            "time": "2025-04-13T08:53:43+00:00"
         },
         {
             "name": "brick/math",
@@ -2489,6 +2582,70 @@
             "time": "2025-02-11T13:34:40+00:00"
         },
         {
+            "name": "laravel/sanctum",
+            "version": "v4.1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/laravel/sanctum.git",
+                "reference": "a360a6a1fd2400ead4eb9b6a9c1bb272939194f5"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/laravel/sanctum/zipball/a360a6a1fd2400ead4eb9b6a9c1bb272939194f5",
+                "reference": "a360a6a1fd2400ead4eb9b6a9c1bb272939194f5",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "illuminate/console": "^11.0|^12.0",
+                "illuminate/contracts": "^11.0|^12.0",
+                "illuminate/database": "^11.0|^12.0",
+                "illuminate/support": "^11.0|^12.0",
+                "php": "^8.2",
+                "symfony/console": "^7.0"
+            },
+            "require-dev": {
+                "mockery/mockery": "^1.6",
+                "orchestra/testbench": "^9.0|^10.0",
+                "phpstan/phpstan": "^1.10",
+                "phpunit/phpunit": "^11.3"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Laravel\\Sanctum\\SanctumServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Laravel\\Sanctum\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Taylor Otwell",
+                    "email": "taylor@laravel.com"
+                }
+            ],
+            "description": "Laravel Sanctum provides a featherweight authentication system for SPAs and simple APIs.",
+            "keywords": [
+                "auth",
+                "laravel",
+                "sanctum"
+            ],
+            "support": {
+                "issues": "https://github.com/laravel/sanctum/issues",
+                "source": "https://github.com/laravel/sanctum"
+            },
+            "time": "2025-04-23T13:03:38+00:00"
+        },
+        {
             "name": "laravel/serializable-closure",
             "version": "v2.0.4",
             "source": {
@@ -2613,7 +2770,7 @@
             "dist": {
                 "type": "path",
                 "url": "./../contact",
-                "reference": "578199e2a99d1df049195c9e15d5d89b300ba4ee"
+                "reference": "85f21e899dc3936a1dbcfb1f041d3dd436dbe51c"
             },
             "require": {
                 "propaganistas/laravel-phone": "^6.0",
@@ -2627,7 +2784,7 @@
             "extra": {
                 "laravel": {
                     "providers": [
-                        "CashServiceProvider"
+                        "LBHurtado\\Contact\\ContactServiceProvider"
                     ]
                 }
             },
@@ -2657,6 +2814,177 @@
                 }
             ],
             "description": "A package to enable assigning contacts to Eloquent Models",
+            "transport-options": {
+                "relative": true
+            }
+        },
+        {
+            "name": "lbhurtado/laravel-model-channel",
+            "version": "dev-main",
+            "dist": {
+                "type": "path",
+                "url": "./../model-channel",
+                "reference": "7e6e3dfa194f22f74819e03d8928fcc25f982079"
+            },
+            "require": {
+                "propaganistas/laravel-phone": "^6.0"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^10.3",
+                "pestphp/pest": "^3.8"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "LBHurtado\\ModelChannel\\ModelChannelServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "LBHurtado\\ModelChannel\\": "src/",
+                    "LBHurtado\\ModelChannel\\Database\\Factories\\": "database/factories/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "LBHurtado\\ModelChannel\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "vendor/bin/pest"
+                ]
+            },
+            "license": [
+                "proprietary"
+            ],
+            "authors": [
+                {
+                    "name": "Lester Hurtado",
+                    "email": "lester@hurtado.ph"
+                }
+            ],
+            "description": "A package to enable assigning channels to Eloquent Models",
+            "transport-options": {
+                "relative": true
+            }
+        },
+        {
+            "name": "lbhurtado/payment-gateway",
+            "version": "dev-main",
+            "dist": {
+                "type": "path",
+                "url": "./../payment-gateway",
+                "reference": "cd5c87e131dd8e08f21903b86c6db88ccbbf5420"
+            },
+            "require": {
+                "brick/money": "^0.10.1",
+                "laravel/sanctum": "^4.0",
+                "lbhurtado/laravel-model-channel": "dev-main",
+                "lbhurtado/wallet": "dev-main",
+                "lorisleiva/laravel-actions": "^2.9",
+                "propaganistas/laravel-phone": "^6.0",
+                "spatie/laravel-data": "^4.15"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^10.3",
+                "pestphp/pest": "^3.8"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "LBHurtado\\PaymentGateway\\PaymentGatewayServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "LBHurtado\\PaymentGateway\\": "src/",
+                    "LBHurtado\\PaymentGateway\\Database\\Factories\\": "database/factories/"
+                },
+                "files": [
+                    "src/Support/Helpers.php"
+                ]
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "LBHurtado\\PaymentGateway\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "vendor/bin/pest"
+                ]
+            },
+            "license": [
+                "proprietary"
+            ],
+            "authors": [
+                {
+                    "name": "Lester Hurtado",
+                    "email": "lester@hurtado.ph"
+                }
+            ],
+            "description": "Payment Gateway",
+            "transport-options": {
+                "relative": true
+            }
+        },
+        {
+            "name": "lbhurtado/wallet",
+            "version": "dev-main",
+            "dist": {
+                "type": "path",
+                "url": "./../wallet",
+                "reference": "19e465bb6fe1eac6db4681ae6694938e59824c5a"
+            },
+            "require": {
+                "bavix/laravel-wallet": "^11.4",
+                "brick/money": "^0.10.1",
+                "lorisleiva/laravel-actions": "^2.9",
+                "spatie/laravel-data": "^4.15"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^10.3",
+                "pestphp/pest": "^3.8"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "LBHurtado\\Wallet\\WalletServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "LBHurtado\\Wallet\\": "src/",
+                    "LBHurtado\\Wallet\\Database\\Factories\\": "database/factories/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "LBHurtado\\Wallet\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "vendor/bin/pest"
+                ]
+            },
+            "license": [
+                "proprietary"
+            ],
+            "authors": [
+                {
+                    "name": "Lester Hurtado",
+                    "email": "lester@hurtado.ph"
+                }
+            ],
+            "description": "Custom wallet for X-Change",
             "transport-options": {
                 "relative": true
             }
@@ -8314,16 +8642,16 @@
         },
         {
             "name": "filp/whoops",
-            "version": "2.18.2",
+            "version": "2.18.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/filp/whoops.git",
-                "reference": "89dabca1490bc77dbcab41c2b20968c7e44bf7c3"
+                "reference": "59a123a3d459c5a23055802237cb317f609867e5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/filp/whoops/zipball/89dabca1490bc77dbcab41c2b20968c7e44bf7c3",
-                "reference": "89dabca1490bc77dbcab41c2b20968c7e44bf7c3",
+                "url": "https://api.github.com/repos/filp/whoops/zipball/59a123a3d459c5a23055802237cb317f609867e5",
+                "reference": "59a123a3d459c5a23055802237cb317f609867e5",
                 "shasum": ""
             },
             "require": {
@@ -8373,7 +8701,7 @@
             ],
             "support": {
                 "issues": "https://github.com/filp/whoops/issues",
-                "source": "https://github.com/filp/whoops/tree/2.18.2"
+                "source": "https://github.com/filp/whoops/tree/2.18.3"
             },
             "funding": [
                 {
@@ -8381,7 +8709,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2025-06-11T20:42:19+00:00"
+            "time": "2025-06-16T00:02:10+00:00"
         },
         {
             "name": "hamcrest/hamcrest-php",
@@ -11411,12 +11739,14 @@
         }
     ],
     "aliases": [],
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
     "stability-flags": {
         "lbhurtado/cash": 20,
-        "lbhurtado/contact": 20
+        "lbhurtado/contact": 20,
+        "lbhurtado/payment-gateway": 20,
+        "lbhurtado/wallet": 20
     },
-    "prefer-stable": false,
+    "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {},
     "platform-dev": {},

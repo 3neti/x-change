@@ -6,18 +6,18 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 
 trait HasMobile
 {
-    const DEFAULT_COUNTRY = 'PH';
-
     protected function mobile(): Attribute
     {
+        $default_country = config('contact.default.country');
+
         return Attribute::make(
-            get: function ($value, $attributes) {
-                $country = $attributes['country'] ?? self::DEFAULT_COUNTRY;
+            get: function ($value, $attributes) use ($default_country) {
+                $country = $attributes['country'] ?? $default_country;
 
                 return phone($value, $country)->formatForMobileDialingInCountry($country);
             },
-            set: function ($value, $attributes) {
-                $country = $attributes['country'] ?? self::DEFAULT_COUNTRY;
+            set: function ($value, $attributes) use ($default_country) {
+                $country = $attributes['country'] ?? $default_country;
 
                 return phone($value, $country)->formatForMobileDialingInCountry($country);
             }

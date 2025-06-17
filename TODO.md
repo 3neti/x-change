@@ -9,7 +9,7 @@
 - check balance
 - topup
 - generate voucher
-- disburse
+- disburse    //TODO: $cash as sender, not the $voucher->owner
 - redeem
 
 # Data

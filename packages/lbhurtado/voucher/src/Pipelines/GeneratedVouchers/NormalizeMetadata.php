@@ -12,7 +12,8 @@ class NormalizeMetadata
             $instructions = $voucher->metadata['instructions'] ?? [];
 
             if (isset($instructions['cash']['amount'])) {
-                $instructions['cash']['amount'] = (int) $instructions['cash']['amount'];
+                $instructions['cash']['amount'] =
+                    round( num: $instructions['cash']['amount'], precision: 2, mode: PHP_ROUND_HALF_DOWN);
             }
 
             if (isset($instructions['cash']['currency'])) {

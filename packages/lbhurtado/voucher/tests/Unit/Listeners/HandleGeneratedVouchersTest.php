@@ -88,7 +88,7 @@ it('handles generated vouchers and creates associated cash records', function (V
 
         // Ensure the Cash record exists and contains the correct data
         expect($cash)->not->toBeNull()
-            ->and($cash->amount->getAmount()->toInt())->toBe($instructions->cash->amount)
+            ->and($cash->amount->getAmount()->toFloat())->toBe($instructions->cash->amount)
             ->and($cash->currency)->toBe($instructions->cash->currency)
         ;
     }
