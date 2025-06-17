@@ -4,8 +4,10 @@ namespace LBHurtado\Cash\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Casts\AsArrayObject;
+use Bavix\Wallet\Traits\{CanConfirm, HasWalletFloat};
 use Illuminate\Database\Eloquent\Casts\ArrayObject;
 use LBHurtado\Cash\Database\Factories\CashFactory;
+use Bavix\Wallet\Interfaces\{Confirmable, Wallet};
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -15,6 +17,8 @@ use Spatie\ModelStatus\HasStatuses;
 use Illuminate\Support\Number;
 use Spatie\Tags\HasTags;
 use Brick\Money\Money;
+
+use Bavix\Wallet\Traits\HasWallet;
 
 /**
  * Class Cash.
@@ -32,11 +36,14 @@ use Brick\Money\Money;
  *
  * @method int getKey()
  */
-class Cash extends Model
+class Cash extends Model implements Wallet, Confirmable
 {
     use HasStatuses {
         HasStatuses::setStatus as traitSetStatus; // Rename the HasStatuses method to traitSetStatus
     }
+    use HasWallet;
+    use HasWalletFloat;
+    use CanConfirm;
     use HasFactory;
     use HasTags;
 
@@ -59,11 +66,18 @@ class Cash extends Model
     {
         return CashFactory::new();
     }
-
     public static function booted(): void
     {
         static::creating(function (Cash $cash) {
             $cash->currency = $cash->currency ?: Number::defaultCurrency();
+        });
+        static::created(function (Cash $cash) {
+            $float = $cash->amount->getAmount()->toFloat();
+            $cash->depositFloat($float);
+        });
+        // **never** let this model be updated again:
+        static::updating(function (self $cash) {
+            return false; // cancels the update
         });
     }
 

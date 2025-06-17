@@ -23,7 +23,9 @@ abstract class TestCase extends BaseTestCase
     protected function getPackageProviders($app)
     {
         return [
-        \LBHurtado\Cash\CashServiceProvider::class,
+            \LBHurtado\Cash\CashServiceProvider::class,
+            \LBHurtado\Wallet\WalletServiceProvider::class,
+            \Bavix\Wallet\WalletServiceProvider::class
         ];
     }
 

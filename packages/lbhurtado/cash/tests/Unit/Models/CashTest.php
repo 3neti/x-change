@@ -94,3 +94,11 @@ it('checks if cash is expired', function () {
 
     expect($cash->expired)->toBeFalse();
 });
+
+it('cannot be updated', function () {
+    $cash = Cash::factory()->create(['amount' => 1500, 'currency' => 'PHP']);
+    $cash->amount = 100;
+    $cash->save();
+    $cash->refresh();
+    expect($cash->amount->getAmount()->toFloat())->toBe(1500.0);
+});

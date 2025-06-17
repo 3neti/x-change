@@ -31,7 +31,7 @@ trait CanDisburse
             $transaction = $user->withdraw(
                 $credits->getMinorAmount()->toInt(),
                 [],
-                false
+                true
             );
 
             $payload_data = DisbursePayloadData::fromValidated($validated);

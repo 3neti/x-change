@@ -26,8 +26,12 @@ class DisburseCash
     {
         Log::debug('[DisburseCash] Starting disbursement for voucher', ['code' => $voucher->code]);
 
-        //TODO: change this to $cash, make it a wallet
-        $sender = $voucher->owner;
+        $cash = $voucher->getEntities(Cash::class)->first();
+
+        if (! $cash) {
+            Log::warning('[DisburseCash] No cash entity attached to voucher', ['code' => $voucher->code]);
+            return $next($voucher);
+        }
 
         $redeemerRelation = $voucher->redeemers->first();
         $contact = $redeemerRelation?->redeemer;
@@ -43,15 +47,9 @@ class DisburseCash
             return $next($voucher);
         }
 
-        $cashEntity = $voucher->getEntities(Cash::class)->first();
-        if (! $cashEntity) {
-            Log::warning('[DisburseCash] No cash entity attached to voucher', ['code' => $voucher->code]);
-            return $next($voucher);
-        }
-
         $input = DisburseInputData::from([
             'reference'      => "{$voucher->code}-{$contact->mobile}",
-            'amount'         => $cashEntity->amount->getAmount()->toFloat(),
+            'amount'         => $cash->amount->getAmount()->toFloat(),
             'account_number' => $bankAccount->getAccountNumber(), //'000661592316',
             'bank'           => $bankAccount->getBankCode(),// 'GXCHPHM2XXX', //'BNORPHMMXXX'
             'via'            => 'INSTAPAY',
@@ -59,7 +57,7 @@ class DisburseCash
 
         Log::debug('[DisburseCash] DisburseInputData prepared', ['input' => $input->toArray()]);
 
-        $response = $this->gateway->disburse($sender, $input);
+        $response = $this->gateway->disburse($cash, $input);
 
         // Handle boolean-false failure
         if ($response === false) {

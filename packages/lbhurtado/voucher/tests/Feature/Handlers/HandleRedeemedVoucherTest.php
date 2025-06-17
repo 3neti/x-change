@@ -94,12 +94,18 @@ it('disburse voucher invokes handler which in turn invokes the disburse cash pip
                 // The second arg must be a Closure
                 && is_callable($next);
         });
-})->with('voucher');
+})->with('voucher')->skip();
 
 it('disburses cash live', function  ($voucher) {
+    $cash = $voucher->getEntities(Cash::class)->first();
+    expect((float) $cash->balanceFloat)->toBe(53.7);
     $contact = Contact::factory()->create(['mobile' => '09467438575']);
+
 //    $contact = Contact::factory()->create(['mobile' => '09173011987']);
     $success = Vouchers::redeem($voucher->code, $contact);
 //    $success = Vouchers::redeem($voucher->code, $contact, ['bank_account' => 'BNORPHMMXXX:000661592316']);
     expect($success)->toBeTrue();
+    $cash = $voucher->getEntities(Cash::class)->first();
+    $cash->wallet->refreshBalance();
+    expect((float) $cash->wallet->balanceFloat)->toBe(0.0);
 })->with('voucher')->skip();

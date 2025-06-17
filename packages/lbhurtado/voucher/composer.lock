@@ -2712,10 +2712,11 @@
             "dist": {
                 "type": "path",
                 "url": "./../cash",
-                "reference": "49f402e8b8b424e4de8e6ef9b2a426e44996a129"
+                "reference": "d8d67c392c397c6d663a3e085b5c8cae0f1149c1"
             },
             "require": {
                 "brick/money": "^0.10.1",
+                "lbhurtado/wallet": "dev-main",
                 "lorisleiva/laravel-actions": "^2.9",
                 "propaganistas/laravel-phone": "^6.0",
                 "spatie/laravel-data": "^4.15",
