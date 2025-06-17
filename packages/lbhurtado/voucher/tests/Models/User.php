@@ -11,11 +11,13 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Bavix\Wallet\Interfaces\Wallet;
 use Bavix\Wallet\Interfaces\Confirmable;
-use Bavix\Wallet\Traits\CanConfirm;
+use Bavix\Wallet\Traits\{CanConfirm, CanPay};
 use Bavix\Wallet\Traits\HasWalletFloat;
 use LBHurtado\ModelChannel\Traits\HasChannels;
+use Bavix\Wallet\Interfaces\Customer;
 
-class User extends Authenticatable implements Wallet, Confirmable
+
+class User extends Authenticatable implements Wallet, Confirmable, Customer
 {
     use HasFactory;
     use HasRedeemers;
@@ -24,6 +26,7 @@ class User extends Authenticatable implements Wallet, Confirmable
     use HasWalletFloat;
     use CanConfirm;
     use HasChannels;
+    use CanPay;
 
     /**
      * The attributes that are mass assignable.

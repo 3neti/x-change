@@ -2,6 +2,7 @@
 
 namespace LBHurtado\Voucher\Pipelines\Voucher;
 
+use Bavix\Wallet\Interfaces\Customer;
 use Illuminate\Support\Facades\Log;
 use LBHurtado\Cash\Models\Cash;
 use Closure;
@@ -15,6 +16,12 @@ class PersistCash
             'instructions' => $voucher->instructions->toArray(),
         ]);
 
+        $user = auth()->user();
+
+        if (! $user instanceof Customer) {
+            throw new \Illuminate\Auth\AuthenticationException('You must implement customer to perform this action.');
+        }
+
         $instructions = $voucher->instructions;
         $amount       = $instructions->cash->amount;
         $currency     = $instructions->cash->currency;
@@ -26,6 +33,8 @@ class PersistCash
             'currency' => $currency,
             'meta'     => ['notes' => 'change this'],
         ]);
+
+        $user->pay($cash);
 
         Log::info('[PersistCash] Cash record created', [
             'cash_id'  => $cash->getKey(),

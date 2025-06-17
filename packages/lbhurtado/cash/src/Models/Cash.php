@@ -2,12 +2,12 @@
 
 namespace LBHurtado\Cash\Models;
 
+use Bavix\Wallet\Interfaces\{Confirmable, Customer, ProductInterface, Wallet};
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Casts\AsArrayObject;
 use Bavix\Wallet\Traits\{CanConfirm, HasWalletFloat};
 use Illuminate\Database\Eloquent\Casts\ArrayObject;
 use LBHurtado\Cash\Database\Factories\CashFactory;
-use Bavix\Wallet\Interfaces\{Confirmable, Wallet};
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -36,7 +36,7 @@ use Bavix\Wallet\Traits\HasWallet;
  *
  * @method int getKey()
  */
-class Cash extends Model implements Wallet, Confirmable
+class Cash extends Model implements ProductInterface
 {
     use HasStatuses {
         HasStatuses::setStatus as traitSetStatus; // Rename the HasStatuses method to traitSetStatus
@@ -71,14 +71,14 @@ class Cash extends Model implements Wallet, Confirmable
         static::creating(function (Cash $cash) {
             $cash->currency = $cash->currency ?: Number::defaultCurrency();
         });
-        static::created(function (Cash $cash) {
-            $float = $cash->amount->getAmount()->toFloat();
-            $cash->depositFloat($float);
-        });
-        // **never** let this model be updated again:
-        static::updating(function (self $cash) {
-            return false; // cancels the update
-        });
+//        static::created(function (Cash $cash) {
+//            $float = $cash->amount->getAmount()->toFloat();
+//            $cash->depositFloat($float);
+//        });
+//        // **never** let this model be updated again:
+//        static::updating(function (self $cash) {
+//            return false; // cancels the update
+//        });
     }
 
     /** @deprecated  */
@@ -230,5 +230,18 @@ class Cash extends Model implements Wallet, Confirmable
         // Check if it is not expired and the provided secret matches
         return (!$this->expires_on || !$this->expires_on->isPast()) // Not expired
             && $this->verifySecret($providedSecret); // Secret is valid
+    }
+
+    public function getAmountProduct(Customer $customer): int|string
+    {
+        return $this->amount->getMinorAmount()->toInt();
+    }
+
+    public function getMetaProduct(): ?array
+    {
+        return [
+            'title' => $this->title,
+            'description' => 'Purchase of Product #' . $this->id,
+        ];
     }
 }

@@ -7,7 +7,10 @@ namespace LBHurtado\Cash\Tests\Models;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use LBHurtado\Cash\Database\Factories\UserFactory;
+use Bavix\Wallet\Interfaces\{Customer, Wallet};
 use Illuminate\Notifications\Notifiable;
+use Bavix\Wallet\Traits\HasWalletFloat;
+use Bavix\Wallet\Traits\CanPay;
 
 /**
  * Class User.
@@ -18,10 +21,12 @@ use Illuminate\Notifications\Notifiable;
  *
  * @method int getKey()
  */
-class User extends Authenticatable
+class User extends Authenticatable implements Wallet, Customer
 {
+    use HasWalletFloat;
     use HasFactory;
     use Notifiable;
+    use CanPay;
 
     /**
      * The attributes that are mass assignable.

@@ -2,10 +2,11 @@
 
 namespace LBHurtado\Voucher\Pipelines\RedeemedVoucher;
 
-use LBHurtado\PaymentGateway\Data\Netbank\Disburse\DisburseResponseData;
-use LBHurtado\PaymentGateway\Data\Netbank\Disburse\DisburseInputData;
 use LBHurtado\PaymentGateway\Contracts\PaymentGatewayInterface;
-use LBHurtado\Wallet\Services\SystemUserResolverService;
+use LBHurtado\PaymentGateway\Data\Netbank\Disburse\{
+    DisburseResponseData,
+    DisburseInputData
+};
 use LBHurtado\Contact\Classes\BankAccount;
 use LBHurtado\Contact\Models\Contact;
 use Illuminate\Support\Facades\Log;
@@ -18,82 +19,85 @@ class DisburseCash
     public function __construct(protected PaymentGatewayInterface $gateway) {}
 
     /**
-     * @param  mixed    $voucher  The voucher being processed
-     * @param  \Closure $next     Next stage in the pipeline
-     * @return mixed              Either the result of $next or early return on failure
+     * Attempts to disburse the Cash entity attached to the voucher.
+     *
+     * @param  mixed    $voucher
+     * @param  \Closure $next
+     * @return mixed
      */
     public function handle($voucher, Closure $next)
     {
-        Log::debug('[DisburseCash] Starting disbursement for voucher', ['code' => $voucher->code]);
+        $code = $voucher->code;
+        Log::debug('[DisburseCash] Starting', ['voucher' => $code]);
 
+        // 1) Find the Cash entity
         $cash = $voucher->getEntities(Cash::class)->first();
-
         if (! $cash) {
-            Log::warning('[DisburseCash] No cash entity attached to voucher', ['code' => $voucher->code]);
+            Log::warning('[DisburseCash] No Cash entity',     ['voucher' => $code]);
             return $next($voucher);
         }
 
-        $redeemerRelation = $voucher->redeemers->first();
-        $contact = $redeemerRelation?->redeemer;
-        try {
-            $bankAccount = BankAccount::fromBankAccount(Arr::get($redeemerRelation->metadata, 'bank_account', ':'));
+        // 2) Resolve the redeemer Contact
+        $relation = $voucher->redeemers->first();
+        $contact  = $relation?->redeemer;
+        if (! $contact instanceof Contact) {
+            Log::warning('[DisburseCash] No redeemer Contact', ['voucher' => $code]);
+            return $next($voucher);
+        }
 
-        } catch (\Exception $exception) {
+        // 3) Parse bank account (fallback to Contact.bank_account)
+        $rawBank = Arr::get($relation->metadata, 'bank_account', $contact->bank_account);
+        try {
+            $bankAccount = BankAccount::fromBankAccount($rawBank);
+        } catch (\Throwable $e) {
+            Log::warning('[DisburseCash] Invalid bank_account format, using contact.bank_account', [
+                'voucher'      => $code,
+                'providedRaw'  => $rawBank,
+                'fallbackRaw'  => $contact->bank_account,
+            ]);
             $bankAccount = BankAccount::fromBankAccount($contact->bank_account);
         }
 
-        if (! $contact instanceof Contact) {
-            Log::warning('[DisburseCash] No redeemer contact found for voucher', ['code' => $voucher->code]);
-            return $next($voucher);
-        }
-
+        // 4) Build the DisburseInputData
         $input = DisburseInputData::from([
-            'reference'      => "{$voucher->code}-{$contact->mobile}",
+            'reference'      => "{$code}-{$contact->mobile}",
             'amount'         => $cash->amount->getAmount()->toFloat(),
-            'account_number' => $bankAccount->getAccountNumber(), //'000661592316',
-            'bank'           => $bankAccount->getBankCode(),// 'GXCHPHM2XXX', //'BNORPHMMXXX'
+            'account_number' => $bankAccount->getAccountNumber(),
+            'bank'           => $bankAccount->getBankCode(),
             'via'            => 'INSTAPAY',
         ]);
 
-        Log::debug('[DisburseCash] DisburseInputData prepared', ['input' => $input->toArray()]);
+        Log::debug('[DisburseCash] Payload ready', ['input' => $input->toArray()]);
 
+        // 5) Call the gateway
         $response = $this->gateway->disburse($cash, $input);
 
-        // Handle boolean-false failure
+        // 6) Handle failure or unexpected return
         if ($response === false) {
-            Log::error('[DisburseCash] Disbursement failed (returned false)', [
-                'voucher' => $voucher->code,
+            Log::error('[DisburseCash] Gateway returned false', [
+                'voucher' => $code,
                 'redeemer'=> $contact->mobile,
                 'amount'  => $input->amount,
             ]);
-            // Stop the pipeline here. You can either:
-            //  - return null or the voucher itself,
-            //  - throw an exception to fully abort,
-            //  - or push on a “failed” flag in the voucher metadata.
             return null;
         }
 
-        // Handle DisburseResponseData
-        if ($response instanceof DisburseResponseData) {
-            Log::info('[DisburseCash] Disbursement succeeded', [
-                'voucher'       => $voucher->code,
-                'uuid'          => $response->uuid,
-                'transactionId' => $response->transaction_id,
-                'status'        => $response->status,
-            ]);
-
-
-        } else {
-            // Defensive catch‐all
-            Log::warning('[DisburseCash] Unexpected disburse() return type', [
+        if (! $response instanceof DisburseResponseData) {
+            Log::warning('[DisburseCash] Unexpected response type', [
+                'voucher' => $code,
                 'type'    => gettype($response),
-                'content' => $response,
             ]);
-
             return null;
         }
 
-        // And only now continue to the next pipeline stage…
+        // 7) Success
+        Log::info('[DisburseCash] Success', [
+            'voucher'       => $code,
+            'transactionId' => $response->transaction_id,
+            'uuid'          => $response->uuid,
+            'status'        => $response->status,
+        ]);
+
         return $next($voucher);
     }
 }

@@ -8,6 +8,7 @@ use LBHurtado\Voucher\Enums\VoucherInputField;
 use Illuminate\Contracts\Auth\Authenticatable;
 use FrittenKeeZ\Vouchers\Facades\Vouchers;
 use FrittenKeeZ\Vouchers\Models\Voucher;
+use LBHurtado\Voucher\Tests\Models\User;
 use Illuminate\Support\Facades\Http;
 use LBHurtado\Cash\Models\Cash;
 
@@ -20,7 +21,9 @@ beforeEach(function () {
             'available' => true,
         ], 200),
     ]);
-
+    $user = User::factory()->create();
+    $user->depositFloat(100000);
+    $this->actingAs($user);
 });
 
 dataset('voucher_instructions', function () {

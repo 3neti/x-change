@@ -4,16 +4,14 @@ declare(strict_types=1);
 
 namespace LBHurtado\Wallet\Tests\Models;
 
+use Bavix\Wallet\Interfaces\{Confirmable, Customer, Wallet};
 use LBHurtado\Wallet\Services\WalletProvisioningService;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use LBHurtado\Wallet\Database\Factories\UserFactory;
 use LBHurtado\Wallet\Traits\HasPlatformWallets;
 use Illuminate\Notifications\Notifiable;
-use Bavix\Wallet\Interfaces\Confirmable;
-use Bavix\Wallet\Traits\HasWalletFloat;
-use Bavix\Wallet\Interfaces\Wallet;
-use Bavix\Wallet\Traits\CanConfirm;
+use Bavix\Wallet\Traits\{CanConfirm, CanPay, HasWalletFloat};
 
 /**
  * Class User.
@@ -24,13 +22,14 @@ use Bavix\Wallet\Traits\CanConfirm;
  *
  * @method int getKey()
  */
-class User extends Authenticatable implements Wallet, Confirmable
+class User extends Authenticatable implements Wallet, Confirmable, Customer
 {
     use HasPlatformWallets;
     use HasWalletFloat;
     use HasFactory;
     use Notifiable;
     use CanConfirm;
+    use CanPay;
 
     /**
      * The attributes that are mass assignable.

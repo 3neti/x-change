@@ -2,160 +2,130 @@
 
 namespace LBHurtado\PaymentGateway\Gateways\Netbank\Traits;
 
-use LBHurtado\PaymentGateway\Data\Netbank\Disburse\{DisbursePayloadData, DisburseResponseData};
-use LBHurtado\PaymentGateway\Data\Netbank\Disburse\DisburseInputData;
+use LBHurtado\PaymentGateway\Data\Netbank\Disburse\{
+    DisburseInputData,
+    DisbursePayloadData,
+    DisburseResponseData
+};
 use LBHurtado\Wallet\Events\DisbursementConfirmed;
-use Illuminate\Support\Facades\{DB, Http, Log};
 use Bavix\Wallet\Models\Transaction;
 use Bavix\Wallet\Interfaces\Wallet;
+use Illuminate\Support\Facades\{
+    Http,
+    Log,
+    DB
+};
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Arr;
 use Brick\Money\Money;
 
 trait CanDisburse
 {
-    public function disburse(Wallet $user, DisburseInputData|array $validated): DisburseResponseData|bool
+    /**
+     * Attempt to disburse funds.
+     *
+     * @param Wallet $wallet
+     * @param DisburseInputData|array $validated
+     * @return DisburseResponseData|bool
+     */
+    public function disburse(Wallet $wallet, DisburseInputData|array $validated): DisburseResponseData|bool
     {
-        $validated = $validated instanceof DisburseInputData
+        $data = $validated instanceof DisburseInputData
             ? $validated->toArray()
             : $validated;
 
-        // Parse the transaction amount into minor units (e.g., cents)
-        $credits = Money::of(Arr::get($validated, 'amount'), 'PHP');
+        $amount  = Arr::get($data, 'amount');
+        $currency = config('disbursement.currency', 'PHP');
+        $credits  = Money::of($amount, $currency);
 
-        // Begin a database transaction
         DB::beginTransaction();
 
         try {
-            // Step 1: Withdraw the amount from the user's wallet
-            $transaction = $user->withdraw(
+            // Reserve funds (pending withdrawal)
+            $transaction = $wallet->withdraw(
                 $credits->getMinorAmount()->toInt(),
                 [],
-                true
+                false
             );
 
-            $payload_data = DisbursePayloadData::fromValidated($validated);
+            // Build and log request payload
+            $payload = DisbursePayloadData::fromValidated($data)->toArray();
+            Log::info('[Netbank] Disburse payload prepared', $payload);
 
-            $payload = $payload_data->toArray();
-
-            // Step 2: Prepare the disbursement payload
-//            $payload = [
-//                'reference_id'          => $reference = Arr::get($validated, 'reference'),
-//                'settlement_rail'       => Arr::get($validated, 'via'),
-//                'amount'                => $this->getAmountArray($validated),
-//                'source_account_number' => config('disbursement.source.account_number'),
-//                'sender'                => config('disbursement.source.sender'),
-//                'destination_account'   => $this->getDestinationAccount($validated),
-//                'recipient'             => $this->getRecipient($validated),
-//            ];
-
-            // Log the disbursement payload
-            Log::info('NetbankPaymentGateway@disburse', compact('payload'));
-
-            // Step 3: Send the disbursement request to the Netbank API
+            // Send to bank
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->getAccessToken(),
+                'Authorization' => 'Bearer '.$this->getAccessToken(),
                 'Content-Type'  => 'application/json',
             ])->post(config('disbursement.server.end-point'), $payload);
 
-            // Step 4: Handle successful disbursement
-            if ($response->successful()) {
-                // Attach metadata to the transaction
-                $transaction->meta = [
-                    'operationId' => $response->json('transaction_id'),
-                        'request' => [
-                            'user_id' => $user->getKey(),
-                            'payload' => $payload
-                        ],
-                ];
-                $transaction->save();
-
-                // Commit the database transaction
-                DB::commit();
-
-                // Create and return response data object
-                return DisburseResponseData::from(
-                    array_merge(['uuid' => $transaction->uuid], $response->json())
-                );
+            if (! $response->successful()) {
+                Log::warning('[Netbank] Disbursement failed', ['body' => $response->body()]);
+                DB::rollBack();
+                return false;
             }
 
-            // Step 5: Handle failure response from the API
-            Log::warning('Netbank disbursement failed', ['body' => $response->body()]);
-            DB::rollBack();
-            return false;
+            // Persist operationId and commit
+            $transaction->meta = [
+                'operationId' => $response->json('transaction_id'),
+                'user_id'     => $wallet->getKey(),
+                'payload'     => $payload,
+            ];
+            $transaction->save();
 
+            DB::commit();
+
+            // Build response DTO
+            return DisburseResponseData::from(array_merge(
+                ['uuid' => $transaction->uuid],
+                $response->json()
+            ));
         } catch (\Throwable $e) {
-            // Step 6: Handle errors and rollback transaction on failure
-            Log::error('Netbank disbursement error', ['error' => $e->getMessage()]);
+            Log::error('[Netbank] Disbursement error', ['error' => $e->getMessage()]);
             DB::rollBack();
             return false;
         }
     }
 
+    /**
+     * Retrieve the validation rules for disbursement input.
+     *
+     * @return array
+     */
     protected function rules(): array
     {
-        $min = config('disbursement.min');
-        $min_rule = 'min:' . $min;
-        $max = config('disbursement.max');
-        $max_rule = 'max:' . $max;
-        $settlement_rails = config('disbursement.settlement_rails');
+        $min  = config('disbursement.min');
+        $max  = config('disbursement.max');
+        $rails = config('disbursement.settlement_rails', []);
 
         return [
             'reference'      => ['required', 'string', 'min:2', 'unique:references,code'],
             'bank'           => ['required', 'string'],
             'account_number' => ['required', 'string'],
-            'via'            => ['required', 'string', Rule::in($settlement_rails)],
-            'amount'         => ['required', 'integer', $min_rule, $max_rule],
+            'via'            => ['required', 'string', Rule::in($rails)],
+            'amount'         => ['required', 'integer', 'min:'.$min, 'max:'.$max],
         ];
     }
 
-//    protected function getDestinationAccount(array $validated): array
-//    {
-//        return [
-//            'bank_code'      => Arr::get($validated, 'bank'),
-//            'account_number' => Arr::get($validated, 'account_number'),
-//        ];
-//    }
-//
-//    protected function getRecipient(array $validated): array
-//    {
-//        return [
-//            'name'    => Arr::get($validated, 'account_number'), // Or fetch user-provided "name"
-//            'address' => Address::generate(),                    // Address generation logic
-//        ];
-//    }
-//
-//    protected function getAmountArray(array $validated): array
-//    {
-//        // Parse the amount into minor units (e.g., cents)
-//        $minor = Money::of(Arr::get($validated, 'amount'), 'PHP')
-//            ->getMinorAmount()
-//            ->toInt();
-//
-//        // Add a small variance (randomized amount) for operational reasons
-//        $variance = rand(config('disbursement.variance.min'), config('disbursement.variance.max'));
-//        $minor += $variance;
-//
-//        return [
-//            'cur' => 'PHP',      // Currency code (PHP for Philippine Peso)
-//            'num' => (string) $minor,
-//        ];
-//    }
-
+    /**
+     * Confirm a previously‐reserved disbursement once the bank calls back.
+     *
+     * @param string $operationId
+     * @return bool
+     */
     public function confirmDisbursement(string $operationId): bool
     {
         try {
-            $transaction = Transaction::whereJsonContains('meta->operationId', $operationId)->firstOrFail();
-            $payable = $transaction->payable;
+            $transaction = Transaction::whereJsonContains('meta->operationId', $operationId)
+                ->firstOrFail();
 
-            $payable->confirm($transaction);
+            // Mark it as completed
+            $transaction->payable->confirm($transaction);
             DisbursementConfirmed::dispatch($transaction);
 
-            Log::info("Disbursement confirmed for operation ID: {$operationId}");
-
+            Log::info("[Netbank] Disbursement confirmed for operation {$operationId}");
             return true;
         } catch (\Throwable $e) {
-            Log::error("Failed to confirm disbursement: {$e->getMessage()}");
+            Log::error('[Netbank] Confirm disbursement failed', ['error' => $e->getMessage()]);
             return false;
         }
     }
