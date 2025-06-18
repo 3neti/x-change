@@ -3026,10 +3026,11 @@
             "dist": {
                 "type": "path",
                 "url": "./packages/lbhurtado/cash",
-                "reference": "49f402e8b8b424e4de8e6ef9b2a426e44996a129"
+                "reference": "d8d67c392c397c6d663a3e085b5c8cae0f1149c1"
             },
             "require": {
                 "brick/money": "^0.10.1",
+                "lbhurtado/wallet": "dev-main",
                 "lorisleiva/laravel-actions": "^2.9",
                 "propaganistas/laravel-phone": "^6.0",
                 "spatie/laravel-data": "^4.15",
@@ -3450,13 +3451,15 @@
             "dist": {
                 "type": "path",
                 "url": "./packages/lbhurtado/voucher",
-                "reference": "668f5a45fa598036086b2b76d4fb266481ff2dec"
+                "reference": "b0613e92a88d26425ff3795c6d1c8bb0c24af32b"
             },
             "require": {
                 "brick/money": "^0.10.1",
                 "frittenkeez/laravel-vouchers": "^0.6.0",
                 "lbhurtado/cash": "dev-main",
                 "lbhurtado/contact": "dev-main",
+                "lbhurtado/payment-gateway": "dev-main",
+                "lbhurtado/wallet": "dev-main",
                 "lorisleiva/laravel-actions": "^2.9",
                 "propaganistas/laravel-phone": "^6.0",
                 "spatie/laravel-data": "^4.15",
@@ -9496,16 +9499,16 @@
         },
         {
             "name": "workos/workos-php",
-            "version": "v4.24.0",
+            "version": "v4.25.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/workos/workos-php.git",
-                "reference": "343f1469b8facb24c70239e976e98ebbb214984e"
+                "reference": "a65be0b3db1d23541fbd36c938cc1bc694469a57"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/workos/workos-php/zipball/343f1469b8facb24c70239e976e98ebbb214984e",
-                "reference": "343f1469b8facb24c70239e976e98ebbb214984e",
+                "url": "https://api.github.com/repos/workos/workos-php/zipball/a65be0b3db1d23541fbd36c938cc1bc694469a57",
+                "reference": "a65be0b3db1d23541fbd36c938cc1bc694469a57",
                 "shasum": ""
             },
             "require": {
@@ -9536,9 +9539,9 @@
             "homepage": "https://workos.com",
             "support": {
                 "issues": "https://github.com/workos/workos-php/issues",
-                "source": "https://github.com/workos/workos-php/tree/v4.24.0"
+                "source": "https://github.com/workos/workos-php/tree/v4.25.0"
             },
-            "time": "2025-05-22T21:49:09+00:00"
+            "time": "2025-06-17T12:50:12+00:00"
         }
     ],
     "packages-dev": [
@@ -9761,16 +9764,16 @@
         },
         {
             "name": "filp/whoops",
-            "version": "2.18.2",
+            "version": "2.18.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/filp/whoops.git",
-                "reference": "89dabca1490bc77dbcab41c2b20968c7e44bf7c3"
+                "reference": "59a123a3d459c5a23055802237cb317f609867e5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/filp/whoops/zipball/89dabca1490bc77dbcab41c2b20968c7e44bf7c3",
-                "reference": "89dabca1490bc77dbcab41c2b20968c7e44bf7c3",
+                "url": "https://api.github.com/repos/filp/whoops/zipball/59a123a3d459c5a23055802237cb317f609867e5",
+                "reference": "59a123a3d459c5a23055802237cb317f609867e5",
                 "shasum": ""
             },
             "require": {
@@ -9820,7 +9823,7 @@
             ],
             "support": {
                 "issues": "https://github.com/filp/whoops/issues",
-                "source": "https://github.com/filp/whoops/tree/2.18.2"
+                "source": "https://github.com/filp/whoops/tree/2.18.3"
             },
             "funding": [
                 {
@@ -9828,7 +9831,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2025-06-11T20:42:19+00:00"
+            "time": "2025-06-16T00:02:10+00:00"
         },
         {
             "name": "hamcrest/hamcrest-php",

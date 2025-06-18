@@ -2,8 +2,11 @@
 
 namespace LBHurtado\Voucher\Models;
 
+use FrittenKeeZ\Vouchers\Models\Redeemer;
 use FrittenKeeZ\Vouchers\Models\Voucher as BaseVoucher;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use LBHurtado\Cash\Models\Cash;
+use LBHurtado\Contact\Models\Contact;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Observers\VoucherObserver;
 use LBHurtado\Voucher\Scopes\RedeemedScope;
@@ -27,6 +30,8 @@ use Illuminate\Support\Carbon;
  * @property \FrittenKeeZ\Vouchers\Models\Redeemer      $redeemer
  * @property \Illuminate\Database\Eloquent\Collection   $voucherEntities
  * @property \Illuminate\Database\Eloquent\Collection   $redeemers
+ * @property Cash                                       $cash
+ * @property Contact                                    $contact
  *
  * @method int getKey()
  */
@@ -65,5 +70,20 @@ class Voucher extends BaseVoucher
     public function getInstructionsAttribute(): VoucherInstructionsData
     {
         return VoucherInstructionsData::from($this->metadata['instructions']);
+    }
+
+    public function getCashAttribute(): ?Cash
+    {
+        return $this->getEntities(Cash::class)->first();
+    }
+
+    public function getRedeemerAttribute(): ?Redeemer
+    {
+        return $this->redeemers->first();
+    }
+
+    public function getContactAttribute(): ?Contact
+    {
+        return $this->redeemer?->redeemer;
     }
 }

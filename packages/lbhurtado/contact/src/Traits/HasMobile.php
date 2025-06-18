@@ -3,6 +3,7 @@
 namespace LBHurtado\Contact\Traits;
 
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Propaganistas\LaravelPhone\PhoneNumber;
 
 trait HasMobile
 {
@@ -22,5 +23,13 @@ trait HasMobile
                 return phone($value, $country)->formatForMobileDialingInCountry($country);
             }
         );
+    }
+
+    static public function fromPhoneNumber(PhoneNumber $phoneNumber): ?static
+    {
+        $mobile = $phoneNumber->formatForMobileDialingInCountry($phoneNumber->getCountry());
+        $country = $phoneNumber->getCountry();
+
+        return static::firstOrCreate(compact('mobile', 'country'));
     }
 }

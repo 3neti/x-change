@@ -2,7 +2,7 @@
 
 namespace LBHurtado\Voucher\Handlers;
 
-use LBHurtado\Voucher\Pipelines\RedeemedVoucher\DisburseCash;
+use LBHurtado\Voucher\Pipelines\RedeemedVoucher\{DisburseCash, ValidateRedeemerAndCash};
 use Lorisleiva\Actions\Concerns\AsAction;
 use LBHurtado\Voucher\Models\Voucher;
 use Illuminate\Pipeline\Pipeline;
@@ -16,11 +16,13 @@ class HandleRedeemedVoucher
         app(Pipeline::class)
             ->send($voucher)
             ->through([
+                ValidateRedeemerAndCash::class,
                 DisburseCash::class,
             ])
             ->thenReturn();
+        //validate
         //disburse
         //feedback
-        //notify
+        //notification
     }
 }

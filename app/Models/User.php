@@ -17,10 +17,12 @@ use Illuminate\Notifications\Notifiable;
 use Bavix\Wallet\Interfaces\Confirmable;
 use Bavix\Wallet\Traits\HasWalletFloat;
 use LBHurtado\Wallet\Enums\WalletType;
+use Bavix\Wallet\Interfaces\Customer;
 use Bavix\Wallet\Interfaces\Wallet;
 use Bavix\Wallet\Traits\CanConfirm;
 use Laravel\Sanctum\HasApiTokens;
 use App\Observers\UserObserver;
+use Bavix\Wallet\Traits\CanPay;
 use App\Actions\CheckBalance;
 use Parental\HasChildren;
 use App\Enums\ChildType;
@@ -38,7 +40,7 @@ use App\Enums\ChildType;
  */
 
 #[ObservedBy([UserObserver::class])]
-class User extends Authenticatable implements Wallet, Confirmable, ChannelsInterface, MerchantInterface
+class User extends Authenticatable implements Wallet, Confirmable, ChannelsInterface, MerchantInterface, Customer
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
@@ -49,6 +51,7 @@ class User extends Authenticatable implements Wallet, Confirmable, ChannelsInter
     use HasMerchant;
     use HasChildren;
     use CanConfirm;
+    use CanPay;
 
     /**
      * The attributes that are mass assignable.

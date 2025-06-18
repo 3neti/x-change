@@ -12,6 +12,8 @@ class RedeemVoucher
 {
     use AsAction;
 
+    const META_KEY = 'redemption';
+
     /**
      * Attempt to redeem a voucher for a given contact.
      *
@@ -25,7 +27,7 @@ class RedeemVoucher
         try {
             // Facade call into the voucher library.
             // Returns true on success, or throws if not found/already redeemed.
-            return Vouchers::redeem($voucher_code, $contact, ['redemption' => $meta]);
+            return Vouchers::redeem($voucher_code, $contact, [self::META_KEY => $meta]);
         } catch (VoucherNotFoundException $e) {
             // swallow and return false if voucher code doesn't exist
             return false;

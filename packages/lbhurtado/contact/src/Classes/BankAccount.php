@@ -42,4 +42,13 @@ class BankAccount
 
         return new static($code, $acct);
     }
+
+    public static function fromBankAccountWithFallback(string $raw, string $fallback): self
+    {
+        try {
+            return static::fromBankAccount($raw);
+        } catch (InvalidArgumentException $e) {
+            return static::fromBankAccount($fallback);
+        }
+    }
 }

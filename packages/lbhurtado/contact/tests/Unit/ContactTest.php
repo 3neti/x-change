@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Propaganistas\LaravelPhone\PhoneNumber;
 use LBHurtado\Contact\Models\Contact;
 
 uses(RefreshDatabase::class);
@@ -136,4 +137,12 @@ it('booted creating() ensures default bank_account is applied', function () {
     // and our getters still work
     expect($c->bank_code)->toBe('GXCHPHM2XXX')
         ->and($c->account_number)->toBe('09171234567');
+});
+
+it('can be persisted using PhoneNumber object', function () {
+    $phone = new PhoneNumber('09171234567', 'PH');
+    $contact = Contact::fromPhoneNumber($phone);
+    expect($contact)->toBeInstanceOf(Contact::class);
+    expect($contact->mobile)->toBe('09171234567');
+    expect($contact->country)->toBe('PH');
 });
