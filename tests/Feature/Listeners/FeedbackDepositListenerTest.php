@@ -5,7 +5,7 @@ use LBHurtado\Wallet\Actions\TopupWalletAction;
 use LBHurtado\Wallet\Events\DepositConfirmed;
 use Illuminate\Support\Facades\Notification;
 use App\Notifications\DepositNotification;
-use App\Models\{System, User};
+use App\Models\{System, Subscriber};
 
 uses(RefreshDatabase::class);
 
@@ -18,7 +18,7 @@ test('FeedbackDeposit listener sends deposit notification', function () {
     Notification::fake();
 
     // Create a regular user
-    $user = User::factory()->create([
+    $user = Subscriber::factory()->create([
         'email' => 'lbhurtado@gmail.com',
     ]);
 

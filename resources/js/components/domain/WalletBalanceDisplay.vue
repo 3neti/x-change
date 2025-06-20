@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { defineProps } from 'vue';
+import { defineProps } from 'vue'
 
 interface Props {
-    balance: number | null;
-    currency: string | null;
-    type: string;
-    status: 'idle' | 'loading' | 'success' | 'error';
-    message: string;
-    refresh: () => void;
+    balance: number | null
+    currency: string | null
+    type: string
+    status: 'idle' | 'loading' | 'success' | 'error'
+    message: string
+    refresh: () => void
 }
 
-const props = defineProps<Props>();
+const props = defineProps<Props>()
 </script>
 
 <template>
@@ -20,18 +20,28 @@ const props = defineProps<Props>();
                 <h2 class="text-lg font-medium text-gray-800 dark:text-gray-200">
                     {{ props.type.charAt(0).toUpperCase() + props.type.slice(1) }} Balance
                 </h2>
+
+                <!-- Loading state -->
                 <div v-if="props.status === 'loading'" class="text-sm text-gray-500">
                     {{ props.message }}
                 </div>
+
+                <!-- Error state -->
                 <div v-else-if="props.status === 'error'" class="text-sm text-red-500">
                     {{ props.message }}
                 </div>
-                <div v-else-if="props.status === 'success'" class="mt-1">
-          <span class="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-            {{ props.currency }} {{ props.balance }}
+
+                <!-- Success state or idle/fallback -->
+                <div v-else class="mt-1">
+          <span
+              class="text-2xl font-semibold text-gray-900 dark:text-gray-100"
+          >
+            {{ props.currency ?? '' }}
+            {{ props.balance !== null ? props.balance : '—' }}
           </span>
                 </div>
             </div>
+
             <button
                 @click="props.refresh()"
                 class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"

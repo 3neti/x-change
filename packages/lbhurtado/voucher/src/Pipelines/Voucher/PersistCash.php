@@ -16,7 +16,14 @@ class PersistCash
             'instructions' => $voucher->instructions->toArray(),
         ]);
 
-        $user = auth()->user();
+//        $user = auth()->user();
+        $user = $voucher->owner;
+
+        Log::debug('[RedeemVoucher] Voucher owner:', [
+            'id'      => $user?->getKey(),
+            'class'   => $user::class,
+        'payload' => $user?->toArray(),
+    ]);
 
         if (! $user instanceof Customer) {
             throw new \Illuminate\Auth\AuthenticationException('You must implement customer to perform this action.');

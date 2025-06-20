@@ -78,6 +78,7 @@ class User extends Authenticatable implements Wallet, Confirmable, ChannelsInter
 
     protected $childTypes = [
         ChildType::SYSTEM->value => System::class,
+        ChildType::SUBSCRIBER->value => Subscriber::class
     ];
 
     /**

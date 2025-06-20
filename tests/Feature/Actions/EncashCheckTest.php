@@ -81,7 +81,7 @@ test('encash check works', function (Voucher $voucher) {
     $meta = [];
     $response = EncashCheck::run($voucher, $phoneNumber, $meta);
     expect($response)->toBeTrue();
-})->with('voucher')->skip();
+})->with('voucher');
 
 test('EncashCheck dispatches RedeemVoucher::run with the right arguments', function (Voucher $voucher) {
     // build a phone number + meta

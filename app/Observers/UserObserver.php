@@ -12,6 +12,8 @@ class UserObserver
     {
         if ($this->isSystemUser($user)) {
             $user->type = ChildType::SYSTEM->value;
+        } else {
+//            $user->type = $user->type ? $user->type : ChildType::SUBSCRIBER->value;
         }
     }
 

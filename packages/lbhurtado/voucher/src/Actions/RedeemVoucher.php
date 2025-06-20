@@ -7,6 +7,7 @@ use FrittenKeeZ\Vouchers\Exceptions\VoucherNotFoundException;
 use FrittenKeeZ\Vouchers\Facades\Vouchers;
 use Lorisleiva\Actions\Concerns\AsAction;
 use LBHurtado\Contact\Models\Contact;
+use Illuminate\Support\Facades\Log;
 
 class RedeemVoucher
 {
@@ -17,22 +18,45 @@ class RedeemVoucher
     /**
      * Attempt to redeem a voucher for a given contact.
      *
-     * @param Contact $contact     The notifiable contact who redeems the voucher.
-     * @param string  $voucher_code  The code of the voucher to redeem.
-     * @param array   $meta         Optional metadata about the redemption (e.g. ['location'=>'POS1']).
+     * @param Contact $contact      The notifiable contact who redeems the voucher.
+     * @param string  $voucher_code The code of the voucher to redeem.
+     * @param array   $meta         Optional metadata about the redemption.
      * @return bool True if redemption succeeded, false otherwise.
      */
     public function handle(Contact $contact, string $voucher_code, array $meta = []): bool
     {
+        // 1) Log what we're about to attempt
+        Log::debug('[RedeemVoucher] Attempting redemption', [
+            'voucher_code' => $voucher_code,
+            'contact_id'   => $contact->getKey(),
+            'contact_mobile' => $contact->mobile,
+            'meta'           => $meta,
+        ]);
+
         try {
-            // Facade call into the voucher library.
-            // Returns true on success, or throws if not found/already redeemed.
-            return Vouchers::redeem($voucher_code, $contact, [self::META_KEY => $meta]);
+            $success = Vouchers::redeem(
+                $voucher_code,
+                $contact,
+                [ self::META_KEY => $meta ]
+            );
+
+            Log::info('[RedeemVoucher] Redemption succeeded', [
+                'voucher_code' => $voucher_code,
+                'contact_id'   => $contact->getKey(),
+            ]);
+
+            return $success;
         } catch (VoucherNotFoundException $e) {
-            // swallow and return false if voucher code doesn't exist
+            Log::warning('[RedeemVoucher] Voucher not found', [
+                'voucher_code' => $voucher_code,
+                'contact_id'   => $contact->getKey(),
+            ]);
             return false;
         } catch (VoucherAlreadyRedeemedException $e) {
-            // swallow and return false if voucher was already redeemed
+            Log::warning('[RedeemVoucher] Voucher already redeemed', [
+                'voucher_code' => $voucher_code,
+                'contact_id'   => $contact->getKey(),
+            ]);
             return false;
         }
     }

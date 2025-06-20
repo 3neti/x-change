@@ -8,7 +8,7 @@ uses(RefreshDatabase::class);
 
 test('scratch', function () {
     User::factory()->create([
-        'email' => 'lester@hurtado.ph',
+        'email' => 'admin@disburse.cash',
     ]);
 
     $resolvedUser = app(SystemUserResolverService::class)->resolve();

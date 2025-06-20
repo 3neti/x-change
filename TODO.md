@@ -9,7 +9,7 @@
 - check balance
 - topup
 - generate voucher
-- disburse    //TODO: $cash as sender, not the $voucher->owner
+- disburse    //TODO: $cash as sender - withdraw and deposit (transfer) bayad utang
 - redeem
 
 # Data
@@ -21,4 +21,4 @@
 # Others
 - favicon
 - fix names of migration files, migrate:refresh in production
-- 
+- next day expiration
