@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "4e44d48ee3e4e255ad82b4ce17a079f7",
+    "content-hash": "aad2b08cafa7f5543c7102faca2cb3ea",
     "packages": [
         {
             "name": "amphp/amp",
@@ -3316,6 +3316,60 @@
                 }
             ],
             "description": "A package to enable assigning channels to Eloquent Models",
+            "transport-options": {
+                "relative": true
+            }
+        },
+        {
+            "name": "lbhurtado/omnichannel",
+            "version": "dev-main",
+            "dist": {
+                "type": "path",
+                "url": "./packages/lbhurtado/omnichannel",
+                "reference": "5851b95b5191825004cc96cebf5f4706cca2468a"
+            },
+            "require": {
+                "propaganistas/laravel-phone": "^6.0",
+                "spatie/laravel-data": "^4.15"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^10.3",
+                "pestphp/pest": "^3.8"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "LBHurtado\\OmniChannel\\OmniChannelServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "LBHurtado\\OmniChannel\\": "src/",
+                    "LBHurtado\\OmniChannel\\Database\\Factories\\": "database/factories/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "LBHurtado\\OmniChannel\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "vendor/bin/pest"
+                ]
+            },
+            "license": [
+                "proprietary"
+            ],
+            "authors": [
+                {
+                    "name": "Lester Hurtado",
+                    "email": "lester@hurtado.ph"
+                }
+            ],
+            "description": "A package that would consume Omni Channel services",
             "transport-options": {
                 "relative": true
             }
@@ -12509,6 +12563,7 @@
     "aliases": [],
     "minimum-stability": "dev",
     "stability-flags": {
+        "lbhurtado/omnichannel": 20,
         "lbhurtado/payment-gateway": 20,
         "lbhurtado/voucher": 20
     },

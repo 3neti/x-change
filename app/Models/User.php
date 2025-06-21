@@ -104,6 +104,11 @@ class User extends Authenticatable implements Wallet, Confirmable, ChannelsInter
         return $this->mobile;
     }
 
+    public function routeNotificationForOmnichannel($notification)
+    {
+        return $this->mobile;
+    }
+
     public function sendBalanceNotification(?WalletType $walletType = null): void
     {
         $this->notify(new BalanceNotification(CheckBalance::run($this, $walletType), $walletType));

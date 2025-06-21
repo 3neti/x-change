@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\Log;
-use LBHurtado\Contact\Classes\BankAccount;
+use Illuminate\Validation\ValidationException;
 use Propaganistas\LaravelPhone\PhoneNumber;
+use LBHurtado\Contact\Classes\BankAccount;
 use LBHurtado\Voucher\Models\Voucher;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use App\Actions\EncashCheck;
-use Illuminate\Validation\ValidationException;
 
 
 class RedeemVoucherController extends Controller

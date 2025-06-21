@@ -61,13 +61,22 @@ class OmniChannelServiceProvider extends ServiceProvider
         // core API routes
         $this->loadRoutesFrom(__DIR__ . '/../routes/api.php');
 
-        // package's SMS routes
-        $this->loadRoutesFrom(__DIR__ . '/../routes/sms.php');
+//        // package's SMS routes
+//        $this->loadRoutesFrom(__DIR__ . '/../routes/sms.php');
+//
+//        // optional app-level override
+//        $appSms = base_path('routes/sms.php');
+//        if (File::exists($appSms)) {
+//            require $appSms;
+//        }
 
-        // optional app-level override
-        $appSms = base_path('routes/sms.php');
-        if (File::exists($appSms)) {
-            require $appSms;
+        $app = base_path('routes/sms.php');
+
+        if (File::exists($app)) {
+            // load the *app’s* sms.php → this becomes the only sms route
+            require $app;
+        } else {
+            $this->loadRoutesFrom(__DIR__ . '/../routes/sms.php');
         }
     }
 }
