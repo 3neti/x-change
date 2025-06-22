@@ -2,6 +2,7 @@
 
 namespace LBHurtado\PaymentGateway\Data\Netbank\Generate;
 
+use LBHurtado\PaymentGateway\Data\Netbank\Deposit\Helpers\RecipientAccountNumberData;
 use LBHurtado\PaymentGateway\Data\Netbank\Common\PayloadAmountData;
 use LBHurtado\PaymentGateway\Contracts\MerchantInterface;
 use Spatie\LaravelData\Data;

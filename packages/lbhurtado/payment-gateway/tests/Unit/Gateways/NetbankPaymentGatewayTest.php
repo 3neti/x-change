@@ -174,7 +174,7 @@ dataset('live_response', function () {
             externalTransferStatus: 'SETTLED',
             operationId: 175192002,
             productBranchCode: '000',
-            recipientAccountNumber: '9150019173011987',
+            recipientAccountNumber: '9150009173011987',
             recipientAccountNumberBankFormat: '113-001-00001-9',
             referenceCode: '19173011987',
             referenceNumber: '20250613GXCHPHM2XXXB000000005603644',

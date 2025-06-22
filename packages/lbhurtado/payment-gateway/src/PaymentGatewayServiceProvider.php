@@ -26,12 +26,25 @@ class PaymentGatewayServiceProvider extends ServiceProvider
             'payment-gateway'
         );
 
+        $this->mergeConfigFrom(
+            __DIR__ . '/../config/payment.php',
+            'payment'
+        );
+
         $this->app->singleton(SystemUserResolverService::class, fn () => new SystemUserResolverService());
 
         $this->app->bind(PaymentGatewayInterface::class, function ($app) {
             $concrete = config('payment-gateway.gateway', NetbankPaymentGateway::class);
             return $app->make($concrete);
         });
+
+//        // You could default to User::class / "mobile", but allow end‐user override in config:
+//        $model  = config('disbursement.reference.model', \App\Models\User::class);
+//        $column = config('disbursement.reference.column', 'mobile');
+//
+//        $this->app->singleton(\LBHurtado\PaymentGateway\Services\ReferenceLookup::class, function($app) use ($model, $column) {
+//            return new \LBHurtado\PaymentGateway\Services\ReferenceLookup($model, $column);
+//        });
     }
 
     public function boot(): void
@@ -43,7 +56,7 @@ class PaymentGatewayServiceProvider extends ServiceProvider
         $this->publishes([
             __DIR__ . '/../config/disbursement.php' => config_path('disbursement.php'),
             __DIR__ . '/../config/payment-gateway.php' => config_path('payment-gateway.php'),
-
+            __DIR__ . '/../config/payment.php' => config_path('payment.php'),
         ], 'config');
 
         // Use PHP as the default currency globally

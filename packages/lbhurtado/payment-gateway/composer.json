@@ -11,6 +11,18 @@
         {
             "type": "path",
             "url": "./../wallet"
+        },
+        {
+            "type": "path",
+            "url": "./../voucher"
+        },
+        {
+            "type": "path",
+            "url": "./../cash"
+        },
+        {
+            "type": "path",
+            "url": "./../contact"
         }
     ],
     "authors": [
@@ -51,6 +63,7 @@
         "propaganistas/laravel-phone": "^6.0"
     },
     "require-dev": {
+        "lbhurtado/voucher": "dev-main",
         "orchestra/testbench": "^10.3",
         "pestphp/pest": "^3.8"
     },
@@ -61,5 +74,7 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true
         }
-    }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
 }

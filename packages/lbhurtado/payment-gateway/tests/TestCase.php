@@ -2,6 +2,7 @@
 
 namespace LBHurtado\PaymentGateway\Tests;
 
+use FrittenKeeZ\Vouchers\VouchersServiceProvider;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Orchestra\Testbench\TestCase as BaseTestCase;
 use LBHurtado\PaymentGateway\Tests\Models\User;
@@ -34,7 +35,8 @@ abstract class TestCase extends BaseTestCase
             \LBHurtado\ModelChannel\ModelChannelServiceProvider::class,
             \Bavix\Wallet\WalletServiceProvider::class,
             \Laravel\Sanctum\SanctumServiceProvider::class,
-
+            \LBHurtado\Voucher\VoucherServiceProvider::class,
+            VouchersServiceProvider::class
         ];
     }
 
@@ -66,6 +68,10 @@ abstract class TestCase extends BaseTestCase
         $userMigration->up();
         $userMigration = include __DIR__ . '/../database/migrations/2024_03_17_000000_create_merchant_user_table.php';
         $userMigration->up();
+        $voucherMigration = include __DIR__ . '/../vendor/frittenkeez/laravel-vouchers/publishes/migrations/2018_06_12_000000_create_voucher_tables.php';
+        $voucherMigration->up();
+        $cashMigration = include __DIR__ . '/../database/migrations/test/2024_08_02_202500_create_cash_table.php';
+        $cashMigration->up();
 
         // Dynamically include and run all migrations from vendor/bavix/laravel-wallet/database
 //        $migrationPath = base_path('vendor/bavix/laravel-wallet/database/migrations');
