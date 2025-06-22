@@ -242,7 +242,7 @@ it('tests confirmDeposit function in NetbankPaymentGateway', function (User $use
     });
 
     // (Optional) Verify logging
-    Log::shouldHaveReceived('info')->once();
+    Log::shouldHaveReceived('info')->twice();
 })->with('user', 'live_response');
 
 it('tests confirmDeposit with valid payload and updates balances', function (User $user, DepositResponseData $response) {

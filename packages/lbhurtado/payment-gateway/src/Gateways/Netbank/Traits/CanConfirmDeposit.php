@@ -69,14 +69,23 @@ trait CanConfirmDeposit
 //        return true;
 //    }
 
-    protected function transferToWallet(Wallet $user, DepositResponseData $response): void
+    protected function transferToWallet(Wallet $user, DepositResponseData $deposit): void
     {
-        $amountFloat = $response->amount;
+        [ $logMessage, $transaction ] = match (true) {
+            $user instanceof \LBHurtado\Cash\Models\Cash => [
+                'Treating deposit as loan repayment back into cash wallet',
+                $user->depositFloat($deposit->amount),
+            ],
+            default => [
+                'Treating deposit as user top-up',
+                TopupWalletAction::run($user, $deposit->amount)->deposit,
+            ]
+        };
+        Log::info($logMessage);
 
-        $transfer = TopupWalletAction::run($user, $amountFloat);
-        $transfer->deposit->meta = $response->toArray();
-        $transfer->deposit->save();
+        $transaction->meta = $deposit->toArray();
+        $transaction->save();
 
-        DepositConfirmed::dispatch($transfer->deposit);
+        DepositConfirmed::dispatch($transaction);
     }
 }
