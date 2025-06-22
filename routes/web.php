@@ -1,7 +1,7 @@
 <?php
 
+use App\Http\Controllers\{CheckWalletBalanceController, VoucherController};
 use Laravel\WorkOS\Http\Middleware\ValidateSessionWithWorkOS;
-use App\Http\Controllers\CheckWalletBalanceController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -44,3 +44,5 @@ Route::get('redeem', [RedeemVoucherController::class, 'create'])
 
 Route::post('redeem', [RedeemVoucherController::class, 'store'])
     ->name('redeem.store');
+
+Route::resource('vouchers', VoucherController::class);
