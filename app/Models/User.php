@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use LBHurtado\PaymentGateway\Traits\HasMerchant;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use LBHurtado\Wallet\Traits\HasPlatformWallets;
-use LBHurtado\ModelChannel\Traits\HasInputs;
+use LBHurtado\ModelChannel\Traits\HasChannels;
 use App\Notifications\BalanceNotification;
 use Illuminate\Notifications\Notifiable;
 use Bavix\Wallet\Interfaces\Confirmable;
@@ -47,7 +47,7 @@ class User extends Authenticatable implements Wallet, Confirmable, ChannelsInter
     use HasPlatformWallets;
     use HasWalletFloat;
     use HasApiTokens;
-    use HasInputs;
+    use HasChannels;
     use HasMerchant;
     use HasChildren;
     use CanConfirm;

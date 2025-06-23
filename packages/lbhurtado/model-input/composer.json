@@ -1,0 +1,45 @@
+{
+    "name": "lbhurtado/laravel-model-input",
+    "description": "A package to enable assigning inputs to Eloquent Models",
+    "type": "library",
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "Lester Hurtado",
+            "email": "lester@hurtado.ph"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "LBHurtado\\ModelInput\\": "src/",
+            "LBHurtado\\ModelInput\\Database\\Factories\\": "database/factories/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "LBHurtado\\ModelInput\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "LBHurtado\\ModelInput\\ModelInputServiceProvider"
+            ]
+        }
+    },
+    "require": {
+        "propaganistas/laravel-phone": "^6.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^10.3",
+        "pestphp/pest": "^3.8"
+    },
+    "scripts": {
+        "test": "vendor/bin/pest"
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
+}
