@@ -86,6 +86,6 @@ class Voucher extends BaseVoucher
 
     public function getContactAttribute(): ?Contact
     {
-        return $this->redeemer?->redeemer;
+        return $this->redeemers?->first()?->redeemer;
     }
 }

@@ -7,7 +7,9 @@ use Spatie\LaravelData\Attributes\{WithCast, WithTransformer};
 use LBHurtado\Voucher\Models\Voucher as VoucherModel;
 use Spatie\LaravelData\Casts\DateTimeInterfaceCast;
 use LBHurtado\Contact\Data\ContactData;
+use LBHurtado\Contact\Models\Contact;
 use LBHurtado\Cash\Data\CashData;
+use LBHurtado\Cash\Models\Cash;
 use Illuminate\Support\Carbon;
 use Spatie\LaravelData\Data;
 
@@ -53,8 +55,8 @@ class VoucherData extends Data
                     ? VoucherInstructionsData::from($model->instructions)
                     : null
                 ),
-            cash: $model->cash instanceof CashData ? $model->cash : null,
-            contact: $model->contact instanceof ContactData ? $model->contact : null,
+            cash: $model->cash instanceof Cash ? CashData::fromModel($model->cash) : null,
+            contact: $model->contact instanceof Contact ? ContactData::fromModel($model->contact) : null,
 //            redeemer: $model->redeemer
 //                ? ModelData::fromModel($model->redeemer)
 //                : null,

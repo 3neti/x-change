@@ -67,7 +67,7 @@ it('serializes to array/JSON correctly', function () {
 
     // Check keys exist
     expect(array_keys($arr))->toEqual([
-        'amount', 'meta', 'secret', 'expires_on', 'expired', 'status', 'tags',
+        'amount', 'currency', 'meta', 'secret', 'expires_on', 'expired', 'status', 'tags',
     ]);
 
     // The transformed amount should be a string (per MoneyToStringTransformer)

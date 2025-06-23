@@ -19,8 +19,9 @@ class CashData extends Data
         #[WithTransformer(MoneyToStringTransformer::class)]
         #[WithCast(MoneyCast::class)]
         public Money $amount,
+        public string $currency,
         public ArrayObject $meta,
-        public string $secret,
+        public ?string $secret = null,
         #[WithTransformer(DateTimeInterfaceTransformer::class)]
         #[WithCast(DateTimeInterfaceCast::class, timeZone: 'Asia/Manila')]
         public ?Carbon $expires_on,
@@ -33,6 +34,7 @@ class CashData extends Data
     {
         return new static(
             amount: $cash->amount,
+            currency: $cash->currency,
             meta: $cash->meta,
             secret: $cash->secret,
             expires_on: $cash->expires_on,

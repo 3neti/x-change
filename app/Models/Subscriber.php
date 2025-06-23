@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use LBHurtado\PaymentGateway\Traits\HasMerchant;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use LBHurtado\Wallet\Traits\HasPlatformWallets;
-use LBHurtado\ModelChannel\Traits\HasChannels;
+use LBHurtado\ModelChannel\Traits\HasInputs;
 use App\Notifications\BalanceNotification;
 use Illuminate\Notifications\Notifiable;
 use Bavix\Wallet\Interfaces\Confirmable;
