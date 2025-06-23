@@ -33,6 +33,17 @@ abstract class TestCase extends BaseTestCase
 
         // Optional: Set web guard as the default
         $app['config']->set('auth.defaults.guard', 'web');
+        config()->set('data.validation_strategy', 'always');
+        config()->set('data.max_transformation_depth', 6);
+        config()->set('data.throw_when_max_transformation_depth_reached', 6);
+        config()->set('data.normalizers', [
+            \Spatie\LaravelData\Normalizers\ModelNormalizer::class,
+            // Spatie\LaravelData\Normalizers\FormRequestNormalizer::class,
+            \Spatie\LaravelData\Normalizers\ArrayableNormalizer::class,
+            \Spatie\LaravelData\Normalizers\ObjectNormalizer::class,
+            \Spatie\LaravelData\Normalizers\ArrayNormalizer::class,
+            \Spatie\LaravelData\Normalizers\JsonNormalizer::class,
+        ]);
 
         // Run the migration from the local package
         $userMigration = include __DIR__ . '/../database/migrations/test/0001_01_01_000000_create_users_table.php';

@@ -100,8 +100,8 @@ it('disburses cash live', function  ($voucher) {
     $cash = $voucher->getEntities(Cash::class)->first();
     expect((float) $cash->balanceFloat)->toBe(53.7);
 
-//    $contact = Contact::factory()->create(['mobile' => '09467438575']);
-    $contact = Contact::factory()->create(['mobile' => '09173011987']);
+    $contact = Contact::factory()->create(['mobile' => '09467438575']);
+//    $contact = Contact::factory()->create(['mobile' => '09173011987']);
 
     $success = Vouchers::redeem($voucher->code, $contact);
 //    $success = Vouchers::redeem($voucher->code, $contact, ['bank_account' => 'BNORPHMMXXX:000661592316']);

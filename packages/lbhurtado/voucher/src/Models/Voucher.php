@@ -42,6 +42,8 @@ class Voucher extends BaseVoucher
 
     protected string $dataClass = VoucherData::class;
 
+    public ?Redeemer $redeemer = null;
+
     protected function casts(): array
     {
         // Include parent's casts and add/override

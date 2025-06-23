@@ -39,9 +39,14 @@ class Contact extends Model implements Bankable
             $contact->country = $contact->country
                 ?: config('contact.default.country');
             // ensure there's always a bank_account like "BANK_CODE:ACCOUNT_NUMBER"
-            $contact->bank_account = ($contact->bank_account
-                    ?: config('contact.default.bank_code'))
-                . ':' . $contact->mobile;
+            // Only generate a bank_account if one wasn't explicitly set
+            if (empty($contact->bank_account)) {
+                $defaultCode = config('contact.default.bank_code');
+                $contact->bank_account = "{$defaultCode}:{$contact->mobile}";
+            }
+//            $contact->bank_account = ($contact->bank_account
+//                    ?: config('contact.default.bank_code'))
+//                . ':' . $contact->mobile;
         });
     }
 

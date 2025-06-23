@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\{CheckWalletBalanceController, VoucherController};
+use App\Http\Controllers\{CheckWalletBalanceController, RedeemController, VoucherController};
 use Laravel\WorkOS\Http\Middleware\ValidateSessionWithWorkOS;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -39,10 +39,13 @@ Route::middleware('auth:sanctum')->post(
 
 use App\Http\Controllers\RedeemVoucherController;
 
-Route::get('redeem', [RedeemVoucherController::class, 'create'])
+/** @deprecated  */
+Route::get('voucher/redeem', [RedeemVoucherController::class, 'create'])
     ->name('redeem.create');
 
 Route::post('redeem', [RedeemVoucherController::class, 'store'])
     ->name('redeem.store');
 
 Route::resource('vouchers', VoucherController::class);
+
+Route::get('redeem/{voucher}', RedeemController::class)->name('redeem');

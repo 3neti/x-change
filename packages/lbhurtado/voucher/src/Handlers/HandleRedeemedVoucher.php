@@ -5,7 +5,7 @@ namespace LBHurtado\Voucher\Handlers;
 use LBHurtado\Voucher\Pipelines\RedeemedVoucher\ValidateRedeemerAndCash;
 use LBHurtado\Voucher\Pipelines\RedeemedVoucher\DisburseCash;
 use LBHurtado\Voucher\Events\DisbursementRequested;
-use LBHurtado\Voucher\Events\DisbursementFailed;
+use LBHurtado\Wallet\Events\DisbursementFailed;
 use Lorisleiva\Actions\Concerns\AsAction;
 use LBHurtado\Voucher\Models\Voucher;
 use Illuminate\Support\Facades\Log;

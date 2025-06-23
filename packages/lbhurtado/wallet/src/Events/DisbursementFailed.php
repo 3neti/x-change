@@ -1,6 +1,6 @@
 <?php
 
-namespace LBHurtado\Voucher\Events;
+namespace LBHurtado\Wallet\Events;
 
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Foundation\Events\Dispatchable;
