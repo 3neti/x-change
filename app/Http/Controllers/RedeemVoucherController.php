@@ -9,9 +9,6 @@ use LBHurtado\Voucher\Models\Voucher;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use App\Actions\EncashCheck;
-
-
-/** @deprecated */
 class RedeemVoucherController extends Controller
 {
     const META_KEY = 'redemption';

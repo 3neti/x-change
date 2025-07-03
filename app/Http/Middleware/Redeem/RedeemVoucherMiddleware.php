@@ -50,17 +50,21 @@ class RedeemVoucherMiddleware
         $meta = [];
 
         $inputs = Session::get("redeem.{$voucherCode}.inputs", []);
-        $meta['inputs'] = $inputs;
+        if (!empty($inputs)) {
+            $meta['inputs'] = $inputs;
+        }
 
         $bankCode      = Session::get("redeem.{$voucherCode}.bank_code");
         $accountNumber = Session::get("redeem.{$voucherCode}.account_number");
 
-        if (! empty($bankCode) && ! empty($accountNumber)) {
+        if (!empty($bankCode) && !empty($accountNumber)) {
             $meta['bank_account'] = "{$bankCode}:{$accountNumber}";
         }
 
         $signature = Session::get("redeem.{$voucherCode}.signature");
-        $meta['signature'] = $signature;
+        if (!empty($signature)) {
+            $meta['signature'] = $signature;
+        }
 
         Log::debug('[RedeemVoucherMiddleware] Redemption payload prepared', [
             'voucher_code' => $voucherCode,

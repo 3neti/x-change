@@ -45,7 +45,8 @@ class RedeemWizardController extends Controller
         Session::put("redeem.{$voucher->code}.bank_code", $validated['bank_code']);
         Session::put("redeem.{$voucher->code}.account_number", $validated['account_number']);
 
-        return to_route('redeem.inputs', ['voucher' => $voucher]);
+        return redirect()->route('redeem.finalize', $voucher);
+//        return to_route('redeem.inputs', ['voucher' => $voucher]);
     }
 
     public function inputs(Voucher $voucher): Response

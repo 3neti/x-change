@@ -71,10 +71,12 @@ Route::prefix('redeem/{voucher}')
         Route::post('signature', [RedeemWizardController::class, 'storeSignature']);
 
         Route::get('finalize', [RedeemWizardController::class, 'finalize'])
-            ->middleware(SignTransactionMiddleware::class)
+            ->middleware(CheckMobileMiddleware::class)
+//            ->middleware(SignTransactionMiddleware::class)
             ->name('redeem.finalize');
 
         Route::get('success', [RedeemWizardController::class, 'success'])
+//            ->middleware(CheckMobileMiddleware::class)
             ->middleware(RedeemVoucherMiddleware::class)
             ->name('redeem.success');
     });
