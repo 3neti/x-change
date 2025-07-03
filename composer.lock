@@ -2368,16 +2368,16 @@
         },
         {
             "name": "inertiajs/inertia-laravel",
-            "version": "v2.0.2",
+            "version": "v2.0.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/inertiajs/inertia-laravel.git",
-                "reference": "248e815cf8d41307cbfb735efaa514c118e2f3b4"
+                "reference": "b732a5cc33423b2c2366fea38b17dc637d2a0b4f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/inertiajs/inertia-laravel/zipball/248e815cf8d41307cbfb735efaa514c118e2f3b4",
-                "reference": "248e815cf8d41307cbfb735efaa514c118e2f3b4",
+                "url": "https://api.github.com/repos/inertiajs/inertia-laravel/zipball/b732a5cc33423b2c2366fea38b17dc637d2a0b4f",
+                "reference": "b732a5cc33423b2c2366fea38b17dc637d2a0b4f",
                 "shasum": ""
             },
             "require": {
@@ -2430,9 +2430,9 @@
             ],
             "support": {
                 "issues": "https://github.com/inertiajs/inertia-laravel/issues",
-                "source": "https://github.com/inertiajs/inertia-laravel/tree/v2.0.2"
+                "source": "https://github.com/inertiajs/inertia-laravel/tree/v2.0.3"
             },
-            "time": "2025-04-10T15:08:36+00:00"
+            "time": "2025-06-20T07:38:21+00:00"
         },
         {
             "name": "kelunik/certificate",
@@ -2494,16 +2494,16 @@
         },
         {
             "name": "laravel/framework",
-            "version": "v12.18.0",
+            "version": "v12.19.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/laravel/framework.git",
-                "reference": "7d264a0dad2bfc5c154240b38e8ce9b2c4cdd14d"
+                "reference": "4e6ec689ef704bb4bd282f29d9dd658dfb4fb262"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laravel/framework/zipball/7d264a0dad2bfc5c154240b38e8ce9b2c4cdd14d",
-                "reference": "7d264a0dad2bfc5c154240b38e8ce9b2c4cdd14d",
+                "url": "https://api.github.com/repos/laravel/framework/zipball/4e6ec689ef704bb4bd282f29d9dd658dfb4fb262",
+                "reference": "4e6ec689ef704bb4bd282f29d9dd658dfb4fb262",
                 "shasum": ""
             },
             "require": {
@@ -2705,7 +2705,7 @@
                 "issues": "https://github.com/laravel/framework/issues",
                 "source": "https://github.com/laravel/framework"
             },
-            "time": "2025-06-10T14:48:34+00:00"
+            "time": "2025-06-18T12:56:23+00:00"
         },
         {
             "name": "laravel/prompts",
@@ -3026,14 +3026,14 @@
             "dist": {
                 "type": "path",
                 "url": "./packages/lbhurtado/cash",
-                "reference": "d8d67c392c397c6d663a3e085b5c8cae0f1149c1"
+                "reference": "f4d579fd7820e5372a134d402585e0faf7a9d5e7"
             },
             "require": {
                 "brick/money": "^0.10.1",
                 "lbhurtado/wallet": "dev-main",
                 "lorisleiva/laravel-actions": "^2.9",
                 "propaganistas/laravel-phone": "^6.0",
-                "spatie/laravel-data": "^4.15",
+                "spatie/laravel-data": "^4.16",
                 "spatie/laravel-model-status": "^1.18",
                 "spatie/laravel-tags": "^4.10"
             },
@@ -3150,13 +3150,14 @@
             "dist": {
                 "type": "path",
                 "url": "./packages/lbhurtado/contact",
-                "reference": "85f21e899dc3936a1dbcfb1f041d3dd436dbe51c"
+                "reference": "e6fa6e839f5bbc662e7225db835988b34d260188"
             },
             "require": {
                 "propaganistas/laravel-phone": "^6.0",
                 "spatie/laravel-data": "^4.15"
             },
             "require-dev": {
+                "lbhurtado/laravel-model-input": "dev-main",
                 "orchestra/testbench": "^10.3",
                 "pestphp/pest": "^3.8"
             },
@@ -3321,6 +3322,59 @@
             }
         },
         {
+            "name": "lbhurtado/laravel-model-input",
+            "version": "dev-main",
+            "dist": {
+                "type": "path",
+                "url": "./packages/lbhurtado/model-input",
+                "reference": "b40f71f6a0d4ef32985a05d59d7c38c9d9ac77a5"
+            },
+            "require": {
+                "propaganistas/laravel-phone": "^6.0"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^10.3",
+                "pestphp/pest": "^3.8"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "LBHurtado\\ModelInput\\ModelInputServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "LBHurtado\\ModelInput\\": "src/",
+                    "LBHurtado\\ModelInput\\Database\\Factories\\": "database/factories/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "LBHurtado\\ModelInput\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "vendor/bin/pest"
+                ]
+            },
+            "license": [
+                "proprietary"
+            ],
+            "authors": [
+                {
+                    "name": "Lester Hurtado",
+                    "email": "lester@hurtado.ph"
+                }
+            ],
+            "description": "A package to enable assigning inputs to Eloquent Models",
+            "transport-options": {
+                "relative": true
+            }
+        },
+        {
             "name": "lbhurtado/omnichannel",
             "version": "dev-main",
             "dist": {
@@ -3380,7 +3434,7 @@
             "dist": {
                 "type": "path",
                 "url": "./packages/lbhurtado/payment-gateway",
-                "reference": "cd5c87e131dd8e08f21903b86c6db88ccbbf5420"
+                "reference": "af92621a95adf40858f07f5b1b72d15414377c25"
             },
             "require": {
                 "brick/money": "^0.10.1",
@@ -3392,6 +3446,7 @@
                 "spatie/laravel-data": "^4.15"
             },
             "require-dev": {
+                "lbhurtado/voucher": "dev-main",
                 "orchestra/testbench": "^10.3",
                 "pestphp/pest": "^3.8"
             },
@@ -3505,13 +3560,14 @@
             "dist": {
                 "type": "path",
                 "url": "./packages/lbhurtado/voucher",
-                "reference": "b0613e92a88d26425ff3795c6d1c8bb0c24af32b"
+                "reference": "d780320c4288d4f23398f00c9d7ff47308c889de"
             },
             "require": {
                 "brick/money": "^0.10.1",
                 "frittenkeez/laravel-vouchers": "^0.6.0",
                 "lbhurtado/cash": "dev-main",
                 "lbhurtado/contact": "dev-main",
+                "lbhurtado/laravel-model-input": "dev-main",
                 "lbhurtado/payment-gateway": "dev-main",
                 "lbhurtado/wallet": "dev-main",
                 "lorisleiva/laravel-actions": "^2.9",
@@ -4422,16 +4478,16 @@
         },
         {
             "name": "nesbot/carbon",
-            "version": "3.10.0",
+            "version": "3.10.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/CarbonPHP/carbon.git",
-                "reference": "c1397390dd0a7e0f11660f0ae20f753d88c1f3d9"
+                "reference": "1fd1935b2d90aef2f093c5e35f7ae1257c448d00"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/CarbonPHP/carbon/zipball/c1397390dd0a7e0f11660f0ae20f753d88c1f3d9",
-                "reference": "c1397390dd0a7e0f11660f0ae20f753d88c1f3d9",
+                "url": "https://api.github.com/repos/CarbonPHP/carbon/zipball/1fd1935b2d90aef2f093c5e35f7ae1257c448d00",
+                "reference": "1fd1935b2d90aef2f093c5e35f7ae1257c448d00",
                 "shasum": ""
             },
             "require": {
@@ -4523,7 +4579,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2025-06-12T10:24:28+00:00"
+            "time": "2025-06-21T15:19:35+00:00"
         },
         {
             "name": "nette/schema",
@@ -5988,16 +6044,16 @@
         },
         {
             "name": "psy/psysh",
-            "version": "v0.12.8",
+            "version": "v0.12.9",
             "source": {
                 "type": "git",
                 "url": "https://github.com/bobthecow/psysh.git",
-                "reference": "85057ceedee50c49d4f6ecaff73ee96adb3b3625"
+                "reference": "1b801844becfe648985372cb4b12ad6840245ace"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/bobthecow/psysh/zipball/85057ceedee50c49d4f6ecaff73ee96adb3b3625",
-                "reference": "85057ceedee50c49d4f6ecaff73ee96adb3b3625",
+                "url": "https://api.github.com/repos/bobthecow/psysh/zipball/1b801844becfe648985372cb4b12ad6840245ace",
+                "reference": "1b801844becfe648985372cb4b12ad6840245ace",
                 "shasum": ""
             },
             "require": {
@@ -6061,9 +6117,9 @@
             ],
             "support": {
                 "issues": "https://github.com/bobthecow/psysh/issues",
-                "source": "https://github.com/bobthecow/psysh/tree/v0.12.8"
+                "source": "https://github.com/bobthecow/psysh/tree/v0.12.9"
             },
-            "time": "2025-03-16T03:05:19+00:00"
+            "time": "2025-06-23T02:35:06+00:00"
         },
         {
             "name": "ralouphie/getallheaders",
@@ -6469,16 +6525,16 @@
         },
         {
             "name": "spatie/laravel-data",
-            "version": "4.15.2",
+            "version": "4.16.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/spatie/laravel-data.git",
-                "reference": "50f5abe716ff1ad9a3e96dcfdeb4ad00f014bf8d"
+                "reference": "e652b52bdaca4774abb4a6024736850a1c4ab50b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/spatie/laravel-data/zipball/50f5abe716ff1ad9a3e96dcfdeb4ad00f014bf8d",
-                "reference": "50f5abe716ff1ad9a3e96dcfdeb4ad00f014bf8d",
+                "url": "https://api.github.com/repos/spatie/laravel-data/zipball/e652b52bdaca4774abb4a6024736850a1c4ab50b",
+                "reference": "e652b52bdaca4774abb4a6024736850a1c4ab50b",
                 "shasum": ""
             },
             "require": {
@@ -6540,7 +6596,7 @@
             ],
             "support": {
                 "issues": "https://github.com/spatie/laravel-data/issues",
-                "source": "https://github.com/spatie/laravel-data/tree/4.15.2"
+                "source": "https://github.com/spatie/laravel-data/tree/4.16.1"
             },
             "funding": [
                 {
@@ -6548,7 +6604,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2025-06-12T09:42:08+00:00"
+            "time": "2025-06-24T08:19:42+00:00"
         },
         {
             "name": "spatie/laravel-model-status",
@@ -9553,16 +9609,16 @@
         },
         {
             "name": "workos/workos-php",
-            "version": "v4.25.0",
+            "version": "v4.26.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/workos/workos-php.git",
-                "reference": "a65be0b3db1d23541fbd36c938cc1bc694469a57"
+                "reference": "bb7b8233eb9fedd1d11365d2f1e51ec8a232620d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/workos/workos-php/zipball/a65be0b3db1d23541fbd36c938cc1bc694469a57",
-                "reference": "a65be0b3db1d23541fbd36c938cc1bc694469a57",
+                "url": "https://api.github.com/repos/workos/workos-php/zipball/bb7b8233eb9fedd1d11365d2f1e51ec8a232620d",
+                "reference": "bb7b8233eb9fedd1d11365d2f1e51ec8a232620d",
                 "shasum": ""
             },
             "require": {
@@ -9593,9 +9649,9 @@
             "homepage": "https://workos.com",
             "support": {
                 "issues": "https://github.com/workos/workos-php/issues",
-                "source": "https://github.com/workos/workos-php/tree/v4.25.0"
+                "source": "https://github.com/workos/workos-php/tree/v4.26.0"
             },
-            "time": "2025-06-17T12:50:12+00:00"
+            "time": "2025-06-23T20:37:16+00:00"
         }
     ],
     "packages-dev": [
@@ -10966,16 +11022,16 @@
         },
         {
             "name": "phpunit/php-code-coverage",
-            "version": "11.0.9",
+            "version": "11.0.10",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/php-code-coverage.git",
-                "reference": "14d63fbcca18457e49c6f8bebaa91a87e8e188d7"
+                "reference": "1a800a7446add2d79cc6b3c01c45381810367d76"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/14d63fbcca18457e49c6f8bebaa91a87e8e188d7",
-                "reference": "14d63fbcca18457e49c6f8bebaa91a87e8e188d7",
+                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/1a800a7446add2d79cc6b3c01c45381810367d76",
+                "reference": "1a800a7446add2d79cc6b3c01c45381810367d76",
                 "shasum": ""
             },
             "require": {
@@ -11032,15 +11088,27 @@
             "support": {
                 "issues": "https://github.com/sebastianbergmann/php-code-coverage/issues",
                 "security": "https://github.com/sebastianbergmann/php-code-coverage/security/policy",
-                "source": "https://github.com/sebastianbergmann/php-code-coverage/tree/11.0.9"
+                "source": "https://github.com/sebastianbergmann/php-code-coverage/tree/show"
             },
             "funding": [
                 {
                     "url": "https://github.com/sebastianbergmann",
                     "type": "github"
+                },
+                {
+                    "url": "https://liberapay.com/sebastianbergmann",
+                    "type": "liberapay"
+                },
+                {
+                    "url": "https://thanks.dev/u/gh/sebastianbergmann",
+                    "type": "thanks_dev"
+                },
+                {
+                    "url": "https://tidelift.com/funding/github/packagist/phpunit/php-code-coverage",
+                    "type": "tidelift"
                 }
             ],
-            "time": "2025-02-25T13:26:39+00:00"
+            "time": "2025-06-18T08:56:18+00:00"
         },
         {
             "name": "phpunit/php-file-iterator",

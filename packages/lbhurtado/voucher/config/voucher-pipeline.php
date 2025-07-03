@@ -18,6 +18,10 @@ return [
         \LBHurtado\Voucher\Pipelines\Voucher\EscrowAction::class,
         \LBHurtado\Voucher\Pipelines\Voucher\PersistCash::class,
     ],
+    'post-redemption' => [
+        \LBHurtado\Voucher\Pipelines\RedeemedVoucher\ValidateRedeemerAndCash::class,
+        \LBHurtado\Voucher\Pipelines\RedeemedVoucher\DisburseCash::class,
+    ],
 ];
 
 // put this after NormalizeMetadata

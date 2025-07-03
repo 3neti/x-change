@@ -1,65 +1,72 @@
+<!-- resources/js/Pages/Redeem/Success.vue -->
 <script setup lang="ts">
+import { onMounted } from 'vue'
+import { Head, router } from '@inertiajs/vue3'
+import GuestLayout from '@/layouts/legacy/GuestLayout.vue'
 import { useFormatCurrency } from '@/composables/useFormatCurrency'
 import { useFormatDate } from '@/composables/useFormatDate'
-import { defineProps, onMounted } from 'vue';
-import { router } from "@inertiajs/vue3";
 
-const props = defineProps({
+const props = defineProps<{
     voucher: {
-        type: Object,
-        required: true,
+        code: string
+        cash: {
+            amount: number
+            currency: string
+        }
+        redeemed_at: string
     },
-    redirectTimeout: {
-        type: Number,
-        default: 3000, // Default to 3 seconds
-    },
-});
+    signature: string,
+    redirectTimeout?: number
+}>()
 
 const formatCurrency = useFormatCurrency()
 const { formatDate } = useFormatDate()
 
-// Automatically redirect to the rider page after the configured timeout
 onMounted(() => {
     setTimeout(() => {
-        router.get(route('rider', { voucher: props.voucher.code }));
-    }, props.redirectTimeout);
-});
+        router.get(route('rider', { voucher: props.voucher.code }))
+    }, props.redirectTimeout ?? 3000)
+})
 </script>
 
-<style>
-.voucher-success {
-    padding: 20px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    background-color: #f9f9f9;
-    max-width: 600px;
-    margin: 20px auto;
-    text-align: center;
-}
+<template>
+    <GuestLayout>
+        <Head title="Voucher Redeemed" />
 
-.signature-box {
-    margin-top: 20px;
-}
+        <div class="space-y-6 text-center">
+            <h2 class="text-2xl font-semibold text-green-600">Voucher Successfully Redeemed!</h2>
 
-img {
-    max-width: 100%;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+            <div class="space-y-4">
+                <div>
+                    <p class="text-sm text-gray-500">Voucher Code</p>
+                    <div class="font-mono text-lg">{{ props.voucher.code }}</div>
+                </div>
+
+                <div>
+                    <p class="text-sm text-gray-500">Amount</p>
+                    <div class="text-lg font-medium">
+                        {{ formatCurrency(props.voucher.cash.amount) }}
+                    </div>
+                </div>
+
+                <div>
+                    <p class="text-sm text-gray-500">Redeemed At</p>
+                    <div class="text-lg">{{ formatDate(props.voucher.redeemed_at) }}</div>
+                </div>
+
+                <div v-if="props.signature">
+                    <p class="text-sm text-gray-500">Signature</p>
+                    <img :src="props.signature" alt="Signature" class="mx-auto h-24 object-contain border p-2" />
+                </div>
+            </div>
+
+            <p class="text-sm text-gray-400">Redirecting shortly…</p>
+        </div>
+    </GuestLayout>
+</template>
+
+<style scoped>
+.font-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 </style>
-
-<template>
-    <div class="voucher-success">
-        <h1>Voucher Redeemed Successfully!</h1>
-        <p><strong>Code:</strong> {{ voucher.code }}</p>
-<!--        <p><strong>Name:</strong> {{ voucher.metadata.name }}</p>-->
-        <p><strong>Mobile:</strong> {{ voucher.contact.mobile }}</p>
-        <p><strong>Amount Disbursed:</strong> {{ formatCurrency(voucher.cash.amount) }}</p>
-        <p><strong>Date Disbursed:</strong> {{ formatDate(voucher.redeemed_at) }}</p>
-
-<!--        <div v-if="voucher.metadata.signature" class="signature-box">-->
-<!--            <h2>Signature:</h2>-->
-<!--            <img :src="voucher.metadata.signature" alt="Signature" />-->
-<!--        </div>-->
-    </div>
-</template>

@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace LBHurtado\Contact\Tests\Models;
 
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use LBHurtado\Contact\Database\Factories\UserFactory;
 use Illuminate\Notifications\Notifiable;
+use LBHurtado\ModelInput\Contracts\InputInterface;
+use LBHurtado\ModelInput\Traits\HasInputs;
 
 /**
  * Class User.
@@ -18,10 +21,11 @@ use Illuminate\Notifications\Notifiable;
  *
  * @method int getKey()
  */
-class User extends Authenticatable
+class User extends Authenticatable implements InputInterface
 {
     use HasFactory;
     use Notifiable;
+    use HasInputs;
 
     /**
      * The attributes that are mass assignable.

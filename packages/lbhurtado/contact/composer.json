@@ -3,6 +3,12 @@
     "description": "A package to enable assigning contacts to Eloquent Models",
     "type": "library",
     "license": "proprietary",
+    "repositories": [
+        {
+            "type": "path",
+            "url": "./../model-input"
+        }
+    ],
     "authors": [
         {
             "name": "Lester Hurtado",
@@ -32,6 +38,7 @@
         "propaganistas/laravel-phone": "^6.0"
     },
     "require-dev": {
+        "lbhurtado/laravel-model-input": "dev-main",
         "orchestra/testbench": "^10.3",
         "pestphp/pest": "^3.8"
     },

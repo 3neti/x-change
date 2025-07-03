@@ -3,6 +3,7 @@
 use LBHurtado\OmniChannel\Notifications\AdhocNotification;
 use LBHurtado\Wallet\Services\SystemUserResolverService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use LBHurtado\PaymentGateway\Support\BankRegistry;
 use App\Models\{System, User};
 
 uses(RefreshDatabase::class);
@@ -21,4 +22,8 @@ test('send notification', function () {
     $user->mobile = '09467438575';
     $user->save();
     $user->notify(new AdhocNotification('Who in the world is Leslie Chiong?'));
+})->skip();
+
+test('bank codes', function () {
+    dd(app(BankRegistry::class)->toCollection());
 })->skip();

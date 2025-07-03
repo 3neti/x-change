@@ -1,7 +1,7 @@
 <?php
 
 use LBHurtado\ModelInput\Tests\Models\User;
-use LBHurtado\ModelInput\Enums\Input;
+use LBHurtado\ModelInput\Enums\InputType;
 
 it('can retrieve user inputs', function () {
     // Arrange
@@ -154,10 +154,10 @@ it('allows setting a input using Inputs enum', function () {
     $user = User::factory()->create();
 
     // Act
-    $user->setInput(Input::MOBILE, '9876543210');
+    $user->setInput(InputType::MOBILE, '9876543210');
 
     // Assert
-    expect($user->inputs()->where('name', Input::MOBILE->value)->exists())->toBeTrue();
+    expect($user->inputs()->where('name', InputType::MOBILE->value)->exists())->toBeTrue();
 });
 
 it('throws exception for disallowed input names', function () {

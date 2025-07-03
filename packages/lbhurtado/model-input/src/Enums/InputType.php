@@ -4,10 +4,16 @@ namespace LBHurtado\ModelInput\Enums;
 
 use Illuminate\Support\Facades\Config;
 
-enum Input: string
+enum InputType: string
 {
     case MOBILE = 'mobile';
     case SIGNATURE = 'signature';
+    case BANK_ACCOUNT = 'bank_account';
+    case NAME = 'name';
+    case ADDRESS = 'address';
+    case BIRTH_DATE = 'birth_date';
+    case EMAIL = 'email';
+    case GROSS_MONTHLY_INCOME = 'gross_monthly_income';
 
     public function rules(): array
     {

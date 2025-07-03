@@ -1,7 +1,9 @@
 <?php
 
-use App\Http\Controllers\{CheckWalletBalanceController, RedeemController, VoucherController};
+use App\Http\Controllers\{CheckWalletBalanceController, VoucherController};
 use Laravel\WorkOS\Http\Middleware\ValidateSessionWithWorkOS;
+use App\Http\Controllers\Api\CutCheckController;
+use App\Http\Controllers\Api\TokenController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -26,26 +28,53 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         ->name('wallet.add-funds');
 });
 
-use App\Http\Controllers\Api\TokenController;
-
 Route::middleware('auth:sanctum')->post('/token', [TokenController::class, 'store'])->name('token.store');
-
-use App\Http\Controllers\Api\CutCheckController;
 
 Route::middleware('auth:sanctum')->post(
     '/cut-check',
     [CutCheckController::class, 'store']
 )->name('api.cut-check');
 
-use App\Http\Controllers\RedeemVoucherController;
-
-/** @deprecated  */
-Route::get('voucher/redeem', [RedeemVoucherController::class, 'create'])
-    ->name('redeem.create');
-
-Route::post('redeem', [RedeemVoucherController::class, 'store'])
-    ->name('redeem.store');
-
 Route::resource('vouchers', VoucherController::class);
 
-Route::get('redeem/{voucher}', RedeemController::class)->name('redeem');
+use App\Http\Controllers\Redeem\RedeemWizardController;
+use App\Http\Middleware\Redeem\{
+    CheckVoucherMiddleware,
+    CheckMobileMiddleware,
+    AddInputsMiddleware,
+    SignTransactionMiddleware,
+    RedeemVoucherMiddleware
+};
+
+Route::get('redeem', function () {
+    return Inertia::render('Redeem/Start');
+})->name('redeem');
+
+Route::prefix('redeem/{voucher}')
+    ->middleware(CheckVoucherMiddleware::class) // ✅ Applies to all steps
+    ->group(function () {
+        Route::get('mobile', [RedeemWizardController::class, 'mobile'])
+            ->name('redeem.mobile');
+
+        Route::post('mobile', [RedeemWizardController::class, 'storeMobile']);
+
+        Route::get('inputs', [RedeemWizardController::class, 'inputs'])
+            ->middleware(CheckMobileMiddleware::class)
+            ->name('redeem.inputs');
+
+        Route::post('inputs', [RedeemWizardController::class, 'storeInputs']);
+
+        Route::get('signature', [RedeemWizardController::class, 'signature'])
+            ->middleware(AddInputsMiddleware::class)
+            ->name('redeem.signature');
+
+        Route::post('signature', [RedeemWizardController::class, 'storeSignature']);
+
+        Route::get('finalize', [RedeemWizardController::class, 'finalize'])
+            ->middleware(SignTransactionMiddleware::class)
+            ->name('redeem.finalize');
+
+        Route::get('success', [RedeemWizardController::class, 'success'])
+            ->middleware(RedeemVoucherMiddleware::class)
+            ->name('redeem.success');
+    });

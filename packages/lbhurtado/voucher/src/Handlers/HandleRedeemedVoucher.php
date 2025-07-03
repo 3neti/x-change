@@ -34,13 +34,15 @@ class HandleRedeemedVoucher
             'id'      => $voucher->getKey(),
         ]);
 
+        $post_redemption_pipeline_array = config('voucher-pipeline.post-redemption');
+        Log::info('[HandleRedeemedVoucher] Pipeline arranged for redeemed voucher.', [
+            'pipeline' => $post_redemption_pipeline_array,
+        ]);
+
         try {
             app(Pipeline::class)
                 ->send($voucher)
-                ->through([
-                    ValidateRedeemerAndCash::class,
-                    DisburseCash::class,
-                ])
+                ->through($post_redemption_pipeline_array)
                 ->then(function (Voucher $voucher) {
                     Log::info('[HandleRedeemedVoucher] Pipeline completed successfully; dispatching DisbursementRequested.', [
                         'voucher' => $voucher->code,

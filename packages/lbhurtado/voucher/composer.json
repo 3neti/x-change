@@ -18,6 +18,10 @@
         },
         {
             "type": "path",
+            "url": "./../model-input"
+        },
+        {
+            "type": "path",
             "url": "./../payment-gateway"
         },
         {
@@ -60,7 +64,8 @@
         "spatie/laravel-model-status": "^1.18",
         "spatie/laravel-tags": "^4.10",
         "propaganistas/laravel-phone": "^6.0",
-        "lbhurtado/payment-gateway": "dev-main"
+        "lbhurtado/payment-gateway": "dev-main",
+        "lbhurtado/laravel-model-input": "dev-main"
     },
     "require-dev": {
         "orchestra/testbench": "^10.3",

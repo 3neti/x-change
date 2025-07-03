@@ -33,7 +33,6 @@ class DisburseCash
 
         Log::debug('[DisburseCash] Payload ready', ['input' => $input->toArray()]);
 
-//        dd($voucher->cash, $voucher->contact);
         // TODO: make a pipeline to check voucher->cash and voucher->contact
         $response = $this->gateway->disburse($voucher->cash, $input);
 

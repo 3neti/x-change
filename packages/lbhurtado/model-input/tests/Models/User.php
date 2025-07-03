@@ -7,10 +7,10 @@ namespace LBHurtado\ModelInput\Tests\Models;
 use LBHurtado\ModelInput\Database\Factories\UserFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use LBHurtado\ModelInput\Contracts\InputsInterface;
+use LBHurtado\ModelInput\Contracts\InputInterface;
 use LBHurtado\ModelInput\Traits\HasInputs;
 use Illuminate\Notifications\Notifiable;
-use LBHurtado\ModelInput\Enums\Input;
+use LBHurtado\ModelInput\Enums\InputType;
 
 /**
  * Class User.
@@ -22,7 +22,7 @@ use LBHurtado\ModelInput\Enums\Input;
  *
  * @method int getKey()
  */
-class User extends Authenticatable implements InputsInterface
+class User extends Authenticatable implements InputInterface
 {
     use HasInputs;
     use HasFactory;

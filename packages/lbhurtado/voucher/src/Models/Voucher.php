@@ -13,6 +13,8 @@ use LBHurtado\Voucher\Scopes\RedeemedScope;
 use LBHurtado\Voucher\Data\VoucherData;
 use Spatie\LaravelData\WithData;
 use Illuminate\Support\Carbon;
+use LBHurtado\ModelInput\Contracts\InputInterface;
+use LBHurtado\ModelInput\Traits\HasInputs;
 
 /**
  * Class Voucher.
@@ -36,9 +38,10 @@ use Illuminate\Support\Carbon;
  * @method int getKey()
  */
 #[ObservedBy([VoucherObserver::class])]
-class Voucher extends BaseVoucher
+class Voucher extends BaseVoucher implements InputInterface
 {
     use WithData;
+    use HasInputs;
 
     protected string $dataClass = VoucherData::class;
 
@@ -54,6 +57,18 @@ class Voucher extends BaseVoucher
 
     public function getRouteKeyName() {
         return "code";
+    }
+
+    /**
+     * Override the default to trim your incoming code.
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        $column = $field ?? $this->getRouteKeyName();
+
+        return $this
+            ->where($column, trim($value))
+            ->firstOrFail();
     }
 
     public function setProcessedAttribute(bool $value): self

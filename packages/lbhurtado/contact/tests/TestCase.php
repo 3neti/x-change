@@ -48,6 +48,8 @@ abstract class TestCase extends BaseTestCase
         // Run the migration from the local package
         $userMigration = include __DIR__ . '/../database/migrations/test/0001_01_01_000000_create_users_table.php';
         $userMigration->up();
+        $inputMigration = include __DIR__ . '/../database/migrations/test/2024_08_02_000000_create_inputs_table.php';
+        $inputMigration->up();
     }
 
     // Define a reusable method for logging in a user

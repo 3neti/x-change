@@ -38,6 +38,7 @@ abstract class TestCase extends BaseTestCase
             \Bavix\Wallet\WalletServiceProvider::class,
             \LBHurtado\PaymentGateway\PaymentGatewayServiceProvider::class,
             \LBHurtado\Contact\ContactServiceProvider::class,
+            \LBHurtado\ModelInput\ModelInputServiceProvider::class,
         ];
     }
 
@@ -94,6 +95,8 @@ abstract class TestCase extends BaseTestCase
         $statusMigration->up();
         $tagMigration = include __DIR__ . '/../database/migrations/test/2024_08_04_202500_create_tag_tables.php';
         $tagMigration->up();
+//        $inputMigration = include __DIR__ . '/../database/migrations/test/2024_08_02_000000_create_inputs_table.php';
+//        $inputMigration->up();
     }
 
     // Define a reusable method for logging in a user
