@@ -27,7 +27,7 @@ const form = useForm({
 Object.assign(form, props.inputs)
 
 function submit() {
-    form.post(route('redeem.inputs', { voucher: props.context.voucherCode }), {
+    form.post(route('redeem.inputs', { voucher: props.context.voucherCode, plugin: 'inputs' }), {
         preserveScroll: true,
     })
 }

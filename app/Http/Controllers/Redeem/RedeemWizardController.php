@@ -3,13 +3,12 @@
 namespace App\Http\Controllers\Redeem;
 
 use LBHurtado\PaymentGateway\Support\BankRegistry;
+use Illuminate\Support\Facades\{Config, Session};
+use Illuminate\Http\{RedirectResponse, Request};
 use Propaganistas\LaravelPhone\Rules\Phone;
-use Illuminate\Support\Facades\Session;
-use Illuminate\Http\RedirectResponse;
 use LBHurtado\Voucher\Models\Voucher;
 use App\Http\Controllers\Controller;
 use Inertia\{Inertia, Response};
-use Illuminate\Http\Request;
 
 class RedeemWizardController extends Controller
 {
@@ -18,10 +17,10 @@ class RedeemWizardController extends Controller
         $registry = new BankRegistry();
 
         return Inertia::render('Redeem/Form', [
-            'voucher_code'    => $voucher->code,
-            'country'    => config('x-change.redeem.default_country', 'PH'),
-            'bank_code'  => '',
-            'banks'      => collect($registry->all())
+            'voucher_code' => $voucher->code,
+            'country'      => config('x-change.redeem.default_country', 'PH'),
+            'bank_code'    => '',
+            'banks'        => collect($registry->all())
                 ->map(fn ($info, $code) => [
                     'code' => $code,
                     'name' => $info['full_name'],
@@ -33,67 +32,69 @@ class RedeemWizardController extends Controller
     public function storeMobile(Request $request, Voucher $voucher): RedirectResponse
     {
         $validated = $request->validate([
-            'mobile' => ['required', (new Phone)->country('PH')->type('mobile')],
-            'country' => ['required', 'string'],
-            'bank_code' => ['nullable', 'string'],
+            'mobile'         => ['required', (new Phone)->country('PH')->type('mobile')],
+            'country'        => ['required', 'string'],
+            'bank_code'      => ['nullable', 'string'],
             'account_number' => ['nullable', 'string'],
         ]);
 
-        // Scope all entries under redeem.{voucher}
         Session::put("redeem.{$voucher->code}.mobile", $validated['mobile']);
         Session::put("redeem.{$voucher->code}.country", $validated['country']);
         Session::put("redeem.{$voucher->code}.bank_code", $validated['bank_code']);
         Session::put("redeem.{$voucher->code}.account_number", $validated['account_number']);
 
-        return redirect()->route('redeem.finalize', $voucher);
-//        return to_route('redeem.inputs', ['voucher' => $voucher]);
+        $plugins = Config::get('x-change.redeem.plugins', []);
+        $enabledPlugins = collect($plugins)->filter(fn ($p) => $p['enabled']);
+        $firstPlugin = $enabledPlugins->keys()->first();
+
+        return $firstPlugin
+            ? redirect()->route("redeem.{$firstPlugin}", ['voucher' => $voucher, 'plugin' => $firstPlugin] )
+            : redirect()->route('redeem.finalize', $voucher);
     }
 
-    public function inputs(Voucher $voucher): Response
+    public function plugin(Voucher $voucher, string $plugin): Response
     {
-        return Inertia::render('Redeem/Inputs', [
+        $config = config("x-change.redeem.plugins.$plugin");
+
+        abort_unless($config && $config['enabled'], 404);
+
+        return Inertia::render($config['page'], [
             'context' => [
                 'voucherCode' => $voucher->code,
                 'mobile'      => Session::get("redeem.{$voucher->code}.mobile"),
             ],
-            'inputs' => Session::get("redeem.{$voucher->code}.inputs", []),
+            $config['session_key'] => Session::get("redeem.{$voucher->code}.{$config['session_key']}", []),
         ]);
     }
 
-    public function storeInputs(Request $request, Voucher $voucher)
+    public function storePlugin(Request $request, Voucher $voucher, string $plugin): RedirectResponse
     {
-        $validated = $request->validate([
-            'name'                  => 'required|string',
-            'address'               => 'required|string',
-            'birthdate'             => 'required|date',
-            'email'                 => 'required|email',
-            'gross_monthly_income'  => 'required|numeric|min:0',
-        ]);
+        $plugins = collect(config('x-change.redeem.plugins', []))
+            ->filter(fn ($cfg) => $cfg['enabled'] ?? false)
+            ->keys()
+            ->values();
 
-        Session::put("redeem.{$voucher->code}.inputs", $validated);
+        $config = config("x-change.redeem.plugins.$plugin");
+        abort_unless($config && $config['enabled'], 404);
 
-        return redirect()->route('redeem.signature', $voucher);
-    }
+        $validated = $request->validate($config['validation'] ?? []);
+        $sessionKey = $config['session_key'];
 
-    public function signature(Voucher $voucher): Response
-    {
-        return Inertia::render('Redeem/Signature', [
-            'context' => [
-                'voucherCode' => $voucher->code,
-                'mobile'      => Session::get("redeem.{$voucher->code}.mobile"),
-            ],
-        ]);
-    }
+        // 🔍 Store single-field plugin as value, multi-field as array
+        if (count($validated) === 1) {
+            Session::put("redeem.{$voucher->code}.{$sessionKey}", reset($validated));
+        } else {
+            Session::put("redeem.{$voucher->code}.{$sessionKey}", $validated);
+        }
 
-    public function storeSignature(Request $request, Voucher $voucher)
-    {
-        $validated = $request->validate([
-            'signature' => 'required|string',
-        ]);
+        $currentIndex = $plugins->search($plugin);
+        $nextPlugin = $plugins->get($currentIndex + 1);
 
-        Session::put("redeem.{$voucher->code}.signature", $validated['signature']);
+        if ($nextPlugin) {
+            return redirect()->route("redeem.$nextPlugin", ['voucher' => $voucher, 'plugin' => $nextPlugin]);
+        }
 
-        return redirect()->route('redeem.finalize', $voucher);
+        return redirect()->route('redeem.finalize', ['voucher' => $voucher]);
     }
 
     public function finalize(Voucher $voucher): Response
@@ -122,18 +123,21 @@ class RedeemWizardController extends Controller
         $code = $voucher->code;
 
         $response = Inertia::render('Redeem/Success', [
-            'voucher' => $voucher->getData(),
-            'signature' => Session::get("redeem.{$voucher->code}.signature"),
+            'voucher'   => $voucher->getData(),
+            'signature' => Session::get("redeem.{$voucher->code}.signature.signature"),
         ]);
 
-        Session::forget([
-            "redeem.{$code}.mobile",
-            "redeem.{$code}.country",
-            "redeem.{$code}.bank_code",
-            "redeem.{$code}.account_number",
-            "redeem.{$code}.inputs",
-            "redeem.{$code}.signature",
-        ]);
+        // Clear all redeem session keys
+        Session::forget(collect(Config::get('x-change.plugins', []))
+            ->keys()
+            ->map(fn ($key) => "redeem.{$code}.{$key}")
+            ->merge([
+                "redeem.{$code}.mobile",
+                "redeem.{$code}.country",
+                "redeem.{$code}.bank_code",
+                "redeem.{$code}.account_number",
+            ])
+            ->toArray());
 
         return $response;
     }

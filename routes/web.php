@@ -49,34 +49,38 @@ use App\Http\Middleware\Redeem\{
 Route::get('redeem', function () {
     return Inertia::render('Redeem/Start');
 })->name('redeem');
+use App\Http\Controllers\Redeem\RedeemPluginController;
 
 Route::prefix('redeem/{voucher}')
-    ->middleware(CheckVoucherMiddleware::class) // ✅ Applies to all steps
+    ->middleware(CheckVoucherMiddleware::class)
     ->group(function () {
-        Route::get('mobile', [RedeemWizardController::class, 'mobile'])
-            ->name('redeem.mobile');
+        Route::get('mobile', [RedeemWizardController::class, 'mobile'])->name('redeem.mobile');
 
         Route::post('mobile', [RedeemWizardController::class, 'storeMobile']);
 
-        Route::get('inputs', [RedeemWizardController::class, 'inputs'])
-            ->middleware(CheckMobileMiddleware::class)
-            ->name('redeem.inputs');
+        foreach (config('x-change.redeem.plugins', []) as $key => $plugin) {
+            if (!($plugin['enabled'] ?? false)) continue;
 
-        Route::post('inputs', [RedeemWizardController::class, 'storeInputs']);
+            Route::get($key . '/{plugin}', [RedeemWizardController::class, 'plugin'])
+                ->middleware($plugin['middleware'] ?? [])
+                ->name($plugin['route'] ?? "redeem.$key");
 
-        Route::get('signature', [RedeemWizardController::class, 'signature'])
-            ->middleware(AddInputsMiddleware::class)
-            ->name('redeem.signature');
-
-        Route::post('signature', [RedeemWizardController::class, 'storeSignature']);
+            Route::post($key . '/{plugin}', [RedeemWizardController::class, 'storePlugin'])
+                ->name("redeem.$key.store");
+        }
 
         Route::get('finalize', [RedeemWizardController::class, 'finalize'])
-            ->middleware(CheckMobileMiddleware::class)
-//            ->middleware(SignTransactionMiddleware::class)
+            ->middleware([
+                CheckVoucherMiddleware::class,
+                CheckMobileMiddleware::class
+            ])
             ->name('redeem.finalize');
 
         Route::get('success', [RedeemWizardController::class, 'success'])
-//            ->middleware(CheckMobileMiddleware::class)
-            ->middleware(RedeemVoucherMiddleware::class)
+            ->middleware([
+                CheckVoucherMiddleware::class,
+                CheckMobileMiddleware::class,
+                RedeemVoucherMiddleware::class
+            ])
             ->name('redeem.success');
     });

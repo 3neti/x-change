@@ -47,7 +47,7 @@ function handleDisabled() {
 }
 
 function submit() {
-    form.post(route('redeem.signature', { voucher: props.context.voucherCode }), {
+    form.post(route('redeem.signature', { voucher: props.context.voucherCode, plugin: 'signature' }), {
         preserveScroll: true,
     })
 }
