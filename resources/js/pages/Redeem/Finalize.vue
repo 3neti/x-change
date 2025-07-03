@@ -17,7 +17,7 @@ const props = defineProps<{
         meta: Record<string, any>
     }
     mobile: string,
-    bank_account: string
+    bank_account: string|null
 }>()
 
 const formatCurrency = useFormatCurrency()

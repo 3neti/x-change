@@ -61,13 +61,28 @@ Route::prefix('redeem/{voucher}')
         foreach (config('x-change.redeem.plugins', []) as $key => $plugin) {
             if (!($plugin['enabled'] ?? false)) continue;
 
-            Route::get($key . '/{plugin}', [RedeemWizardController::class, 'plugin'])
-                ->middleware($plugin['middleware'] ?? [])
+            $middlewares = $plugin['middleware'] ?? [];
+            $middlewares = is_array($middlewares) ? $middlewares : [$middlewares];
+
+            Route::get("$key/{plugin}", [RedeemWizardController::class, 'plugin'])
+                ->middleware($middlewares)
                 ->name($plugin['route'] ?? "redeem.$key");
 
-            Route::post($key . '/{plugin}', [RedeemWizardController::class, 'storePlugin'])
+            Route::post("$key/{plugin}", [RedeemWizardController::class, 'storePlugin'])
+                ->middleware($middlewares) // 🔁 include POST middleware too if needed
                 ->name("redeem.$key.store");
         }
+
+//        foreach (config('x-change.redeem.plugins', []) as $key => $plugin) {
+//            if (!($plugin['enabled'] ?? false)) continue;
+//
+//            Route::get($key . '/{plugin}', [RedeemWizardController::class, 'plugin'])
+//                ->middleware($plugin['middleware'] ?? [])
+//                ->name($plugin['route'] ?? "redeem.$key");
+//
+//            Route::post($key . '/{plugin}', [RedeemWizardController::class, 'storePlugin'])
+//                ->name("redeem.$key.store");
+//        }
 
         Route::get('finalize', [RedeemWizardController::class, 'finalize'])
             ->middleware([

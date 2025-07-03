@@ -19,7 +19,6 @@ return [
          * 💡 Plugins define dynamic redemption steps
          */
         'plugins' => [
-
             'inputs' => [
                 'enabled' => true,
                 'title' => 'Gather Inputs',
@@ -33,7 +32,9 @@ return [
                     'email' => 'required|email',
                     'gross_monthly_income' => 'required|numeric|min:0',
                 ],
-//                'middleware' => App\Http\Middleware\Redeem\AddInputsMiddleware::class,
+                'middleware' => [
+                    App\Http\Middleware\Redeem\CheckVoucherMiddleware::class
+                ],
             ],
 
             'signature' => [
@@ -45,11 +46,11 @@ return [
                 'validation' => [
                     'signature' => 'required|string',
                 ],
-//                'middleware' => App\Http\Middleware\Redeem\SignTransactionMiddleware::class,
+                'middleware' => [
+                    App\Http\Middleware\Redeem\CheckVoucherMiddleware::class
+                ],
             ],
-
         ],
-
     ],
 
 ];
