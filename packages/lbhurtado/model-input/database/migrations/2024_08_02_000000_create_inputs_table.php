@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('inputs', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('value');
+            $table->text('value');
             $table->morphs('model');
             $table->timestamps();
         });
