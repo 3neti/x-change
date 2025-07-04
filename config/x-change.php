@@ -11,6 +11,7 @@ return [
 
         'success' => [
             'redirect_timeout' => env('RIDER_REDIRECT_TIMEOUT', 5000),
+            'rider' => env('RIDER_REDIRECT_URL', 'https://mosaically.com/photomosaic/d7d3f985-ef62-49a4-897d-e209061475d0'),
         ],
 
         'auto_feedback' => (bool) env('REDEEM_AUTO_FEEDBACK', true),
@@ -38,7 +39,7 @@ return [
             ],
 
             'signature' => [
-                'enabled' => false,
+                'enabled' => true,
                 'title' => 'Capture Signature',
                 'route' => 'redeem.signature',
                 'page' => 'Redeem/Signature',

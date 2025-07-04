@@ -73,17 +73,6 @@ Route::prefix('redeem/{voucher}')
                 ->name("redeem.$key.store");
         }
 
-//        foreach (config('x-change.redeem.plugins', []) as $key => $plugin) {
-//            if (!($plugin['enabled'] ?? false)) continue;
-//
-//            Route::get($key . '/{plugin}', [RedeemWizardController::class, 'plugin'])
-//                ->middleware($plugin['middleware'] ?? [])
-//                ->name($plugin['route'] ?? "redeem.$key");
-//
-//            Route::post($key . '/{plugin}', [RedeemWizardController::class, 'storePlugin'])
-//                ->name("redeem.$key.store");
-//        }
-
         Route::get('finalize', [RedeemWizardController::class, 'finalize'])
             ->middleware([
                 CheckVoucherMiddleware::class,
@@ -99,3 +88,6 @@ Route::prefix('redeem/{voucher}')
             ])
             ->name('redeem.success');
     });
+
+Route::get('redeem/{voucher}/redirect', \App\Http\Controllers\SuccessRedirectController::class)
+    ->name('redeem.redirect');

@@ -24,7 +24,7 @@ const { formatDate } = useFormatDate()
 
 onMounted(() => {
     setTimeout(() => {
-        router.get(route('rider', { voucher: props.voucher.code }))
+        router.visit(route('redeem.redirect', { voucher: props.voucher.code }))
     }, props.redirectTimeout ?? 3000)
 })
 </script>
