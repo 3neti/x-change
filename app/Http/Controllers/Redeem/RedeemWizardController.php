@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Redeem;
 
+use LBHurtado\ModelInput\Support\InputRuleBuilder;
 use LBHurtado\PaymentGateway\Support\BankRegistry;
 use Illuminate\Support\Facades\{Config, Session};
 use Illuminate\Http\{RedirectResponse, Request};
@@ -9,6 +10,7 @@ use Propaganistas\LaravelPhone\Rules\Phone;
 use LBHurtado\Voucher\Models\Voucher;
 use App\Http\Controllers\Controller;
 use Inertia\{Inertia, Response};
+use Illuminate\Support\Arr;
 
 class RedeemWizardController extends Controller
 {
@@ -63,10 +65,11 @@ class RedeemWizardController extends Controller
                 'voucherCode' => $voucher->code,
                 'mobile'      => Session::get("redeem.{$voucher->code}.mobile"),
             ],
-            $config['session_key'] => Session::get("redeem.{$voucher->code}.{$config['session_key']}", []),
+            $config['session_key'] => Session::get("redeem.{$voucher->code}.{$config['session_key']}", $voucher->instructions->inputs->toArray()),
         ]);
     }
 
+    //TODO: check this out - not working
     public function storePlugin(Request $request, Voucher $voucher, string $plugin): RedirectResponse
     {
         $plugins = collect(config('x-change.redeem.plugins', []))
@@ -77,24 +80,30 @@ class RedeemWizardController extends Controller
         $config = config("x-change.redeem.plugins.$plugin");
         abort_unless($config && $config['enabled'], 404);
 
-        $validated = $request->validate($config['validation'] ?? []);
+        // ✅ Dynamically build rules from voucher's instructions
+        $rules = InputRuleBuilder::from($voucher->instructions->inputs);
+
+        // ✅ Only validate fields that are actually present in the request
+        $filteredRules = Arr::only($rules, array_keys(array_filter($request->all())));
+
+        $validated = $request->validate($filteredRules);
+
         $sessionKey = $config['session_key'];
 
-        // 🔍 Store single-field plugin as value, multi-field as array
+        // 🔐 Store validated input
         if (count($validated) === 1) {
             Session::put("redeem.{$voucher->code}.{$sessionKey}", reset($validated));
         } else {
             Session::put("redeem.{$voucher->code}.{$sessionKey}", $validated);
         }
 
+        // ➡️ Continue to next plugin (or finalize)
         $currentIndex = $plugins->search($plugin);
         $nextPlugin = $plugins->get($currentIndex + 1);
 
-        if ($nextPlugin) {
-            return redirect()->route("redeem.$nextPlugin", ['voucher' => $voucher, 'plugin' => $nextPlugin]);
-        }
-
-        return redirect()->route('redeem.finalize', ['voucher' => $voucher]);
+        return $nextPlugin
+            ? redirect()->route("redeem.$nextPlugin", ['voucher' => $voucher, 'plugin' => $nextPlugin])
+            : redirect()->route('redeem.finalize', ['voucher' => $voucher]);
     }
 
     public function finalize(Voucher $voucher): Response

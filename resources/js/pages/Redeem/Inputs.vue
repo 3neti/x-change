@@ -6,28 +6,33 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import InputError from '@/components/InputError.vue'
+import { computed } from 'vue'
 
 const props = defineProps<{
     context: {
         voucherCode: string
         mobile: string
     }
-    inputs: Record<string, any>
+    inputs: string[] // 👈 if passed as array of field names
 }>()
 
 const form = useForm({
     name: '',
     address: '',
-    birthdate: '',
+    birth_date: '',
     email: '',
     gross_monthly_income: '',
     country: '',
 })
 
-Object.assign(form, props.inputs)
+// ✅ visibleFields is just the array passed
+const visibleFields = computed(() => props.inputs)
 
 function submit() {
-    form.post(route('redeem.inputs', { voucher: props.context.voucherCode, plugin: 'inputs' }), {
+    form.post(route('redeem.inputs', {
+        voucher: props.context.voucherCode,
+        plugin: 'inputs',
+    }), {
         preserveScroll: true,
     })
 }
@@ -46,41 +51,54 @@ function submit() {
             </div>
 
             <!-- Name -->
-            <div class="flex flex-col gap-1">
+            <div v-if="visibleFields.includes('name')" class="flex flex-col gap-1">
                 <Label for="name">Full Name</Label>
-                <Input id="name" v-model="form.name" required />
+                <Input id="name" v-model="form.name"/>
                 <InputError :message="form.errors.name" />
             </div>
 
             <!-- Address -->
-            <div class="flex flex-col gap-1">
+            <div v-if="visibleFields.includes('address')" class="flex flex-col gap-1">
                 <Label for="address">Address</Label>
-                <Input id="address" v-model="form.address" required />
+                <Input id="address" v-model="form.address"/>
                 <InputError :message="form.errors.address" />
             </div>
 
             <!-- Birthdate -->
-            <div class="flex flex-col gap-1">
-                <Label for="birthdate">Birthdate</Label>
-                <Input id="birthdate" v-model="form.birthdate" type="date" required />
-                <InputError :message="form.errors.birthdate" />
+            <div v-if="visibleFields.includes('birth_date')" class="flex flex-col gap-1">
+                <Label for="birthdate">Birth Date</Label>
+                <Input id="birthdate" v-model="form.birth_date" type="date"/>
+                <InputError :message="form.errors.birth_date" />
             </div>
 
             <!-- Email -->
-            <div class="flex flex-col gap-1">
+            <div v-if="visibleFields.includes('email')" class="flex flex-col gap-1">
                 <Label for="email">Email</Label>
-                <Input id="email" v-model="form.email" type="email" required />
+                <Input id="email" v-model="form.email" type="email"/>
                 <InputError :message="form.errors.email" />
             </div>
 
             <!-- Gross Monthly Income -->
-            <div class="flex flex-col gap-1">
+            <div v-if="visibleFields.includes('gross_monthly_income')" class="flex flex-col gap-1">
                 <Label for="gross_monthly_income">Gross Monthly Income</Label>
-                <Input id="gross_monthly_income" v-model="form.gross_monthly_income" type="number" required />
+                <Input
+                    id="gross_monthly_income"
+                    v-model="form.gross_monthly_income"
+                    type="number"
+                    step="any"
+                    min="0"
+                    required
+                />
                 <InputError :message="form.errors.gross_monthly_income" />
             </div>
 
-            <!-- Submit -->
+            <!-- Country (optional for future) -->
+            <div v-if="visibleFields.includes('country')" class="flex flex-col gap-1">
+                <Label for="country">Country</Label>
+                <Input id="country" v-model="form.country"/>
+                <InputError :message="form.errors.country" />
+            </div>
+
             <div class="pt-4">
                 <Button :disabled="form.processing">
                     {{ form.processing ? 'Saving…' : 'Next' }}
@@ -91,5 +109,5 @@ function submit() {
 </template>
 
 <style scoped>
-/* Field spacing and clean layout consistent with other pages */
+/* Clean layout, consistent spacing */
 </style>

@@ -29,7 +29,7 @@ return [
                 'validation' => [
                     'name' => 'required|string',
                     'address' => 'required|string',
-                    'birthdate' => 'required|date',
+                    'birth_date' => 'required|date',
                     'email' => 'required|email',
                     'gross_monthly_income' => 'required|numeric|min:0',
                 ],
