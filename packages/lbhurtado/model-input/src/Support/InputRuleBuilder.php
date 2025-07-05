@@ -5,6 +5,8 @@ namespace LBHurtado\ModelInput\Support;
 use LBHurtado\ModelInput\Enums\InputType;
 use RuntimeException;
 
+//TODO: refactor this to Voucher package instead of here in ModelInput package
+//TODO: use VoucherInputField instead of InputType
 class InputRuleBuilder
 {
     /**

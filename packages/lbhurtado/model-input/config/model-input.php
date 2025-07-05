@@ -9,6 +9,6 @@ return [
         'name' => ['required', 'string', 'min:2', 'max:255'],
         'address' => ['required', 'string', 'min:10', 'max:255'],
         'birth_date' => ['required', 'date', 'before_or_equal:today'],
-        'gross_monthly_income' => ['required', 'numeric', 'min:10_000', 'max:1_000_000'],
+        'gross_monthly_income' => ['required', 'numeric', 'min:10000', 'max:1000000'],
     ],
 ];

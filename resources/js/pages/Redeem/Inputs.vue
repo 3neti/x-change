@@ -8,25 +8,27 @@ import { Button } from '@/components/ui/button'
 import InputError from '@/components/InputError.vue'
 import { computed } from 'vue'
 
+// ⬅️ Accept key-value input props
 const props = defineProps<{
     context: {
         voucherCode: string
         mobile: string
     }
-    inputs: string[] // 👈 if passed as array of field names
+    inputs: Record<string, string | null> // 👈 now an object with field defaults
 }>()
 
+// Hydrate form with default values
 const form = useForm({
-    name: '',
-    address: '',
-    birth_date: '',
-    email: '',
-    gross_monthly_income: '',
-    country: '',
+    name: props.inputs.name ?? '',
+    address: props.inputs.address ?? '',
+    birth_date: props.inputs.birth_date ?? '',
+    email: props.inputs.email ?? '',
+    gross_monthly_income: props.inputs.gross_monthly_income ?? '',
+    country: props.inputs.country ?? '',
 })
 
-// ✅ visibleFields is just the array passed
-const visibleFields = computed(() => props.inputs)
+// 👁️ Get only the visible fields from keys
+const visibleFields = computed(() => Object.keys(props.inputs))
 
 function submit() {
     form.post(route('redeem.inputs', {

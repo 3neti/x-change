@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Redeem;
 use LBHurtado\ModelInput\Support\InputRuleBuilder;
 use LBHurtado\PaymentGateway\Support\BankRegistry;
 use Illuminate\Support\Facades\{Config, Session};
+use LBHurtado\Voucher\Enums\VoucherInputField;
 use Illuminate\Http\{RedirectResponse, Request};
 use Propaganistas\LaravelPhone\Rules\Phone;
 use LBHurtado\Voucher\Models\Voucher;
@@ -12,8 +13,13 @@ use App\Http\Controllers\Controller;
 use Inertia\{Inertia, Response};
 use Illuminate\Support\Arr;
 
+use Illuminate\Support\Facades\Log;
+use App\Support\RedeemPluginMap;
+
+
 class RedeemWizardController extends Controller
 {
+    //TODO: rename mobile to wallet
     public function mobile(Voucher $voucher): Response
     {
         $registry = new BankRegistry();
@@ -31,6 +37,7 @@ class RedeemWizardController extends Controller
         ]);
     }
 
+    //TODO: rename storeMobile to storeWallet
     public function storeMobile(Request $request, Voucher $voucher): RedirectResponse
     {
         $validated = $request->validate([
@@ -60,16 +67,42 @@ class RedeemWizardController extends Controller
 
         abort_unless($config && $config['enabled'], 404);
 
+        // 🧭 Step 1: Get the plugin-relevant input fields
+        $pluginFields = RedeemPluginMap::fieldsFor($plugin); // array<VoucherInputField>
+        $pluginFieldKeys = array_map(fn (VoucherInputField $f) => $f->value, $pluginFields);
+
+        // 🎯 Step 2: Intersect with what the voucher actually requires
+        $voucherFieldKeys = array_map(
+            fn (VoucherInputField $f) => $f->value,
+            $voucher->instructions->inputs->fields
+        );
+
+        $requestedFields = array_values(array_intersect($pluginFieldKeys, $voucherFieldKeys));
+
+        // 🧠 Step 3: Hydrate default values from session
+        $defaultValues = collect($requestedFields)
+            ->mapWithKeys(fn ($field) => [
+                $field => Session::get("redeem.{$voucher->code}.{$config['session_key']}")[$field] ?? null
+            ])
+            ->all();
+
+        Log::info('[RedeemWizardController] Rendering plugin page', [
+            'voucher'         => $voucher->code,
+            'plugin'          => $plugin,
+            'session_key'     => $config['session_key'],
+            'requestedFields' => $requestedFields,
+            'default_values'  => $defaultValues,
+        ]);
+
         return Inertia::render($config['page'], [
             'context' => [
                 'voucherCode' => $voucher->code,
                 'mobile'      => Session::get("redeem.{$voucher->code}.mobile"),
             ],
-            $config['session_key'] => Session::get("redeem.{$voucher->code}.{$config['session_key']}", $voucher->instructions->inputs->toArray()),
+            $config['session_key'] => $defaultValues,
         ]);
     }
 
-    //TODO: check this out - not working
     public function storePlugin(Request $request, Voucher $voucher, string $plugin): RedirectResponse
     {
         $plugins = collect(config('x-change.redeem.plugins', []))
@@ -80,24 +113,29 @@ class RedeemWizardController extends Controller
         $config = config("x-change.redeem.plugins.$plugin");
         abort_unless($config && $config['enabled'], 404);
 
-        // ✅ Dynamically build rules from voucher's instructions
+        // 🧠 Step 1: Get fields associated with this plugin
+        $pluginFields = RedeemPluginMap::fieldsFor($plugin);
+        $pluginFieldKeys = array_map(fn (VoucherInputField $f) => $f->value, $pluginFields);
+
+        // ✅ Step 2: Dynamically build full rules from voucher’s instructions
         $rules = InputRuleBuilder::from($voucher->instructions->inputs);
 
-        // ✅ Only validate fields that are actually present in the request
-        $filteredRules = Arr::only($rules, array_keys(array_filter($request->all())));
+        // 🧼 Step 3: Filter rules to plugin-specific fields only
+        $filteredRules = Arr::only($rules, $pluginFieldKeys);
 
+        // 🧪 Step 4: Validate only the present fields
         $validated = $request->validate($filteredRules);
 
         $sessionKey = $config['session_key'];
 
-        // 🔐 Store validated input
+        // 🔐 Step 5: Store validated values in session
         if (count($validated) === 1) {
             Session::put("redeem.{$voucher->code}.{$sessionKey}", reset($validated));
         } else {
             Session::put("redeem.{$voucher->code}.{$sessionKey}", $validated);
         }
 
-        // ➡️ Continue to next plugin (or finalize)
+        // ⏭️ Step 6: Redirect to next plugin or finalize
         $currentIndex = $plugins->search($plugin);
         $nextPlugin = $plugins->get($currentIndex + 1);
 
