@@ -28,10 +28,18 @@ trait HasInputs
         return $this->forceSetInput($name, $value);
     }
 
-    public function forceSetInput(string|InputType $name, string $value): self
+    public function forceSetInput(string|InputType $name, string|array $value): self
     {
         // Convert Channels enum to its string value if provided
         $name = $name instanceof InputType ? $name->value : $name;
+
+        if (is_array($value)) {
+            if (isset($value[$name])) {
+                $value = $value[$name];
+            } else {
+                throw new \InvalidArgumentException("Input [$name] expects string, array given without key.");
+            }
+        }
 
         // Normalize phone numbers to E.164 format without "+"
         if ($name === 'mobile') {
