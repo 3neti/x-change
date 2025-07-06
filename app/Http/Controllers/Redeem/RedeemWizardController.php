@@ -2,20 +2,17 @@
 
 namespace App\Http\Controllers\Redeem;
 
+use App\Support\{RedeemPluginMap, RedeemPluginSelector};
+use Illuminate\Support\Facades\{Config, Log, Session};
 use LBHurtado\ModelInput\Support\InputRuleBuilder;
 use LBHurtado\PaymentGateway\Support\BankRegistry;
-use Illuminate\Support\Facades\{Config, Session};
-use LBHurtado\Voucher\Enums\VoucherInputField;
 use Illuminate\Http\{RedirectResponse, Request};
-use Propaganistas\LaravelPhone\Rules\Phone;
+use LBHurtado\Voucher\Enums\VoucherInputField;
+use App\Http\Requests\WalletFormRequest;
 use LBHurtado\Voucher\Models\Voucher;
 use App\Http\Controllers\Controller;
 use Inertia\{Inertia, Response};
 use Illuminate\Support\Arr;
-
-use Illuminate\Support\Facades\Log;
-use App\Support\RedeemPluginMap;
-
 
 class RedeemWizardController extends Controller
 {
@@ -38,26 +35,15 @@ class RedeemWizardController extends Controller
     }
 
     //TODO: rename storeMobile to storeWallet
-    public function storeMobile(Request $request, Voucher $voucher): RedirectResponse
+    public function storeMobile(WalletFormRequest $request, Voucher $voucher): RedirectResponse
     {
-        $validated = $request->validate([
-            'mobile'         => ['required', (new Phone)->country('PH')->type('mobile')],
-            'country'        => ['required', 'string'],
-            'bank_code'      => ['nullable', 'string'],
-            'account_number' => ['nullable', 'string'],
-        ]);
+        $this->storeWalletData($request, $voucher);
 
-        Session::put("redeem.{$voucher->code}.mobile", $validated['mobile']);
-        Session::put("redeem.{$voucher->code}.country", $validated['country']);
-        Session::put("redeem.{$voucher->code}.bank_code", $validated['bank_code']);
-        Session::put("redeem.{$voucher->code}.account_number", $validated['account_number']);
+        $plugins = RedeemPluginSelector::fromVoucher($voucher);
+        Session::put("redeem.{$voucher->code}.plugins", $plugins->all());
 
-        $plugins = Config::get('x-change.redeem.plugins', []);
-        $enabledPlugins = collect($plugins)->filter(fn ($p) => $p['enabled']);
-        $firstPlugin = $enabledPlugins->keys()->first();
-
-        return $firstPlugin
-            ? redirect()->route("redeem.{$firstPlugin}", ['voucher' => $voucher, 'plugin' => $firstPlugin] )
+        return ($plugin = $plugins->first())
+            ? redirect()->route("redeem.{$plugin}", ['voucher' => $voucher, 'plugin' => $plugin])
             : redirect()->route('redeem.finalize', $voucher);
     }
 
@@ -105,10 +91,7 @@ class RedeemWizardController extends Controller
 
     public function storePlugin(Request $request, Voucher $voucher, string $plugin): RedirectResponse
     {
-        $plugins = collect(config('x-change.redeem.plugins', []))
-            ->filter(fn ($cfg) => $cfg['enabled'] ?? false)
-            ->keys()
-            ->values();
+        $plugins = collect(Session::get("redeem.{$voucher->code}.plugins", []));
 
         $config = config("x-change.redeem.plugins.$plugin");
         abort_unless($config && $config['enabled'], 404);
@@ -187,5 +170,20 @@ class RedeemWizardController extends Controller
             ->toArray());
 
         return $response;
+    }
+
+    /**
+     * @param WalletFormRequest $request
+     * @param Voucher $voucher
+     * @return void
+     */
+    protected function storeWalletData(WalletFormRequest $request, Voucher $voucher): void
+    {
+        $validated = $request->validated();
+
+        Session::put("redeem.{$voucher->code}.mobile", $validated['mobile']);
+        Session::put("redeem.{$voucher->code}.country", $validated['country']);
+        Session::put("redeem.{$voucher->code}.bank_code", $validated['bank_code'] ?? null);
+        Session::put("redeem.{$voucher->code}.account_number", $validated['account_number'] ?? null);
     }
 }

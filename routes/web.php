@@ -49,7 +49,7 @@ use App\Http\Middleware\Redeem\{
 Route::get('redeem', function () {
     return Inertia::render('Redeem/Start');
 })->name('redeem');
-use App\Http\Controllers\Redeem\RedeemPluginController;
+//use App\Http\Controllers\Redeem\RedeemPluginController;
 
 Route::prefix('redeem/{voucher}')
     ->middleware(CheckVoucherMiddleware::class)
