@@ -11,8 +11,8 @@ use LBHurtado\Voucher\Enums\VoucherInputField;
 use App\Http\Requests\WalletFormRequest;
 use LBHurtado\Voucher\Models\Voucher;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\{Arr, Str};
 use Inertia\{Inertia, Response};
-use Illuminate\Support\Arr;
 
 class RedeemWizardController extends Controller
 {
@@ -21,15 +21,61 @@ class RedeemWizardController extends Controller
     {
         $registry = new BankRegistry();
 
+        // Associative map: lowercase => preferred casing
+        $wordMap = collect([
+            'of',
+            'de',
+            'AllBank',
+            'Al-Amanah',
+            'AliPay',
+            'BananaPay',
+            'BDO',
+            '(BDO)',
+            'BPI',
+            '(BPI)',
+            'BRBDigital',
+            'CTBC',
+            'DCPay',
+            'DM',
+            'GCash',
+            'GM',
+            'GoTyme',
+            'GrabPay',
+            'G-Xchange',
+            'HSBC',
+            'HK',
+            'ING',
+            'N.V.',
+            'PayMaya',
+            'RCBC',
+            'UBP',
+
+        ])->mapWithKeys(fn ($word) => [Str::lower($word) => $word]);
+
         return Inertia::render('Redeem/Form', [
             'voucher_code' => $voucher->code,
             'country'      => config('x-change.redeem.default_country', 'PH'),
             'bank_code'    => '',
             'banks'        => collect($registry->all())
-                ->map(fn ($info, $code) => [
-                    'code' => $code,
-                    'name' => $info['full_name'],
-                ])
+                ->map(function ($info, $code) use ($wordMap) {
+                    $words = explode(' ', $info['full_name']);
+
+                    $normalized = collect($words)->map(function ($word) use ($wordMap) {
+                        // Separate trailing punctuation
+                        preg_match('/^(\w+)([\W]*)$/u', $word, $matches);
+                        $base = Str::lower($matches[1] ?? $word);
+                        $punct = $matches[2] ?? '';
+
+                        $formatted = $wordMap[$base] ?? ucfirst($base);
+
+                        return $formatted . $punct;
+                    })->implode(' ');
+
+                    return [
+                        'code' => $code,
+                        'name' => $normalized,
+                    ];
+                })
                 ->values(),
         ]);
     }

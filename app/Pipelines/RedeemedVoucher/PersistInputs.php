@@ -2,32 +2,15 @@
 
 namespace App\Pipelines\RedeemedVoucher;
 
-use LBHurtado\ModelInput\Enums\InputType;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Arr;
 use Closure;
 
-/**
- * Pipeline step: persist any “input” values collected
- * during voucher redemption (e.g. mobile, signature, bank_account).
- *
- * It looks for them under the redeemer’s metadata at
- *     redemption.{inputName}
- * and—if present—mass-assigns them on the Voucher via its
- * magic setter (so they end up in your inputs table),
- * then saves once at the end.
- */
 class PersistInputs
 {
-    /**
-     * @param  \FrittenKeeZ\Vouchers\Models\Voucher  $voucher
-     * @param  Closure                                $next
-     * @return mixed
-     */
     public function handle($voucher, Closure $next)
     {
-        // 1) Grab the redeemer metadata
         $redeemer = $voucher->redeemers->first();
+
         if (! $redeemer) {
             Log::debug('[PersistInputs] No redeemer found; skipping', [
                 'voucher' => $voucher->code,
@@ -36,38 +19,59 @@ class PersistInputs
         }
 
         $metadata = $redeemer->metadata['redemption'] ?? [];
-        Log::debug('[PersistInputs] Redemption metadata', [
+        $plugins  = config('x-change.redeem.plugins', []);
+        $dirty    = false;
+
+        Log::debug('[PersistInputs] Loaded redemption metadata', [
             'voucher'  => $voucher->code,
             'metadata' => $metadata,
         ]);
 
-        $dirty = false;
+        foreach ($plugins as $plugin => $config) {
+            $sessionKey = $config['session_key'] ?? $plugin;
+            $fields     = $config['fields'] ?? [];
 
-        // 2) For each InputType, see if there’s a value in metadata
-        foreach (InputType::cases() as $inputType) {
-            $field = $inputType->value; // e.g. 'mobile', 'signature', 'bank_account'
-            if (Arr::has($metadata, $field)) {
-                $value = Arr::get($metadata, $field);
-                Log::info('[PersistInputs] Found input to persist', [
-                    'voucher' => $voucher->code,
-                    'field'   => $field,
-                    'value'   => $value,
-                ]);
+            if (count($fields) === 1) {
+                // ✍️ Single field value (e.g., signature)
+                $field = $fields[0]->value;
+                $value = $metadata[$sessionKey] ?? null;
 
-                // magic __set will create an Input record if needed
-                $voucher->{$field} = $value;
-                $dirty = true;
+                if (! is_null($value)) {
+                    $voucher->{$field} = $value;
+                    $dirty = true;
+                    Log::info('[PersistInputs] Assigned single input', [
+                        'field' => $field,
+                        'value' => $value,
+                    ]);
+                }
+            } elseif (count($fields) > 1) {
+                // 📥 Multiple fields inside a nested array (e.g., inputs)
+                $values = $metadata[$sessionKey] ?? [];
+
+                foreach ($fields as $enum) {
+                    $field = $enum->value;
+
+                    if (array_key_exists($field, $values)) {
+                        $value = $values[$field];
+                        $voucher->{$field} = $value;
+                        $dirty = true;
+
+                        Log::info('[PersistInputs] Assigned nested input', [
+                            'field' => $field,
+                            'value' => $value,
+                        ]);
+                    }
+                }
             }
         }
 
-        // 3) If we actually assigned anything, persist once
         if ($dirty) {
             $voucher->save();
-            Log::debug('[PersistInputs] Saved voucher with new inputs', [
+            Log::debug('[PersistInputs] Saved voucher with persisted inputs', [
                 'voucher' => $voucher->code,
             ]);
         } else {
-            Log::debug('[PersistInputs] No redemption inputs to persist', [
+            Log::debug('[PersistInputs] No changes to persist', [
                 'voucher' => $voucher->code,
             ]);
         }
