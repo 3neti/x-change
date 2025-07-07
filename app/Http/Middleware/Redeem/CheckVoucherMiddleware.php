@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware\Redeem;
 
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\{Log, Session};
 use Symfony\Component\HttpFoundation\Response;
 use FrittenKeeZ\Vouchers\Facades\Vouchers;
@@ -30,24 +31,50 @@ class CheckVoucherMiddleware
         $voucher = $request->route('voucher');
 
         // Validate that the route param is a bound Voucher instance
-        if ($voucher instanceof Voucher) {
-            $voucherCode = $voucher->code;
-            Log::info('[CheckVoucherMiddleware] Checking voucher', compact('voucherCode'));
-        } else {
+        if (! $voucher instanceof Voucher) {
             Log::warning('[CheckVoucherMiddleware] Voucher not found in route.');
-            abort(Response::HTTP_BAD_REQUEST, 'Voucher not found');
+
+            throw ValidationException::withMessages([
+                'voucher_code' => 'Voucher not found',
+            ]);
         }
+//        if ($voucher instanceof Voucher) {
+//            $voucherCode = $voucher->code;
+//            Log::info('[CheckVoucherMiddleware] Checking voucher', compact('voucherCode'));
+//        } else {
+//            Log::warning('[CheckVoucherMiddleware] Voucher not found in route.');
+//            abort(Response::HTTP_BAD_REQUEST, 'Voucher not found');
+//        }
 
         // Check redeemability using package's built-in helper
-        if (! Vouchers::redeemable($voucherCode)) {
+        if (! Vouchers::redeemable($voucher->code)) {
             Log::warning('[CheckVoucherMiddleware] Voucher not redeemable', [
                 'code'        => $voucher->code,
                 'is_redeemed' => $voucher->isRedeemed(),
                 'is_started'  => $voucher->isStarted(),
                 'is_expired'  => $voucher->isExpired(),
             ]);
-            abort(Response::HTTP_BAD_REQUEST, 'Voucher not redeemable');
+
+            $message = match (true) {
+                $voucher->isRedeemed() => 'This voucher has already been redeemed.',
+                ! $voucher->isStarted() => 'This voucher is not yet active.',
+                $voucher->isExpired() => 'This voucher has expired.',
+                default => 'This voucher is not redeemable.',
+            };
+
+            throw ValidationException::withMessages([
+                'voucher_code' => $message,
+            ]);
         }
+//        if (! Vouchers::redeemable($voucherCode)) {
+//            Log::warning('[CheckVoucherMiddleware] Voucher not redeemable', [
+//                'code'        => $voucher->code,
+//                'is_redeemed' => $voucher->isRedeemed(),
+//                'is_started'  => $voucher->isStarted(),
+//                'is_expired'  => $voucher->isExpired(),
+//            ]);
+//            abort(Response::HTTP_BAD_REQUEST, 'Voucher not redeemable');
+//        }
 
         return $next($request);
     }

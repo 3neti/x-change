@@ -54,9 +54,9 @@ Route::get('redeem', function () {
 Route::prefix('redeem/{voucher}')
     ->middleware(CheckVoucherMiddleware::class)
     ->group(function () {
-        Route::get('mobile', [RedeemWizardController::class, 'mobile'])->name('redeem.mobile');
+        Route::get('wallet', [RedeemWizardController::class, 'wallet'])->name('redeem.wallet');
 
-        Route::post('mobile', [RedeemWizardController::class, 'storeMobile']);
+        Route::post('wallet', [RedeemWizardController::class, 'storeWallet']);
 
         foreach (config('x-change.redeem.plugins', []) as $key => $plugin) {
             if (!($plugin['enabled'] ?? false)) continue;

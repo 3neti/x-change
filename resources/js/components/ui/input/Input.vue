@@ -20,7 +20,11 @@ const modelValue = useVModel(props, 'modelValue', emits, {
 })
 
 const inputRef = ref()
-defineExpose({ focus: () => inputRef.value?.focus() })
+defineExpose({
+    focus: () => inputRef.value?.focus(),
+    select: () => inputRef.value?.select(),
+})
+
 </script>
 
 <template>

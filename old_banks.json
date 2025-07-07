@@ -20,8 +20,18 @@
                 }
             }
         },
+        "ALKBPHM2XXX": {
+            "full_name": "ALLBANK, INC.",
+            "swift_bic": "ALKBPHM2XXX",
+            "settlement_rail": {
+                "PESONET": {
+                    "bank_code": "ALKBPHM2XXX",
+                    "name": "PESONET"
+                }
+            }
+        },
         "ANZBPHMXXXX": {
-            "full_name": "Australia & New Zealand Bank",
+            "full_name": "AUSTRALIA & NEW ZEALAND BANK",
             "swift_bic": "ANZBPHMXXXX",
             "settlement_rail": {
                 "PESONET": {
@@ -41,7 +51,7 @@
             }
         },
         "AUBKPHMMXXX": {
-            "full_name": "Asia United Bank",
+            "full_name": "ASIA UNITED BANK",
             "swift_bic": "AUBKPHMMXXX",
             "settlement_rail": {
                 "INSTAPAY": {
@@ -65,7 +75,7 @@
             }
         },
         "BIURPHM2XXX": {
-            "full_name": "Binan Rural Bank, Inc.",
+            "full_name": "BINAN RURAL BANK, INC.",
             "swift_bic": "BIURPHM2XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -99,7 +109,7 @@
             }
         },
         "BKKBPHMMXXX": {
-            "full_name": "Bangkok Bank Public Co., Ltd.",
+            "full_name": "BANGKOK BANK PUBLIC CO., LTD.",
             "swift_bic": "BKKBPHMMXXX",
             "settlement_rail": {
                 "PESONET": {
@@ -123,7 +133,7 @@
             }
         },
         "BOFAPH2XXXX": {
-            "full_name": "Bank of America, Nat’l. Ass’n.",
+            "full_name": "BANK OF AMERICA, NAT'L. ASS'N.",
             "swift_bic": "BOFAPH2XXXX",
             "settlement_rail": {
                 "PESONET": {
@@ -147,7 +157,7 @@
             }
         },
         "BORRPHM1XXX": {
-            "full_name": "Bank of Florida",
+            "full_name": "BANK OF FLORIDA",
             "swift_bic": "BORRPHM1XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -157,7 +167,7 @@
             }
         },
         "BOTKPHMMXXX": {
-            "full_name": "MUFG Bank, Ltd.",
+            "full_name": "MUFG BANK, LTD.",
             "swift_bic": "BOTKPHMMXXX",
             "settlement_rail": {
                 "PESONET": {
@@ -181,7 +191,7 @@
             }
         },
         "CBMFPHM1XXX": {
-            "full_name": "CARD Bank Inc.",
+            "full_name": "CARD Bank Inc",
             "swift_bic": "CBMFPHM1XXX",
             "settlement_rail": {
                 "INSTAPAY": {
@@ -191,7 +201,7 @@
             }
         },
         "CBQPPHM2XXX": {
-            "full_name": "Cooperative Bank of Quezon Province",
+            "full_name": "COOPERATIVE BANK OF QUEZON PROVINCE",
             "swift_bic": "CBQPPHM2XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -215,7 +225,7 @@
             }
         },
         "CESNPHM1XXX": {
-            "full_name": "Century Savings Bank",
+            "full_name": "CENTURY SAVINGS BANK",
             "swift_bic": "CESNPHM1XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -225,7 +235,7 @@
             }
         },
         "CHASPHMMXXX": {
-            "full_name": "JPMorgan Chase Bank",
+            "full_name": "JPMORGAN CHASE BANK",
             "swift_bic": "CHASPHMMXXX",
             "settlement_rail": {
                 "PESONET": {
@@ -249,7 +259,7 @@
             }
         },
         "CHSVPHM1XXX": {
-            "full_name": "China Bank Savings Inc.",
+            "full_name": "China Bank Savings Inc",
             "swift_bic": "CHSVPHM1XXX",
             "settlement_rail": {
                 "INSTAPAY": {
@@ -263,7 +273,7 @@
             }
         },
         "CIPHPHMMXXX": {
-            "full_name": "CIMB Bank “Philippines Inc.",
+            "full_name": "CIMB BANK PHILIPPINES INC",
             "swift_bic": "CIPHPHMMXXX",
             "settlement_rail": {
                 "INSTAPAY": {
@@ -277,7 +287,7 @@
             }
         },
         "CITIPHMXXXX": {
-            "full_name": "CitiBank, N. A.",
+            "full_name": "CITIBANK, N. A.",
             "swift_bic": "CITIPHMXXXX",
             "settlement_rail": {
                 "PESONET": {
@@ -325,7 +335,7 @@
             }
         },
         "COUKPHM1XXX": {
-            "full_name": "Country “Builders Bank, Inc.",
+            "full_name": "COUNTRY BUILDERS BANK,INC.",
             "swift_bic": "COUKPHM1XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -349,7 +359,7 @@
             }
         },
         "CRMHPHM1XXX": {
-            "full_name": "Card SME Bank Inc.",
+            "full_name": "CARD SME BANK INC",
             "swift_bic": "CRMHPHM1XXX",
             "settlement_rail": {
                 "INSTAPAY": {
@@ -401,7 +411,7 @@
             }
         },
         "DCDEPHM1XXX": {
-            "full_name": "Dumaguete City Development Bank Inc",
+            "full_name": "Dumaugete City Development Bank Inc",
             "swift_bic": "DCDEPHM1XXX",
             "settlement_rail": {
                 "INSTAPAY": {
@@ -429,7 +439,7 @@
             }
         },
         "DEUTPHMMXXX": {
-            "full_name": "Deutsche Bank",
+            "full_name": "DEUTSCHE BANK",
             "swift_bic": "DEUTPHMMXXX",
             "settlement_rail": {
                 "PESONET": {
@@ -439,7 +449,7 @@
             }
         },
         "DMBNPHM1XXX": {
-            "full_name": "DM Bank",
+            "full_name": "DM BANK",
             "swift_bic": "DMBNPHM1XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -449,7 +459,7 @@
             }
         },
         "DUMTPHM1XXX": {
-            "full_name": "Dungganon Bank Incorporated",
+            "full_name": "DUNGGANON BANK INCORPORATED",
             "swift_bic": "DUMTPHM1XXX",
             "settlement_rail": {
                 "INSTAPAY": {
@@ -505,7 +515,7 @@
             }
         },
         "FIOOPHM1XXX": {
-            "full_name": "First Consolidated Bank",
+            "full_name": "FIRST CONSOLIDATED BANK",
             "swift_bic": "FIOOPHM1XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -529,7 +539,7 @@
             }
         },
         "GMBANKLUZON": {
-            "full_name": "GM Bank of Luzon, Inc.",
+            "full_name": "GM BANK OF LUZON, INC.",
             "swift_bic": "GMBANKLUZON",
             "settlement_rail": {
                 "PESONET": {
@@ -553,7 +563,7 @@
             }
         },
         "GRBUPHM1XXX": {
-            "full_name": "Guagua Rural Bank Inc.",
+            "full_name": "GUAGUA RURAL BANK INC",
             "swift_bic": "GRBUPHM1XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -577,7 +587,7 @@
             }
         },
         "HBPHPHMMXXX": {
-            "full_name": "HSBC Savings Bank Phils., Inc.",
+            "full_name": "HSBC SAVINGS BANK PHILS.,INC.",
             "swift_bic": "HBPHPHMMXXX",
             "settlement_rail": {
                 "PESONET": {
@@ -587,7 +597,7 @@
             }
         },
         "HSBCPHMMXXX": {
-            "full_name": "HK and Shanghai Banking Corp.",
+            "full_name": "HK AND SHANGHAI BANKING CORP.",
             "swift_bic": "HSBCPHMMXXX",
             "settlement_rail": {
                 "PESONET": {
@@ -597,7 +607,7 @@
             }
         },
         "IBKOPHMMXXX": {
-            "full_name": "Industrial Bank of Korea - Manila",
+            "full_name": "INDUSTRIAL BANK OF KOREA - MANILA",
             "swift_bic": "IBKOPHMMXXX",
             "settlement_rail": {
                 "PESONET": {
@@ -607,7 +617,7 @@
             }
         },
         "ICBCPHMMXXX": {
-            "full_name": "Mega Intl Come Bank Co. Ltd.",
+            "full_name": "MEGA INTL COMML BANK CO. LTD",
             "swift_bic": "ICBCPHMMXXX",
             "settlement_rail": {
                 "PESONET": {
@@ -617,7 +627,7 @@
             }
         },
         "ICBKPHMMXXX": {
-            "full_name": "Industrial Commercial Bank of China",
+            "full_name": "INDUSTRIAL COMMERCIAL BANK OF CHINA",
             "swift_bic": "ICBKPHMMXXX",
             "settlement_rail": {
                 "PESONET": {
@@ -637,7 +647,7 @@
             }
         },
         "INGBPHMMRTL": {
-            "full_name": "ING Bank N.V.",
+            "full_name": "ING BANK N.V.",
             "swift_bic": "INGBPHMMRTL",
             "settlement_rail": {
                 "PESONET": {
@@ -647,7 +657,7 @@
             }
         },
         "IORUPHM1XXX": {
-            "full_name": "Innovative Bank",
+            "full_name": "INNOVATIVE BANK",
             "swift_bic": "IORUPHM1XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -667,7 +677,7 @@
             }
         },
         "KARUPHM1XXX": {
-            "full_name": "Bangko Kabayan",
+            "full_name": "BANGKO KABAYAN",
             "swift_bic": "KARUPHM1XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -677,7 +687,7 @@
             }
         },
         "KOEXPHMMXXX": {
-            "full_name": "KEB Hana Bank",
+            "full_name": "KEB HANA BANK",
             "swift_bic": "KOEXPHMMXXX",
             "settlement_rail": {
                 "PESONET": {
@@ -701,7 +711,7 @@
             }
         },
         "LESIPHM1XXX": {
-            "full_name": "Legazpi Savings Bank Inc.",
+            "full_name": "LEGAZPI SAVINGS BANK INC",
             "swift_bic": "LESIPHM1XXX",
             "settlement_rail": {
                 "INSTAPAY": {
@@ -711,7 +721,7 @@
             }
         },
         "LFSHPHM2XXX": {
-            "full_name": "LuLu Financial Services Phils Inc.",
+            "full_name": "LULU FINANCIAL SERVICES PHILS INC",
             "swift_bic": "LFSHPHM2XXX",
             "settlement_rail": {
                 "INSTAPAY": {
@@ -725,7 +735,7 @@
             }
         },
         "LPCRPHM2XXX": {
-            "full_name": "Laguna Prestige Banking Corporation",
+            "full_name": "LAGUNA PRESTIGE BANKING CORPORATION",
             "swift_bic": "LPCRPHM2XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -787,7 +797,7 @@
             }
         },
         "MHCBPHMMXXX": {
-            "full_name": "Mizuho Bank, Ltd.",
+            "full_name": "MIZUHO BANK,LTD.",
             "swift_bic": "MHCBPHMMXXX",
             "settlement_rail": {
                 "PESONET": {
@@ -797,7 +807,7 @@
             }
         },
         "MIOCPHM1XXX": {
-            "full_name": "Mindanao Consolidated Cooperative",
+            "full_name": "MINDANAO CONSOLIDATED COOPERATIVE",
             "swift_bic": "MIOCPHM1XXX",
             "settlement_rail": {
                 "INSTAPAY": {
@@ -807,7 +817,7 @@
             }
         },
         "MKRUPHM1XXX": {
-            "full_name": "Bank of Makati",
+            "full_name": "BANK OF MAKATI",
             "swift_bic": "MKRUPHM1XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -817,7 +827,7 @@
             }
         },
         "MLRUPHM2XXX": {
-            "full_name": "Malarayat Rural Bank, Inc.",
+            "full_name": "MALARAYAT RURAL BANK, INC.",
             "swift_bic": "MLRUPHM2XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -827,7 +837,7 @@
             }
         },
         "MOMLPHM2XXX": {
-            "full_name": "Money Mall Rural Bank, Inc.",
+            "full_name": "MONEY MALL RURAL BANK, INC.",
             "swift_bic": "MOMLPHM2XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -851,7 +861,7 @@
             }
         },
         "MVRSPHM2XXX": {
-            "full_name": "MVSM Bank (A Rural Bank), Inc.",
+            "full_name": "MVSM BANK (A RURAL BANK), INC.",
             "swift_bic": "MVRSPHM2XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -870,8 +880,18 @@
                 }
             }
         },
+        "MYYAPHM2XXX": {
+            "full_name": "MAYA BANK, INC",
+            "swift_bic": "MYYAPHM2XXX",
+            "settlement_rail": {
+                "PESONET": {
+                    "bank_code": "MYYAPHM2XXX",
+                    "name": "PESONET"
+                }
+            }
+        },
         "NRSLPHM1XXX": {
-            "full_name": "New Rural Bank of San Leonardo (Nueva Ecija), Inc.",
+            "full_name": "NEW RURAL BANK OF SAN LEONARDO (NUEVA ECIJA), INC.",
             "swift_bic": "NRSLPHM1XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -881,7 +901,7 @@
             }
         },
         "NSPRPHM1XXX": {
-            "full_name": "Bangko Nuestra Senora Del Pilar",
+            "full_name": "BANGKO NUESTRA SENORA DEL PILAR",
             "swift_bic": "NSPRPHM1XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -943,7 +963,7 @@
             }
         },
         "PAEYPHM2XXX": {
-            "full_name": "PayMongo Payment, Inc.",
+            "full_name": "PAYMONGO PAYMENTS, INC.",
             "swift_bic": "PAEYPHM2XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -981,12 +1001,22 @@
             }
         },
         "PDAXPHM2XXX": {
-            "full_name": "Philippine Digital Asset Exchange (PDAX), Inc.",
+            "full_name": "PDAX",
             "swift_bic": "PDAXPHM2XXX",
             "settlement_rail": {
                 "INSTAPAY": {
                     "bank_code": "PDAXPHM2XXX",
                     "name": "INSTAPAY"
+                }
+            }
+        },
+        "PDAXTESTXXX": {
+            "full_name": "PHILIPPINE DIGITAL ASSET EXCHANGE (PDAX), INC.",
+            "swift_bic": "PDAXTESTXXX",
+            "settlement_rail": {
+                "PESONET": {
+                    "bank_code": "PDAXTESTXXX",
+                    "name": "PESONET"
                 }
             }
         },
@@ -1005,7 +1035,7 @@
             }
         },
         "PHTBPHMMXXX": {
-            "full_name": "Philtrust Bank",
+            "full_name": "PHILTRUST BANK",
             "swift_bic": "PHTBPHMMXXX",
             "settlement_rail": {
                 "INSTAPAY": {
@@ -1042,8 +1072,18 @@
                 }
             }
         },
+        "PNBMPHMMXXX": {
+            "full_name": "PHILIPPINE NATIONAL BANK",
+            "swift_bic": "PNBMPHMMXXX",
+            "settlement_rail": {
+                "PESONET": {
+                    "bank_code": "PNBMPHMMXXX",
+                    "name": "PESONET"
+                }
+            }
+        },
         "PPBUPHMMXXX": {
-            "full_name": "Philippine Business Bank",
+            "full_name": "PHILIPPINE BUSINESS BANK",
             "swift_bic": "PPBUPHMMXXX",
             "settlement_rail": {
                 "INSTAPAY": {
@@ -1091,7 +1131,7 @@
             }
         },
         "QCDFPHM1XXX": {
-            "full_name": "Queen City Development Bank Inc.",
+            "full_name": "QUEEN CITY DEVELOPMENT BANK INC",
             "swift_bic": "QCDFPHM1XXX",
             "settlement_rail": {
                 "INSTAPAY": {
@@ -1129,7 +1169,7 @@
             }
         },
         "RBRUPHM2XXX": {
-            "full_name": "RBT Bank, Inc. (A Rural Bank)",
+            "full_name": "RBT BANK, INC. (A RURAL BANK)",
             "swift_bic": "RBRUPHM2XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -1139,7 +1179,7 @@
             }
         },
         "RBSMPHMMXXX": {
-            "full_name": "Rural Bank of San Medjugorje",
+            "full_name": "RURAL BANK OF SAN MEDJUGORJE",
             "swift_bic": "RBSMPHMMXXX",
             "settlement_rail": {
                 "PESONET": {
@@ -1163,7 +1203,7 @@
             }
         },
         "RLSKPHM1XXX": {
-            "full_name": "Rural Bank of Lebak (Sultan Kudarat), Inc.",
+            "full_name": "RURAL BANK OF LEBAK (SULTAN KUDARAT), INC.",
             "swift_bic": "RLSKPHM1XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -1173,7 +1213,7 @@
             }
         },
         "ROBPPHMQXXX": {
-            "full_name": "Robinsons Bank Corporation",
+            "full_name": "ROBINSONS BANK CORPORATION",
             "swift_bic": "ROBPPHMQXXX",
             "settlement_rail": {
                 "INSTAPAY": {
@@ -1187,7 +1227,7 @@
             }
         },
         "RSNAPHM2XXX": {
-            "full_name": "Rural Bank of San Narciso, Inc.",
+            "full_name": "RURAL BANK OF SAN NARCISO, INC.",
             "swift_bic": "RSNAPHM2XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -1197,7 +1237,7 @@
             }
         },
         "RUATPHM1XXX": {
-            "full_name": "Bayanihan Bank, Inc. (Atimonan)",
+            "full_name": "BAYANIHAN BANK, INC. (ATIMONAN)",
             "swift_bic": "RUATPHM1XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -1207,7 +1247,7 @@
             }
         },
         "RUBCPHM2XXX": {
-            "full_name": "Rural Bank of Bacolod City, Inc.",
+            "full_name": "RURAL BANK OF BACOLOD CITY, INC.",
             "swift_bic": "RUBCPHM2XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -1217,7 +1257,7 @@
             }
         },
         "RUBUPHM2XXX": {
-            "full_name": "Rural Bank of Bauang, Inc.",
+            "full_name": "RURAL BANK OF BAUANG, INC.",
             "swift_bic": "RUBUPHM2XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -1227,7 +1267,7 @@
             }
         },
         "RUCAPHM1XXX": {
-            "full_name": "Camalig Bank Inc.",
+            "full_name": "CAMALIG BANK INC",
             "swift_bic": "RUCAPHM1XXX",
             "settlement_rail": {
                 "INSTAPAY": {
@@ -1241,7 +1281,7 @@
             }
         },
         "RUDIPHM1XXX": {
-            "full_name": "Rural Bank of Digos, Inc.",
+            "full_name": "RURAL BANK OF DIGOS, INC.",
             "swift_bic": "RUDIPHM1XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -1265,7 +1305,7 @@
             }
         },
         "RUMTPHM2XXX": {
-            "full_name": "Bank of Montalban, Inc.",
+            "full_name": "BANK OF MONTALBAN, INC.",
             "swift_bic": "RUMTPHM2XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -1275,7 +1315,7 @@
             }
         },
         "RUPPPHM2XXX": {
-            "full_name": "Porac Bank (A Rural Bank)",
+            "full_name": "PORAC BANK (A RURAL BANK)",
             "swift_bic": "RUPPPHM2XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -1285,7 +1325,7 @@
             }
         },
         "RUPZPHM2XXX": {
-            "full_name": "Rural Bank of La Paz, Inc.",
+            "full_name": "RURAL BANK OF LA PAZ, INC.",
             "swift_bic": "RUPZPHM2XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -1295,7 +1335,7 @@
             }
         },
         "RURUPHM2XXX": {
-            "full_name": "Rural Bank of Rosario (LU), Inc.",
+            "full_name": "RURAL BANK OF ROSARIO (LU), INC.",
             "swift_bic": "RURUPHM2XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -1305,7 +1345,7 @@
             }
         },
         "RUSGPHM1XXX": {
-            "full_name": "Rural Bank of Sta. Ignacia, Inc.",
+            "full_name": "RURAL BANK OF STA. IGNACIA, INC. ",
             "swift_bic": "RUSGPHM1XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -1315,7 +1355,7 @@
             }
         },
         "RUSTPHM2XXX": {
-            "full_name": "Rural Bank of Silay City, Inc.",
+            "full_name": "RURAL BANK OF SILAY CITY, INC.",
             "swift_bic": "RUSTPHM2XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -1325,7 +1365,7 @@
             }
         },
         "RUSYPHM2XXX": {
-            "full_name": "Rural Bank of Sagay, Inc.",
+            "full_name": "RURAL BANK OF SAGAY, INC.",
             "swift_bic": "RUSYPHM2XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -1335,7 +1375,7 @@
             }
         },
         "SCBLPHMMXXX": {
-            "full_name": "Standard Chartered Bank",
+            "full_name": "STANDARD CHARTERED BANK",
             "swift_bic": "SCBLPHMMXXX",
             "settlement_rail": {
                 "INSTAPAY": {
@@ -1363,7 +1403,7 @@
             }
         },
         "SHBKPHMMXXX": {
-            "full_name": "Shinhan Bank",
+            "full_name": "SHINHAN BANK",
             "swift_bic": "SHBKPHMMXXX",
             "settlement_rail": {
                 "PESONET": {
@@ -1383,7 +1423,7 @@
             }
         },
         "SMBCPHMMXXX": {
-            "full_name": "Sumitomo Mitsui Banking Corp.",
+            "full_name": "SUMITOMO MITSUI BANKING CORP",
             "swift_bic": "SMBCPHMMXXX",
             "settlement_rail": {
                 "PESONET": {
@@ -1427,7 +1467,7 @@
             }
         },
         "TAGCPHM2XXX": {
-            "full_name": "TagCash",
+            "full_name": "Tagcash",
             "swift_bic": "TAGCPHM2XXX",
             "settlement_rail": {
                 "INSTAPAY": {
@@ -1441,7 +1481,7 @@
             }
         },
         "TAYOPHM2XXX": {
-            "full_name": "TayoCash Inc.",
+            "full_name": "TAYOCASH INC",
             "swift_bic": "TAYOPHM2XXX",
             "settlement_rail": {
                 "INSTAPAY": {
@@ -1465,7 +1505,7 @@
             }
         },
         "TLBPPHMMXXX": {
-            "full_name": "Land Bank of the Philippines",
+            "full_name": "LAND BANK OF THE PHILIPPINES",
             "swift_bic": "TLBPPHMMXXX",
             "settlement_rail": {
                 "INSTAPAY": {
@@ -1474,6 +1514,16 @@
                 },
                 "PESONET": {
                     "bank_code": "TLBPPHMMXXX",
+                    "name": "PESONET"
+                }
+            }
+        },
+        "TODGPHM2XXX": {
+            "full_name": "TONIK DIGITAL BANK, INC.",
+            "swift_bic": "TODGPHM2XXX",
+            "settlement_rail": {
+                "PESONET": {
+                    "bank_code": "TODGPHM2XXX",
                     "name": "PESONET"
                 }
             }
@@ -1489,7 +1539,7 @@
             }
         },
         "TYBKPHMMXXX": {
-            "full_name": "Yuanta Savings Bank, Inc.",
+            "full_name": "YUANTA SAVINGS BANK,INC.",
             "swift_bic": "TYBKPHMMXXX",
             "settlement_rail": {
                 "PESONET": {
@@ -1513,7 +1563,7 @@
             }
         },
         "UCPBPHMMXXX": {
-            "full_name": "United Coconut Planters Bank",
+            "full_name": "UNITED COCONUT PLANTERS BANK",
             "swift_bic": "UCPBPHMMXXX",
             "settlement_rail": {
                 "PESONET": {
@@ -1523,7 +1573,7 @@
             }
         },
         "UCSVPHM1XXX": {
-            "full_name": "UCPB Savings Bank",
+            "full_name": "UCPB SAVINGS BANK",
             "swift_bic": "UCSVPHM1XXX",
             "settlement_rail": {
                 "INSTAPAY": {
@@ -1565,7 +1615,7 @@
             }
         },
         "UOVBPHMMXXX": {
-            "full_name": "United Overseas Bank Phils.",
+            "full_name": "UNITED OVERSEAS BANK PHILS.",
             "swift_bic": "UOVBPHMMXXX",
             "settlement_rail": {
                 "PESONET": {
@@ -1589,7 +1639,7 @@
             }
         },
         "UWCBPHMMXXX": {
-            "full_name": "Cathay United Bank Co. Ltd.",
+            "full_name": "CATHAY UNITED BANK CO. LTD",
             "swift_bic": "UWCBPHMMXXX",
             "settlement_rail": {
                 "PESONET": {
@@ -1599,7 +1649,7 @@
             }
         },
         "VGBCPHM1XXX": {
-            "full_name": "Vigan Banco Rural, Incorporada",
+            "full_name": "VIGAN BANCO RURAL, INCORPORADA",
             "swift_bic": "VGBCPHM1XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -1609,7 +1659,7 @@
             }
         },
         "WEDVPHM1XXX": {
-            "full_name": "Wealth Development Bank Corporation",
+            "full_name": "WEALTH DEVELOPMENT BANK CORPORATION",
             "swift_bic": "WEDVPHM1XXX",
             "settlement_rail": {
                 "INSTAPAY": {
@@ -1623,7 +1673,7 @@
             }
         },
         "ZARUPHM1XXX": {
-            "full_name": "Zambales Rural Bank, Inc.",
+            "full_name": "ZAMBALES RURAL BANK, INC",
             "swift_bic": "ZARUPHM1XXX",
             "settlement_rail": {
                 "PESONET": {
@@ -1648,4 +1698,3 @@
         }
     }
 }
-

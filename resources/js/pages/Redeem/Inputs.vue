@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import InputError from '@/components/InputError.vue'
-import { computed } from 'vue'
+import { computed, onMounted, ref, nextTick } from 'vue'
 
 // ⬅️ Accept key-value input props
 const props = defineProps<{
@@ -38,70 +38,90 @@ function submit() {
         preserveScroll: true,
     })
 }
+
+const inputGroupRef = ref<HTMLFieldSetElement | null>(null)
+
+onMounted(async () => {
+    await nextTick()
+    // Focus the first input inside the group box
+    const firstInput = inputGroupRef.value?.querySelector('input, select, textarea') as HTMLElement | null
+    firstInput?.focus()
+})
 </script>
 
 <template>
     <GuestLayout>
         <Head title="Additional Information" />
 
-        <form @submit.prevent="submit" class="space-y-6">
-            <div class="text-sm text-gray-700 dark:text-gray-300">
-                You are redeeming voucher: <span class="font-semibold">{{ props.context.voucherCode }}</span>
-            </div>
-            <div class="text-sm text-gray-700 dark:text-gray-300">
-                Mobile number: <span class="font-semibold">{{ props.context.mobile }}</span>
-            </div>
-
-            <!-- Name -->
-            <div v-if="visibleFields.includes('name')" class="flex flex-col gap-1">
-                <Label for="name">Full Name</Label>
-                <Input id="name" v-model="form.name"/>
-                <InputError :message="form.errors.name" />
-            </div>
-
-            <!-- Address -->
-            <div v-if="visibleFields.includes('address')" class="flex flex-col gap-1">
-                <Label for="address">Address</Label>
-                <Input id="address" v-model="form.address"/>
-                <InputError :message="form.errors.address" />
-            </div>
-
-            <!-- Birthdate -->
-            <div v-if="visibleFields.includes('birth_date')" class="flex flex-col gap-1">
-                <Label for="birthdate">Birth Date</Label>
-                <Input id="birthdate" v-model="form.birth_date" type="date"/>
-                <InputError :message="form.errors.birth_date" />
-            </div>
-
-            <!-- Email -->
-            <div v-if="visibleFields.includes('email')" class="flex flex-col gap-1">
-                <Label for="email">Email</Label>
-                <Input id="email" v-model="form.email" type="email"/>
-                <InputError :message="form.errors.email" />
-            </div>
-
-            <!-- Gross Monthly Income -->
-            <div v-if="visibleFields.includes('gross_monthly_income')" class="flex flex-col gap-1">
-                <Label for="gross_monthly_income">Gross Monthly Income</Label>
-                <Input
-                    id="gross_monthly_income"
-                    v-model="form.gross_monthly_income"
-                    type="number"
-                    step="any"
-                    min="0"
-                    required
+        <form @submit.prevent="submit" class="space-y-6 relative">
+            <!-- Mobile (Read-only) -->
+            <div class="flex flex-col gap-1">
+                <Label for="mobile">Mobile Handle</Label>
+                <input
+                    id="mobile"
+                    type="text"
+                    :value="props.context.mobile"
+                    readonly
+                    tabindex="-1"
+                    inert
+                    class="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 px-3 py-2 text-gray-700 shadow-sm"
                 />
-                <InputError :message="form.errors.gross_monthly_income" />
             </div>
 
-            <!-- Country (optional for future) -->
-            <div v-if="visibleFields.includes('country')" class="flex flex-col gap-1">
-                <Label for="country">Country</Label>
-                <Input id="country" v-model="form.country"/>
-                <InputError :message="form.errors.country" />
-            </div>
+            <!-- Inputs Group -->
+            <fieldset ref="inputGroupRef" class="border border-gray-300 dark:border-gray-600 rounded-lg p-4">
+                <legend class="text-sm font-medium text-gray-700 dark:text-gray-300 px-2">Requested Inputs</legend>
 
-            <div class="pt-4">
+                <div v-if="visibleFields.includes('name')" class="mt-2 flex flex-col gap-1">
+                    <Label for="name">Full Name</Label>
+                    <Input id="name" v-model="form.name"/>
+                    <InputError :message="form.errors.name" />
+                </div>
+
+                <div v-if="visibleFields.includes('address')" class="mt-4 flex flex-col gap-1">
+                    <Label for="address">Address</Label>
+                    <Input id="address" v-model="form.address"/>
+                    <InputError :message="form.errors.address" />
+                </div>
+
+                <div v-if="visibleFields.includes('birth_date')" class="mt-4 flex flex-col gap-1">
+                    <Label for="birthdate">Birth Date</Label>
+                    <Input id="birthdate" v-model="form.birth_date" type="date"/>
+                    <InputError :message="form.errors.birth_date" />
+                </div>
+
+                <div v-if="visibleFields.includes('email')" class="mt-4 flex flex-col gap-1">
+                    <Label for="email">Email</Label>
+                    <Input id="email" v-model="form.email" type="email"/>
+                    <InputError :message="form.errors.email" />
+                </div>
+
+                <div v-if="visibleFields.includes('gross_monthly_income')" class="mt-4 flex flex-col gap-1">
+                    <Label for="gross_monthly_income">Gross Monthly Income</Label>
+                    <Input
+                        id="gross_monthly_income"
+                        v-model="form.gross_monthly_income"
+                        type="number"
+                        step="any"
+                        min="0"
+                        required
+                    />
+                    <InputError :message="form.errors.gross_monthly_income" />
+                </div>
+
+                <div v-if="visibleFields.includes('country')" class="mt-4 flex flex-col gap-1">
+                    <Label for="country">Country</Label>
+                    <Input id="country" v-model="form.country"/>
+                    <InputError :message="form.errors.country" />
+                </div>
+            </fieldset>
+
+            <!-- Footer Section -->
+            <div class="flex justify-between items-center pt-4">
+                <div class="text-xs text-right text-gray-500 dark:text-gray-400 italic">
+                    Redeeming cash code: <span class="font-semibold">{{ props.context.voucherCode }}</span>
+                </div>
+
                 <Button :disabled="form.processing">
                     {{ form.processing ? 'Saving…' : 'Next' }}
                 </Button>

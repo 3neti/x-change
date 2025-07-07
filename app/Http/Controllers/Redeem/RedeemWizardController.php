@@ -17,71 +17,18 @@ use Inertia\{Inertia, Response};
 class RedeemWizardController extends Controller
 {
     //TODO: rename mobile to wallet
-    public function mobile(Voucher $voucher): Response
+    public function wallet(Voucher $voucher): Response
     {
-        $registry = new BankRegistry();
-
-        // Associative map: lowercase => preferred casing
-        $wordMap = collect([
-            'of',
-            'de',
-            'AllBank',
-            'Al-Amanah',
-            'AliPay',
-            'BananaPay',
-            'BDO',
-            '(BDO)',
-            'BPI',
-            '(BPI)',
-            'BRBDigital',
-            'CTBC',
-            'DCPay',
-            'DM',
-            'GCash',
-            'GM',
-            'GoTyme',
-            'GrabPay',
-            'G-Xchange',
-            'HSBC',
-            'HK',
-            'ING',
-            'N.V.',
-            'PayMaya',
-            'RCBC',
-            'UBP',
-
-        ])->mapWithKeys(fn ($word) => [Str::lower($word) => $word]);
-
-        return Inertia::render('Redeem/Form', [
+        return Inertia::render('Redeem/Wallet', [
             'voucher_code' => $voucher->code,
-            'country'      => config('x-change.redeem.default_country', 'PH'),
-            'bank_code'    => '',
-            'banks'        => collect($registry->all())
-                ->map(function ($info, $code) use ($wordMap) {
-                    $words = explode(' ', $info['full_name']);
-
-                    $normalized = collect($words)->map(function ($word) use ($wordMap) {
-                        // Separate trailing punctuation
-                        preg_match('/^(\w+)([\W]*)$/u', $word, $matches);
-                        $base = Str::lower($matches[1] ?? $word);
-                        $punct = $matches[2] ?? '';
-
-                        $formatted = $wordMap[$base] ?? ucfirst($base);
-
-                        return $formatted . $punct;
-                    })->implode(' ');
-
-                    return [
-                        'code' => $code,
-                        'name' => $normalized,
-                    ];
-                })
-                ->values(),
+            'country' => config('x-change.redeem.default_country', 'PH'),
+            'bank_code' => '',
+            'banks' => $this->getNormalizedBanks(),
         ]);
     }
 
     //TODO: rename storeMobile to storeWallet
-    public function storeMobile(WalletFormRequest $request, Voucher $voucher): RedirectResponse
+    public function storeWallet(WalletFormRequest $request, Voucher $voucher): RedirectResponse
     {
         $this->storeWalletData($request, $voucher);
 
@@ -101,11 +48,11 @@ class RedeemWizardController extends Controller
 
         // 🧭 Step 1: Get the plugin-relevant input fields
         $pluginFields = RedeemPluginMap::fieldsFor($plugin); // array<VoucherInputField>
-        $pluginFieldKeys = array_map(fn (VoucherInputField $f) => $f->value, $pluginFields);
+        $pluginFieldKeys = array_map(fn(VoucherInputField $f) => $f->value, $pluginFields);
 
         // 🎯 Step 2: Intersect with what the voucher actually requires
         $voucherFieldKeys = array_map(
-            fn (VoucherInputField $f) => $f->value,
+            fn(VoucherInputField $f) => $f->value,
             $voucher->instructions->inputs->fields
         );
 
@@ -113,23 +60,23 @@ class RedeemWizardController extends Controller
 
         // 🧠 Step 3: Hydrate default values from session
         $defaultValues = collect($requestedFields)
-            ->mapWithKeys(fn ($field) => [
+            ->mapWithKeys(fn($field) => [
                 $field => Session::get("redeem.{$voucher->code}.{$config['session_key']}")[$field] ?? null
             ])
             ->all();
 
         Log::info('[RedeemWizardController] Rendering plugin page', [
-            'voucher'         => $voucher->code,
-            'plugin'          => $plugin,
-            'session_key'     => $config['session_key'],
+            'voucher' => $voucher->code,
+            'plugin' => $plugin,
+            'session_key' => $config['session_key'],
             'requestedFields' => $requestedFields,
-            'default_values'  => $defaultValues,
+            'default_values' => $defaultValues,
         ]);
 
         return Inertia::render($config['page'], [
             'context' => [
                 'voucherCode' => $voucher->code,
-                'mobile'      => Session::get("redeem.{$voucher->code}.mobile"),
+                'mobile' => Session::get("redeem.{$voucher->code}.mobile"),
             ],
             $config['session_key'] => $defaultValues,
         ]);
@@ -144,7 +91,7 @@ class RedeemWizardController extends Controller
 
         // 🧠 Step 1: Get fields associated with this plugin
         $pluginFields = RedeemPluginMap::fieldsFor($plugin);
-        $pluginFieldKeys = array_map(fn (VoucherInputField $f) => $f->value, $pluginFields);
+        $pluginFieldKeys = array_map(fn(VoucherInputField $f) => $f->value, $pluginFields);
 
         // ✅ Step 2: Dynamically build full rules from voucher’s instructions
         $rules = InputRuleBuilder::from($voucher->instructions->inputs);
@@ -188,8 +135,8 @@ class RedeemWizardController extends Controller
         })() : null;
 
         return Inertia::render('Redeem/Finalize', [
-            'voucher'      => $voucher->getData(),
-            'mobile'       => Session::get("redeem.{$code}.mobile"),
+            'voucher' => $voucher->getData(),
+            'mobile' => Session::get("redeem.{$code}.mobile"),
             'bank_account' => $bankAccount,
         ]);
     }
@@ -199,14 +146,14 @@ class RedeemWizardController extends Controller
         $code = $voucher->code;
 
         $response = Inertia::render('Redeem/Success', [
-            'voucher'   => $voucher->getData(),
+            'voucher' => $voucher->getData(),
             'signature' => Session::get("redeem.{$voucher->code}.signature.signature"),
         ]);
 
         // Clear all redeem session keys
         Session::forget(collect(Config::get('x-change.plugins', []))
             ->keys()
-            ->map(fn ($key) => "redeem.{$code}.{$key}")
+            ->map(fn($key) => "redeem.{$code}.{$key}")
             ->merge([
                 "redeem.{$code}.mobile",
                 "redeem.{$code}.country",
@@ -232,4 +179,76 @@ class RedeemWizardController extends Controller
         Session::put("redeem.{$voucher->code}.bank_code", $validated['bank_code'] ?? null);
         Session::put("redeem.{$voucher->code}.account_number", $validated['account_number'] ?? null);
     }
+
+    /**
+     * @return \Illuminate\Support\Collection
+     */
+    protected function getNormalizedBanks(): \Illuminate\Support\Collection
+    {
+        $registry = new BankRegistry();
+
+        return collect($registry->all())
+            ->map(function ($info, $code) {
+                return [
+                    'code' => $code,
+                    'name' => trim($info['full_name']),
+                ];
+            })
+            ->values();
+    }
 }
+//    protected function getNormalizedBanks(): \Illuminate\Support\Collection
+//    {
+//        $registry = new BankRegistry();
+//
+//        $wordMap = collect([
+//            'of',
+//            'de',
+//            'AllBank',
+//            'Al-Amanah',
+//            'AliPay',
+//            'BananaPay',
+//            'BDO',
+//            '(BDO)',
+//            'BPI',
+//            '(BPI)',
+//            'BRBDigital',
+//            'CTBC',
+//            'DCPay',
+//            'DM',
+//            'GCash',
+//            'GM',
+//            'GoTyme',
+//            'GrabPay',
+//            'G-Xchange',
+//            'HSBC',
+//            'HK',
+//            'ING',
+//            'N.V.',
+//            'PayMaya',
+//            'RCBC',
+//            'UBP',
+//        ])->mapWithKeys(fn ($word) => [Str::lower($word) => $word]);
+//
+//        return collect($registry->all())
+//            ->map(function ($info, $code) use ($wordMap) {
+//                $words = explode(' ', $info['full_name']);
+//
+//                $normalized = collect($words)->map(function ($word) use ($wordMap) {
+//                    preg_match('/^(\w+)([\W]*)$/u', $word, $matches);
+//                    $base = Str::lower($matches[1] ?? $word);
+//                    $punct = $matches[2] ?? '';
+//
+//                    $formatted = $wordMap[$base] ?? ucfirst($base);
+//
+//                    return $formatted . $punct;
+//                })->implode(' ');
+//
+//                return [
+//                    'code' => $code,
+//                    'name' => $normalized,
+//                ];
+//            })
+//            ->values();
+//    }
+//}
