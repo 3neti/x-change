@@ -105,11 +105,14 @@ class RedeemWizardController extends Controller
         $sessionKey = $config['session_key'];
 
         // 🔐 Step 5: Store validated values in session
-        if (count($validated) === 1) {
-            Session::put("redeem.{$voucher->code}.{$sessionKey}", reset($validated));
-        } else {
-            Session::put("redeem.{$voucher->code}.{$sessionKey}", $validated);
-        }
+        Session::put("redeem.{$voucher->code}.{$sessionKey}", $validated);
+
+        Log::debug('[RedeemWizardController] Stored plugin inputs', [
+            'voucher' => $voucher->code,
+            'plugin' => $plugin,
+            'session_key' => $sessionKey,
+            'validated' => $validated,
+        ]);
 
         // ⏭️ Step 6: Redirect to next plugin or finalize
         $currentIndex = $plugins->search($plugin);
@@ -147,7 +150,7 @@ class RedeemWizardController extends Controller
 
         $response = Inertia::render('Redeem/Success', [
             'voucher' => $voucher->getData(),
-            'signature' => Session::get("redeem.{$voucher->code}.signature.signature"),
+            'inputs' => $voucher->inputs->pluck('value', 'name')->toArray(),
         ]);
 
         // Clear all redeem session keys

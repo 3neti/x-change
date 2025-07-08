@@ -49,10 +49,24 @@ class RedeemVoucherMiddleware
         // Assemble metadata for encashment
         $meta = [];
 
-        $inputs = Session::get("redeem.{$voucherCode}.inputs", []);
+        $inputs = Session::get("redeem.{$voucherCode}.inputs");
+
         if (!empty($inputs)) {
-            $meta['inputs'] = $inputs;
+            if (is_array($inputs)) {
+                $meta['inputs'] = $inputs;
+            } else {
+                Log::warning('[RedeemVoucherMiddleware] Inputs value is not an array. Wrapping it for safety.', [
+                    'voucher_code' => $voucherCode,
+                    'raw_inputs'   => $inputs,
+                ]);
+                $meta['inputs'] = ['value' => $inputs];
+            }
         }
+
+//        $inputs = Session::get("redeem.{$voucherCode}.inputs", []);
+//        if (!empty($inputs)) {
+//            $meta['inputs'] = $inputs;
+//        }
 
         $bankCode      = Session::get("redeem.{$voucherCode}.bank_code");
         $accountNumber = Session::get("redeem.{$voucherCode}.account_number");
