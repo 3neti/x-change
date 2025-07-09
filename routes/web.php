@@ -3,7 +3,6 @@
 use App\Http\Controllers\{CheckWalletBalanceController, VoucherController};
 use Laravel\WorkOS\Http\Middleware\ValidateSessionWithWorkOS;
 use App\Http\Controllers\Api\CutCheckController;
-use App\Http\Controllers\Api\TokenController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -16,6 +15,21 @@ Route::middleware([
     Route::get('dashboard', function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
+    Route::get('load', function () {
+        return Inertia::render('Load');
+    })->name('load');
+
+    Route::get('generate', function () {
+        return Inertia::render('Generate');
+    })->name('generate');
+
+    Route::get('disburse', function () {
+        return Inertia::render('Disburse');
+    })->name('disburse');
+
+    Route::get('view', function () {
+        return Inertia::render('View');
+    })->name('view');
 });
 
 require __DIR__.'/settings.php';
@@ -27,8 +41,6 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::get('wallet/add-funds', LBHurtado\PaymentGateway\Http\Controllers\GenerateController::class)
         ->name('wallet.add-funds');
 });
-
-Route::middleware('auth:sanctum')->post('/token', [TokenController::class, 'store'])->name('token.store');
 
 Route::middleware('auth:sanctum')->post(
     '/cut-check',

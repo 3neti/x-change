@@ -29,11 +29,11 @@ const user = page.props.auth.user as User;
 
 const form = useForm({
     name: user.name,
-    mobile: user.mobile,
+    // mobile: user.mobile,
     email: user.email,
-    merchant_code: user.merchant.code,
-    merchant_name: user.merchant.name,
-    merchant_city: user.merchant.city,
+    // merchant_code: user.merchant.code,
+    // merchant_name: user.merchant.name,
+    // merchant_city: user.merchant.city,
 });
 
 const submit = () => {
@@ -58,11 +58,11 @@ const submit = () => {
                         <InputError class="mt-2" :message="form.errors.name" />
                     </div>
 
-                    <div class="grid gap-2">
-                        <Label for="mobile">Mobile</Label>
-                        <Input id="mobile" class="mt-1 block w-full" v-model="form.mobile" required autocomplete="mobile" placeholder="Mobile Number" />
-                        <InputError class="mt-2" :message="form.errors.mobile" />
-                    </div>
+<!--                    <div class="grid gap-2">-->
+<!--                        <Label for="mobile">Mobile</Label>-->
+<!--                        <Input id="mobile" class="mt-1 block w-full" v-model="form.mobile" required autocomplete="mobile" placeholder="Mobile Number" />-->
+<!--                        <InputError class="mt-2" :message="form.errors.mobile" />-->
+<!--                    </div>-->
 
                     <div class="grid gap-2">
                         <Label for="email">Email address</Label>
@@ -70,23 +70,23 @@ const submit = () => {
                         <InputError class="mt-2" :message="form.errors.email" />
                     </div>
 
-                    <div class="grid gap-2">
-                        <Label for="merchant_code">Merchant Code</Label>
-                        <Input id="merchant_code" class="mt-1 block w-full" v-model="form.merchant_code" required autocomplete="merchant_code" disabled />
-                        <InputError class="mt-2" :message="form.errors.merchant_code" />
-                    </div>
+<!--                    <div class="grid gap-2">-->
+<!--                        <Label for="merchant_code">Merchant Code</Label>-->
+<!--                        <Input id="merchant_code" class="mt-1 block w-full" v-model="form.merchant_code" required autocomplete="merchant_code" disabled />-->
+<!--                        <InputError class="mt-2" :message="form.errors.merchant_code" />-->
+<!--                    </div>-->
 
-                    <div class="grid gap-2">
-                        <Label for="merchant_name">Merchant Name</Label>
-                        <Input id="merchant_name" class="mt-1 block w-full" v-model="form.merchant_name" required autocomplete="merchant_name" placeholder="Merchant Name" />
-                        <InputError class="mt-2" :message="form.errors.merchant_name" />
-                    </div>
+<!--                    <div class="grid gap-2">-->
+<!--                        <Label for="merchant_name">Merchant Name</Label>-->
+<!--                        <Input id="merchant_name" class="mt-1 block w-full" v-model="form.merchant_name" required autocomplete="merchant_name" placeholder="Merchant Name" />-->
+<!--                        <InputError class="mt-2" :message="form.errors.merchant_name" />-->
+<!--                    </div>-->
 
-                    <div class="grid gap-2">
-                        <Label for="merchant_city">Merchant City</Label>
-                        <Input id="merchant_city" class="mt-1 block w-full" v-model="form.merchant_city" required autocomplete="merchant_city" placeholder="Merchant City" />
-                        <InputError class="mt-2" :message="form.errors.merchant_city" />
-                    </div>
+<!--                    <div class="grid gap-2">-->
+<!--                        <Label for="merchant_city">Merchant City</Label>-->
+<!--                        <Input id="merchant_city" class="mt-1 block w-full" v-model="form.merchant_city" required autocomplete="merchant_city" placeholder="Merchant City" />-->
+<!--                        <InputError class="mt-2" :message="form.errors.merchant_city" />-->
+<!--                    </div>-->
 
                     <div class="flex items-center gap-4">
                         <Button :disabled="form.processing">Save</Button>

@@ -16,27 +16,46 @@ trait HasChannels
             ->latest('id');
     }
 
-    public function setChannel(string|Channel $name, string $value): self
+    public function setChannel(string|Channel $name, string|null $value): self
     {
         // Convert Channels enum to its string value if provided
         $name = $name instanceof Channel ? $name->value : $name;
 
+        if (is_null($value) || $value === '') {
+            $this->deleteChannel($name);
+            return $this;
+        }
+
         if (! $this->isValidChannel($name, $value)) {
             throw new Exception('Channel name is not valid');
         }
+
+//        if (! $this->isValidChannel($name, $value)) {
+//            throw new Exception('Channel name is not valid');
+//        }
 
         return $this->forceSetChannel($name, $value);
     }
 
     public function forceSetChannel(string|Channel $name, string $value): self
     {
-        // Convert Channels enum to its string value if provided
+        // Convert Channels enum to string if needed
         $name = $name instanceof Channel ? $name->value : $name;
 
-        // Normalize phone numbers to E.164 format without "+"
+        // Normalize mobile numbers to E.164 format without "+"
         if ($name === 'mobile') {
             $value = ltrim(phone($value, 'PH')->formatE164(), '+');
         }
+
+        // Check if existing record already matches the intended value
+        $existing = $this->channels()->where('name', $name)->latest()->first();
+
+        if ($existing && $existing->value === $value) {
+            return $this; // No need to insert duplicate
+        }
+
+        // Delete any existing record for this channel name before inserting new one
+        $this->channels()->where('name', $name)->delete();
 
         $this->channels()->create([
             'name' => $name,
@@ -44,6 +63,33 @@ trait HasChannels
         ]);
 
         return $this;
+    }
+
+//    public function forceSetChannel(string|Channel $name, string|null $value): self
+//    {
+//        // Convert Channels enum to its string value if provided
+//        $name = $name instanceof Channel ? $name->value : $name;
+//
+//        // Normalize phone numbers to E.164 format without "+"
+//        if ($name === 'mobile') {
+//            $value = ltrim(phone($value, 'PH')->formatE164(), '+');
+//        }
+//
+//        $this->channels()->create([
+//            'name' => $name,
+//            'value' => $value,
+//        ]);
+//
+//        return $this;
+//    }
+
+    protected function deleteChannel(string|Channel $name): void
+    {
+        $name = $name instanceof Channel ? $name->value : $name;
+
+        $this->channels()
+            ->where('name', $name)
+            ->delete();
     }
 
     public function isValidChannel(string|Channel $name, ?string $value = null): bool
@@ -113,9 +159,9 @@ trait HasChannels
         return $channel?->value;
     }
 
-    protected function setChannelAttribute(string $name, string $value): void
+    protected function setChannelAttribute(string $name, string|null $value): void
     {
-        $this->forceSetChannel($name, $value);
+        $this->setChannel($name, $value);
     }
 
     private function getChannelFromEnum(string $key): ?Channel

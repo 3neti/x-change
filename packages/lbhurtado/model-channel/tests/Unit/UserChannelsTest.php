@@ -263,3 +263,63 @@ it('properly resolves phone matches with strict and relaxed conditions', functio
         expect($foundUser)->toBeNull();
     }
 })->with('inconsistent_mobiles')->skip();
+
+it('adds a channel and deletes it when null is passed', function () {
+    $user = User::factory()->create();
+    $user->setChannel(Channel::MOBILE, '09171234567');
+
+    expect($user->channels)->toHaveCount(1);
+    expect($user->mobile)->toBe('639171234567');
+
+    // Set to null: should delete the channel
+    $user->setChannel(Channel::MOBILE, null);
+
+    expect($user->channels()->where('name', 'mobile')->exists())->toBeFalse();
+});
+
+it('deletes the channel when empty string is passed', function () {
+    $user = User::factory()->create();
+
+    $user->mobile = '09171234567';
+
+    expect($user->mobile)->toBe('639171234567');
+
+    $user->mobile = '';
+
+    expect($user->mobile)->toBeNull();
+    expect($user->channels()->where('name', 'mobile')->exists())->toBeFalse();
+});
+
+it('does not add duplicate records for the same name-value pair', function () {
+    $user = User::factory()->create();
+
+    $user->setChannel(Channel::MOBILE, '09171234567');
+    $user->setChannel(Channel::MOBILE, '09171234567');
+
+    expect($user->channels()->where('name', 'mobile')->count())->toBe(1);
+});
+
+it('updates the value if the channel value changes', function () {
+    $user = User::factory()->create();
+
+    $user->setChannel(Channel::MOBILE, '09171234567');
+    $user->setChannel(Channel::MOBILE, '09181234567');
+
+    expect($user->channels()->where('name', 'mobile')->count())->toBe(1);
+    expect($user->mobile)->toBe('639181234567');
+});
+
+it('preserves other channel values when updating a specific one', function () {
+    $user = User::factory()->create();
+
+    $user->setChannel(Channel::MOBILE, '09171234567');
+    $user->setChannel(Channel::WEBHOOK, 'http://example.com');
+
+    expect($user->channels()->count())->toBe(2);
+
+    $user->setChannel(Channel::MOBILE, '09181234567');
+
+    expect($user->channels()->count())->toBe(2);
+    expect($user->mobile)->toBe('639181234567');
+    expect($user->webhook)->toBe('http://example.com');
+});

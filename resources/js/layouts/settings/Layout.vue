@@ -11,6 +11,18 @@ const sidebarNavItems: NavItem[] = [
         href: '/settings/profile',
     },
     {
+        title: 'Channel',
+        href: '/settings/channel',
+    },
+    {
+        title: 'Merchant',
+        href: '/settings/merchant',
+    },
+    {
+        title: 'Token',
+        href: '/settings/token',
+    },
+    {
         title: 'Appearance',
         href: '/settings/appearance',
     },

@@ -1,3 +1,6 @@
+/**
+* @deprecated This component is no longer in use. Use Token.vue instead.
+*/
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import axios, { AxiosResponse } from 'axios'
