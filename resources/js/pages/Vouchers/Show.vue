@@ -1,112 +1,114 @@
 <script setup lang="ts">
-import { Head, usePage } from '@inertiajs/vue3'
-import { defineProps } from 'vue'
-
-interface CashData {
-    amount: number
-    currency: string
-}
-
-interface Instructions {
-    cash: CashData
-    // …other instruction fields if you have them
-}
-
-interface RedeemerRelation {
-    redeemer: {
-        mobile: string
-        // …other contact fields if needed
-    }
-}
-
-interface Voucher {
-    code: string
-    instructions: Instructions
-    expires_at: string | null
-    redeemed_at: string | null
-    processed_on: string | null
-    qr_code: string           // ← newly added
-    redeemer?: RedeemerRelation
-}
+import { Head } from '@inertiajs/vue3'
+import GuestLayout from '@/layouts/legacy/GuestLayout.vue'
+import { useFormatCurrency } from '@/composables/useFormatCurrency'
+import { useFormatDate } from '@/composables/useFormatDate'
 
 const props = defineProps<{
-    voucher: Voucher
+    voucher: {
+        code: string
+        cash: {
+            amount: number
+            currency: string
+        }
+        redeemed_at: string
+        contact: {
+            bank_account?: string
+        }
+        instructions?: {
+            rider?: {
+                message?: string
+            }
+        }
+    },
+    inputs: {
+        name?: string
+        email?: string
+        address?: string
+        birth_date?: string
+        gross_monthly_income?: number
+        signature?: string
+    },
+    header?: string
 }>()
+
+const formatCurrency = useFormatCurrency()
+const { formatDate } = useFormatDate()
+
+const title = props.voucher.instructions?.rider?.message?.trim()
+    || props.header?.trim()
+    || 'Cash Code Redeemed!'
 </script>
 
 <template>
-    <Head title={{ props.voucher.code }} />
+    <GuestLayout>
+        <Head title="Voucher Redeemed" />
 
-    <div class="space-y-6 p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Voucher: <span class="font-mono">{{ props.voucher.code }}</span>
-        </h1>
+        <div class="space-y-6 text-center max-w-md mx-auto">
+            <h2 class="text-2xl font-semibold text-green-600">{{ title }}</h2>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <!-- Left: Details -->
-            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+            <div class="space-y-4 text-left">
                 <div>
-                    <dt class="text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Amount
-                    </dt>
-                    <dd class="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
-                        {{ props.voucher.instructions.cash.currency }}
-                        {{ props.voucher.instructions.cash.amount.toFixed(2) }}
-                    </dd>
+                    <p class="text-sm text-gray-500">Cash Code</p>
+                    <div class="font-mono text-base">{{ voucher.code }}</div>
                 </div>
-                <div>
-                    <dt class="text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Expires At
-                    </dt>
-                    <dd class="mt-1 text-gray-800 dark:text-gray-200">
-            <span v-if="props.voucher.expires_at">
-              {{ new Date(props.voucher.expires_at).toLocaleString() }}
-            </span>
-                        <span v-else>—</span>
-                    </dd>
-                </div>
-                <div>
-                    <dt class="text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Redeemed At
-                    </dt>
-                    <dd class="mt-1 text-gray-800 dark:text-gray-200">
-            <span v-if="props.voucher.redeemed_at">
-              {{ new Date(props.voucher.redeemed_at).toLocaleString() }}
-            </span>
-                        <span v-else>—</span>
-                    </dd>
-                </div>
-                <div>
-                    <dt class="text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Processed On
-                    </dt>
-                    <dd class="mt-1 text-gray-800 dark:text-gray-200">
-            <span v-if="props.voucher.processed_on">
-              {{ new Date(props.voucher.processed_on).toLocaleString() }}
-            </span>
-                        <span v-else>—</span>
-                    </dd>
-                </div>
-                <div class="sm:col-span-2">
-                    <dt class="text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Redeemer Mobile
-                    </dt>
-                    <dd class="mt-1 text-gray-800 dark:text-gray-200">
-                        {{ props.voucher.redeemer?.redeemer.mobile ?? '—' }}
-                    </dd>
-                </div>
-            </dl>
 
-            <!-- Right: QR Code -->
-            <div class="flex items-center justify-center">
-                <div class="bg-white p-4 rounded shadow-md">
+                <div>
+                    <p class="text-sm text-gray-500">Amount</p>
+                    <div class="text-lg font-medium">
+                        {{ formatCurrency(voucher.cash.amount) }}
+                    </div>
+                </div>
+
+                <div v-if="voucher.contact.bank_account">
+                    <p class="text-sm text-gray-500">Bank Account</p>
+                    <div class="text-base">{{ voucher.contact.bank_account }}</div>
+                </div>
+
+                <div v-if="inputs.name">
+                    <p class="text-sm text-gray-500">Full Name</p>
+                    <div class="text-base">{{ inputs.name }}</div>
+                </div>
+
+                <div v-if="inputs.email">
+                    <p class="text-sm text-gray-500">Email</p>
+                    <div class="text-base">{{ inputs.email }}</div>
+                </div>
+
+                <div v-if="inputs.address">
+                    <p class="text-sm text-gray-500">Address</p>
+                    <div class="text-base">{{ inputs.address }}</div>
+                </div>
+
+                <div v-if="inputs.birth_date">
+                    <p class="text-sm text-gray-500">Birth Date</p>
+                    <div class="text-base">{{ inputs.birth_date }}</div>
+                </div>
+
+                <div v-if="inputs.gross_monthly_income">
+                    <p class="text-sm text-gray-500">Gross Monthly Income</p>
+                    <div class="text-base">₱{{ inputs.gross_monthly_income.toLocaleString() }}</div>
+                </div>
+
+                <div v-if="inputs.signature">
+                    <p class="text-sm text-gray-500">Signature</p>
                     <img
-                        :src="props.voucher.qr_code"
-                        alt="Voucher QR Code"
-                        class="w-48 h-48 object-contain"
+                        :src="inputs.signature"
+                        alt="Signature"
+                        class="mx-auto h-24 object-contain border p-2 rounded"
                     />
                 </div>
             </div>
+
+            <div class="pt-4 text-xs text-gray-400">
+                Redeemed at {{ formatDate(voucher.redeemed_at) }}
+            </div>
         </div>
-    </div>
+    </GuestLayout>
 </template>
+
+<style scoped>
+.font-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+</style>
