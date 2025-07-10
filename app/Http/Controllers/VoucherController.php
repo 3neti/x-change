@@ -13,7 +13,7 @@ class VoucherController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request): \Inertia\Response|\Inertia\ResponseFactory
     {
         //
     }
@@ -42,18 +42,6 @@ class VoucherController extends Controller
         $cash = $voucher->cash;
         $qr_code = $this->gateway->generate($voucher->code, $cash->amount);
 
-//        return inertia('Vouchers/Show', [
-//            // use a lazy prop (closure) so we don't serialize the entire model before
-//            // Inertia needs it; and explicitly include instructions as an array
-//            'voucher' => fn() => array_merge(
-//                $voucher->toArray(),
-//                [
-//                    'instructions' => $voucher->instructions->toArray(),
-//                    'qr_code' => $qr_code,
-//                    'signature' => $voucher->signature,
-//                ]
-//            ),
-//        ]);
         return inertia('Vouchers/Show', [
             'voucher' => $voucher->getData(),
             'inputs' => $voucher->inputs->pluck('value', 'name')->toArray(),

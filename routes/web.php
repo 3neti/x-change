@@ -1,10 +1,14 @@
 <?php
 
 use App\Http\Controllers\{CheckWalletBalanceController, VoucherController};
+use Illuminate\Http\Request;
 use Laravel\WorkOS\Http\Middleware\ValidateSessionWithWorkOS;
 use App\Http\Controllers\Api\CutCheckController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use Spatie\LaravelData\DataCollection;
+use LBHurtado\Voucher\Data\VoucherData;
+use App\Http\Controllers\Voucher\ViewController;
 
 Route::get('/', fn () => Inertia::render('Welcome'));
 
@@ -27,9 +31,7 @@ Route::middleware([
         return Inertia::render('Disburse');
     })->name('disburse');
 
-    Route::get('view', function () {
-        return Inertia::render('View');
-    })->name('view');
+    Route::get('view', ViewController::class)->name('view');
 });
 
 require __DIR__.'/settings.php';
@@ -57,6 +59,7 @@ use App\Http\Middleware\Redeem\{
     SignTransactionMiddleware,
     RedeemVoucherMiddleware
 };
+
 
 Route::get('redeem', function () {
     return Inertia::render('Redeem/Start');

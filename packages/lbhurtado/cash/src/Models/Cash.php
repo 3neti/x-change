@@ -14,11 +14,10 @@ use Illuminate\Database\Eloquent\Model;
 use LBHurtado\Cash\Enums\CashStatus;
 use Illuminate\Support\Facades\Hash;
 use Spatie\ModelStatus\HasStatuses;
+use Bavix\Wallet\Traits\HasWallet;
 use Illuminate\Support\Number;
 use Spatie\Tags\HasTags;
 use Brick\Money\Money;
-
-use Bavix\Wallet\Traits\HasWallet;
 
 /**
  * Class Cash.
@@ -41,10 +40,10 @@ class Cash extends Model implements ProductInterface
     use HasStatuses {
         HasStatuses::setStatus as traitSetStatus; // Rename the HasStatuses method to traitSetStatus
     }
-    use HasWallet;
     use HasWalletFloat;
     use CanConfirm;
     use HasFactory;
+    use HasWallet;
     use HasTags;
 
     protected $table = 'cash';
@@ -81,12 +80,17 @@ class Cash extends Model implements ProductInterface
 //        });
     }
 
+    public function withdrawTransaction()
+    {
+        return $this->morphOne(\Bavix\Wallet\Models\Transaction::class, 'payable')
+            ->where('type', 'withdraw');
+    }
+
     /** @deprecated  */
     public function reference(): \Illuminate\Database\Eloquent\Relations\MorphTo
     {
         return $this->morphTo();
     }
-
     protected function amount(): Attribute
     {
         return Attribute::make(

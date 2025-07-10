@@ -39,6 +39,7 @@ abstract class TestCase extends BaseTestCase
             \LBHurtado\PaymentGateway\PaymentGatewayServiceProvider::class,
             \LBHurtado\Contact\ContactServiceProvider::class,
             \LBHurtado\ModelInput\ModelInputServiceProvider::class,
+            \LBHurtado\ModelChannel\ModelChannelServiceProvider::class,
         ];
     }
 
@@ -57,6 +58,8 @@ abstract class TestCase extends BaseTestCase
             \Spatie\LaravelData\Normalizers\ArrayNormalizer::class,
             \Spatie\LaravelData\Normalizers\JsonNormalizer::class,
         ]);
+        config()->set('data.date_format', "Y-m-d\TH:i:sP");
+
         config()->set('model-status.status_model', \Spatie\ModelStatus\Status::class);
         config()->set('vouchers.models.voucher', \LBHurtado\Voucher\Models\Voucher::class);
 
@@ -89,8 +92,8 @@ abstract class TestCase extends BaseTestCase
         $userMigration->up();
         $moneyIssuerMigration = include __DIR__ . '/../database/migrations/test/2024_07_02_202500_create_money_issuers_table.php';
         $moneyIssuerMigration->up();
-        $channelsMigration = include __DIR__ . '/../database/migrations/test/2024_08_02_000000_create_channels_table.php';
-        $channelsMigration->up();
+//        $channelsMigration = include __DIR__ . '/../database/migrations/test/2024_08_02_000000_create_channels_table.php';
+//        $channelsMigration->up();
         $statusMigration = include __DIR__ . '/../database/migrations/test/2024_08_03_202500_create_statuses_table.php';
         $statusMigration->up();
         $tagMigration = include __DIR__ . '/../database/migrations/test/2024_08_04_202500_create_tag_tables.php';

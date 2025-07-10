@@ -8,6 +8,7 @@ use Spatie\LaravelData\Attributes\{WithCast, WithTransformer};
 use Illuminate\Database\Eloquent\Casts\ArrayObject;
 use Spatie\LaravelData\Casts\DateTimeInterfaceCast;
 use LBHurtado\Cash\Models\Cash as CashModel;
+use LBHurtado\Wallet\Data\TransactionData;
 use LBHurtado\Cash\Data\Casts\MoneyCast;
 use Illuminate\Support\Carbon;
 use Spatie\LaravelData\Data;
@@ -28,6 +29,7 @@ class CashData extends Data
         public bool $expired,
         public string $status,
         public array $tags,
+        public ?TransactionData $withdrawTransaction
     ) {}
 
     public static function fromModel(CashModel $cash): CashData
@@ -40,7 +42,8 @@ class CashData extends Data
             expires_on: $cash->expires_on,
             expired: $cash->expired,
             status: $cash->status,
-            tags: $cash->tags->toArray()
+            tags: $cash->tags->toArray(),
+            withdrawTransaction: $cash->withdrawTransaction ? TransactionData::fromModel($cash->withdrawTransaction) : null
         );
     }
 }

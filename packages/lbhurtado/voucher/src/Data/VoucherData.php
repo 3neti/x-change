@@ -6,18 +6,22 @@ use Spatie\LaravelData\Transformers\DateTimeInterfaceTransformer;
 use Spatie\LaravelData\Attributes\{WithCast, WithTransformer};
 use LBHurtado\Voucher\Models\Voucher as VoucherModel;
 use Spatie\LaravelData\Casts\DateTimeInterfaceCast;
+use Spatie\LaravelData\{Data, DataCollection};
+use LBHurtado\ModelInput\Data\InputData;
 use LBHurtado\Contact\Data\ContactData;
 use LBHurtado\Contact\Models\Contact;
 use LBHurtado\Cash\Data\CashData;
 use LBHurtado\Cash\Models\Cash;
 use Illuminate\Support\Carbon;
-use Spatie\LaravelData\Data;
 
 class VoucherData extends Data
 {
     public function __construct(
         public string                       $code,
         public ?ModelData                   $owner,
+        #[WithTransformer(DateTimeInterfaceTransformer::class)]
+        #[WithCast(DateTimeInterfaceCast::class, timeZone: 'Asia/Manila')]
+        public ?Carbon                      $created_at,
         #[WithTransformer(DateTimeInterfaceTransformer::class)]
         #[WithCast(DateTimeInterfaceCast::class, timeZone: 'Asia/Manila')]
         public ?Carbon                      $starts_at,
@@ -33,7 +37,9 @@ class VoucherData extends Data
         public bool                         $processed,
         public ?VoucherInstructionsData     $instructions,
         public ?CashData                    $cash = null,
-        public ?ContactData                 $contact = null
+        public ?ContactData                 $contact = null,
+        /** @var InputData[] */
+        public DataCollection               $inputs,
 //        public ?ModelData                   $redeemer,
     ) {}
 
@@ -44,6 +50,7 @@ class VoucherData extends Data
             owner: $model->owner
                 ? ModelData::fromModel($model->owner)
                 : null,
+            created_at: $model->created_at,
             starts_at: $model->starts_at,
             expires_at: $model->expires_at,
             redeemed_at: $model->redeemed_at,
@@ -57,6 +64,7 @@ class VoucherData extends Data
                 ),
             cash: $model->cash instanceof Cash ? CashData::fromModel($model->cash) : null,
             contact: $model->contact instanceof Contact ? ContactData::fromModel($model->contact) : null,
+            inputs: new DataCollection(InputData::class, $model->inputs)
 //            redeemer: $model->redeemer
 //                ? ModelData::fromModel($model->redeemer)
 //                : null,

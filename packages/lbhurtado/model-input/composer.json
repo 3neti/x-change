@@ -28,7 +28,8 @@
         }
     },
     "require": {
-        "propaganistas/laravel-phone": "^6.0"
+        "propaganistas/laravel-phone": "^6.0",
+        "spatie/laravel-data": "^4.17"
     },
     "require-dev": {
         "orchestra/testbench": "^10.3",
