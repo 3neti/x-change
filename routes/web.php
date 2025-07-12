@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Spatie\LaravelData\DataCollection;
 use LBHurtado\Voucher\Data\VoucherData;
-use App\Http\Controllers\Voucher\ViewController;
+use App\Http\Controllers\Voucher\{DisburseController, ViewController};
 
 Route::get('/', fn () => Inertia::render('Welcome'));
 
@@ -27,9 +27,8 @@ Route::middleware([
         return Inertia::render('Generate');
     })->name('generate');
 
-    Route::get('disburse', function () {
-        return Inertia::render('Disburse');
-    })->name('disburse');
+    Route::get('disburse', [DisburseController::class, 'create'])->name('disburse');
+    Route::post('disburse', [DisburseController::class, 'store'])->name('disburse.store');
 
     Route::get('view', ViewController::class)->name('view');
 });

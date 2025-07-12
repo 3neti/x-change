@@ -1,8 +1,13 @@
 <?php
 
+use Carbon\CarbonInterval;
 use LBHurtado\Voucher\Enums\VoucherInputField;
 
 return [
+    'generate' => [
+        'prefix' => env('GENERATE_PREFIX', 'AA'), // New field for prefix
+        'mask' => env('GENERATE_MASK', '****'), // New field for mask
+    ],
 
     'redeem' => [
 

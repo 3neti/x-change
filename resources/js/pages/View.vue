@@ -10,11 +10,15 @@ import { useFormatCurrency } from '@/composables/useFormatCurrency';
 import { useFormatDate } from '@/composables/useFormatDate';
 import { useBankAlias } from '@/composables/useBankAlias';
 import { useFlagEmoji } from '@/composables/useFlagEmoji';
+import type { BreadcrumbItemType } from '@/types';
 
 // const props = defineProps({
 //     vouchers: Array,
 //     pagination: Object,
 // });
+const breadcrumbs: BreadcrumbItemType[] = [
+    { title: 'View', href: '/view' },
+];
 
 const props = defineProps<{
     vouchers: {
@@ -184,7 +188,7 @@ const { getBankAlias } = useBankAlias();
 </script>
 
 <template>
-    <AppLayout>
+    <AppLayout :breadcrumbs="breadcrumbs">
         <template #header>
             <h2 class="text-xl leading-tight font-semibold text-gray-800">Checks List</h2>
         </template>

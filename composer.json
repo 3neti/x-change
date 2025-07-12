@@ -27,6 +27,7 @@
         "lbhurtado/voucher": "dev-main",
         "openai-php/laravel": "^0.13.0",
         "predis/predis": "^3.0",
+        "pusher/pusher-php-server": "^7.2",
         "resend/resend-php": "^0.18.0",
         "tightenco/parental": "^1.4",
         "tightenco/ziggy": "^2.5"

@@ -55,7 +55,6 @@
     },
     "require": {
         "frittenkeez/laravel-vouchers": "^0.6.0",
-        "spatie/laravel-data": "^4.15",
         "lorisleiva/laravel-actions": "^2.9",
         "brick/money": "^0.10.1",
         "lbhurtado/cash": "dev-main",
