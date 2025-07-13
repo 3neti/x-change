@@ -13,4 +13,9 @@ enum VoucherInputField: string
     case ADDRESS = 'address';
     case BIRTH_DATE = 'birth_date';
     case GROSS_MONTHLY_INCOME = 'gross_monthly_income';
+
+    public static function valuesToCsv(): string
+    {
+        return implode(',', array_column(self::cases(), 'value'));
+    }
 }

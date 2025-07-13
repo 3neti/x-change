@@ -5,7 +5,8 @@ use LBHurtado\Voucher\Enums\VoucherInputField;
 
 return [
     'generate' => [
-        'prefix' => env('GENERATE_PREFIX', 'AA'), // New field for prefix
+        'country' => env('GENERATE_COUNTRY', 'PH'),
+        'prefix' => env('GENERATE_PREFIX'), // New field for prefix
         'mask' => env('GENERATE_MASK', '****'), // New field for mask
     ],
 

@@ -13,21 +13,20 @@ import {
     DialogFooter,
     DialogClose,
     DialogOverlay,
-} from '@/components/ui/dialog'
+} from '@/components/ui/dialog';
 
-import {
-    Collapsible, CollapsibleTrigger, CollapsibleContent
-} from '@/components/ui/collapsible'
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 
-import { computed, nextTick, ref, watch } from 'vue'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
-import InputError from '@/components/InputError.vue'
-import CurrencyDropdown from '@/components/domain/CurrencyDropdown.vue'
-import CountryDropdown from '@/components/domain/CountryDropdown.vue'
+import { computed, nextTick, ref, watch } from 'vue';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import InputError from '@/components/InputError.vue';
+import CurrencyDropdown from '@/components/domain/CurrencyDropdown.vue';
+import CountryDropdown from '@/components/domain/CountryDropdown.vue';
 import WalletBalanceDisplay from '@/components/domain/WalletBalanceDisplay.vue';
-import { useWalletBalance } from '@/composables/useWalletBalance'
+import { useWalletBalance } from '@/composables/useWalletBalance';
+import { useLabelFormatter } from '@/composables/useLabelFormatter';
 
 const breadcrumbs: BreadcrumbItemType[] = [{ title: 'Disburse', href: '/disburse' }];
 
@@ -61,44 +60,54 @@ const props = defineProps<{
         mask: string;
         ttl: string;
     };
+    availableInputs: string;
+    labelMap?: Record<string, string>;
 }>();
 
 const form = useForm({
-    amount: props.data.cash?.amount ?? 1500,
-    currency: props.data.cash?.currency ?? 'PHP',
-
-    secret: props.data.cash?.validation?.secret ?? '',
-    mobile: props.data.cash?.validation?.mobile ?? '',
-    country: props.data.cash?.validation?.country ?? 'PH',
-    location: props.data.cash?.validation?.location ?? '',
-    radius: props.data.cash?.validation?.radius ?? '',
-
-    email: props.data.feedback?.email ?? '',
-    webhook: props.data.feedback?.webhook ?? '',
-
-    message: props.data.rider?.message ?? '',
-    url: props.data.rider?.url ?? '',
-
+    cash: {
+        amount: props.data.cash?.amount ?? 0.0,
+        currency: props.data.cash?.currency ?? 'PHP',
+        validation: {
+            secret: props.data.cash?.validation?.secret ?? '',
+            mobile: props.data.cash?.validation?.mobile ?? '',
+            country: props.data.cash?.validation?.country ?? '',
+            location: props.data.cash?.validation?.location ?? '',
+            radius: props.data.cash?.validation?.radius ?? '',
+        },
+    },
+    inputs: {
+        fields: props.data.inputs?.fields ?? [],
+    },
+    feedback: {
+        mobile: props.data.feedback?.mobile ?? '',
+        email: props.data.feedback?.email ?? '',
+        webhook: props.data.feedback?.webhook ?? '',
+    },
+    rider: {
+        message: props.data.rider?.message ?? '',
+        url: props.data.rider?.url ?? '',
+    },
     count: props.data.count ?? 1,
     prefix: props.data.prefix ?? '',
     mask: props.data.mask ?? '****',
-
+    ttl: props.data.ttl ?? '',
     starts_at: '',
     expires_at: '',
-    payeeMode: 'prefix', // or 'mobile'
+    payeeMode: 'prefix',
 });
 
 function submit() {
     form.post(route('disburse.store'), {
         onSuccess: () => {
-            // fetchBalance(); // 👈 refresh balance after success
+            form.reset();
         },
     });
 }
 
-const showDialog = ref(false)
-const voucherCodes = ref<string[]>([])
-const voucherInput = ref<HTMLInputElement | null>(null)
+const showDialog = ref(false);
+const voucherCodes = ref<string[]>([]);
+const voucherInput = ref<HTMLInputElement | null>(null);
 
 const formattedVoucherCodes = computed(() => voucherCodes.value.join(', '));
 
@@ -109,46 +118,64 @@ useFlashEventWatcher<{ vouchers: string[] }>('vouchers_generated', (data) => {
 
 watch(showDialog, async (open) => {
     if (open) {
-        await nextTick()
-        voucherInput.value?.focus()
-        voucherInput.value?.select()
+        await nextTick();
+        voucherInput.value?.focus();
+        voucherInput.value?.select();
     }
-})
+});
 
 const displayPrefix = computed({
     get() {
-        return form.prefix === props.data.prefix ? 'CASH' : form.prefix
+        return form.prefix === props.data.prefix ? 'CASH' : form.prefix;
     },
     set(value: string) {
-        form.prefix = value === 'CASH' ? props.data.prefix : value
+        form.prefix = value === 'CASH' ? props.data.prefix : value;
+    },
+});
+
+watch(
+    () => form.prefix,
+    (newPrefix) => {
+        if (newPrefix && form.cash.validation.mobile) {
+            form.cash.validation.mobile = '';
+        }
+    },
+);
+
+watch(
+    () => form.cash.validation.mobile,
+    (newMobile) => {
+        if (newMobile && form.prefix) {
+            form.prefix = '';
+        }
+    },
+);
+
+const prefixInput = ref<HTMLInputElement | null>(null);
+const mobileInput = ref<HTMLInputElement | null>(null);
+
+watch(
+    () => form.payeeMode,
+    (mode) => {
+        nextTick(() => {
+            if (mode === 'prefix') prefixInput.value?.focus();
+            else if (mode === 'mobile') mobileInput.value?.focus();
+        });
+    },
+);
+
+const showSecret = ref(false);
+const activeTab = ref<'basic' | 'advanced'>('basic');
+const { formattedBalance, status } = useWalletBalance();
+function toggleInputField(input: string) {
+    const index = form.inputs.fields.indexOf(input);
+    if (index > -1) {
+        form.inputs.fields.splice(index, 1); // remove if already selected
+    } else {
+        form.inputs.fields.push(input); // add if not selected
     }
-})
-
-watch(() => form.prefix, (newPrefix) => {
-    if (newPrefix && form.mobile) {
-        form.mobile = ''
-    }
-})
-
-watch(() => form.mobile, (newMobile) => {
-    if (newMobile && form.prefix) {
-        form.prefix = ''
-    }
-})
-
-const prefixInput = ref<HTMLInputElement | null>(null)
-const mobileInput = ref<HTMLInputElement | null>(null)
-
-watch(() => form.payeeMode, (mode) => {
-    nextTick(() => {
-        if (mode === 'prefix') prefixInput.value?.focus()
-        else if (mode === 'mobile') mobileInput.value?.focus()
-    })
-})
-
-const showSecret = ref(false)
-const activeTab = ref<'basic' | 'advanced'>('basic')
-const { formattedBalance, status } = useWalletBalance()
+}
+const { formatLabel } = useLabelFormatter(props.labelMap ?? {});
 
 </script>
 
@@ -158,24 +185,18 @@ const { formattedBalance, status } = useWalletBalance()
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="mx-auto max-w-3xl space-y-1 rounded bg-white p-6 shadow">
             <h1 class="text-2xl font-bold text-gray-700">Cash Code Generation</h1>
-            <p class="text-sm text-gray-500 mt-1">Escrow Fund Transfer</p>
+            <p class="mt-1 text-sm text-gray-500">Escrow Fund Transfer</p>
 
             <div class="mb-4 flex border-b">
                 <button
                     @click="activeTab = 'basic'"
-                    :class="[
-            'px-4 py-2 font-semibold',
-            activeTab === 'basic' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500'
-        ]"
+                    :class="['px-4 py-2 font-semibold', activeTab === 'basic' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500']"
                 >
                     Basic
                 </button>
                 <button
                     @click="activeTab = 'advanced'"
-                    :class="[
-            'px-4 py-2 font-semibold',
-            activeTab === 'advanced' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500'
-        ]"
+                    :class="['px-4 py-2 font-semibold', activeTab === 'advanced' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500']"
                 >
                     Advanced
                 </button>
@@ -186,17 +207,17 @@ const { formattedBalance, status } = useWalletBalance()
                 <div v-if="activeTab === 'basic'" class="space-y-6">
                     <!-- CASH -->
                     <Collapsible :defaultOpen="true" class="rounded border border-gray-300">
-                        <CollapsibleTrigger as="legend" class="px-4 py-2 text-sm font-semibold text-gray-600 w-full text-left">
+                        <CollapsibleTrigger as="legend" class="w-full px-4 py-2 text-left text-sm font-semibold text-gray-600">
                             Cash
                         </CollapsibleTrigger>
-                        <CollapsibleContent class="p-4 border-t border-gray-300">
+                        <CollapsibleContent class="border-t border-gray-300 p-4">
                             <div class="grid grid-cols-2 gap-4">
-                                <div class="space-y-2 col-span-1">
+                                <div class="col-span-1 space-y-2">
                                     <Label>Amount</Label>
-                                    <Input type="number" v-model="form.amount" autofocus />
-                                    <InputError :message="form.errors.amount" />
+                                    <Input type="number" v-model="form.cash.amount" autofocus />
+                                    <InputError :message="form.errors['cash.amount']" />
                                 </div>
-                                <div class="space-y-2 col-span-1">
+                                <div class="col-span-1 space-y-2">
                                     <Label>Quantity</Label>
                                     <Input type="number" v-model="form.count" />
                                     <InputError :message="form.errors.count" />
@@ -207,10 +228,10 @@ const { formattedBalance, status } = useWalletBalance()
 
                     <!-- PAYEE -->
                     <Collapsible :defaultOpen="false" class="rounded border border-gray-300">
-                        <CollapsibleTrigger as="legend" class="px-4 py-2 text-sm font-semibold text-gray-600 w-full text-left">
+                        <CollapsibleTrigger as="legend" class="w-full px-4 py-2 text-left text-sm font-semibold text-gray-600">
                             Payee
                         </CollapsibleTrigger>
-                        <CollapsibleContent class="p-4 border-t border-gray-300">
+                        <CollapsibleContent class="border-t border-gray-300 p-4">
                             <div class="mb-4 flex gap-4">
                                 <label class="flex items-center gap-2">
                                     <input type="radio" value="mobile" v-model="form.payeeMode" />
@@ -225,7 +246,7 @@ const { formattedBalance, status } = useWalletBalance()
                             <div class="grid grid-cols-2 gap-4">
                                 <!-- Prefix + Secret -->
                                 <template v-if="form.payeeMode === 'prefix'">
-                                    <div class="space-y-2 col-span-1">
+                                    <div class="col-span-1 space-y-2">
                                         <Label>Handle</Label>
                                         <Input
                                             type="text"
@@ -238,17 +259,13 @@ const { formattedBalance, status } = useWalletBalance()
                                     <div class="space-y-2">
                                         <Label>Secret</Label>
                                         <div class="relative">
-                                            <Input
-                                                :type="showSecret ? 'text' : 'password'"
-                                                v-model="form.secret"
-                                                class="pr-16"
-                                            />
+                                            <Input :type="showSecret ? 'text' : 'password'" v-model="form.cash.validation.secret" class="pr-16" />
                                             <Button
                                                 type="button"
                                                 size="sm"
                                                 variant="ghost"
                                                 @click="showSecret = !showSecret"
-                                                class="absolute right-2 top-1/2 -translate-y-1/2"
+                                                class="absolute top-1/2 right-2 -translate-y-1/2"
                                             >
                                                 {{ showSecret ? 'Hide' : 'Show' }}
                                             </Button>
@@ -258,30 +275,26 @@ const { formattedBalance, status } = useWalletBalance()
 
                                 <!-- Mobile + Secret -->
                                 <template v-if="form.payeeMode === 'mobile'">
-                                    <div class="space-y-2 col-span-1">
+                                    <div class="col-span-1 space-y-2">
                                         <Label>Mobile</Label>
                                         <Input
                                             type="text"
-                                            v-model="form.mobile"
+                                            v-model="form.cash.validation.mobile"
                                             ref="mobileInput"
                                             @focus="(e: FocusEvent) => (e.target as HTMLInputElement).select()"
                                         />
-                                        <InputError :message="form.errors.mobile" />
+                                        <InputError :message="form.errors['cash.validation.mobile']" />
                                     </div>
                                     <div class="space-y-2">
                                         <Label>Secret</Label>
                                         <div class="relative">
-                                            <Input
-                                                :type="showSecret ? 'text' : 'password'"
-                                                v-model="form.secret"
-                                                class="pr-16"
-                                            />
+                                            <Input :type="showSecret ? 'text' : 'password'" v-model="form.cash.validation.secret" class="pr-16" />
                                             <Button
                                                 type="button"
                                                 size="sm"
                                                 variant="ghost"
                                                 @click="showSecret = !showSecret"
-                                                class="absolute right-2 top-1/2 -translate-y-1/2"
+                                                class="absolute top-1/2 right-2 -translate-y-1/2"
                                             >
                                                 {{ showSecret ? 'Hide' : 'Show' }}
                                             </Button>
@@ -292,12 +305,8 @@ const { formattedBalance, status } = useWalletBalance()
                                 <!-- Message -->
                                 <div class="col-span-2 space-y-2">
                                     <Label>Message</Label>
-                                    <Input
-                                        type="text"
-                                        v-model="form.message"
-                                        class="w-full"
-                                    />
-                                    <InputError :message="form.errors.message" />
+                                    <Input type="text" v-model="form.rider.message" class="w-full" />
+                                    <InputError :message="form.errors['rider.message']" />
                                 </div>
                             </div>
                         </CollapsibleContent>
@@ -315,24 +324,57 @@ const { formattedBalance, status } = useWalletBalance()
                             <fieldset class="rounded border border-gray-300 p-4">
                                 <div class="grid grid-cols-2 gap-4">
                                     <div class="space-y-2">
-                                        <Label>Email Address</Label>
-                                        <Input type="email" v-model="form.email" class="w-full" />
-                                        <InputError :message="form.errors.email" />
+                                        <Label>Mobile Number</Label>
+                                        <Input type="text" v-model="form.feedback.mobile" autocomplete="mobile" placeholder="e.g., 09171234567" />
+                                        <InputError :message="form.errors['feedback.mobile']" />
                                     </div>
-                                    <!-- Empty column for spacing if needed -->
-                                    <div></div>
+                                    <div class="space-y-2">
+                                        <Label>Email Address</Label>
+                                        <Input type="email" v-model="form.feedback.email" autocomplete="username" />
+                                        <InputError :message="form.errors['feedback.email']" />
+                                    </div>
                                     <div class="col-span-2 space-y-2">
                                         <Label>Webhook URL</Label>
-                                        <Input type="url" v-model="form.webhook" class="w-full" />
-                                        <InputError :message="form.errors.webhook" />
+                                        <Input type="url" v-model="form.feedback.webhook" class="w-full" />
+                                        <InputError :message="form.errors['feedback.webhook']" />
                                     </div>
                                 </div>
                             </fieldset>
                         </CollapsibleContent>
                     </Collapsible>
 
+                    <!-- INPUT FIELDS -->
+                    <Collapsible :defaultOpen="false" class="rounded border border-gray-300">
+                        <CollapsibleTrigger class="w-full rounded border border-gray-300 bg-gray-50 px-4 py-2 text-left font-semibold text-gray-600">
+                            Input Fields
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                            <fieldset class="rounded border border-gray-300 p-4">
+                                <div class="space-y-2">
+                                    <Label class="mb-1 block font-medium">Select Required Inputs</Label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <label
+                                            v-for="input in props.availableInputs.split(',').map(i => i.trim())"
+                                            :key="input"
+                                            class="flex items-center space-x-1 bg-gray-50 px-2 py-1 rounded-md"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                :checked="form.inputs.fields.includes(input)"
+                                                @change="toggleInputField(input)"
+                                                class="form-checkbox text-blue-600 rounded-sm"
+                                            />
+                                            <span class="text-xs text-gray-700 whitespace-nowrap">{{ formatLabel(input) }}</span>
+                                        </label>
+                                    </div>
+                                    <InputError :message="form.errors['inputs.fields']" />
+                                </div>
+                            </fieldset>
+                        </CollapsibleContent>
+                    </Collapsible>
+
                     <!-- RIDER -->
-                    <Collapsible :defaultOpen="true" class="rounded border border-gray-300">
+                    <Collapsible :defaultOpen="false" class="rounded border border-gray-300">
                         <CollapsibleTrigger class="w-full rounded border border-gray-300 bg-gray-50 px-4 py-2 text-left font-semibold text-gray-600">
                             Rider
                         </CollapsibleTrigger>
@@ -341,8 +383,8 @@ const { formattedBalance, status } = useWalletBalance()
                                 <div class="space-y-4">
                                     <div class="space-y-2">
                                         <Label>Landing Page URL</Label>
-                                        <Input type="url" v-model="form.url" class="w-full" />
-                                        <InputError :message="form.errors.url" />
+                                        <Input type="url" v-model="form.rider.url" class="w-full" />
+                                        <InputError :message="form.errors['rider.url']" />
                                     </div>
                                 </div>
                             </fieldset>
@@ -359,13 +401,13 @@ const { formattedBalance, status } = useWalletBalance()
                                 <div class="grid grid-cols-2 gap-4">
                                     <div class="space-y-2">
                                         <Label>Location</Label>
-                                        <Input type="text" v-model="form.location" />
-                                        <InputError :message="form.errors.location" />
+                                        <Input type="text" v-model="form.cash.validation.location" />
+                                        <InputError :message="form.errors['cash.validation.location']" />
                                     </div>
                                     <div class="space-y-2">
                                         <Label>Radius</Label>
-                                        <Input type="text" v-model="form.radius" />
-                                        <InputError :message="form.errors.radius" />
+                                        <Input type="text" v-model="form.cash.validation.radius" />
+                                        <InputError :message="form.errors['cash.validation.radius']" />
                                     </div>
                                 </div>
                             </fieldset>
@@ -380,20 +422,25 @@ const { formattedBalance, status } = useWalletBalance()
                         <CollapsibleContent>
                             <fieldset class="rounded border border-gray-300 p-4">
                                 <div class="mt-4 grid grid-cols-2 gap-4">
-                                    <div class="space-y-2 col-span-1">
+                                    <div class="col-span-1 space-y-2">
                                         <Label>Starts At</Label>
                                         <Input type="datetime-local" v-model="form.starts_at" />
                                         <InputError :message="form.errors.starts_at" />
                                     </div>
-                                    <div class="space-y-2 col-span-1">
+                                    <div class="col-span-1 space-y-2">
                                         <Label>Expires At</Label>
                                         <Input type="datetime-local" v-model="form.expires_at" />
                                         <InputError :message="form.errors.expires_at" />
                                     </div>
-                                    <div class="space-y-2 col-span-1">
-                                        <Label class="mb-1 block font-medium">Mask</Label>
-                                        <Input type="text" v-model="form.mask"/>
+                                    <div class="col-span-1 space-y-2">
+                                        <Label>Mask</Label>
+                                        <Input type="text" v-model="form.mask" placeholder="e.g. ****"/>
                                         <InputError :message="form.errors.mask" />
+                                    </div>
+                                    <div class="col-span-1 space-y-2">
+                                        <Label>Time to Live (TTL)</Label>
+                                        <Input type="text" v-model="form.ttl" placeholder="e.g. PT12H, P2D" />
+                                        <InputError :message="form.errors.ttl" />
                                     </div>
                                 </div>
                             </fieldset>
@@ -403,15 +450,8 @@ const { formattedBalance, status } = useWalletBalance()
 
                 <!-- FORM ACTION BUTTONS WITH BALANCE -->
                 <div class="flex items-center justify-between pt-4">
-                    <!-- Left: Buttons -->
                     <div class="flex items-center gap-4">
-                        <button
-                            type="submit"
-                            class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-                        >
-                            Generate
-                        </button>
-
+                        <button type="submit" class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">Generate</button>
                         <button
                             v-if="voucherCodes.length"
                             type="button"
@@ -421,8 +461,6 @@ const { formattedBalance, status } = useWalletBalance()
                             Show
                         </button>
                     </div>
-
-                    <!-- Right: Balance -->
                     <div class="text-sm text-gray-600 italic">
                         Current Balance:
                         <span class="font-semibold text-gray-800">{{ formattedBalance }}</span>
@@ -434,27 +472,14 @@ const { formattedBalance, status } = useWalletBalance()
 
     <Dialog v-model:open="showDialog">
         <DialogOverlay />
-
         <DialogContent class="max-w-lg">
             <DialogHeader>
                 <DialogTitle>Cash Codes Generated</DialogTitle>
-                <DialogDescription class="text-sm text-gray-500">
-                    Copy and share the cash codes below:
-                </DialogDescription>
+                <DialogDescription class="text-sm text-gray-500"> Copy and share the cash codes below: </DialogDescription>
             </DialogHeader>
-
-            <input
-                type="text"
-                readonly
-                :value="formattedVoucherCodes"
-                class="w-full border rounded px-3 py-2"
-                ref="voucherInput"
-            />
-
+            <input type="text" readonly :value="formattedVoucherCodes" class="w-full rounded border px-3 py-2" ref="voucherInput" />
             <DialogFooter class="mt-4">
-                <DialogClose class="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700">
-                    Close
-                </DialogClose>
+                <DialogClose class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"> Close </DialogClose>
             </DialogFooter>
         </DialogContent>
     </Dialog>

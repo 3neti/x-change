@@ -20,7 +20,7 @@ class CashInstructionData extends Data
     {
         return [
             'amount' => [
-                ['required', 'numeric', 'min:50'],
+                ['required', 'numeric', 'min:0'],
                 config('instructions.cash.amount')
             ],
             'currency' => [

@@ -2,7 +2,7 @@
 
 return [
     'cash' => [
-        'amount' => env('INSTRUCTION_CASH_AMOUNT',      50.0),
+        'amount' => env('INSTRUCTION_CASH_AMOUNT', 0.0),
         'currency' => env('INSTRUCTION_CASH_CURRENCY', 'PHP'),
         'validation_rules' => [
             'secret'   => env('DEFAULT_CASH_VALIDATION_RULES_SECRET'),
@@ -31,8 +31,8 @@ return [
         'message' => env('DEFAULT_RIDER_MESSAGE'),
         'url'     => env('DEFAULT_RIDER_URL'),
     ],
-    'count'  => env('DEFAULT_INSTRUCTION_COUNT',     1),
-    'prefix' => env('DEFAULT_INSTRUCTION_PREFIX', 'AA'),
-    'mask'   => env('DEFAULT_INSTRUCTION_MASK', '****'),
-    'ttl'    => env('DEFAULT_INSTRUCTION_TTL',      12),
+    'count'  => env('DEFAULT_INSTRUCTION_COUNT', 1),
+    'prefix' => env('DEFAULT_INSTRUCTION_PREFIX', ''),
+    'mask'   => env('DEFAULT_INSTRUCTION_MASK', ''),
+    'ttl'    => env('DEFAULT_INSTRUCTION_TTL', 12),
 ];

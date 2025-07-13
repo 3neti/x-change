@@ -26,7 +26,7 @@ class VoucherInstructionsData extends Data
         public CarbonInterval|null     $ttl,              // Expiry time (TTL)
     ){
         $this->applyRulesAndDefaults();
-        $this->ttl = $ttl ?: CarbonInterval::hours(config('instructions.ttl'));
+//        $this->ttl = $ttl ?: CarbonInterval::hours(config('instructions.ttl'));
     }
 
     protected function rulesAndDefaults(): array
@@ -42,7 +42,7 @@ class VoucherInstructionsData extends Data
             ],
             'mask' => [
                 ['required', 'string', 'min:3', 'regex:/\*/'],
-                config('instructions.mask', '***'),
+                config('instructions.mask', ''),
             ],
 //            'ttl' => [
 //                // nullable ISO-8601 duration format:
