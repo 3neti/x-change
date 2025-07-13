@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use LBHurtado\Voucher\Data\InputFieldsData;
+use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Enums\VoucherInputField;
 use Propaganistas\LaravelPhone\Rules\Phone;
 use App\Rules\ValidISODuration;
@@ -71,5 +72,43 @@ class VoucherInstructionDataRequest extends FormRequest
             'starts_at'  => 'nullable|date',
             'expires_at' => 'nullable|date|after_or_equal:starts_at',
         ];
+    }
+
+    // in VoucherInstructionDataRequest
+    public function toData(): VoucherInstructionsData
+    {
+        $validated = $this->validated();
+
+        return VoucherInstructionsData::from([
+            'cash' => [
+                'amount' => $validated['cash']['amount'],
+                'currency' => $validated['cash']['currency'],
+                'validation' => [
+                    'secret'   => $validated['cash']['validation']['secret'] ?? null,
+                    'mobile'   => $validated['cash']['validation']['mobile'] ?? null,
+                    'country'  => $validated['cash']['validation']['country'] ?? null,
+                    'location' => $validated['cash']['validation']['location'] ?? null,
+                    'radius'   => $validated['cash']['validation']['radius'] ?? null,
+                ],
+            ],
+            'inputs' => [
+                'fields' => $validated['inputs']['fields'] ?? null,
+            ],
+            'feedback' => [
+                'email'   => $validated['feedback']['email'] ?? null,
+                'mobile'  => $validated['feedback']['mobile'] ?? null,
+                'webhook' => $validated['feedback']['webhook'] ?? null,
+            ],
+            'rider' => [
+                'message' => $validated['rider']['message'] ?? '',
+                'url'     => $validated['rider']['url'] ?? '',
+            ],
+            'count'      => $validated['count'],
+            'prefix'     => $validated['prefix'] ?? '',
+            'mask'       => $validated['mask'] ?? '',
+            'ttl'        => $validated['ttl'] ?? null,
+            'starts_at'  => $validated['starts_at'] ?? null,
+            'expires_at' => $validated['expires_at'] ?? null,
+        ]);
     }
 }

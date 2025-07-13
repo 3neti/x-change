@@ -19,11 +19,14 @@ class ValidISODuration implements ValidationRule
             $fail('The :attribute must be a string.');
             return;
         }
-
-        try {
-            CarbonInterval::fromString($value);
-        } catch (\Exception) {
+        $ci = CarbonInterval::fromString($value);
+        if ($ci->total('minutes') == 0.0)
             $fail('The :attribute must be a valid ISO-8601 duration string (e.g. PT1H30M or P2D).');
-        }
+//        try {
+//            $ci = CarbonInterval::fromString($value);
+//            dd($ci->total('minutes'));
+//        } catch (\Exception) {
+//            $fail('The :attribute must be a valid ISO-8601 duration string (e.g. PT1H30M or P2D).');
+//        }
     }
 }

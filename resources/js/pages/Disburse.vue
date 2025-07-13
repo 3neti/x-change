@@ -100,7 +100,7 @@ const form = useForm({
 function submit() {
     form.post(route('disburse.store'), {
         onSuccess: () => {
-            form.reset();
+            // form.reset();
         },
     });
 }
@@ -177,6 +177,38 @@ function toggleInputField(input: string) {
 }
 const { formatLabel } = useLabelFormatter(props.labelMap ?? {});
 
+function resetForm() {
+    form.cash = {
+        amount: 0.0,
+        currency: 'PHP',
+        validation: {
+            secret: '',
+            mobile: '',
+            country: '',
+            location: '',
+            radius: '',
+        },
+    };
+    form.inputs = {
+        fields: [],
+    };
+    form.feedback = {
+        mobile: '',
+        email: '',
+        webhook: '',
+    };
+    form.rider = {
+        message: '',
+        url: '',
+    };
+    form.count = 1;
+    form.prefix = '';
+    form.mask = '****';
+    form.ttl = '';
+    form.starts_at = '';
+    form.expires_at = '';
+    form.payeeMode = 'prefix';
+}
 </script>
 
 <template>
@@ -227,7 +259,7 @@ const { formatLabel } = useLabelFormatter(props.labelMap ?? {});
                     </Collapsible>
 
                     <!-- PAYEE -->
-                    <Collapsible :defaultOpen="false" class="rounded border border-gray-300">
+                    <Collapsible :defaultOpen="true" class="rounded border border-gray-300">
                         <CollapsibleTrigger as="legend" class="w-full px-4 py-2 text-left text-sm font-semibold text-gray-600">
                             Payee
                         </CollapsibleTrigger>
@@ -344,7 +376,7 @@ const { formatLabel } = useLabelFormatter(props.labelMap ?? {});
                     </Collapsible>
 
                     <!-- INPUT FIELDS -->
-                    <Collapsible :defaultOpen="false" class="rounded border border-gray-300">
+                    <Collapsible :defaultOpen="true" class="rounded border border-gray-300">
                         <CollapsibleTrigger class="w-full rounded border border-gray-300 bg-gray-50 px-4 py-2 text-left font-semibold text-gray-600">
                             Input Fields
                         </CollapsibleTrigger>
@@ -374,7 +406,7 @@ const { formatLabel } = useLabelFormatter(props.labelMap ?? {});
                     </Collapsible>
 
                     <!-- RIDER -->
-                    <Collapsible :defaultOpen="false" class="rounded border border-gray-300">
+                    <Collapsible :defaultOpen="true" class="rounded border border-gray-300">
                         <CollapsibleTrigger class="w-full rounded border border-gray-300 bg-gray-50 px-4 py-2 text-left font-semibold text-gray-600">
                             Rider
                         </CollapsibleTrigger>
@@ -451,18 +483,27 @@ const { formatLabel } = useLabelFormatter(props.labelMap ?? {});
                 <!-- FORM ACTION BUTTONS WITH BALANCE -->
                 <div class="flex items-center justify-between pt-4">
                     <div class="flex items-center gap-4">
-                        <button type="submit" class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">Generate</button>
-                        <button
+                        <Button type="submit">Generate</Button>
+
+                        <Button
+                            type="button"
+                            variant="link"
+                            class="text-sm"
+                            @click="resetForm"
+                        >
+                            Clear
+                        </Button>
+                        <Button
                             v-if="voucherCodes.length"
                             type="button"
-                            class="rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700"
+                            variant="link"
                             @click="showDialog = true"
                         >
                             Show
-                        </button>
+                        </Button>
                     </div>
                     <div class="text-sm text-gray-600 italic">
-                        Current Balance:
+                        Balance:
                         <span class="font-semibold text-gray-800">{{ formattedBalance }}</span>
                     </div>
                 </div>

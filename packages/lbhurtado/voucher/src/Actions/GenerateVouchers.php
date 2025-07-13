@@ -21,8 +21,8 @@ class GenerateVouchers
 
         // Extract parameters from instructions
         $count = $instructions->count ?? 1; // Use 'count' from instructions or default to 1
-        $prefix = $instructions->prefix ?? config('lbhurtado-voucher.default-prefix', '');
-        $mask = $instructions->mask ?? config('lbhurtado-voucher.default-mask', '******');
+        $prefix = $instructions->prefix ?? config('x-change.generate.prefix');
+        $mask = $instructions->mask ?? config('x-change.generate.mask');
         $ttl = $instructions->ttl instanceof CarbonInterval
             ? $instructions->ttl
             : CarbonInterval::hours(12); // Default TTL to 12 hours if missing
