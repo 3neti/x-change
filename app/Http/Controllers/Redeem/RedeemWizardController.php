@@ -27,7 +27,6 @@ class RedeemWizardController extends Controller
         ]);
     }
 
-    //TODO: rename storeMobile to storeWallet
     public function storeWallet(WalletFormRequest $request, Voucher $voucher): RedirectResponse
     {
         $this->storeWalletData($request, $voucher);

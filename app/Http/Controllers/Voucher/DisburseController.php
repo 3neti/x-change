@@ -13,15 +13,13 @@ use Illuminate\Support\Number;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
+//TODO: test this
 class DisburseController extends Controller
 {
     public function create(Request $request)
     {
-        $cached = Cache::get($this->getCacheKeyForUser($request->user()->id));
-
-        $data = $cached
-            ? VoucherInstructionsData::from($cached)
-            : VoucherInstructionsData::from($this->rawDefaultInstructions());
+        $data = Cache::get($this->getCacheKeyForUser($request->user()->id))
+            ?? VoucherInstructionsData::from($this->rawDefaultInstructions());
 
         return Inertia::render('Disburse', [
             'data' => $data,
@@ -32,6 +30,7 @@ class DisburseController extends Controller
 
     public function store(VoucherInstructionDataRequest $request)
     {
+//        dd($request->all());
         $instructions = $request->toData();
         logger('[DisburseController@store] Parsed instructions', $instructions->toArray());
 

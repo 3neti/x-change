@@ -42,7 +42,7 @@ class VoucherInstructionsData extends Data
             ],
             'mask' => [
                 ['required', 'string', 'min:3', 'regex:/\*/'],
-                config('instructions.mask', ''),
+                config('instructions.mask'),
             ],
 //            'ttl' => [
 //                // nullable ISO-8601 duration format:

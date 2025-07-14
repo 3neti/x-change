@@ -27,6 +27,7 @@ import CountryDropdown from '@/components/domain/CountryDropdown.vue';
 import WalletBalanceDisplay from '@/components/domain/WalletBalanceDisplay.vue';
 import { useWalletBalance } from '@/composables/useWalletBalance';
 import { useLabelFormatter } from '@/composables/useLabelFormatter';
+import { useCleanForm } from '@/composables/useCleanForm'
 
 const breadcrumbs: BreadcrumbItemType[] = [{ title: 'Disburse', href: '/disburse' }];
 
@@ -106,6 +107,8 @@ function submit() {
 }
 
 const showDialog = ref(false);
+const confirmedInstructions = ref<any | null>(null)
+
 const voucherCodes = ref<string[]>([]);
 const voucherInput = ref<HTMLInputElement | null>(null);
 
@@ -209,6 +212,35 @@ function resetForm() {
     form.expires_at = '';
     form.payeeMode = 'prefix';
 }
+
+const excluded = ['cash.currency', 'cash.validation.country', 'payeeMode']
+const { clean } = useCleanForm()
+
+const showConfirmation = ref(false)
+
+function confirmAndSubmit() {
+    showConfirmation.value = true
+}
+
+function submitConfirmed() {
+    confirmedInstructions.value = clean(form, [], excluded)
+
+    form.post(route('disburse.store'), {
+        onSuccess: () => {
+            showDialog.value = true
+            showConfirmation.value = false
+        },
+    })
+}
+
+function copyToClipboard(text: string) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert('Voucher codes copied to clipboard!');
+    }).catch(() => {
+        alert('Failed to copy voucher codes.');
+    });
+}
+
 </script>
 
 <template>
@@ -234,7 +266,8 @@ function resetForm() {
                 </button>
             </div>
 
-            <form @submit.prevent="submit" class="space-y-6">
+<!--            <form @submit.prevent="submit" class="space-y-6">-->
+            <form @submit.prevent="confirmAndSubmit" class="space-y-6">
                 <!-- BASIC TAB CONTENT -->
                 <div v-if="activeTab === 'basic'" class="space-y-6">
                     <!-- CASH -->
@@ -510,17 +543,77 @@ function resetForm() {
             </form>
         </div>
     </AppLayout>
-
     <Dialog v-model:open="showDialog">
         <DialogOverlay />
         <DialogContent class="max-w-lg">
             <DialogHeader>
                 <DialogTitle>Cash Codes Generated</DialogTitle>
-                <DialogDescription class="text-sm text-gray-500"> Copy and share the cash codes below: </DialogDescription>
+                <DialogDescription class="text-sm text-gray-500">
+                    Share the codes and review the submitted instructions.
+                </DialogDescription>
             </DialogHeader>
-            <input type="text" readonly :value="formattedVoucherCodes" class="w-full rounded border px-3 py-2" ref="voucherInput" />
+
+            <!-- Voucher codes preview -->
+            <div class="mt-2">
+                <p class="text-xs font-medium text-gray-600 mb-1">Voucher Codes:</p>
+                <input
+                    type="text"
+                    readonly
+                    :value="formattedVoucherCodes"
+                    class="w-full rounded border px-3 py-2 font-mono text-sm"
+                    ref="voucherInput"
+                />
+                <div class="mt-2 flex justify-end">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        class="text-xs"
+                        @click="copyToClipboard(formattedVoucherCodes)"
+                    >
+                        Copy Codes
+                    </Button>
+                </div>
+            </div>
+
+            <!-- Instruction preview -->
+            <div class="mt-4">
+                <p class="text-xs font-medium text-gray-600 mb-1">Submitted Instructions:</p>
+                <pre class="text-xs text-gray-700 max-h-64 overflow-y-auto whitespace-pre-wrap bg-gray-100 px-3 py-2 rounded">{{ JSON.stringify(confirmedInstructions, null, 2) }}</pre>
+            </div>
+
             <DialogFooter class="mt-4">
-                <DialogClose class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"> Close </DialogClose>
+                <DialogClose class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">Close</DialogClose>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+
+
+
+    <Dialog v-model:open="showConfirmation">
+        <DialogOverlay />
+        <DialogContent class="max-w-lg">
+            <DialogHeader>
+                <DialogTitle>Confirm Instructions</DialogTitle>
+                <DialogDescription class="text-sm text-gray-500">
+                    Please review the voucher instructions before submitting.
+                </DialogDescription>
+            </DialogHeader>
+
+            <!-- Cleaned form preview -->
+            <div class="mt-2 rounded bg-gray-100 px-3 py-2">
+                <p class="text-xs font-medium text-gray-600 mb-1">Instruction Summary:</p>
+                <pre class="text-xs text-gray-700 max-h-64 overflow-y-auto whitespace-pre-wrap">
+{{ JSON.stringify(clean(form, [], excluded), null, 2) }}
+            </pre>
+            </div>
+
+            <DialogFooter class="mt-4 flex justify-end gap-2">
+                <DialogClose as="button" class="rounded bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300">
+                    Cancel
+                </DialogClose>
+                <button @click="submitConfirmed" class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
+                    Confirm & Submit
+                </button>
             </DialogFooter>
         </DialogContent>
     </Dialog>

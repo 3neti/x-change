@@ -67,7 +67,7 @@ onMounted(() => {
                 <div>
                     <p class="text-sm text-gray-500">Amount</p>
                     <div class="text-lg font-medium">
-                        {{ formatCurrency(voucher.cash.amount) }}
+                        {{ formatCurrency(voucher.cash.amount, {isMinor: true}) }}
                     </div>
                 </div>
 

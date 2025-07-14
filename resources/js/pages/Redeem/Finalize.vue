@@ -59,7 +59,7 @@ function submit() {
                     <input
                         id="amount"
                         type="text"
-                        :value="formatCurrency(props.voucher.cash.amount)"
+                        :value="formatCurrency(props.voucher.cash.amount, {isMinor: true})"
                         readonly
                         tabindex="-1"
                         inert
