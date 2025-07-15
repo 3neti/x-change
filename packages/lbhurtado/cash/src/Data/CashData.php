@@ -22,13 +22,13 @@ class CashData extends Data
         public Money $amount,
         public string $currency,
         public ArrayObject $meta,
-        public ?string $secret = null,
         #[WithTransformer(DateTimeInterfaceTransformer::class)]
         #[WithCast(DateTimeInterfaceCast::class, timeZone: 'Asia/Manila')]
         public ?Carbon $expires_on,
         public bool $expired,
         public string $status,
         public array $tags,
+        public ?string $secret = null,
         public ?TransactionData $withdrawTransaction
     ) {}
 
@@ -38,11 +38,11 @@ class CashData extends Data
             amount: $cash->amount,
             currency: $cash->currency,
             meta: $cash->meta,
-            secret: $cash->secret,
             expires_on: $cash->expires_on,
             expired: $cash->expired,
             status: $cash->status,
             tags: $cash->tags->toArray(),
+            secret: $cash->secret,
             withdrawTransaction: $cash->withdrawTransaction ? TransactionData::fromModel($cash->withdrawTransaction) : null
         );
     }

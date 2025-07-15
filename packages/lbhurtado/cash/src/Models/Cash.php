@@ -139,7 +139,7 @@ class Cash extends Model implements ProductInterface
      * @param string|null $reason Optional reason for the status change.
      * @return $this
      */
-    public function setStatus(CashStatus $status, string $reason = null): self
+    public function setStatus(CashStatus $status, ?string $reason = null): self
     {
         // Explicitly call the renamed method from the HasStatuses trait
         $this->traitSetStatus($status->value, $reason);

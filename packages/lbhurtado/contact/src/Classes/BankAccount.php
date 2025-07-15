@@ -22,6 +22,16 @@ class BankAccount
         return $this->account_number;
     }
 
+    public function getBankAccount(): string
+    {
+        return $this->bank_code . ':' . $this->account_number;
+    }
+
+    public function __toString(): string
+    {
+        return $this->getBankAccount();
+    }
+
     public static function fromBankAccount(string $bank_account): BankAccount
     {
         $raw = trim($bank_account);

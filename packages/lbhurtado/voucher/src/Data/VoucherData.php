@@ -36,10 +36,10 @@ class VoucherData extends Data
         public ?Carbon                      $processed_on,
         public bool                         $processed,
         public ?VoucherInstructionsData     $instructions,
-        public ?CashData                    $cash = null,
-        public ?ContactData                 $contact = null,
         /** @var InputData[] */
         public DataCollection               $inputs,
+        public ?CashData                    $cash = null,
+        public ?ContactData                 $contact = null,
 //        public ?ModelData                   $redeemer,
     ) {}
 
@@ -62,9 +62,9 @@ class VoucherData extends Data
                     ? VoucherInstructionsData::from($model->instructions)
                     : null
                 ),
+            inputs: new DataCollection(InputData::class, $model->inputs),
             cash: $model->cash instanceof Cash ? CashData::fromModel($model->cash) : null,
-            contact: $model->contact instanceof Contact ? ContactData::fromModel($model->contact) : null,
-            inputs: new DataCollection(InputData::class, $model->inputs)
+            contact: $model->contact instanceof Contact ? ContactData::fromModel($model->contact) : null
 //            redeemer: $model->redeemer
 //                ? ModelData::fromModel($model->redeemer)
 //                : null,

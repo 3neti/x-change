@@ -44,10 +44,11 @@ test('balance notification is sent live', function () {
 })->skip();
 
 test('balance notification is sent live via sendBalanceNotification', function () {
-    $user = User::factory()->create(['email' => 'lester@lyflyn.net']);
+    $user = User::factory()->create(['email' => 'admin@disburse.cash']);
+    $this->actingAs($user);
     $user->mobile = '09173011987';
-    $user->depositFloat(123.00);
+    $user->depositFloat(537.00);
     $user->save();
 
     $user->sendBalanceNotification();
-})->skip();
+});

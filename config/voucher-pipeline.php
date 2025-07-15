@@ -22,6 +22,7 @@ return [
         \LBHurtado\Voucher\Pipelines\RedeemedVoucher\ValidateRedeemerAndCash::class,
         \App\Pipelines\RedeemedVoucher\PersistInputs::class,
         \LBHurtado\Voucher\Pipelines\RedeemedVoucher\DisburseCash::class,
+        \App\Pipelines\RedeemedVoucher\SendFeedbacks::class,
     ],
 ];
 
