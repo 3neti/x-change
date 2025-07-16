@@ -17,7 +17,7 @@ import {
 
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -241,6 +241,12 @@ function copyToClipboard(text: string) {
     });
 }
 
+onMounted(() => {
+    const mobile = form?.cash?.validation?.mobile ?? ''
+    if (mobile.trim() !== '') {
+        form.payeeMode = 'mobile'
+    }
+})
 </script>
 
 <template>
@@ -586,8 +592,6 @@ function copyToClipboard(text: string) {
             </DialogFooter>
         </DialogContent>
     </Dialog>
-
-
 
     <Dialog v-model:open="showConfirmation">
         <DialogOverlay />
