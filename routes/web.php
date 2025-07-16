@@ -56,6 +56,7 @@ use App\Http\Middleware\Redeem\{
     CheckMobileMiddleware,
     AddInputsMiddleware,
     SignTransactionMiddleware,
+    EnsurePayeeMobile,
     RedeemVoucherMiddleware
 };
 
@@ -98,6 +99,7 @@ Route::prefix('redeem/{voucher}')
             ->middleware([
                 CheckVoucherMiddleware::class,
                 CheckMobileMiddleware::class,
+                EnsurePayeeMobile::class,
                 RedeemVoucherMiddleware::class
             ])
             ->name('redeem.success');
