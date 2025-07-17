@@ -16,7 +16,6 @@ class PersistCash
             'instructions' => $voucher->instructions->toArray(),
         ]);
 
-//        $user = auth()->user();
         $user = $voucher->owner;
 
         Log::debug('[RedeemVoucher] Voucher owner:', [
@@ -32,13 +31,15 @@ class PersistCash
         $instructions = $voucher->instructions;
         $amount       = $instructions->cash->amount;
         $currency     = $instructions->cash->currency;
+        $secret       = $instructions->cash->validation->secret;;
 
-        Log::debug('[PersistCash] Creating Cash record', compact('amount', 'currency'));
+        Log::debug('[PersistCash] Creating Cash record', compact('amount', 'currency', 'secret'));
 
         $cash = Cash::create([
             'amount'   => $amount,
             'currency' => $currency,
             'meta'     => ['notes' => 'change this'],
+            ...($secret ? ['secret' => $secret] : []),
         ]);
 
         $user->pay($cash);

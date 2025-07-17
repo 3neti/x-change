@@ -1,5 +1,7 @@
 <?php
 
+use Illuminate\Support\Facades\Hash;
+use LBHurtado\Cash\Models\Cash;
 use LBHurtado\OmniChannel\Notifications\AdhocNotification;
 use LBHurtado\Wallet\Services\SystemUserResolverService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -27,3 +29,22 @@ test('send notification', function () {
 test('bank codes', function () {
     dd(app(BankRegistry::class)->toCollection());
 })->skip();
+
+test('hash works', function () {
+    $amount = 100;
+    $currency = 'PHP';
+    $secret = 'password';
+    $cash = Cash::create([
+        'amount'   => $amount,
+        'currency' => $currency,
+        'meta'     => ['notes' => 'change this'],
+        'secret'   => $secret,
+    ]);
+
+   $hashed_secret = $cash->secret;
+
+    dump('Hash:', $cash->secret);
+    dump('Driver:', config('hashing.driver'));
+   expect(strlen($hashed_secret))->toBe(60);
+   expect(Hash::check($secret, $hashed_secret))->toBeTrue();
+});

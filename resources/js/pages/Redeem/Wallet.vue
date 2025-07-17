@@ -2,11 +2,11 @@
 <script setup lang="ts">
 import GuestLayout from '@/layouts/legacy/GuestLayout.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
+import { onMounted, ref, watch, nextTick } from 'vue'
+import InputError from '@/components/InputError.vue'
+import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import InputError from '@/components/InputError.vue'
-import { onMounted, ref, watch, nextTick } from 'vue'
 
 interface Bank { code: string; name: string }
 
@@ -14,7 +14,8 @@ const props = defineProps<{
     voucher_code: string
     country?: string
     bank_code?: string
-    banks: Bank[]
+    banks: Bank[],
+    hasSecret: boolean
 }>()
 
 const GCASH_CODE = 'GXCHPHM2XXX'
@@ -30,6 +31,7 @@ const accountNumberInput = ref<HTMLInputElement | null>(null)
 const form = useForm({
     mobile: '',
     country: defaultCountry.value,
+    secret: '',
     bank_code: defaultBankCode.value,
     account_number: '',
 })
@@ -65,27 +67,40 @@ watch(() => form.bank_code, async (newCode, oldCode) => {
 })
 
 const mobileInput = ref()
+const secretInput = ref()
 
 onMounted(() => {
     mobileInput.value?.focus()
 })
 
 function submit() {
-    const payload = {
-        mobile: form.mobile,
-        country: form.country,
-        ...(
-            form.bank_code !== GCASH_CODE ||
-            (form.bank_code === GCASH_CODE && form.account_number !== form.mobile)
-        ) && {
-            bank_code: form.bank_code || null,
-            account_number: form.account_number || null,
-        },
-    }
-
-    router.post(route('redeem.wallet', { voucher: props.voucher_code }), payload, {
-        preserveScroll: true,
-    })
+    form
+        .transform(data => ({
+            ...data,
+            // Only include bank_code + account_number if needed
+            ...(form.bank_code !== GCASH_CODE ||
+                (form.bank_code === GCASH_CODE && form.account_number !== form.mobile)
+                    ? {
+                        bank_code: form.bank_code || null,
+                        account_number: form.account_number || null,
+                    }
+                    : {}
+            ),
+            // Only include secret if props.hasSecret is true
+            ...(props.hasSecret && {
+                secret: form.secret || null,
+            }),
+        }))
+        .post(route('redeem.wallet', { voucher: props.voucher_code }), {
+            preserveScroll: true,
+            preserveState: true,
+            onError: (errors) => {
+                form.reset('secret')
+                secretInput.value?.focus()
+                console.warn('Validation errors:', errors)
+                console.warn('Reactive form.errors:', form.errors)
+            },
+        })
 }
 </script>
 
@@ -103,6 +118,13 @@ function submit() {
 
             <!-- Hidden Country -->
             <input type="hidden" v-model="form.country" />
+
+            <!-- Secret -->
+            <div v-if="props.hasSecret" class="flex flex-col gap-1">
+                <Label for="secret">Secret</Label>
+                <Input id="secret" ref="secretInput" v-model="form.secret" type="password" required />
+                <InputError :message="form.errors.secret" />
+            </div>
 
             <hr class="my-4 border-gray-300 dark:border-gray-700" />
 

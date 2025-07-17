@@ -53,6 +53,7 @@ class Cash extends Model implements ProductInterface
         'value',
         'currency',
         'meta',
+        'secret',
         'expires_on',
     ];
 

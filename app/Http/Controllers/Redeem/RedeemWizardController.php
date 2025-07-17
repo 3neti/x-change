@@ -11,12 +11,11 @@ use LBHurtado\Voucher\Enums\VoucherInputField;
 use App\Http\Requests\WalletFormRequest;
 use LBHurtado\Voucher\Models\Voucher;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\{Arr, Str};
 use Inertia\{Inertia, Response};
+use Illuminate\Support\Arr;
 
 class RedeemWizardController extends Controller
 {
-    //TODO: rename mobile to wallet
     public function wallet(Voucher $voucher): Response
     {
         return Inertia::render('Redeem/Wallet', [
@@ -24,6 +23,7 @@ class RedeemWizardController extends Controller
             'country' => config('x-change.redeem.default_country', 'PH'),
             'bank_code' => '',
             'banks' => $this->getNormalizedBanks(),
+            'hasSecret' => (booL) $voucher->cash->secret
         ]);
     }
 
@@ -180,6 +180,7 @@ class RedeemWizardController extends Controller
         Session::put("redeem.{$voucher->code}.country", $validated['country']);
         Session::put("redeem.{$voucher->code}.bank_code", $validated['bank_code'] ?? null);
         Session::put("redeem.{$voucher->code}.account_number", $validated['account_number'] ?? null);
+        Session::put("redeem.{$voucher->code}.secret", $validated['secret'] ?? null);
     }
 
     /**
