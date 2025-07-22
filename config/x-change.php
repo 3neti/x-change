@@ -113,4 +113,83 @@ return [
 
     ],
 
+    'pricelist' => [
+
+//        'instructions.cash.amount' => [
+//            'price' => 100,
+//            'description' => 'Amount of cash the user will receive',
+//        ],
+//        'instructions.cash.currency' => [
+//            'price' => 110,
+//            'description' => 'Currency of the cash disbursement',
+//        ],
+        'instructions.cash.validation.secret' => [
+            'price' => 120,
+            'description' => 'Secret code required to claim the voucher',
+        ],
+        'instructions.cash.validation.mobile' => [
+            'price' => 130,
+            'description' => 'Mobile number required to redeem',
+        ],
+//        'instructions.cash.validation.country' => [
+//            'price' => 140,
+//            'description' => 'Country of the claimant',
+//        ],
+        'instructions.cash.validation.location' => [
+            'price' => 150,
+            'description' => 'Expected location of redemption',
+        ],
+        'instructions.cash.validation.radius' => [
+            'price' => 160,
+            'description' => 'Radius around the location where redemption is valid',
+        ],
+        'instructions.feedback.email' => [
+            'price' => 170,
+            'description' => 'Email address to send voucher feedback to',
+        ],
+        'instructions.feedback.mobile' => [
+            'price' => 180,
+            'description' => 'Mobile number to send feedback SMS to',
+        ],
+        'instructions.feedback.webhook' => [
+            'price' => 190,
+            'description' => 'Webhook URL to notify after redemption',
+        ],
+        'instructions.rider.message' => [
+            'price' => 200,
+            'description' => 'Message shown to the rider or recipient',
+        ],
+        'instructions.rider.url' => [
+            'price' => 210,
+            'description' => 'Redirect link shown to the user after redemption',
+        ],
+        'instructions.inputs.fields.email' => [
+            'price' => 220,
+            'description' => 'Email input field required from the user',
+        ],
+        'instructions.inputs.fields.mobile' => [
+            'price' => 230,
+            'description' => 'Mobile Number input field required from the user',
+        ],
+        'instructions.inputs.fields.name' => [
+            'price' => 240,
+            'description' => 'Name input field required from the user',
+        ],
+        'instructions.inputs.fields.address' => [
+            'price' => 250,
+            'description' => 'Address input field required from the user',
+        ],
+        'instructions.inputs.fields.birth_date' => [
+            'price' => 260,
+            'description' => 'Birth Date input field required from the user',
+        ],
+        'instructions.inputs.fields.gross_monthly_income' => [
+            'price' => 270,
+            'description' => 'Gross Monthly Income input field required from the user',
+        ],
+        'instructions.inputs.fields.signature' => [
+            'price' => 280,
+            'description' => 'Signature input field required from the user',
+        ],
+    ],
 ];

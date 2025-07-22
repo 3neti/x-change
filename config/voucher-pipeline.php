@@ -8,6 +8,7 @@ return [
         \LBHurtado\Voucher\Pipelines\GeneratedVouchers\RunFraudChecks::class,
         \LBHurtado\Voucher\Pipelines\GeneratedVouchers\ApplyUsageLimits::class,
         \LBHurtado\Voucher\Pipelines\GeneratedVouchers\CreateCashEntities::class,
+
         \LBHurtado\Voucher\Pipelines\GeneratedVouchers\NotifyBatchCreator::class,
         \LBHurtado\Voucher\Pipelines\GeneratedVouchers\LogAuditTrail::class,
         \LBHurtado\Voucher\Pipelines\GeneratedVouchers\MarkAsProcessed::class,
@@ -17,6 +18,7 @@ return [
         \LBHurtado\Voucher\Pipelines\Voucher\CheckBalance::class,
         \LBHurtado\Voucher\Pipelines\Voucher\EscrowAction::class,
         \LBHurtado\Voucher\Pipelines\Voucher\PersistCash::class,
+        \App\Pipelines\GeneratedVoucher\ChargeInstructions::class,
     ],
     'post-redemption' => [
         \LBHurtado\Voucher\Pipelines\RedeemedVoucher\ValidateRedeemerAndCash::class,

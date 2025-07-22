@@ -38,7 +38,7 @@ class VoucherInstructionDataRequest extends FormRequest
 
             'inputs' => ['nullable', 'array'],
             'inputs.fields' => ['nullable', 'array'],
-            'inputs.fields.*' => ['string', 'in:' . implode(',', array_column(VoucherInputField::cases(), 'value'))],
+            'inputs.fields.*' => ['nullable', 'string', 'in:' . implode(',', array_column(VoucherInputField::cases(), 'value'))],
 
             'feedback.mobile'   => ['nullable', (new Phone)->country('PH')->type('mobile')],
             'feedback.email'    => 'nullable|email',

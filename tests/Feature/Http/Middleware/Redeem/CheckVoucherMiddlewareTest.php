@@ -30,11 +30,15 @@ it('fails when voucher is not redeemable', function () {
         ->with($voucher->code)
         ->andReturnFalse();
 
-    $this->get("/test-check-voucher/{$voucher->code}")
-        ->assertStatus(400); // BAD_REQUEST
+    $this->get("/test-check-voucher/{$voucher->code}", ['Accept' => 'application/json'])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('voucher_code')
+        ->assertJsonPath('errors.voucher_code.0', 'This cash code is not redeemable.');
 });
 
 it('fails when voucher is not found', function () {
-    $this->get('/test-check-voucher/INVALID')
-        ->assertNotFound(); // 404 from Laravel route model binding
+    $this->get('/test-check-voucher/INVALID', ['Accept' => 'application/json'])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('voucher_code')
+        ->assertJsonPath('errors.voucher_code.0', 'Cash code not found.');
 });

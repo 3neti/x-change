@@ -119,6 +119,12 @@ it('traverses rider message', function (Voucher $voucher) {
     expect(traverse($voucher, 'instructions.rider.message'))->toBe('Welcome!');
 })->with('voucher');
 
+it('traverses inputs email, mobile but not signature', function (Voucher $voucher) {
+    expect(traverse($voucher, 'instructions.inputs.fields.email'))->toBeTrue();
+    expect(traverse($voucher, 'instructions.inputs.fields.mobile'))->toBeTrue();
+    expect(traverse($voucher, 'instructions.inputs.fields.signature'))->toBeFalse();
+})->with('voucher');
+
 it('returns default for non-existent path', function (Voucher $voucher) {
     expect(traverse($voucher, 'non.existent.path', 'default'))->toBe('default');
 })->with('voucher');
