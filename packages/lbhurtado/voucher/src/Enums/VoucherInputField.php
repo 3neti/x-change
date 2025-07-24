@@ -18,4 +18,35 @@ enum VoucherInputField: string
     {
         return implode(',', array_column(self::cases(), 'value'));
     }
+    public static function options(): array
+    {
+        return array_map(
+            fn(self $case) => [
+                'label' => str(self::label($case))->headline()->toString(),
+                'value' => $case->value,
+            ],
+            self::cases()
+        );
+    }
+
+    protected static function label(self $case): string
+    {
+        return match ($case) {
+            self::NAME => 'Full Name',
+            self::EMAIL => 'Email Address',
+            self::MOBILE => 'Mobile Number',
+            self::REFERENCE_CODE => 'Reference Code',
+            self::SIGNATURE => 'Signature',
+            self::ADDRESS => 'Residential Address',
+            self::BIRTH_DATE => 'Birth Date',
+            self::GROSS_MONTHLY_INCOME => 'Gross Monthly Income',
+            // Add more custom labels here as needed
+            default => $case->value,
+        };
+    }
+
+    public static function values(): array
+    {
+        return array_column(self::cases(), 'value');
+    }
 }

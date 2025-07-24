@@ -18,7 +18,10 @@ class InstructionItemSeeder extends Seeder
                 InstructionItem::attributesFromIndex($index, [
                     'price' => $data['price'],
                     'currency' => 'PHP',
-                    'meta' => ['description' => $data['description']],
+                    'meta' => [
+                        'description' => $data['description'] ?? null,
+                        ...(!empty($data['label']) ? ['label' => $data['label']] : []),
+                    ],
                 ])
             );
         }

@@ -109,20 +109,26 @@ it('traverses cash amount', function (Voucher $voucher) {
 
 it('traverses cash validation mobile', function (Voucher $voucher) {
     expect(traverse($voucher, 'instructions.cash.validation.mobile'))->toBe('09171234567');
+    expect(traverse($voucher->getData()->instructions, 'cash.validation.mobile'))->toBe('09171234567');
 })->with('voucher');
 
 it('traverses feedback webhook', function (Voucher $voucher) {
     expect(traverse($voucher, 'instructions.feedback.webhook'))->toBe('https://acme.com/webhook');
+    expect(traverse($voucher->getData()->instructions, 'feedback.webhook'))->toBe('https://acme.com/webhook');
 })->with('voucher');
 
 it('traverses rider message', function (Voucher $voucher) {
     expect(traverse($voucher, 'instructions.rider.message'))->toBe('Welcome!');
+    expect(traverse($voucher->getData()->instructions, 'rider.message'))->toBe('Welcome!');
 })->with('voucher');
 
 it('traverses inputs email, mobile but not signature', function (Voucher $voucher) {
     expect(traverse($voucher, 'instructions.inputs.fields.email'))->toBeTrue();
     expect(traverse($voucher, 'instructions.inputs.fields.mobile'))->toBeTrue();
     expect(traverse($voucher, 'instructions.inputs.fields.signature'))->toBeFalse();
+    expect(traverse($voucher->getData()->instructions, 'inputs.fields.email'))->toBeTrue();
+    expect(traverse($voucher->getData()->instructions, 'inputs.fields.mobile'))->toBeTrue();
+    expect(traverse($voucher->getData()->instructions, 'inputs.fields.signature'))->toBeFalse();
 })->with('voucher');
 
 it('returns default for non-existent path', function (Voucher $voucher) {

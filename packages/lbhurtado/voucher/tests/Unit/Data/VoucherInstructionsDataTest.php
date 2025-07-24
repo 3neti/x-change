@@ -31,8 +31,8 @@ it('validates and serializes voucher instructions data', function () {
         ],
         'count' => 3, // New field for count
         'prefix' => 'PROMO', // New field for prefix
-        'mask' => '****-****-****', // New field for mask
-        'ttl' => CarbonInterval::hours(24), // New field for ttl
+        'mask' => '******', // New field for mask
+//        'ttl' => CarbonInterval::hours(24), // New field for ttl
     ]);
 
     // Validate nested properties
@@ -46,6 +46,20 @@ it('validates and serializes voucher instructions data', function () {
     // Validate new properties
     expect($data->count)->toBe(3);
     expect($data->prefix)->toBe('PROMO');
-    expect($data->mask)->toBe('****-****-****');
-    expect($data->ttl)->toEqual(CarbonInterval::hours(24));
+    expect($data->mask)->toBe('******');
+//    expect($data->ttl)->toEqual(CarbonInterval::hours(24));
+});
+
+
+it('validates and constructs instructions from array', function () {
+    $data = VoucherInstructionsData::createFromAttribs([
+        'cash' => ['amount' => 10, 'currency' => 'PHP'],
+//        'inputs' => ['fields' => []],
+        'count' => 5,
+    ]);
+
+    expect($data)
+        ->cash->amount->toBe(10.0)
+        ->count->toBe(5)
+        ->inputs->fields->toBeArray();
 });

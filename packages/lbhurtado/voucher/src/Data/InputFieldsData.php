@@ -20,7 +20,7 @@ class InputFieldsData extends Data
      */
     public function __construct(
         #[WithCast(EnumCast::class, VoucherInputField::class)]
-        public array $fields
+        public array|null $fields = []
     ) {
         $this->applyRulesAndDefaults();
 //        $this->fields = empty($fields) ? config('instructions.input_fields') : $fields;
@@ -28,13 +28,29 @@ class InputFieldsData extends Data
 
     public static function fromArray(array $input): self
     {
-        $fields = $input['fields'] ?? $input;
+        // ✅ Ensure 'fields' exists and is an array
+        $fields = isset($input['fields']) && is_array($input['fields'])
+            ? $input['fields']
+            : [];
 
-        return new self(array_map(
+        // 🧼 Normalize to VoucherInputField enums
+        $fields = array_map(
             fn ($field) => VoucherInputField::from($field),
             $fields
-        ));
+        );
+
+        return new self($fields);
     }
+
+//    public static function fromArray(array $input): self
+//    {
+//        $fields = $input['fields'] ?? $input;
+//
+//        return new self(array_map(
+//            fn ($field) => VoucherInputField::from($field),
+//            $fields
+//        ));
+//    }
 
     public function contains(VoucherInputField $field): bool
     {
@@ -65,4 +81,20 @@ class InputFieldsData extends Data
             ],
         ];
     }
+
+//    public static function from(...$payloads): static
+//    {
+//        /** Ensure 'fields' is always an array */
+//        if (!isset($payloads[0]['fields']) || !is_array($payloads[0]['fields'])) {
+//            $payloads[0]['fields'] = [];
+//        }
+//
+//        // Normalize each field into a VoucherInputField enum instance
+//        $payloads[0]['fields'] = array_map(
+//            fn ($field) => VoucherInputField::from($field),
+//            $payloads[0]['fields']
+//        );
+//
+//        return parent::from(...$payloads);
+//    }
 }

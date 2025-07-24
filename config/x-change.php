@@ -115,79 +115,85 @@ return [
 
     'pricelist' => [
 
-//        'instructions.cash.amount' => [
+//        'cash.amount' => [
 //            'price' => 100,
 //            'description' => 'Amount of cash the user will receive',
 //        ],
-//        'instructions.cash.currency' => [
+//        'cash.currency' => [
 //            'price' => 110,
 //            'description' => 'Currency of the cash disbursement',
 //        ],
-        'instructions.cash.validation.secret' => [
+        'cash.validation.secret' => [
             'price' => 120,
             'description' => 'Secret code required to claim the voucher',
         ],
-        'instructions.cash.validation.mobile' => [
+        'cash.validation.mobile' => [
             'price' => 130,
             'description' => 'Mobile number required to redeem',
         ],
-//        'instructions.cash.validation.country' => [
+//        'cash.validation.country' => [
 //            'price' => 140,
 //            'description' => 'Country of the claimant',
 //        ],
-        'instructions.cash.validation.location' => [
+        'cash.validation.location' => [
             'price' => 150,
             'description' => 'Expected location of redemption',
         ],
-        'instructions.cash.validation.radius' => [
+        'cash.validation.radius' => [
             'price' => 160,
             'description' => 'Radius around the location where redemption is valid',
         ],
-        'instructions.feedback.email' => [
+        'feedback.email' => [
             'price' => 170,
+            'label' => 'Email Address',
             'description' => 'Email address to send voucher feedback to',
         ],
-        'instructions.feedback.mobile' => [
+        'feedback.mobile' => [
             'price' => 180,
+            'label' => 'Mobile Number',
             'description' => 'Mobile number to send feedback SMS to',
         ],
-        'instructions.feedback.webhook' => [
+        'feedback.webhook' => [
             'price' => 190,
+            'label' => 'Webhook URL',
             'description' => 'Webhook URL to notify after redemption',
         ],
-        'instructions.rider.message' => [
+        'rider.message' => [
             'price' => 200,
+            'label' => 'Rider Message',
             'description' => 'Message shown to the rider or recipient',
         ],
-        'instructions.rider.url' => [
+        'rider.url' => [
             'price' => 210,
+            'label' => 'Rider URL',
             'description' => 'Redirect link shown to the user after redemption',
         ],
-        'instructions.inputs.fields.email' => [
+        'inputs.fields.email' => [
             'price' => 220,
             'description' => 'Email input field required from the user',
         ],
-        'instructions.inputs.fields.mobile' => [
+        'inputs.fields.mobile' => [
             'price' => 230,
             'description' => 'Mobile Number input field required from the user',
         ],
-        'instructions.inputs.fields.name' => [
+        'inputs.fields.name' => [
             'price' => 240,
             'description' => 'Name input field required from the user',
         ],
-        'instructions.inputs.fields.address' => [
+        'inputs.fields.address' => [
             'price' => 250,
+            'label' => 'Full Address',
             'description' => 'Address input field required from the user',
         ],
-        'instructions.inputs.fields.birth_date' => [
+        'inputs.fields.birth_date' => [
             'price' => 260,
             'description' => 'Birth Date input field required from the user',
         ],
-        'instructions.inputs.fields.gross_monthly_income' => [
+        'inputs.fields.gross_monthly_income' => [
             'price' => 270,
             'description' => 'Gross Monthly Income input field required from the user',
         ],
-        'instructions.inputs.fields.signature' => [
+        'inputs.fields.signature' => [
             'price' => 280,
             'description' => 'Signature input field required from the user',
         ],

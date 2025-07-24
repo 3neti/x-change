@@ -1,7 +1,6 @@
 <?php
 
 use App\Pipelines\GeneratedVoucher\ChargeInstructions;
-use App\Http\Requests\VoucherInstructionDataRequest;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use LBHurtado\Voucher\Actions\GenerateVouchers;
@@ -9,6 +8,8 @@ use App\Repositories\InstructionItemRepository;
 use LBHurtado\Wallet\Actions\TopupWalletAction;
 use Illuminate\Support\Facades\Config;
 use LBHurtado\Voucher\Models\Voucher;
+use App\Data\CostBreakdownData;
+use App\Actions\CalculateCost;
 use App\Models\User;
 
 uses(RefreshDatabase::class);
@@ -46,59 +47,59 @@ beforeEach(function () {
  */
 dataset('instructions', function () {
     return [
-        'secret validation only' => [ 'instructions.cash.validation.secret', $values = ['LESLIE'], $tariff = 1.2, [
+        'secret validation only' => [ 'cash.validation.secret', $values = ['LESLIE'], $tariff = 1.2, [
             'cash' => ['amount' => 0, 'currency' => 'PHP', 'validation' => ['secret' => $values[0]]],
             'inputs' => ['fields' => []],
             'count' => 1,
         ]],
-        'mobile validation only' => [ 'instructions.cash.validation.mobile', $values = ['09467438575'], $tariff = 1.3, [
+        'mobile validation only' => [ 'cash.validation.mobile', $values = ['09467438575'], $tariff = 1.3, [
             'cash' => ['amount' => 0, 'currency' => 'PHP', 'validation' => ['mobile' => $values[0]]],
             'inputs' => ['fields' => []],
             'count' => 1,
         ]],
-        'email feedback only' => [ 'instructions.feedback.email', $values = ['lester@hurtado.ph'], $tariff = 1.7, [
+        'email feedback only' => [ 'feedback.email', $values = ['lester@hurtado.ph'], $tariff = 1.7, [
             'cash' => ['amount' => 0, 'currency' => 'PHP', 'validation' => []],
             'inputs' => ['fields' => []],
             'feedback' => ['email' => $values[0]],
             'count' => 1,
         ]],
-        'message rider only' => [ 'instructions.rider.message', $values = ['The quick brown fox...'], $tariff = 2.0, [
+        'message rider only' => [ 'rider.message', $values = ['The quick brown fox...'], $tariff = 2.0, [
             'cash' => ['amount' => 0, 'currency' => 'PHP', 'validation' => []],
             'inputs' => ['fields' => []],
             'rider' => ['message' => $values[0]],
             'count' => 1,
         ]],
-        'email inputs only' => [ 'instructions.inputs.fields.email', $values = [true], $tariff = 2.2, [
+        'email inputs only' => [ 'inputs.fields.email', $values = [true], $tariff = 2.2, [
             'cash' => ['amount' => 0, 'currency' => 'PHP', 'validation' => []],
             'inputs' => ['fields' => ['email']],
             'count' => 1,
         ]],
-        'mobile inputs only' => [ 'instructions.inputs.fields.mobile', $values = [true], $tariff = 2.3, [
+        'mobile inputs only' => [ 'inputs.fields.mobile', $values = [true], $tariff = 2.3, [
             'cash' => ['amount' => 0, 'currency' => 'PHP', 'validation' => []],
             'inputs' => ['fields' => ['mobile']],
             'count' => 1,
         ]],
-        'name inputs only' => [ 'instructions.inputs.fields.name', $values = [true], $tariff = 2.4, [
+        'name inputs only' => [ 'inputs.fields.name', $values = [true], $tariff = 2.4, [
             'cash' => ['amount' => 0, 'currency' => 'PHP', 'validation' => []],
             'inputs' => ['fields' => ['name']],
             'count' => 1,
         ]],
-        'address inputs only' => [ 'instructions.inputs.fields.address', $values = [true], $tariff = 2.5, [
+        'address inputs only' => [ 'inputs.fields.address', $values = [true], $tariff = 2.5, [
             'cash' => ['amount' => 0, 'currency' => 'PHP', 'validation' => []],
             'inputs' => ['fields' => ['address']],
             'count' => 1,
         ]],
-        'birth date inputs only' => [ 'instructions.inputs.fields.birth_date', $values = [true], $tariff = 2.6, [
+        'birth date inputs only' => [ 'inputs.fields.birth_date', $values = [true], $tariff = 2.6, [
             'cash' => ['amount' => 0, 'currency' => 'PHP', 'validation' => []],
             'inputs' => ['fields' => ['birth_date']],
             'count' => 1,
         ]],
-        'gmi inputs only' => [ 'instructions.inputs.fields.gross_monthly_income', $values = [true], $tariff = 2.7, [
+        'gmi inputs only' => [ 'inputs.fields.gross_monthly_income', $values = [true], $tariff = 2.7, [
             'cash' => ['amount' => 0, 'currency' => 'PHP', 'validation' => []],
             'inputs' => ['fields' => ['gross_monthly_income']],
             'count' => 1,
         ]],
-        'signature inputs only' => [ 'instructions.inputs.fields.signature', $values = [true], $tariff = 2.8, [
+        'signature inputs only' => [ 'inputs.fields.signature', $values = [true], $tariff = 2.8, [
             'cash' => ['amount' => 0, 'currency' => 'PHP', 'validation' => []],
             'inputs' => ['fields' => ['signature']],
             'count' => 1,
@@ -117,7 +118,7 @@ test('charge instructions apply correct tariff to instruction wallet', function 
     $instruction_item = app(InstructionItemRepository::class)->findByIndex($index);
     $preChargingInstructionBalance = (float) $instruction_item->wallet->balanceFloat;
 
-    $voucher = generate_voucher($instructions);
+    $voucher = GenerateVouchers::run($instructions)->first();
     $owner = $voucher->owner;
     $preChargingOwnerBalance = (float) $owner->balanceFloat;
 
@@ -125,7 +126,7 @@ test('charge instructions apply correct tariff to instruction wallet', function 
         ->and($preChargingInstructionBalance)->toBe(0.0);
 
     /** Act: Apply the charge manually */
-    $pipe = new ChargeInstructions;
+    $pipe = app(ChargeInstructions::class);
     $result = $pipe->handle($voucher, fn ($v) => $v);
 
     /** Assert: Voucher unchanged and balances correct */
@@ -135,45 +136,17 @@ test('charge instructions apply correct tariff to instruction wallet', function 
         ->and((float) $owner->balanceFloat)->toBe($preChargingOwnerBalance - $tariff);
 })->with('instructions');
 
-/**
- * Helper to validate and normalize instruction data using the form request,
- * and generate a voucher from it.
- */
-function generate_voucher(array $voucher_instructions): Voucher
-{
-    $validated = validator($voucher_instructions, (new VoucherInstructionDataRequest)->rules())->validate();
+test('calculate cost returns correct component breakdown and total', function ($index, $values, $tariff, $instructions) {
+    $data = VoucherInstructionsData::createFromAttribs($instructions);
+    $result = CalculateCost::run($data);
 
-    $data_array = [
-        'cash' => [
-            'amount' => $validated['cash']['amount'],
-            'currency' => $validated['cash']['currency'],
-            'validation' => [
-                'secret'   => $validated['cash']['validation']['secret'] ?? null,
-                'mobile'   => $validated['cash']['validation']['mobile'] ?? null,
-                'country'  => $validated['cash']['validation']['country'] ?? null,
-                'location' => $validated['cash']['validation']['location'] ?? null,
-                'radius'   => $validated['cash']['validation']['radius'] ?? null,
-            ],
-        ],
-        'inputs' => [
-            'fields' => $validated['inputs']['fields'] ?? null,
-        ],
-        'feedback' => [
-            'email'   => $validated['feedback']['email'] ?? null,
-            'mobile'  => $validated['feedback']['mobile'] ?? null,
-            'webhook' => $validated['feedback']['webhook'] ?? null,
-        ],
-        'rider' => [
-            'message' => $validated['rider']['message'] ?? '',
-            'url'     => $validated['rider']['url'] ?? '',
-        ],
-        'count'      => $validated['count'],
-        'prefix'     => $validated['prefix'] ?? '',
-        'mask'       => $validated['mask'] ?? '',
-        'ttl'        => $validated['ttl'] ?? null,
-        'starts_at'  => $validated['starts_at'] ?? null,
-        'expires_at' => $validated['expires_at'] ?? null,
-    ];
+    $item = app(InstructionItemRepository::class)->findByIndex($index);
+    $label = $item->meta['description'] ?? $item->name;
 
-    return GenerateVouchers::run(VoucherInstructionsData::from($data_array))->first();
-}
+    expect($result)->toBeInstanceOf(CostBreakdownData::class)
+        ->and($result->breakdown)->toHaveKey('cash')
+        ->and($result->breakdown)->toHaveKey($label)
+        ->and($result->breakdown['cash'])->toBe(0.0)
+        ->and((float) $result->breakdown[$label])->toBe($tariff)
+        ->and($result->total)->toBe((float) ($result->breakdown['cash'] + $result->breakdown[$label]));
+})->with('instructions');

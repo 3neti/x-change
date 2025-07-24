@@ -1,12 +1,11 @@
 <?php
 
-namespace App\Rules;
+namespace LBHurtado\Voucher\Rules;
 
-use Closure;
 use Carbon\CarbonInterval;
+use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 
-/** @deprecated  */
 class ValidISODuration implements ValidationRule
 {
     /**

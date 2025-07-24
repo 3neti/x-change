@@ -28,6 +28,11 @@ import WalletBalanceDisplay from '@/components/domain/WalletBalanceDisplay.vue';
 import { useWalletBalance } from '@/composables/useWalletBalance';
 import { useLabelFormatter } from '@/composables/useLabelFormatter';
 import { useCleanForm } from '@/composables/useCleanForm'
+import axios from 'axios';
+import InputExtra from '@/components/domain/InputExtra.vue';
+import { useCostBreakdown } from '@/composables/useCostBreakdown'
+import { useFormatCurrency } from '@/composables/useFormatCurrency'
+import get from 'lodash/get'
 
 const breadcrumbs: BreadcrumbItemType[] = [{ title: 'Disburse', href: '/disburse' }];
 
@@ -213,7 +218,8 @@ function resetForm() {
     form.payeeMode = 'prefix';
 }
 
-const excluded = ['cash.currency', 'cash.validation.country', 'payeeMode']
+// const excluded = ['cash.currency', 'cash.validation.country', 'payeeMode']
+const excluded = ['payeeMode']
 const { clean } = useCleanForm()
 
 const showConfirmation = ref(false)
@@ -247,6 +253,20 @@ onMounted(() => {
         form.payeeMode = 'mobile'
     }
 })
+
+const { getCostComponent, costBreakdown, loading } = useCostBreakdown(form, excluded)
+const formatCurrency = useFormatCurrency()
+
+function getCostMessage(index: string): string {
+    const raw = getCostComponent(index)
+    return raw ? (formatCurrency(Number(raw), { detailed: false }) as string) : ''
+}
+
+function getTotalCost(): string {
+    const raw = costBreakdown.value?.total * form.count
+    return raw ? (formatCurrency(Number(raw), { detailed: false }) as string) : ''
+}
+
 </script>
 
 <template>
@@ -286,7 +306,7 @@ onMounted(() => {
                                 <div class="col-span-1 space-y-2">
                                     <Label>Amount</Label>
                                     <Input type="number" v-model="form.cash.amount" autofocus />
-                                    <InputError :message="form.errors['cash.amount']" />
+                                    <InputError :message="get(form.errors, 'cash.amount')" />
                                 </div>
                                 <div class="col-span-1 space-y-2">
                                     <Label>Quantity</Label>
@@ -341,6 +361,7 @@ onMounted(() => {
                                                 {{ showSecret ? 'Hide' : 'Show' }}
                                             </Button>
                                         </div>
+                                        <InputExtra :message="getCostMessage('cash.validation.secret')" />
                                     </div>
                                 </template>
 
@@ -354,7 +375,10 @@ onMounted(() => {
                                             ref="mobileInput"
                                             @focus="(e: FocusEvent) => (e.target as HTMLInputElement).select()"
                                         />
-                                        <InputError :message="form.errors['cash.validation.mobile']" />
+                                        <div class="text-right">
+                                            <InputExtra :message="getCostMessage('cash.validation.mobile')" />
+                                        </div>
+                                        <InputError :message="get(form.errors, 'cash.validation.mobile')" />
                                     </div>
                                     <div class="space-y-2">
                                         <Label>Secret</Label>
@@ -370,6 +394,9 @@ onMounted(() => {
                                                 {{ showSecret ? 'Hide' : 'Show' }}
                                             </Button>
                                         </div>
+                                        <div class="text-right">
+                                            <InputExtra :message="getCostMessage('cash.validation.secret')" />
+                                        </div>
                                     </div>
                                 </template>
 
@@ -377,7 +404,10 @@ onMounted(() => {
                                 <div class="col-span-2 space-y-2">
                                     <Label>Message</Label>
                                     <Input type="text" v-model="form.rider.message" class="w-full" />
-                                    <InputError :message="form.errors['rider.message']" />
+                                    <div class="text-right">
+                                        <InputExtra :message="getCostMessage('rider.message')" />
+                                    </div>
+                                    <InputError :message="get(form.errors, 'rider.message')" />
                                 </div>
                             </div>
                         </CollapsibleContent>
@@ -397,17 +427,26 @@ onMounted(() => {
                                     <div class="space-y-2">
                                         <Label>Mobile Number</Label>
                                         <Input type="text" v-model="form.feedback.mobile" autocomplete="mobile" placeholder="e.g., 09171234567" />
-                                        <InputError :message="form.errors['feedback.mobile']" />
+                                        <div class="text-right">
+                                            <InputExtra :message="getCostMessage('feedback.mobile')" />
+                                        </div>
+                                        <InputError :message="get(form.errors, 'feedback.mobile')" />
                                     </div>
                                     <div class="space-y-2">
                                         <Label>Email Address</Label>
                                         <Input type="email" v-model="form.feedback.email" autocomplete="username" />
-                                        <InputError :message="form.errors['feedback.email']" />
+                                        <div class="text-right">
+                                            <InputExtra :message="getCostMessage('feedback.email')" />
+                                        </div>
+                                        <InputError :message="get(form.errors, 'feedback.email')" />
                                     </div>
                                     <div class="col-span-2 space-y-2">
                                         <Label>Webhook URL</Label>
                                         <Input type="url" v-model="form.feedback.webhook" class="w-full" />
-                                        <InputError :message="form.errors['feedback.webhook']" />
+                                        <div class="text-right">
+                                            <InputExtra :message="getCostMessage('feedback.webhook')" />
+                                        </div>
+                                        <InputError :message="get(form.errors, 'feedback.webhook')" />
                                     </div>
                                 </div>
                             </fieldset>
@@ -427,18 +466,29 @@ onMounted(() => {
                                         <label
                                             v-for="input in props.availableInputs.split(',').map(i => i.trim())"
                                             :key="input"
-                                            class="flex items-center space-x-1 bg-gray-50 px-2 py-1 rounded-md"
+                                            class="flex items-center justify-between w-full bg-gray-50 px-2 py-1 rounded-md text-xs text-gray-700"
                                         >
-                                            <input
-                                                type="checkbox"
-                                                :checked="form.inputs.fields.includes(input)"
-                                                @change="toggleInputField(input)"
-                                                class="form-checkbox text-blue-600 rounded-sm"
-                                            />
-                                            <span class="text-xs text-gray-700 whitespace-nowrap">{{ formatLabel(input) }}</span>
+                                            <!-- Left side: checkbox + label -->
+                                            <div class="flex items-center space-x-1">
+                                                <input
+                                                    type="checkbox"
+                                                    :checked="form.inputs.fields.includes(input)"
+                                                    @change="toggleInputField(input)"
+                                                    class="form-checkbox text-blue-600 rounded-sm"
+                                                />
+                                                <span class="whitespace-nowrap">{{ formatLabel(input) }}</span>
+                                            </div>
+
+                                            <!-- Right side: Cost -->
+                                            <span
+                                                v-if="getCostMessage(`inputs.fields.${input}`)"
+                                                class="text-[0.7rem] text-gray-500"
+                                            >
+                    {{ getCostMessage(`inputs.fields.${input}`) }}
+                </span>
                                         </label>
                                     </div>
-                                    <InputError :message="form.errors['inputs.fields']" />
+                                    <InputError :message="get(form.errors, 'inputs.fields')" />
                                 </div>
                             </fieldset>
                         </CollapsibleContent>
@@ -455,7 +505,10 @@ onMounted(() => {
                                     <div class="space-y-2">
                                         <Label>Landing Page URL</Label>
                                         <Input type="url" v-model="form.rider.url" class="w-full" />
-                                        <InputError :message="form.errors['rider.url']" />
+                                        <div class="text-right">
+                                            <InputExtra :message="getCostMessage('rider.url')" />
+                                        </div>
+                                        <InputError :message="get(form.errors, 'rider.url')" />
                                     </div>
                                 </div>
                             </fieldset>
@@ -473,12 +526,18 @@ onMounted(() => {
                                     <div class="space-y-2">
                                         <Label>Location</Label>
                                         <Input type="text" v-model="form.cash.validation.location" />
-                                        <InputError :message="form.errors['cash.validation.location']" />
+                                        <div class="text-right">
+                                            <InputExtra :message="getCostMessage('cash.validation.location')" />
+                                        </div>
+                                        <InputError :message="get(form.errors, 'cash.validation.location')" />
                                     </div>
                                     <div class="space-y-2">
                                         <Label>Radius</Label>
                                         <Input type="text" v-model="form.cash.validation.radius" />
-                                        <InputError :message="form.errors['cash.validation.radius']" />
+                                        <div class="text-right">
+                                            <InputExtra :message="getCostMessage('cash.validation.radius')" />
+                                        </div>
+                                        <InputError :message="get(form.errors, 'cash.validation.radius')" />
                                     </div>
                                 </div>
                             </fieldset>
@@ -541,9 +600,21 @@ onMounted(() => {
                             Show
                         </Button>
                     </div>
-                    <div class="text-sm text-gray-600 italic">
-                        Balance:
-                        <span class="font-semibold text-gray-800">{{ formattedBalance }}</span>
+                    <div class="text-sm space-y-1">
+                        <div class="flex justify-between text-gray-600 italic">
+                            <span>Balance:</span>
+                            <span class="font-semibold text-gray-800 text-right w-24">
+            {{ formattedBalance }}
+        </span>
+                        </div>
+
+                        <div
+                            v-if="costBreakdown"
+                            class="flex justify-between text-gray-500"
+                        >
+                            <span>Cost:</span>
+                            <span class="font-semibold text-gray-900 text-right w-24">{{ getTotalCost() }}</span>
+                        </div>
                     </div>
                 </div>
             </form>

@@ -11,3 +11,5 @@ use App\Http\Controllers\RedeemVoucherController;
 
 Route::post('redeem‐voucher', [RedeemVoucherController::class, 'store'])
     ->name('redeem‐voucher.store');
+
+Route::post('calculate-cost', \App\Actions\CalculateCost::class)->name('calculate-cost');

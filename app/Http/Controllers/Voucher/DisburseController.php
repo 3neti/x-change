@@ -6,10 +6,8 @@ use App\Http\Requests\VoucherInstructionDataRequest;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Actions\GenerateVouchers;
 use LBHurtado\Voucher\Enums\VoucherInputField;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\{Cache, Log};
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Number;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -20,7 +18,7 @@ class DisburseController extends Controller
     public function create(Request $request)
     {
         $data = Cache::get($this->getCacheKeyForUser($request->user()->id))
-            ?? VoucherInstructionsData::from($this->rawDefaultInstructions());
+            ?? VoucherInstructionsData::generateFromScratch();
 
         return Inertia::render('Disburse', [
             'data' => $data,
@@ -31,14 +29,13 @@ class DisburseController extends Controller
 
     public function store(VoucherInstructionDataRequest $request)
     {
-//        dd($request->all());
-        $instructions = $request->toData();
+        $instructions = $request->getData();
         logger('[DisburseController@store] Parsed instructions', $instructions->toArray());
 
         Cache::put(
             $this->getCacheKeyForUser($request->user()->id),
             $instructions->toArray(),
-            now()->addDays(7) // keep for 1 week (adjust as needed)
+            now()->addDays(7) // keep for 1 week for now
         );
 
         $vouchers = GenerateVouchers::run($instructions);
@@ -51,40 +48,7 @@ class DisburseController extends Controller
         ]);
     }
 
-    //TODO: refactor this
-    protected function rawDefaultInstructions(): array
-    {
-        return [
-            'cash' => [
-                'amount' => 0,
-                'currency' => Number::defaultCurrency(),
-                'validation' => [
-                    'secret' => null,
-                    'mobile' => null,
-                    'country' => config('x-change.generate.country'),
-                    'location' => null,
-                    'radius' => null,
-                ],
-            ],
-            'inputs' => [
-                'fields' => [],
-            ],
-            'feedback' => [
-                'mobile' => null,
-                'email' => null,
-                'webhook' => null,
-            ],
-            'rider' => [
-                'message' => null,
-                'url' => null,
-            ],
-            'count' => 1, // New field for count
-            'prefix' => null, // New field for prefix
-            'mask' => null, // New field for mask
-            'ttl' => null, // New field for ttl
-        ];
-    }
-    private function getCacheKeyForUser(int $userId): string
+    protected function getCacheKeyForUser(int $userId): string
     {
         return "disburse.last_data.user:{$userId}";
     }

@@ -7,7 +7,7 @@ return [
         'validation_rules' => [
             'secret'   => env('DEFAULT_CASH_VALIDATION_RULES_SECRET'),
             'mobile'   => env('DEFAULT_CASH_VALIDATION_RULES_MOBILE'),
-            'country'  => env('DEFAULT_CASH_VALIDATION_RULES_COUNTRY'),
+            'country'  => env('DEFAULT_CASH_VALIDATION_RULES_COUNTRY', 'PH'),
             'location' => env('DEFAULT_CASH_VALIDATION_RULES_LOCATION'),
             'radius'   => env('DEFAULT_CASH_VALIDATION_RULES_RADIUS'),
         ]

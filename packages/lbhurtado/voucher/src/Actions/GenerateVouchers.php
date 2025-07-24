@@ -14,8 +14,12 @@ class GenerateVouchers
 {
     use AsAction;
 
-    public function handle(VoucherInstructionsData $instructions): Collection
+    public function handle(VoucherInstructionsData|array $instructions): Collection
     {
+        if (is_array($instructions)) {
+            $instructions = VoucherInstructionsData::createFromAttribs($instructions);
+        }
+
         Log::debug('[GenerateVouchers] Received count=' . $instructions->count);
         Log::debug('[GenerateVouchers] Raw DTO:', $instructions->toArray());
 
@@ -47,7 +51,7 @@ class GenerateVouchers
 
         $vouchers = Vouchers::withPrefix($prefix)
             ->withMask($mask)
-            ->withMetadata(['instructions' => $instructions->toArray()]) // Pass instructions as metadata
+            ->withMetadata(['instructions' => $instructions->toCleanArray()]) // This is most important! Pass instructions as metadata.
             ->withExpireTimeIn($ttl)
             ->withOwner($owner)
             ->create($count)
