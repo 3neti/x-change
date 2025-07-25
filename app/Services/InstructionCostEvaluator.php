@@ -3,8 +3,9 @@
 namespace App\Services;
 
 use App\Repositories\InstructionItemRepository;
-use Illuminate\Support\Collection;
+use Bavix\Wallet\Interfaces\Customer;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Collection;
 
 class InstructionCostEvaluator
 {
@@ -12,7 +13,7 @@ class InstructionCostEvaluator
         protected InstructionItemRepository $repository
     ) {}
 
-    public function evaluate(mixed $source): Collection
+    public function evaluate(Customer $customer, mixed $source): Collection
     {
         $charges = collect();
         $items = $this->repository->all();
@@ -26,14 +27,19 @@ class InstructionCostEvaluator
             $value = traverse($source, $item->index);
             $isTruthyString = is_string($value) && trim($value) !== '';
             $isTruthyBoolean = is_bool($value) && $value === true;
-            $shouldCharge = ($isTruthyString || $isTruthyBoolean) && $item->price > 0;
+            $isTruthyFloat = is_float($value) && $value > 0.0;
+            $shouldCharge = ($isTruthyString || $isTruthyBoolean || $isTruthyFloat) && $item->price > 0;
+
+            $price = $item->getAmountProduct($customer);
 
             Log::debug("[InstructionCostEvaluator] Evaluating index: {$item->index}", [
                 'raw_value' => $value,
                 'type' => gettype($value),
-                'price' => $item->price,
+                'price' => $price,
+                'currency' => $item->currency,
                 'is_truthy_string' => $isTruthyString,
                 'is_truthy_boolean' => $isTruthyBoolean,
+                'is_truthy_float' => $isTruthyFloat,
                 'should_charge' => $shouldCharge,
             ]);
 
@@ -44,13 +50,15 @@ class InstructionCostEvaluator
                     'index' => $item->index,
                     'label' => $label,
                     'value' => $value,
-                    'price' => $item->price,
+                    'price' => $price,
+                    'currency' => $item->currency
                 ]);
 
                 $charges->push([
                     'item' => $item,
                     'value' => $value,
-                    'price' => round($item->price, 2),//improve this, use Price
+                    'price' => $price,
+                    'currency' => $item->currency,
                     'label' => $label,
                 ]);
             }

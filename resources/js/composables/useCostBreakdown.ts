@@ -1,6 +1,7 @@
-import { ref, computed, watch } from 'vue'
-import axios from 'axios'
 import { useCleanForm } from './useCleanForm'
+import { ref, computed, watch } from 'vue'
+import { debounce } from 'lodash'
+import axios from 'axios'
 
 export function useCostBreakdown(form: any, excluded: string[] = []) {
     const { clean } = useCleanForm()
@@ -9,6 +10,8 @@ export function useCostBreakdown(form: any, excluded: string[] = []) {
     const costBreakdown = ref<any>(null)
     const loading = ref(false)
     const error = ref<string | null>(null)
+
+    axios.defaults.withCredentials = true
 
     async function calculateCost() {
         loading.value = true
@@ -32,7 +35,13 @@ export function useCostBreakdown(form: any, excluded: string[] = []) {
         return costBreakdown.value?.total
     }
 
-    watch(payload, calculateCost, { deep: true, immediate: true })
+    watch(
+        payload,
+        debounce(() => {
+            calculateCost()
+        }, 500),
+        { deep: true, immediate: true }
+    )
 
     return {
         costBreakdown,

@@ -109,3 +109,7 @@ Route::prefix('redeem/{voucher}')
 
 Route::get('redeem/{voucher}/redirect', \App\Http\Controllers\SuccessRedirectController::class)
     ->name('redeem.redirect');
+
+Route::post('calculate-cost', \App\Actions\CalculateCost::class)
+    ->middleware( 'auth', 'web')
+    ->name('calculate-cost');

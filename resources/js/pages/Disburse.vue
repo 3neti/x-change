@@ -306,6 +306,9 @@ function getTotalCost(): string {
                                 <div class="col-span-1 space-y-2">
                                     <Label>Amount</Label>
                                     <Input type="number" v-model="form.cash.amount" autofocus />
+                                    <div class="text-right">
+                                        <InputExtra :message="getCostMessage('cash.amount')" />
+                                    </div>
                                     <InputError :message="get(form.errors, 'cash.amount')" />
                                 </div>
                                 <div class="col-span-1 space-y-2">
@@ -361,7 +364,9 @@ function getTotalCost(): string {
                                                 {{ showSecret ? 'Hide' : 'Show' }}
                                             </Button>
                                         </div>
-                                        <InputExtra :message="getCostMessage('cash.validation.secret')" />
+                                        <div class="text-right">
+                                            <InputExtra :message="getCostMessage('cash.validation.secret')" />
+                                        </div>
                                     </div>
                                 </template>
 

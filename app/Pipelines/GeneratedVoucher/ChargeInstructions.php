@@ -16,7 +16,7 @@ class ChargeInstructions
         $owner = $voucher->owner;
         if (!$owner || !$owner->wallet) return $next($voucher);
 
-        $charges = $this->evaluator->evaluate($voucher->instructions);
+        $charges = $this->evaluator->evaluate($voucher->owner, $voucher->instructions);
 
         foreach ($charges as $charge) {
             $owner->pay($charge['item']);

@@ -115,10 +115,10 @@ return [
 
     'pricelist' => [
 
-//        'cash.amount' => [
-//            'price' => 100,
-//            'description' => 'Amount of cash the user will receive',
-//        ],
+        'cash.amount' => [
+            'price' => 20 * 100,
+            'description' => 'Amount of cash the user will receive',
+        ],
 //        'cash.currency' => [
 //            'price' => 110,
 //            'description' => 'Currency of the cash disbursement',

@@ -4,10 +4,11 @@ namespace App\Actions;
 
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use App\Services\InstructionCostEvaluator;
-use Lorisleiva\Actions\ActionRequest;
 use Lorisleiva\Actions\Concerns\AsAction;
-use LBHurtado\Voucher\Models\Voucher;
+use Lorisleiva\Actions\ActionRequest;
 use App\Data\CostBreakdownData;
+use Brick\Money\Money;
+use App\Models\User;
 
 class CalculateCost
 {
@@ -17,14 +18,14 @@ class CalculateCost
         protected InstructionCostEvaluator $evaluator
     ) {}
 
-    public function handle(VoucherInstructionsData $instructions): CostBreakdownData
+    public function handle(User $user, VoucherInstructionsData $instructions): CostBreakdownData
     {
         $breakdown = ['Cash' => $instructions->cash->amount];
 
-        $charges = $this->evaluator->evaluate($instructions);
+        $charges = $this->evaluator->evaluate($user, $instructions);
         foreach ($charges as $charge) {
-            $breakdown[$charge['item']->index] = $charge['price'] / 100;
-//            $breakdown[$charge['label']] = $charge['price'] / 100;
+            $breakdown[$charge['item']->index] = Money::ofMinor($charge['price'], 'PHP')->getAmount()->toFloat();
+//            $breakdown[$charge['item']->index] = $charge['price'] / 100;
         }
 
         $total = array_sum($breakdown);
@@ -39,6 +40,6 @@ class CalculateCost
     {
         $instructions = VoucherInstructionsData::createFromAttribs($request->all());
 
-        return $this->handle($instructions);
+        return $this->handle($request->user(), $instructions);
     }
 }
