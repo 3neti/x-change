@@ -20,11 +20,6 @@ const mainNavItems: NavItem[] = [
         icon: ScanQrCode,
     },
     {
-        title: 'Generate',
-        href: '/generate',
-        icon: Atom,
-    },
-    {
         title: 'Disburse',
         href: '/disburse',
         icon: PhilippinePeso,

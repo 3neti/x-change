@@ -23,10 +23,6 @@ Route::middleware([
         return Inertia::render('Load');
     })->name('load');
 
-    Route::get('generate', function () {
-        return Inertia::render('Generate');
-    })->name('generate');
-
     Route::get('disburse', [DisburseController::class, 'create'])->name('disburse');
     Route::post('disburse', [DisburseController::class, 'store'])->name('disburse.store');
 
