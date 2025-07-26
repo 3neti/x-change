@@ -62,6 +62,10 @@ class HandleInertiaRequests extends Middleware
                             : null,
                         'webhook' => $user->webhook,
                         'merchant' => $user->merchant?->toArray(),
+                        'wallet' => (fn() => $user->wallet ? [
+                            'id' => $user->wallet->getKey(),
+                            'type' => $user->wallet->type,
+                        ] : null)(),
                     ]);
                 },
             ],

@@ -10,14 +10,14 @@ export function useWalletBalance(type?: string) {
     const walletType = ref<string>(type || 'default')
     const status     = ref<'idle' | 'loading' | 'success' | 'error'>('idle')
     const message    = ref<string>('')
-
     const page = usePage<SharedData>();
     const user = page.props.auth.user as User;
+
+    const userWalletId = user.wallet?.id
 
     const fetchBalance = async () => {
         status.value  = 'loading'
         message.value = 'Fetching balance…'
-
         try {
             const url = route('wallet.balance')
             const { data } = await axios.get(url, {
@@ -32,23 +32,29 @@ export function useWalletBalance(type?: string) {
         } catch (e: any) {
             status.value  = 'error'
             message.value = e.response?.data?.message || 'Failed to fetch balance.'
+            console.error('[useWalletBalance] Failed to fetch balance:', e);
         }
     }
 
     // 1️⃣ Fetch on mount
     onMounted(fetchBalance)
 
-    // 2️⃣ Echo: subscribe to user balance update event
-    const { listen } = useEcho<{ balance: number, balanceFloat: number }>(
+    // 2️⃣ Echo: subscribe to user balance update event (filtered by wallet ID)
+    const { listen } = useEcho<{ walletId: number, balanceFloat: number }>(
         `user.${user.id}`,
         '.balance.updated',
         (event) => {
-            balance.value = event.balanceFloat
+            if (event.walletId !== userWalletId) {
+                return;
+            }
+
+            balance.value = event.balanceFloat;
         }
     )
 
     onMounted(() => {
-        listen()
+        fetchBalance();
+        listen();
     })
 
     // 3️⃣ Computed formatted balance
@@ -70,6 +76,6 @@ export function useWalletBalance(type?: string) {
         status,
         message,
         fetchBalance,
-        formattedBalance, // ✅ included here
+        formattedBalance,
     }
 }

@@ -34,7 +34,7 @@ import { useCostBreakdown } from '@/composables/useCostBreakdown'
 import { useFormatCurrency } from '@/composables/useFormatCurrency'
 import get from 'lodash/get'
 
-const breadcrumbs: BreadcrumbItemType[] = [{ title: 'Disburse', href: '/disburse' }];
+const breadcrumbs: BreadcrumbItemType[] = [{ title: 'Generate', href: '/disburse' }];
 
 const props = defineProps<{
     data: {
@@ -349,7 +349,7 @@ watch(parsedInstructions, (data) => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="mx-auto max-w-3xl space-y-1 rounded bg-white p-6 shadow">
-            <h1 class="text-2xl font-bold text-gray-700">Cash Code Generation</h1>
+            <h1 class="text-2xl font-bold text-gray-700">Instructions</h1>
             <p class="mt-1 text-sm text-gray-500">Escrow Fund Transfer</p>
 
             <div class="flex space-x-4 border-b text-sm font-medium">
@@ -694,7 +694,7 @@ watch(parsedInstructions, (data) => {
                 <!-- FORM ACTION BUTTONS WITH BALANCE -->
                 <div class="flex items-center justify-between pt-4">
                     <div class="flex items-center gap-4">
-                        <Button type="submit">Generate</Button>
+                        <Button type="submit">Generate Code</Button>
                         <Button
                             type="button"
                             variant="link"
@@ -715,7 +715,7 @@ watch(parsedInstructions, (data) => {
                     <div class="text-sm space-y-1">
                         <div class="flex justify-between text-gray-600 italic">
                             <span>Balance:</span>
-                            <span class="font-semibold text-gray-800 text-right w-24">{{ formattedBalance }}</span>
+                            <span class="font-semibold text-green-800 text-right w-24">{{ formattedBalance }}</span>
                         </div>
 
                         <div
@@ -723,7 +723,7 @@ watch(parsedInstructions, (data) => {
                             class="flex justify-between text-gray-500"
                         >
                             <span>Cost:</span>
-                            <span class="font-semibold text-gray-900 text-right w-24">{{ getTotalCost() }}</span>
+                            <span class="font-semibold text-red-600 text-right w-24">{{ getTotalCost() }}</span>
                         </div>
                     </div>
                 </div>
@@ -734,7 +734,7 @@ watch(parsedInstructions, (data) => {
         <DialogOverlay />
         <DialogContent class="max-w-lg">
             <DialogHeader>
-                <DialogTitle>Cash Codes Generated</DialogTitle>
+                <DialogTitle>Codes Generated</DialogTitle>
                 <DialogDescription class="text-sm text-gray-500">
                     Share the codes and review the submitted instructions.
                 </DialogDescription>

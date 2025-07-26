@@ -13,14 +13,14 @@ use Inertia\Inertia;
 
 
 //TODO: test this
-class DisburseController extends Controller
+class GenerateController extends Controller
 {
     public function create(Request $request)
     {
         $data = Cache::get($this->getCacheKeyForUser($request->user()->id))
             ?? VoucherInstructionsData::generateFromScratch();
 
-        return Inertia::render('Disburse', [
+        return Inertia::render('Generate', [
             'data' => $data,
             'availableInputs' => VoucherInputField::valuesToCsv(),
             'labelMap' => ['kyc' => 'KYC', 'gross_monthly_income' => 'GMI']

@@ -1,14 +1,12 @@
 <?php
 
 use App\Http\Controllers\{CheckWalletBalanceController, VoucherController};
-use Illuminate\Http\Request;
+use App\Http\Controllers\Voucher\{GenerateController, ViewController};
 use Laravel\WorkOS\Http\Middleware\ValidateSessionWithWorkOS;
 use App\Http\Controllers\Api\CutCheckController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Spatie\LaravelData\DataCollection;
-use LBHurtado\Voucher\Data\VoucherData;
-use App\Http\Controllers\Voucher\{DisburseController, ViewController};
 
 Route::get('/', fn () => Inertia::render('Welcome'));
 
@@ -23,8 +21,8 @@ Route::middleware([
         return Inertia::render('Load');
     })->name('load');
 
-    Route::get('disburse', [DisburseController::class, 'create'])->name('disburse');
-    Route::post('disburse', [DisburseController::class, 'store'])->name('disburse.store');
+    Route::get('generate', [GenerateController::class, 'create'])->name('disburse');
+    Route::post('generate', [GenerateController::class, 'store'])->name('disburse.store');
 
     Route::get('view', ViewController::class)->name('view');
 });
@@ -61,7 +59,6 @@ use App\Http\Middleware\Redeem\{
 Route::get('redeem', function () {
     return Inertia::render('Redeem/Start');
 })->name('redeem');
-//use App\Http\Controllers\Redeem\RedeemPluginController;
 
 Route::prefix('redeem/{voucher}')
     ->middleware(CheckVoucherMiddleware::class)

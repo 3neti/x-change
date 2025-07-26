@@ -7,7 +7,7 @@ import { Head, usePage } from '@inertiajs/vue3';
 import { type BreadcrumbItem } from '@/types';
 
 const user = usePage().props.auth.user;
-console.log(user.mobile);
+
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Dashboard',
