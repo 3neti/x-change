@@ -14,6 +14,7 @@ class GenerateVouchers
 {
     use AsAction;
 
+    //TODO: explicitly add owner in the parameter
     public function handle(VoucherInstructionsData|array $instructions): Collection
     {
         if (is_array($instructions)) {

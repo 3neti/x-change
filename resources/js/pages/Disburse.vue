@@ -28,7 +28,7 @@ import WalletBalanceDisplay from '@/components/domain/WalletBalanceDisplay.vue';
 import { useWalletBalance } from '@/composables/useWalletBalance';
 import { useLabelFormatter } from '@/composables/useLabelFormatter';
 import { useCleanForm } from '@/composables/useCleanForm'
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import InputExtra from '@/components/domain/InputExtra.vue';
 import { useCostBreakdown } from '@/composables/useCostBreakdown'
 import { useFormatCurrency } from '@/composables/useFormatCurrency'
@@ -173,7 +173,11 @@ watch(
 );
 
 const showSecret = ref(false);
-const activeTab = ref<'basic' | 'advanced'>('basic');
+const tabs = ['basic', 'advanced', 'text'] as const
+type Tab = typeof tabs[number]
+const activeTab = ref<Tab>('basic')
+
+// const activeTab = ref<'basic' | 'advanced' | 'text'>('basic');
 const { formattedBalance, status } = useWalletBalance();
 function toggleInputField(input: string) {
     const index = form.inputs.fields.indexOf(input);
@@ -267,6 +271,77 @@ function getTotalCost(): string {
     return raw ? (formatCurrency(Number(raw), { detailed: false }) as string) : ''
 }
 
+const rawText = ref('')
+const parsedInstructions = ref(null)
+const parsing = ref(false)
+const parseError = ref<string | null>(null) // or string | undefined
+
+async function parseInstructions() {
+    parsing.value = true
+    parseError.value = null
+    parsedInstructions.value = null
+
+    axios.defaults.withCredentials = true
+
+    try {
+        const response = await axios.post(route('parse-instructions'), {
+            text: rawText.value,
+        })
+
+        parsedInstructions.value = clean(response.data)
+    } catch (err) {
+        const axiosError = err as AxiosError<{ message: string }>
+        parseError.value =
+            axiosError.response?.data?.message || 'Failed to parse instructions.'
+    } finally {
+        parsing.value = false
+    }
+}
+
+function clearInstructions() {
+    parsedInstructions.value = null
+    parseError.value = ''
+    parsing.value = false
+}
+watch(parsedInstructions, (data) => {
+    if (!data) return;
+
+    const cleaned = clean(data);
+
+    resetForm();
+
+    if (cleaned.cash) {
+        form.cash.amount = cleaned.cash.amount ?? form.cash.amount;
+        form.cash.currency = cleaned.cash.currency ?? form.cash.currency;
+
+        if (cleaned.cash.validation) {
+            form.cash.validation.secret = cleaned.cash.validation.secret ?? form.cash.validation.secret;
+            form.cash.validation.mobile = cleaned.cash.validation.mobile ?? form.cash.validation.mobile;
+            form.cash.validation.country = cleaned.cash.validation.country ?? form.cash.validation.country;
+            form.cash.validation.location = cleaned.cash.validation.location ?? form.cash.validation.location;
+            form.cash.validation.radius = cleaned.cash.validation.radius ?? form.cash.validation.radius;
+        }
+    }
+
+    if (cleaned.inputs?.fields)
+        form.inputs.fields = cleaned.inputs.fields;
+
+    if (cleaned.feedback) {
+        form.feedback.mobile = cleaned.feedback.mobile ?? form.feedback.mobile;
+        form.feedback.email = cleaned.feedback.email ?? form.feedback.email;
+        form.feedback.webhook = cleaned.feedback.webhook ?? form.feedback.webhook;
+    }
+
+    if (cleaned.rider) {
+        form.rider.message = cleaned.rider.message ?? form.rider.message;
+        form.rider.url = cleaned.rider.url ?? form.rider.url;
+    }
+
+    form.count = cleaned.count ?? form.count;
+    form.prefix = cleaned.prefix ?? form.prefix;
+    form.mask = cleaned.mask ?? form.mask;
+    form.ttl = cleaned.ttl ?? form.ttl;
+});
 </script>
 
 <template>
@@ -277,22 +352,17 @@ function getTotalCost(): string {
             <h1 class="text-2xl font-bold text-gray-700">Cash Code Generation</h1>
             <p class="mt-1 text-sm text-gray-500">Escrow Fund Transfer</p>
 
-            <div class="mb-4 flex border-b">
+            <div class="flex space-x-4 border-b text-sm font-medium">
                 <button
-                    @click="activeTab = 'basic'"
-                    :class="['px-4 py-2 font-semibold', activeTab === 'basic' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500']"
+                    v-for="tab in ['basic', 'advanced', 'text']"
+                    :key="tab"
+                    :class="['px-4 py-2', activeTab === tab ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-blue-500']"
+                    @click="activeTab = tab as 'basic' | 'advanced' | 'text'"
                 >
-                    Basic
-                </button>
-                <button
-                    @click="activeTab = 'advanced'"
-                    :class="['px-4 py-2 font-semibold', activeTab === 'advanced' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500']"
-                >
-                    Advanced
+                    {{ tab.charAt(0).toUpperCase() + tab.slice(1) }}
                 </button>
             </div>
 
-<!--            <form @submit.prevent="submit" class="space-y-6">-->
             <form @submit.prevent="confirmAndSubmit" class="space-y-6">
                 <!-- BASIC TAB CONTENT -->
                 <div v-if="activeTab === 'basic'" class="space-y-6">
@@ -321,7 +391,7 @@ function getTotalCost(): string {
                     </Collapsible>
 
                     <!-- PAYEE -->
-                    <Collapsible :defaultOpen="true" class="rounded border border-gray-300">
+                    <Collapsible :defaultOpen="false" class="rounded border border-gray-300">
                         <CollapsibleTrigger as="legend" class="w-full px-4 py-2 text-left text-sm font-semibold text-gray-600">
                             Payee
                         </CollapsibleTrigger>
@@ -583,11 +653,48 @@ function getTotalCost(): string {
                     </Collapsible>
                 </div>
 
+                <!-- TEXT TAB CONTENT -->
+                <div v-if="activeTab === 'text'" class="space-y-6">
+                    <div class="space-y-2">
+                        <Label for="voucher-text">Enter Instructions</Label>
+
+                        <!-- Show textarea only if parsedInstructions is not yet available -->
+                        <template v-if="!parsedInstructions">
+            <textarea
+                id="voucher-text"
+                v-model="rawText"
+                rows="10"
+                placeholder="e.g., Cut 3 checks worth ₱500 each to 09171234567, secret 123456"
+                class="w-full rounded border border-gray-300 p-2 text-sm"
+            />
+                        </template>
+
+                        <!-- Show parsed instructions in same space -->
+                        <template v-else>
+                            <div class="rounded border border-gray-200 bg-gray-50 p-4 text-sm whitespace-pre-wrap">
+                                <pre class="whitespace-pre-wrap font-mono text-xs text-gray-800">{{ parsedInstructions }}</pre>
+                            </div>
+                        </template>
+
+                        <!-- Button row -->
+                        <div class="text-right">
+                            <button
+                                class="mt-2 rounded bg-blue-600 px-4 py-1 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+                                :disabled="parsing"
+                                @click.prevent="parsedInstructions ? clearInstructions() : parseInstructions()"
+                            >
+                                {{ parsedInstructions ? 'Clear Instructions' : parsing ? 'Parsing…' : 'Parse Instructions' }}
+                            </button>
+                        </div>
+
+                        <p v-if="parseError" class="text-sm text-red-600">{{ parseError }}</p>
+                    </div>
+                </div>
+
                 <!-- FORM ACTION BUTTONS WITH BALANCE -->
                 <div class="flex items-center justify-between pt-4">
                     <div class="flex items-center gap-4">
                         <Button type="submit">Generate</Button>
-
                         <Button
                             type="button"
                             variant="link"
@@ -608,9 +715,7 @@ function getTotalCost(): string {
                     <div class="text-sm space-y-1">
                         <div class="flex justify-between text-gray-600 italic">
                             <span>Balance:</span>
-                            <span class="font-semibold text-gray-800 text-right w-24">
-            {{ formattedBalance }}
-        </span>
+                            <span class="font-semibold text-gray-800 text-right w-24">{{ formattedBalance }}</span>
                         </div>
 
                         <div

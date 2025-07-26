@@ -2,12 +2,13 @@
 
 namespace App\Services;
 
-use App\Exceptions\InstructionParseException;
-use Illuminate\Support\Facades\Log;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use App\Services\OpenAI\Client as OpenAIClient;
-use Carbon\CarbonInterval;
 use LBHurtado\Voucher\Enums\VoucherInputField;
+use App\Exceptions\InstructionParseException;
+use Illuminate\Support\Facades\Log;
+use Carbon\CarbonInterval;
+use App\Models\User;
 
 class InstructionParser
 {
@@ -17,12 +18,20 @@ class InstructionParser
     {
         Log::debug('[InstructionParser] Raw instruction text:', ['text' => $text]);
 
+        // 🧑‍💼 Grab current user info (if available)
+        $user = auth()->user();
+        if ($user instanceof User) {
+            $email = $user->email;
+            $mobile = $user->mobile;
+        }
+
         // 1) Strong system prompt
         $system = <<<'TXT'
 You are a voucher‐creation / digital‐check assistant.
 Any time the user says “voucher,” “check,” or “cut a check,” you should behave identically.
 
 If and when the amount is missing just make it PHP zero.
+Only country and currency have default values, all the other fields are empty unless explicitly requested.
 
 Whenever the user says “payable to <NUMBER>” or “to account <NUMBER>,”
 — fill `"cash"."validation"."mobile"` with that number.
@@ -30,6 +39,16 @@ If they don’t mention “payable to,” leave `"mobile": null`.
 
 Support an optional `"post_date"` ISO-8601 date if they say “post date X” or “dated X”.
 If they do not mention a post-date, emit `"post_date": null`.
+
+If the user asked for feedback after redemption such as an email, mobile or webhook, add it in feedbacks.email, feedbacks.mobile and feedbacks.webhook respectively.
+If the user asked for feedback AND email address or mobile number are not explicitly expressed, then use:
+- Email: {{user_email}}
+- Mobile: {{user_mobile}}
+If the user did not ask for feedback explicitly leave the respective fields blank.
+
+Dictionary:
+birthday, birth day = birth_date
+gmi, income, monthly income = gross_monthly_income
 
 Here is the exact JSON schema you must output—nothing else:
 
@@ -82,6 +101,16 @@ User: “Cut me a check for 5,000 PHP payable to 09171234567, secret ABC, post-d
 "post_date":"2025-07-01",
 …
 TXT;
+
+        // 🔁 Inject user data into the system prompt
+        Log::info('[InstructionParser] Using fallback user info', compact('email', 'mobile'));
+
+        $system = strtr($system, [
+            '{{user_email}}' => $email,
+            '{{user_mobile}}' => $mobile,
+        ]);
+
+//        Log::debug('[InstructionParser] Final system prompt:', compact('system'));
 
         Log::debug('[InstructionParser] Sending to OpenAI.chat.create', [
             'model'      => 'gpt-4',

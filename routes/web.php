@@ -113,3 +113,7 @@ Route::get('redeem/{voucher}/redirect', \App\Http\Controllers\SuccessRedirectCon
 Route::post('calculate-cost', \App\Actions\CalculateCost::class)
     ->middleware( 'auth', 'web')
     ->name('calculate-cost');
+
+Route::post('parse-instructions', \App\Actions\ParseInstructions::class)
+    ->middleware( 'auth', 'web')
+    ->name('parse-instructions');

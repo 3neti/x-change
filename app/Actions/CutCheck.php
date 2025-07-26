@@ -2,29 +2,25 @@
 
 namespace App\Actions;
 
-use App\Services\InstructionParser;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
 use LBHurtado\Voucher\Actions\GenerateVouchers;
 use Lorisleiva\Actions\Concerns\AsAction;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Collection;
 
 class CutCheck
 {
     use AsAction;
 
-    public function __construct(
-        protected InstructionParser $parser
-    ) {}
-
     /**
      * @param  string  $text  The human instruction text
      * @return \Illuminate\Support\Collection  The newly generated vouchers
+     * @todo explicitly add owner in the parameter
      */
     public function handle(string $text): Collection
     {
         Log::debug('[CutCheck] Received raw text for parsing', ['text' => $text]);
 
-        $instructions = $this->parser->fromText($text);
+        $instructions = ParseInstructions::run($text);
 
         Log::debug('[CutCheck] Parsed instructions', [
             'instructions' => $instructions->toArray(),

@@ -15,3 +15,9 @@ Route::post('redeem‐voucher', [RedeemVoucherController::class, 'store'])
 Route::post('calculate-cost', \App\Actions\CalculateCost::class)
     ->middleware( 'auth:sanctum')
     ->name('api.calculate-cost');
+
+
+Route::post('parse-instructions', \App\Actions\ParseInstructions::class)
+    ->middleware( 'auth:sanctum')
+    ->name('api.parse-instructions');
+
