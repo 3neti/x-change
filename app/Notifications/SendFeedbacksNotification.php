@@ -7,6 +7,7 @@ use LBHurtado\EngageSpark\EngageSparkMessage;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 use LBHurtado\Contact\Classes\BankAccount;
+use LBHurtado\ModelInput\Data\InputData;
 use LBHurtado\Voucher\Data\VoucherData;
 use LBHurtado\Voucher\Models\Voucher;
 use Illuminate\Support\Number;
@@ -35,7 +36,7 @@ class SendFeedbacksNotification extends Notification implements ShouldQueue
         $formattedAmount = $amount->formatTo(Number::defaultLocale());
         $bank_account = new BankAccount(...$this->voucher->cash->withdrawTransaction->payload['destination_account']);
 
-        return (new MailMessage)
+        $mail_message = (new MailMessage)
             ->subject('Voucher Code Redeemed')
             ->greeting('Yo ' . ',')
             ->line("The cash code **{$this->voucher->code}** with the amount of **{$formattedAmount}** has been successfully redeemed.")
@@ -43,6 +44,28 @@ class SendFeedbacksNotification extends Notification implements ShouldQueue
             ->line("This amount will be processed and credited to {$bank_account} shortly.")
             ->line('If you did not authorize this transaction, please contact support immediately.')
             ->salutation('Thank you for using our service!');
+
+        $signature = $this->voucher->inputs
+            ->first(fn(InputData $input) => $input->name === 'signature')
+            ?->value;
+
+        if ($signature && str_starts_with($signature, 'data:image/')) {
+            // Extract the actual base64 data
+            [, $encodedImage] = explode(',', $signature, 2);
+
+            // Determine mime and file extension
+            preg_match('/^data:image\/(\w+);base64/', $signature, $matches);
+            $extension = $matches[1] ?? 'png'; // fallback to png
+            $mime = "image/{$extension}";
+
+            $mail_message->attachData(
+                base64_decode($encodedImage),
+                "signature.{$extension}",
+                ['mime' => $mime]
+            );
+        }
+
+        return $mail_message;
     }
 
     public function toEngageSpark(object $notifiable): EngageSparkMessage
