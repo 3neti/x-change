@@ -1,7 +1,10 @@
 <?php
 
-use Illuminate\Support\Arr;
 use LBHurtado\Voucher\Enums\VoucherInputField;
+use Illuminate\Support\{Arr, Carbon};
+use Illuminate\Support\Collection;
+use Brick\Money\Money;
+
 
 if (!function_exists('traverse')) {
     /**
@@ -55,3 +58,75 @@ if (!function_exists('traverse')) {
         return $model ?? value($default);
     }
 }
+
+if (!function_exists('voucher_totals')) {
+    /**
+     * Compute total outstanding cash amounts by currency for a collection of vouchers.
+     *
+     * @param Collection $vouchers
+     * @return Collection<string, array{ amount: Money, count: int, latest_created_at: string|null }>
+     */
+    function voucher_totals(Collection $vouchers): Collection
+    {
+        // 1. Pair voucher and its cash if cash exists
+        $entries = $vouchers
+            ->map(fn ($voucher) => $voucher->cash ? [
+                'cash' => $voucher->cash,
+                'created_at' => $voucher->created_at,
+            ] : null)
+            ->filter();
+
+        // 2. Group by currency
+        $grouped = $entries->groupBy(fn ($entry) =>
+        $entry['cash']->amount->getCurrency()->getCurrencyCode()
+        );
+
+        // 3. Compute totals per currency group
+        return $grouped->map(function (Collection $group) {
+            $amount = $group->reduce(
+                fn (Money $carry, $entry) => $carry->plus($entry['cash']->amount),
+                Money::zero($group->first()['cash']->amount->getCurrency())
+            );
+
+            $count = $group->count();
+
+            $latest = $group
+                ->pluck('created_at')
+                ->map(fn ($dt) => Carbon::parse($dt))
+                ->sortDesc()
+                ->first()?->toDateTimeString();
+
+            return [
+                'amount' => $amount,
+                'count' => $count,
+                'latest_created_at' => $latest,
+            ];
+        });
+    }
+}
+
+//if (!function_exists('voucher_totals')) {
+//    /**
+//     * Compute total outstanding cash amounts by currency for a collection of vouchers.
+//     *
+//     * @param Collection $vouchers
+//     * @return Collection<string, Money>
+//     */
+//    function voucher_totals(Collection $vouchers): Collection
+//    {
+//        $cashEntries = $vouchers
+//            ->map(fn ($voucher) => $voucher->cash)
+//            ->filter();
+//
+//        $cashByCurrency = $cashEntries->groupBy(fn ($cash) =>
+//        $cash->amount->getCurrency()->getCurrencyCode()
+//        );
+//
+//        return $cashByCurrency->map(function (Collection $group) {
+//            return $group->reduce(
+//                fn (Money $carry, $cash) => $carry->plus($cash->amount),
+//                Money::zero($group->first()->amount->getCurrency())
+//            );
+//        });
+//    }
+//}

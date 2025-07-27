@@ -8,8 +8,11 @@ export function useWalletBalance(type?: string) {
     const balance    = ref<number | null>(null)
     const currency   = ref<string | null>(null)
     const walletType = ref<string>(type || 'default')
+    const updatedAt     = ref<string | null>(null)
     const status     = ref<'idle' | 'loading' | 'success' | 'error'>('idle')
     const message    = ref<string>('')
+    const realtimeNote  = ref<string>('') // 👈 for balance updated event message
+    const realtimeTime  = ref<string>('') // 👈 for updated datetime string
     const page = usePage<SharedData>();
     const user = page.props.auth.user as User;
 
@@ -29,6 +32,7 @@ export function useWalletBalance(type?: string) {
             walletType.value = 'Platform' // data.type
             status.value     = 'success'
             message.value    = ''
+            updatedAt.value  = data.datetime
         } catch (e: any) {
             status.value  = 'error'
             message.value = e.response?.data?.message || 'Failed to fetch balance.'
@@ -40,7 +44,12 @@ export function useWalletBalance(type?: string) {
     onMounted(fetchBalance)
 
     // 2️⃣ Echo: subscribe to user balance update event (filtered by wallet ID)
-    const { listen } = useEcho<{ walletId: number, balanceFloat: number }>(
+    const { listen } = useEcho<{
+        walletId: number,
+        balanceFloat: number,
+        updatedAt: string,
+        message: string
+    }>(
         `user.${user.id}`,
         '.balance.updated',
         (event) => {
@@ -49,6 +58,15 @@ export function useWalletBalance(type?: string) {
             }
 
             balance.value = event.balanceFloat;
+            updatedAt.value    = event.updatedAt;
+            realtimeNote.value = event.message;
+            realtimeTime.value = event.updatedAt;
+
+            console.log('[useWalletBalance] Balance updated via Echo:', {
+                balance: event.balanceFloat,
+                updatedAt: event.updatedAt,
+                message: event.message,
+            })
         }
     )
 
@@ -75,6 +93,9 @@ export function useWalletBalance(type?: string) {
         walletType,
         status,
         message,
+        updatedAt,
+        realtimeNote,
+        realtimeTime,
         fetchBalance,
         formattedBalance,
     }

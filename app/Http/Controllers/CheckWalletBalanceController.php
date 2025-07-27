@@ -26,6 +26,7 @@ class CheckWalletBalanceController extends Controller
                 'balance' => $balance->getAmount()->toFloat(),
                 'currency' => $balance->getCurrency()->getCurrencyCode(),
                 'type' => $walletType?->value ?? 'default',
+                'datetime' => now()->format('Y-m-d H:i:s'),
             ]);
         }
 
@@ -34,6 +35,7 @@ class CheckWalletBalanceController extends Controller
                 'amount' => $balance->getAmount()->toFloat(),
                 'currency' => $balance->getCurrency()->getCurrencyCode(),
                 'type' => $walletType?->value ?? 'default',
+                'datetime' => now()->format('Y-m-d H:i:s'),
             ],
         ]);
     }

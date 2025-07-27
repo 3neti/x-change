@@ -10,7 +10,7 @@ import { useFormatCurrency } from '@/composables/useFormatCurrency';
 import { useFormatDate } from '@/composables/useFormatDate';
 import { useBankAlias } from '@/composables/useBankAlias';
 import { useFlagEmoji } from '@/composables/useFlagEmoji';
-import type { BreadcrumbItemType } from '@/types';
+import type { BreadcrumbItemType, VoucherList } from '@/types';
 
 // const props = defineProps({
 //     vouchers: Array,
@@ -20,41 +20,12 @@ const breadcrumbs: BreadcrumbItemType[] = [
     { title: 'View', href: '/view' },
 ];
 
+// const props = defineProps<{
+//     vouchers: VoucherList;
+// }>();
+
 const props = defineProps<{
-    vouchers: {
-        code: string;
-        instructions: Record<string, any>;
-        cash: {
-            amount: number;
-            currency: string;
-            withdrawTransaction?: {
-                confirmed: boolean;
-                payload: {
-                    destination_account: {
-                        bank_code: string;
-                        account_number: string;
-                    };
-                };
-            };
-        };
-        metadata: Record<string, any>;
-        inputs: {
-            name: string;
-            value: string;
-        }[];
-        contact?: {
-            mobile: string;
-            country?: string;
-            bank_code?: string;
-            account_number?: string;
-            bank_account?: string;
-        } | null;
-        created_at: string;
-        starts_at: string;
-        redeemed_at: string;
-        disbursed: boolean;
-        expired_at: string;
-    }[];
+    vouchers: VoucherList;
     pagination: {
         current_page: number;
         last_page: number;

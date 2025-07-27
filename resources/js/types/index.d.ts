@@ -41,4 +41,40 @@ export interface User {
     };
 }
 
+export interface Voucher {
+    code: string;
+    instructions: Record<string, any>;
+    cash: {
+        amount: number;
+        currency: string;
+        withdrawTransaction?: {
+            confirmed: boolean;
+            payload: {
+                destination_account: {
+                    bank_code: string;
+                    account_number: string;
+                };
+            };
+        };
+    };
+    metadata: Record<string, any>;
+    inputs: {
+        name: string;
+        value: string;
+    }[];
+    contact?: {
+        mobile: string;
+        country?: string;
+        bank_code?: string;
+        account_number?: string;
+        bank_account?: string;
+    } | null;
+    created_at: string;
+    starts_at: string;
+    redeemed_at: string;
+    disbursed: boolean;
+    expired_at: string;
+}
+export type VoucherList = Voucher[];
+
 export type BreadcrumbItemType = BreadcrumbItem;
