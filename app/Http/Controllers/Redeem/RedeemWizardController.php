@@ -150,6 +150,7 @@ class RedeemWizardController extends Controller
         $response = Inertia::render('Redeem/Success', [
             'voucher' => $voucher->getData(),
             'inputs' => $voucher->inputs->pluck('value', 'name')->toArray(),
+            'redirectTimeout' => config('x-change.redeem.success.redirect_timeout'),
         ]);
 
         // Clear all redeem session keys
