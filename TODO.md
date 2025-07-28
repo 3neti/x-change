@@ -14,7 +14,7 @@
 
 # Inputs
 - splash
-- location
+- selfie
 - KYC
 
 # Data

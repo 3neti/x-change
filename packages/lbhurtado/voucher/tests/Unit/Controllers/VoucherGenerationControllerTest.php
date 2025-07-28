@@ -53,7 +53,7 @@ it('generates vouchers successfully via the named route', function () {
         // Additional properties handled by VoucherInstructionsData
         "count" => 2, // Number of vouchers to generate
         "prefix" => "TEST", // Prefix for voucher codes
-        "mask" => "****-****", // Mask for voucher codes
+        "mask" => "****", // Mask for voucher codes
         "ttl" => 'PT24H', // Expiry Time (TTL in ISO format)
     ];
 
@@ -89,7 +89,7 @@ it('generates vouchers successfully via the named route', function () {
             ->toMatch('/^'
                 . 'TEST' // Escape the prefix
                 . config('vouchers.separator') // Add the separator after the prefix
-                . str_replace('*', '.', '****-****') // Replace '*' with '.' and escape everything else
+                . str_replace('*', '.', '****') // Replace '*' with '.' and escape everything else
                 . '$/' // Ensure the entire code matches
             );
     });

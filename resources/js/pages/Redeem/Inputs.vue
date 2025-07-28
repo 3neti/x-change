@@ -6,7 +6,9 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import InputError from '@/components/InputError.vue'
-import { computed, onMounted, ref, nextTick } from 'vue'
+import { computed, onMounted, ref, nextTick, watch } from 'vue';
+import { useBrowserLocation } from '@/composables/useBrowserLocation'
+import GeoPermissionAlert from '@/components/domain/GeoPermissionAlert.vue';
 
 // ⬅️ Accept key-value input props
 const props = defineProps<{
@@ -25,6 +27,7 @@ const form = useForm({
     email: props.inputs.email ?? '',
     gross_monthly_income: props.inputs.gross_monthly_income ?? '',
     country: props.inputs.country ?? '',
+    location: '',
 })
 
 // 👁️ Get only the visible fields from keys
@@ -47,6 +50,37 @@ onMounted(async () => {
     const firstInput = inputGroupRef.value?.querySelector('input, select, textarea') as HTMLElement | null
     firstInput?.focus()
 })
+
+const { location, getLocation, loading, error } = useBrowserLocation(import.meta.env.VITE_OPENCAGE_KEY, 3 * 60 * 1000)
+const geoAlertRef = ref<InstanceType<typeof GeoPermissionAlert> | null>(null)
+
+async function fetchLocation() {
+    const data = await getLocation(false)
+
+    if (error.value === 'PERMISSION_DENIED') {
+        geoAlertRef.value?.open()
+        return
+    }
+
+    if (data) {
+        form.location = JSON.stringify(data)
+    }
+}
+
+const parsedLocation = computed(() => {
+    try {
+        return JSON.parse(form.location);
+    } catch {
+        return null;
+    }
+});
+
+watch(() => form.location, (value) => {
+    if (value && form.errors && 'location' in form.errors) {
+        form.errors.location = null
+    }
+})
+
 </script>
 
 <template>
@@ -114,7 +148,24 @@ onMounted(async () => {
                     <Input id="country" v-model="form.country"/>
                     <InputError :message="form.errors.country" />
                 </div>
+
+                <div v-if="visibleFields.includes('location')" class="mt-4 flex flex-col gap-1">
+                    <Label for="location">Location</Label>
+                    <div class="flex items-center gap-2">
+                        <Input id="location"  :value="parsedLocation?.address.formatted ?? ''" class="flex-1" required readonly />
+                        <Button type="button" @click.prevent="fetchLocation">Get</Button>
+                    </div>
+                    <GeoPermissionAlert ref="geoAlertRef" />
+                    <InputError :message="form.errors.location" />
+                </div>
+
+<!--                <div v-if="visibleFields.includes('location')" class="mt-4 flex flex-col gap-1">-->
+<!--                    <Label for="address">Location</Label>-->
+<!--                    <Input id="address" v-model="form.location"/>-->
+<!--                    <InputError :message="form.errors.location" />-->
+<!--                </div>-->
             </fieldset>
+
 
             <!-- Footer Section -->
             <div class="flex justify-between items-center pt-4">

@@ -42,6 +42,7 @@ return [
                     VoucherInputField::GROSS_MONTHLY_INCOME,
                     VoucherInputField::NAME,
                     VoucherInputField::ADDRESS,
+                    VoucherInputField::LOCATION,
                 ],
                 'validation' => [
                     'name' => 'required|string',
@@ -49,6 +50,7 @@ return [
                     'birth_date' => 'required|date',
                     'email' => 'required|email',
                     'gross_monthly_income' => 'required|numeric|min:0',
+                    'location' => 'required|string',
                 ],
                 'middleware' => [
                     App\Http\Middleware\Redeem\CheckVoucherMiddleware::class,
@@ -90,25 +92,6 @@ return [
                     App\Http\Middleware\Redeem\CheckVoucherMiddleware::class,
                 ],
             ],
-
-//            // 🏦 Bank Account Info (optional)
-//            'bank' => [
-//                'enabled' => false,
-//                'title' => 'Provide Bank Info',
-//                'route' => 'redeem.bank',
-//                'page' => 'Redeem/BankAccount',
-//                'session_key' => 'bank_account',
-//                'fields' => [
-//                    VoucherInputField::BANK_ACCOUNT,
-//                ],
-//                'validation' => [
-//                    'bank_account' => 'required|string', // Adjust as needed
-//                ],
-//                'middleware' => [
-//                    App\Http\Middleware\Redeem\CheckVoucherMiddleware::class,
-//                ],
-//            ],
-
         ],
 
     ],
@@ -196,6 +179,10 @@ return [
         'inputs.fields.signature' => [
             'price' => 280,
             'description' => 'Signature input field required from the user',
+        ],
+        'inputs.fields.location' => [
+            'price' => 300,
+            'description' => 'Location input field required from the user',
         ],
     ],
 ];

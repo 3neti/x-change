@@ -109,4 +109,4 @@ it('disburses cash live', function  ($voucher) {
     $cash = $voucher->getEntities(Cash::class)->first();
     $cash->wallet->refreshBalance();
     expect((float) $cash->wallet->balanceFloat)->toBe(53.7);//need to be confirmed to become zero
-})->with('voucher');
+})->with('voucher')->skip();

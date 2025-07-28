@@ -46,7 +46,7 @@ it('correctly maps a full Voucher model to VoucherData DTO', function () {
         ],
         'count'  => 2,
         'prefix' => 'PRE',
-        'mask'   => '**MASK**',
+        'mask'   => '******',
         'ttl'    => 'PT48H',
     ]);
 
@@ -86,7 +86,7 @@ it('correctly maps a full Voucher model to VoucherData DTO', function () {
         ->instructions->cash->amount->toBe(500.0)
         ->instructions->count->toBe(2)
         ->instructions->prefix->toBe('PRE')
-        ->instructions->mask->toBe('**MASK**')
+        ->instructions->mask->toBe('******')
 //        ->instructions->ttl->toEqual(Carbon::parse('2025-01-03 10:00:00')
 //            ->diffAsCarbonInterval(Carbon::parse('2025-01-01 10:00:00')))
 

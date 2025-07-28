@@ -10,5 +10,6 @@ return [
         'address' => ['required', 'string', 'min:10', 'max:255'],
         'birth_date' => ['required', 'date', 'before_or_equal:today'],
         'gross_monthly_income' => ['required', 'numeric', 'min:10000', 'max:1000000'],
+        'location' => ['required', 'string'],
     ],
 ];

@@ -57,7 +57,7 @@ dataset('voucher_instructions', function () {
             ],
             'count' => 2,
             'prefix' => 'TEST',
-            'mask' => '****-****',
+            'mask' => '******',
             'ttl' => 'PT24H', // ISO8601 duration string (24 hours)
         ])]
     ];

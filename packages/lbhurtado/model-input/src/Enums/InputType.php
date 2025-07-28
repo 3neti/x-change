@@ -14,7 +14,7 @@ enum InputType: string
     case BIRTH_DATE = 'birth_date';
     case EMAIL = 'email';
     case GROSS_MONTHLY_INCOME = 'gross_monthly_income';
-
+    case LOCATION = 'location';
     public function rules(): array
     {
         // Dynamically retrieve rules from the configuration file

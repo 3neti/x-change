@@ -34,7 +34,7 @@ it('correctly maps voucher inputs to InputData collection', function () {
         ],
         'count'  => 2,
         'prefix' => 'PRE',
-        'mask'   => '**MASK**',
+        'mask'   => '******',
         'ttl'    => 'PT48H',
     ]);
 

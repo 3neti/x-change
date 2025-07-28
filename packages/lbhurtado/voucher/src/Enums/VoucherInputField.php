@@ -13,7 +13,7 @@ enum VoucherInputField: string
     case ADDRESS = 'address';
     case BIRTH_DATE = 'birth_date';
     case GROSS_MONTHLY_INCOME = 'gross_monthly_income';
-
+    case LOCATION = 'location';
     public static function valuesToCsv(): string
     {
         return implode(',', array_column(self::cases(), 'value'));
@@ -40,6 +40,7 @@ enum VoucherInputField: string
             self::ADDRESS => 'Residential Address',
             self::BIRTH_DATE => 'Birth Date',
             self::GROSS_MONTHLY_INCOME => 'Gross Monthly Income',
+            self::LOCATION => 'Location',
             // Add more custom labels here as needed
             default => $case->value,
         };

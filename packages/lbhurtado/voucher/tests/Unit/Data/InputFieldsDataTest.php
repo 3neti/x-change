@@ -6,7 +6,7 @@ use LBHurtado\Voucher\Data\InputFieldsData;
 it('can create InputFieldsData from strings and cast to enum', function () {
     $fields = ['email', 'mobile', 'kyc'];
 
-    $data = InputFieldsData::fromArray($fields);
+    $data = InputFieldsData::fromArray(compact('fields'));
 
     expect($data->fields)->toHaveCount(3);
     expect($data->fields[0])->toBeInstanceOf(VoucherInputField::class);
