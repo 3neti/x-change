@@ -64,7 +64,8 @@ if (!function_exists('voucher_totals')) {
      * Compute total outstanding cash amounts by currency for a collection of vouchers.
      *
      * @param Collection $vouchers
-     * @return Collection<string, array{ amount: Money, count: int, latest_created_at: string|null }>
+     * @return Collection<string, array{ total: Money, count: int, latest_created_at: string|null }>
+     * @todo make this into a DTO
      */
     function voucher_totals(Collection $vouchers): Collection
     {
@@ -83,7 +84,7 @@ if (!function_exists('voucher_totals')) {
 
         // 3. Compute totals per currency group
         return $grouped->map(function (Collection $group) {
-            $amount = $group->reduce(
+            $total = $group->reduce(
                 fn (Money $carry, $entry) => $carry->plus($entry['cash']->amount),
                 Money::zero($group->first()['cash']->amount->getCurrency())
             );
@@ -97,36 +98,10 @@ if (!function_exists('voucher_totals')) {
                 ->first()?->toDateTimeString();
 
             return [
-                'amount' => $amount,
+                'total' => $total,
                 'count' => $count,
                 'latest_created_at' => $latest,
             ];
         });
     }
 }
-
-//if (!function_exists('voucher_totals')) {
-//    /**
-//     * Compute total outstanding cash amounts by currency for a collection of vouchers.
-//     *
-//     * @param Collection $vouchers
-//     * @return Collection<string, Money>
-//     */
-//    function voucher_totals(Collection $vouchers): Collection
-//    {
-//        $cashEntries = $vouchers
-//            ->map(fn ($voucher) => $voucher->cash)
-//            ->filter();
-//
-//        $cashByCurrency = $cashEntries->groupBy(fn ($cash) =>
-//        $cash->amount->getCurrency()->getCurrencyCode()
-//        );
-//
-//        return $cashByCurrency->map(function (Collection $group) {
-//            return $group->reduce(
-//                fn (Money $carry, $cash) => $carry->plus($cash->amount),
-//                Money::zero($group->first()->amount->getCurrency())
-//            );
-//        });
-//    }
-//}

@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import PlaceholderPattern from '../components/PlaceholderPattern.vue';
 import { useWalletBalance } from '@/composables/useWalletBalance';
-import { useQrCode } from '@/composables/useQrCode';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, usePage } from '@inertiajs/vue3';
 import { type BreadcrumbItem, VoucherList } from '@/types';
-
 import {
     Card,
     CardContent,
@@ -18,39 +16,29 @@ import RecentRedemptions from '@/components/domain/RecentRedemptions.vue';
 import { computed } from 'vue';
 import { useFormatCurrency } from '@/composables/useFormatCurrency';
 
-export interface CurrencyAmount {
-    amount: {
+export interface Totals {
+    total: {
         amount: number;
         currency: string;
     };
     count: number;
     latest_created_at: string | null;
 }
-
 const props = defineProps<{
     vouchers: VoucherList;
-    totalVouchers: number,
-    totalRedeemables: Record<string, CurrencyAmount>,
-    totalRedeemed: Record<string, CurrencyAmount>;
+    totalRedeemables: Record<string, Totals>,
+    totalRedeemed: Record<string, Totals>;
 }>();
 
-const user = usePage().props.auth.user;
-
+const { formattedBalance, updatedAt } = useWalletBalance('platform');
+const voucherCount = computed(() => props.vouchers.length);
+const formatCurrency = useFormatCurrency();
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Dashboard',
         href: '/dashboard',
     },
 ];
-
-const account = user.mobile;
-const amount = 0;
-
-const { qrCode, status, message, refresh } = useQrCode(account, amount);
-
-const { formattedBalance, updatedAt } = useWalletBalance('platform');
-const voucherCount = computed(() => props.vouchers.length);
-const formatCurrency = useFormatCurrency();
 </script>
 
 <template>
@@ -91,11 +79,11 @@ const formatCurrency = useFormatCurrency();
                         <CardContent>
                             <div class="flex flex-col items-center">
                                 <div class="text-2xl font-bold">
-                                    {{ formatCurrency(totalRedeemed.PHP?.amount.amount) }}
+                                    {{ formatCurrency(totalRedeemed?.PHP?.total?.amount || 0) }}
                                 </div>
                                 <p class="text-xs">
                                     <span class="text-muted-foreground">as of </span>
-                                    <span> {{ totalRedeemed.PHP?.latest_created_at }}</span>
+                                    <span> {{ totalRedeemed?.PHP?.latest_created_at }}</span>
                                 </p>
                             </div>
                         </CardContent>
@@ -112,11 +100,11 @@ const formatCurrency = useFormatCurrency();
                         <CardContent>
                             <div class="flex flex-col items-center">
                                 <div class="text-2xl font-bold">
-                                    {{ totalRedeemables.PHP.count }}
+                                    {{ totalRedeemables?.PHP?.count || 0 }}
                                 </div>
                                 <p class="text-xs">
                                     <span class="text-muted-foreground">totalling </span>
-                                    <span> {{ formatCurrency(totalRedeemables.PHP.amount.amount) }} </span>
+                                    <span> {{ formatCurrency(totalRedeemables?.PHP?.total?.amount || 0) }} </span>
                                 </p>
                             </div>
                         </CardContent>

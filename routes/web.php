@@ -1,17 +1,12 @@
 <?php
 
-use App\Http\Controllers\{CheckWalletBalanceController, VoucherController};
+use App\Http\Controllers\{CheckWalletBalanceController, DashboardController, LoadController, VoucherController};
 use App\Http\Controllers\Voucher\{GenerateController, ViewController};
 use Laravel\WorkOS\Http\Middleware\ValidateSessionWithWorkOS;
 use App\Http\Controllers\Api\CutCheckController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Spatie\LaravelData\DataCollection;
-use LBHurtado\Voucher\Data\VoucherData;
-use LBHurtado\Voucher\Models\Voucher;
-use Illuminate\Support\Collection;
-use Brick\Money\Money;
 
 Route::get('/', fn () => Inertia::render('Welcome'));
 
@@ -19,55 +14,10 @@ Route::middleware([
     'auth',
     ValidateSessionWithWorkOS::class,
 ])->group(function () {
-    Route::get('dashboard', function (Request $request) {
-        $vouchers = Voucher::query()
-            ->withOwner($request->user())
-            ->withRedeemed()
-            ->latest('redeemed_at')
-            ->get()
-        ;
-
-        $redeemables = Voucher::query()
-            ->withOwner($request->user())
-            ->withRedeemable()
-            ->latest('redeemed_at')
-            ->get()
-        ;
-        $totalVouchers = $redeemables->count();
-
-        $totalRedeemed = voucher_totals($vouchers);
-        $totalRedeemables = voucher_totals($redeemables);
-//// 1. Extract all non-null cash objects
-//        $cashEntries = $redeemables
-//            ->map(fn ($voucher) => $voucher->cash)
-//            ->filter(); // remove nulls
-//
-//// 2. Group them by currency
-//        $cashByCurrency = $cashEntries->groupBy(fn ($cash) => $cash->amount->getCurrency()->getCurrencyCode());
-//
-//// 3. Sum using Money::plus()
-//        $totalAmounts = $cashByCurrency->map(function (Collection $group) {
-//            return $group->reduce(
-//                fn (Money $carry, $cash) => $carry->plus($cash->amount),
-//                Money::zero($group->first()->amount->getCurrency())
-//            );
-//        });
-
-        return Inertia::render('Dashboard', [
-            'vouchers' => new DataCollection(VoucherData::class, $vouchers),
-            'totalVouchers' => $totalVouchers,
-            'totalRedeemables' => $totalRedeemables,
-            'totalRedeemed' => $totalRedeemed,
-
-        ]);
-    })->name('dashboard');
-    Route::get('load', function () {
-        return Inertia::render('Load');
-    })->name('load');
-
+    Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::get('load', LoadController::class)->name('load');
     Route::get('generate', [GenerateController::class, 'create'])->name('disburse');
     Route::post('generate', [GenerateController::class, 'store'])->name('disburse.store');
-
     Route::get('view', ViewController::class)->name('view');
 });
 

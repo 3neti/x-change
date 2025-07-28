@@ -12,6 +12,11 @@
 - disburse    //TODO: $cash as sender - withdraw and deposit (transfer) bayad utang
 - redeem
 
+# Inputs
+- splash
+- location
+- KYC
+
 # Data
 - action
 - user
