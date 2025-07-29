@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers\Redeem;
 
+use App\Data\MessageData;
+use Illuminate\Foundation\Inspiring;
+use Illuminate\Support\Str;
 use App\Support\{RedeemPluginMap, RedeemPluginSelector};
 use Illuminate\Support\Facades\{Config, Log, Session};
 use LBHurtado\ModelInput\Support\InputRuleBuilder;
@@ -145,15 +148,29 @@ class RedeemWizardController extends Controller
 
     public function success(Voucher $voucher): Response
     {
-        $code = $voucher->code;
+        $from = $voucher->owner->name;
+        $to = $voucher->input('name')  ?? $voucher->contact->mobile;
+        $instruction_message = $voucher->instructions->rider->message;
+        if (! $message = MessageData::tryFrom($instruction_message)?->withWrappedBody()) {
+            $subject = 'Quote';
+            $title = '';
+            [$body, $from] = str(Inspiring::quotes()->random())->explode('-');
+            $body = Str::wordWrap($body, characters: 40, break: "\n");
+            $closing = 'Ayus!';
+
+            $message = MessageData::from(compact('subject','title', 'body', 'closing'));
+        }
 
         $response = Inertia::render('Redeem/Success', [
             'voucher' => $voucher->getData(),
-            'inputs' => $voucher->inputs->pluck('value', 'name')->toArray(),
+            'from' => $from,
+            'to' => $to,
+            'message' => $message,
             'redirectTimeout' => config('x-change.redeem.success.redirect_timeout'),
         ]);
 
         // Clear all redeem session keys
+        $code = $voucher->code;
         Session::forget(collect(Config::get('x-change.plugins', []))
             ->keys()
             ->map(fn($key) => "redeem.{$code}.{$key}")

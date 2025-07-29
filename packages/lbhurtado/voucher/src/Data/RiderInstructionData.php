@@ -18,7 +18,7 @@ class RiderInstructionData extends Data
     {
         return [
             'message' => [
-                ['required', 'string', 'max:255'],
+                ['required', 'string', 'max:2048'],
                 config('instructions.rider.message')
             ],
             'url' => [

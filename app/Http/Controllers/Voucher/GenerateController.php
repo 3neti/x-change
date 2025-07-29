@@ -9,8 +9,8 @@ use LBHurtado\Voucher\Enums\VoucherInputField;
 use Illuminate\Support\Facades\{Cache, Log};
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Enums\Subject;
 use Inertia\Inertia;
-
 
 //TODO: test this
 class GenerateController extends Controller
@@ -23,6 +23,7 @@ class GenerateController extends Controller
         return Inertia::render('Generate', [
             'data' => $data,
             'availableInputs' => VoucherInputField::valuesToCsv(),
+            'subjects' => Subject::options(),
             'labelMap' => ['kyc' => 'KYC', 'gross_monthly_income' => 'GMI']
         ]);
     }

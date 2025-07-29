@@ -77,4 +77,11 @@ export interface Voucher {
 }
 export type VoucherList = Voucher[];
 
+export interface MessageData {
+    subject: string
+    title: string
+    body: string
+    closing: string
+}
+
 export type BreadcrumbItemType = BreadcrumbItem;

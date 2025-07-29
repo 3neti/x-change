@@ -104,3 +104,33 @@ Route::post('calculate-cost', \App\Actions\CalculateCost::class)
 Route::post('parse-instructions', \App\Actions\ParseInstructions::class)
     ->middleware( 'auth', 'web')
     ->name('parse-instructions');
+
+use LBHurtado\Voucher\Models\Voucher;
+use Illuminate\Foundation\Inspiring;
+use App\Data\MessageData;
+use Illuminate\Support\Str;
+
+Route::get('test/{voucher}', function (Voucher $voucher) {
+    $from = $voucher->owner->name;
+    $to = $voucher->input('name')  ?? $voucher->contact->mobile;
+    $instruction_message = $voucher->instructions->rider->message;
+    if (! $message = MessageData::tryFrom($instruction_message)?->withWrappedBody()) {
+        $subject = 'Quote';
+        $title = '';
+        [$body, $from] = str(Inspiring::quotes()->random())->explode('-');
+        $body = Str::wordWrap($body, characters: 40, break: "\n");
+        $closing = 'Ayus!';
+
+        $message = MessageData::from(compact('subject','title', 'body', 'closing'));
+    }
+
+    $response = Inertia::render('Redeem/Success', [
+        'voucher' => $voucher->getData(),
+        'from' => $from,
+        'to' => $to,
+        'message' => $message,
+        'redirectTimeout' => config('x-change.redeem.success.redirect_timeout'),
+    ]);
+
+    return $response;
+});

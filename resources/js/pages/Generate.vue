@@ -5,6 +5,15 @@ import { Head, useForm, usePage } from '@inertiajs/vue3';
 import type { BreadcrumbItemType } from '@/types';
 import { useFlashEventWatcher } from '@/composables/useFlashEventWatcher';
 import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card'
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
+import {
     Dialog,
     DialogContent,
     DialogHeader,
@@ -14,10 +23,16 @@ import {
     DialogClose,
     DialogOverlay,
 } from '@/components/ui/dialog';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
-
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -33,6 +48,7 @@ import InputExtra from '@/components/domain/InputExtra.vue';
 import { useCostBreakdown } from '@/composables/useCostBreakdown'
 import { useFormatCurrency } from '@/composables/useFormatCurrency'
 import get from 'lodash/get'
+import { Trash } from 'lucide-vue-next';
 
 const breadcrumbs: BreadcrumbItemType[] = [{ title: 'Generate', href: '/disburse' }];
 
@@ -66,6 +82,7 @@ const props = defineProps<{
         mask: string;
         ttl: string;
     };
+    subjects: Record<string, string>;
     availableInputs: string;
     labelMap?: Record<string, string>;
 }>();
@@ -91,7 +108,7 @@ const form = useForm({
         webhook: props.data.feedback?.webhook ?? '',
     },
     rider: {
-        message: props.data.rider?.message ?? '',
+        message: '',
         url: props.data.rider?.url ?? '',
     },
     count: props.data.count ?? 1,
@@ -342,6 +359,48 @@ watch(parsedInstructions, (data) => {
     form.mask = cleaned.mask ?? form.mask;
     form.ttl = cleaned.ttl ?? form.ttl;
 });
+
+const messageFields = reactive({
+    subject: '',
+    title: '',
+    body: '',
+    closing: '',
+});
+
+function clearMessageFields() {
+    messageFields.subject = '';
+    messageFields.title = '';
+    messageFields.body = '';
+    messageFields.closing = '';
+}
+
+watch(messageFields, (val) => {
+    const allFilled = Object.values(val).every(v => !!v?.trim());
+    form.rider.message = allFilled ? JSON.stringify(val) : '';
+}, { deep: true });
+
+// ⛰️ Populate from existing props.data.rider.message if available
+onMounted(() => {
+    const message = props?.data?.rider?.message;
+
+    if (message) {
+        try {
+            const parsed = JSON.parse(message);
+            if (
+                parsed &&
+                typeof parsed === 'object' &&
+                ['subject', 'title', 'body', 'closing'].every(key => key in parsed)
+            ) {
+                messageFields.subject = parsed.subject ?? '';
+                messageFields.title = parsed.title ?? '';
+                messageFields.body = parsed.body ?? '';
+                messageFields.closing = parsed.closing ?? '';
+            }
+        } catch (e) {
+            console.warn('Invalid message JSON in rider.message:', e);
+        }
+    }
+});
 </script>
 
 <template>
@@ -475,15 +534,85 @@ watch(parsedInstructions, (data) => {
                                     </div>
                                 </template>
 
-                                <!-- Message -->
-                                <div class="col-span-2 space-y-2">
-                                    <Label>Message</Label>
-                                    <Input type="text" v-model="form.rider.message" class="w-full" />
-                                    <div class="text-right">
-                                        <InputExtra :message="getCostMessage('rider.message')" />
+<!--                                &lt;!&ndash; Message &ndash;&gt;-->
+<!--                                <div class="col-span-2 space-y-2">-->
+<!--                                    <Label>Message</Label>-->
+<!--                                    <Input type="text" v-model="form.rider.message" class="w-full" />-->
+<!--                                    <div class="text-right">-->
+<!--                                        <InputExtra :message="getCostMessage('rider.message')" />-->
+<!--                                    </div>-->
+<!--                                    <InputError :message="get(form.errors, 'rider.message')" />-->
+<!--                                </div>-->
+
+                                <!-- Structured Message Fields -->
+                                <fieldset class="col-span-2 border rounded p-4">
+                                    <legend class="text-sm font-medium text-gray-700 px-1">Message</legend>
+
+                                    <div class="grid grid-cols-2 gap-4 mt-2">
+                                        <div class="flex flex-col space-y-1.5">
+                                            <Label for="message-subject">Subject</Label>
+                                            <Select v-model="messageFields.subject">
+                                                <SelectTrigger id="subject">
+                                                    <SelectValue placeholder="Choose a subject" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem
+                                                        v-for="item in props.subjects"
+                                                        :key="item.value"
+                                                        :value="item.label"
+                                                    >
+                                                        {{ item.label }}
+                                                    </SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <div class="space-y-2">
+                                            <Label>Title</Label>
+                                            <Input type="text" v-model="messageFields.title" />
+                                        </div>
+
+                                        <div class="col-span-2 space-y-2">
+                                            <Label>Body</Label>
+                                            <Textarea v-model="messageFields.body" rows="4" />
+                                        </div>
+
+                                        <div class="col-span-2 space-y-2">
+                                            <Label>Closing</Label>
+                                            <Input type="text" v-model="messageFields.closing" />
+                                            <div class="text-right">
+                                                <InputExtra :message="getCostMessage('rider.message')" />
+                                            </div>
+                                            <InputError :message="get(form.errors, 'rider.message')" />
+                                        </div>
+
+                                        <!-- Message Hint + Clear Button -->
+                                        <div class="col-span-2 flex items-center justify-between mt-2">
+                                            <p class="text-xs text-muted-foreground">
+                                                Message will be auto-generated when all fields are filled.
+                                            </p>
+                                            <button
+                                                type="button"
+                                                @click="clearMessageFields"
+                                                class="inline-flex items-center justify-center rounded p-1 text-gray-400 hover:text-red-500 transition-colors"
+                                                title="Clear"
+                                            >
+                                                <Trash class="w-4 h-4" />
+                                            </button>
+                                        </div>
+
                                     </div>
-                                    <InputError :message="get(form.errors, 'rider.message')" />
-                                </div>
+                                </fieldset>
+
+<!--                                &lt;!&ndash; Resulting JSON Message (auto-updated) &ndash;&gt;-->
+<!--                                <div class="col-span-2 space-y-2">-->
+<!--                                    <Label>Message JSON (auto-generated)</Label>-->
+<!--                                    <Input type="text" v-model="form.rider.message" readonly class="w-full" />-->
+<!--                                    <div class="text-right">-->
+<!--                                        <InputExtra :message="getCostMessage('rider.message')" />-->
+<!--                                    </div>-->
+<!--                                    <InputError :message="get(form.errors, 'rider.message')" />-->
+<!--                                </div>-->
                             </div>
                         </CollapsibleContent>
                     </Collapsible>
