@@ -6,7 +6,7 @@ import GuestLayout from '@/layouts/legacy/GuestLayout.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import TextLink from '@/components/TextLink.vue';
 import { MessageData, Voucher } from '@/types';
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { Share } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -14,7 +14,6 @@ const props = defineProps<{
     from: string;
     to: string;
     message: MessageData;
-    redirectUrl: string;
     redirectTimeout?: number;
 }>();
 
@@ -33,6 +32,22 @@ function shareToDevice() {
         alert('Sharing is not supported on this device.');
     }
 }
+
+const countdown = ref(0)
+
+onMounted(() => {
+    const timeout = props.redirectTimeout ?? 3000
+    countdown.value = Math.ceil(timeout / 1000)
+
+    const interval = setInterval(() => {
+        countdown.value--
+        if (countdown.value <= 0) clearInterval(interval)
+    }, 1000)
+
+    setTimeout(() => {
+        router.visit(route('redeem.redirect', { voucher: props.voucher.code }))
+    }, timeout)
+})
 </script>
 
 <template>
@@ -79,6 +94,9 @@ function shareToDevice() {
                 </blockquote>
                 <!-- Bottom-right: Done + Share -->
                 <div class="absolute bottom-4 right-4 z-30 flex items-center space-x-6">
+                    <!-- Countdown Timer -->
+                    <span class="text-[0.65rem] text-white/70 font-mono">({{ countdown }}s)</span>
+
                     <!-- Share Button (Web Share API) -->
                     <button
                         @click="shareToDevice"
