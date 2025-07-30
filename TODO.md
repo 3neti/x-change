@@ -16,6 +16,7 @@
 - splash
 - selfie
 - KYC
+- OTP
 
 # Data
 - action
@@ -27,3 +28,8 @@
 - favicon
 - fix names of migration files, migrate:refresh in production
 - next day expiration
+
+
+# Features
+- respond after redemption
+- OTP
