@@ -35,19 +35,19 @@ function shareToDevice() {
 
 const countdown = ref(0)
 
-// onMounted(() => {
-//     const timeout = props.redirectTimeout ?? 3000
-//     countdown.value = Math.ceil(timeout / 1000)
-//
-//     const interval = setInterval(() => {
-//         countdown.value--
-//         if (countdown.value <= 0) clearInterval(interval)
-//     }, 1000)
-//
-//     setTimeout(() => {
-//         router.visit(route('redeem.redirect', { voucher: props.voucher.code }))
-//     }, timeout)
-// })
+onMounted(() => {
+    const timeout = props.redirectTimeout ?? 3000
+    countdown.value = Math.ceil(timeout / 1000)
+
+    const interval = setInterval(() => {
+        countdown.value--
+        if (countdown.value <= 0) clearInterval(interval)
+    }, 1000)
+
+    setTimeout(() => {
+        router.visit(route('redeem.redirect', { voucher: props.voucher.code }))
+    }, timeout)
+})
 const parsedTitle = computed(() => {
     const title = props.message.title.trim()
 
