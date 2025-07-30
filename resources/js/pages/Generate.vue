@@ -83,6 +83,7 @@ const props = defineProps<{
         ttl: string;
     };
     subjects: Record<string, string>;
+    subject_placeholders: Record<string, string>;
     availableInputs: string;
     labelMap?: Record<string, string>;
 }>();
@@ -237,6 +238,7 @@ function resetForm() {
     form.starts_at = '';
     form.expires_at = '';
     form.payeeMode = 'prefix';
+    clearMessageFields();
 }
 
 // const excluded = ['cash.currency', 'cash.validation.country', 'payeeMode']
@@ -319,6 +321,7 @@ function clearInstructions() {
     parsedInstructions.value = null
     parseError.value = ''
     parsing.value = false
+    clearMessageFields()
 }
 watch(parsedInstructions, (data) => {
     if (!data) return;
@@ -368,10 +371,12 @@ const messageFields = reactive({
 });
 
 function clearMessageFields() {
-    messageFields.subject = '';
-    messageFields.title = '';
-    messageFields.body = '';
-    messageFields.closing = '';
+    Object.assign(messageFields, {
+        subject: '',
+        title: '',
+        body: '',
+        closing: '',
+    });
 }
 
 watch(messageFields, (val) => {
@@ -401,6 +406,24 @@ onMounted(() => {
         }
     }
 });
+const titlePlaceholder = computed(() => {
+    const key = messageFields.subject
+    return props.subject_placeholders[key] ?? 'Enter a title...'
+})
+watch(
+    () => messageFields.subject,
+    (newSubject, oldSubject) => {
+        if (!messageFields.body.trim()) {
+            messageFields.title = ''
+        }
+    }
+)
+onMounted(() => {
+    if (!form.rider.message?.trim()) {
+        messageFields.subject = 'INSTRUCTIONS'
+        messageFields.closing = 'Done'
+    }
+})
 </script>
 
 <template>
@@ -549,11 +572,6 @@ onMounted(() => {
                                     <legend class="text-sm font-medium text-gray-700 px-1">Message</legend>
 
                                     <div class="grid grid-cols-2 gap-4 mt-2">
-                                        <div class="col-span-2 space-y-2">
-                                            <Label>Title</Label>
-                                            <Input type="text" v-model="messageFields.title" placeholder="Disenchanted - My Chemical Romance"/>
-                                        </div>
-
                                         <div class="flex flex-col space-y-1.5">
                                             <Label for="message-subject">Subject</Label>
                                             <Select v-model="messageFields.subject">
@@ -564,23 +582,46 @@ onMounted(() => {
                                                     <SelectItem
                                                         v-for="item in props.subjects"
                                                         :key="item.value"
-                                                        :value="item.label"
+                                                        :value="item.value"
                                                     >
-                                                        {{ item.label }}
+                                                    {{ item.label }}
                                                     </SelectItem>
+<!--                                                    <SelectItem-->
+<!--                                                        v-for="item in props.subjects"-->
+<!--                                                        :key="item.value"-->
+<!--                                                        :value="item.label"-->
+<!--                                                    >-->
+<!--                                                        {{ item.label }}-->
+<!--                                                    </SelectItem>-->
                                                 </SelectContent>
                                             </Select>
                                         </div>
 
                                         <div class="space-y-2">
                                             <Label>Closing</Label>
-                                            <Input type="text" v-model="messageFields.closing" />
+                                            <Select v-model="messageFields.closing">
+                                                <SelectTrigger id="message-closing">
+                                                    <SelectValue placeholder="Choose a closing" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="Done">Done</SelectItem>
+                                                    <SelectItem value="Continue">Continue</SelectItem>
+                                                    <SelectItem value="Next">Next</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <div class="col-span-2 space-y-2">
+                                            <Label>Title</Label>
+                                            <Input type="text" v-model="messageFields.title" :placeholder="titlePlaceholder"/>
                                         </div>
 
                                         <div class="col-span-2 space-y-2">
                                             <Label>Body</Label>
-                                            <Textarea v-model="messageFields.body" rows="4" />
-                                            <div class="text-right">
+                                            <Textarea v-model="messageFields.body" rows="4" maxlength="2048"/>
+                                            <!-- Character Count + InputExtra on same line -->
+                                            <div class="flex justify-between text-xs text-muted-foreground">
+                                                <span :class="{ 'text-red-500': messageFields.body.length > 2000 }">{{ messageFields.body.length.toLocaleString() }}/2,048 characters</span>
                                                 <InputExtra :message="getCostMessage('rider.message')" />
                                             </div>
                                             <InputError :message="get(form.errors, 'rider.message')" />
