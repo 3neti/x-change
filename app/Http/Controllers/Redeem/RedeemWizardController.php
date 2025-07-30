@@ -143,6 +143,7 @@ class RedeemWizardController extends Controller
             'voucher' => $voucher->getData(),
             'mobile' => Session::get("redeem.{$code}.mobile"),
             'bank_account' => $bankAccount,
+            'inputs' => Session::get("redeem.{$code}.inputs"),
         ]);
     }
 

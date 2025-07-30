@@ -25,6 +25,7 @@ const form = useForm({
     address: props.inputs.address ?? '',
     birth_date: props.inputs.birth_date ?? '',
     email: props.inputs.email ?? '',
+    reference_code: props.inputs.reference_code ?? '',
     gross_monthly_income: props.inputs.gross_monthly_income ?? '',
     country: props.inputs.country ?? '',
     location: '',
@@ -128,6 +129,12 @@ watch(() => form.location, (value) => {
                     <Label for="email">Email</Label>
                     <Input id="email" v-model="form.email" type="email"/>
                     <InputError :message="form.errors.email" />
+                </div>
+
+                <div v-if="visibleFields.includes('reference_code')" class="mt-4 flex flex-col gap-1">
+                    <Label for="reference_code">Reference Code</Label>
+                    <Input id="reference_code" v-model="form.reference_code"/>
+                    <InputError :message="form.errors.reference_code" />
                 </div>
 
                 <div v-if="visibleFields.includes('gross_monthly_income')" class="mt-4 flex flex-col gap-1">

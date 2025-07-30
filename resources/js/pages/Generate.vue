@@ -549,6 +549,11 @@ onMounted(() => {
                                     <legend class="text-sm font-medium text-gray-700 px-1">Message</legend>
 
                                     <div class="grid grid-cols-2 gap-4 mt-2">
+                                        <div class="col-span-2 space-y-2">
+                                            <Label>Title</Label>
+                                            <Input type="text" v-model="messageFields.title" placeholder="Disenchanted - My Chemical Romance"/>
+                                        </div>
+
                                         <div class="flex flex-col space-y-1.5">
                                             <Label for="message-subject">Subject</Label>
                                             <Select v-model="messageFields.subject">
@@ -568,18 +573,13 @@ onMounted(() => {
                                         </div>
 
                                         <div class="space-y-2">
-                                            <Label>Title</Label>
-                                            <Input type="text" v-model="messageFields.title" />
+                                            <Label>Closing</Label>
+                                            <Input type="text" v-model="messageFields.closing" />
                                         </div>
 
                                         <div class="col-span-2 space-y-2">
                                             <Label>Body</Label>
                                             <Textarea v-model="messageFields.body" rows="4" />
-                                        </div>
-
-                                        <div class="col-span-2 space-y-2">
-                                            <Label>Closing</Label>
-                                            <Input type="text" v-model="messageFields.closing" />
                                             <div class="text-right">
                                                 <InputExtra :message="getCostMessage('rider.message')" />
                                             </div>

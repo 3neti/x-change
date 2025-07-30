@@ -35,25 +35,59 @@ function shareToDevice() {
 
 const countdown = ref(0)
 
-onMounted(() => {
-    const timeout = props.redirectTimeout ?? 3000
-    countdown.value = Math.ceil(timeout / 1000)
+// onMounted(() => {
+//     const timeout = props.redirectTimeout ?? 3000
+//     countdown.value = Math.ceil(timeout / 1000)
+//
+//     const interval = setInterval(() => {
+//         countdown.value--
+//         if (countdown.value <= 0) clearInterval(interval)
+//     }, 1000)
+//
+//     setTimeout(() => {
+//         router.visit(route('redeem.redirect', { voucher: props.voucher.code }))
+//     }, timeout)
+// })
+const parsedTitle = computed(() => {
+    const title = props.message.title.trim()
 
-    const interval = setInterval(() => {
-        countdown.value--
-        if (countdown.value <= 0) clearInterval(interval)
-    }, 1000)
+    if (title.includes(' - ')) {
+        const [main, author] = title.split(' - ')
+        return `${main.trim()}\n- ${author.trim()}`
+    }
 
-    setTimeout(() => {
-        router.visit(route('redeem.redirect', { voucher: props.voucher.code }))
-    }, timeout)
+    if (title.includes(' by ')) {
+        const [main, author] = title.split(' by ')
+        return `${main.trim()}\nby ${author.trim()}`
+    }
+
+    return title
+})
+
+const parsed = computed(() => {
+    const title = props.message.title.trim()
+    const delimiters = [' - ', ' by ', ' ~ ', ' | ']
+
+    for (const delimiter of delimiters) {
+        if (title.includes(delimiter)) {
+            const [main, author] = title.split(delimiter)
+            return {
+                main: main.trim(),
+                author: author.trim(),
+            }
+        }
+    }
+
+    return {
+        main: title,
+        author: null,
+    }
 })
 </script>
 
 <template>
     <GuestLayout>
         <Head title="Voucher Redeemed" />
-
         <!-- Voucher Code: top-left, subtle -->
         <div class="absolute top-0 left-0 px-2 py-1 text-[10px] text-zinc-800 select-none dark:text-zinc-700">{{ voucher.code }} => {{ formatCurrency(voucher.cash.amount, {isMinor: true}) }}</div>
 
@@ -78,11 +112,25 @@ onMounted(() => {
             <!-- Main content -->
             <div class="relative z-20 mt-auto">
                 <blockquote class="space-y-2">
-                    <pre
-                        class="rounded bg-black/10 p-4 pl-0 text-center font-mono text-base leading-snug whitespace-pre"
-                        style="text-indent: 0; margin: 0"
-                        >{{ message.title }}</pre
-                    >
+                    <!-- Centered Title + Author only -->
+                    <div class="text-center space-y-1">
+                        <!-- Title + Author aligned block -->
+                        <div class="inline-block mx-auto text-left">
+                            <!-- Title -->
+                            <pre
+                                class="rounded bg-black/10 p-2 font-mono text-base leading-snug whitespace-pre-line"
+                                style="text-indent: 0; margin: 0"
+                            >{{ parsed.main }}</pre>
+
+                            <!-- Author -->
+                            <div
+                                v-if="parsed.author"
+                                class="text-xs italic text-muted-foreground -mt-1 text-right"
+                            >
+                                — {{ parsed.author }}
+                            </div>
+                        </div>
+                    </div>
                     <pre
                         class="max-h-96 max-w-full overflow-auto rounded bg-black/10 p-4 pl-0 font-mono text-sm leading-snug whitespace-pre"
                         style="text-indent: 0; margin: 0"

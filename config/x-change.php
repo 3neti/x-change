@@ -43,6 +43,7 @@ return [
                     VoucherInputField::NAME,
                     VoucherInputField::ADDRESS,
                     VoucherInputField::LOCATION,
+                    VoucherInputField::REFERENCE_CODE
                 ],
                 'validation' => [
                     'name' => 'required|string',
@@ -51,6 +52,7 @@ return [
                     'email' => 'required|email',
                     'gross_monthly_income' => 'required|numeric|min:0',
                     'location' => 'required|string',
+                    'reference_code' => 'required|string',
                 ],
                 'middleware' => [
                     App\Http\Middleware\Redeem\CheckVoucherMiddleware::class,
