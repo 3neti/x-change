@@ -25,7 +25,7 @@ class GenerateController extends Controller
             'availableInputs' => VoucherInputField::valuesToCsv(),
             'subjects' => Subject::options(),
             'subject_placeholders' => Subject::placeholders(),
-            'labelMap' => ['kyc' => 'KYC', 'gross_monthly_income' => 'GMI']
+            'labelMap' => ['kyc' => 'KYC', 'gross_monthly_income' => 'GMI', 'otp' => 'OTP'],
         ]);
     }
 

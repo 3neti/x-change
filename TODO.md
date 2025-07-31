@@ -33,3 +33,13 @@
 # Features
 - respond after redemption
 - OTP
+
+# Documentation
+- how to add input
+  - model-inputs InputType enum, mode-input.php rules
+  - voucher VoucherInputField
+  - generate controller label map
+  - x-change config inputs.fields, inputs.validation, price
+  - composer update, composer dumpautoload, seed
+  - Inputs.vue add input field
+  - 

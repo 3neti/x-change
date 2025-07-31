@@ -29,6 +29,7 @@ const form = useForm({
     gross_monthly_income: props.inputs.gross_monthly_income ?? '',
     country: props.inputs.country ?? '',
     location: '',
+    otp: ''
 })
 
 // 👁️ Get only the visible fields from keys
@@ -164,6 +165,12 @@ watch(() => form.location, (value) => {
                     </div>
                     <GeoPermissionAlert ref="geoAlertRef" />
                     <InputError :message="form.errors.location" />
+                </div>
+
+                <div v-if="visibleFields.includes('otp')" class="mt-4 flex flex-col gap-1">
+                    <Label for="country">OTP</Label>
+                    <Input id="country" v-model="form.otp"/>
+                    <InputError :message="form.errors.otp" />
                 </div>
 
 <!--                <div v-if="visibleFields.includes('location')" class="mt-4 flex flex-col gap-1">-->

@@ -29,6 +29,7 @@
         "predis/predis": "^3.0",
         "pusher/pusher-php-server": "^7.2",
         "resend/resend-php": "^0.18.0",
+        "spomky-labs/otphp": "^11.3",
         "tightenco/parental": "^1.4",
         "tightenco/ziggy": "^2.5"
     },

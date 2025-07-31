@@ -67,7 +67,7 @@ class Voucher extends BaseVoucher implements InputInterface
         $column = $field ?? $this->getRouteKeyName();
 
         return $this
-            ->where($column, trim($value))
+            ->where($column, strtoupper(trim($value)))
             ->firstOrFail();
     }
 

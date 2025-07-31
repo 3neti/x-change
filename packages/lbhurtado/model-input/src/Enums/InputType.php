@@ -16,6 +16,7 @@ enum InputType: string
     case GROSS_MONTHLY_INCOME = 'gross_monthly_income';
     case LOCATION = 'location';
     case REFERENCE_CODE = 'reference_code';
+    case OTP = 'otp';
     public function rules(): array
     {
         // Dynamically retrieve rules from the configuration file

@@ -12,5 +12,6 @@ return [
         'gross_monthly_income' => ['required', 'numeric', 'min:10000', 'max:1000000'],
         'location' => ['required', 'string'],
         'reference_code' => ['required', 'string'],
+        'otp' => ['required', 'string', 'min:4', 'max:6'],
     ],
 ];

@@ -43,7 +43,8 @@ return [
                     VoucherInputField::NAME,
                     VoucherInputField::ADDRESS,
                     VoucherInputField::LOCATION,
-                    VoucherInputField::REFERENCE_CODE
+                    VoucherInputField::REFERENCE_CODE,
+                    VoucherInputField::OTP
                 ],
                 'validation' => [
                     'name' => 'required|string',
@@ -53,6 +54,7 @@ return [
                     'gross_monthly_income' => 'required|numeric|min:0',
                     'location' => 'required|string',
                     'reference_code' => 'required|string',
+                    'otp' => 'required|string|min:4|max:6',
                 ],
                 'middleware' => [
                     App\Http\Middleware\Redeem\CheckVoucherMiddleware::class,
@@ -186,5 +188,15 @@ return [
             'price' => 300,
             'description' => 'Location input field required from the user',
         ],
+        'inputs.fields.otp' => [
+            'price' => 400,
+            'description' => 'OTP input field required from the user',
+        ],
+    ],
+
+    'otp' => [
+        'label' => env('OTP_LABEL', 'x-change'),
+        'period' => env('OTP_PERIOD', 10 * 60), //10 minutes
+        'digits' => env('OTP_DIGITS', 4),
     ],
 ];
