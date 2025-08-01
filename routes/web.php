@@ -48,7 +48,7 @@ use App\Http\Middleware\Redeem\{
     EnsurePayeeSecretMiddleware,
     RedeemVoucherMiddleware
 };
-
+use App\Actions\VerifyMobile;
 
 Route::get('redeem', function () {
     return Inertia::render('Redeem/Start');
@@ -92,6 +92,8 @@ Route::prefix('redeem/{voucher}')
                 RedeemVoucherMiddleware::class
             ])
             ->name('redeem.success');
+
+        Route::post('verify-mobile', VerifyMobile::class)->name('redeem.verify-mobile');
     });
 
 Route::get('redeem/{voucher}/redirect', \App\Http\Controllers\SuccessRedirectController::class)

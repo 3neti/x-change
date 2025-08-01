@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Session;
 use Illuminate\Http\Request;
 use Closure;
 
+/** @deprecated  */
 class SendOTPMiddleware
 {
     public function handle(Request $request, Closure $next): Response

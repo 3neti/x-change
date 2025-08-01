@@ -16,6 +16,10 @@ use LBHurtado\Voucher\Models\Voucher;
 use App\Http\Controllers\Controller;
 use Inertia\{Inertia, Response};
 use Illuminate\Support\Arr;
+use App\Events\SessionMobileStored;
+use Illuminate\Support\Facades\Validator;
+use OTPHP\Factory;
+use App\Validators\VoucherRedemptionValidator;
 
 class RedeemWizardController extends Controller
 {
@@ -102,7 +106,23 @@ class RedeemWizardController extends Controller
         $filteredRules = Arr::only($rules, $pluginFieldKeys);
 
         // 🧪 Step 4: Validate only the present fields
-        $validated = $request->validate($filteredRules);
+        $validator = Validator::make($request->all(), $filteredRules);
+        $validator->after(function ($validator) use ($request, $voucher) {
+            $pin = $request->input('otp');
+            if (!is_null($pin) && $pin !== '') {
+                $voucherCode = $voucher->code;
+                $uri = cache()->get("otp.uri.{$voucherCode}");
+                $verifier = Factory::loadFromProvisioningUri($uri);
+                $otp_is_verified = $verifier->verify($pin);
+                if (!$otp_is_verified) {
+                    $validator->errors()->add(
+                        'otp',
+                        'Invalid PIN! Please try again.'
+                    );
+                }
+            }
+        });
+        $validated = $validator->validate();
 
         $sessionKey = $config['session_key'];
 
@@ -196,6 +216,7 @@ class RedeemWizardController extends Controller
         $validated = $request->validated();
 
         Session::put("redeem.{$voucher->code}.mobile", $validated['mobile']);
+        SessionMobileStored::dispatch($voucher, $validated['mobile']);
         Session::put("redeem.{$voucher->code}.country", $validated['country']);
         Session::put("redeem.{$voucher->code}.bank_code", $validated['bank_code'] ?? null);
         Session::put("redeem.{$voucher->code}.account_number", $validated['account_number'] ?? null);

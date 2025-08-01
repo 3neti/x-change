@@ -14,6 +14,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->app->register(EventServiceProvider::class);
         Number::useLocale(config('app.locale'));
     }
 }

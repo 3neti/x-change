@@ -36,14 +36,32 @@ const form = useForm({
     account_number: '',
 })
 
+function debounce<T extends (...args: any[]) => void>(fn: T, delay: number): T {
+    let timer: ReturnType<typeof setTimeout>
+    return function (this: any, ...args: any[]) {
+        clearTimeout(timer)
+        timer = setTimeout(() => fn.apply(this, args), delay)
+    } as T
+}
+
 // Sync account_number to mobile only if it wasn't manually changed
 let manualAccountOverride = false
 
-watch(() => form.mobile, (mobile) => {
+const updateAccountNumber = debounce((mobile: string) => {
     if (!manualAccountOverride && form.bank_code === GCASH_CODE) {
         form.account_number = mobile
     }
+}, 2000) // 300ms delay
+
+watch(() => form.mobile, (mobile) => {
+    updateAccountNumber(mobile)
 })
+
+// watch(() => form.mobile, (mobile) => {
+//     if (!manualAccountOverride && form.bank_code === GCASH_CODE) {
+//         form.account_number = mobile
+//     }
+// })
 
 watch(() => form.account_number, () => {
     manualAccountOverride = true
