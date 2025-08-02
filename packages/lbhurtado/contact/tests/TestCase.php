@@ -23,7 +23,8 @@ abstract class TestCase extends BaseTestCase
     protected function getPackageProviders($app)
     {
         return [
-        \LBHurtado\Contact\ContactServiceProvider::class,
+            \LBHurtado\Contact\ContactServiceProvider::class,
+            \Spatie\SchemalessAttributes\SchemalessAttributesServiceProvider::class
         ];
     }
 

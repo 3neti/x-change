@@ -51,6 +51,9 @@ trait HasInputs
             'value' => $value,
         ]);
 
+        // 🔥 Touch the parent model to trigger 'updated' event
+        $this->touch();
+
         return $this;
     }
 

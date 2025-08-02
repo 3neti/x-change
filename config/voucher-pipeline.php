@@ -1,6 +1,9 @@
 <?php
 
 return [
+    'updated' => [
+        \App\Pipelines\UpdatedVoucher\UpdateContact::class,
+    ],
     'post-generation' => [
         \LBHurtado\Voucher\Pipelines\GeneratedVouchers\ValidateStructure::class,
         \LBHurtado\Voucher\Pipelines\GeneratedVouchers\NormalizeMetadata::class,
@@ -23,7 +26,7 @@ return [
     'post-redemption' => [
         \LBHurtado\Voucher\Pipelines\RedeemedVoucher\ValidateRedeemerAndCash::class,
         \App\Pipelines\RedeemedVoucher\PersistInputs::class,
-        \LBHurtado\Voucher\Pipelines\RedeemedVoucher\DisburseCash::class,
+//        \LBHurtado\Voucher\Pipelines\RedeemedVoucher\DisburseCash::class,
         \App\Pipelines\RedeemedVoucher\SendFeedbacks::class,
     ],
 ];

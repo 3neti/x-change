@@ -34,8 +34,9 @@
         }
     },
     "require": {
-        "spatie/laravel-data": "^4.15",
-        "propaganistas/laravel-phone": "^6.0"
+        "spatie/laravel-data": "^4.17",
+        "propaganistas/laravel-phone": "^6.0",
+        "spatie/laravel-schemaless-attributes": "^2.5"
     },
     "require-dev": {
         "lbhurtado/laravel-model-input": "dev-main",

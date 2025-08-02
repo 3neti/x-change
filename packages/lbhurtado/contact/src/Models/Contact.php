@@ -2,6 +2,7 @@
 
 namespace LBHurtado\Contact\Models;
 
+use LBHurtado\Contact\Traits\{HasAdditionalAttributes, HasMeta};
 use LBHurtado\Contact\Database\Factories\ContactFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use LBHurtado\Contact\Traits\HasBankAccount;
@@ -18,19 +19,26 @@ use Illuminate\Database\Eloquent\Model;
  * @property string      $bank_account
  * @property string      $bank_code
  * @property string      $account_number
+ * @property string      $name
  *
  * @method int getKey()
  */
 class Contact extends Model implements Bankable
 {
+    use HasAdditionalAttributes;
     use HasBankAccount;
     use HasFactory;
     use HasMobile;
+    use HasMeta;
 
     protected $fillable = [
         'mobile',
         'country',
         'bank_account',
+    ];
+
+    protected $appends = [
+        'name'
     ];
 
     public static function booted(): void

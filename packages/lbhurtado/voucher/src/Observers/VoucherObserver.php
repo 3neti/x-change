@@ -5,13 +5,17 @@ namespace LBHurtado\Voucher\Observers;
 use LBHurtado\Voucher\Handlers\HandleShouldMarkRedeemedVoucher;
 use LBHurtado\Voucher\Handlers\HandleRedeemingVoucher;
 use LBHurtado\Voucher\Handlers\HandleRedeemedVoucher;
+use LBHurtado\Voucher\Handlers\HandleUpdatedVoucher;
 use LBHurtado\Voucher\Models\Voucher;
 
 class VoucherObserver
 {
     public function created(Voucher $voucher): void         {/**  */}
 
-    public function updated(Voucher $voucher): void         {/**  */}
+    public function updated(Voucher $voucher): void
+    {
+        app(HandleUpdatedVoucher::class)->handle($voucher);
+    }
 
     public function deleted(Voucher $voucher): void         {/**  */}
 

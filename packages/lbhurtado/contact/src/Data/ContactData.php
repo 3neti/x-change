@@ -13,6 +13,7 @@ class ContactData extends Data
         public ?string $bank_account = null,
         public ?string $bank_code = null,
         public ?string $account_number = null,
+        public ?string $name = null,
     ) {}
 
     public static function fromModel(ContactModel $contact): static
@@ -23,6 +24,7 @@ class ContactData extends Data
             bank_account: $contact->bank_account,
             bank_code: $contact->bank_code,
             account_number: $contact->account_number,
+            name: $contact->name
         );
     }
 }

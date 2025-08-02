@@ -20,6 +20,7 @@ use App\Events\SessionMobileStored;
 use Illuminate\Support\Facades\Validator;
 use OTPHP\Factory;
 use App\Validators\VoucherRedemptionValidator;
+use LBHurtado\Contact\Models\Contact;
 
 class RedeemWizardController extends Controller
 {
@@ -65,9 +66,21 @@ class RedeemWizardController extends Controller
         $requestedFields = array_values(array_intersect($pluginFieldKeys, $voucherFieldKeys));
 
         // 🧠 Step 3: Hydrate default values from session
+        $mobile = Session::get("redeem.{$voucher->code}.mobile");
+        $contact = filled($mobile)
+            ? Contact::fromPhoneNumber(phone($mobile, 'PH'))
+            : null;
+
+        Log::info('[RedeemWizardController] Getting Contact', [
+            'voucher' => $voucher->code,
+            'mobile' => $mobile,
+            'contact' => $contact->toArray(),
+        ]);
+
         $defaultValues = collect($requestedFields)
             ->mapWithKeys(fn($field) => [
-                $field => Session::get("redeem.{$voucher->code}.{$config['session_key']}")[$field] ?? null
+//                $field => Session::get("redeem.{$voucher->code}.{$config['session_key']}")[$field] ?? null
+                $field => $contact?->{$field} ?? null
             ])
             ->all();
 

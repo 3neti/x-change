@@ -1,6 +1,9 @@
 <?php
 
 return [
+    'updated' => [
+
+    ],
     'post-generation' => [
         \LBHurtado\Voucher\Pipelines\GeneratedVouchers\ValidateStructure::class,
         \LBHurtado\Voucher\Pipelines\GeneratedVouchers\NormalizeMetadata::class,

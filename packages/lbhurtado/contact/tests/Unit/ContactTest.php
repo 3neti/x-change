@@ -1,5 +1,6 @@
 <?php
 
+use Spatie\SchemalessAttributes\SchemalessAttributes;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Propaganistas\LaravelPhone\PhoneNumber;
 use LBHurtado\Contact\Models\Contact;
@@ -145,4 +146,17 @@ it('can be persisted using PhoneNumber object', function () {
     expect($contact)->toBeInstanceOf(Contact::class);
     expect($contact->mobile)->toBe('09171234567');
     expect($contact->country)->toBe('PH');
+});
+
+it('has meta attributes', function () {
+    $contact = Contact::factory()->create();
+    expect($contact->meta)->toBeInstanceOf(SchemalessAttributes::class);
+
+    expect($contact->name)->toBeEmpty();
+    $name = 'Juan de la Cruz';
+    $contact->name = $name;
+    $contact->save();
+
+    $c1 = Contact::find($contact->id);
+    expect($c1->name)->toBe($name);
 });

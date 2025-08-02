@@ -16,7 +16,6 @@
 - splash
 - selfie
 - KYC
-- OTP
 
 # Data
 - action
@@ -32,7 +31,6 @@
 
 # Features
 - respond after redemption
-- OTP
 
 # Documentation
 - how to add input

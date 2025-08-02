@@ -68,6 +68,7 @@ export interface Voucher {
         bank_code?: string;
         account_number?: string;
         bank_account?: string;
+        name?: string;
     } | null;
     created_at: string;
     starts_at: string;

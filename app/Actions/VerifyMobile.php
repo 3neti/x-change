@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Log;
+use LBHurtado\Voucher\Enums\VoucherInputField;
 use LBHurtado\Voucher\Models\Voucher;
 use Lorisleiva\Actions\ActionRequest;
 use Lorisleiva\Actions\Concerns\AsAction;
@@ -35,7 +36,9 @@ class VerifyMobile
 
     public function asListener(SessionMobileStored $event): void
     {
-        $this->verifyMobile($event->getVoucher(), $event->getMobile());
+        $voucher = $event->getVoucher();
+        if ($voucher->instructions->inputs->contains(VoucherInputField::OTP))
+            $this->verifyMobile($event->getVoucher(), $event->getMobile());
     }
 
     public function rules(): array
