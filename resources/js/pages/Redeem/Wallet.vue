@@ -51,7 +51,7 @@ const updateAccountNumber = debounce((mobile: string) => {
     if (!manualAccountOverride && form.bank_code === GCASH_CODE) {
         form.account_number = mobile
     }
-}, 2000) // 300ms delay
+}, 1500) // 300ms delay
 
 watch(() => form.mobile, (mobile) => {
     updateAccountNumber(mobile)
