@@ -3,6 +3,7 @@
 import { ref } from 'vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import GuestLayout from '@/layouts/legacy/GuestLayout.vue'
+import AuthBase from '@/layouts/AuthLayout.vue';
 import { useFormatCurrency } from '@/composables/useFormatCurrency'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -58,7 +59,7 @@ function beautifyKey(str) {
 </script>
 
 <template>
-    <GuestLayout>
+    <AuthBase title="Finalize" description="Redemption Data">
         <Head title="Review & Finalize" />
         <Table>
             <TableCaption>Verify the following details.</TableCaption>
@@ -130,5 +131,5 @@ function beautifyKey(str) {
                 Redeem
             </Button>
         </div>
-    </GuestLayout>
+    </AuthBase>
 </template>

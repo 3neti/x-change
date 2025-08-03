@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import GuestLayout from '@/layouts/legacy/GuestLayout.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
+import AuthBase from '@/layouts/AuthLayout.vue';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -167,7 +168,7 @@ watch(() => form.errors.otp, (error) => {
 </script>
 
 <template>
-    <GuestLayout>
+    <AuthBase>
         <Head title="Additional Information" />
 
         <form @submit.prevent="submit" class="relative space-y-6">
@@ -295,7 +296,7 @@ watch(() => form.errors.otp, (error) => {
                 </Button>
             </div>
         </form>
-    </GuestLayout>
+    </AuthBase>
 </template>
 
 <style scoped>

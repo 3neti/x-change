@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
 import GuestLayout from '@/layouts/legacy/GuestLayout.vue'
+import InputError from '@/components/InputError.vue'
+import AuthBase from '@/layouts/AuthLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import InputError from '@/components/InputError.vue'
+
 
 const form = useForm({
     voucher_code: '',
@@ -39,7 +41,7 @@ onMounted(() => {
 </script>
 
 <template>
-    <GuestLayout>
+    <AuthBase>
         <Head title="Redeem Voucher" />
 
         <form @submit.prevent="submit" class="space-y-6">
@@ -84,5 +86,5 @@ onMounted(() => {
                 {{ form.errors.general }}
             </p>
         </form>
-    </GuestLayout>
+    </AuthBase>
 </template>

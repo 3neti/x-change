@@ -5,6 +5,7 @@ import { useFormatDate } from '@/composables/useFormatDate';
 import GuestLayout from '@/layouts/legacy/GuestLayout.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import TextLink from '@/components/TextLink.vue';
+import AuthBase from '@/layouts/AuthLayout.vue';
 import { MessageData, Voucher } from '@/types';
 import { computed, onMounted, ref } from 'vue';
 import { Share } from 'lucide-vue-next';
@@ -87,7 +88,7 @@ const parsed = computed(() => {
 </script>
 
 <template>
-    <GuestLayout>
+    <AuthBase>
         <Head title="Voucher Redeemed" />
         <!-- Voucher Code: top-left, subtle -->
         <div class="absolute top-0 left-0 px-2 py-1 text-[10px] text-zinc-800 select-none dark:text-zinc-700">{{ voucher.code }} => {{ formatCurrency(voucher.cash.amount, {isMinor: true}) }}</div>
@@ -164,7 +165,7 @@ const parsed = computed(() => {
                 </div>
             </div>
         </div>
-    </GuestLayout>
+    </AuthBase>
 </template>
 
 <style scoped>

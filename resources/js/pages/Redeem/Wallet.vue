@@ -4,6 +4,7 @@ import GuestLayout from '@/layouts/legacy/GuestLayout.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import { onMounted, ref, watch, nextTick } from 'vue'
 import InputError from '@/components/InputError.vue'
+import AuthBase from '@/layouts/AuthLayout.vue';
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -123,7 +124,7 @@ function submit() {
 </script>
 
 <template>
-    <GuestLayout>
+    <AuthBase>
         <Head title="Redeem Voucher" />
 
         <form @submit.prevent="submit" class="space-y-6 relative">
@@ -187,5 +188,5 @@ function submit() {
                 </Button>
             </div>
         </form>
-    </GuestLayout>
+    </AuthBase>
 </template>

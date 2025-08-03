@@ -1,6 +1,7 @@
 <!-- resources/js/Pages/Redeem/Signature.vue -->
 <script setup lang="ts">
 import GuestLayout from '@/layouts/legacy/GuestLayout.vue'
+import AuthBase from '@/layouts/AuthLayout.vue';
 import { VueSignaturePad } from "@selemondev/vue3-signature-pad"
 import { useForm } from "@inertiajs/vue3"
 import { ref } from "vue"
@@ -57,7 +58,7 @@ function submit() {
 </script>
 
 <template>
-    <GuestLayout>
+    <AuthBase>
         <form @submit.prevent="handleSave" class="space-y-6 max-w-lg mx-auto">
             <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-200">
                 Signature
@@ -107,5 +108,5 @@ function submit() {
                 </div>
             </div>
         </form>
-    </GuestLayout>
+    </AuthBase>
 </template>
