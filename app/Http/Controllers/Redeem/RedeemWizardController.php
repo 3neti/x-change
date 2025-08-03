@@ -182,23 +182,23 @@ class RedeemWizardController extends Controller
 
     public function success(Voucher $voucher): Response
     {
-        $from = $voucher->owner->name;
-        $to = $voucher->input('name')  ?? $voucher->contact->mobile;
-        $instruction_message = $voucher->instructions->rider->message;
-        if (! $message = MessageData::tryFrom($instruction_message)?->withWrappedBody()) {
-            $subject = 'Quote';
-            $title = '';
-            [$body, $from] = str(Inspiring::quotes()->random())->explode('-');
-            $body = Str::wordWrap($body, characters: 40, break: "\n");
-            $closing = 'Ayus!';
+        $instructionMessage = $voucher->instructions->rider->message;
 
-            $message = MessageData::from(compact('subject','title', 'body', 'closing'));
+        if ($base = MessageData::tryFrom($instructionMessage)) {
+            // Build from the instruction and stamp the “from” field
+            $message = $base->withWrappedBody();
+            $message->setFrom($voucher->owner->name);
+        } else {
+            // Fallback to an inspiring default
+            $message = MessageData::inspiring();
         }
+
+        $message->setTo($voucher->input('name')  ?? $voucher->contact->mobile);
 
         $response = Inertia::render('Redeem/Success', [
             'voucher' => $voucher->getData(),
-            'from' => $from,
-            'to' => $to,
+            'from' => $message->getFrom(),
+            'to' => $message->getTo(),
             'message' => $message,
             'redirectTimeout' => config('x-change.redeem.success.redirect_timeout'),
         ]);

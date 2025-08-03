@@ -1,5 +1,7 @@
 <?php
 
+$disable_disbursement = filter_var(env('DISBURSE_DISABLE', false), FILTER_VALIDATE_BOOLEAN);
+
 return [
     'updated' => [
         \App\Pipelines\UpdatedVoucher\UpdateContact::class,
@@ -26,7 +28,10 @@ return [
     'post-redemption' => [
         \LBHurtado\Voucher\Pipelines\RedeemedVoucher\ValidateRedeemerAndCash::class,
         \App\Pipelines\RedeemedVoucher\PersistInputs::class,
-        \LBHurtado\Voucher\Pipelines\RedeemedVoucher\DisburseCash::class,
+        ...($disable_disbursement
+            ? []
+            : [\LBHurtado\Voucher\Pipelines\RedeemedVoucher\DisburseCash::class]
+        ),
         \App\Pipelines\RedeemedVoucher\SendFeedbacks::class,
     ],
 ];

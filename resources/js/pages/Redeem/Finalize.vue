@@ -15,16 +15,10 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
+import { Voucher } from '@/types';
 
 const props = defineProps<{
-    voucher: {
-        code: string
-        cash: {
-            amount: number
-            currency: string
-        }
-        meta: Record<string, any>
-    }
+    voucher: Voucher;
     inputs: {
         name?: string
         email?: string
@@ -33,9 +27,9 @@ const props = defineProps<{
         reference_code?: string
         gross_monthly_income?: number
         signature?: string
-    }
-    mobile: string
-    bank_account: string | null
+    };
+    mobile: string;
+    bank_account: string | null;
 }>()
 
 const formatCurrency = useFormatCurrency()
@@ -44,6 +38,7 @@ const form = useForm({})
 
 function submit() {
     if (!confirm.value) return
+    console.debug('[Finalize.vue] About to navigate to success for', props.voucher.code);
     router.get(route('redeem.success', { voucher: props.voucher.code }))
 }
 function isJsonString(str) {

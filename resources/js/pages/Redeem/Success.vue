@@ -36,6 +36,7 @@ function shareToDevice() {
 const countdown = ref(0)
 
 onMounted(() => {
+    console.debug('[Success.vue] Mounted – redirectTimeout=', props.redirectTimeout);
     const timeout = props.redirectTimeout ?? 3000
     countdown.value = Math.ceil(timeout / 1000)
 
