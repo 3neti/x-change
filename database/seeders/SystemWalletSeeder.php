@@ -4,15 +4,17 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use App\Models\System;
 
-class UserWalletSeeder extends Seeder
+class SystemWalletSeeder extends Seeder
 {
     /**
      * Run the database seeds.
      */
     public function run(): void
     {
-        $this->call(SystemWalletSeeder::class);
-        $this->call(SubscriberWalletSeeder::class);
+        $system = System::first();
+        $system->depositFloat(1_000_000.00);
+        $system->wallet->refreshBalance();
     }
 }

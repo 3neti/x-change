@@ -10,6 +10,7 @@ enum Subject: string
     case SONG = 'Song';
     case HAIKU = 'Haiku';
     case BLOG = 'Blog';
+    case TRIVIA = 'Trivia';
 
     public static function options(): array
     {
@@ -36,6 +37,7 @@ enum Subject: string
             self::SONG => 'e.g. Disenchanted - My Chemical Romance',
             self::HAIKU => 'e.g. Old pond... a frog jumps in',
             self::BLOG => 'e.g. 5 Lessons I Learned from Freelancing',
+            self::TRIVIA => 'e.g. Chemistry',
         };
     }
 
