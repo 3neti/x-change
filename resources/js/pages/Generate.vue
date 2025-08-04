@@ -49,6 +49,7 @@ import { useCostBreakdown } from '@/composables/useCostBreakdown'
 import { useFormatCurrency } from '@/composables/useFormatCurrency'
 import get from 'lodash/get'
 import { Trash } from 'lucide-vue-next';
+import { cn } from '@/lib/utils';
 
 const breadcrumbs: BreadcrumbItemType[] = [{ title: 'Generate', href: '/disburse' }];
 
@@ -430,11 +431,15 @@ onMounted(() => {
     <Head title="Create Voucher" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="mx-auto max-w-3xl space-y-1 rounded bg-white p-6 shadow">
-            <h1 class="text-2xl font-bold text-gray-700">Instructions</h1>
-            <p class="mt-1 text-sm text-gray-500">Escrow Fund Transfer</p>
-
-            <div class="flex space-x-4 border-b text-sm font-medium">
+<!--        <div class="mx-auto max-w-3xl space-y-1 rounded bg-white p-6 shadow">-->
+<!--        <Card :class="cn('w-[380px]', $attrs.class ?? '')">-->
+        <Card>
+            <CardHeader>
+                <CardTitle>Instructions</CardTitle>
+                <CardDescription>Escrow Fund Transfer</CardDescription>
+            </CardHeader>
+<!--            <div class="flex space-x-4 border-b text-sm font-medium">-->
+            <CardContent>
                 <button
                     v-for="tab in ['basic', 'advanced', 'text']"
                     :key="tab"
@@ -443,7 +448,7 @@ onMounted(() => {
                 >
                     {{ tab.charAt(0).toUpperCase() + tab.slice(1) }}
                 </button>
-            </div>
+            </CardContent>
 
             <form @submit.prevent="confirmAndSubmit" class="space-y-6">
                 <!-- BASIC TAB CONTENT -->
@@ -490,82 +495,75 @@ onMounted(() => {
                             </div>
 
                             <div class="grid grid-cols-2 gap-4">
-                                <!-- Prefix + Secret -->
-                                <template v-if="form.payeeMode === 'prefix'">
-                                    <div class="col-span-1 space-y-2">
-                                        <Label>Handle</Label>
-                                        <Input
-                                            type="text"
-                                            v-model="displayPrefix"
-                                            ref="prefixInput"
-                                            @focus="(e: FocusEvent) => (e.target as HTMLInputElement).select()"
-                                        />
-                                        <InputError :message="form.errors.prefix" />
-                                    </div>
-                                    <div class="space-y-2">
-                                        <Label>Secret</Label>
-                                        <div class="relative">
-                                            <Input :type="showSecret ? 'text' : 'password'" v-model="form.cash.validation.secret" class="pr-16" />
-                                            <Button
-                                                type="button"
-                                                size="sm"
-                                                variant="ghost"
-                                                @click="showSecret = !showSecret"
-                                                class="absolute top-1/2 right-2 -translate-y-1/2"
-                                            >
-                                                {{ showSecret ? 'Hide' : 'Show' }}
-                                            </Button>
+                                <fieldset class="col-span-2 border rounded p-4">
+                                    <legend class="text-sm font-medium text-gray-700 px-1">Addressee</legend>
+                                    <!-- Prefix + Secret -->
+                                    <template v-if="form.payeeMode === 'prefix'">
+                                        <div class="col-span-1 space-y-2">
+                                            <Label>Handle</Label>
+                                            <Input
+                                                type="text"
+                                                v-model="displayPrefix"
+                                                ref="prefixInput"
+                                                @focus="(e: FocusEvent) => (e.target as HTMLInputElement).select()"
+                                            />
+                                            <InputError :message="form.errors.prefix" />
                                         </div>
-                                        <div class="text-right">
-                                            <InputExtra :message="getCostMessage('cash.validation.secret')" />
+                                        <div class="space-y-2">
+                                            <Label>Secret</Label>
+                                            <div class="relative">
+                                                <Input :type="showSecret ? 'text' : 'password'" v-model="form.cash.validation.secret" class="pr-16" />
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    @click="showSecret = !showSecret"
+                                                    class="absolute top-1/2 right-2 -translate-y-1/2"
+                                                >
+                                                    {{ showSecret ? 'Hide' : 'Show' }}
+                                                </Button>
+                                            </div>
+                                            <div class="text-right">
+                                                <InputExtra :message="getCostMessage('cash.validation.secret')" />
+                                            </div>
                                         </div>
-                                    </div>
-                                </template>
+                                    </template>
 
-                                <!-- Mobile + Secret -->
-                                <template v-if="form.payeeMode === 'mobile'">
-                                    <div class="col-span-1 space-y-2">
-                                        <Label>Mobile</Label>
-                                        <Input
-                                            type="text"
-                                            v-model="form.cash.validation.mobile"
-                                            ref="mobileInput"
-                                            @focus="(e: FocusEvent) => (e.target as HTMLInputElement).select()"
-                                        />
-                                        <div class="text-right">
-                                            <InputExtra :message="getCostMessage('cash.validation.mobile')" />
+                                    <!-- Mobile + Secret -->
+                                    <template v-if="form.payeeMode === 'mobile'">
+                                        <div class="col-span-1 space-y-2">
+                                            <Label>Mobile</Label>
+                                            <Input
+                                                type="text"
+                                                v-model="form.cash.validation.mobile"
+                                                ref="mobileInput"
+                                                @focus="(e: FocusEvent) => (e.target as HTMLInputElement).select()"
+                                            />
+                                            <div class="text-right">
+                                                <InputExtra :message="getCostMessage('cash.validation.mobile')" />
+                                            </div>
+                                            <InputError :message="get(form.errors, 'cash.validation.mobile')" />
                                         </div>
-                                        <InputError :message="get(form.errors, 'cash.validation.mobile')" />
-                                    </div>
-                                    <div class="space-y-2">
-                                        <Label>Secret</Label>
-                                        <div class="relative">
-                                            <Input :type="showSecret ? 'text' : 'password'" v-model="form.cash.validation.secret" class="pr-16" />
-                                            <Button
-                                                type="button"
-                                                size="sm"
-                                                variant="ghost"
-                                                @click="showSecret = !showSecret"
-                                                class="absolute top-1/2 right-2 -translate-y-1/2"
-                                            >
-                                                {{ showSecret ? 'Hide' : 'Show' }}
-                                            </Button>
+                                        <div class="space-y-2">
+                                            <Label>Secret</Label>
+                                            <div class="relative">
+                                                <Input :type="showSecret ? 'text' : 'password'" v-model="form.cash.validation.secret" class="pr-16" />
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    @click="showSecret = !showSecret"
+                                                    class="absolute top-1/2 right-2 -translate-y-1/2"
+                                                >
+                                                    {{ showSecret ? 'Hide' : 'Show' }}
+                                                </Button>
+                                            </div>
+                                            <div class="text-right">
+                                                <InputExtra :message="getCostMessage('cash.validation.secret')" />
+                                            </div>
                                         </div>
-                                        <div class="text-right">
-                                            <InputExtra :message="getCostMessage('cash.validation.secret')" />
-                                        </div>
-                                    </div>
-                                </template>
-
-<!--                                &lt;!&ndash; Message &ndash;&gt;-->
-<!--                                <div class="col-span-2 space-y-2">-->
-<!--                                    <Label>Message</Label>-->
-<!--                                    <Input type="text" v-model="form.rider.message" class="w-full" />-->
-<!--                                    <div class="text-right">-->
-<!--                                        <InputExtra :message="getCostMessage('rider.message')" />-->
-<!--                                    </div>-->
-<!--                                    <InputError :message="get(form.errors, 'rider.message')" />-->
-<!--                                </div>-->
+                                    </template>
+                                </fieldset>
 
                                 <!-- Structured Message Fields -->
                                 <fieldset class="col-span-2 border rounded p-4">
@@ -644,16 +642,6 @@ onMounted(() => {
 
                                     </div>
                                 </fieldset>
-
-<!--                                &lt;!&ndash; Resulting JSON Message (auto-updated) &ndash;&gt;-->
-<!--                                <div class="col-span-2 space-y-2">-->
-<!--                                    <Label>Message JSON (auto-generated)</Label>-->
-<!--                                    <Input type="text" v-model="form.rider.message" readonly class="w-full" />-->
-<!--                                    <div class="text-right">-->
-<!--                                        <InputExtra :message="getCostMessage('rider.message')" />-->
-<!--                                    </div>-->
-<!--                                    <InputError :message="get(form.errors, 'rider.message')" />-->
-<!--                                </div>-->
                             </div>
                         </CollapsibleContent>
                     </Collapsible>
@@ -860,116 +848,125 @@ onMounted(() => {
                         <p v-if="parseError" class="text-sm text-red-600">{{ parseError }}</p>
                     </div>
                 </div>
-
-                <!-- FORM ACTION BUTTONS WITH BALANCE -->
-                <div class="flex items-center justify-between pt-4">
-                    <div class="flex items-center gap-4">
-                        <Button type="submit">Generate Code</Button>
-                        <Button
-                            type="button"
-                            variant="link"
-                            class="text-sm"
-                            @click="resetForm"
-                        >
-                            Clear
-                        </Button>
-                        <Button
-                            v-if="voucherCodes.length"
-                            type="button"
-                            variant="link"
-                            @click="showDialog = true"
-                        >
-                            Show
-                        </Button>
-                    </div>
-                    <div class="text-sm space-y-1">
-                        <div class="flex justify-between text-gray-600 italic">
-                            <span>Balance:</span>
-                            <span class="font-semibold text-green-800 text-right w-24">{{ formattedBalance }}</span>
-                        </div>
-
-                        <div
-                            v-if="costBreakdown"
-                            class="flex justify-between text-gray-500"
-                        >
-                            <span>Cost:</span>
-                            <span class="font-semibold text-red-600 text-right w-24">{{ getTotalCost() }}</span>
-                        </div>
-                    </div>
-                </div>
             </form>
-        </div>
-    </AppLayout>
-    <Dialog v-model:open="showDialog">
-        <DialogOverlay />
-        <DialogContent class="max-w-lg">
-            <DialogHeader>
-                <DialogTitle>Codes Generated</DialogTitle>
-                <DialogDescription class="text-sm text-gray-500">
-                    Share the codes and review the submitted instructions.
-                </DialogDescription>
-            </DialogHeader>
+        </Card>
+        <CardFooter class="flex justify-between px-6 pb-6">
+            <div class="flex items-center gap-4">
+                <Button @click.prevent="confirmAndSubmit" type="submit">Generate Code</Button>
+                <Button
+                    type="button"
+                    variant="link"
+                    class="text-sm"
+                    @click="resetForm"
+                >
+                    Clear
+                </Button>
+                <Button
+                    v-if="voucherCodes.length"
+                    type="button"
+                    variant="link"
+                    @click="showDialog = true"
+                >
+                    Show
+                </Button>
+            </div>
+            <div class="text-sm space-y-1">
+                <div class="flex justify-between text-gray-600 italic">
+                    <span>Balance:</span>
+                    <span class="font-semibold text-green-800 text-right w-24">{{ formattedBalance }}</span>
+                </div>
 
-            <!-- Voucher codes preview -->
-            <div class="mt-2">
-                <p class="text-xs font-medium text-gray-600 mb-1">Voucher Codes:</p>
-                <input
-                    type="text"
-                    readonly
-                    :value="formattedVoucherCodes"
-                    class="w-full rounded border px-3 py-2 font-mono text-sm"
-                    ref="voucherInput"
-                />
-                <div class="mt-2 flex justify-end">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        class="text-xs"
-                        @click="copyToClipboard(formattedVoucherCodes)"
-                    >
-                        Copy Codes
-                    </Button>
+                <div
+                    v-if="costBreakdown"
+                    class="flex justify-between text-gray-500"
+                >
+                    <span>Cost:</span>
+                    <span class="font-semibold text-red-600 text-right w-24">{{ getTotalCost() }}</span>
                 </div>
             </div>
+        </CardFooter>
+        <Dialog v-model:open="showDialog">
+            <DialogOverlay />
+            <DialogContent class="max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Codes Generated</DialogTitle>
+                    <DialogDescription class="text-sm text-gray-500">
+                        Share the codes and review the submitted instructions.
+                    </DialogDescription>
+                </DialogHeader>
 
-            <!-- Instruction preview -->
-            <div class="mt-4">
-                <p class="text-xs font-medium text-gray-600 mb-1">Submitted Instructions:</p>
-                <pre class="text-xs text-gray-700 max-h-64 overflow-y-auto whitespace-pre-wrap bg-gray-100 px-3 py-2 rounded">{{ JSON.stringify(confirmedInstructions, null, 2) }}</pre>
-            </div>
+                <!-- Voucher codes preview -->
+                <div class="mt-2">
+                    <p class="text-xs font-medium text-gray-600 mb-1">Voucher Codes:</p>
+                    <input
+                        type="text"
+                        readonly
+                        :value="formattedVoucherCodes"
+                        class="w-full rounded border px-3 py-2 font-mono text-sm"
+                        ref="voucherInput"
+                    />
+                    <div class="mt-2 flex justify-end">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            class="text-xs"
+                            @click="copyToClipboard(formattedVoucherCodes)"
+                        >
+                            Copy Codes
+                        </Button>
+                    </div>
+                </div>
 
-            <DialogFooter class="mt-4">
-                <DialogClose class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">Close</DialogClose>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
+                <!-- Instruction preview -->
+                <div class="mt-4">
+                    <p class="text-xs font-medium text-gray-600 mb-1">Submitted Instructions:</p>
+                    <pre class="text-xs text-gray-700 max-h-64 overflow-y-auto whitespace-pre-wrap bg-gray-100 px-3 py-2 rounded">{{ JSON.stringify(confirmedInstructions, null, 2) }}</pre>
+                </div>
 
-    <Dialog v-model:open="showConfirmation">
-        <DialogOverlay />
-        <DialogContent class="max-w-lg">
-            <DialogHeader>
-                <DialogTitle>Confirm Instructions</DialogTitle>
-                <DialogDescription class="text-sm text-gray-500">
-                    Please review the voucher instructions before submitting.
-                </DialogDescription>
-            </DialogHeader>
+                <DialogFooter class="mt-4">
+                    <DialogClose class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">Close</DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
 
-            <!-- Cleaned form preview -->
-            <div class="mt-2 rounded bg-gray-100 px-3 py-2">
-                <p class="text-xs font-medium text-gray-600 mb-1">Instruction Summary:</p>
-                <pre class="text-xs text-gray-700 max-h-64 overflow-y-auto whitespace-pre-wrap">
-{{ JSON.stringify(clean(form, [], excluded), null, 2) }}
-            </pre>
-            </div>
+        <Dialog v-model:open="showConfirmation">
+            <DialogOverlay />
+            <DialogContent class="max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Confirm Instructions</DialogTitle>
+                    <DialogDescription class="text-sm text-gray-500">
+                        Please review the voucher instructions before submitting.
+                    </DialogDescription>
+                </DialogHeader>
 
-            <DialogFooter class="mt-4 flex justify-end gap-2">
-                <DialogClose as="button" class="rounded bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300">
-                    Cancel
-                </DialogClose>
-                <button @click="submitConfirmed" class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
-                    Confirm & Submit
-                </button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
+                <!-- Cleaned form preview -->
+                <div class="mt-2 rounded bg-gray-100 px-3 py-2">
+                    <p class="text-xs font-medium text-gray-600 mb-1">Instruction Summary:</p>
+                    <pre
+                        class="text-xs text-gray-700
+               max-h-64 max-w-full
+               overflow-auto
+               whitespace-pre-wrap
+               break-words"
+                    >{{ JSON.stringify(clean(form, [], excluded), null, 2) }}</pre>
+                </div>
+
+                <DialogFooter class="mt-4 flex justify-end gap-2">
+                    <DialogClose
+                        as="button"
+                        class="rounded bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300"
+                    >
+                        Cancel
+                    </DialogClose>
+                    <button
+                        @click="submitConfirmed"
+                        class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                    >
+                        Confirm & Submit
+                    </button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    </AppLayout>
+
 </template>
