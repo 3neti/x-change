@@ -60,9 +60,9 @@ function submit() {
 <template>
     <AuthBase>
         <form @submit.prevent="handleSave" class="space-y-6 max-w-lg mx-auto">
-            <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-200">
-                Signature
-            </h2>
+<!--            <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-200">-->
+<!--                Signature-->
+<!--            </h2>-->
 
             <!-- Signature Pad -->
             <div class="relative aspect-square border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden bg-white">
@@ -76,9 +76,9 @@ function submit() {
                 />
                 <p
                     v-if="!form.signature"
-                    class="absolute inset-0 flex items-center justify-center text-gray-400 text-lg pointer-events-none"
+                    class="absolute inset-0 flex items-center justify-center text-gray-800 text-xl pointer-events-none"
                 >
-                    Tap and sign here
+                    Tap and Sign here
                 </p>
             </div>
 

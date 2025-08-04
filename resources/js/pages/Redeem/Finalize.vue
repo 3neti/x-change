@@ -59,15 +59,14 @@ function beautifyKey(str) {
 </script>
 
 <template>
-    <AuthBase title="Finalize" description="Redemption Data">
+<!--    <AuthBase title="Finalize" description="Redemption Data">-->
+    <AuthBase>
         <Head title="Review & Finalize" />
         <Table>
             <TableCaption>Verify the following details.</TableCaption>
             <TableHeader>
                 <TableRow>
-                    <TableHead class="w-[100px] text-center">
-                        Key
-                    </TableHead>
+                    <TableHead class="w-[100px] text-center">Attribute Name</TableHead>
                     <TableHead class="text-center">Value</TableHead>
                 </TableRow>
             </TableHeader>
