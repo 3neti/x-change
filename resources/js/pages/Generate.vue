@@ -483,20 +483,20 @@ onMounted(() => {
                             Payee
                         </CollapsibleTrigger>
                         <CollapsibleContent class="border-t border-gray-300 p-4">
-                            <div class="mb-4 flex gap-4">
-                                <label class="flex items-center gap-2">
-                                    <input type="radio" value="mobile" v-model="form.payeeMode" />
-                                    <span>Mobile</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input type="radio" value="prefix" v-model="form.payeeMode" />
-                                    <span>Handle</span>
-                                </label>
-                            </div>
-
                             <div class="grid grid-cols-2 gap-4">
                                 <fieldset class="col-span-2 border rounded p-4">
                                     <legend class="text-sm font-medium text-gray-700 px-1">Addressee</legend>
+                                    <div class="mb-4 flex gap-4">
+                                        <label class="flex items-center gap-2">
+                                            <input type="radio" value="mobile" v-model="form.payeeMode" />
+                                            <span>Mobile</span>
+                                        </label>
+                                        <label class="flex items-center gap-2">
+                                            <input type="radio" value="prefix" v-model="form.payeeMode" />
+                                            <span>Handle</span>
+                                        </label>
+                                    </div>
+
                                     <!-- Prefix + Secret -->
                                     <template v-if="form.payeeMode === 'prefix'">
                                         <div class="col-span-1 space-y-2">
