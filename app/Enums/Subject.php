@@ -4,6 +4,7 @@ namespace App\Enums;
 
 enum Subject: string
 {
+    const NOTE = 'note';
     case QUOTE = 'Quote';
     case POEM = 'Poem';
     case INSTRUCTIONS = 'Instructions';
@@ -11,6 +12,7 @@ enum Subject: string
     case HAIKU = 'Haiku';
     case BLOG = 'Blog';
     case TRIVIA = 'Trivia';
+    case JOKE = 'Joke';
 
     public static function options(): array
     {
@@ -31,6 +33,7 @@ enum Subject: string
     public function placeholder(): string
     {
         return match ($this) {
+            self::NOTE => 'e.g. Do not forget',
             self::QUOTE => 'e.g. Be yourself - Oscar Wilde',
             self::POEM => 'e.g. The Road Not Taken by Robert Frost',
             self::INSTRUCTIONS => 'e.g. How to Brew Tea',
@@ -38,6 +41,7 @@ enum Subject: string
             self::HAIKU => 'e.g. Old pond... a frog jumps in',
             self::BLOG => 'e.g. 5 Lessons I Learned from Freelancing',
             self::TRIVIA => 'e.g. Chemistry',
+            self::JOKE => 'e.g. Green Joke',
         };
     }
 

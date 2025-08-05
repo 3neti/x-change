@@ -436,7 +436,7 @@ onMounted(() => {
         <Card>
             <CardHeader>
                 <CardTitle>Instructions</CardTitle>
-                <CardDescription>Escrow Fund Transfer</CardDescription>
+                <CardDescription>Balance: {{ formattedBalance }}</CardDescription>
             </CardHeader>
 <!--            <div class="flex space-x-4 border-b text-sm font-medium">-->
             <CardContent>
@@ -871,10 +871,10 @@ onMounted(() => {
                 </Button>
             </div>
             <div class="text-sm space-y-1">
-                <div class="flex justify-between text-gray-600 italic">
-                    <span>Balance:</span>
-                    <span class="font-semibold text-green-800 text-right w-24">{{ formattedBalance }}</span>
-                </div>
+<!--                <div class="flex justify-between text-gray-600 italic">-->
+<!--                    <span>Balance:</span>-->
+<!--                    <span class="font-semibold text-green-800 text-right w-24">{{ formattedBalance }}</span>-->
+<!--                </div>-->
 
                 <div
                     v-if="costBreakdown"
