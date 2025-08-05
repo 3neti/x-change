@@ -193,7 +193,7 @@ class RedeemWizardController extends Controller
             $message = MessageData::inspiring();
         }
 
-        $message->setTo($voucher->input('name')  ?? $voucher->contact->mobile);
+        $message->setTo($this->getContactName($voucher));
 
         $response = Inertia::render('Redeem/Success', [
             'voucher' => $voucher->getData(),
@@ -204,17 +204,7 @@ class RedeemWizardController extends Controller
         ]);
 
         // Clear all redeem session keys
-        $code = $voucher->code;
-        Session::forget(collect(Config::get('x-change.plugins', []))
-            ->keys()
-            ->map(fn($key) => "redeem.{$code}.{$key}")
-            ->merge([
-                "redeem.{$code}.mobile",
-                "redeem.{$code}.country",
-                "redeem.{$code}.bank_code",
-                "redeem.{$code}.account_number",
-            ])
-            ->toArray());
+        $this->clearAllRedeemSessionKeys($voucher);
 
         return $response;
     }
@@ -237,7 +227,26 @@ class RedeemWizardController extends Controller
     }
 
     /**
-     * @return \Illuminate\Support\Collection
+     * Fetch and normalize all banks from the registry.
+     *
+     * Retrieves the full list of banks from the BankRegistry, then transforms
+     * each entry into a uniform array structure of ['code' => string, 'name' => string].
+     * Trims any extra whitespace from the full bank name.
+     *
+     * @return \Illuminate\Support\Collection<int, array{code: string, name: string}>
+     *   A collection of bank records, where each item is an associative array:
+     *     - `code`: The bank’s short code (array key in the registry).
+     *     - `name`: The bank’s full name (trimmed).
+     *
+     * @example
+     * ```php
+     * $banks = $this->getNormalizedBanks();
+     * // [
+     * //   ['code' => 'ABC123', 'name' => 'Acme Bank, Inc.'],
+     * //   ['code' => 'XYZ789', 'name' => 'Zenith Trust'],
+     * //   // …
+     * // ]
+     * ```
      */
     protected function getNormalizedBanks(): \Illuminate\Support\Collection
     {
@@ -251,5 +260,65 @@ class RedeemWizardController extends Controller
                 ];
             })
             ->values();
+    }
+
+    /**
+     * Determine which identifier to use when addressing the voucher
+     * recipient: first checking a submitted “name” input, then the
+     * linked contact’s saved name, and finally the contact’s mobile.
+     *
+     * @param  Voucher  $voucher  The voucher whose recipient we need to address.
+     * @return string             The first non-NULL value among:
+     *                            1) the user‐submitted name input
+     *                            2) the contact’s saved name
+     *                            3) the contact’s mobile number
+     */
+    public function getContactName(Voucher $voucher): string
+    {
+        $nameInput     = $voucher->input('name');
+        $contactName   = $voucher->contact->name;
+        $contactMobile = $voucher->contact->mobile;
+
+        $to = $nameInput !== null
+            ? $nameInput
+            : ($contactName !== null
+                ? $contactName
+                : $contactMobile
+            );
+
+        return $to;
+    }
+
+    /**
+     * Remove all session data related to redeeming the given voucher.
+     *
+     * This method builds a list of session keys used during the redemption flow:
+     *   1. Plugin-specific keys from the `x-change.plugins` config.
+     *   2. Common redemption keys (mobile, country, bank_code, account_number).
+     * It then flushes these keys from the session to clean up after a successful redemption.
+     *
+     * @param  Voucher  $voucher  The voucher whose redeem session keys should be cleared.
+     * @return void
+     *
+     * @see \Config::get('x-change.plugins')
+     */
+    public function clearAllRedeemSessionKeys(Voucher $voucher): void
+    {
+        $code = $voucher->code;
+
+        $pluginKeys = collect(Config::get('x-change.plugins', []))
+            ->keys()
+            ->map(fn (string $key) => "redeem.{$code}.{$key}");
+
+        $commonKeys = [
+            "redeem.{$code}.mobile",
+            "redeem.{$code}.country",
+            "redeem.{$code}.bank_code",
+            "redeem.{$code}.account_number",
+        ];
+
+        Session::forget(
+            $pluginKeys->merge($commonKeys)->toArray()
+        );
     }
 }
