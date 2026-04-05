@@ -36,10 +36,6 @@ class XChangeServiceProvider extends ServiceProvider
                 continue;
             }
 
-            $this->app->singleton($concrete, function ($app) use ($concrete) {
-                return $app->make($concrete);
-            });
-
             $this->app->singleton("x-change.services.{$key}", function ($app) use ($concrete) {
                 return $app->make($concrete);
             });
@@ -54,10 +50,6 @@ class XChangeServiceProvider extends ServiceProvider
             if (! is_string($key) || ! is_string($concrete) || $concrete === '') {
                 continue;
             }
-
-            $this->app->singleton($concrete, function ($app) use ($concrete) {
-                return $app->make($concrete);
-            });
 
             $this->app->singleton("x-change.integrations.{$key}", function ($app) use ($concrete) {
                 return $app->make($concrete);
