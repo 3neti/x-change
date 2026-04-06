@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Actions\PayCode;
 
+use Illuminate\Support\Facades\DB;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\UserResolverContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
@@ -16,8 +17,7 @@ class GeneratePayCode
         protected WalletAccessContract $wallets,
         protected EstimatePayCodeCost $estimatePayCodeCost,
         protected PayCodeIssuanceContract $issuance,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array<string, mixed>  $input
@@ -32,29 +32,30 @@ class GeneratePayCode
         }
 
         $wallet = $this->wallets->resolveForUser($issuer);
-
         $estimate = $this->estimatePayCodeCost->handle($input);
 
-        $balanceBefore = $this->wallets->getBalance($wallet);
+        return DB::transaction(function () use ($issuer, $wallet, $input, $estimate): array {
+            $balanceBefore = $this->wallets->getBalance($wallet);
 
-        $this->wallets->assertCanAfford($wallet, $estimate['total']);
+            $this->wallets->assertCanAfford($wallet, $estimate['total']);
 
-        $debit = $this->wallets->debit($wallet, $estimate['total'], [
-            'reason' => 'pay_code_issuance',
-            'cost' => $estimate,
-        ]);
+            $debit = $this->wallets->debit($wallet, $estimate['total'], [
+                'reason' => 'pay_code_issuance',
+                'cost' => $estimate,
+            ]);
 
-        $issued = $this->issuance->issue($issuer, $input);
+            $issued = $this->issuance->issue($issuer, $input);
 
-        $balanceAfter = $this->wallets->getBalance($wallet);
+            $balanceAfter = $this->wallets->getBalance($wallet);
 
-        return array_merge($issued, [
-            'cost' => $estimate,
-            'wallet' => [
-                'balance_before' => $balanceBefore,
-                'balance_after' => $balanceAfter,
-            ],
-            'debit' => $debit,
-        ]);
+            return array_merge($issued, [
+                'cost' => $estimate,
+                'wallet' => [
+                    'balance_before' => $balanceBefore,
+                    'balance_after' => $balanceAfter,
+                ],
+                'debit' => $debit,
+            ]);
+        });
     }
 }

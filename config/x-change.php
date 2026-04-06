@@ -19,7 +19,7 @@ use LBHurtado\XChange\Services\VoucherAccessService;
 use LBHurtado\XChange\Services\VoucherEntryRouteService;
 use LBHurtado\XChange\Support\Logging\NullAuditLogger;
 use LBHurtado\XChange\Support\Resolvers\NullSystemWalletResolver;
-use LBHurtado\XChange\Support\Resolvers\NullUserResolver;
+//use LBHurtado\XChange\Support\Resolvers\NullUserResolver;
 
 return [
 
@@ -86,6 +86,7 @@ return [
     ],
 
     'services' => [
+        'user_resolver' => \LBHurtado\XChange\Services\AuthUserResolver::class,
         'voucher_access' => \LBHurtado\XChange\Services\VoucherAccessService::class,
         'entry_route' => \LBHurtado\XChange\Services\VoucherEntryRouteService::class,
         'disburse_flow' => \LBHurtado\XChange\Services\DisburseFlowStarterService::class,
@@ -95,27 +96,23 @@ return [
         'pricing' => \LBHurtado\XChange\Services\PricingService::class,
         'issuance' => \LBHurtado\XChange\Services\PayCodeIssuanceService::class,
         'wallet_access' => \LBHurtado\XChange\Services\WalletAccessService::class,
-        'user_resolver' => \LBHurtado\XChange\Services\AuthUserResolver::class,
     ],
 
     'service_contracts' => [
+        \LBHurtado\XChange\Contracts\UserResolverContract::class => 'user_resolver',
         \LBHurtado\XChange\Contracts\VoucherAccessContract::class => 'voucher_access',
         \LBHurtado\XChange\Contracts\VoucherEntryRouteResolverContract::class => 'entry_route',
         \LBHurtado\XChange\Contracts\TerminologyServiceContract::class => 'terminology',
         \LBHurtado\XChange\Contracts\PricingServiceContract::class => 'pricing',
         \LBHurtado\XChange\Contracts\PayCodeIssuanceContract::class => 'issuance',
         \LBHurtado\XChange\Contracts\WalletAccessContract::class => 'wallet_access',
-        \LBHurtado\XChange\Contracts\UserResolverContract::class => 'user_resolver',
     ],
-
     'integrations' => [
-        'user_resolver' => NullUserResolver::class,
-        'system_wallet_resolver' => NullSystemWalletResolver::class,
-        'audit_logger' => NullAuditLogger::class,
+        'system_wallet_resolver' => \LBHurtado\XChange\Support\Resolvers\NullSystemWalletResolver::class,
+        'audit_logger' => \LBHurtado\XChange\Support\Logging\NullAuditLogger::class,
     ],
 
     'integration_contracts' => [
-        UserResolverContract::class => 'user_resolver',
         SystemWalletResolverContract::class => 'system_wallet_resolver',
         AuditLoggerContract::class => 'audit_logger',
     ],

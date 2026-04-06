@@ -17,7 +17,8 @@ class WalletAccessService implements WalletAccessContract
             throw new PayCodeWalletNotResolved('Unable to resolve wallet for issuer.');
         }
 
-        $wallet = $user->wallet()->first();
+        $wallet = $user->wallet()->where('slug', 'platform')->first()
+            ?? $user->wallet()->first();
 
         if (! $wallet) {
             throw new PayCodeWalletNotResolved('Issuer wallet was not found.');

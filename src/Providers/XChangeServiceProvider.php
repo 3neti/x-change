@@ -4,7 +4,14 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Providers;
 
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\ServiceProvider;
+use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
+use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
+use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
+use LBHurtado\XChange\Exceptions\PayCodeWalletNotResolved;
+use Throwable;
 
 class XChangeServiceProvider extends ServiceProvider
 {
@@ -25,6 +32,7 @@ class XChangeServiceProvider extends ServiceProvider
     {
         $this->bootConfig();
         $this->bootRoutes();
+        $this->bootExceptionRendering();
     }
 
     protected function registerServices(): void
@@ -109,6 +117,57 @@ class XChangeServiceProvider extends ServiceProvider
         if ((bool) $config->get('x-change.routes.api', true)) {
             $this->loadRoutesFrom($this->packagePath('routes/api.php'));
         }
+    }
+
+    protected function bootExceptionRendering(): void
+    {
+        $exceptions = $this->app->make('Illuminate\Contracts\Debug\ExceptionHandler');
+
+        if (! method_exists($exceptions, 'renderable')) {
+            return;
+        }
+
+        $exceptions->renderable(function (InsufficientWalletBalance $e, Request $request) {
+            if (! $request->expectsJson()) {
+                return null;
+            }
+
+            return $this->errorResponse($e, 422, 'INSUFFICIENT_WALLET_BALANCE');
+        });
+
+        $exceptions->renderable(function (PayCodeIssuerNotResolved $e, Request $request) {
+            if (! $request->expectsJson()) {
+                return null;
+            }
+
+            return $this->errorResponse($e, 401, 'PAY_CODE_ISSUER_NOT_RESOLVED');
+        });
+
+        $exceptions->renderable(function (PayCodeWalletNotResolved $e, Request $request) {
+            if (! $request->expectsJson()) {
+                return null;
+            }
+
+            return $this->errorResponse($e, 422, 'PAY_CODE_WALLET_NOT_RESOLVED');
+        });
+
+        $exceptions->renderable(function (PayCodeIssuanceFailed $e, Request $request) {
+            if (! $request->expectsJson()) {
+                return null;
+            }
+
+            return $this->errorResponse($e, 500, 'PAY_CODE_ISSUANCE_FAILED');
+        });
+    }
+
+    protected function errorResponse(Throwable $e, int $status, string $code): JsonResponse
+    {
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage(),
+            'code' => $code,
+            'errors' => [],
+        ], $status);
     }
 
     protected function packagePath(string $path = ''): string
