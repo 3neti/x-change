@@ -8,11 +8,14 @@ use Bavix\Wallet\WalletServiceProvider as BavixWalletServiceProvider;
 use FrittenKeeZ\Vouchers\VouchersServiceProvider;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use LBHurtado\Contact\ContactServiceProvider;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\VoucherServiceProvider;
 use LBHurtado\Wallet\WalletServiceProvider as LBHurtadoWalletServiceProvider;
+use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Providers\XChangeServiceProvider;
+use LBHurtado\XChange\Tests\Fakes\FakeAuditLogger;
 use LBHurtado\XChange\Tests\Fakes\FakePayoutProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 use ReflectionClass;
@@ -22,11 +25,12 @@ use Spatie\LaravelData\Normalizers\ArrayNormalizer;
 use Spatie\LaravelData\Normalizers\JsonNormalizer;
 use Spatie\LaravelData\Normalizers\ModelNormalizer;
 use Spatie\LaravelData\Normalizers\ObjectNormalizer;
-use LBHurtado\Contact\ContactServiceProvider;
 
 abstract class TestCase extends Orchestra
 {
     protected FakePayoutProvider $fakePayoutProvider;
+
+    protected FakeAuditLogger $fakeAuditLogger;
 
     protected function setUp(): void
     {
@@ -34,6 +38,9 @@ abstract class TestCase extends Orchestra
 
         $this->fakePayoutProvider = new FakePayoutProvider;
         $this->app->instance(PayoutProvider::class, $this->fakePayoutProvider);
+
+        $this->fakeAuditLogger = new FakeAuditLogger;
+        $this->app->instance(AuditLoggerContract::class, $this->fakeAuditLogger);
     }
 
     public function fakePayoutProvider(): FakePayoutProvider
@@ -300,5 +307,10 @@ abstract class TestCase extends Orchestra
     protected function packageRoot(string $providerClass): string
     {
         return dirname((new ReflectionClass($providerClass))->getFileName(), 2);
+    }
+
+    public function fakeAuditLogger(): FakeAuditLogger
+    {
+        return $this->fakeAuditLogger;
     }
 }

@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use LBHurtado\Voucher\Actions\GenerateVouchers;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
+use LBHurtado\XChange\Tests\Fakes\FakeAuditLogger;
 use LBHurtado\XChange\Tests\Fakes\FakePayoutProvider;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XChange\Tests\TestCase;
@@ -126,6 +127,14 @@ function fakePayoutProvider(): FakePayoutProvider
     $test = test();
 
     return $test->fakePayoutProvider()->reset();
+}
+
+function fakeAuditLogger(): FakeAuditLogger
+{
+    /** @var TestCase $test */
+    $test = test();
+
+    return $test->fakeAuditLogger()->reset();
 }
 
 function xchangeApi(string $path): string
