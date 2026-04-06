@@ -39,10 +39,11 @@ class GeneratePayCode
 
             $this->wallets->assertCanAfford($wallet, $estimate['total']);
 
-            $debit = $this->wallets->debit($wallet, $estimate['total'], [
-                'reason' => 'pay_code_issuance',
-                'cost' => $estimate,
-            ]);
+            $debit = $this->wallets->debit(
+                $wallet,
+                $estimate['total'],
+                $this->buildDebitMetadata($input, $estimate),
+            );
 
             $issued = $this->issuance->issue($issuer, $input);
 
@@ -60,6 +61,28 @@ class GeneratePayCode
                 'debit' => $this->normalizeDebit($debit),
             ]);
         });
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     * @param  array<string, mixed>  $estimate
+     * @return array<string, mixed>
+     */
+    protected function buildDebitMetadata(array $input, array $estimate): array
+    {
+        return [
+            'reason' => 'pay_code_issuance',
+            'requested_amount' => data_get($input, 'cash.amount'),
+            'requested_currency' => data_get($input, 'cash.currency'),
+            'cost' => [
+                'currency' => $estimate['currency'] ?? null,
+                'base_fee' => $estimate['base_fee'] ?? null,
+                'components' => $estimate['components'] ?? [],
+                'total' => $estimate['total'] ?? null,
+            ],
+            'idempotency_key' => data_get($input, '_meta.idempotency_key'),
+            'correlation_id' => data_get($input, '_meta.correlation_id'),
+        ];
     }
 
     /**

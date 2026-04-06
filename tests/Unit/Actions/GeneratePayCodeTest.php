@@ -7,8 +7,8 @@ use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\UserResolverContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
-use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
+use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 
 it('generates a pay code by resolving issuer, estimating cost, debiting wallet, and issuing voucher', function () {
     $issuer = (object) ['id' => 1, 'name' => 'Issuer'];
@@ -34,6 +34,10 @@ it('generates a pay code by resolving issuer, estimating cost, debiting wallet, 
             'splash' => null,
             'splash_timeout' => null,
             'og_source' => null,
+        ],
+        '_meta' => [
+            'idempotency_key' => 'idem-123',
+            'correlation_id' => 'corr-456',
         ],
     ];
 
@@ -85,8 +89,22 @@ it('generates a pay code by resolving issuer, estimating cost, debiting wallet, 
     $wallets->shouldReceive('debit')
         ->once()
         ->with($wallet, 31.0, Mockery::on(function (array $meta) use ($estimate) {
-            return $meta['reason'] === 'pay_code_issuance'
-                && $meta['cost'] === $estimate;
+            expect($meta['reason'])->toBe('pay_code_issuance');
+            expect($meta['requested_amount'])->toBe(100.0);
+            expect($meta['requested_currency'])->toBe('PHP');
+            expect($meta['cost'])->toBe([
+                'currency' => 'PHP',
+                'base_fee' => 1.0,
+                'components' => [
+                    'kyc' => 25.0,
+                    'selfie' => 5.0,
+                ],
+                'total' => 31.0,
+            ]);
+            expect($meta['idempotency_key'])->toBe('idem-123');
+            expect($meta['correlation_id'])->toBe('corr-456');
+
+            return true;
         }))
         ->andReturn($debit);
 

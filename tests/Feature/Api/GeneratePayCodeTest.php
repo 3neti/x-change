@@ -33,6 +33,9 @@ it('returns a generated pay code via api', function () {
         'code' => 'TEST-1234',
         'amount' => 100.0,
         'currency' => 'PHP',
+        'issuer' => [
+            'id' => 1,
+        ],
         'cost' => [
             'currency' => 'PHP',
             'base_fee' => 1.0,
@@ -45,13 +48,41 @@ it('returns a generated pay code via api', function () {
         ],
         'debit' => [
             'id' => 501,
+            'amount' => null,
+        ],
+        'links' => [
+            'redeem' => 'https://example.test/disburse?code=TEST-1234',
+            'redeem_path' => '/disburse?code=TEST-1234',
         ],
     ];
 
     $action = Mockery::mock(GeneratePayCode::class);
     $action->shouldReceive('handle')
         ->once()
-        ->with($payload)
+        ->with(Mockery::on(function (array $actual) use ($payload) {
+            expect((float) data_get($actual, 'cash.amount'))->toBe(100.0);
+            expect(data_get($actual, 'cash.currency'))->toBe('PHP');
+
+            expect(data_get($actual, 'inputs.fields'))->toBe([]);
+
+            expect(data_get($actual, 'feedback.email'))->toBe('example@example.com');
+            expect(data_get($actual, 'feedback.mobile'))->toBe('09171234567');
+            expect(data_get($actual, 'feedback.webhook'))->toBe('https://example.com/webhook');
+
+
+            expect(data_get($actual, 'rider.message'))->toBeNull();
+            expect(data_get($actual, 'rider.url'))->toBeNull();
+            expect(data_get($actual, 'rider.redirect_timeout'))->toBeNull();
+            expect(data_get($actual, 'rider.splash'))->toBeNull();
+            expect(data_get($actual, 'rider.splash_timeout'))->toBeNull();
+            expect(data_get($actual, 'rider.og_source'))->toBeNull();
+
+            expect($actual)->toHaveKey('_meta');
+            expect(data_get($actual, '_meta.idempotency_key'))->toBeNull();
+            expect(data_get($actual, '_meta.correlation_id'))->toBeNull();
+
+            return true;
+        }))
         ->andReturn($result);
 
     $this->app->instance(GeneratePayCode::class, $action);
@@ -63,7 +94,12 @@ it('returns a generated pay code via api', function () {
         ->assertJson([
             'success' => true,
             'data' => $result,
-            'meta' => [],
+            'meta' => [
+                'idempotency' => [
+                    'key' => null,
+                    'replayed' => false,
+                ],
+            ],
         ]);
 });
 

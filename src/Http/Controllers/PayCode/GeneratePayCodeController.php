@@ -25,6 +25,13 @@ class GeneratePayCodeController extends Controller
     ) {
         $payload = $request->validated();
         $key = $idempotency->extractKey($request);
+        $correlationId = $request->header((string) config('x-change.api.correlation.header', 'X-Correlation-ID'));
+
+        $payload['_meta'] = [
+            'idempotency_key' => $key,
+            'correlation_id' => is_string($correlationId) ? $correlationId : null,
+        ];
+
         $issuer = $users->resolve($payload);
 
         $audit->log('pay_code.generate.requested', [
@@ -32,7 +39,7 @@ class GeneratePayCodeController extends Controller
             'amount' => data_get($payload, 'cash.amount'),
             'currency' => data_get($payload, 'cash.currency'),
             'idempotency_key' => $key,
-            'correlation_id' => $request->header((string) config('x-change.api.correlation.header', 'X-Correlation-ID')),
+            'correlation_id' => $correlationId,
         ]);
 
         try {
