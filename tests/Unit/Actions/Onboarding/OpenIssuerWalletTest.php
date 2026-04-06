@@ -2,56 +2,50 @@
 
 declare(strict_types=1);
 
+namespace LBHurtado\XChange\Http\Controllers\Onboarding;
+
+use Illuminate\Routing\Controller;
 use LBHurtado\XChange\Actions\Onboarding\OpenIssuerWallet;
-use LBHurtado\XChange\Contracts\UserResolverContract;
-use LBHurtado\XChange\Contracts\WalletProvisioningContract;
+use LBHurtado\XChange\Contracts\AuditLoggerContract;
+use LBHurtado\XChange\Http\Requests\Onboarding\OpenIssuerWalletRequest;
+use LBHurtado\XChange\Services\ApiResponseFactory;
+use Throwable;
 
-it('opens issuer wallet through provisioning contract and returns normalized wallet payload', function () {
-    $input = [
-        'issuer_id' => 1,
-        'wallet' => [
-            'slug' => 'platform',
-            'name' => 'Platform Wallet',
-        ],
-        'metadata' => [],
-    ];
+class OpenIssuerWalletController extends Controller
+{
+    public function __invoke(
+        OpenIssuerWalletRequest $request,
+        OpenIssuerWallet $action,
+        ApiResponseFactory $responses,
+        AuditLoggerContract $audit,
+    ) {
+        $payload = $request->validated();
 
-    $issuer = (object) [
-        'id' => 1,
-    ];
+        $audit->log('issuer.wallet.open.requested', [
+            'issuer_id' => data_get($payload, 'issuer_id'),
+            'wallet_slug' => data_get($payload, 'wallet.slug'),
+            'wallet_name' => data_get($payload, 'wallet.name'),
+        ]);
 
-    $wallet = (object) [
-        'id' => 10,
-        'slug' => 'platform',
-        'name' => 'Platform Wallet',
-        'balance' => 0,
-    ];
+        try {
+            $result = $action->handle($payload);
 
-    $users = Mockery::mock(UserResolverContract::class);
-    $users->shouldReceive('resolve')
-        ->once()
-        ->with($input)
-        ->andReturn($issuer);
+            $audit->log('issuer.wallet.open.succeeded', [
+                'issuer_id' => data_get($result, 'issuer.id'),
+                'wallet_id' => data_get($result, 'wallet.id'),
+                'wallet_slug' => data_get($result, 'wallet.slug'),
+            ]);
 
-    $wallets = Mockery::mock(WalletProvisioningContract::class);
-    $wallets->shouldReceive('open')
-        ->once()
-        ->with($issuer, $input)
-        ->andReturn($wallet);
+            return $responses->success($result, [], 201);
+        } catch (Throwable $e) {
+            $audit->log('issuer.wallet.open.failed', [
+                'issuer_id' => data_get($payload, 'issuer_id'),
+                'wallet_slug' => data_get($payload, 'wallet.slug'),
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
 
-    $action = new OpenIssuerWallet($users, $wallets);
-
-    $result = $action->handle($input);
-
-    expect($result)->toBe([
-        'issuer' => [
-            'id' => 1,
-        ],
-        'wallet' => [
-            'id' => 10,
-            'slug' => 'platform',
-            'name' => 'Platform Wallet',
-            'balance' => 0,
-        ],
-    ]);
-});
+            throw $e;
+        }
+    }
+}

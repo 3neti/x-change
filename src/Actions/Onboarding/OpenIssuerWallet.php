@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Actions\Onboarding;
 
-use LBHurtado\XChange\Contracts\UserResolverContract;
+use LBHurtado\XChange\Contracts\IssuerResolverContract;
 use LBHurtado\XChange\Contracts\WalletProvisioningContract;
+use RuntimeException;
 
 class OpenIssuerWallet
 {
     public function __construct(
-        protected UserResolverContract $users,
-        protected WalletProvisioningContract $wallets,
+        protected IssuerResolverContract $issuerResolver,
+        protected WalletProvisioningContract $walletProvisioning,
     ) {}
 
     /**
@@ -20,18 +21,29 @@ class OpenIssuerWallet
      */
     public function handle(array $input): array
     {
-        $issuer = $this->users->resolve($input);
-        $wallet = $this->wallets->open($issuer, $input);
+        $issuer = $this->issuerResolver->resolve($input);
 
+        if (! $issuer) {
+            throw new RuntimeException('Issuer could not be resolved.');
+        }
+
+        $wallet = $this->walletProvisioning->open($issuer, $input);
+
+        return $this->transform($issuer, $wallet);
+    }
+
+    protected function transform($issuer, $wallet): array
+    {
         return [
             'issuer' => [
-                'id' => is_object($issuer) ? ($issuer->id ?? null) : data_get($issuer, 'id'),
+                'id' => $issuer->id,
             ],
+
             'wallet' => [
-                'id' => is_object($wallet) ? ($wallet->id ?? null) : data_get($wallet, 'id'),
-                'slug' => is_object($wallet) ? ($wallet->slug ?? null) : data_get($wallet, 'slug'),
-                'name' => is_object($wallet) ? ($wallet->name ?? null) : data_get($wallet, 'name'),
-                'balance' => is_object($wallet) ? ($wallet->balance ?? null) : data_get($wallet, 'balance'),
+                'id' => $wallet->id,
+                'slug' => $wallet->slug,
+                'name' => $wallet->name,
+                'balance' => (float) $wallet->balance,
             ],
         ];
     }

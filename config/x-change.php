@@ -100,6 +100,7 @@ return [
         'idempotency_store' => \LBHurtado\XChange\Services\CacheIdempotencyStore::class,
         'issuer_onboarding' => \LBHurtado\XChange\Services\DefaultIssuerOnboardingService::class,
         'wallet_provisioning' => \LBHurtado\XChange\Services\DefaultWalletProvisioningService::class,
+        'issuer_resolver' => \LBHurtado\XChange\Support\Resolvers\DefaultIssuerResolver::class,
     ],
 
     'service_contracts' => [
@@ -113,6 +114,7 @@ return [
         \LBHurtado\XChange\Contracts\IdempotencyStoreContract::class => 'idempotency_store',
         \LBHurtado\XChange\Contracts\IssuerOnboardingContract::class => 'issuer_onboarding',
         \LBHurtado\XChange\Contracts\WalletProvisioningContract::class => 'wallet_provisioning',
+        \LBHurtado\XChange\Contracts\IssuerResolverContract::class => 'issuer_resolver',
     ],
 
     'integrations' => [
