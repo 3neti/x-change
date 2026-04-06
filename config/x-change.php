@@ -114,6 +114,7 @@ return [
         \LBHurtado\XChange\Contracts\IssuerOnboardingContract::class => 'issuer_onboarding',
         \LBHurtado\XChange\Contracts\WalletProvisioningContract::class => 'wallet_provisioning',
     ],
+
     'integrations' => [
         'system_wallet_resolver' => \LBHurtado\XChange\Support\Resolvers\NullSystemWalletResolver::class,
         'audit_logger' => \LBHurtado\XChange\Support\Logging\NullAuditLogger::class,
@@ -142,5 +143,11 @@ return [
         ],
 
         'minimum_balance_enforced' => env('XCHANGE_PRICING_MINIMUM_BALANCE_ENFORCED', true),
+    ],
+
+    'onboarding' => [
+        'issuer_model' => \LBHurtado\XChange\Tests\Fakes\User::class,
+        'default_wallet_slug' => env('XCHANGE_ONBOARDING_DEFAULT_WALLET_SLUG', 'platform'),
+        'default_wallet_name' => env('XCHANGE_ONBOARDING_DEFAULT_WALLET_NAME', 'Platform Wallet'),
     ],
 ];
