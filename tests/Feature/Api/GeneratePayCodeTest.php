@@ -56,7 +56,7 @@ it('returns a generated pay code via api', function () {
 
     $this->app->instance(GeneratePayCode::class, $action);
 
-    $response = $this->postJson('/pay-codes', $payload);
+    $response = $this->postJson(xchangeApi('pay-codes'), $payload);
 
     $response
         ->assertCreated()
@@ -68,14 +68,24 @@ it('returns a generated pay code via api', function () {
 });
 
 it('validates required payload fields for pay code generation', function () {
-    $response = $this->postJson('/pay-codes', []);
+    $response = $this->postJson(xchangeApi('pay-codes'), []);
 
     $response
         ->assertUnprocessable()
-        ->assertJsonValidationErrors([
-            'cash',
-            'inputs',
-            'feedback',
-            'rider',
+        ->assertJson([
+            'success' => false,
+            'code' => 'VALIDATION_ERROR',
+            'message' => 'The given data was invalid.',
+        ])
+        ->assertJsonStructure([
+            'success',
+            'message',
+            'code',
+            'errors' => [
+                'cash',
+                'inputs',
+                'feedback',
+                'rider',
+            ],
         ]);
 });

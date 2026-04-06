@@ -24,7 +24,7 @@ it('returns a pricing estimate via api', function () {
         ],
     ])->toArray();
 
-    $response = $this->postJson('/pay-codes/estimate', $payload);
+    $response = $this->postJson(xchangeApi('pay-codes/estimate'), $payload);
 
     $response
         ->assertOk()
@@ -45,14 +45,24 @@ it('returns a pricing estimate via api', function () {
 });
 
 it('validates required pricing payload fields', function () {
-    $response = $this->postJson('/pay-codes/estimate', []);
+    $response = $this->postJson(xchangeApi('pay-codes/estimate'), []);
 
     $response
         ->assertUnprocessable()
-        ->assertJsonValidationErrors([
-            'cash',
-            'inputs',
-            'feedback',
-            'rider',
+        ->assertJson([
+            'success' => false,
+            'code' => 'VALIDATION_ERROR',
+            'message' => 'The given data was invalid.',
+        ])
+        ->assertJsonStructure([
+            'success',
+            'message',
+            'code',
+            'errors' => [
+                'cash',
+                'inputs',
+                'feedback',
+                'rider',
+            ],
         ]);
 });

@@ -38,7 +38,7 @@ it('returns 401 when issuer cannot be resolved', function () {
 
     $this->app->instance(GeneratePayCode::class, $action);
 
-    $response = $this->postJson('/pay-codes', $payload);
+    $response = $this->postJson(xchangeApi('pay-codes'), $payload);
 
     $response
         ->assertUnauthorized()
@@ -80,7 +80,7 @@ it('returns 422 when wallet cannot be resolved', function () {
 
     $this->app->instance(GeneratePayCode::class, $action);
 
-    $response = $this->postJson('/pay-codes', $payload);
+    $response = $this->postJson(xchangeApi('pay-codes'), $payload);
 
     $response
         ->assertUnprocessable()
@@ -122,7 +122,7 @@ it('returns 500 when pay code issuance fails', function () {
 
     $this->app->instance(GeneratePayCode::class, $action);
 
-    $response = $this->postJson('/pay-codes', $payload);
+    $response = $this->postJson(xchangeApi('pay-codes'), $payload);
 
     $response
         ->assertStatus(500)

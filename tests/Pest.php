@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
+use Bavix\Wallet\Interfaces\Wallet;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use LBHurtado\Voucher\Actions\GenerateVouchers;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\XChange\Tests\Fakes\FakePayoutProvider;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XChange\Tests\TestCase;
-use Bavix\Wallet\Interfaces\Wallet;
-use Illuminate\Support\Str;
 
 uses(TestCase::class)->in('Unit', 'Feature');
 
@@ -126,4 +126,13 @@ function fakePayoutProvider(): FakePayoutProvider
     $test = test();
 
     return $test->fakePayoutProvider()->reset();
+}
+
+function xchangeApi(string $path): string
+{
+    $prefix = trim((string) config('x-change.routes.api_prefix', 'api/x'), '/');
+    $version = trim((string) config('x-change.routes.api_version', 'v1'), '/');
+    $path = ltrim($path, '/');
+
+    return '/'.$prefix.'/'.$version.'/'.$path;
 }

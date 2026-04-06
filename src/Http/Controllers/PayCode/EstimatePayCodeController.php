@@ -4,23 +4,20 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Http\Controllers\PayCode;
 
-use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Http\Requests\EstimatePayCodeRequest;
+use LBHurtado\XChange\Services\ApiResponseFactory;
 
 class EstimatePayCodeController extends Controller
 {
     public function __invoke(
         EstimatePayCodeRequest $request,
         EstimatePayCodeCost $action,
-    ): JsonResponse {
+        ApiResponseFactory $responses,
+    ) {
         $result = $action->handle($request->validated());
 
-        return response()->json([
-            'success' => true,
-            'data' => $result,
-            'meta' => [],
-        ]);
+        return $responses->success($result, [], 200);
     }
 }

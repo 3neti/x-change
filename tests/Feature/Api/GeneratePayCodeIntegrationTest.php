@@ -52,7 +52,7 @@ it('generates a pay code end to end via api and debits the issuer wallet', funct
         'metadata' => [],
     ];
 
-    $response = $this->postJson('/pay-codes', $payload);
+    $response = $this->postJson(xchangeApi('pay-codes'), $payload);
 
     $response
         ->assertCreated()
@@ -142,7 +142,7 @@ it('fails via api when issuer wallet cannot afford pay code generation', functio
         'metadata' => [],
     ];
 
-    $response = $this->postJson('/pay-codes', $payload);
+    $response = $this->postJson(xchangeApi('pay-codes'), $payload);
 
     $response
         ->assertUnprocessable()

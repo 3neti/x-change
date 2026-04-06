@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Providers;
 
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\ValidationException;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
-use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
+use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Exceptions\PayCodeWalletNotResolved;
-use Throwable;
+use LBHurtado\XChange\Services\ApiResponseFactory;
 
 class XChangeServiceProvider extends ServiceProvider
 {
@@ -127,12 +127,30 @@ class XChangeServiceProvider extends ServiceProvider
             return;
         }
 
+        $exceptions->renderable(function (ValidationException $e, Request $request) {
+            if (! $request->expectsJson()) {
+                return null;
+            }
+
+            return $this->apiResponses()->error(
+                'The given data was invalid.',
+                'VALIDATION_ERROR',
+                $e->errors(),
+                422,
+            );
+        });
+
         $exceptions->renderable(function (InsufficientWalletBalance $e, Request $request) {
             if (! $request->expectsJson()) {
                 return null;
             }
 
-            return $this->errorResponse($e, 422, 'INSUFFICIENT_WALLET_BALANCE');
+            return $this->apiResponses()->errorFromThrowable(
+                $e,
+                'INSUFFICIENT_WALLET_BALANCE',
+                [],
+                422,
+            );
         });
 
         $exceptions->renderable(function (PayCodeIssuerNotResolved $e, Request $request) {
@@ -140,7 +158,12 @@ class XChangeServiceProvider extends ServiceProvider
                 return null;
             }
 
-            return $this->errorResponse($e, 401, 'PAY_CODE_ISSUER_NOT_RESOLVED');
+            return $this->apiResponses()->errorFromThrowable(
+                $e,
+                'PAY_CODE_ISSUER_NOT_RESOLVED',
+                [],
+                401,
+            );
         });
 
         $exceptions->renderable(function (PayCodeWalletNotResolved $e, Request $request) {
@@ -148,7 +171,12 @@ class XChangeServiceProvider extends ServiceProvider
                 return null;
             }
 
-            return $this->errorResponse($e, 422, 'PAY_CODE_WALLET_NOT_RESOLVED');
+            return $this->apiResponses()->errorFromThrowable(
+                $e,
+                'PAY_CODE_WALLET_NOT_RESOLVED',
+                [],
+                422,
+            );
         });
 
         $exceptions->renderable(function (PayCodeIssuanceFailed $e, Request $request) {
@@ -156,18 +184,18 @@ class XChangeServiceProvider extends ServiceProvider
                 return null;
             }
 
-            return $this->errorResponse($e, 500, 'PAY_CODE_ISSUANCE_FAILED');
+            return $this->apiResponses()->errorFromThrowable(
+                $e,
+                'PAY_CODE_ISSUANCE_FAILED',
+                [],
+                500,
+            );
         });
     }
 
-    protected function errorResponse(Throwable $e, int $status, string $code): JsonResponse
+    protected function apiResponses(): ApiResponseFactory
     {
-        return response()->json([
-            'success' => false,
-            'message' => $e->getMessage(),
-            'code' => $code,
-            'errors' => [],
-        ], $status);
+        return $this->app->make(ApiResponseFactory::class);
     }
 
     protected function packagePath(string $path = ''): string
