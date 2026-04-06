@@ -94,6 +94,8 @@ return [
         'api_response' => \LBHurtado\XChange\Services\ApiResponseFactory::class,
         'pricing' => \LBHurtado\XChange\Services\PricingService::class,
         'issuance' => \LBHurtado\XChange\Services\PayCodeIssuanceService::class,
+        'wallet_access' => \LBHurtado\XChange\Services\WalletAccessService::class,
+        'user_resolver' => \LBHurtado\XChange\Services\AuthUserResolver::class,
     ],
 
     'service_contracts' => [
@@ -101,6 +103,9 @@ return [
         \LBHurtado\XChange\Contracts\VoucherEntryRouteResolverContract::class => 'entry_route',
         \LBHurtado\XChange\Contracts\TerminologyServiceContract::class => 'terminology',
         \LBHurtado\XChange\Contracts\PricingServiceContract::class => 'pricing',
+        \LBHurtado\XChange\Contracts\PayCodeIssuanceContract::class => 'issuance',
+        \LBHurtado\XChange\Contracts\WalletAccessContract::class => 'wallet_access',
+        \LBHurtado\XChange\Contracts\UserResolverContract::class => 'user_resolver',
     ],
 
     'integrations' => [
