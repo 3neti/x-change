@@ -49,13 +49,41 @@ class GeneratePayCode
             $balanceAfter = $this->wallets->getBalance($wallet);
 
             return array_merge($issued, [
+                'issuer' => [
+                    'id' => is_object($issuer) ? ($issuer->id ?? null) : null,
+                ],
                 'cost' => $estimate,
                 'wallet' => [
                     'balance_before' => $balanceBefore,
                     'balance_after' => $balanceAfter,
                 ],
-                'debit' => $debit,
+                'debit' => $this->normalizeDebit($debit),
             ]);
         });
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function normalizeDebit(mixed $debit): array
+    {
+        if (is_object($debit)) {
+            return [
+                'id' => $debit->id ?? null,
+                'amount' => $debit->amount ?? null,
+            ];
+        }
+
+        if (is_array($debit)) {
+            return [
+                'id' => $debit['id'] ?? null,
+                'amount' => $debit['amount'] ?? null,
+            ];
+        }
+
+        return [
+            'id' => null,
+            'amount' => null,
+        ];
     }
 }

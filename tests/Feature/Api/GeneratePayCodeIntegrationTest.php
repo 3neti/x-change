@@ -7,6 +7,8 @@ use LBHurtado\Voucher\Models\Voucher;
 it('generates a pay code end to end via api and debits the issuer wallet', function () {
     $user = actingAsTestUser(1_000_000);
 
+    config()->set('app.url', 'https://example.test');
+
     $wallet = $user->wallet()->where('slug', 'platform')->first();
     expect($wallet)->not->toBeNull();
 
@@ -63,6 +65,9 @@ it('generates a pay code end to end via api and debits the issuer wallet', funct
                 'code',
                 'amount',
                 'currency',
+                'issuer' => [
+                    'id',
+                ],
                 'cost' => [
                     'currency',
                     'base_fee',
@@ -73,7 +78,14 @@ it('generates a pay code end to end via api and debits the issuer wallet', funct
                     'balance_before',
                     'balance_after',
                 ],
-                'debit',
+                'debit' => [
+                    'id',
+                    'amount',
+                ],
+                'links' => [
+                    'redeem',
+                    'redeem_path',
+                ],
             ],
             'meta',
         ]);
@@ -86,8 +98,12 @@ it('generates a pay code end to end via api and debits the issuer wallet', funct
 
     expect((float) $data['amount'])->toBe(100.0);
     expect($data['currency'])->toBe('PHP');
+    expect($data['issuer']['id'])->toBe($user->id);
     expect((float) $data['wallet']['balance_before'])->toBe($balanceBefore);
     expect((float) $data['wallet']['balance_after'])->toBeLessThan($balanceBefore);
+
+    expect($data['links']['redeem'])->toContain($data['code']);
+    expect($data['links']['redeem_path'])->toContain($data['code']);
 
     $wallet->refresh();
     expect((float) $wallet->balance)->toBe((float) $data['wallet']['balance_after']);

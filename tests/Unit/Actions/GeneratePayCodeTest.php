@@ -7,8 +7,8 @@ use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\UserResolverContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
-use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
+use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 
 it('generates a pay code by resolving issuer, estimating cost, debiting wallet, and issuing voucher', function () {
     $issuer = (object) ['id' => 1, 'name' => 'Issuer'];
@@ -52,9 +52,13 @@ it('generates a pay code by resolving issuer, estimating cost, debiting wallet, 
         'code' => 'TEST-1234',
         'amount' => 100.0,
         'currency' => 'PHP',
+        'links' => [
+            'redeem' => 'https://example.test/disburse?code=TEST-1234',
+            'redeem_path' => '/disburse?code=TEST-1234',
+        ],
     ];
 
-    $debit = (object) ['id' => 501];
+    $debit = (object) ['id' => 501, 'amount' => 31.0];
 
     $users = Mockery::mock(UserResolverContract::class);
     $users->shouldReceive('resolve')
@@ -114,10 +118,16 @@ it('generates a pay code by resolving issuer, estimating cost, debiting wallet, 
 
     expect($result['voucher_id'])->toBe(99);
     expect($result['code'])->toBe('TEST-1234');
+    expect($result['issuer']['id'])->toBe(1);
+    expect($result['links']['redeem'])->toBe('https://example.test/disburse?code=TEST-1234');
+    expect($result['links']['redeem_path'])->toBe('/disburse?code=TEST-1234');
     expect($result['cost'])->toBe($estimate);
     expect($result['wallet']['balance_before'])->toBe(1000.0);
     expect($result['wallet']['balance_after'])->toBe(969.0);
-    expect($result['debit'])->toBe($debit);
+    expect($result['debit'])->toBe([
+        'id' => 501,
+        'amount' => 31.0,
+    ]);
 });
 
 it('throws when issuer cannot be resolved', function () {

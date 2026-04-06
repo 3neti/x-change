@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
+use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 
 it('generates a pay code end to end and debits the issuer wallet', function () {
     $user = actingAsTestUser(1_000_000);
+
+    config()->set('app.url', 'https://example.test');
 
     $wallet = $user->wallet()->where('slug', 'platform')->first();
     expect($wallet)->not->toBeNull();
@@ -62,20 +65,29 @@ it('generates a pay code end to end and debits the issuer wallet', function () {
         'code',
         'amount',
         'currency',
+        'issuer',
         'cost',
         'wallet',
         'debit',
+        'links',
     ]);
 
     expect($result['amount'])->toBe(100.0);
     expect($result['currency'])->toBe('PHP');
+    expect($result['issuer']['id'])->toBe($user->id);
     expect($result['cost']['total'])->toBeGreaterThan(0);
+
+    expect($result['links']['redeem'])->toContain($result['code']);
+    expect($result['links']['redeem_path'])->toContain($result['code']);
 
     $wallet->refresh();
 
     expect((float) $result['wallet']['balance_before'])->toBe($balanceBefore);
     expect((float) $result['wallet']['balance_after'])->toBeLessThan($balanceBefore);
     expect((float) $wallet->balance)->toBe((float) $result['wallet']['balance_after']);
+
+    expect($result['debit'])->toBeArray();
+    expect($result['debit'])->toHaveKey('id');
 
     $voucher = Voucher::query()->find($result['voucher_id']);
 
@@ -86,7 +98,7 @@ it('generates a pay code end to end and debits the issuer wallet', function () {
 });
 
 it('fails end to end when issuer wallet cannot afford pay code generation', function () {
-    $user = actingAsTestUser(0);
+    actingAsTestUser(0);
 
     $payload = [
         'cash' => [
@@ -130,5 +142,5 @@ it('fails end to end when issuer wallet cannot afford pay code generation', func
     $action = app(GeneratePayCode::class);
 
     expect(fn () => $action->handle($payload))
-        ->toThrow(\LBHurtado\XChange\Exceptions\InsufficientWalletBalance::class);
+        ->toThrow(InsufficientWalletBalance::class);
 });
