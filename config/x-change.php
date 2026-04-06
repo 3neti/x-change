@@ -66,6 +66,7 @@ return [
         'idempotency' => [
             'enabled' => env('XCHANGE_API_IDEMPOTENCY_ENABLED', true),
             'header' => env('XCHANGE_API_IDEMPOTENCY_HEADER', 'Idempotency-Key'),
+            'ttl' => (int) env('XCHANGE_API_IDEMPOTENCY_TTL', 3600),
         ],
 
         'correlation' => [
@@ -96,6 +97,7 @@ return [
         'pricing' => \LBHurtado\XChange\Services\PricingService::class,
         'issuance' => \LBHurtado\XChange\Services\PayCodeIssuanceService::class,
         'wallet_access' => \LBHurtado\XChange\Services\WalletAccessService::class,
+        'idempotency_store' => \LBHurtado\XChange\Services\CacheIdempotencyStore::class,
     ],
 
     'service_contracts' => [
@@ -106,6 +108,7 @@ return [
         \LBHurtado\XChange\Contracts\PricingServiceContract::class => 'pricing',
         \LBHurtado\XChange\Contracts\PayCodeIssuanceContract::class => 'issuance',
         \LBHurtado\XChange\Contracts\WalletAccessContract::class => 'wallet_access',
+        \LBHurtado\XChange\Contracts\IdempotencyStoreContract::class => 'idempotency_store',
     ],
     'integrations' => [
         'system_wallet_resolver' => \LBHurtado\XChange\Support\Resolvers\NullSystemWalletResolver::class,
@@ -136,5 +139,4 @@ return [
 
         'minimum_balance_enforced' => env('XCHANGE_PRICING_MINIMUM_BALANCE_ENFORCED', true),
     ],
-
 ];

@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Providers;
 use Illuminate\Http\Request;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\XChange\Exceptions\IdempotencyConflict;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
@@ -189,6 +190,19 @@ class XChangeServiceProvider extends ServiceProvider
                 'PAY_CODE_ISSUANCE_FAILED',
                 [],
                 500,
+            );
+        });
+
+        $exceptions->renderable(function (IdempotencyConflict $e, Request $request) {
+            if (! $request->expectsJson()) {
+                return null;
+            }
+
+            return $this->apiResponses()->errorFromThrowable(
+                $e,
+                'IDEMPOTENCY_CONFLICT',
+                [],
+                409,
             );
         });
     }
