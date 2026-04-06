@@ -1,0 +1,64 @@
+<?php
+
+declare(strict_types=1);
+
+use LBHurtado\XChange\Actions\Onboarding\OnboardIssuer;
+
+it('returns an onboarded issuer via api', function () {
+    $payload = [
+        'name' => 'Issuer Name',
+        'email' => 'issuer@example.com',
+        'mobile' => '09171234567',
+        'country' => 'PH',
+        'metadata' => [],
+    ];
+
+    $result = [
+        'issuer' => [
+            'id' => 1,
+            'name' => 'Issuer Name',
+            'email' => 'issuer@example.com',
+            'mobile' => '09171234567',
+            'country' => 'PH',
+        ],
+    ];
+
+    $action = Mockery::mock(OnboardIssuer::class);
+    $action->shouldReceive('handle')
+        ->once()
+        ->with($payload)
+        ->andReturn($result);
+
+    $this->app->instance(OnboardIssuer::class, $action);
+
+    $response = $this->postJson(xchangeApi('onboarding/issuers'), $payload);
+
+    $response
+        ->assertCreated()
+        ->assertJson([
+            'success' => true,
+            'data' => $result,
+            'meta' => [],
+        ]);
+});
+
+it('validates required payload fields for issuer onboarding', function () {
+    $response = $this->postJson(xchangeApi('onboarding/issuers'), []);
+
+    $response
+        ->assertUnprocessable()
+        ->assertJson([
+            'success' => false,
+            'code' => 'VALIDATION_ERROR',
+            'message' => 'The given data was invalid.',
+        ])
+        ->assertJsonStructure([
+            'success',
+            'message',
+            'code',
+            'errors' => [
+                'name',
+                'mobile',
+            ],
+        ]);
+});

@@ -98,6 +98,8 @@ return [
         'issuance' => \LBHurtado\XChange\Services\PayCodeIssuanceService::class,
         'wallet_access' => \LBHurtado\XChange\Services\WalletAccessService::class,
         'idempotency_store' => \LBHurtado\XChange\Services\CacheIdempotencyStore::class,
+        'issuer_onboarding' => \LBHurtado\XChange\Services\DefaultIssuerOnboardingService::class,
+        'wallet_provisioning' => \LBHurtado\XChange\Services\DefaultWalletProvisioningService::class,
     ],
 
     'service_contracts' => [
@@ -109,6 +111,8 @@ return [
         \LBHurtado\XChange\Contracts\PayCodeIssuanceContract::class => 'issuance',
         \LBHurtado\XChange\Contracts\WalletAccessContract::class => 'wallet_access',
         \LBHurtado\XChange\Contracts\IdempotencyStoreContract::class => 'idempotency_store',
+        \LBHurtado\XChange\Contracts\IssuerOnboardingContract::class => 'issuer_onboarding',
+        \LBHurtado\XChange\Contracts\WalletProvisioningContract::class => 'wallet_provisioning',
     ],
     'integrations' => [
         'system_wallet_resolver' => \LBHurtado\XChange\Support\Resolvers\NullSystemWalletResolver::class,
