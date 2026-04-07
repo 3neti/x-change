@@ -146,13 +146,19 @@ function xchangeApi(string $path): string
     return '/'.$prefix.'/'.$version.'/'.$path;
 }
 
-function validPayCodePayload(): array
-{
-    return [
+/**
+ * @return array<string, mixed>
+ */
+function validPayCodePayload(
+    float $amount = 100.00,
+    ?string $settlementRail = 'INSTAPAY',
+    array $overrides = []
+): array {
+    return array_replace_recursive([
         'cash' => [
-            'amount' => 100.0,
+            'amount' => $amount,
             'currency' => 'PHP',
-            'settlement_rail' => 'INSTAPAY',
+            'settlement_rail' => $settlementRail,
             'validation' => [
                 'secret' => null,
                 'mobile' => null,
@@ -186,5 +192,37 @@ function validPayCodePayload(): array
         'mask' => '****',
         'ttl' => null,
         'metadata' => [],
-    ];
+    ], $overrides);
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function validOnboardIssuerPayload(array $overrides = []): array
+{
+    return array_replace_recursive([
+        'name' => 'Issuer Name',
+        'email' => 'issuer@example.com',
+        'mobile' => '09171234567',
+        'country' => 'PH',
+        'identity' => [],
+        'metadata' => [],
+    ], $overrides);
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function validOpenIssuerWalletPayload(
+    mixed $issuerId = 1,
+    array $overrides = []
+): array {
+    return array_replace_recursive([
+        'issuer_id' => $issuerId,
+        'wallet' => [
+            'slug' => 'platform',
+            'name' => 'Platform Wallet',
+        ],
+        'metadata' => [],
+    ], $overrides);
 }

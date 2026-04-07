@@ -7,13 +7,7 @@ use LBHurtado\XChange\Tests\Fakes\User;
 it('onboards an issuer end to end via api', function () {
     config()->set('x-change.onboarding.issuer_model', User::class);
 
-    $payload = [
-        'name' => 'Issuer Name',
-        'email' => 'issuer@example.com',
-        'mobile' => '09171234567',
-        'country' => 'PH',
-        'metadata' => [],
-    ];
+    $payload = validOnboardIssuerPayload();
 
     $response = $this->postJson(xchangeApi('onboarding/issuers'), $payload);
 

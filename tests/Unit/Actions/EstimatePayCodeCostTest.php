@@ -68,7 +68,7 @@ it('returns pricing estimate from voucher instructions input', function () {
         ->once()
         ->with(Mockery::on(function ($instructions) {
             expect($instructions)->toBeInstanceOf(VoucherInstructionsData::class);
-            expect((float) data_get($instructions, 'cash.amount'))->toBe(100.0);
+            expect((float) $instructions->cash->amount)->toBe(100.0);
 
             return true;
         }))

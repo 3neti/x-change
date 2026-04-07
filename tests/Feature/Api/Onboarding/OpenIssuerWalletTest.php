@@ -8,14 +8,7 @@ use LBHurtado\XChange\Data\Onboarding\OpenIssuerWalletResultData;
 use LBHurtado\XChange\Data\WalletData;
 
 it('returns an opened issuer wallet via api', function () {
-    $payload = [
-        'issuer_id' => 1,
-        'wallet' => [
-            'slug' => 'platform',
-            'name' => 'Platform Wallet',
-        ],
-        'metadata' => [],
-    ];
+    $payload = validOpenIssuerWalletPayload();
 
     $result = new OpenIssuerWalletResultData(
         issuer: new IssuerData(

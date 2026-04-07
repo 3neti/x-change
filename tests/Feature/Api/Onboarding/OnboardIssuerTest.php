@@ -7,13 +7,7 @@ use LBHurtado\XChange\Data\IssuerData;
 use LBHurtado\XChange\Data\Onboarding\OnboardIssuerResultData;
 
 it('returns an onboarded issuer via api', function () {
-    $payload = [
-        'name' => 'Issuer Name',
-        'email' => 'issuer@example.com',
-        'mobile' => '09171234567',
-        'country' => 'PH',
-        'metadata' => [],
-    ];
+    $payload = validOnboardIssuerPayload();
 
     $result = new OnboardIssuerResultData(
         issuer: new IssuerData(

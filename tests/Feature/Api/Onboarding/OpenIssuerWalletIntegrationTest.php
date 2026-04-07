@@ -13,14 +13,7 @@ it('opens an issuer wallet end to end via api', function () {
 
     $this->actingAs($issuer);
 
-    $payload = [
-        'issuer_id' => $issuer->id,
-        'wallet' => [
-            'slug' => 'platform',
-            'name' => 'Platform Wallet',
-        ],
-        'metadata' => [],
-    ];
+    $payload = validOpenIssuerWalletPayload($issuer->id);
 
     $response = $this->postJson(xchangeApi('onboarding/wallets'), $payload);
 
