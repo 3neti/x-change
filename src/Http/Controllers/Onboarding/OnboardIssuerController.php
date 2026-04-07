@@ -31,9 +31,9 @@ class OnboardIssuerController extends Controller
             $result = $action->handle($payload);
 
             $audit->log('issuer.onboard.succeeded', [
-                'issuer_id' => data_get($result, 'issuer.id'),
-                'email' => data_get($result, 'issuer.email'),
-                'mobile' => data_get($result, 'issuer.mobile'),
+                'issuer_id' => $result->issuer->id,
+                'email' => $result->issuer->email,
+                'mobile' => $result->issuer->mobile,
             ]);
 
             return $responses->success($result, [], 201);

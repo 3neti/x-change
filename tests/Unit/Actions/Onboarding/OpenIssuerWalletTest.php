@@ -2,50 +2,63 @@
 
 declare(strict_types=1);
 
-namespace LBHurtado\XChange\Http\Controllers\Onboarding;
-
-use Illuminate\Routing\Controller;
 use LBHurtado\XChange\Actions\Onboarding\OpenIssuerWallet;
-use LBHurtado\XChange\Contracts\AuditLoggerContract;
-use LBHurtado\XChange\Http\Requests\Onboarding\OpenIssuerWalletRequest;
-use LBHurtado\XChange\Services\ApiResponseFactory;
-use Throwable;
+use LBHurtado\XChange\Contracts\IssuerResolverContract;
+use LBHurtado\XChange\Contracts\WalletProvisioningContract;
+use LBHurtado\XChange\Data\Onboarding\OpenIssuerWalletResultData;
 
-class OpenIssuerWalletController extends Controller
-{
-    public function __invoke(
-        OpenIssuerWalletRequest $request,
-        OpenIssuerWallet $action,
-        ApiResponseFactory $responses,
-        AuditLoggerContract $audit,
-    ) {
-        $payload = $request->validated();
+it('opens issuer wallet through provisioning contract and returns normalized wallet payload', function () {
+    $input = validOpenIssuerWalletPayload(1);
 
-        $audit->log('issuer.wallet.open.requested', [
-            'issuer_id' => data_get($payload, 'issuer_id'),
-            'wallet_slug' => data_get($payload, 'wallet.slug'),
-            'wallet_name' => data_get($payload, 'wallet.name'),
-        ]);
+    $issuer = (object) [
+        'id' => 1,
+    ];
 
-        try {
-            $result = $action->handle($payload);
+    $wallet = (object) [
+        'id' => 10,
+        'slug' => 'platform',
+        'name' => 'Platform Wallet',
+        'balance' => 0,
+    ];
 
-            $audit->log('issuer.wallet.open.succeeded', [
-                'issuer_id' => data_get($result, 'issuer.id'),
-                'wallet_id' => data_get($result, 'wallet.id'),
-                'wallet_slug' => data_get($result, 'wallet.slug'),
-            ]);
+    $resolver = Mockery::mock(IssuerResolverContract::class);
+    $resolver->shouldReceive('resolve')
+        ->once()
+        ->with($input)
+        ->andReturn($issuer);
 
-            return $responses->success($result, [], 201);
-        } catch (Throwable $e) {
-            $audit->log('issuer.wallet.open.failed', [
-                'issuer_id' => data_get($payload, 'issuer_id'),
-                'wallet_slug' => data_get($payload, 'wallet.slug'),
-                'exception' => $e::class,
-                'message' => $e->getMessage(),
-            ]);
+    $wallets = Mockery::mock(WalletProvisioningContract::class);
+    $wallets->shouldReceive('open')
+        ->once()
+        ->with($issuer, $input)
+        ->andReturn($wallet);
 
-            throw $e;
-        }
-    }
-}
+    $action = new OpenIssuerWallet($resolver, $wallets);
+
+    $result = $action->handle($input);
+
+    expect($result)->toBeInstanceOf(OpenIssuerWalletResultData::class);
+    expect($result->issuer->id)->toBe(1);
+    expect($result->wallet->id)->toBe(10);
+    expect($result->wallet->slug)->toBe('platform');
+    expect($result->wallet->name)->toBe('Platform Wallet');
+    expect($result->wallet->balance)->toBe(0);
+});
+
+it('throws when issuer cannot be resolved', function () {
+    $input = validOpenIssuerWalletPayload(999);
+
+    $resolver = Mockery::mock(IssuerResolverContract::class);
+    $resolver->shouldReceive('resolve')
+        ->once()
+        ->with($input)
+        ->andReturn(null);
+
+    $wallets = Mockery::mock(WalletProvisioningContract::class);
+    $wallets->shouldNotReceive('open');
+
+    $action = new OpenIssuerWallet($resolver, $wallets);
+
+    expect(fn () => $action->handle($input))
+        ->toThrow(RuntimeException::class, 'Issuer could not be resolved.');
+});
