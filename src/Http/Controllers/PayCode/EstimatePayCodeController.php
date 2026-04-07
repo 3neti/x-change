@@ -39,7 +39,7 @@ class EstimatePayCodeController extends Controller
                 'issuer_id' => is_object($issuer) ? ($issuer->id ?? null) : null,
                 'amount' => data_get($payload, 'cash.amount'),
                 'currency' => data_get($payload, 'cash.currency'),
-                'total' => $result['total'] ?? null,
+                'total' => $result->total,
             ]);
 
             return $responses->success($result, [], 200);

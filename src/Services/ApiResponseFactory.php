@@ -4,20 +4,21 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services;
 
+use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Http\JsonResponse;
+use JsonSerializable;
 use Throwable;
 
 class ApiResponseFactory
 {
     /**
-     * @param  array<string, mixed>  $data
      * @param  array<string, mixed>  $meta
      */
-    public function success(array $data = [], array $meta = [], int $status = 200): JsonResponse
+    public function success(mixed $data = [], array $meta = [], int $status = 200): JsonResponse
     {
         return response()->json([
             $this->successKey() => true,
-            $this->dataKey() => $data,
+            $this->dataKey() => $this->normalize($data),
             $this->metaKey() => $meta,
         ], $status);
     }
@@ -54,6 +55,19 @@ class ApiResponseFactory
             $errors,
             $status,
         );
+    }
+
+    protected function normalize(mixed $value): mixed
+    {
+        if ($value instanceof Arrayable) {
+            return $value->toArray();
+        }
+
+        if ($value instanceof JsonSerializable) {
+            return $value->jsonSerialize();
+        }
+
+        return $value;
     }
 
     protected function successKey(): string

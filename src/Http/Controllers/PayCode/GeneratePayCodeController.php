@@ -49,8 +49,8 @@ class GeneratePayCodeController extends Controller
                 if (is_array($recalled)) {
                     $audit->log('pay_code.generate.succeeded', [
                         'issuer_id' => is_object($issuer) ? ($issuer->id ?? null) : null,
-                        'voucher_id' => $recalled['voucher_id'] ?? null,
-                        'code' => $recalled['code'] ?? null,
+                        'voucher_id' => data_get($recalled, 'voucher_id'),
+                        'code' => data_get($recalled, 'code'),
                         'replayed' => true,
                         'idempotency_key' => $key,
                     ]);
@@ -67,14 +67,14 @@ class GeneratePayCodeController extends Controller
             $result = $action->handle($payload);
 
             if (is_string($key)) {
-                $idempotency->remember($key, $payload, $result);
+                $idempotency->remember($key, $payload, $result->toArray());
             }
 
             $audit->log('pay_code.generate.succeeded', [
                 'issuer_id' => is_object($issuer) ? ($issuer->id ?? null) : null,
-                'voucher_id' => $result['voucher_id'] ?? null,
-                'code' => $result['code'] ?? null,
-                'debit_id' => data_get($result, 'debit.id'),
+                'voucher_id' => $result->voucher_id,
+                'code' => $result->code,
+                'debit_id' => $result->debit->id,
                 'replayed' => false,
                 'idempotency_key' => $key,
             ]);

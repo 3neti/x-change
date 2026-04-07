@@ -6,6 +6,9 @@ namespace LBHurtado\XChange\Actions\Onboarding;
 
 use LBHurtado\XChange\Contracts\IssuerResolverContract;
 use LBHurtado\XChange\Contracts\WalletProvisioningContract;
+use LBHurtado\XChange\Data\IssuerData;
+use LBHurtado\XChange\Data\Onboarding\OpenIssuerWalletResultData;
+use LBHurtado\XChange\Data\WalletData;
 use RuntimeException;
 
 class OpenIssuerWallet
@@ -17,9 +20,8 @@ class OpenIssuerWallet
 
     /**
      * @param  array<string, mixed>  $input
-     * @return array<string, mixed>
      */
-    public function handle(array $input): array
+    public function handle(array $input): OpenIssuerWalletResultData
     {
         $issuer = $this->issuerResolver->resolve($input);
 
@@ -29,22 +31,16 @@ class OpenIssuerWallet
 
         $wallet = $this->walletProvisioning->open($issuer, $input);
 
-        return $this->transform($issuer, $wallet);
-    }
-
-    protected function transform($issuer, $wallet): array
-    {
-        return [
-            'issuer' => [
-                'id' => $issuer->id,
-            ],
-
-            'wallet' => [
-                'id' => $wallet->id,
-                'slug' => $wallet->slug,
-                'name' => $wallet->name,
-                'balance' => (float) $wallet->balance,
-            ],
-        ];
+        return new OpenIssuerWalletResultData(
+            issuer: new IssuerData(
+                id: is_object($issuer) ? ($issuer->id ?? null) : data_get($issuer, 'id'),
+            ),
+            wallet: new WalletData(
+                id: is_object($wallet) ? ($wallet->id ?? null) : data_get($wallet, 'id'),
+                slug: is_object($wallet) ? ($wallet->slug ?? null) : data_get($wallet, 'slug'),
+                name: is_object($wallet) ? ($wallet->name ?? null) : data_get($wallet, 'name'),
+                balance: is_object($wallet) ? ($wallet->balance ?? null) : data_get($wallet, 'balance'),
+            ),
+        );
     }
 }

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Actions\Onboarding;
 
 use LBHurtado\XChange\Contracts\IssuerOnboardingContract;
+use LBHurtado\XChange\Data\IssuerData;
+use LBHurtado\XChange\Data\Onboarding\OnboardIssuerResultData;
 
 class OnboardIssuer
 {
@@ -14,20 +16,19 @@ class OnboardIssuer
 
     /**
      * @param  array<string, mixed>  $input
-     * @return array<string, mixed>
      */
-    public function handle(array $input): array
+    public function handle(array $input): OnboardIssuerResultData
     {
         $issuer = $this->issuers->onboard($input);
 
-        return [
-            'issuer' => [
-                'id' => is_object($issuer) ? ($issuer->id ?? null) : data_get($issuer, 'id'),
-                'name' => is_object($issuer) ? ($issuer->name ?? null) : data_get($issuer, 'name'),
-                'email' => is_object($issuer) ? ($issuer->email ?? null) : data_get($issuer, 'email'),
-                'mobile' => is_object($issuer) ? ($issuer->mobile ?? null) : data_get($issuer, 'mobile'),
-                'country' => is_object($issuer) ? ($issuer->country ?? null) : data_get($issuer, 'country'),
-            ],
-        ];
+        return new OnboardIssuerResultData(
+            issuer: new IssuerData(
+                id: is_object($issuer) ? ($issuer->id ?? null) : data_get($issuer, 'id'),
+                name: is_object($issuer) ? ($issuer->name ?? null) : data_get($issuer, 'name'),
+                email: is_object($issuer) ? ($issuer->email ?? null) : data_get($issuer, 'email'),
+                mobile: is_object($issuer) ? ($issuer->mobile ?? null) : data_get($issuer, 'mobile'),
+                country: is_object($issuer) ? ($issuer->country ?? null) : data_get($issuer, 'country'),
+            ),
+        );
     }
 }

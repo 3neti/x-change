@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Actions\PayCode;
 
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
+use LBHurtado\XChange\Data\PricingEstimateData;
 
 class EstimatePayCodeCost
 {
@@ -15,24 +16,18 @@ class EstimatePayCodeCost
 
     /**
      * @param  array<string, mixed>  $input
-     * @return array{
-     *     currency:string,
-     *     base_fee:float,
-     *     components:array<string,float>,
-     *     total:float
-     * }
      */
-    public function handle(array $input): array
+    public function handle(array $input): PricingEstimateData
     {
         $instructions = VoucherInstructionsData::from($input);
 
         $estimate = $this->pricing->estimate($instructions);
 
-        return [
-            'currency' => (string) $estimate['currency'],
-            'base_fee' => (float) $estimate['base_fee'],
-            'components' => (array) $estimate['components'],
-            'total' => (float) $estimate['total'],
-        ];
+        return new PricingEstimateData(
+            currency: (string) ($estimate['currency'] ?? config('x-change.pricing.currency', 'PHP')),
+            base_fee: (float) ($estimate['base_fee'] ?? 0),
+            components: (array) ($estimate['components'] ?? []),
+            total: (float) ($estimate['total'] ?? 0),
+        );
     }
 }

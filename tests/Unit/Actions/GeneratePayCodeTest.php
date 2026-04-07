@@ -7,6 +7,8 @@ use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\UserResolverContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
+use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
+use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 
@@ -41,15 +43,15 @@ it('generates a pay code by resolving issuer, estimating cost, debiting wallet, 
         ],
     ];
 
-    $estimate = [
-        'currency' => 'PHP',
-        'base_fee' => 1.0,
-        'components' => [
+    $estimate = new PricingEstimateData(
+        currency: 'PHP',
+        base_fee: 1.0,
+        components: [
             'kyc' => 25.0,
             'selfie' => 5.0,
         ],
-        'total' => 31.0,
-    ];
+        total: 31.0,
+    );
 
     $issued = [
         'voucher_id' => 99,
@@ -88,19 +90,15 @@ it('generates a pay code by resolving issuer, estimating cost, debiting wallet, 
 
     $wallets->shouldReceive('debit')
         ->once()
-        ->with($wallet, 31.0, Mockery::on(function (array $meta) use ($estimate) {
+        ->with($wallet, 31.0, Mockery::on(function (array $meta) {
             expect($meta['reason'])->toBe('pay_code_issuance');
             expect($meta['requested_amount'])->toBe(100.0);
             expect($meta['requested_currency'])->toBe('PHP');
-            expect($meta['cost'])->toBe([
-                'currency' => 'PHP',
-                'base_fee' => 1.0,
-                'components' => [
-                    'kyc' => 25.0,
-                    'selfie' => 5.0,
-                ],
-                'total' => 31.0,
-            ]);
+            expect($meta['cost']['currency'])->toBe('PHP');
+            expect($meta['cost']['base_fee'])->toBe(1.0);
+            expect($meta['cost']['components']['kyc'])->toBe(25.0);
+            expect($meta['cost']['components']['selfie'])->toBe(5.0);
+            expect($meta['cost']['total'])->toBe(31.0);
             expect($meta['idempotency_key'])->toBe('idem-123');
             expect($meta['correlation_id'])->toBe('corr-456');
 
@@ -134,18 +132,21 @@ it('generates a pay code by resolving issuer, estimating cost, debiting wallet, 
 
     $result = $action->handle($input);
 
-    expect($result['voucher_id'])->toBe(99);
-    expect($result['code'])->toBe('TEST-1234');
-    expect($result['issuer']['id'])->toBe(1);
-    expect($result['links']['redeem'])->toBe('https://example.test/disburse?code=TEST-1234');
-    expect($result['links']['redeem_path'])->toBe('/disburse?code=TEST-1234');
-    expect($result['cost'])->toBe($estimate);
-    expect($result['wallet']['balance_before'])->toBe(1000.0);
-    expect($result['wallet']['balance_after'])->toBe(969.0);
-    expect($result['debit'])->toBe([
-        'id' => 501,
-        'amount' => 31.0,
-    ]);
+    expect($result)->toBeInstanceOf(GeneratePayCodeResultData::class);
+    expect($result->voucher_id)->toBe(99);
+    expect($result->code)->toBe('TEST-1234');
+    expect($result->issuer->id)->toBe(1);
+    expect($result->links->redeem)->toBe('https://example.test/disburse?code=TEST-1234');
+    expect($result->links->redeem_path)->toBe('/disburse?code=TEST-1234');
+    expect($result->cost->currency)->toBe('PHP');
+    expect($result->cost->base_fee)->toBe(1.0);
+    expect($result->cost->components['kyc'])->toBe(25.0);
+    expect($result->cost->components['selfie'])->toBe(5.0);
+    expect($result->cost->total)->toBe(31.0);
+    expect($result->wallet['balance_before'])->toBe(1000.0);
+    expect($result->wallet['balance_after'])->toBe(969.0);
+    expect($result->debit->id)->toBe(501);
+    expect($result->debit->amount)->toBe(31.0);
 });
 
 it('throws when issuer cannot be resolved', function () {
@@ -188,12 +189,12 @@ it('stops before issuance when wallet cannot afford the estimated cost', functio
         'rider' => [],
     ];
 
-    $estimate = [
-        'currency' => 'PHP',
-        'base_fee' => 1.0,
-        'components' => [],
-        'total' => 999.0,
-    ];
+    $estimate = new PricingEstimateData(
+        currency: 'PHP',
+        base_fee: 1.0,
+        components: [],
+        total: 999.0,
+    );
 
     $users = Mockery::mock(UserResolverContract::class);
     $users->shouldReceive('resolve')

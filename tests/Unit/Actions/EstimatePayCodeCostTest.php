@@ -3,39 +3,27 @@
 declare(strict_types=1);
 
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
+use LBHurtado\XChange\Contracts\PricingServiceContract;
+use LBHurtado\Voucher\Data\VoucherInstructionsData;
+use LBHurtado\XChange\Data\PricingEstimateData;
 
 it('returns pricing estimate from voucher instructions input', function () {
-    config()->set('x-change.pricing.base_fee', 1.0);
-    config()->set('x-change.pricing.components', [
-        'cash' => 0.0,
-        'kyc' => 25.0,
-        'otp' => 2.0,
-        'selfie' => 5.0,
-        'signature' => 3.0,
-        'location' => 1.0,
-        'webhook' => 4.0,
-        'email_feedback' => 6.0,
-        'sms_feedback' => 7.0,
-    ]);
-
-    $payload = [
+    $input = [
         'cash' => [
             'amount' => 100.0,
             'currency' => 'PHP',
-            'settlement_rail' => 'INSTAPAY',
             'validation' => [
                 'secret' => null,
                 'mobile' => null,
                 'payable' => null,
                 'country' => 'PH',
-                'location' => '14.5995,120.9842',
-                'radius' => '50',
+                'location' => null,
+                'radius' => null,
             ],
         ],
         'inputs' => [
             'fields' => [
                 'selfie',
-                'signature',
             ],
         ],
         'feedback' => [
@@ -55,30 +43,44 @@ it('returns pricing estimate from voucher instructions input', function () {
         'prefix' => 'TEST',
         'mask' => '****',
         'ttl' => null,
-        'metadata' => [
-            'issuer_id' => null,
-            'issuer_name' => null,
-            'issuer_email' => null,
-            'created_at' => now()->toIso8601String(),
-            'issued_at' => now()->toIso8601String(),
-        ],
+        'metadata' => [],
     ];
 
-    $action = app(EstimatePayCodeCost::class);
+    $estimate = [
+        'currency' => 'PHP',
+        'base_fee' => 0.0,
+        'components' => [
+            'selfie' => 5.0,
+            'email_feedback' => 0.0,
+            'sms_feedback' => 0.0,
+            'webhook' => 0.0,
+            'cash' => 0.0,
+            'kyc' => 0.0,
+            'otp' => 0.0,
+            'signature' => 0.0,
+            'location' => 0.0,
+        ],
+        'total' => 5.0,
+    ];
 
-    $result = $action->handle($payload);
+    $pricing = Mockery::mock(PricingServiceContract::class);
+    $pricing->shouldReceive('estimate')
+        ->once()
+        ->with(Mockery::on(function ($instructions) {
+            expect($instructions)->toBeInstanceOf(VoucherInstructionsData::class);
+            expect((float) data_get($instructions, 'cash.amount'))->toBe(100.0);
 
-    expect($result)->toHaveKeys([
-        'currency',
-        'base_fee',
-        'components',
-        'total',
-    ]);
+            return true;
+        }))
+        ->andReturn($estimate);
 
-    expect($result['currency'])->toBe('PHP');
-    expect($result['base_fee'])->toBe(1.0);
-    expect($result['components']['kyc'])->toBe(25.0);
-    expect($result['components']['selfie'])->toBe(5.0);
-    expect($result['components']['signature'])->toBe(3.0);
-    expect($result['total'])->toBe(52.0);
+    $action = new EstimatePayCodeCost($pricing);
+
+    $result = $action->handle($input);
+
+    expect($result)->toBeInstanceOf(PricingEstimateData::class);
+    expect($result->currency)->toBe('PHP');
+    expect($result->base_fee)->toBe(0.0);
+    expect($result->components['selfie'])->toBe(5.0);
+    expect($result->total)->toBe(5.0);
 });

@@ -33,7 +33,7 @@ class EstimatePayCodeRequest extends FormRequest
             'cash.validation.radius' => ['nullable', 'string'],
 
             'inputs' => ['required', 'array'],
-            'inputs.fields' => ['required', 'array'],
+            'inputs.fields' => ['present', 'array'],
 
             'feedback' => ['required', 'array'],
             'feedback.email' => ['nullable', 'email'],

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
+use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 
 it('generates a pay code end to end and debits the issuer wallet', function () {
@@ -16,83 +17,45 @@ it('generates a pay code end to end and debits the issuer wallet', function () {
 
     $balanceBefore = (float) $wallet->balance;
 
-    $payload = [
-        'cash' => [
-            'amount' => 100.0,
-            'currency' => 'PHP',
-            'settlement_rail' => 'INSTAPAY',
-            'validation' => [
-                'secret' => null,
-                'mobile' => null,
-                'payable' => null,
-                'country' => 'PH',
-                'location' => null,
-                'radius' => null,
-            ],
-        ],
-        'inputs' => [
-            'fields' => [
-                'selfie',
-                'signature',
-            ],
-        ],
-        'feedback' => [
-            'email' => 'example@example.com',
-            'mobile' => '09171234567',
-            'webhook' => 'https://example.com/webhook',
-        ],
-        'rider' => [
-            'message' => null,
-            'url' => null,
-            'redirect_timeout' => null,
-            'splash' => null,
-            'splash_timeout' => null,
-            'og_source' => null,
-        ],
-        'count' => 1,
-        'prefix' => 'TEST',
-        'mask' => '****',
-        'ttl' => null,
-        'metadata' => [],
-    ];
+    $payload = validPayCodePayload();
 
     $action = app(GeneratePayCode::class);
 
     $result = $action->handle($payload);
 
-    expect($result)->toHaveKeys([
-        'voucher_id',
-        'code',
-        'amount',
-        'currency',
-        'issuer',
-        'cost',
-        'wallet',
-        'debit',
-        'links',
-    ]);
+    expect($result)->toBeInstanceOf(GeneratePayCodeResultData::class);
 
-    expect($result['amount'])->toBe(100.0);
-    expect($result['currency'])->toBe('PHP');
-    expect($result['issuer']['id'])->toBe($user->id);
-    expect($result['cost']['total'])->toBeGreaterThan(0);
+    expect($result->voucher_id)->not->toBeNull();
+    expect($result->code)->toBeString();
+    expect($result->amount)->toBe(100.0);
+    expect($result->currency)->toBe('PHP');
 
-    expect($result['links']['redeem'])->toContain($result['code']);
-    expect($result['links']['redeem_path'])->toContain($result['code']);
+    expect($result->issuer->id)->toBe($user->id);
+
+    expect($result->cost->currency)->toBe('PHP');
+    expect($result->cost->total)->toBeGreaterThan(0);
+
+    expect((float) $result->wallet['balance_before'])->toBe($balanceBefore);
+    expect((float) $result->wallet['balance_after'])->toBeLessThan($balanceBefore);
+
+    expect($result->debit->id)->not->toBeNull();
+
+    expect($result->links->redeem)->toContain($result->code);
+    expect($result->links->redeem_path)->toContain($result->code);
 
     $wallet->refresh();
 
-    expect((float) $result['wallet']['balance_before'])->toBe($balanceBefore);
-    expect((float) $result['wallet']['balance_after'])->toBeLessThan($balanceBefore);
-    expect((float) $wallet->balance)->toBe((float) $result['wallet']['balance_after']);
+    expect((float) $result->wallet['balance_before'])->toBe($balanceBefore);
+    expect((float) $result->wallet['balance_after'])->toBeLessThan($balanceBefore);
+    expect((float) $wallet->balance)->toBe((float) $result->wallet['balance_after']);
 
-    expect($result['debit'])->toBeArray();
-    expect($result['debit'])->toHaveKey('id');
+    expect($result->debit)->toBeInstanceOf(\LBHurtado\XChange\Data\DebitData::class);
+    expect($result->debit)->toHaveKey('id');
 
-    $voucher = Voucher::query()->find($result['voucher_id']);
+    $voucher = Voucher::query()->find($result->voucher_id);
 
     expect($voucher)->not->toBeNull();
-    expect($voucher?->code)->toBe($result['code']);
+    expect($voucher?->code)->toBe($result->code);
     expect($voucher?->instructions)->not->toBeNull();
     expect(data_get($voucher?->instructions, 'cash.amount'))->toBe(100.0);
 });

@@ -10,13 +10,14 @@
     ],
     "require": {
         "php": "^8.2",
+        "3neti/voucher": "*",
         "illuminate/contracts": "^13.0",
         "illuminate/events": "^13.0",
         "illuminate/http": "^13.0",
         "illuminate/queue": "^13.0",
         "illuminate/routing": "^13.0",
         "illuminate/support": "^13.0",
-        "3neti/voucher": "*"
+        "spatie/laravel-data": "^4.21"
     },
     "require-dev": {
         "orchestra/testbench": "^11.0",
@@ -54,4 +55,3 @@
         "test:coverage": "pest --coverage"
     }
 }
-

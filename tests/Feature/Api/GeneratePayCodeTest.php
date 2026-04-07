@@ -3,6 +3,11 @@
 declare(strict_types=1);
 
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
+use LBHurtado\XChange\Data\DebitData;
+use LBHurtado\XChange\Data\IssuerData;
+use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
+use LBHurtado\XChange\Data\PayCodeLinksData;
+use LBHurtado\XChange\Data\PricingEstimateData;
 
 it('returns a generated pay code via api', function () {
     $payload = [
@@ -28,38 +33,38 @@ it('returns a generated pay code via api', function () {
         ],
     ];
 
-    $result = [
-        'voucher_id' => 99,
-        'code' => 'TEST-1234',
-        'amount' => 100.0,
-        'currency' => 'PHP',
-        'issuer' => [
-            'id' => 1,
-        ],
-        'cost' => [
-            'currency' => 'PHP',
-            'base_fee' => 1.0,
-            'components' => [],
-            'total' => 1.0,
-        ],
-        'wallet' => [
+    $result = new GeneratePayCodeResultData(
+        voucher_id: 99,
+        code: 'TEST-1234',
+        amount: 100.0,
+        currency: 'PHP',
+        issuer: new IssuerData(
+            id: 1,
+        ),
+        cost: new PricingEstimateData(
+            currency: 'PHP',
+            base_fee: 1.0,
+            components: [],
+            total: 1.0,
+        ),
+        wallet: [
             'balance_before' => 1000.0,
             'balance_after' => 999.0,
         ],
-        'debit' => [
-            'id' => 501,
-            'amount' => null,
-        ],
-        'links' => [
-            'redeem' => 'https://example.test/disburse?code=TEST-1234',
-            'redeem_path' => '/disburse?code=TEST-1234',
-        ],
-    ];
+        debit: new DebitData(
+            id: 501,
+            amount: null,
+        ),
+        links: new PayCodeLinksData(
+            redeem: 'https://example.test/disburse?code=TEST-1234',
+            redeem_path: '/disburse?code=TEST-1234',
+        ),
+    );
 
     $action = Mockery::mock(GeneratePayCode::class);
     $action->shouldReceive('handle')
         ->once()
-        ->with(Mockery::on(function (array $actual) use ($payload) {
+        ->with(Mockery::on(function (array $actual) {
             expect((float) data_get($actual, 'cash.amount'))->toBe(100.0);
             expect(data_get($actual, 'cash.currency'))->toBe('PHP');
 
@@ -68,7 +73,6 @@ it('returns a generated pay code via api', function () {
             expect(data_get($actual, 'feedback.email'))->toBe('example@example.com');
             expect(data_get($actual, 'feedback.mobile'))->toBe('09171234567');
             expect(data_get($actual, 'feedback.webhook'))->toBe('https://example.com/webhook');
-
 
             expect(data_get($actual, 'rider.message'))->toBeNull();
             expect(data_get($actual, 'rider.url'))->toBeNull();
@@ -93,7 +97,7 @@ it('returns a generated pay code via api', function () {
         ->assertCreated()
         ->assertJson([
             'success' => true,
-            'data' => $result,
+            'data' => $result->toArray(),
             'meta' => [
                 'idempotency' => [
                     'key' => null,
@@ -101,6 +105,13 @@ it('returns a generated pay code via api', function () {
                 ],
             ],
         ]);
+
+    $response
+        ->assertCreated()
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('data.voucher_id', 99)
+        ->assertJsonPath('data.code', 'TEST-1234')
+        ->assertJsonPath('meta.idempotency.replayed', false);
 });
 
 it('validates required payload fields for pay code generation', function () {
