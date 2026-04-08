@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Actions\Redemption;
 
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Contracts\ClaimExecutorContract;
 use LBHurtado\XChange\Contracts\RedemptionExecutionContract;
 use LBHurtado\XChange\Data\Redemption\RedeemPayCodeResultData;
 use Lorisleiva\Actions\Concerns\AsAction;
 
-class RedeemPayCode
+class RedeemPayCode implements ClaimExecutorContract
 {
     use AsAction;
 

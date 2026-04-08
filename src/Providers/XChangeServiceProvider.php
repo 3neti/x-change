@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Providers;
 use Illuminate\Http\Request;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
 use LBHurtado\XChange\Contracts\RedemptionCompletionContextContract;
 use LBHurtado\XChange\Contracts\RedemptionCompletionStoreContract;
 use LBHurtado\XChange\Contracts\RedemptionContextResolverContract;
@@ -20,6 +21,7 @@ use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Exceptions\PayCodeWalletNotResolved;
 use LBHurtado\XChange\Services\ApiResponseFactory;
+use LBHurtado\XChange\Services\DefaultClaimExecutionFactory;
 use LBHurtado\XChange\Services\DefaultRedemptionCompletionContextService;
 use LBHurtado\XChange\Services\DefaultRedemptionContextResolverService;
 use LBHurtado\XChange\Services\DefaultRedemptionExecutionService;
@@ -80,6 +82,12 @@ class XChangeServiceProvider extends ServiceProvider
 
         $this->app->bind(RedemptionExecutionContract::class, function ($app) {
             $service = config('x-change.services.redemption_execution', DefaultRedemptionExecutionService::class);
+
+            return $app->make($service);
+        });
+
+        $this->app->bind(ClaimExecutionFactoryContract::class, function ($app) {
+            $service = config('x-change.services.claim_execution_factory', DefaultClaimExecutionFactory::class);
 
             return $app->make($service);
         });
