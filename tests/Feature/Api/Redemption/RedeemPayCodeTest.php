@@ -48,7 +48,23 @@ it('redeems pay code via api', function () {
         ->once()
         ->with(
             Mockery::on(fn ($actual) => $actual instanceof Voucher && $actual->is($voucher)),
-            $payload,
+            Mockery::on(function (array $actual) {
+                expect(data_get($actual, 'mobile'))->toBe('09171234567');
+                expect(data_get($actual, 'recipient_country'))->toBe('PH');
+                expect(data_get($actual, 'secret'))->toBe('1234');
+                expect(data_get($actual, 'inputs'))->toBe([
+                    'name' => 'Juan Dela Cruz',
+                ]);
+                expect(data_get($actual, 'bank_account'))->toBe([
+                    'bank_code' => 'GXCHPHM2XXX',
+                    'account_number' => '09171234567',
+                ]);
+                expect($actual)->toHaveKey('_meta');
+                expect(data_get($actual, '_meta.idempotency_key'))->toBeNull();
+                expect(data_get($actual, '_meta.correlation_id'))->toBeNull();
+
+                return true;
+            }),
         )
         ->andReturn($result);
 
@@ -64,7 +80,12 @@ it('redeems pay code via api', function () {
         ->assertJson([
             'success' => true,
             'data' => $result->toArray(),
-            'meta' => [],
+            'meta' => [
+                'idempotency' => [
+                    'key' => null,
+                    'replayed' => false,
+                ],
+            ],
         ]);
 });
 
