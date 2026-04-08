@@ -104,6 +104,10 @@ return [
         'redemption_flow_preparation' => \LBHurtado\XChange\Services\DefaultRedemptionFlowPreparationService::class,
         'redemption_completion_context' => \LBHurtado\XChange\Services\DefaultRedemptionCompletionContextService::class,
         'redemption_completion_store' => \LBHurtado\XChange\Services\NullRedemptionCompletionStore::class,
+        'redemption_context_resolver' => \LBHurtado\XChange\Services\DefaultRedemptionContextResolverService::class,
+        'redemption_validation' => \LBHurtado\XChange\Services\DefaultRedemptionValidationService::class,
+        'redemption_processor' => \LBHurtado\XChange\Services\DefaultRedemptionProcessorService::class,
+        'redemption_execution' => \LBHurtado\XChange\Services\DefaultRedemptionExecutionService::class,
     ],
 
     'service_contracts' => [

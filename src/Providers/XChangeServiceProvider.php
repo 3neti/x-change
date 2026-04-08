@@ -9,7 +9,11 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\XChange\Contracts\RedemptionCompletionContextContract;
 use LBHurtado\XChange\Contracts\RedemptionCompletionStoreContract;
+use LBHurtado\XChange\Contracts\RedemptionContextResolverContract;
+use LBHurtado\XChange\Contracts\RedemptionExecutionContract;
 use LBHurtado\XChange\Contracts\RedemptionFlowPreparationContract;
+use LBHurtado\XChange\Contracts\RedemptionProcessorContract;
+use LBHurtado\XChange\Contracts\RedemptionValidationContract;
 use LBHurtado\XChange\Exceptions\IdempotencyConflict;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
@@ -17,7 +21,11 @@ use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Exceptions\PayCodeWalletNotResolved;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\DefaultRedemptionCompletionContextService;
+use LBHurtado\XChange\Services\DefaultRedemptionContextResolverService;
+use LBHurtado\XChange\Services\DefaultRedemptionExecutionService;
 use LBHurtado\XChange\Services\DefaultRedemptionFlowPreparationService;
+use LBHurtado\XChange\Services\DefaultRedemptionProcessorService;
+use LBHurtado\XChange\Services\DefaultRedemptionValidationService;
 use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
 
 class XChangeServiceProvider extends ServiceProvider
@@ -48,6 +56,30 @@ class XChangeServiceProvider extends ServiceProvider
 
         $this->app->bind(RedemptionCompletionContextContract::class, function ($app) {
             $service = config('x-change.services.redemption_completion_context', DefaultRedemptionCompletionContextService::class);
+
+            return $app->make($service);
+        });
+
+        $this->app->bind(RedemptionContextResolverContract::class, function ($app) {
+            $service = config('x-change.services.redemption_context_resolver', DefaultRedemptionContextResolverService::class);
+
+            return $app->make($service);
+        });
+
+        $this->app->bind(RedemptionValidationContract::class, function ($app) {
+            $service = config('x-change.services.redemption_validation', DefaultRedemptionValidationService::class);
+
+            return $app->make($service);
+        });
+
+        $this->app->bind(RedemptionProcessorContract::class, function ($app) {
+            $service = config('x-change.services.redemption_processor', DefaultRedemptionProcessorService::class);
+
+            return $app->make($service);
+        });
+
+        $this->app->bind(RedemptionExecutionContract::class, function ($app) {
+            $service = config('x-change.services.redemption_execution', DefaultRedemptionExecutionService::class);
 
             return $app->make($service);
         });
