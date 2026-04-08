@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use LBHurtado\Voucher\Actions\GenerateVouchers;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Tests\Fakes\FakeAuditLogger;
 use LBHurtado\XChange\Tests\Fakes\FakePayoutProvider;
 use LBHurtado\XChange\Tests\Fakes\User;
@@ -102,7 +103,7 @@ function validVoucherInstructions(
 
 function issueVoucher(
     VoucherInstructionsData|array|null $instructions = null
-) {
+): Voucher {
     if (! auth()->check()) {
         actingAsTestUser();
     }
@@ -118,7 +119,10 @@ function issueVoucher(
         $instructions = VoucherInstructionsData::from($instructions);
     }
 
-    return GenerateVouchers::run($instructions)->first();
+    /** @var Voucher $voucher */
+    $voucher = GenerateVouchers::run($instructions)->first();
+
+    return $voucher;
 }
 
 function fakePayoutProvider(): FakePayoutProvider

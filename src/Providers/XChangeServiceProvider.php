@@ -7,12 +7,14 @@ namespace LBHurtado\XChange\Providers;
 use Illuminate\Http\Request;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\XChange\Contracts\RedemptionFlowPreparationContract;
 use LBHurtado\XChange\Exceptions\IdempotencyConflict;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Exceptions\PayCodeWalletNotResolved;
 use LBHurtado\XChange\Services\ApiResponseFactory;
+use LBHurtado\XChange\Services\DefaultRedemptionFlowPreparationService;
 
 class XChangeServiceProvider extends ServiceProvider
 {
@@ -27,6 +29,12 @@ class XChangeServiceProvider extends ServiceProvider
         $this->registerIntegrations();
         $this->registerServiceContracts();
         $this->registerIntegrationContracts();
+
+        $this->app->bind(RedemptionFlowPreparationContract::class, function ($app) {
+            $service = config('x-change.services.redemption_flow_preparation', DefaultRedemptionFlowPreparationService::class);
+
+            return $app->make($service);
+        });
     }
 
     public function boot(): void

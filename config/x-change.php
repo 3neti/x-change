@@ -101,6 +101,7 @@ return [
         'issuer_onboarding' => \LBHurtado\XChange\Services\DefaultIssuerOnboardingService::class,
         'wallet_provisioning' => \LBHurtado\XChange\Services\DefaultWalletProvisioningService::class,
         'issuer_resolver' => \LBHurtado\XChange\Support\Resolvers\DefaultIssuerResolver::class,
+        'redemption_flow_preparation' => \LBHurtado\XChange\Services\DefaultRedemptionFlowPreparationService::class,
     ],
 
     'service_contracts' => [
