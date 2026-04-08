@@ -102,6 +102,8 @@ return [
         'wallet_provisioning' => \LBHurtado\XChange\Services\DefaultWalletProvisioningService::class,
         'issuer_resolver' => \LBHurtado\XChange\Support\Resolvers\DefaultIssuerResolver::class,
         'redemption_flow_preparation' => \LBHurtado\XChange\Services\DefaultRedemptionFlowPreparationService::class,
+        'redemption_completion_context' => \LBHurtado\XChange\Services\DefaultRedemptionCompletionContextService::class,
+        'redemption_completion_store' => \LBHurtado\XChange\Services\NullRedemptionCompletionStore::class,
     ],
 
     'service_contracts' => [
@@ -152,5 +154,13 @@ return [
         'issuer_model' => \LBHurtado\XChange\Tests\Fakes\User::class,
         'default_wallet_slug' => env('XCHANGE_ONBOARDING_DEFAULT_WALLET_SLUG', 'platform'),
         'default_wallet_name' => env('XCHANGE_ONBOARDING_DEFAULT_WALLET_NAME', 'Platform Wallet'),
+    ],
+
+    'redemption' => [
+        'field_mappings' => [
+            'full_name' => 'name',
+            'date_of_birth' => 'birth_date',
+            'otp_code' => 'otp',
+        ],
     ],
 ];

@@ -7,6 +7,8 @@ namespace LBHurtado\XChange\Providers;
 use Illuminate\Http\Request;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\XChange\Contracts\RedemptionCompletionContextContract;
+use LBHurtado\XChange\Contracts\RedemptionCompletionStoreContract;
 use LBHurtado\XChange\Contracts\RedemptionFlowPreparationContract;
 use LBHurtado\XChange\Exceptions\IdempotencyConflict;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
@@ -14,7 +16,9 @@ use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Exceptions\PayCodeWalletNotResolved;
 use LBHurtado\XChange\Services\ApiResponseFactory;
+use LBHurtado\XChange\Services\DefaultRedemptionCompletionContextService;
 use LBHurtado\XChange\Services\DefaultRedemptionFlowPreparationService;
+use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
 
 class XChangeServiceProvider extends ServiceProvider
 {
@@ -32,6 +36,18 @@ class XChangeServiceProvider extends ServiceProvider
 
         $this->app->bind(RedemptionFlowPreparationContract::class, function ($app) {
             $service = config('x-change.services.redemption_flow_preparation', DefaultRedemptionFlowPreparationService::class);
+
+            return $app->make($service);
+        });
+
+        $this->app->bind(RedemptionCompletionStoreContract::class, function ($app) {
+            $service = config('x-change.services.redemption_completion_store', NullRedemptionCompletionStore::class);
+
+            return $app->make($service);
+        });
+
+        $this->app->bind(RedemptionCompletionContextContract::class, function ($app) {
+            $service = config('x-change.services.redemption_completion_context', DefaultRedemptionCompletionContextService::class);
 
             return $app->make($service);
         });

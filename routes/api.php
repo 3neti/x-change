@@ -7,6 +7,7 @@ use LBHurtado\XChange\Http\Controllers\Onboarding\OnboardIssuerController;
 use LBHurtado\XChange\Http\Controllers\Onboarding\OpenIssuerWalletController;
 use LBHurtado\XChange\Http\Controllers\PayCode\EstimatePayCodeController;
 use LBHurtado\XChange\Http\Controllers\PayCode\GeneratePayCodeController;
+use LBHurtado\XChange\Http\Controllers\Redemption\LoadPayCodeRedemptionCompletionContextController;
 use LBHurtado\XChange\Http\Controllers\Redemption\PreparePayCodeRedemptionFlowController;
 
 $prefix = trim((string) config('x-change.routes.api_prefix', 'api/x'), '/');
@@ -27,4 +28,7 @@ Route::prefix($prefix.'/'.$version)->group(function (): void {
 
     Route::post('/pay-codes/{code}/claim/start', PreparePayCodeRedemptionFlowController::class)
         ->name('xchange.api.pay-codes.claim.start');
+
+    Route::post('/pay-codes/{code}/claim/complete', LoadPayCodeRedemptionCompletionContextController::class)
+        ->name('xchange.api.pay-codes.claim.complete');
 });
