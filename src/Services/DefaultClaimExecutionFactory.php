@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Services;
 use Illuminate\Contracts\Container\Container;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Redemption\RedeemPayCode;
+use LBHurtado\XChange\Actions\Redemption\WithdrawPayCode;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
 use LBHurtado\XChange\Contracts\ClaimExecutorContract;
 
@@ -23,12 +24,10 @@ class DefaultClaimExecutionFactory implements ClaimExecutionFactoryContract
     public function make(Voucher $voucher, array $payload): ClaimExecutorContract
     {
         if ($this->shouldWithdraw($voucher, $payload)) {
-            if ($this->container->bound('xchange.withdraw.executor')) {
-                /** @var ClaimExecutorContract $executor */
-                $executor = $this->container->make('xchange.withdraw.executor');
+            /** @var ClaimExecutorContract $executor */
+            $executor = $this->container->make(WithdrawPayCode::class);
 
-                return $executor;
-            }
+            return $executor;
         }
 
         return $this->redeemExecutor;

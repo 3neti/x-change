@@ -15,6 +15,9 @@ use LBHurtado\XChange\Contracts\RedemptionExecutionContract;
 use LBHurtado\XChange\Contracts\RedemptionFlowPreparationContract;
 use LBHurtado\XChange\Contracts\RedemptionProcessorContract;
 use LBHurtado\XChange\Contracts\RedemptionValidationContract;
+use LBHurtado\XChange\Contracts\WithdrawalExecutionContract;
+use LBHurtado\XChange\Contracts\WithdrawalProcessorContract;
+use LBHurtado\XChange\Contracts\WithdrawalValidationContract;
 use LBHurtado\XChange\Exceptions\IdempotencyConflict;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
@@ -28,6 +31,9 @@ use LBHurtado\XChange\Services\DefaultRedemptionExecutionService;
 use LBHurtado\XChange\Services\DefaultRedemptionFlowPreparationService;
 use LBHurtado\XChange\Services\DefaultRedemptionProcessorService;
 use LBHurtado\XChange\Services\DefaultRedemptionValidationService;
+use LBHurtado\XChange\Services\DefaultWithdrawalExecutionService;
+use LBHurtado\XChange\Services\DefaultWithdrawalProcessorService;
+use LBHurtado\XChange\Services\DefaultWithdrawalValidationService;
 use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
 
 class XChangeServiceProvider extends ServiceProvider
@@ -88,6 +94,24 @@ class XChangeServiceProvider extends ServiceProvider
 
         $this->app->bind(ClaimExecutionFactoryContract::class, function ($app) {
             $service = config('x-change.services.claim_execution_factory', DefaultClaimExecutionFactory::class);
+
+            return $app->make($service);
+        });
+
+        $this->app->bind(WithdrawalValidationContract::class, function ($app) {
+            $service = config('x-change.services.withdrawal_validation', DefaultWithdrawalValidationService::class);
+
+            return $app->make($service);
+        });
+
+        $this->app->bind(WithdrawalProcessorContract::class, function ($app) {
+            $service = config('x-change.services.withdrawal_processor', DefaultWithdrawalProcessorService::class);
+
+            return $app->make($service);
+        });
+
+        $this->app->bind(WithdrawalExecutionContract::class, function ($app) {
+            $service = config('x-change.services.withdrawal_execution', DefaultWithdrawalExecutionService::class);
 
             return $app->make($service);
         });

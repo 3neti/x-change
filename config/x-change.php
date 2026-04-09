@@ -109,6 +109,9 @@ return [
         'redemption_validation' => \LBHurtado\XChange\Services\DefaultRedemptionValidationService::class,
         'redemption_processor' => \LBHurtado\XChange\Services\DefaultRedemptionProcessorService::class,
         'redemption_execution' => \LBHurtado\XChange\Services\DefaultRedemptionExecutionService::class,
+        'withdrawal_validation' => \LBHurtado\XChange\Services\DefaultWithdrawalValidationService::class,
+        'withdrawal_processor' => \LBHurtado\XChange\Services\DefaultWithdrawalProcessorService::class,
+        'withdrawal_execution' => \LBHurtado\XChange\Services\DefaultWithdrawalExecutionService::class,
     ],
 
     'service_contracts' => [

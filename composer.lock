@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "498e30bbf662d86781764c6e5a0539dd",
+    "content-hash": "8f995902e254627323917967ffb132ec",
     "packages": [
         {
             "name": "3neti/cash",
@@ -296,6 +296,64 @@
                 "source": "https://github.com/3neti/laravel-vouchers/tree/v1.0.0"
             },
             "time": "2026-04-04T06:01:01+00:00"
+        },
+        {
+            "name": "3neti/money-issuer",
+            "version": "v1.0.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/3neti/money-issuer.git",
+                "reference": "ca9343fa37c857b595b89979b787f885d79ba09a"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/3neti/money-issuer/zipball/ca9343fa37c857b595b89979b787f885d79ba09a",
+                "reference": "ca9343fa37c857b595b89979b787f885d79ba09a",
+                "shasum": ""
+            },
+            "require": {
+                "3neti/emi-core": "^1.0",
+                "brick/money": "^0.10.1",
+                "lorisleiva/laravel-actions": "^2.9",
+                "spatie/laravel-data": "^4.15"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^10.3",
+                "pestphp/pest": "^3.8"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "LBHurtado\\MoneyIssuer\\MoneyIssuerServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "files": [
+                    "src/Support/Helpers.php"
+                ],
+                "psr-4": {
+                    "LBHurtado\\MoneyIssuer\\": "src/",
+                    "LBHurtado\\MoneyIssuer\\Database\\Factories\\": "database/factories/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "proprietary"
+            ],
+            "authors": [
+                {
+                    "name": "Lester Hurtado",
+                    "email": "lester@hurtado.ph"
+                }
+            ],
+            "description": "Electronic Money Issuer",
+            "support": {
+                "issues": "https://github.com/3neti/money-issuer/issues",
+                "source": "https://github.com/3neti/money-issuer/tree/v1.0.2"
+            },
+            "time": "2026-04-01T07:17:18+00:00"
         },
         {
             "name": "3neti/settlement-envelope",

@@ -8,6 +8,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
 use LBHurtado\XChange\Data\Redemption\RedeemPayCodeResultData;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
+use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
 use Lorisleiva\Actions\Concerns\AsAction;
 
 class SubmitPayCodeClaim
@@ -31,6 +32,7 @@ class SubmitPayCodeClaim
     }
 
     /**
+     * @param  mixed  $result
      * @param  array<string, mixed>  $payload
      */
     protected function normalizeResult(mixed $result, array $payload): SubmitPayCodeClaimResultData
@@ -46,6 +48,22 @@ class SubmitPayCodeClaim
                 currency: null,
                 remaining_balance: null,
                 fully_claimed: true,
+                disbursement: $result->disbursement,
+                messages: $result->messages,
+            );
+        }
+
+        if ($result instanceof WithdrawPayCodeResultData) {
+            return new SubmitPayCodeClaimResultData(
+                voucher_code: $result->voucher_code,
+                claim_type: 'withdraw',
+                claimed: $result->withdrawn,
+                status: $result->status,
+                requested_amount: $result->requested_amount,
+                disbursed_amount: $result->disbursed_amount,
+                currency: $result->currency,
+                remaining_balance: $result->remaining_balance,
+                fully_claimed: (float) ($result->remaining_balance ?? 0) <= 0,
                 disbursement: $result->disbursement,
                 messages: $result->messages,
             );
