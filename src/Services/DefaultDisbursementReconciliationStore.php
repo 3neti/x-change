@@ -38,6 +38,24 @@ class DefaultDisbursementReconciliationStore implements DisbursementReconciliati
         return $model ? $this->toData($model) : null;
     }
 
+    public function findById(int $id): ?DisbursementReconciliationData
+    {
+        $model = DisbursementReconciliation::query()->find($id);
+
+        return $model ? $this->toData($model) : null;
+    }
+
+    public function getPending(int $limit = 50): array
+    {
+        return DisbursementReconciliation::query()
+            ->whereIn('status', ['pending', 'unknown'])
+            ->orderBy('attempted_at')
+            ->limit($limit)
+            ->get()
+            ->map(fn (DisbursementReconciliation $model): DisbursementReconciliationData => $this->toData($model))
+            ->all();
+    }
+
     protected function toData(DisbursementReconciliation $model): DisbursementReconciliationData
     {
         return new DisbursementReconciliationData(

@@ -7,8 +7,11 @@ namespace LBHurtado\XChange\Providers;
 use Illuminate\Http\Request;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\XChange\Console\Commands\ReconcilePendingDisbursementsCommand;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
+use LBHurtado\XChange\Contracts\DisbursementReconciliationContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
+use LBHurtado\XChange\Contracts\DisbursementStatusFetcherContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Contracts\RedemptionCompletionContextContract;
 use LBHurtado\XChange\Contracts\RedemptionCompletionStoreContract;
@@ -22,12 +25,14 @@ use LBHurtado\XChange\Contracts\WithdrawalProcessorContract;
 use LBHurtado\XChange\Contracts\WithdrawalValidationContract;
 use LBHurtado\XChange\Exceptions\IdempotencyConflict;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
-use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
+use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Exceptions\PayCodeWalletNotResolved;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\DefaultClaimExecutionFactory;
+use LBHurtado\XChange\Services\DefaultDisbursementReconciliationService;
 use LBHurtado\XChange\Services\DefaultDisbursementReconciliationStore;
+use LBHurtado\XChange\Services\DefaultDisbursementStatusFetcherService;
 use LBHurtado\XChange\Services\DefaultDisbursementStatusResolverService;
 use LBHurtado\XChange\Services\DefaultRedemptionCompletionContextService;
 use LBHurtado\XChange\Services\DefaultRedemptionContextResolverService;
@@ -137,6 +142,24 @@ class XChangeServiceProvider extends ServiceProvider
 
             return $app->make($service);
         });
+
+        $this->app->bind(DisbursementStatusFetcherContract::class, function ($app) {
+            $service = config(
+                'x-change.services.disbursement_status_fetcher',
+                DefaultDisbursementStatusFetcherService::class,
+            );
+
+            return $app->make($service);
+        });
+
+        $this->app->bind(DisbursementReconciliationContract::class, function ($app) {
+            $service = config(
+                'x-change.services.disbursement_reconciliation',
+                DefaultDisbursementReconciliationService::class,
+            );
+
+            return $app->make($service);
+        });
     }
 
     public function boot(): void
@@ -144,6 +167,12 @@ class XChangeServiceProvider extends ServiceProvider
         $this->bootConfig();
         $this->bootRoutes();
         $this->bootExceptionRendering();
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                ReconcilePendingDisbursementsCommand::class,
+            ]);
+        }
     }
 
     protected function registerServices(): void

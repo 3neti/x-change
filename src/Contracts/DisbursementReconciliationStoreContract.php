@@ -18,4 +18,11 @@ interface DisbursementReconciliationStoreContract
         ?string $providerReference,
         ?string $claimType,
     ): ?DisbursementReconciliationData;
+
+    public function findById(int $id): ?DisbursementReconciliationData;
+
+    /**
+     * @return array<int, DisbursementReconciliationData>
+     */
+    public function getPending(int $limit = 50): array;
 }
