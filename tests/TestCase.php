@@ -143,6 +143,8 @@ abstract class TestCase extends Orchestra
 
         // Extra voucher-support tables used by voucher package tests/flows.
         $this->runVoucherSupportMigrations();
+
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
     }
 
     protected function runBaseWalletTablesMigrations(): void

@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
+use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
+use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Contracts\RedemptionCompletionContextContract;
 use LBHurtado\XChange\Contracts\RedemptionCompletionStoreContract;
 use LBHurtado\XChange\Contracts\RedemptionContextResolverContract;
@@ -25,6 +27,8 @@ use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Exceptions\PayCodeWalletNotResolved;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\DefaultClaimExecutionFactory;
+use LBHurtado\XChange\Services\DefaultDisbursementReconciliationStore;
+use LBHurtado\XChange\Services\DefaultDisbursementStatusResolverService;
 use LBHurtado\XChange\Services\DefaultRedemptionCompletionContextService;
 use LBHurtado\XChange\Services\DefaultRedemptionContextResolverService;
 use LBHurtado\XChange\Services\DefaultRedemptionExecutionService;
@@ -112,6 +116,24 @@ class XChangeServiceProvider extends ServiceProvider
 
         $this->app->bind(WithdrawalExecutionContract::class, function ($app) {
             $service = config('x-change.services.withdrawal_execution', DefaultWithdrawalExecutionService::class);
+
+            return $app->make($service);
+        });
+
+        $this->app->bind(DisbursementReconciliationStoreContract::class, function ($app) {
+            $service = config(
+                'x-change.services.disbursement_reconciliation_store',
+                DefaultDisbursementReconciliationStore::class
+            );
+
+            return $app->make($service);
+        });
+
+        $this->app->bind(DisbursementStatusResolverContract::class, function ($app) {
+            $service = config(
+                'x-change.services.disbursement_status_resolver',
+                DefaultDisbursementStatusResolverService::class
+            );
 
             return $app->make($service);
         });

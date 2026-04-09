@@ -112,6 +112,8 @@ return [
         'withdrawal_validation' => \LBHurtado\XChange\Services\DefaultWithdrawalValidationService::class,
         'withdrawal_processor' => \LBHurtado\XChange\Services\DefaultWithdrawalProcessorService::class,
         'withdrawal_execution' => \LBHurtado\XChange\Services\DefaultWithdrawalExecutionService::class,
+        'disbursement_reconciliation_store' => \LBHurtado\XChange\Services\DefaultDisbursementReconciliationStore::class,
+        'disbursement_status_resolver' => \LBHurtado\XChange\Services\DefaultDisbursementStatusResolverService::class,
     ],
 
     'service_contracts' => [
