@@ -87,7 +87,7 @@ return [
     ],
 
     'services' => [
-        'user_resolver' => \LBHurtado\XChange\Services\AuthUserResolver::class,
+        'user_resolver' => \LBHurtado\XChange\Services\ContextUserResolver::class,
         'voucher_access' => \LBHurtado\XChange\Services\VoucherAccessService::class,
         'entry_route' => \LBHurtado\XChange\Services\VoucherEntryRouteService::class,
         'disburse_flow' => \LBHurtado\XChange\Services\DisburseFlowStarterService::class,
@@ -163,7 +163,8 @@ return [
     ],
 
     'onboarding' => [
-        'issuer_model' => \LBHurtado\XChange\Tests\Fakes\User::class,
+//        'issuer_model' => env('XCHANGE_ONBOARDING_DEFAULT_ISSUER_MODEL', \LBHurtado\XChange\Tests\Fakes\User::class),
+        'issuer_model' => env('XCHANGE_ONBOARDING_DEFAULT_ISSUER_MODEL', App\Models\User::class),
         'default_wallet_slug' => env('XCHANGE_ONBOARDING_DEFAULT_WALLET_SLUG', 'platform'),
         'default_wallet_name' => env('XCHANGE_ONBOARDING_DEFAULT_WALLET_NAME', 'Platform Wallet'),
     ],
@@ -174,5 +175,14 @@ return [
             'date_of_birth' => 'birth_date',
             'otp_code' => 'otp',
         ],
+    ],
+    'payout' => [
+        'provider' => \LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider::class,
+        'wallet_proxy' => \LBHurtado\XChange\Services\SystemWalletProxy::class,
+        'system_user_id' => env('XCHANGE_SYSTEM_USER_ID'),
+        'system_wallet_slug' => env(
+            'XCHANGE_SYSTEM_WALLET_SLUG',
+            env('XCHANGE_ONBOARDING_DEFAULT_WALLET_SLUG', 'platform')
+        ),
     ],
 ];

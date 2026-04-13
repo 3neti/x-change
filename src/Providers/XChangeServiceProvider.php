@@ -7,12 +7,23 @@ namespace LBHurtado\XChange\Providers;
 use Illuminate\Http\Request;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\EmiCore\Contracts\PayoutProvider;
+use LBHurtado\PaymentGateway\Contracts\WalletProxy;
+use LBHurtado\XChange\Console\Commands\Claim\LoadPayCodeRedemptionCompletionContextCommand;
+use LBHurtado\XChange\Console\Commands\Claim\PreparePayCodeRedemptionFlowCommand;
+use LBHurtado\XChange\Console\Commands\Claim\SubmitPayCodeClaimCommand;
+use LBHurtado\XChange\Console\Commands\Onboarding\OnboardIssuerCommand;
+use LBHurtado\XChange\Console\Commands\Onboarding\OpenIssuerWalletCommand;
+use LBHurtado\XChange\Console\Commands\PayCode\EstimatePayCodeCostCommand;
+use LBHurtado\XChange\Console\Commands\PayCode\GeneratePayCodeCommand;
 use LBHurtado\XChange\Console\Commands\ReconcilePendingDisbursementsCommand;
+use LBHurtado\XChange\Console\Commands\Wallet\GetWalletBalanceCommand;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusFetcherContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
+use LBHurtado\XChange\Contracts\PricingServiceContract;
 use LBHurtado\XChange\Contracts\RedemptionCompletionContextContract;
 use LBHurtado\XChange\Contracts\RedemptionCompletionStoreContract;
 use LBHurtado\XChange\Contracts\RedemptionContextResolverContract;
@@ -43,6 +54,7 @@ use LBHurtado\XChange\Services\DefaultRedemptionValidationService;
 use LBHurtado\XChange\Services\DefaultWithdrawalExecutionService;
 use LBHurtado\XChange\Services\DefaultWithdrawalProcessorService;
 use LBHurtado\XChange\Services\DefaultWithdrawalValidationService;
+use LBHurtado\XChange\Services\InstructionBackedPricingService;
 use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
 
 class XChangeServiceProvider extends ServiceProvider
@@ -53,6 +65,9 @@ class XChangeServiceProvider extends ServiceProvider
             $this->packagePath('config/x-change.php'),
             'x-change'
         );
+
+        $this->alignWalletDefaults();
+        $this->alignVoucherDefaults();
 
         $this->registerServices();
         $this->registerIntegrations();
@@ -160,6 +175,26 @@ class XChangeServiceProvider extends ServiceProvider
 
             return $app->make($service);
         });
+
+        $this->app->bind(PricingServiceContract::class, InstructionBackedPricingService::class);
+
+        $this->app->bind(WalletProxy::class, function ($app) {
+            $service = config(
+                'x-change.payout.wallet_proxy',
+                \LBHurtado\XChange\Services\SystemWalletProxy::class
+            );
+
+            return $app->make($service);
+        });
+
+        $this->app->singleton(PayoutProvider::class, function ($app) {
+            $provider = config(
+                'x-change.payout.provider',
+                \LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider::class
+            );
+
+            return $app->make($provider);
+        });
     }
 
     public function boot(): void
@@ -170,6 +205,14 @@ class XChangeServiceProvider extends ServiceProvider
 
         if ($this->app->runningInConsole()) {
             $this->commands([
+                OnboardIssuerCommand::class,
+                OpenIssuerWalletCommand::class,
+                GetWalletBalanceCommand::class,
+                EstimatePayCodeCostCommand::class,
+                GeneratePayCodeCommand::class,
+                PreparePayCodeRedemptionFlowCommand::class,
+                LoadPayCodeRedemptionCompletionContextCommand::class,
+                SubmitPayCodeClaimCommand::class,
                 ReconcilePendingDisbursementsCommand::class,
             ]);
         }
@@ -358,5 +401,31 @@ class XChangeServiceProvider extends ServiceProvider
         return $path !== ''
             ? $base.DIRECTORY_SEPARATOR.ltrim($path, DIRECTORY_SEPARATOR)
             : $base;
+    }
+
+    protected function alignWalletDefaults(): void
+    {
+        $slug = config('x-change.payout.system_wallet_slug')
+            ?? config('x-change.onboarding.default_wallet_slug')
+            ?? 'platform';
+
+        $name = config('x-change.onboarding.default_wallet_name', 'Platform Wallet');
+
+        config()->set('wallet.wallet.default.slug', $slug);
+        config()->set('wallet.wallet.default.name', $name);
+    }
+
+    protected function alignVoucherDefaults(): void
+    {
+        $currentVoucherModel = config('vouchers.models.voucher');
+
+        if (! is_string($currentVoucherModel)
+            || $currentVoucherModel === ''
+            || $currentVoucherModel === \FrittenKeeZ\Vouchers\Models\Voucher::class) {
+            config()->set(
+                'vouchers.models.voucher',
+                \LBHurtado\Voucher\Models\Voucher::class
+            );
+        }
     }
 }

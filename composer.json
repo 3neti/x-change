@@ -10,8 +10,9 @@
     ],
     "require": {
         "php": "^8.2",
+        "3neti/instruction": "^0.2",
         "3neti/money-issuer": "^1.0",
-        "3neti/voucher": "*",
+        "3neti/voucher": "^0.9.3",
         "illuminate/contracts": "^13.0",
         "illuminate/events": "^13.0",
         "illuminate/http": "^13.0",

@@ -10,20 +10,48 @@ class DefaultIssuerResolver implements IssuerResolverContract
 {
     public function resolve(array $context = []): mixed
     {
-        $issuerId = data_get($context, 'issuer_id');
-
-        if (! $issuerId) {
-            return null;
-        }
-
         $modelClass = $this->issuerModelClass();
 
         if (! $modelClass || ! class_exists($modelClass)) {
             return null;
         }
 
-        return $modelClass::query()->find($issuerId);
+        if ($issuerId = data_get($context, 'issuer_id')) {
+            return $modelClass::query()->find($issuerId);
+        }
+
+        $query = $modelClass::query();
+
+        if ($externalId = data_get($context, 'external_id')) {
+            return $query->where('external_id', $externalId)->first();
+        }
+
+        if ($email = data_get($context, 'email')) {
+            return $query->where('email', $email)->first();
+        }
+
+        if ($mobile = data_get($context, 'mobile')) {
+            return $query->where('mobile', $mobile)->first();
+        }
+
+        return null;
     }
+//    public function resolve(array $context = []): mixed
+//    {
+//        $issuerId = data_get($context, 'issuer_id');
+//
+//        if (! $issuerId) {
+//            return null;
+//        }
+//
+//        $modelClass = $this->issuerModelClass();
+//
+//        if (! $modelClass || ! class_exists($modelClass)) {
+//            return null;
+//        }
+//
+//        return $modelClass::query()->find($issuerId);
+//    }
 
     protected function issuerModelClass(): ?string
     {

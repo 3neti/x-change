@@ -29,7 +29,9 @@ class GeneratePayCode
      */
     public function handle(array $input): GeneratePayCodeResultData
     {
-        $issuer = $this->users->resolve($input);
+        $resolved = $this->users->resolve($input);
+
+        $issuer = $resolved;
 
         if (! $issuer) {
             throw new PayCodeIssuerNotResolved('Unable to resolve Pay Code issuer.');

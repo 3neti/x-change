@@ -8,8 +8,11 @@ use Bavix\Wallet\WalletServiceProvider as BavixWalletServiceProvider;
 use FrittenKeeZ\Vouchers\VouchersServiceProvider;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use LBHurtado\Cash\CashServiceProvider;
 use LBHurtado\Contact\ContactServiceProvider;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
+use LBHurtado\Instruction\Database\Seeders\InstructionItemSeeder;
+use LBHurtado\Instruction\InstructionServiceProvider;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\VoucherServiceProvider;
 use LBHurtado\Wallet\WalletServiceProvider as LBHurtadoWalletServiceProvider;
@@ -36,11 +39,21 @@ abstract class TestCase extends Orchestra
     {
         parent::setUp();
 
+//        if (Schema::hasTable('vouchers')) {
+//            dump('vouchers columns after parent::setUp', Schema::getColumnListing('vouchers'));
+//        }
+//
+//        if (! Schema::hasColumn('vouchers', 'voucher_type')) {
+//            dump('voucher_type missing after setup');
+//        }
+
         $this->fakePayoutProvider = new FakePayoutProvider;
         $this->app->instance(PayoutProvider::class, $this->fakePayoutProvider);
 
         $this->fakeAuditLogger = new FakeAuditLogger;
         $this->app->instance(AuditLoggerContract::class, $this->fakeAuditLogger);
+
+        $this->seedInstructionItems();
     }
 
     public function fakePayoutProvider(): FakePayoutProvider
@@ -53,10 +66,12 @@ abstract class TestCase extends Orchestra
         return [
             LaravelDataServiceProvider::class,
             BavixWalletServiceProvider::class,
+            CashServiceProvider::class,
             LBHurtadoWalletServiceProvider::class,
             VouchersServiceProvider::class,
             ContactServiceProvider::class,
             VoucherServiceProvider::class,
+            InstructionServiceProvider::class,
             XChangeServiceProvider::class,
         ];
     }
@@ -138,13 +153,28 @@ abstract class TestCase extends Orchestra
         // Base vouchers table from 3neti/laravel-vouchers.
         $this->runBaseVoucherTablesMigration();
 
+        // Cash package migrations.
+        $this->loadCashPackageMigrations();
+
         // Higher-level voucher package migrations.
         $this->loadVoucherPackageMigrations();
+
+        // Instruction package migrations.
+        $this->loadInstructionPackageMigrations();
 
         // Extra voucher-support tables used by voucher package tests/flows.
         $this->runVoucherSupportMigrations();
 
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+    }
+
+    protected function loadInstructionPackageMigrations(): void
+    {
+        $path = $this->packageRoot(InstructionServiceProvider::class).'/database/migrations';
+
+        if (is_dir($path) && (glob($path.'/*.php') ?: []) !== []) {
+            $this->loadMigrationsFrom($path);
+        }
     }
 
     protected function runBaseWalletTablesMigrations(): void
@@ -195,13 +225,18 @@ abstract class TestCase extends Orchestra
         }
     }
 
+    protected function loadCashPackageMigrations(): void
+    {
+        $this->runMigrationFilesFromCandidates([
+            $this->packageRoot(CashServiceProvider::class).'/database/migrations',
+        ]);
+    }
+
     protected function loadVoucherPackageMigrations(): void
     {
-        $path = $this->packageRoot(VoucherServiceProvider::class).'/database/migrations';
-
-        if (is_dir($path) && (glob($path.'/*.php') ?: []) !== []) {
-            $this->loadMigrationsFrom($path);
-        }
+        $this->runMigrationFilesFromCandidates([
+            $this->packageRoot(VouchersServiceProvider::class).'/database/migrations',
+        ]);
     }
 
     protected function runVoucherSupportMigrations(): void
@@ -289,6 +324,10 @@ abstract class TestCase extends Orchestra
             }
         }
 
+        if ($basename === '2018_06_12_000000_create_voucher_tables.php' && Schema::hasTable('vouchers')) {
+            return true;
+        }
+
         return false;
     }
 
@@ -314,5 +353,10 @@ abstract class TestCase extends Orchestra
     public function fakeAuditLogger(): FakeAuditLogger
     {
         return $this->fakeAuditLogger;
+    }
+
+    protected function seedInstructionItems(): void
+    {
+        $this->seed(InstructionItemSeeder::class);
     }
 }
