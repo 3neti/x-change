@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Providers;
 
+use App\Models\User;
 use FrittenKeeZ\Vouchers\Models\Voucher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
@@ -312,6 +313,11 @@ class XChangeServiceProvider extends ServiceProvider
         $this->publishes([
             $this->packagePath('config/x-change.php') => config_path('x-change.php'),
         ], 'x-change-config');
+
+        $this->publishes([
+            $this->packagePath('stubs/scripts/test-netbank-lifecycle.sh.stub') => base_path('scripts/test-netbank-lifecycle.sh'),
+            $this->packagePath('stubs/scripts/.xchange-lifecycle.env.example') => base_path('scripts/.xchange-lifecycle.env.example'),
+        ], 'x-change-scripts');
     }
 
     protected function bootRoutes(): void
@@ -471,12 +477,12 @@ class XChangeServiceProvider extends ServiceProvider
 
         $walletDefaultIdentifier = env('SYSTEM_USER_ID', 'lester@hurtado.ph');
         $walletDefaultColumn = 'email';
-        $walletDefaultModel = \App\Models\User::class;
+        $walletDefaultModel = User::class;
 
         if ($currentModel === $walletDefaultModel) {
             config()->set(
                 'account.system_user.model',
-                config('x-change.onboarding.issuer_model', \App\Models\User::class)
+                config('x-change.onboarding.issuer_model', User::class)
             );
         }
 
