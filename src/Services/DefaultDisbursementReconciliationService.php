@@ -37,11 +37,31 @@ class DefaultDisbursementReconciliationService implements DisbursementReconcilia
         $fetchedStatus = $fetched['status'] ?? null;
         $resolvedStatus = $this->resolver->resolveFromFetchedStatus($fetchedStatus, $metadata);
 
+        $trustsFailure = $this->shouldTrustFailedStatus($fetchedStatus, $metadata);
+
+        $needsReview = (bool) $model->needs_review;
+        $reviewReason = $model->review_reason;
+        $errorMessage = null;
+
+        if ($resolvedStatus === 'failed' && ! $trustsFailure) {
+            if ($beforeStatus === 'pending') {
+                $resolvedStatus = 'pending';
+            } else {
+                $resolvedStatus = 'unknown';
+            }
+
+            $needsReview = true;
+            $reviewReason = 'Low-confidence failed status from provider';
+            $errorMessage = 'Provider returned an untrusted failed status with incomplete metadata.';
+        }
+
         $updates = [
             'status' => $resolvedStatus,
             'last_checked_at' => now(),
             'raw_response' => $metadata !== [] ? $metadata : $fetched,
-            'error_message' => null,
+            'error_message' => $errorMessage,
+            'needs_review' => $needsReview,
+            'review_reason' => $reviewReason,
         ];
 
         if ($resolvedStatus === 'succeeded' && ! $model->completed_at) {
@@ -66,6 +86,9 @@ class DefaultDisbursementReconciliationService implements DisbursementReconcilia
             'resolved_status' => $resolvedStatus,
             'reconciliation_id' => $model->id,
             'raw' => $metadata !== [] ? $metadata : $fetched,
+            'needs_review' => $needsReview,
+            'review_reason' => $reviewReason,
+            'trusted_failure' => $trustsFailure,
         ];
     }
 
@@ -78,5 +101,35 @@ class DefaultDisbursementReconciliationService implements DisbursementReconcilia
         $metadata = $fetched['raw'] ?? $fetched['metadata'] ?? null;
 
         return is_array($metadata) ? $metadata : [];
+    }
+
+    /**
+     * A provider-reported failure is only trusted when the payload contains
+     * enough transaction detail to be considered authoritative.
+     *
+     * @param  array<string, mixed>  $metadata
+     */
+    protected function shouldTrustFailedStatus(mixed $fetchedStatus, array $metadata): bool
+    {
+        if (! is_string($fetchedStatus) || strtolower($fetchedStatus) !== 'failed') {
+            return true;
+        }
+
+        if ($metadata === []) {
+            return false;
+        }
+
+        $hasOperationId = data_get($metadata, 'operation_id') !== null;
+        $hasReferenceNumber = data_get($metadata, 'reference_number') !== null;
+        $hasStatusDetails = ! empty(data_get($metadata, 'status_details', []));
+        $hasDestinationBank = data_get($metadata, 'destination_account.bank_code') !== null;
+        $hasDestinationAccount = data_get($metadata, 'destination_account.account_number') !== null;
+        $hasRail = data_get($metadata, 'settlement_rail') !== null;
+
+        return $hasOperationId
+            || $hasReferenceNumber
+            || $hasStatusDetails
+            || ($hasDestinationBank && $hasDestinationAccount)
+            || $hasRail;
     }
 }
