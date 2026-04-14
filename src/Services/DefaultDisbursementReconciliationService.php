@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services;
 
+use Illuminate\Support\Facades\Event;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusFetcherContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Data\Reconciliation\DisbursementReconciliationData;
+use LBHurtado\XChange\Events\DisbursementConfirmed;
+use LBHurtado\XChange\Models\DisbursementReconciliation;
 
 class DefaultDisbursementReconciliationService implements DisbursementReconciliationContract
 {
@@ -18,87 +21,62 @@ class DefaultDisbursementReconciliationService implements DisbursementReconcilia
         protected DisbursementStatusResolverContract $resolver,
     ) {}
 
-    public function reconcile(DisbursementReconciliationData $reconciliation): DisbursementReconciliationData
+    public function reconcile(DisbursementReconciliation|DisbursementReconciliationData $reconciliation): array
     {
-        try {
-            $providerPayload = $this->fetcher->fetch($reconciliation);
+        $model = $reconciliation instanceof DisbursementReconciliation
+            ? $reconciliation
+            : DisbursementReconciliation::query()->findOrFail($reconciliation->id);
 
-            $normalized = $this->resolver->resolveFromGatewayResponse((object) $providerPayload);
+        $beforeStatus = (string) $model->status;
 
-            return $this->store->record([
-                'voucher_id' => $reconciliation->voucher_id,
-                'voucher_code' => $reconciliation->voucher_code,
-                'claim_type' => $reconciliation->claim_type,
-                'provider' => $reconciliation->provider,
-                'provider_reference' => $reconciliation->provider_reference,
-                'provider_transaction_id' => $providerPayload['transaction_id']
-                    ?? $reconciliation->provider_transaction_id,
-                'transaction_uuid' => $providerPayload['uuid']
-                    ?? $reconciliation->transaction_uuid,
-                'status' => $normalized,
-                'internal_status' => $this->resolveInternalStatus($normalized),
-                'amount' => $reconciliation->amount,
-                'currency' => $reconciliation->currency,
-                'bank_code' => $reconciliation->bank_code,
-                'account_number_masked' => $reconciliation->account_number_masked,
-                'settlement_rail' => $reconciliation->settlement_rail,
-                'attempt_count' => max(1, $reconciliation->attempt_count),
-                'attempted_at' => $reconciliation->attempted_at,
-                'completed_at' => $normalized === 'succeeded' ? now() : $reconciliation->completed_at,
-                'last_checked_at' => now(),
-                'needs_review' => $normalized === 'unknown',
-                'review_reason' => $normalized === 'unknown' ? 'Provider returned unknown status' : null,
-                'error_message' => $normalized === 'failed'
-                    ? ($providerPayload['message'] ?? $reconciliation->error_message)
-                    : null,
-                'raw_request' => $reconciliation->raw_request,
-                'raw_response' => $providerPayload,
-                'meta' => array_merge($reconciliation->meta ?? [], [
-                    'reconciled_at' => now()->toIso8601String(),
-                ]),
-            ]);
-        } catch (\Throwable $e) {
-            return $this->store->record([
-                'voucher_id' => $reconciliation->voucher_id,
-                'voucher_code' => $reconciliation->voucher_code,
-                'claim_type' => $reconciliation->claim_type,
-                'provider' => $reconciliation->provider,
-                'provider_reference' => $reconciliation->provider_reference,
-                'provider_transaction_id' => $reconciliation->provider_transaction_id,
-                'transaction_uuid' => $reconciliation->transaction_uuid,
-                'status' => 'unknown',
-                'internal_status' => 'manual_review',
-                'amount' => $reconciliation->amount,
-                'currency' => $reconciliation->currency,
-                'bank_code' => $reconciliation->bank_code,
-                'account_number_masked' => $reconciliation->account_number_masked,
-                'settlement_rail' => $reconciliation->settlement_rail,
-                'attempt_count' => max(1, $reconciliation->attempt_count),
-                'attempted_at' => $reconciliation->attempted_at,
-                'completed_at' => $reconciliation->completed_at,
-                'last_checked_at' => now(),
-                'needs_review' => true,
-                'review_reason' => 'Reconciliation fetch failed',
-                'error_message' => $e->getMessage(),
-                'raw_request' => $reconciliation->raw_request,
-                'raw_response' => [
-                    'exception' => $e::class,
-                    'message' => $e->getMessage(),
-                ],
-                'meta' => array_merge($reconciliation->meta ?? [], [
-                    'reconciliation_error_at' => now()->toIso8601String(),
-                ]),
-            ]);
+        $fetched = $this->fetcher->fetch(
+            DisbursementReconciliationData::from($model->toArray())
+        );
+
+        $metadata = $this->extractMetadata($fetched);
+        $fetchedStatus = $fetched['status'] ?? null;
+        $resolvedStatus = $this->resolver->resolveFromFetchedStatus($fetchedStatus, $metadata);
+
+        $updates = [
+            'status' => $resolvedStatus,
+            'last_checked_at' => now(),
+            'raw_response' => $metadata !== [] ? $metadata : $fetched,
+            'error_message' => null,
+        ];
+
+        if ($resolvedStatus === 'succeeded' && ! $model->completed_at) {
+            $updates['completed_at'] = now();
         }
+
+        if (in_array($resolvedStatus, ['succeeded', 'failed'], true)) {
+            $updates['next_retry_at'] = null;
+        }
+
+        $model->fill($updates);
+        $model->save();
+
+        if ($beforeStatus !== 'succeeded' && $resolvedStatus === 'succeeded') {
+            Event::dispatch(new DisbursementConfirmed($model->fresh()));
+        }
+
+        return [
+            'updated' => $beforeStatus !== $resolvedStatus,
+            'before_status' => $beforeStatus,
+            'fetched_status' => $fetchedStatus,
+            'resolved_status' => $resolvedStatus,
+            'reconciliation_id' => $model->id,
+            'raw' => $metadata !== [] ? $metadata : $fetched,
+        ];
     }
 
-    protected function resolveInternalStatus(string $normalized): string
+    /**
+     * @param  array<string, mixed>  $fetched
+     * @return array<string, mixed>
+     */
+    protected function extractMetadata(array $fetched): array
     {
-        return match ($normalized) {
-            'succeeded' => 'matched',
-            'failed' => 'finalized',
-            'pending' => 'recorded',
-            default => 'manual_review',
-        };
+        $metadata = $fetched['raw'] ?? $fetched['metadata'] ?? null;
+
+        return is_array($metadata) ? $metadata : [];
     }
 }

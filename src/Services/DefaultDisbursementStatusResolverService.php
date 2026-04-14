@@ -11,28 +11,11 @@ class DefaultDisbursementStatusResolverService implements DisbursementStatusReso
 {
     public function resolveFromGatewayResponse(mixed $response): string
     {
-        $status = $response->status ?? null;
+        $status = is_array($response)
+            ? ($response['status'] ?? null)
+            : ($response->status ?? null);
 
-        if ($status instanceof PayoutStatus) {
-            return match ($status) {
-                PayoutStatus::COMPLETED => 'succeeded',
-                PayoutStatus::FAILED => 'failed',
-                PayoutStatus::PENDING,
-                PayoutStatus::PROCESSING => 'pending',
-                PayoutStatus::CANCELLED => 'failed',
-                PayoutStatus::REFUNDED => 'failed',
-                default => 'unknown',
-            };
-        }
-
-        $value = is_string($status) ? strtolower($status) : null;
-
-        return match ($value) {
-            'success', 'succeeded', 'completed', 'paid' => 'succeeded',
-            'failed', 'error', 'rejected', 'cancelled' => 'failed',
-            'pending', 'processing', 'queued', 'submitted' => 'pending',
-            default => 'unknown',
-        };
+        return $this->normalizeStatus($status);
     }
 
     public function resolveFromGatewayException(\Throwable $e): string
@@ -48,5 +31,41 @@ class DefaultDisbursementStatusResolverService implements DisbursementStatusReso
         }
 
         return 'failed';
+    }
+
+    /**
+     * @param  mixed  $status
+     */
+    public function resolveFromFetchedStatus(mixed $status, array $raw = []): string
+    {
+        return $this->normalizeStatus($status);
+    }
+
+    protected function normalizeStatus(mixed $status): string
+    {
+        if ($status instanceof PayoutStatus) {
+            return match ($status) {
+                PayoutStatus::COMPLETED => 'succeeded',
+                PayoutStatus::FAILED => 'failed',
+                PayoutStatus::PENDING,
+                PayoutStatus::PROCESSING => 'pending',
+                PayoutStatus::CANCELLED => 'failed',
+                PayoutStatus::REFUNDED => 'failed',
+                default => 'unknown',
+            };
+        }
+
+        if (is_string($status)) {
+            $value = strtolower(trim($status));
+
+            return match ($value) {
+                'success', 'succeeded', 'completed', 'settled', 'paid' => 'succeeded',
+                'failed', 'error', 'rejected', 'cancelled', 'canceled' => 'failed',
+                'pending', 'processing', 'queued', 'submitted', 'for settlement', 'forsettlement' => 'pending',
+                default => 'unknown',
+            };
+        }
+
+        return 'unknown';
     }
 }

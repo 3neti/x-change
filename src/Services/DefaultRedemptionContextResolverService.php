@@ -20,6 +20,18 @@ class DefaultRedemptionContextResolverService implements RedemptionContextResolv
         /** @var array<string, mixed> $bankAccount */
         $bankAccount = (array) ($payload['bank_account'] ?? []);
 
+        if ($bankAccount === []) {
+            $bankCode = $payload['bank_code'] ?? null;
+            $accountNumber = $payload['account_number'] ?? null;
+
+            if ($bankCode || $accountNumber) {
+                $bankAccount = array_filter([
+                    'bank_code' => $bankCode,
+                    'account_number' => $accountNumber,
+                ], static fn ($value) => $value !== null && $value !== '');
+            }
+        }
+
         return new RedemptionContext(
             mobile: $mobile,
             secret: $secret,

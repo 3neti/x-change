@@ -8,11 +8,21 @@
             "name": "Lester B. Hurtado"
         }
     ],
+    "repositories": [
+        {
+            "type": "path",
+            "url": "/Users/rli/PhpstormProjects/packages/voucher",
+            "options": {
+                "symlink": true
+            }
+        }
+    ],
     "require": {
         "php": "^8.2",
+        "3neti/contact": "^1.1",
         "3neti/instruction": "^0.2",
         "3neti/money-issuer": "^1.0",
-        "3neti/voucher": "^0.9.3",
+        "3neti/voucher": "dev-main",
         "illuminate/contracts": "^13.0",
         "illuminate/events": "^13.0",
         "illuminate/http": "^13.0",

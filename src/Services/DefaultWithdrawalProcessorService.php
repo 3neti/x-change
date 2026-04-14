@@ -434,11 +434,32 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
     ): PayoutRequestData {
         $rawBank = data_get($payload, 'bank_account');
 
-        if ($rawBank === null && property_exists($voucher, 'redeemer') && $voucher->redeemer) {
+        if (! is_string($rawBank) || trim($rawBank) === '') {
+            $bankCode = data_get($payload, 'bank_code');
+            $accountNumber = data_get($payload, 'account_number');
+
+            if (is_string($bankCode) && trim($bankCode) !== '' && is_string($accountNumber) && trim($accountNumber) !== '') {
+                $rawBank = trim($bankCode).':'.trim($accountNumber);
+            }
+        }
+
+        if ((! is_string($rawBank) || trim($rawBank) === '') && property_exists($voucher, 'redeemer') && $voucher->redeemer) {
             $rawBank = Arr::get($voucher->redeemer->metadata ?? [], 'redemption.bank_account');
         }
 
-        $bankAccount = BankAccount::fromBankAccountWithFallback($rawBank, $contact->bank_account);
+        $fallbackBankAccount = is_string($contact->bank_account) && trim($contact->bank_account) !== ''
+            ? $contact->bank_account
+            : null;
+
+        if (is_string($rawBank) && trim($rawBank) !== '') {
+            $bankAccount = $fallbackBankAccount
+                ? BankAccount::fromBankAccountWithFallback($rawBank, $fallbackBankAccount)
+                : BankAccount::fromBankAccount($rawBank);
+        } elseif ($fallbackBankAccount) {
+            $bankAccount = BankAccount::fromBankAccount($fallbackBankAccount);
+        } else {
+            throw new RuntimeException('Bank account information is required for withdrawal.');
+        }
 
         $reference = "{$voucher->code}-{$contact->mobile}-S{$sliceNumber}";
 

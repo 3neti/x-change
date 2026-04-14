@@ -38,12 +38,16 @@ class DefaultClaimExecutionFactory implements ClaimExecutionFactoryContract
      */
     protected function shouldWithdraw(Voucher $voucher, array $payload): bool
     {
-        if (method_exists($voucher, 'canWithdraw') && $voucher->canWithdraw()) {
-            return true;
+        $isRedeemed = method_exists($voucher, 'isRedeemed')
+            ? (bool) $voucher->isRedeemed()
+            : $voucher->redeemed_at !== null;
+
+        if (! $isRedeemed) {
+            return false;
         }
 
-        if (method_exists($voucher, 'getSliceMode') && $voucher->getSliceMode() !== null) {
-            return true;
+        if (method_exists($voucher, 'canWithdraw')) {
+            return (bool) $voucher->canWithdraw();
         }
 
         return false;

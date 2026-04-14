@@ -4,14 +4,20 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Providers;
 
+use FrittenKeeZ\Vouchers\Models\Voucher;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
+use LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider;
 use LBHurtado\PaymentGateway\Contracts\WalletProxy;
+use LBHurtado\Voucher\Events\VoucherDisbursementFailed;
+use LBHurtado\Voucher\Events\VoucherDisbursementSucceeded;
 use LBHurtado\XChange\Console\Commands\Claim\LoadPayCodeRedemptionCompletionContextCommand;
 use LBHurtado\XChange\Console\Commands\Claim\PreparePayCodeRedemptionFlowCommand;
 use LBHurtado\XChange\Console\Commands\Claim\SubmitPayCodeClaimCommand;
+use LBHurtado\XChange\Console\Commands\Disbursement\CheckDisbursementStatusCommand;
 use LBHurtado\XChange\Console\Commands\Onboarding\OnboardIssuerCommand;
 use LBHurtado\XChange\Console\Commands\Onboarding\OpenIssuerWalletCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\EstimatePayCodeCostCommand;
@@ -34,11 +40,15 @@ use LBHurtado\XChange\Contracts\RedemptionValidationContract;
 use LBHurtado\XChange\Contracts\WithdrawalExecutionContract;
 use LBHurtado\XChange\Contracts\WithdrawalProcessorContract;
 use LBHurtado\XChange\Contracts\WithdrawalValidationContract;
+use LBHurtado\XChange\Events\DisbursementConfirmed;
 use LBHurtado\XChange\Exceptions\IdempotencyConflict;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Exceptions\PayCodeWalletNotResolved;
+use LBHurtado\XChange\Listeners\HandleConfirmedDisbursement;
+use LBHurtado\XChange\Listeners\RecordFailedVoucherDisbursement;
+use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\DefaultClaimExecutionFactory;
 use LBHurtado\XChange\Services\DefaultDisbursementReconciliationService;
@@ -56,6 +66,7 @@ use LBHurtado\XChange\Services\DefaultWithdrawalProcessorService;
 use LBHurtado\XChange\Services\DefaultWithdrawalValidationService;
 use LBHurtado\XChange\Services\InstructionBackedPricingService;
 use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
+use LBHurtado\XChange\Services\SystemWalletProxy;
 
 class XChangeServiceProvider extends ServiceProvider
 {
@@ -68,6 +79,7 @@ class XChangeServiceProvider extends ServiceProvider
 
         $this->alignWalletDefaults();
         $this->alignVoucherDefaults();
+        $this->alignAccountSystemUser();
 
         $this->registerServices();
         $this->registerIntegrations();
@@ -181,7 +193,7 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->bind(WalletProxy::class, function ($app) {
             $service = config(
                 'x-change.payout.wallet_proxy',
-                \LBHurtado\XChange\Services\SystemWalletProxy::class
+                SystemWalletProxy::class
             );
 
             return $app->make($service);
@@ -190,7 +202,7 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->singleton(PayoutProvider::class, function ($app) {
             $provider = config(
                 'x-change.payout.provider',
-                \LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider::class
+                NetbankPayoutProvider::class
             );
 
             return $app->make($provider);
@@ -202,6 +214,7 @@ class XChangeServiceProvider extends ServiceProvider
         $this->bootConfig();
         $this->bootRoutes();
         $this->bootExceptionRendering();
+        $this->bootMigrations();
 
         if ($this->app->runningInConsole()) {
             $this->commands([
@@ -213,9 +226,25 @@ class XChangeServiceProvider extends ServiceProvider
                 PreparePayCodeRedemptionFlowCommand::class,
                 LoadPayCodeRedemptionCompletionContextCommand::class,
                 SubmitPayCodeClaimCommand::class,
+                CheckDisbursementStatusCommand::class,
                 ReconcilePendingDisbursementsCommand::class,
             ]);
         }
+
+        Event::listen(
+            VoucherDisbursementSucceeded::class,
+            RecordSuccessfulVoucherDisbursement::class
+        );
+
+        Event::listen(
+            VoucherDisbursementFailed::class,
+            RecordFailedVoucherDisbursement::class
+        );
+
+        Event::listen(
+            DisbursementConfirmed::class,
+            HandleConfirmedDisbursement::class
+        );
     }
 
     protected function registerServices(): void
@@ -389,6 +418,11 @@ class XChangeServiceProvider extends ServiceProvider
         });
     }
 
+    protected function bootMigrations(): void
+    {
+        $this->loadMigrationsFrom($this->packagePath('database/migrations'));
+    }
+
     protected function apiResponses(): ApiResponseFactory
     {
         return $this->app->make(ApiResponseFactory::class);
@@ -421,10 +455,42 @@ class XChangeServiceProvider extends ServiceProvider
 
         if (! is_string($currentVoucherModel)
             || $currentVoucherModel === ''
-            || $currentVoucherModel === \FrittenKeeZ\Vouchers\Models\Voucher::class) {
+            || $currentVoucherModel === Voucher::class) {
             config()->set(
                 'vouchers.models.voucher',
                 \LBHurtado\Voucher\Models\Voucher::class
+            );
+        }
+    }
+
+    protected function alignAccountSystemUser(): void
+    {
+        $currentIdentifier = config('account.system_user.identifier');
+        $currentColumn = config('account.system_user.identifier_column');
+        $currentModel = config('account.system_user.model');
+
+        $walletDefaultIdentifier = env('SYSTEM_USER_ID', 'lester@hurtado.ph');
+        $walletDefaultColumn = 'email';
+        $walletDefaultModel = \App\Models\User::class;
+
+        if ($currentModel === $walletDefaultModel) {
+            config()->set(
+                'account.system_user.model',
+                config('x-change.onboarding.issuer_model', \App\Models\User::class)
+            );
+        }
+
+        if ($currentIdentifier === $walletDefaultIdentifier) {
+            config()->set(
+                'account.system_user.identifier',
+                config('x-change.payout.system_user_id')
+            );
+        }
+
+        if ($currentColumn === $walletDefaultColumn) {
+            config()->set(
+                'account.system_user.identifier_column',
+                config('x-change.payout.system_user_column', 'id')
             );
         }
     }

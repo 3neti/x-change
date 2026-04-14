@@ -50,4 +50,19 @@ trait InteractsWithClaimPayload
 
         return $payload;
     }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function commandMetaPayload(): array
+    {
+        $meta = [];
+
+        $idempotencyKey = $this->option('idempotency-key');
+        if (is_string($idempotencyKey) && trim($idempotencyKey) !== '') {
+            $meta['idempotency_key'] = trim($idempotencyKey);
+        }
+
+        return $meta;
+    }
 }
