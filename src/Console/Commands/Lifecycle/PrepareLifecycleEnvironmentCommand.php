@@ -157,6 +157,8 @@ class PrepareLifecycleEnvironmentCommand extends Command
             ? $configured
             : 'system@example.test';
 
+        $mobile = (string) config('x-change.lifecycle.defaults.system_user_mobile', '');
+
         /** @var Model $user */
         $user = $class::firstOrCreate(
             ['email' => $email],
@@ -165,6 +167,21 @@ class PrepareLifecycleEnvironmentCommand extends Command
                 'password' => bcrypt('password'),
             ]
         );
+
+        if ($mobile !== '') {
+            if (! $user instanceof HasMobileChannel) {
+                throw new RuntimeException(sprintf(
+                    'Lifecycle user model [%s] must implement [%s] to support mobile channels.',
+                    $class,
+                    HasMobileChannel::class,
+                ));
+            }
+
+            if ($user->getMobileChannel() !== $mobile) {
+                $user->setMobileChannel($mobile);
+                $user->refresh();
+            }
+        }
 
         return $user;
     }

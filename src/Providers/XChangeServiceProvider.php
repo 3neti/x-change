@@ -19,6 +19,8 @@ use LBHurtado\XChange\Console\Commands\Claim\LoadPayCodeRedemptionCompletionCont
 use LBHurtado\XChange\Console\Commands\Claim\PreparePayCodeRedemptionFlowCommand;
 use LBHurtado\XChange\Console\Commands\Claim\SubmitPayCodeClaimCommand;
 use LBHurtado\XChange\Console\Commands\Disbursement\CheckDisbursementStatusCommand;
+use LBHurtado\XChange\Console\Commands\Lifecycle\PrepareLifecycleEnvironmentCommand;
+use LBHurtado\XChange\Console\Commands\Lifecycle\RunLifecycleScenarioCommand;
 use LBHurtado\XChange\Console\Commands\Onboarding\OnboardIssuerCommand;
 use LBHurtado\XChange\Console\Commands\Onboarding\OpenIssuerWalletCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\EstimatePayCodeCostCommand;
@@ -229,6 +231,9 @@ class XChangeServiceProvider extends ServiceProvider
                 SubmitPayCodeClaimCommand::class,
                 CheckDisbursementStatusCommand::class,
                 ReconcilePendingDisbursementsCommand::class,
+
+                PrepareLifecycleEnvironmentCommand::class,
+                RunLifecycleScenarioCommand::class,
             ]);
         }
 

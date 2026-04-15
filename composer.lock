@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7767941df5198dd2de1a39ff91e67eff",
+    "content-hash": "7a6032aa7b085926957e95c04ad3393c",
     "packages": [
         {
             "name": "3neti/cash",
@@ -285,6 +285,62 @@
                 "source": "https://github.com/3neti/instruction/tree/v0.2.1"
             },
             "time": "2026-04-13T07:27:21+00:00"
+        },
+        {
+            "name": "3neti/laravel-model-channel",
+            "version": "v1.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/3neti/laravel-model-channel.git",
+                "reference": "1ab9fb51f393f5b340e8f3b077a324c75f6ccd49"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/3neti/laravel-model-channel/zipball/1ab9fb51f393f5b340e8f3b077a324c75f6ccd49",
+                "reference": "1ab9fb51f393f5b340e8f3b077a324c75f6ccd49",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/contracts": "^11.0|^12.0|^13.0",
+                "illuminate/database": "^11.0|^12.0|^13.0",
+                "illuminate/support": "^11.0|^12.0|^13.0",
+                "php": "^8.2",
+                "propaganistas/laravel-phone": "^6.0"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^9.0|^10.0|^11.0",
+                "pestphp/pest": "^3.8"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "LBHurtado\\ModelChannel\\ModelChannelServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "LBHurtado\\ModelChannel\\": "src/",
+                    "LBHurtado\\ModelChannel\\Database\\Factories\\": "database/factories/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "proprietary"
+            ],
+            "authors": [
+                {
+                    "name": "Lester Hurtado",
+                    "email": "lester@hurtado.ph"
+                }
+            ],
+            "description": "A package to enable assigning communication channels to Eloquent models.",
+            "support": {
+                "issues": "https://github.com/3neti/laravel-model-channel/issues",
+                "source": "https://github.com/3neti/laravel-model-channel/tree/v1.1.0"
+            },
+            "time": "2026-04-15T03:41:58+00:00"
         },
         {
             "name": "3neti/laravel-model-input",
