@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Console\Commands\Lifecycle;
 
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Number;
 use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
@@ -80,13 +81,14 @@ class RunLifecycleScenarioCommand extends Command
 
         $issuer = $this->resolveIssuerModel($issuerId);
         $claimMobile = $this->resolveScenarioMobile($scenario, $issuer);
+        $idempotencyKey = 'lifecycle-'.(string) str()->uuid();
 
         if (! $this->option('json')) {
             $this->info("Running scenario: {$scenarioKey}");
             $this->line('Estimating cost...');
         }
 
-        $lifecycleInput = $this->buildLifecycleInput($scenario, $issuerId, $walletId, $amount);
+        $lifecycleInput = $this->buildLifecycleInput($scenario, $issuerId, $walletId, $amount, $idempotencyKey);
         $estimate = $estimatePayCodeCost->handle($lifecycleInput)->toArray();
 
         if (! $this->option('json')) {
@@ -98,6 +100,13 @@ class RunLifecycleScenarioCommand extends Command
         $code = $generated->code;
 
         if ($this->option('no-claim')) {
+            $walletTransactions = $this->recentWalletTransactions(
+                issuer: $issuer,
+                idempotencyKey: $idempotencyKey,
+                voucherCode: null,
+                limit: 10,
+            );
+
             return $this->renderResult([
                 'scenario' => $scenarioKey,
                 'label' => $scenario['label'] ?? $scenarioKey,
@@ -105,6 +114,7 @@ class RunLifecycleScenarioCommand extends Command
                 'claim_mobile' => $claimMobile,
                 'estimate' => $estimate,
                 'generated' => $generated->toArray(),
+                'wallet_transactions' => $walletTransactions,
             ]);
         }
 
@@ -133,6 +143,13 @@ class RunLifecycleScenarioCommand extends Command
             ->latest('id')
             ->first();
 
+        $walletTransactions = $this->recentWalletTransactions(
+            issuer: $issuer,
+            idempotencyKey: $idempotencyKey,
+            voucherCode: $code,
+            limit: 10,
+        );
+
         return $this->renderResult([
             'scenario' => $scenarioKey,
             'label' => $scenario['label'] ?? $scenarioKey,
@@ -143,6 +160,7 @@ class RunLifecycleScenarioCommand extends Command
             'claim' => $claim->toArray(),
             'disbursement_check' => $finalCheck,
             'reconciliation' => $reconciliation?->toArray(),
+            'wallet_transactions' => $walletTransactions,
         ]);
     }
 
@@ -156,8 +174,13 @@ class RunLifecycleScenarioCommand extends Command
     /**
      * @return array<string, mixed>
      */
-    protected function buildLifecycleInput(array $scenario, int $issuerId, int $walletId, float $amount): array
-    {
+    protected function buildLifecycleInput(
+        array $scenario,
+        int $issuerId,
+        int $walletId,
+        float $amount,
+        string $idempotencyKey,
+    ): array {
         return [
             'issuer_id' => $issuerId,
             'wallet_id' => $walletId,
@@ -212,7 +235,7 @@ class RunLifecycleScenarioCommand extends Command
             'rules' => data_get($scenario, 'rules'),
 
             '_meta' => [
-                'idempotency_key' => 'lifecycle-'.(string) str()->uuid(),
+                'idempotency_key' => $idempotencyKey,
             ],
         ];
     }
@@ -392,6 +415,12 @@ class RunLifecycleScenarioCommand extends Command
             ));
         }
 
+        if (! empty($payload['wallet_transactions']) && is_array($payload['wallet_transactions'])) {
+            $this->newLine();
+            $this->line('Recent Wallet Transactions:');
+            $this->renderWalletTransactionsTable($payload['wallet_transactions']);
+        }
+
         if (isset($payload['disbursement_check']['current_status'])) {
             $this->line('Final Status: '.$payload['disbursement_check']['current_status']);
         }
@@ -528,5 +557,142 @@ class RunLifecycleScenarioCommand extends Command
             'email' => $user->getAttribute('email'),
             'mobile' => $user instanceof HasMobileChannel ? $user->getMobileChannel() : null,
         ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    protected function recentWalletTransactions(
+        Model $issuer,
+        string $idempotencyKey,
+        ?string $voucherCode = null,
+        int $limit = 10,
+    ): array {
+        if (! isset($issuer->wallet) || ! $issuer->wallet) {
+            return [];
+        }
+
+        $wallet = $issuer->wallet;
+
+        if (! method_exists($wallet, 'transactions')) {
+            return [];
+        }
+
+        $transactions = $wallet->transactions()
+            ->latest('id')
+            ->limit(max($limit, 1) * 5)
+            ->get();
+
+        return $transactions
+            ->filter(function ($transaction) use ($idempotencyKey, $voucherCode) {
+                $meta = $this->normalizeTransactionMeta(
+                    $transaction->meta ?? $transaction->metadata ?? null
+                );
+
+                if (data_get($meta, 'idempotency_key') === $idempotencyKey) {
+                    return true;
+                }
+
+                if ($voucherCode !== null && $voucherCode !== '') {
+                    return data_get($meta, 'voucher_code') === $voucherCode
+                        || data_get($meta, 'external_code') === $voucherCode
+                        || data_get($meta, 'code') === $voucherCode;
+                }
+
+                return false;
+            })
+            ->take($limit)
+            ->map(function ($transaction): array {
+                $amountMinor = $this->resolveTransactionAmountMinor($transaction);
+                $currency = (string) ($transaction->currency ?? 'PHP');
+                $meta = $this->normalizeTransactionMeta(
+                    $transaction->meta ?? $transaction->metadata ?? null
+                );
+
+                return [
+                    'id' => $transaction->id ?? null,
+                    'uuid' => $transaction->uuid ?? null,
+                    'type' => $transaction->type ?? $transaction->transaction_type ?? null,
+                    'confirmed' => isset($transaction->confirmed)
+                        ? (bool) $transaction->confirmed
+                        : null,
+                    'amount_minor' => $amountMinor,
+                    'amount' => $amountMinor / 100,
+                    'currency' => $currency,
+                    'formatted_amount' => Number::currency($amountMinor / 100, in: $currency),
+                    'reason' => data_get($meta, 'reason'),
+                    'voucher_code' => data_get($meta, 'voucher_code')
+                        ?? data_get($meta, 'external_code')
+                            ?? data_get($meta, 'code'),
+                    'reference' => data_get($meta, 'reference'),
+                    'idempotency_key' => data_get($meta, 'idempotency_key'),
+                    'created_at' => optional($transaction->created_at)?->toIso8601String(),
+                    'meta' => $meta,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $transactions
+     */
+    protected function renderWalletTransactionsTable(array $transactions): void
+    {
+        $rows = array_map(function (array $tx): array {
+            return [
+                $tx['id'] ?? 'n/a',
+                $tx['type'] ?? 'n/a',
+                $tx['formatted_amount'] ?? Number::currency((float) ($tx['amount'] ?? 0), in: (string) ($tx['currency'] ?? 'PHP')),
+                $tx['reason'] ?? 'n/a',
+                $tx['voucher_code'] ?? 'n/a',
+                $tx['idempotency_key'] ?? 'n/a',
+                $tx['created_at'] ?? 'n/a',
+            ];
+        }, $transactions);
+
+        $this->table(
+            ['ID', 'Type', 'Amount', 'Reason', 'Voucher', 'Idempotency Key', 'Created At'],
+            $rows
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function normalizeTransactionMeta(mixed $meta): array
+    {
+        if (is_array($meta)) {
+            return $meta;
+        }
+
+        if (is_string($meta) && $meta !== '') {
+            $decoded = json_decode($meta, true);
+
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        if (is_object($meta)) {
+            return (array) $meta;
+        }
+
+        return [];
+    }
+
+    protected function resolveTransactionAmountMinor(object $transaction): int
+    {
+        $candidates = [
+            $transaction->amount ?? null,
+            $transaction->amount_int ?? null,
+            $transaction->amount_minor ?? null,
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (is_numeric($candidate)) {
+                return (int) $candidate;
+            }
+        }
+
+        return 0;
     }
 }
