@@ -41,7 +41,7 @@ class DefaultDisbursementReconciliationService implements DisbursementReconcilia
 
         $needsReview = (bool) $model->needs_review;
         $reviewReason = $model->review_reason;
-        $errorMessage = null;
+        $errorMessage = $model->error_message;
 
         if ($resolvedStatus === 'failed' && ! $trustsFailure) {
             if ($beforeStatus === 'pending') {
@@ -53,6 +53,13 @@ class DefaultDisbursementReconciliationService implements DisbursementReconcilia
             $needsReview = true;
             $reviewReason = 'Low-confidence failed status from provider';
             $errorMessage = 'Provider returned an untrusted failed status with incomplete metadata.';
+        }
+
+        // Clear stale review flags once the provider later returns a trusted success.
+        if ($resolvedStatus === 'succeeded') {
+            $needsReview = false;
+            $reviewReason = null;
+            $errorMessage = null;
         }
 
         $updates = [

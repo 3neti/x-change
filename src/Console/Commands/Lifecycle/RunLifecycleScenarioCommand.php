@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Console\Commands\Lifecycle;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Number;
 use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
@@ -29,6 +30,8 @@ class RunLifecycleScenarioCommand extends Command
         {--check-only= : Existing voucher code to check only}
         {--timeout= : Poll timeout in seconds}
         {--poll= : Poll interval in seconds}
+        {--max-polls= : Maximum number of polling attempts}
+        {--accept-pending : Treat a trusted pending provider transaction as good enough}
         {--json : Output JSON}';
 
     protected $description = 'Run a named lifecycle scenario.';
@@ -72,7 +75,8 @@ class RunLifecycleScenarioCommand extends Command
         $walletId = (int) ($this->option('wallet') ?: $scenario['wallet_id'] ?? 1);
         $amount = (float) ($this->option('amount') ?: $scenario['amount'] ?? 25);
         $timeout = (int) ($this->option('timeout') ?: $scenario['timeout'] ?? 180);
-        $poll = (int) ($this->option('poll') ?: $scenario['poll'] ?? 10);
+        $poll = max(1, (int) ($this->option('poll') ?: $scenario['poll'] ?? 10));
+        $maxPolls = $this->resolveMaxPolls($timeout, $poll);
 
         $issuer = $this->resolveIssuerModel($issuerId);
         $claimMobile = $this->resolveScenarioMobile($scenario, $issuer);
@@ -86,6 +90,7 @@ class RunLifecycleScenarioCommand extends Command
         $estimate = $estimatePayCodeCost->handle($lifecycleInput)->toArray();
 
         if (! $this->option('json')) {
+            $this->renderEstimateSummary($estimate);
             $this->line('Generating voucher...');
         }
 
@@ -115,7 +120,13 @@ class RunLifecycleScenarioCommand extends Command
             $this->line('Polling disbursement status...');
         }
 
-        $finalCheck = $this->pollDisbursement($code, $timeout, $poll);
+        $finalCheck = $this->pollDisbursement(
+            code: $code,
+            timeout: $timeout,
+            poll: $poll,
+            maxPolls: $maxPolls,
+            acceptPending: (bool) $this->option('accept-pending'),
+        );
 
         $reconciliation = DisbursementReconciliation::query()
             ->where('voucher_code', $code)
@@ -231,15 +242,23 @@ class RunLifecycleScenarioCommand extends Command
     /**
      * @return array<string, mixed>
      */
-    protected function pollDisbursement(string $code, int $timeout, int $poll): array
-    {
+    protected function pollDisbursement(
+        string $code,
+        int $timeout,
+        int $poll,
+        ?int $maxPolls = null,
+        bool $acceptPending = false,
+    ): array {
         $start = time();
+        $attempt = 0;
         $last = [
             'voucher_code' => $code,
             'current_status' => 'unknown',
         ];
 
         do {
+            $attempt++;
+
             Artisan::call('xchange:disbursement:check', [
                 'code' => $code,
                 '--sync' => true,
@@ -252,19 +271,40 @@ class RunLifecycleScenarioCommand extends Command
             if (is_array($decoded)) {
                 $last = $decoded;
                 $status = $decoded['current_status'] ?? null;
+                $providerTransactionId = $decoded['provider_transaction_id'] ?? null;
+                $needsReview = (bool) ($decoded['needs_review'] ?? false);
+                $provider = $decoded['provider'] ?? null;
 
                 if (! $this->option('json')) {
                     $elapsed = time() - $start;
+                    $maxPollsLabel = $maxPolls !== null ? (string) $maxPolls : '∞';
+
                     $this->line(sprintf(
-                        '[poll %ss] voucher=%s status=%s provider_tx=%s',
+                        '[poll %d/%s | %ss] status=%s provider_tx=%s needs_review=%s',
+                        $attempt,
+                        $maxPollsLabel,
                         $elapsed,
-                        $code,
                         $status ?? 'unknown',
-                        $decoded['provider_transaction_id'] ?? 'n/a',
+                        $providerTransactionId ?: 'n/a',
+                        $needsReview ? 'yes' : 'no',
                     ));
                 }
 
                 if (in_array($status, ['succeeded', 'failed'], true)) {
+                    return $decoded;
+                }
+
+                if (
+                    $acceptPending
+                    && $status === 'pending'
+                    && ! $needsReview
+                    && is_string($provider) && $provider !== ''
+                    && is_string($providerTransactionId) && $providerTransactionId !== ''
+                ) {
+                    if (! $this->option('json')) {
+                        $this->info('Trusted pending transaction accepted as good enough.');
+                    }
+
                     return $decoded;
                 }
             } elseif (! $this->option('json')) {
@@ -272,10 +312,20 @@ class RunLifecycleScenarioCommand extends Command
                 $this->warn("[poll {$elapsed}s] unable to decode disbursement status response");
             }
 
+            if ($maxPolls !== null && $attempt >= $maxPolls) {
+                break;
+            }
+
+            if ((time() - $start) >= $timeout) {
+                break;
+            }
+
             sleep($poll);
-        } while ((time() - $start) < $timeout);
+        } while (true);
 
         $last['current_status'] = $last['current_status'] ?? 'timeout';
+        $last['timed_out'] = true;
+        $last['poll_attempts'] = $attempt;
 
         return $last;
     }
@@ -283,13 +333,20 @@ class RunLifecycleScenarioCommand extends Command
     protected function runCheckOnly(string $code): int
     {
         $timeout = (int) ($this->option('timeout') ?: config('x-change.lifecycle.defaults.timeout', 180));
-        $poll = (int) ($this->option('poll') ?: config('x-change.lifecycle.defaults.poll', 10));
+        $poll = max(1, (int) ($this->option('poll') ?: config('x-change.lifecycle.defaults.poll', 10)));
+        $maxPolls = $this->resolveMaxPolls($timeout, $poll);
 
         if (! $this->option('json')) {
             $this->info("Checking existing voucher: {$code}");
         }
 
-        $payload = $this->pollDisbursement($code, $timeout, $poll);
+        $payload = $this->pollDisbursement(
+            code: $code,
+            timeout: $timeout,
+            poll: $poll,
+            maxPolls: $maxPolls,
+            acceptPending: (bool) $this->option('accept-pending'),
+        );
 
         return $this->renderResult([
             'mode' => 'check-only',
@@ -310,7 +367,9 @@ class RunLifecycleScenarioCommand extends Command
         $this->line('Scenario: '.($payload['scenario'] ?? $payload['mode'] ?? 'n/a'));
 
         if (isset($payload['issuer'])) {
-            $this->line('Issuer: '.($payload['issuer']['email'] ?? ('#'.($payload['issuer']['id'] ?? 'n/a'))));
+            $issuerLabel = $payload['issuer']['email'] ?? ('#'.($payload['issuer']['id'] ?? 'n/a'));
+            $issuerMobile = $payload['issuer']['mobile'] ?? 'n/a';
+            $this->line("Issuer: {$issuerLabel} / {$issuerMobile}");
         }
 
         if (isset($payload['claim_mobile'])) {
@@ -321,15 +380,75 @@ class RunLifecycleScenarioCommand extends Command
             $this->line('Voucher Code: '.$payload['generated']['code']);
         }
 
-        if (isset($payload['estimate']['total'])) {
-            $this->line('Estimated Tariff: '.$payload['estimate']['total']);
+        if (isset($payload['estimate'])) {
+            $this->renderEstimateSummary($payload['estimate']);
+        }
+
+        if (isset($payload['generated']['wallet']['balance_before'], $payload['generated']['wallet']['balance_after'])) {
+            $this->line(sprintf(
+                'Wallet Balance: %s → %s',
+                Number::currency(((float) $payload['generated']['wallet']['balance_before']) / 100, in: 'PHP'),
+                Number::currency(((float) $payload['generated']['wallet']['balance_after']) / 100, in: 'PHP'),
+            ));
         }
 
         if (isset($payload['disbursement_check']['current_status'])) {
             $this->line('Final Status: '.$payload['disbursement_check']['current_status']);
         }
 
+        if (isset($payload['disbursement_check']['provider_transaction_id'])) {
+            $this->line('Provider Transaction ID: '.($payload['disbursement_check']['provider_transaction_id'] ?: 'n/a'));
+        }
+
+        if (! empty($payload['disbursement_check']['timed_out'])) {
+            $this->warn('Polling stopped before a terminal status was reached.');
+        }
+
         return self::SUCCESS;
+    }
+
+    protected function renderEstimateSummary(array $estimate): void
+    {
+        $currency = (string) ($estimate['currency'] ?? 'PHP');
+
+        if (isset($estimate['total'])) {
+            $this->line('Estimated Tariff: '.Number::currency((float) $estimate['total'], in: $currency));
+        }
+
+        $charges = $estimate['charges'] ?? null;
+
+        if (! is_array($charges) || $charges === []) {
+            return;
+        }
+
+        $this->line('Charge Lines:');
+
+        foreach ($charges as $charge) {
+            $label = (string) ($charge['label'] ?? $charge['index'] ?? 'Unknown');
+            $quantity = (int) ($charge['quantity'] ?? 1);
+            $unitPrice = (float) ($charge['unit_price'] ?? 0);
+            $price = (float) ($charge['price'] ?? 0);
+            $chargeCurrency = (string) ($charge['currency'] ?? $currency);
+
+            $this->line(sprintf(
+                '  - %s | %s × %d = %s',
+                $label,
+                Number::currency($unitPrice, in: $chargeCurrency),
+                $quantity,
+                Number::currency($price, in: $chargeCurrency),
+            ));
+        }
+    }
+
+    protected function resolveMaxPolls(int $timeout, int $poll): ?int
+    {
+        $configured = $this->option('max-polls');
+
+        if ($configured !== null && $configured !== '') {
+            return max(1, (int) $configured);
+        }
+
+        return (int) ceil($timeout / max(1, $poll));
     }
 
     protected function assertLifecycleUserModelSupportsMobile(): void

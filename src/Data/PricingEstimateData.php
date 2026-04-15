@@ -9,12 +9,14 @@ use Spatie\LaravelData\Data;
 class PricingEstimateData extends Data
 {
     /**
-     * @param  array<string, mixed>  $components
+     * @param  array<string, float|int>  $components
+     * @param  array<int, array<string, mixed>>  $charges
      */
     public function __construct(
-        public string $currency,
-        public float $base_fee,
-        public array $components,
-        public float $total,
+        public string $currency = 'PHP',
+        public float $base_fee = 0.0,
+        public array $components = [],
+        public float $total = 0.0,
+        public array $charges = [],
     ) {}
 }

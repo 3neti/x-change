@@ -7,7 +7,7 @@ return [
     'defaults' => [
         'issuer_id' => 1,
         'wallet_id' => 1,
-        'amount' => 25,
+        'amount' => 17,
         'currency' => 'PHP',
 
         'mobile' => '639171234567',
@@ -29,7 +29,7 @@ return [
 
         'basic_cash' => [
             'label' => 'Basic Cash',
-            'amount' => 25,
+            'amount' => 12.50,
             'currency' => 'PHP',
             'cash' => [],
             'inputs' => [

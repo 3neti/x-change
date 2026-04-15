@@ -418,4 +418,353 @@ return [
             ],
         ],
     ],
+    /*
+    |--------------------------------------------------------------------------
+    | Pricing Configuration - Market-Rational Pricing Model
+    |--------------------------------------------------------------------------
+    |
+    | This pricing schedule is designed to be competitive, cost-based, and
+    | value-driven. All prices are in centavos (100 = ₱1.00).
+    |
+    | PRICING PHILOSOPHY:
+    | ===================
+    |
+    | 1. COST RECOVERY (Break-even or minimal margin)
+    |    - Transaction Fee: ₱15.00 (NetBank InstaPay cost)
+    |    - KYC Verification: ₱18.00 (HyperVerge ₱15 + processing ₱3)
+    |    - OTP: ₱2.00 (SMS ₱1 + processing ₱1)
+    |    - Email/SMS Notifications: ₱1.20-₱1.50 (delivery + storage)
+    |
+    | 2. MINIMAL PRICING (Single digits for competitive advantage)
+    |    - Standard text inputs: ₱0.30-₱0.50
+    |    - Simple validations: ₱0.50-₱0.80
+    |    - Storage-light features: ₱0.50-₱1.00
+    |
+    | 3. STORAGE-BASED PRICING
+    |    - Location: ₱1.00 (geocoding + coordinates storage)
+    |    - Signature: ₱1.50 (medium image storage)
+    |    - Selfie: ₱3.00 (large image storage + processing)
+    |
+    | 4. PREMIUM FEATURES (Value-based - Marketing ROI)
+    |    - Rider Message: ₱2.00 (basic messaging)
+    |    - Rider Splash: ₱20.00 (advertising real estate - 10x multiplier)
+    |    - Rider URL: ₱50.00 (digital marketing conversion tool - 25x multiplier)
+    |
+    | 5. ENTERPRISE FEATURES (Accessible pricing)
+    |    - Payable Voucher: ₱5.00 (multi-payment capability)
+    |    - Settlement Voucher: ₱8.00 (complex enterprise workflows)
+    |
+    | COMPETITIVE POSITIONING:
+    | =======================
+    |
+    | Base Transaction: ₱15.00 (cost pass-through, profit from features)
+    | Basic Voucher (no extras): ₱15.00
+    | Marketing Voucher (email + name + rider URL): ₱66.80
+    | KYC Voucher (KYC + selfie + location + signature): ₱38.50
+    | Full-Featured: ~₱120.00
+    |
+    | COST BREAKDOWN BY CATEGORY:
+    | ===========================
+    |
+    | Base Charges:          ₱15.00 - ₱8.00
+    | Feedback Channels:     ₱0.50 - ₱1.50
+    | Input Fields (Text):   ₱0.30 - ₱0.50
+    | Input Fields (Media):  ₱1.00 - ₱3.00
+    | Input Fields (KYC):    ₱18.00
+    | Input Fields (OTP):    ₱2.00
+    | Validation Rules:      ₱0.50 - ₱2.00
+    | Rider Features:        ₱2.00 - ₱50.00
+    |
+    | RATIONALE:
+    | ==========
+    |
+    | 1. Transaction Fee = NetBank cost (no markup) to stay competitive
+    | 2. Text inputs minimal (₱0.30-₱0.50) - just database storage
+    | 3. Media inputs priced by storage size (location < signature < selfie)
+    | 4. Third-party APIs cost-plus (KYC ₱15+₱3, OTP ₱1+₱1)
+    | 5. Rider URL premium (₱50) justified by marketing conversion value
+    | 6. Everything kept single-digit except cost-recovery and premium features
+    |
+    */
+
+    'pricelist' => [
+        /*
+        |--------------------------------------------------------------------------
+        | BASE CHARGES - Cost Recovery
+        |--------------------------------------------------------------------------
+        |
+        | Transaction Fee: Pass-through of NetBank InstaPay cost (₱15.00)
+        | Enterprise Vouchers: Accessible pricing for business features
+        |
+        */
+        'cash.amount' => [
+            'price' => 1500, // ₱15.00 (NetBank InstaPay fee - break-even)
+            'label' => 'Transaction Fee',
+            'description' => 'InstaPay fund transfer cost (NetBank)',
+            'category' => 'base',
+        ],
+        'voucher_type.payable' => [
+            'price' => 500, // ₱5.00 (multi-payment capability)
+            'label' => 'Payable Voucher',
+            'description' => 'Multi-payment voucher accepting payments until target amount reached',
+            'category' => 'base',
+        ],
+        'voucher_type.settlement' => [
+            'price' => 800, // ₱8.00 (complex enterprise workflows)
+            'label' => 'Settlement Voucher',
+            'description' => 'Enterprise settlement instrument for complex multi-payment scenarios',
+            'category' => 'base',
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
+        | HIGH-COST FEATURES - Third-Party API Costs
+        |--------------------------------------------------------------------------
+        |
+        | KYC: HyperVerge API (₱15) + processing/storage (₱3)
+        | OTP: SMS gateway (₱1) + system processing (₱1)
+        |
+        */
+        'inputs.fields.kyc' => [
+            'price' => 1800, // ₱18.00 (HyperVerge ₱15 + processing ₱3)
+            'label' => 'KYC Verification',
+            'description' => 'Identity verification via HyperVerge (ID + selfie biometric)',
+            'category' => 'input_fields',
+        ],
+        'inputs.fields.otp' => [
+            'price' => 200, // ₱2.00 (SMS ₱1 + processing ₱1)
+            'label' => 'OTP Verification',
+            'description' => 'One-time password via SMS',
+            'category' => 'input_fields',
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
+        | FEEDBACK CHANNELS - Notification Costs
+        |--------------------------------------------------------------------------
+        |
+        | Email: Service cost + storage for mail/attachments (₱1.50)
+        | SMS: Delivery cost + margin (₱1.20)
+        | Webhook: Minimal HTTP request + logging (₱0.50)
+        |
+        */
+        'feedback.email' => [
+            'price' => 150, // ₱1.50 (email service + storage for attachments)
+            'label' => 'Email Notification',
+            'description' => 'Email notification on redemption with attachments',
+            'category' => 'feedback',
+        ],
+        'feedback.mobile' => [
+            'price' => 120, // ₱1.20 (SMS delivery ₱1.00 + margin ₱0.20)
+            'label' => 'SMS Notification',
+            'description' => 'SMS notification on redemption',
+            'category' => 'feedback',
+        ],
+        'feedback.webhook' => [
+            'price' => 50, // ₱0.50 (HTTP request + logging)
+            'label' => 'Webhook Notification',
+            'description' => 'Real-time webhook notification to your endpoint',
+            'category' => 'feedback',
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
+        | STORAGE-INTENSIVE INPUT FIELDS
+        |--------------------------------------------------------------------------
+        |
+        | Selfie: Large image storage + processing (₱3.00)
+        | Signature: Medium image storage (₱1.50)
+        | Location: Geocoding API + coordinates storage (₱1.00)
+        |
+        */
+        'inputs.fields.selfie' => [
+            'price' => 300, // ₱3.00 (large image storage + processing)
+            'label' => 'Selfie Photo',
+            'description' => 'Camera capture for selfie verification',
+            'category' => 'input_fields',
+        ],
+        'inputs.fields.signature' => [
+            'price' => 150, // ₱1.50 (medium image storage)
+            'label' => 'Digital Signature',
+            'description' => 'Digital signature capture',
+            'category' => 'input_fields',
+        ],
+        'inputs.fields.location' => [
+            'price' => 100, // ₱1.00 (geocoding API + storage)
+            'label' => 'GPS Location',
+            'description' => 'GPS coordinates capture with reverse geocoding',
+            'category' => 'input_fields',
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
+        | STANDARD INPUT FIELDS - Text/Data Only
+        |--------------------------------------------------------------------------
+        |
+        | Minimal cost - just database storage for text data (₱0.30 - ₱0.50)
+        | Email/Mobile collection slightly higher due to validation overhead
+        |
+        */
+        'inputs.fields.email' => [
+            'price' => 50, // ₱0.50 (text storage + validation)
+            'label' => 'Email Address',
+            'description' => 'Collect email address from redeemer',
+            'category' => 'input_fields',
+        ],
+        'inputs.fields.mobile' => [
+            'price' => 50, // ₱0.50 (text storage + validation)
+            'label' => 'Mobile Number',
+            'description' => 'Collect mobile number from redeemer',
+            'category' => 'input_fields',
+        ],
+        'inputs.fields.name' => [
+            'price' => 30, // ₱0.30 (text storage only)
+            'label' => 'Full Name',
+            'description' => 'Collect full name from redeemer',
+            'category' => 'input_fields',
+        ],
+        'inputs.fields.address' => [
+            'price' => 50, // ₱0.50 (text storage)
+            'label' => 'Full Address',
+            'description' => 'Collect complete address from redeemer',
+            'category' => 'input_fields',
+        ],
+        'inputs.fields.birth_date' => [
+            'price' => 30, // ₱0.30 (date storage)
+            'label' => 'Birth Date',
+            'description' => 'Collect birth date for age verification',
+            'category' => 'input_fields',
+        ],
+        'inputs.fields.gross_monthly_income' => [
+            'price' => 30, // ₱0.30 (numeric storage)
+            'label' => 'Monthly Income',
+            'description' => 'Collect gross monthly income data',
+            'category' => 'input_fields',
+        ],
+        'inputs.fields.reference_code' => [
+            'price' => 30, // ₱0.30 (text storage)
+            'label' => 'Reference Code',
+            'description' => 'Collect custom reference code',
+            'category' => 'input_fields',
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDATION RULES - Security & Compliance
+        |--------------------------------------------------------------------------
+        |
+        | Secret Code: Simple validation logic (₱0.50)
+        | Mobile Restriction: Phone number validation (₱0.50)
+        | Time Validation: Complex scheduling logic (₱0.80)
+        | Location Validation: GPS licensing + geo-fencing (₱1.20)
+        | Vendor Alias: Enterprise B2B feature (₱2.00)
+        |
+        */
+        'cash.validation.secret' => [
+            'price' => 50, // ₱0.50 (validation logic only)
+            'label' => 'Secret Code',
+            'description' => 'Require secret code for redemption security',
+            'category' => 'validation',
+        ],
+        'cash.validation.mobile' => [
+            'price' => 50, // ₱0.50 (phone validation)
+            'label' => 'Mobile Restriction',
+            'description' => 'Restrict redemption to specific mobile number',
+            'category' => 'validation',
+        ],
+        'validation.time' => [
+            'price' => 80, // ₱0.80 (complex scheduling logic)
+            'label' => 'Time Window Validation',
+            'description' => 'Restrict redemption to specific time windows and duration limits',
+            'category' => 'validation',
+        ],
+        'validation.location' => [
+            'price' => 120, // ₱1.20 (GPS licensing + geo-fencing computation)
+            'label' => 'Location Validation',
+            'description' => 'Geo-fencing with coordinates and radius restrictions',
+            'category' => 'validation',
+        ],
+        'cash.validation.payable' => [
+            'price' => 200, // ₱2.00 (enterprise B2B feature)
+            'label' => 'Vendor Alias (B2B)',
+            'description' => 'Restrict redemption to specific merchant vendor alias',
+            'category' => 'validation',
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
+        | PREMIUM: RIDER FEATURES - Value-Based Marketing Tools
+        |--------------------------------------------------------------------------
+        |
+        | These are PREMIUM features with high marketing/conversion value:
+        |
+        | Rider Message (₱2.00):
+        |   - Basic post-redemption messaging
+        |   - Custom instructions or thank-you notes
+        |   - Modest value, accessible pricing
+        |
+        | Rider Splash (₱20.00):
+        |   - ADVERTISING REAL ESTATE - 10x multiplier
+        |   - Full-screen branded splash page
+        |   - Logo, images, custom branding
+        |   - High visibility, perfect for brand awareness
+        |
+        | Rider URL (₱50.00):
+        |   - DIGITAL MARKETING CONVERSION TOOL - 25x multiplier
+        |   - Redirect to landing page, signup form, app download
+        |   - Lead generation and customer onboarding
+        |   - Highest ROI for marketers
+        |   - Conversion tracking capability
+        |
+        | PRICING RATIONALE:
+        | Rider features enable monetization of the "attention moment" right
+        | after successful redemption. Users are engaged and ready to take
+        | action - perfect for marketing, onboarding, and conversions.
+        |
+        */
+        'rider.message' => [
+            'price' => 200, // ₱2.00 (basic messaging)
+            'label' => 'Rider Message',
+            'description' => 'Custom message shown after successful redemption',
+            'category' => 'rider',
+        ],
+        'rider.splash' => [
+            'price' => 2000, // ₱20.00 (advertising real estate - 10x value)
+            'label' => 'Rider Splash Screen',
+            'description' => 'Full-screen branded splash page with logo and custom content (advertising space)',
+            'category' => 'rider',
+        ],
+        'rider.url' => [
+            'price' => 5000, // ₱50.00 (digital marketing tool - 25x value)
+            'label' => 'Rider Redirect URL',
+            'description' => 'Redirect to landing page for onboarding, lead generation, or app download (conversion tool)',
+            'category' => 'rider',
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
+        | DEPRECATED FEATURES
+        |--------------------------------------------------------------------------
+        |
+        | Legacy validation fields replaced by modern implementations.
+        | Kept for backward compatibility but priced at ₱0.00.
+        |
+        */
+        'cash.validation.location' => [
+            'price' => 0, // DEPRECATED
+            'label' => 'Location String (Legacy)',
+            'description' => '[DEPRECATED] Use validation.location with lat/lng coordinates instead',
+            'category' => 'validation',
+            'deprecated' => true,
+            'deprecated_reason' => 'Use validation.location with coordinates and radius_meters for accurate geo-fencing',
+        ],
+        'cash.validation.radius' => [
+            'price' => 0, // DEPRECATED
+            'label' => 'Radius String (Legacy)',
+            'description' => '[DEPRECATED] Use validation.location.radius_meters instead',
+            'category' => 'validation',
+            'deprecated' => true,
+            'deprecated_reason' => 'Use validation.location.radius_meters for precise radius validation',
+        ],
+    ],
 ];

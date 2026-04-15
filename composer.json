@@ -24,6 +24,7 @@
         "3neti/laravel-model-channel": "^1.1",
         "3neti/money-issuer": "^1.0",
         "3neti/voucher": "dev-main",
+        "brick/money": "^0.10.3",
         "illuminate/contracts": "^13.0",
         "illuminate/events": "^13.0",
         "illuminate/http": "^13.0",

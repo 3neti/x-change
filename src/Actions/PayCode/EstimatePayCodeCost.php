@@ -28,6 +28,7 @@ class EstimatePayCodeCost
             base_fee: (float) ($estimate['base_fee'] ?? 0),
             components: (array) ($estimate['components'] ?? []),
             total: (float) ($estimate['total'] ?? 0),
+            charges: (array) ($estimate['charges'] ?? []),
         );
     }
 }

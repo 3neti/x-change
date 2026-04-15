@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Console\Commands\Lifecycle;
 
 use App\Models\User;
+use Brick\Money\Money;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Number;
 use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
 use RuntimeException;
 
@@ -97,8 +99,17 @@ class PrepareLifecycleEnvironmentCommand extends Command
             .' / '.($testUser instanceof HasMobileChannel ? ($testUser->getMobileChannel() ?: 'n/a') : 'n/a')
         );
 
-        $this->line('System Wallet Balance: '.($systemUser->wallet?->balanceFloat ?? 'n/a'));
-        $this->line('Test Wallet Balance: '.($testUser->wallet?->balanceFloat ?? 'n/a'));
+        $this->line('System Wallet Balance: '.(
+            $systemUser->wallet?->balanceFloat !== null
+                ? Number::currency((float) $systemUser->wallet->balanceFloat, in: 'PHP')
+                : 'n/a'
+        ));
+
+        $this->line('Test Wallet Balance: '.(
+            $testUser->wallet?->balanceFloat !== null
+                ? Number::currency((float) $testUser->wallet->balanceFloat, in: 'PHP')
+                : 'n/a'
+        ));
 
         $this->line('Instruction Items: '.count($priceList));
         $this->newLine();
@@ -110,7 +121,7 @@ class PrepareLifecycleEnvironmentCommand extends Command
                     $item['index'],
                     $item['name'],
                     $item['type'],
-                    number_format((float) $item['price'], 2),
+                    Number::currency((float) $item['price'], in: $item['currency']),
                     $item['currency'],
                 ],
                 $priceList
@@ -191,8 +202,8 @@ class PrepareLifecycleEnvironmentCommand extends Command
         $class = $this->userModelClass();
 
         $email = (string) (
-        config('x-change.lifecycle.defaults.test_user_email')
-            ?: 'lifecycle-user@example.test'
+            config('x-change.lifecycle.defaults.test_user_email')
+                ?: 'lifecycle-user@example.test'
         );
 
         $mobile = (string) config('x-change.lifecycle.defaults.test_user_mobile', '');
@@ -275,38 +286,38 @@ class PrepareLifecycleEnvironmentCommand extends Command
 
     protected function seedInstructionItemsFromPricingConfig(): void
     {
-        $components = (array) config('x-change.pricing.components', []);
-        $baseFee = (float) config('x-change.pricing.base_fee', 0);
-        $currency = (string) config('x-change.pricing.currency', 'PHP');
+        $items = (array) config('x-change.pricelist', []);
 
-        if ($components === [] && $baseFee === 0.0) {
-            $this->warn('No x-change pricing config found; instruction_items not seeded.');
+        if ($items === []) {
+            $this->warn('No x-change.pricelist config found; instruction_items not seeded.');
 
             return;
         }
 
-        $items = [
-            'cash' => ['name' => 'Cash', 'type' => 'cash', 'price' => (float) ($components['cash'] ?? 0)],
-            'kyc' => ['name' => 'KYC', 'type' => 'kyc', 'price' => (float) ($components['kyc'] ?? 0)],
-            'otp' => ['name' => 'OTP', 'type' => 'otp', 'price' => (float) ($components['otp'] ?? 0)],
-            'selfie' => ['name' => 'Selfie', 'type' => 'selfie', 'price' => (float) ($components['selfie'] ?? 0)],
-            'signature' => ['name' => 'Signature', 'type' => 'signature', 'price' => (float) ($components['signature'] ?? 0)],
-            'location' => ['name' => 'Location', 'type' => 'location', 'price' => (float) ($components['location'] ?? 0)],
-            'webhook' => ['name' => 'Webhook', 'type' => 'webhook', 'price' => (float) ($components['webhook'] ?? 0)],
-            'email_feedback' => ['name' => 'Email Feedback', 'type' => 'email_feedback', 'price' => (float) ($components['email_feedback'] ?? 0)],
-            'sms_feedback' => ['name' => 'SMS Feedback', 'type' => 'sms_feedback', 'price' => (float) ($components['sms_feedback'] ?? 0)],
-            'base_fee' => ['name' => 'Base Fee', 'type' => 'base_fee', 'price' => $baseFee],
-        ];
+        foreach ($items as $index => $data) {
+            if (! is_array($data)) {
+                continue;
+            }
 
-        foreach ($items as $index => $item) {
+            $meta = [
+                'description' => $data['description'] ?? null,
+                'label' => $data['label'] ?? null,
+                'category' => $data['category'] ?? 'other',
+            ];
+
+            if (! empty($data['deprecated'])) {
+                $meta['deprecated'] = true;
+                $meta['deprecated_reason'] = $data['deprecated_reason'] ?? 'No longer in use';
+            }
+
             DB::table('instruction_items')->updateOrInsert(
                 ['index' => $index],
                 [
-                    'name' => $item['name'],
-                    'type' => $item['type'],
-                    'price' => $item['price'],
-                    'currency' => $currency,
-                    'meta' => json_encode([], JSON_UNESCAPED_SLASHES),
+                    'name' => $this->inferInstructionItemName($index, $data),
+                    'type' => $this->inferInstructionItemType($index, $data),
+                    'price' => (int) ($data['price'] ?? 0), // stored in minor units
+                    'currency' => (string) ($data['currency'] ?? 'PHP'),
+                    'meta' => json_encode($meta, JSON_UNESCAPED_SLASHES),
                     'revenue_destination_type' => null,
                     'revenue_destination_id' => null,
                     'updated_at' => now(),
@@ -315,7 +326,7 @@ class PrepareLifecycleEnvironmentCommand extends Command
             );
         }
 
-        $this->info('Instruction items seeded from x-change.pricing config.');
+        $this->info('Instruction items seeded from x-change.pricelist config.');
     }
 
     /**
@@ -326,13 +337,18 @@ class PrepareLifecycleEnvironmentCommand extends Command
         return DB::table('instruction_items')
             ->orderBy('index')
             ->get(['index', 'name', 'type', 'price', 'currency'])
-            ->map(fn ($row) => [
-                'index' => $row->index,
-                'name' => $row->name,
-                'type' => $row->type,
-                'price' => (float) $row->price,
-                'currency' => $row->currency,
-            ])
+            ->map(function ($row): array {
+                $money = $this->moneyFromMinor((int) $row->price, (string) $row->currency);
+
+                return [
+                    'index' => $row->index,
+                    'name' => $row->name,
+                    'type' => $row->type,
+                    'price_minor' => (int) $row->price,
+                    'price' => $money->getAmount()->toFloat(),
+                    'currency' => $row->currency,
+                ];
+            })
             ->toArray();
     }
 
@@ -347,5 +363,40 @@ class PrepareLifecycleEnvironmentCommand extends Command
                 HasMobileChannel::class,
             ));
         }
+    }
+
+    protected function inferInstructionItemName(string $index, array $data): string
+    {
+        if (! empty($data['label']) && is_string($data['label'])) {
+            return $data['label'];
+        }
+
+        return str($index)
+            ->replace(['.', '_'], ' ')
+            ->title()
+            ->toString();
+    }
+
+    protected function inferInstructionItemType(string $index, array $data): string
+    {
+        if (! empty($data['category']) && is_string($data['category'])) {
+            return $data['category'];
+        }
+
+        return match (true) {
+            str_starts_with($index, 'inputs.fields.') => 'input_fields',
+            str_starts_with($index, 'feedback.') => 'feedback',
+            str_starts_with($index, 'validation.') => 'validation',
+            str_starts_with($index, 'cash.validation.') => 'validation',
+            str_starts_with($index, 'rider.') => 'rider',
+            str_starts_with($index, 'voucher_type.') => 'base',
+            $index === 'cash.amount' => 'base',
+            default => 'other',
+        };
+    }
+
+    protected function moneyFromMinor(int $minorAmount, string $currency): Money
+    {
+        return Money::ofMinor($minorAmount, $currency);
     }
 }
