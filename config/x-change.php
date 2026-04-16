@@ -767,4 +767,21 @@ return [
             'deprecated_reason' => 'Use validation.location.radius_meters for precise radius validation',
         ],
     ],
+
+    'revenue' => [
+        'instruction_item_model' => env(
+            'XCHANGE_REVENUE_INSTRUCTION_ITEM_MODEL',
+            \LBHurtado\Instruction\Models\InstructionItem::class,
+//            \App\Models\InstructionItem::class
+        ),
+
+        'destination' => [
+            'model' => env(
+                'XCHANGE_REVENUE_DESTINATION_MODEL',
+                \App\Models\User::class
+            ),
+            'identifier' => env('XCHANGE_REVENUE_DESTINATION_IDENTIFIER'),
+            'identifier_column' => env('XCHANGE_REVENUE_DESTINATION_IDENTIFIER_COLUMN', 'email'),
+        ],
+    ],
 ];

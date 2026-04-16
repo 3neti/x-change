@@ -26,6 +26,8 @@ use LBHurtado\XChange\Console\Commands\Onboarding\OpenIssuerWalletCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\EstimatePayCodeCostCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\GeneratePayCodeCommand;
 use LBHurtado\XChange\Console\Commands\ReconcilePendingDisbursementsCommand;
+use LBHurtado\XChange\Console\Commands\Revenue\CollectRevenueCommand;
+use LBHurtado\XChange\Console\Commands\Revenue\ShowPendingRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Wallet\GetWalletBalanceCommand;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationContract;
@@ -234,6 +236,8 @@ class XChangeServiceProvider extends ServiceProvider
 
                 PrepareLifecycleEnvironmentCommand::class,
                 RunLifecycleScenarioCommand::class,
+                CollectRevenueCommand::class,
+                ShowPendingRevenueCommand::class,
             ]);
         }
 

@@ -14,6 +14,7 @@ class GeneratePayCodeResultData extends Data
 {
     /**
      * @param  array<string, mixed>  $wallet
+     * @param  array<int, array<string, mixed>>  $allocations
      */
     public function __construct(
         public mixed $voucher_id,
@@ -25,5 +26,6 @@ class GeneratePayCodeResultData extends Data
         public array $wallet,
         public DebitData $debit,
         public PayCodeLinksData $links,
+        public array $allocations = [],
     ) {}
 }
