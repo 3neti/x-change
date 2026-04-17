@@ -27,24 +27,24 @@ it('reconciles a disbursement by id', function () {
         attempt_count: 1,
     );
 
-    $updated = new DisbursementReconciliationData(
-        id: 1,
-        voucher_id: 10,
-        voucher_code: 'TEST-1234',
-        claim_type: 'withdraw',
-        provider: 'constellation',
-        provider_reference: 'REF-001',
-        provider_transaction_id: 'TX-001',
-        transaction_uuid: 'UUID-001',
-        status: 'succeeded',
-        internal_status: 'matched',
-        amount: 100.00,
-        currency: 'PHP',
-        bank_code: 'GXCHPHM2XXX',
-        account_number_masked: '******4567',
-        settlement_rail: 'INSTAPAY',
-        attempt_count: 1,
-    );
+    $updated = [
+        'id' => 1,
+        'voucher_id' => 10,
+        'voucher_code' => 'TEST-1234',
+        'claim_type' => 'withdraw',
+        'provider' => 'constellation',
+        'provider_reference' => 'REF-001',
+        'provider_transaction_id' => 'TX-001',
+        'transaction_uuid' => 'UUID-001',
+        'status' => 'succeeded',
+        'internal_status' => 'matched',
+        'amount' => 100.00,
+        'currency' => 'PHP',
+        'bank_code' => 'GXCHPHM2XXX',
+        'account_number_masked' => '******4567',
+        'settlement_rail' => 'INSTAPAY',
+        'attempt_count' => 1,
+    ];
 
     $store = Mockery::mock(DisbursementReconciliationStoreContract::class);
     $store->shouldReceive('findById')
@@ -62,5 +62,6 @@ it('reconciles a disbursement by id', function () {
 
     $result = $action->handle(1);
 
+    expect($result)->toBeInstanceOf(DisbursementReconciliationData::class);
     expect($result->status)->toBe('succeeded');
 });

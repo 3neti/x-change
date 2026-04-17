@@ -17,7 +17,9 @@ it('generates a pay code end to end and debits the issuer wallet', function () {
 
     $balanceBefore = (float) $wallet->balance;
 
-    $payload = validPayCodePayload();
+    $payload = array_merge(validPayCodePayload(), [
+        'issuer_id' => $user->id,
+    ]);
 
     $action = app(GeneratePayCode::class);
 
@@ -61,9 +63,11 @@ it('generates a pay code end to end and debits the issuer wallet', function () {
 });
 
 it('fails end to end when issuer wallet cannot afford pay code generation', function () {
-    actingAsTestUser(0);
+    $user = actingAsTestUser(0);
 
-    $payload = validPayCodePayload(100.0, 'INSTAPAY', ['inputs' => ['fields' => ['selfie']]]);
+    $payload = array_merge(validPayCodePayload(100.0, 'INSTAPAY', ['inputs' => ['fields' => ['selfie']]]), [
+        'issuer_id' => $user->id,
+    ]);
 
     $action = app(GeneratePayCode::class);
 

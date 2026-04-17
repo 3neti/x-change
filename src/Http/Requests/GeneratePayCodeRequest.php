@@ -53,6 +53,8 @@ class GeneratePayCodeRequest extends FormRequest
             'mask' => ['nullable', 'string'],
             'ttl' => ['nullable'],
             'metadata' => ['nullable', 'array'],
+
+            'issuer_id' => ['sometimes', 'integer'], // TODO: make this intentional, require this
         ];
     }
 }

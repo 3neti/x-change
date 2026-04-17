@@ -11,9 +11,13 @@ use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
+use LBHurtado\XChange\Services\InstructionRevenueAllocatorService;
 
-it('generates a pay code by resolving issuer, estimating cost, debiting wallet, and issuing voucher', function () {
-    $issuer = (object) ['id' => 1, 'name' => 'Issuer'];
+it('generates a pay code by resolving issuer, estimating cost, allocating revenue, and issuing voucher', function () {
+    $issuer = new \LBHurtado\XChange\Tests\Fakes\User();
+    $issuer->id = 1;
+    $issuer->name = 'Issuer';
+
     $wallet = (object) ['id' => 10, 'balance' => 1000];
 
     $input = [
@@ -64,8 +68,6 @@ it('generates a pay code by resolving issuer, estimating cost, debiting wallet, 
         ],
     ];
 
-    $debit = (object) ['id' => 501, 'amount' => 31.0];
-
     $users = Mockery::mock(UserResolverContract::class);
     $users->shouldReceive('resolve')
         ->once()
@@ -88,24 +90,6 @@ it('generates a pay code by resolving issuer, estimating cost, debiting wallet, 
         ->with($wallet, 31.0)
         ->andReturnNull();
 
-    $wallets->shouldReceive('debit')
-        ->once()
-        ->with($wallet, 31.0, Mockery::on(function (array $meta) {
-            expect($meta['reason'])->toBe('pay_code_issuance');
-            expect($meta['requested_amount'])->toBe(100.0);
-            expect($meta['requested_currency'])->toBe('PHP');
-            expect($meta['cost']['currency'])->toBe('PHP');
-            expect($meta['cost']['base_fee'])->toBe(1.0);
-            expect($meta['cost']['components']['kyc'])->toBe(25.0);
-            expect($meta['cost']['components']['selfie'])->toBe(5.0);
-            expect($meta['cost']['total'])->toBe(31.0);
-            expect($meta['idempotency_key'])->toBe('idem-123');
-            expect($meta['correlation_id'])->toBe('corr-456');
-
-            return true;
-        }))
-        ->andReturn($debit);
-
     $wallets->shouldReceive('getBalance')
         ->once()
         ->with($wallet)
@@ -123,11 +107,23 @@ it('generates a pay code by resolving issuer, estimating cost, debiting wallet, 
         ->with($issuer, $input)
         ->andReturn($issued);
 
+    $allocator = Mockery::mock(InstructionRevenueAllocatorService::class);
+    $allocator->shouldReceive('allocate')
+        ->once()
+        ->andReturn([
+            'debit' => [
+                'id' => 501,
+                'amount' => 31.0,
+            ],
+            'allocations' => [],
+        ]);
+
     $action = new GeneratePayCode(
         $users,
         $wallets,
         $estimateAction,
         $issuance,
+        $allocator,
     );
 
     $result = $action->handle($input);
@@ -162,11 +158,14 @@ it('throws when issuer cannot be resolved', function () {
     $estimateAction = Mockery::mock(EstimatePayCodeCost::class);
     $issuance = Mockery::mock(PayCodeIssuanceContract::class);
 
+    $allocator = Mockery::mock(InstructionRevenueAllocatorService::class);
+
     $action = new GeneratePayCode(
         $users,
         $wallets,
         $estimateAction,
         $issuance,
+        $allocator,
     );
 
     expect(fn () => $action->handle($input))
@@ -227,11 +226,14 @@ it('stops before issuance when wallet cannot afford the estimated cost', functio
     $issuance = Mockery::mock(PayCodeIssuanceContract::class);
     $issuance->shouldNotReceive('issue');
 
+    $allocator = Mockery::mock(InstructionRevenueAllocatorService::class);
+
     $action = new GeneratePayCode(
         $users,
         $wallets,
         $estimateAction,
         $issuance,
+        $allocator,
     );
 
     expect(fn () => $action->handle($input))

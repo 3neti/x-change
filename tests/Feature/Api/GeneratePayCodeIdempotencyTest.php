@@ -5,7 +5,7 @@ declare(strict_types=1);
 use LBHurtado\Voucher\Models\Voucher;
 
 it('replays the same pay code response for the same idempotency key and payload', function () {
-    actingAsTestUser(1_000_000);
+    $user = actingAsTestUser(1_000_000);
 
     $payload = [
         'cash' => [
@@ -44,6 +44,8 @@ it('replays the same pay code response for the same idempotency key and payload'
         'mask' => '****',
         'ttl' => null,
         'metadata' => [],
+
+        'issuer_id' => $user->id,
     ];
 
     $headers = [
@@ -63,7 +65,7 @@ it('replays the same pay code response for the same idempotency key and payload'
 });
 
 it('returns conflict when the same idempotency key is reused with a different payload', function () {
-    actingAsTestUser(1_000_000);
+    $user = actingAsTestUser(1_000_000);
 
     $headers = [
         'Idempotency-Key' => 'idem-002',
@@ -104,6 +106,8 @@ it('returns conflict when the same idempotency key is reused with a different pa
         'mask' => '****',
         'ttl' => null,
         'metadata' => [],
+
+        'issuer_id' => $user->id,
     ];
 
     $secondPayload = [
@@ -141,6 +145,8 @@ it('returns conflict when the same idempotency key is reused with a different pa
         'mask' => '****',
         'ttl' => null,
         'metadata' => [],
+
+        'issuer_id' => $user->id,
     ];
 
     $this->postJson(xchangeApi('pay-codes'), $firstPayload, $headers)

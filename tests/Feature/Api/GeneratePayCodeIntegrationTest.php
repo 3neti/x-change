@@ -14,7 +14,9 @@ it('generates a pay code end to end via api and debits the issuer wallet', funct
 
     $balanceBefore = (float) $wallet->balance;
 
-    $payload = validPayCodePayload();
+    $payload = array_merge(validPayCodePayload(), [
+        'issuer_id' => $user->id,
+    ]);
 
     $response = $this->postJson(xchangeApi('pay-codes'), $payload);
 
@@ -79,7 +81,7 @@ it('generates a pay code end to end via api and debits the issuer wallet', funct
 });
 
 it('fails via api when issuer wallet cannot afford pay code generation', function () {
-    actingAsTestUser(0);
+    $user = actingAsTestUser(0);
 
     $payload = [
         'cash' => [
@@ -118,6 +120,7 @@ it('fails via api when issuer wallet cannot afford pay code generation', functio
         'mask' => '****',
         'ttl' => null,
         'metadata' => [],
+        'issuer_id' => $user->id,
     ];
 
     $response = $this->postJson(xchangeApi('pay-codes'), $payload);

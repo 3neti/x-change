@@ -236,19 +236,21 @@
         },
         {
             "name": "3neti/instruction",
-            "version": "v0.2.1",
+            "version": "v0.2.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/3neti/instruction.git",
-                "reference": "a8d1729f29b452ddf2d034930ed524a93e070c2d"
+                "reference": "8c899d5bf5aaa669d8f1d08c89433dca6fc55301"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/3neti/instruction/zipball/a8d1729f29b452ddf2d034930ed524a93e070c2d",
-                "reference": "a8d1729f29b452ddf2d034930ed524a93e070c2d",
+                "url": "https://api.github.com/repos/3neti/instruction/zipball/8c899d5bf5aaa669d8f1d08c89433dca6fc55301",
+                "reference": "8c899d5bf5aaa669d8f1d08c89433dca6fc55301",
                 "shasum": ""
             },
             "require": {
+                "bavix/laravel-wallet": "^11.5",
+                "brick/money": "^0.10|^0.11|^0.12|^0.13",
                 "illuminate/contracts": "^11.0|^12.0|^13.0",
                 "illuminate/database": "^11.0|^12.0|^13.0",
                 "illuminate/support": "^11.0|^12.0|^13.0",
@@ -282,9 +284,9 @@
             "description": "Instruction pricing and charge evaluation package.",
             "support": {
                 "issues": "https://github.com/3neti/instruction/issues",
-                "source": "https://github.com/3neti/instruction/tree/v0.2.1"
+                "source": "https://github.com/3neti/instruction/tree/v0.2.2"
             },
-            "time": "2026-04-13T07:27:21+00:00"
+            "time": "2026-04-16T04:21:45+00:00"
         },
         {
             "name": "3neti/laravel-model-channel",

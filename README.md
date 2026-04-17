@@ -103,6 +103,15 @@ Key Pattern:
 
 ---
 
+## 8. Reports
+
+- xchange-revenue-pending
+- xchange-revenue-collections
+- xchange-revenue-summary
+- xchange-revenue-by-instruction
+
+---
+
 # 🔁 Flow Overview
 
 Pay Code Generation → DTO → API  

@@ -9,8 +9,9 @@ use LBHurtado\XChange\Services\DefaultClaimExecutionFactory;
 
 it('returns redeem executor for a normal voucher', function () {
     $voucher = Mockery::mock(\LBHurtado\Voucher\Models\Voucher::class);
-    $voucher->shouldReceive('canWithdraw')->once()->andReturn(false);
-    $voucher->shouldReceive('getSliceMode')->once()->andReturn(null);
+    $voucher->shouldReceive('isRedeemed')->once()->andReturn(false);
+    $voucher->shouldReceive('canWithdraw')->never();
+    $voucher->shouldReceive('getSliceMode')->never();
 
     $redeemExecutor = Mockery::mock(RedeemPayCode::class);
 
@@ -28,6 +29,7 @@ it('returns redeem executor for a normal voucher', function () {
 
 it('returns withdraw executor when voucher is withdrawable', function () {
     $voucher = Mockery::mock(\LBHurtado\Voucher\Models\Voucher::class);
+    $voucher->shouldReceive('isRedeemed')->once()->andReturn(true);
     $voucher->shouldReceive('canWithdraw')->once()->andReturn(true);
     $voucher->shouldReceive('getSliceMode')->never();
 
@@ -47,10 +49,10 @@ it('returns withdraw executor when voucher is withdrawable', function () {
     expect($result)->toBe($withdrawExecutor);
 });
 
-it('returns withdraw executor when voucher has a slice mode', function () {
+it('returns redeem executor when voucher is redeemed but not withdrawable', function () {
     $voucher = Mockery::mock(\LBHurtado\Voucher\Models\Voucher::class);
+    $voucher->shouldReceive('isRedeemed')->once()->andReturn(true);
     $voucher->shouldReceive('canWithdraw')->once()->andReturn(false);
-    $voucher->shouldReceive('getSliceMode')->once()->andReturn('open');
 
     $redeemExecutor = Mockery::mock(RedeemPayCode::class);
     $withdrawExecutor = Mockery::mock(WithdrawPayCode::class);
@@ -65,5 +67,5 @@ it('returns withdraw executor when voucher has a slice mode', function () {
 
     $result = $factory->make($voucher, []);
 
-    expect($result)->toBe($withdrawExecutor);
+    expect($result)->toBe($redeemExecutor);
 });

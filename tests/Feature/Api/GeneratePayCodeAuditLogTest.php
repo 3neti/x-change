@@ -6,7 +6,7 @@ use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 
 it('logs generate requested and succeeded events', function () {
-    actingAsTestUser(1_000_000);
+    $user = actingAsTestUser(1_000_000);
 
     $logger = fakeAuditLogger();
 
@@ -47,6 +47,8 @@ it('logs generate requested and succeeded events', function () {
         'mask' => '****',
         'ttl' => null,
         'metadata' => [],
+
+        'issuer_id' => $user->id,
     ];
 
     $this->postJson(xchangeApi('pay-codes'), $payload)

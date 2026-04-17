@@ -140,6 +140,8 @@ abstract class TestCase extends Orchestra
             JsonNormalizer::class,
         ]);
         $app['config']->set('data.date_format', 'Y-m-d\\TH:i:sP');
+
+        config()->set('x-change.onboarding.issuer_model', \LBHurtado\XChange\Tests\Fakes\User::class);
     }
 
     protected function defineDatabaseMigrations(): void
