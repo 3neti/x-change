@@ -1,0 +1,53 @@
+driver:
+  id: xchange-revenue-collections
+  version: 1.0.0
+  title: Revenue Collections
+  description: Historical revenue collected from instruction items
+  group: x-change
+
+resolver: LBHurtado\XChange\Reports\Resolvers\RevenueCollectionsReportResolver
+
+columns:
+  - key: index
+    label: Index
+    type: text
+    sortable: true
+
+  - key: name
+    label: Name
+    type: text
+    sortable: true
+
+  - key: amount
+    label: Amount
+    type: currency
+    sortable: true
+
+  - key: destination
+    label: Destination
+    type: text
+    sortable: true
+
+  - key: collected_at
+    label: Collected At
+    type: datetime
+    sortable: true
+
+  - key: transfer_uuid
+    label: Transfer UUID
+    type: text
+    sortable: false
+
+filters:
+  - key: index
+    label: Instruction Index
+    type: text
+
+  - key: min_amount
+    label: Minimum Amount
+    type: number
+
+defaults:
+  sort: collected_at
+  sort_direction: desc
+  per_page: 25

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use LBHurtado\Instruction\Models\InstructionItem;
 
 class RevenueCollection extends Model
 {
@@ -27,12 +28,14 @@ class RevenueCollection extends Model
 
     protected $casts = [
         'amount' => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     public function instructionItem(): BelongsTo
     {
         return $this->belongsTo(
-            config('x-change.revenue.instruction_item_model', \App\Models\InstructionItem::class),
+            config('x-change.revenue.instruction_item_model', InstructionItem::class),
             'instruction_item_id'
         );
     }
@@ -40,7 +43,7 @@ class RevenueCollection extends Model
     public function collectedBy(): BelongsTo
     {
         return $this->belongsTo(
-            config('x-change.revenue.destination.model', \App\Models\User::class),
+            config('x-change.lifecycle.defaults.user_model', \App\Models\User::class),
             'collected_by_user_id'
         );
     }

@@ -13,6 +13,7 @@ use Illuminate\Validation\ValidationException;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider;
 use LBHurtado\PaymentGateway\Contracts\WalletProxy;
+use LBHurtado\ReportRegistry\Contracts\ReportResolverInterface;
 use LBHurtado\Voucher\Events\VoucherDisbursementFailed;
 use LBHurtado\Voucher\Events\VoucherDisbursementSucceeded;
 use LBHurtado\XChange\Console\Commands\Claim\LoadPayCodeRedemptionCompletionContextCommand;
@@ -90,6 +91,7 @@ class XChangeServiceProvider extends ServiceProvider
         $this->registerIntegrations();
         $this->registerServiceContracts();
         $this->registerIntegrationContracts();
+        $this->registerReportDriverSource();
 
         $this->app->bind(RedemptionFlowPreparationContract::class, function ($app) {
             $service = config('x-change.services.redemption_flow_preparation', DefaultRedemptionFlowPreparationService::class);
@@ -314,6 +316,21 @@ class XChangeServiceProvider extends ServiceProvider
             $this->app->singleton($contract, function ($app) use ($integrationKey) {
                 return $app->make("x-change.integrations.{$integrationKey}");
             });
+        }
+    }
+
+    protected function registerReportDriverSource(): void
+    {
+        if (! interface_exists(ReportResolverInterface::class)) {
+            return;
+        }
+
+        $sources = $this->app['config']->get('report-registry.driver_sources', []);
+        $path = $this->packagePath('resources/report-drivers');
+
+        if (! in_array($path, $sources, true)) {
+            $sources[] = $path;
+            $this->app['config']->set('report-registry.driver_sources', $sources);
         }
     }
 

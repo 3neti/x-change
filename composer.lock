@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a19184d2f9302c02ca116001a5290b31",
+    "content-hash": "34ce9611c833cb85f8774a0693316864",
     "packages": [
         {
             "name": "3neti/cash",
@@ -522,6 +522,62 @@
                 "source": "https://github.com/3neti/money-issuer/tree/v1.0.2"
             },
             "time": "2026-04-01T07:17:18+00:00"
+        },
+        {
+            "name": "3neti/report-registry",
+            "version": "v1.1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/3neti/report-registry.git",
+                "reference": "5bf5358c61428cf0592ad14b274da80b4cd225d6"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/3neti/report-registry/zipball/5bf5358c61428cf0592ad14b274da80b4cd225d6",
+                "reference": "5bf5358c61428cf0592ad14b274da80b4cd225d6",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/database": "^11.0 || ^12.0 || ^13.0",
+                "illuminate/support": "^11.0 || ^12.0 || ^13.0",
+                "php": "^8.2",
+                "spatie/laravel-data": "^4.0",
+                "symfony/yaml": "^7.0",
+                "zordius/lightncandy": "^1.2"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^9.0 || ^10.0 || ^11.0",
+                "pestphp/pest": "^3.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "LBHurtado\\ReportRegistry\\ReportRegistryServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "LBHurtado\\ReportRegistry\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Lester Hurtado",
+                    "email": "lester@hurtado.ph"
+                }
+            ],
+            "description": "Driver-based report registry with multi-format output and Handlebars templating",
+            "support": {
+                "issues": "https://github.com/3neti/report-registry/issues",
+                "source": "https://github.com/3neti/report-registry/tree/v1.1.1"
+            },
+            "time": "2026-04-16T23:16:55+00:00"
         },
         {
             "name": "3neti/settlement-envelope",
@@ -9350,6 +9406,62 @@
                 "source": "https://github.com/webmozarts/assert/tree/1.12.1"
             },
             "time": "2025-10-29T15:56:20+00:00"
+        },
+        {
+            "name": "zordius/lightncandy",
+            "version": "v1.2.6",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/zordius/lightncandy.git",
+                "reference": "b451f73e8b5c73e62e365997ba3c993a0376b72a"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/zordius/lightncandy/zipball/b451f73e8b5c73e62e365997ba3c993a0376b72a",
+                "reference": "b451f73e8b5c73e62e365997ba3c993a0376b72a",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.1.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": ">=7"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.2.5-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "LightnCandy\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Zordius Chen",
+                    "email": "zordius@gmail.com"
+                }
+            ],
+            "description": "An extremely fast PHP implementation of handlebars ( http://handlebarsjs.com/ ) and mustache ( http://mustache.github.io/ ).",
+            "homepage": "https://github.com/zordius/lightncandy",
+            "keywords": [
+                "handlebars",
+                "logicless",
+                "mustache",
+                "php",
+                "template"
+            ],
+            "support": {
+                "issues": "https://github.com/zordius/lightncandy/issues",
+                "source": "https://github.com/zordius/lightncandy/tree/v1.2.6"
+            },
+            "time": "2021-07-11T04:52:41+00:00"
         }
     ],
     "packages-dev": [

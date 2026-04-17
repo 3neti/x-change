@@ -1,0 +1,56 @@
+driver:
+  id: xchange-revenue-pending
+  version: 1.0.0
+  title: Pending Revenue
+  description: Current collectible balances per instruction item
+  group: x-change
+
+resolver: LBHurtado\XChange\Reports\Resolvers\PendingRevenueReportResolver
+
+columns:
+  - key: index
+    label: Index
+    type: text
+    sortable: true
+
+  - key: name
+    label: Name
+    type: text
+    sortable: true
+
+  - key: type
+    label: Type
+    type: text
+    sortable: true
+
+  - key: balance
+    label: Balance
+    type: currency
+    sortable: true
+
+  - key: destination
+    label: Destination
+    type: text
+    sortable: false
+
+  - key: tx_count
+    label: Tx Count
+    type: number
+    sortable: true
+
+filters:
+  - key: min_amount
+    label: Minimum Amount
+    type: number
+
+  - key: type
+    label: Type
+    type: text
+
+defaults:
+  sort: balance
+  sort_direction: desc
+  per_page: 25
+
+templates:
+  html: revenue-pending.hbs
