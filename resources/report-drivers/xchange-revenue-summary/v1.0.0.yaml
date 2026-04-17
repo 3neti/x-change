@@ -1,0 +1,64 @@
+driver:
+  id: xchange-revenue-summary
+  version: 1.0.0
+  title: Revenue Summary
+  description: Revenue KPI summary for today, this week, and lifetime
+  group: x-change
+
+resolver: LBHurtado\XChange\Reports\Resolvers\RevenueSummaryReportResolver
+
+columns:
+  - key: collected_today
+    label: Collected Today
+    type: currency
+    sortable: false
+
+  - key: collected_this_week
+    label: Collected This Week
+    type: currency
+    sortable: false
+
+  - key: collected_lifetime
+    label: Collected Lifetime
+    type: currency
+    sortable: false
+
+  - key: collections_today
+    label: Collections Today
+    type: number
+    sortable: false
+
+  - key: collections_this_week
+    label: Collections This Week
+    type: number
+    sortable: false
+
+  - key: collections_lifetime
+    label: Collections Lifetime
+    type: number
+    sortable: false
+
+  - key: last_collected_at
+    label: Last Collected At
+    type: datetime
+    sortable: false
+
+  - key: top_instruction_index
+    label: Top Instruction Index
+    type: text
+    sortable: false
+
+  - key: top_instruction_name
+    label: Top Instruction Name
+    type: text
+    sortable: false
+
+  - key: top_instruction_amount
+    label: Top Instruction Amount
+    type: currency
+    sortable: false
+
+filters: []
+
+defaults:
+  per_page: 1

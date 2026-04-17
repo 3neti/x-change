@@ -1,0 +1,53 @@
+driver:
+  id: xchange-revenue-by-instruction
+  version: 1.0.0
+  title: Revenue by Instruction
+  description: Aggregated revenue totals grouped by instruction item
+  group: x-change
+
+resolver: LBHurtado\XChange\Reports\Resolvers\RevenueByInstructionReportResolver
+
+columns:
+  - key: index
+    label: Index
+    type: text
+    sortable: true
+
+  - key: name
+    label: Name
+    type: text
+    sortable: true
+
+  - key: type
+    label: Type
+    type: text
+    sortable: true
+
+  - key: collections_count
+    label: Collections
+    type: number
+    sortable: true
+
+  - key: total_amount
+    label: Total Amount
+    type: currency
+    sortable: true
+
+  - key: last_collected_at
+    label: Last Collected At
+    type: datetime
+    sortable: true
+
+filters:
+  - key: type
+    label: Type
+    type: text
+
+  - key: min_amount
+    label: Minimum Amount
+    type: number
+
+defaults:
+  sort: total_amount
+  sort_direction: desc
+  per_page: 25
