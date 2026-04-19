@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Schema;
 use LBHurtado\Cash\CashServiceProvider;
 use LBHurtado\Contact\ContactServiceProvider;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
+use LBHurtado\EmiCore\EmiCoreServiceProvider;
 use LBHurtado\Instruction\Database\Seeders\InstructionItemSeeder;
 use LBHurtado\Instruction\InstructionServiceProvider;
 use LBHurtado\Voucher\Models\Voucher;
@@ -28,6 +29,7 @@ use Spatie\LaravelData\Normalizers\ArrayNormalizer;
 use Spatie\LaravelData\Normalizers\JsonNormalizer;
 use Spatie\LaravelData\Normalizers\ModelNormalizer;
 use Spatie\LaravelData\Normalizers\ObjectNormalizer;
+use Spatie\SchemalessAttributes\SchemalessAttributesServiceProvider;
 
 abstract class TestCase extends Orchestra
 {
@@ -53,6 +55,11 @@ abstract class TestCase extends Orchestra
         $this->fakeAuditLogger = new FakeAuditLogger;
         $this->app->instance(AuditLoggerContract::class, $this->fakeAuditLogger);
 
+        // Test-only helper tables owned by this test suite.
+        if (! Schema::hasTable('users')) {
+            $this->runMigrationDirectory(__DIR__.'/database/migrations');
+        }
+
         $this->seedInstructionItems();
     }
 
@@ -65,6 +72,7 @@ abstract class TestCase extends Orchestra
     {
         return [
             LaravelDataServiceProvider::class,
+            SchemalessAttributesServiceProvider::class,
             BavixWalletServiceProvider::class,
             CashServiceProvider::class,
             LBHurtadoWalletServiceProvider::class,
@@ -72,6 +80,7 @@ abstract class TestCase extends Orchestra
             ContactServiceProvider::class,
             VoucherServiceProvider::class,
             InstructionServiceProvider::class,
+            EmiCoreServiceProvider::class,
             XChangeServiceProvider::class,
         ];
     }
@@ -360,5 +369,23 @@ abstract class TestCase extends Orchestra
     protected function seedInstructionItems(): void
     {
         $this->seed(InstructionItemSeeder::class);
+    }
+
+    protected function runMigrationDirectory(string $path): void
+    {
+        if (! is_dir($path)) {
+            throw new \RuntimeException("Migration directory not found: {$path}");
+        }
+
+        $files = glob($path.'/*.php') ?: [];
+        sort($files);
+
+        foreach ($files as $file) {
+            $migration = include $file;
+
+            if (is_object($migration) && method_exists($migration, 'up')) {
+                $migration->up();
+            }
+        }
     }
 }

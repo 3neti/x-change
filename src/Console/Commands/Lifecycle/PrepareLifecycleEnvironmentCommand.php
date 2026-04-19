@@ -137,6 +137,10 @@ class PrepareLifecycleEnvironmentCommand extends Command
             return false;
         }
 
+        if (app()->runningUnitTests()) {
+            return true;
+        }
+
         return $this->confirm('This will destroy all database data. Continue?', false);
     }
 
