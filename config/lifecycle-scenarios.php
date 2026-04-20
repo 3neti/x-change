@@ -726,5 +726,101 @@ return [
                 'status' => 'succeeded',
             ],
         ],
+
+        'reconciliation_review_required' => [
+            'label' => 'Reconciliation Review Required',
+            'amount' => 25,
+            'currency' => 'PHP',
+            'cash' => [],
+            'inputs' => [
+                'fields' => [],
+            ],
+            'feedback' => [],
+            'meta' => [
+                'family' => 'reconciliation',
+                'tags' => ['reconciliation', 'review', 'provider'],
+            ],
+            'metadata' => [
+                'lifecycle' => [
+                    'reconciliation_mode' => 'review_required',
+                ],
+            ],
+            'claim' => [],
+            'expect' => [
+                'status' => 'succeeded',
+            ],
+        ],
+
+        'reconciliation_provider_failed_recorded' => [
+            'label' => 'Reconciliation Provider Failed Recorded',
+            'amount' => 25,
+            'currency' => 'PHP',
+            'cash' => [],
+            'inputs' => [
+                'fields' => [],
+            ],
+            'feedback' => [],
+            'meta' => [
+                'family' => 'reconciliation',
+                'tags' => ['reconciliation', 'failure', 'provider'],
+            ],
+            'metadata' => [
+                'lifecycle' => [
+                    'reconciliation_mode' => 'provider_failed_recorded',
+                ],
+            ],
+            'claim' => [],
+            'expect' => [
+                'status' => 'succeeded',
+            ],
+        ],
+
+        'reconciliation_resolved_success' => [
+            'label' => 'Reconciliation Resolved Success',
+            'amount' => 25,
+            'currency' => 'PHP',
+            'cash' => [],
+            'inputs' => [
+                'fields' => [],
+            ],
+            'feedback' => [],
+            'meta' => [
+                'family' => 'reconciliation',
+                'tags' => ['reconciliation', 'resolve', 'success'],
+            ],
+            'metadata' => [
+                'lifecycle' => [
+                    'reconciliation_mode' => 'resolve_success',
+                ],
+            ],
+            'claim' => [],
+            'expect' => [
+                'status' => 'succeeded',
+            ],
+        ],
+
+        'reconciliation_failed_pending_review' => [
+            'label' => 'Reconciliation Failed Pending Review',
+            'amount' => 25,
+            'currency' => 'PHP',
+            'cash' => [],
+            'inputs' => [
+                'fields' => [],
+            ],
+            'feedback' => [],
+            'meta' => [
+                'family' => 'reconciliation',
+                'tags' => ['reconciliation', 'resolve', 'failed'],
+            ],
+            'metadata' => [
+                'lifecycle' => [
+                    'reconciliation_mode' => 'resolve_failed',
+                ],
+            ],
+            'claim' => [],
+            'expect' => [
+                'status' => 'succeeded',
+            ],
+        ],
     ],
 ];

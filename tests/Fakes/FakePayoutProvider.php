@@ -33,6 +33,14 @@ class FakePayoutProvider implements PayoutProvider
 
     public ?\Throwable $nextException = null;
 
+    public ?PayoutStatus $nextCheckStatus = null;
+
+    public ?string $nextCheckTransactionId = null;
+
+    public ?string $nextCheckUuid = null;
+
+    public ?string $nextCheckProvider = null;
+
     /**
      * Backward-compatible flag used by older tests.
      * When true, disburse() returns FAILED unless overridden by nextStatus.
@@ -51,6 +59,11 @@ class FakePayoutProvider implements PayoutProvider
         $this->nextProvider = 'fake';
         $this->nextException = null;
         $this->shouldFail = false;
+
+        $this->nextCheckStatus = null;
+        $this->nextCheckTransactionId = null;
+        $this->nextCheckUuid = null;
+        $this->nextCheckProvider = null;
 
         return $this;
     }
@@ -136,10 +149,10 @@ class FakePayoutProvider implements PayoutProvider
         $this->checkStatusCallCount++;
 
         return new PayoutResultData(
-            transaction_id: $transactionId,
-            uuid: $this->nextUuid ?? Str::uuid()->toString(),
-            status: $this->nextStatus,
-            provider: $this->nextProvider ?? 'fake',
+            transaction_id: $this->nextCheckTransactionId ?? $transactionId,
+            uuid: $this->nextCheckUuid ?? $this->nextUuid ?? Str::uuid()->toString(),
+            status: $this->nextCheckStatus ?? $this->nextStatus,
+            provider: $this->nextCheckProvider ?? $this->nextProvider ?? 'fake',
         );
     }
 
@@ -166,5 +179,31 @@ class FakePayoutProvider implements PayoutProvider
         expect($this->lastRequest)->not->toBeNull();
 
         $assertion($this->lastRequest);
+    }
+
+    public function willResolveCheckStatusAsSuccessful(
+        ?string $transactionId = null,
+        ?string $uuid = null,
+        ?string $provider = 'fake'
+    ): self {
+        $this->nextCheckStatus = PayoutStatus::COMPLETED;
+        $this->nextCheckTransactionId = $transactionId;
+        $this->nextCheckUuid = $uuid;
+        $this->nextCheckProvider = $provider;
+
+        return $this;
+    }
+
+    public function willResolveCheckStatusAsFailed(
+        ?string $transactionId = null,
+        ?string $uuid = null,
+        ?string $provider = 'fake'
+    ): self {
+        $this->nextCheckStatus = PayoutStatus::FAILED;
+        $this->nextCheckTransactionId = $transactionId;
+        $this->nextCheckUuid = $uuid;
+        $this->nextCheckProvider = $provider;
+
+        return $this;
     }
 }

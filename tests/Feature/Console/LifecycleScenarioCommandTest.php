@@ -128,5 +128,10 @@ it('renders lifecycle results as json', function () {
     expect($payload['scenario'])->toBe('secret_required');
     expect($payload['selected_attempt'])->toBe('wrong_secret_fails');
     expect($payload['attempt_summary']['passed'])->toBe(1);
+    expect($payload['attempt_summary']['failed'])->toBe(0);
+    expect($payload['attempt_summary']['total'])->toBe(1);
+    expect($payload['attempts'])->toHaveCount(1);
     expect($payload['attempts'][0]['name'])->toBe('wrong_secret_fails');
+    expect($payload['attempts'][0]['status'])->toBe('failed');
+    expect(data_get($payload, 'attempts.0.evaluation.summary'))->toBe('FAILED as expected');
 });
