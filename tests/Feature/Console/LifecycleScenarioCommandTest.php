@@ -74,3 +74,59 @@ it('runs a blocked time-window scenario without redeeming the voucher', function
     expect($voucher->redeemed_at)->toBeNull();
     expect($voucher->expires_at)->not->toBeNull();
 });
+
+it('runs only the selected attempt for a multi-attempt scenario', function () {
+    $this->artisan('xchange:lifecycle:run', [
+        'scenario' => 'secret_required',
+        '--only-attempt' => 'wrong_secret_fails',
+    ])
+        ->expectsOutputToContain('Running scenario: secret_required')
+        ->expectsOutputToContain('Selected attempt: wrong_secret_fails')
+        ->expectsOutputToContain('Attempt [wrong_secret_fails]: FAILED as expected')
+        ->doesntExpectOutputToContain('correct_secret_succeeds')
+        ->expectsOutputToContain('Lifecycle scenario completed.')
+        ->assertExitCode(0);
+
+    $voucher = Voucher::query()->latest('id')->first();
+
+    expect($voucher)->not->toBeNull();
+    expect($voucher->redeemed_at)->toBeNull();
+    expect(data_get($voucher->instructions?->toArray(), 'cash.validation.secret'))->toBe('ABC123');
+});
+
+it('fails when the selected attempt does not exist', function () {
+    $this->artisan('xchange:lifecycle:run', [
+        'scenario' => 'secret_required',
+        '--only-attempt' => 'does_not_exist',
+    ])
+        ->expectsOutputToContain('Unknown attempt [does_not_exist]. Available attempts: wrong_secret_fails, correct_secret_succeeds')
+        ->assertExitCode(1);
+
+    expect(Voucher::query()->count())->toBe(0);
+});
+
+it('includes attempt summary in normal output', function () {
+    $this->artisan('xchange:lifecycle:run', [
+        'scenario' => 'secret_required',
+        '--only-attempt' => 'wrong_secret_fails',
+    ])
+        ->expectsOutputToContain('Attempts: 1/1 passed')
+        ->assertExitCode(0);
+});
+
+it('renders lifecycle results as json', function () {
+    $exitCode = Artisan::call('xchange:lifecycle:run', [
+        'scenario' => 'secret_required',
+        '--only-attempt' => 'wrong_secret_fails',
+        '--json' => true,
+    ]);
+
+    $payload = json_decode(Artisan::output(), true);
+
+    expect($exitCode)->toBe(0);
+    expect($payload)->toBeArray();
+    expect($payload['scenario'])->toBe('secret_required');
+    expect($payload['selected_attempt'])->toBe('wrong_secret_fails');
+    expect($payload['attempt_summary']['passed'])->toBe(1);
+    expect($payload['attempts'][0]['name'])->toBe('wrong_secret_fails');
+});

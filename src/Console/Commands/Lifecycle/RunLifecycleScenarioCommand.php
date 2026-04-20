@@ -20,7 +20,7 @@ use RuntimeException;
 class RunLifecycleScenarioCommand extends Command
 {
     protected $signature = 'xchange:lifecycle:run
-        {scenario? : Scenario key from x-change.lifecycle.scenarios}
+      {scenario? : Scenario key from x-change.lifecycle.scenarios}
         {--list : List available scenarios}
         {--provider=netbank : Provider label}
         {--issuer= : Issuer user id}
@@ -34,6 +34,7 @@ class RunLifecycleScenarioCommand extends Command
         {--poll= : Poll interval in seconds}
         {--max-polls= : Maximum number of polling attempts}
         {--accept-pending : Treat a trusted pending provider transaction as good enough}
+        {--only-attempt= : Run only one named attempt from the scenario}
         {--json : Output JSON}';
 
     protected $description = 'Run a named lifecycle scenario.';
@@ -74,6 +75,13 @@ class RunLifecycleScenarioCommand extends Command
         $defaults = (array) config('x-change.lifecycle.defaults', []);
         $scenario = array_replace_recursive($defaults, $scenario);
         $attempts = $this->normalizeScenarioAttempts($scenario);
+        try {
+            $attempts = $this->filterAttemptsForOption($attempts);
+        } catch (RuntimeException $e) {
+            $this->error($e->getMessage());
+
+            return self::FAILURE;
+        }
 
         $issuerId = (int) ($this->option('issuer') ?: $scenario['issuer_id'] ?? 1);
         $walletId = (int) ($this->option('wallet') ?: $scenario['wallet_id'] ?? 1);
@@ -88,6 +96,11 @@ class RunLifecycleScenarioCommand extends Command
 
         if (! $this->option('json')) {
             $this->info("Running scenario: {$scenarioKey}");
+
+            if (is_string($this->option('only-attempt')) && trim((string) $this->option('only-attempt')) !== '') {
+                $this->line('Selected attempt: '.$this->option('only-attempt'));
+            }
+
             $this->line('Estimating cost...');
         }
 
@@ -113,9 +126,15 @@ class RunLifecycleScenarioCommand extends Command
             return $this->renderResult([
                 'scenario' => $scenarioKey,
                 'label' => $scenario['label'] ?? $scenarioKey,
+                'selected_attempt' => $this->option('only-attempt'),
                 'issuer' => $this->formatUserSummary($issuer),
                 'claim_mobile' => $baseClaimMobile,
                 'attempts' => array_keys($attempts),
+                'attempt_summary' => [
+                    'passed' => 0,
+                    'failed' => 0,
+                    'total' => count($attempts),
+                ],
                 'estimate' => $estimate,
                 'generated' => $generated->toArray(),
                 'wallet_transactions' => $walletTransactions,
@@ -208,12 +227,20 @@ class RunLifecycleScenarioCommand extends Command
             limit: 10,
         );
 
+        $attemptSummary = $this->summarizeAttempts($attemptResults);
+
+        if (! $this->option('json')) {
+            $this->renderAttemptsSummary($attemptSummary);
+        }
+
         $this->renderResult([
             'scenario' => $scenarioKey,
             'label' => $scenario['label'] ?? $scenarioKey,
+            'selected_attempt' => $this->option('only-attempt'),
             'issuer' => $this->formatUserSummary($issuer),
             'claim_mobile' => $baseClaimMobile,
             'attempts' => $attemptResults,
+            'attempt_summary' => $attemptSummary,
             'estimate' => $estimate,
             'generated' => $generated->toArray(),
             'reconciliation' => $reconciliation?->toArray(),
@@ -229,6 +256,7 @@ class RunLifecycleScenarioCommand extends Command
 
         if (empty($scenarios)) {
             $this->warn('No lifecycle scenarios found.');
+
             return self::SUCCESS;
         }
 
@@ -467,6 +495,7 @@ class RunLifecycleScenarioCommand extends Command
     protected function renderResult(array $payload): int
     {
         if ($this->option('json')) {
+            $payload = $this->normalizePayloadForJson($payload);
             $this->line(json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
             return self::SUCCESS;
@@ -487,6 +516,15 @@ class RunLifecycleScenarioCommand extends Command
 
         if (isset($payload['generated']['code'])) {
             $this->line('Voucher Code: '.$payload['generated']['code']);
+        }
+
+        if (isset($payload['attempt_summary'])) {
+            $summary = $payload['attempt_summary'];
+            $this->line(sprintf(
+                'Attempts: %d/%d passed',
+                (int) ($summary['passed'] ?? 0),
+                (int) ($summary['total'] ?? 0),
+            ));
         }
 
         if (isset($payload['estimate'])) {
@@ -876,9 +914,6 @@ class RunLifecycleScenarioCommand extends Command
         ];
     }
 
-    /**
-     * @return string
-     */
     protected function summarizeEvaluation(
         bool $passed,
         bool $statusPassed,
@@ -963,5 +998,84 @@ class RunLifecycleScenarioCommand extends Command
         if ($actualMessage !== '') {
             $this->line('  Actual message: '.$actualMessage);
         }
+    }
+
+    /**
+     * @param  array<string, array<string, mixed>>  $attempts
+     * @return array<string, array<string, mixed>>
+     */
+    protected function filterAttemptsForOption(array $attempts): array
+    {
+        $onlyAttempt = $this->option('only-attempt');
+
+        if (! is_string($onlyAttempt) || trim($onlyAttempt) === '') {
+            return $attempts;
+        }
+
+        $onlyAttempt = trim($onlyAttempt);
+
+        if (! array_key_exists($onlyAttempt, $attempts)) {
+            throw new RuntimeException(sprintf(
+                'Unknown attempt [%s]. Available attempts: %s',
+                $onlyAttempt,
+                implode(', ', array_keys($attempts))
+            ));
+        }
+
+        return [
+            $onlyAttempt => $attempts[$onlyAttempt],
+        ];
+    }
+
+    /**
+     * @param  array<string, array<string, mixed>>  $attemptResults
+     * @return array<string, int>
+     */
+    protected function summarizeAttempts(array $attemptResults): array
+    {
+        $total = count($attemptResults);
+        $passed = collect($attemptResults)
+            ->filter(fn (array $result) => (bool) data_get($result, 'evaluation.passed', false))
+            ->count();
+
+        $failed = $total - $passed;
+
+        return [
+            'passed' => $passed,
+            'failed' => $failed,
+            'total' => $total,
+        ];
+    }
+
+    /**
+     * @param  array<string, int>  $summary
+     */
+    protected function renderAttemptsSummary(array $summary): void
+    {
+        $this->newLine();
+        $this->info('Attempts Summary:');
+        $this->line('  Passed: '.$summary['passed']);
+        $this->line('  Failed: '.$summary['failed']);
+        $this->line('  Total: '.$summary['total']);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    protected function normalizePayloadForJson(array $payload): array
+    {
+        $attempts = data_get($payload, 'attempts');
+
+        if (is_array($attempts) && ! array_is_list($attempts)) {
+            $payload['attempts'] = collect($attempts)
+                ->map(function (array $attempt, string $name) {
+                    return array_merge(['name' => $name], $attempt);
+                })
+                ->values()
+                ->all();
+        }
+
+        return $payload;
     }
 }
