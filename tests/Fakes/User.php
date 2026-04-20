@@ -14,8 +14,9 @@ use FrittenKeeZ\Vouchers\Concerns\HasVouchers;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
 
-class User extends Authenticatable implements Confirmable, Customer
+class User extends Authenticatable implements Confirmable, Customer, HasMobileChannel
 {
     use CanConfirm;
     use CanPay;
@@ -24,6 +25,8 @@ class User extends Authenticatable implements Confirmable, Customer
     use HasVouchers;
     use HasWalletFloat;
     use Notifiable;
+
+    protected $table = 'users';
 
     /**
      * The attributes that are mass assignable.
@@ -45,4 +48,21 @@ class User extends Authenticatable implements Confirmable, Customer
         'password',
         'remember_token',
     ];
+
+    public function getMobileChannel(): ?string
+    {
+        return $this->mobile;
+    }
+
+    public function setMobileChannel(string|null $mobile): static
+    {
+        $this->mobile = $mobile;
+
+        return $this;
+    }
+
+    public function hasMobileChannel(): bool
+    {
+        // TODO: Implement hasMobileChannel() method.
+    }
 }

@@ -41,14 +41,6 @@ abstract class TestCase extends Orchestra
     {
         parent::setUp();
 
-//        if (Schema::hasTable('vouchers')) {
-//            dump('vouchers columns after parent::setUp', Schema::getColumnListing('vouchers'));
-//        }
-//
-//        if (! Schema::hasColumn('vouchers', 'voucher_type')) {
-//            dump('voucher_type missing after setup');
-//        }
-
         $this->fakePayoutProvider = new FakePayoutProvider;
         $this->app->instance(PayoutProvider::class, $this->fakePayoutProvider);
 
@@ -166,6 +158,12 @@ abstract class TestCase extends Orchestra
 
         // Cash package migrations.
         $this->loadCashPackageMigrations();
+
+        // Contact package migrations.
+        $this->loadContactPackageMigrations();
+
+        // Model-input package migrations.
+        $this->loadModelInputPackageMigrations();
 
         // Higher-level voucher package migrations.
         $this->loadVoucherPackageMigrations();
@@ -387,5 +385,22 @@ abstract class TestCase extends Orchestra
                 $migration->up();
             }
         }
+    }
+
+    protected function loadContactPackageMigrations(): void
+    {
+        $this->runMigrationFilesFromCandidates([
+            $this->packageRoot(ContactServiceProvider::class).'/database/migrations',
+        ]);
+    }
+
+    protected function loadModelInputPackageMigrations(): void
+    {
+        $candidatePaths = [
+            base_path('vendor/3neti/laravel-model-input/database/migrations'),
+            dirname(__DIR__, 4).'/vendor/3neti/laravel-model-input/database/migrations',
+        ];
+
+        $this->runMigrationFilesFromCandidates($candidatePaths);
     }
 }

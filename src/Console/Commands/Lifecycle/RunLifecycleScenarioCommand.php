@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Console\Commands\Lifecycle;
 
+use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Number;
 use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
@@ -20,7 +20,8 @@ use RuntimeException;
 class RunLifecycleScenarioCommand extends Command
 {
     protected $signature = 'xchange:lifecycle:run
-        {scenario : Scenario key from x-change.lifecycle.scenarios}
+        {scenario? : Scenario key from x-change.lifecycle.scenarios}
+        {--list : List available scenarios}
         {--provider=netbank : Provider label}
         {--issuer= : Issuer user id}
         {--wallet= : Wallet owner/user id}
@@ -43,6 +44,9 @@ class RunLifecycleScenarioCommand extends Command
         SubmitPayCodeClaim $submitPayCodeClaim,
         VoucherAccessContract $vouchers,
     ): int {
+        if ($this->option('list')) {
+            return $this->listScenarios();
+        }
         if ($this->option('prepare') || $this->option('fresh')) {
             Artisan::call('xchange:lifecycle:prepare', array_filter([
                 '--fresh' => (bool) $this->option('fresh'),
@@ -67,10 +71,9 @@ class RunLifecycleScenarioCommand extends Command
 
         $this->assertLifecycleUserModelSupportsMobile();
 
-        $scenario = array_replace_recursive(
-            (array) config('x-change.lifecycle.defaults', []),
-            $scenario
-        );
+        $defaults = (array) config('x-change.lifecycle.defaults', []);
+        $scenario = array_replace_recursive($defaults, $scenario);
+        $attempts = $this->normalizeScenarioAttempts($scenario);
 
         $issuerId = (int) ($this->option('issuer') ?: $scenario['issuer_id'] ?? 1);
         $walletId = (int) ($this->option('wallet') ?: $scenario['wallet_id'] ?? 1);
@@ -80,7 +83,7 @@ class RunLifecycleScenarioCommand extends Command
         $maxPolls = $this->resolveMaxPolls($timeout, $poll);
 
         $issuer = $this->resolveIssuerModel($issuerId);
-        $claimMobile = $this->resolveScenarioMobile($scenario, $issuer);
+        $baseClaimMobile = $this->resolveScenarioMobile($scenario, $issuer);
         $idempotencyKey = 'lifecycle-'.(string) str()->uuid();
 
         if (! $this->option('json')) {
@@ -111,32 +114,87 @@ class RunLifecycleScenarioCommand extends Command
                 'scenario' => $scenarioKey,
                 'label' => $scenario['label'] ?? $scenarioKey,
                 'issuer' => $this->formatUserSummary($issuer),
-                'claim_mobile' => $claimMobile,
+                'claim_mobile' => $baseClaimMobile,
+                'attempts' => array_keys($attempts),
                 'estimate' => $estimate,
                 'generated' => $generated->toArray(),
                 'wallet_transactions' => $walletTransactions,
             ]);
         }
 
-        if (! $this->option('json')) {
-            $this->line("Submitting claim for voucher {$code}...");
-        }
-
         $voucher = $vouchers->findByCodeOrFail($code);
-        $claimPayload = $this->buildClaimPayload($scenario, $claimMobile);
-        $claim = $submitPayCodeClaim->handle($voucher, $claimPayload);
 
-        if (! $this->option('json')) {
-            $this->line('Polling disbursement status...');
+        $attemptResults = [];
+        $commandStatus = self::SUCCESS;
+
+        foreach ($attempts as $attemptKey => $attempt) {
+            $attemptMobile = $this->resolveAttemptMobile($scenario, $attempt, $baseClaimMobile);
+
+            if (! $this->option('json')) {
+                $this->line(sprintf(
+                    'Submitting claim for voucher %s (attempt: %s)...',
+                    $code,
+                    $attemptKey
+                ));
+            }
+
+            $claimPayload = $this->buildClaimPayload($scenario, $attempt, $attemptMobile);
+
+            try {
+                $claim = $submitPayCodeClaim->handle($voucher, $claimPayload);
+
+                if (! $this->option('json')) {
+                    $this->line('Polling disbursement status...');
+                }
+
+                $finalCheck = $this->pollDisbursement(
+                    code: $code,
+                    timeout: $timeout,
+                    poll: $poll,
+                    maxPolls: $maxPolls,
+                    acceptPending: (bool) $this->option('accept-pending'),
+                );
+
+                $actual = [
+                    'status' => 'succeeded',
+                    'message' => $this->resolveSuccessMessage($claim, $finalCheck),
+                    'claim' => $claim->toArray(),
+                    'disbursement_check' => $finalCheck,
+                ];
+            } catch (\Throwable $e) {
+                $actual = [
+                    'status' => 'failed',
+                    'message' => $e->getMessage(),
+                    'error' => [
+                        'class' => $e::class,
+                        'message' => $e->getMessage(),
+                    ],
+                ];
+            }
+
+            $evaluation = $this->evaluateAttemptExpectation($attempt, $actual);
+
+            $attemptResults[$attemptKey] = [
+                'claim_mobile' => $attemptMobile,
+                'claim_payload' => $claimPayload,
+                'expect' => $attempt['expect'] ?? [],
+                'actual' => $actual,
+                'evaluation' => $evaluation,
+                'status' => $actual['status'],
+                'message' => $actual['message'],
+                'claim' => $actual['claim'] ?? null,
+                'disbursement_check' => $actual['disbursement_check'] ?? null,
+                'error' => $actual['error'] ?? null,
+            ];
+
+            if (! $evaluation['passed']) {
+                $commandStatus = self::FAILURE;
+            }
+
+            if (! $this->option('json')) {
+                $this->renderAttemptEvaluation($attemptKey, $evaluation, $actual);
+            }
         }
-
-        $finalCheck = $this->pollDisbursement(
-            code: $code,
-            timeout: $timeout,
-            poll: $poll,
-            maxPolls: $maxPolls,
-            acceptPending: (bool) $this->option('accept-pending'),
-        );
 
         $reconciliation = DisbursementReconciliation::query()
             ->where('voucher_code', $code)
@@ -150,18 +208,38 @@ class RunLifecycleScenarioCommand extends Command
             limit: 10,
         );
 
-        return $this->renderResult([
+        $this->renderResult([
             'scenario' => $scenarioKey,
             'label' => $scenario['label'] ?? $scenarioKey,
             'issuer' => $this->formatUserSummary($issuer),
-            'claim_mobile' => $claimMobile,
+            'claim_mobile' => $baseClaimMobile,
+            'attempts' => $attemptResults,
             'estimate' => $estimate,
             'generated' => $generated->toArray(),
-            'claim' => $claim->toArray(),
-            'disbursement_check' => $finalCheck,
             'reconciliation' => $reconciliation?->toArray(),
             'wallet_transactions' => $walletTransactions,
         ]);
+
+        return $commandStatus;
+    }
+
+    protected function listScenarios(): int
+    {
+        $scenarios = config('x-change.lifecycle.scenarios', []);
+
+        if (empty($scenarios)) {
+            $this->warn('No lifecycle scenarios found.');
+            return self::SUCCESS;
+        }
+
+        $this->info('Available lifecycle scenarios:');
+
+        foreach ($scenarios as $key => $scenario) {
+            $label = $scenario['label'] ?? $key;
+            $this->line(sprintf(' - %s (%s)', $key, $label));
+        }
+
+        return self::SUCCESS;
     }
 
     protected function resolveScenario(string $key): ?array
@@ -228,6 +306,10 @@ class RunLifecycleScenarioCommand extends Command
             'prefix' => data_get($scenario, 'prefix', 'TEST'),
             'mask' => data_get($scenario, 'mask', '****'),
             'ttl' => data_get($scenario, 'ttl'),
+
+            'starts_at' => data_get($scenario, 'starts_at'),
+            'expires_at' => data_get($scenario, 'expires_at'),
+
             'validation' => data_get($scenario, 'validation'),
             'metadata' => data_get($scenario, 'metadata'),
             'voucher_type' => data_get($scenario, 'voucher_type'),
@@ -243,20 +325,24 @@ class RunLifecycleScenarioCommand extends Command
     /**
      * @return array<string, mixed>
      */
-    protected function buildClaimPayload(array $scenario, string $mobile): array
+    protected function buildClaimPayload(array $scenario, array $attempt, string $mobile): array
     {
-        $payload = [
-            'mobile' => $mobile,
-            'recipient_country' => 'PH',
-            'bank_account' => [
-                'bank_code' => (string) data_get($scenario, 'bank_code'),
-                'account_number' => (string) data_get($scenario, 'account_number'),
+        $payload = array_replace_recursive(
+            [
+                'mobile' => $mobile,
+                'recipient_country' => 'PH',
+                'bank_account' => [
+                    'bank_code' => (string) data_get($scenario, 'bank_code'),
+                    'account_number' => (string) data_get($scenario, 'account_number'),
+                ],
+                'inputs' => [],
             ],
-            'inputs' => (array) data_get($scenario, 'claim.inputs', []),
-        ];
+            (array) data_get($scenario, 'claim', []),
+            (array) data_get($attempt, 'claim', []),
+        );
 
-        if (($amount = data_get($scenario, 'claim.amount')) !== null) {
-            $payload['amount'] = (float) $amount;
+        if (data_get($payload, 'amount') !== null) {
+            $payload['amount'] = (float) data_get($payload, 'amount');
         }
 
         return $payload;
@@ -495,7 +581,7 @@ class RunLifecycleScenarioCommand extends Command
 
     protected function userModelClass(): string
     {
-        $class = (string) config('x-change.lifecycle.defaults.user_model', \App\Models\User::class);
+        $class = (string) config('x-change.lifecycle.defaults.user_model', User::class);
 
         if ($class === '' || ! class_exists($class)) {
             throw new RuntimeException('Configured lifecycle user model is invalid.');
@@ -533,9 +619,9 @@ class RunLifecycleScenarioCommand extends Command
     protected function resolveScenarioMobile(array $scenario, Model $issuer): string
     {
         $mobile = (string) (
-        data_get($scenario, 'mobile')
-            ?: ($issuer instanceof HasMobileChannel ? $issuer->getMobileChannel() : null)
-            ?: ''
+            data_get($scenario, 'mobile')
+                ?: ($issuer instanceof HasMobileChannel ? $issuer->getMobileChannel() : null)
+                ?: ''
         );
 
         if ($mobile === '') {
@@ -694,5 +780,188 @@ class RunLifecycleScenarioCommand extends Command
         }
 
         return 0;
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    protected function normalizeScenarioAttempts(array $scenario): array
+    {
+        $attempts = data_get($scenario, 'attempts');
+
+        if (is_array($attempts) && $attempts !== []) {
+            return $attempts;
+        }
+
+        return [
+            'default' => [
+                'claim' => (array) data_get($scenario, 'claim', []),
+                'expect' => (array) data_get($scenario, 'expect', []),
+            ],
+        ];
+    }
+
+    protected function resolveAttemptMobile(array $scenario, array $attempt, string $defaultMobile): string
+    {
+        $mobile = (string) (
+            data_get($attempt, 'claim.mobile')
+                ?: data_get($scenario, 'claim.mobile')
+                ?: $defaultMobile
+        );
+
+        if ($mobile === '') {
+            throw new RuntimeException('Lifecycle attempt mobile could not be resolved.');
+        }
+
+        return $mobile;
+    }
+
+    protected function expectedAttemptStatus(array $attempt, string $default = 'succeeded'): string
+    {
+        return (string) data_get($attempt, 'expect.status', $default);
+    }
+
+    /**
+     * @param  array<string, mixed>  $attempt
+     * @param  array<string, mixed>  $actual
+     * @return array<string, mixed>
+     */
+    protected function evaluateAttemptExpectation(array $attempt, array $actual): array
+    {
+        $expectedStatus = $this->expectedAttemptStatus($attempt);
+        $actualStatus = (string) ($actual['status'] ?? 'failed');
+        $actualMessage = (string) ($actual['message'] ?? '');
+
+        $checks = [];
+
+        $statusPassed = $expectedStatus === $actualStatus;
+        $checks['status'] = [
+            'passed' => $statusPassed,
+            'expected' => $expectedStatus,
+            'actual' => $actualStatus,
+        ];
+
+        $messageNeedles = array_values(array_filter(
+            (array) data_get($attempt, 'expect.message_contains', []),
+            fn ($value) => is_string($value) && trim($value) !== ''
+        ));
+
+        $messagePassed = true;
+        $missingNeedles = [];
+
+        if ($messageNeedles !== []) {
+            $haystack = mb_strtolower($actualMessage);
+
+            foreach ($messageNeedles as $needle) {
+                if (! str_contains($haystack, mb_strtolower($needle))) {
+                    $messagePassed = false;
+                    $missingNeedles[] = $needle;
+                }
+            }
+        }
+
+        $checks['message_contains'] = [
+            'passed' => $messagePassed,
+            'expected' => $messageNeedles,
+            'actual' => $actualMessage,
+            'missing' => $missingNeedles,
+        ];
+
+        $passed = collect($checks)->every(fn (array $check) => (bool) ($check['passed'] ?? false));
+
+        return [
+            'passed' => $passed,
+            'checks' => $checks,
+            'summary' => $this->summarizeEvaluation($passed, $statusPassed, $messagePassed, $expectedStatus, $actualStatus),
+        ];
+    }
+
+    /**
+     * @return string
+     */
+    protected function summarizeEvaluation(
+        bool $passed,
+        bool $statusPassed,
+        bool $messagePassed,
+        string $expectedStatus,
+        string $actualStatus,
+    ): string {
+        if ($passed && $actualStatus === 'failed') {
+            return 'FAILED as expected';
+        }
+
+        if ($passed && $actualStatus === 'succeeded') {
+            return 'SUCCEEDED as expected';
+        }
+
+        if (! $statusPassed && $expectedStatus === 'failed' && $actualStatus === 'succeeded') {
+            return 'UNEXPECTED SUCCESS';
+        }
+
+        if (! $statusPassed && $expectedStatus === 'succeeded' && $actualStatus === 'failed') {
+            return 'UNEXPECTED FAILURE';
+        }
+
+        if (! $messagePassed) {
+            return 'STATUS matched, message check failed';
+        }
+
+        return 'Expectation mismatch';
+    }
+
+    /**
+     * @param  mixed  $claim
+     * @param  array<string, mixed>  $finalCheck
+     */
+    protected function resolveSuccessMessage($claim, array $finalCheck): string
+    {
+        $status = (string) data_get($finalCheck, 'status', '');
+
+        if ($status !== '') {
+            return "Disbursement status: {$status}";
+        }
+
+        return 'Claim submitted successfully.';
+    }
+
+    /**
+     * @param  array<string, mixed>  $evaluation
+     * @param  array<string, mixed>  $actual
+     */
+    protected function renderAttemptEvaluation(string $attemptKey, array $evaluation, array $actual): void
+    {
+        $summary = (string) data_get($evaluation, 'summary', 'Unknown');
+
+        if ((bool) data_get($evaluation, 'passed', false)) {
+            $this->info(sprintf('Attempt [%s]: %s', $attemptKey, $summary));
+        } else {
+            $this->error(sprintf('Attempt [%s]: %s', $attemptKey, $summary));
+        }
+
+        $checks = (array) data_get($evaluation, 'checks', []);
+
+        $statusCheck = (array) ($checks['status'] ?? []);
+        $messageCheck = (array) ($checks['message_contains'] ?? []);
+
+        $this->line(sprintf(
+            '  Status check: expected=%s actual=%s',
+            $statusCheck['expected'] ?? 'n/a',
+            $statusCheck['actual'] ?? 'n/a',
+        ));
+
+        $expectedFragments = (array) ($messageCheck['expected'] ?? []);
+        if ($expectedFragments !== []) {
+            $this->line(sprintf(
+                '  Message check: %s',
+                (bool) ($messageCheck['passed'] ?? false)
+                    ? 'matched'
+                    : 'missing ['.implode(', ', (array) ($messageCheck['missing'] ?? [])).']'
+            ));
+        }
+
+        $actualMessage = (string) ($actual['message'] ?? '');
+        if ($actualMessage !== '') {
+            $this->line('  Actual message: '.$actualMessage);
+        }
     }
 }

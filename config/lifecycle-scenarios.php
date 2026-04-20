@@ -2,301 +2,729 @@
 
 declare(strict_types=1);
 
-use App\Models\User;
-use Bavix\Wallet\Models\Wallet;
-use Carbon\CarbonImmutable;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Date;
-use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
-use LBHurtado\Voucher\Models\Voucher;
-use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
-use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
-use LBHurtado\XChange\Contracts\VoucherAccessContract;
+return [
 
-uses(RefreshDatabase::class);
+    'defaults' => [
+        'issuer_id' => (int) env('XCHANGE_LIFECYCLE_ISSUER_ID', 1),
+        'wallet_id' => (int) env('XCHANGE_LIFECYCLE_WALLET_ID', 1),
+        'amount' => (float) env('XCHANGE_LIFECYCLE_AMOUNT', 25),
+        'currency' => env('XCHANGE_LIFECYCLE_CURRENCY', 'PHP'),
 
-beforeEach(function () {
-    seedInstructionItemsFromPricingConfig();
+        'system_user_mobile' => env('XCHANGE_LIFECYCLE_SYSTEM_USER_MOBILE', '09178251991'),
 
-    $this->systemUser = ensureLifecycleUser(
-        email: (string) config('x-change.lifecycle.defaults.system_user_email', 'system@example.test'),
-        mobile: (string) config('x-change.lifecycle.defaults.system_user_mobile', '639178251991'),
-        name: 'System User',
-    );
+        'mobile' => env('XCHANGE_LIFECYCLE_MOBILE', '639171234567'),
+        'bank_code' => env('XCHANGE_LIFECYCLE_BANK_CODE', 'GXCHPHM2XXX'),
+        'account_number' => env('XCHANGE_LIFECYCLE_ACCOUNT_NUMBER', '09173011987'),
 
-    $this->testUser = ensureLifecycleUser(
-        email: (string) config('x-change.lifecycle.defaults.test_user_email', 'lester@hurtado.ph'),
-        mobile: (string) config('x-change.lifecycle.defaults.test_user_mobile', '09173011987'),
-        name: 'Lifecycle Test User',
-    );
+        'timeout' => (int) env('XCHANGE_LIFECYCLE_TIMEOUT', 180),
+        'poll' => (int) env('XCHANGE_LIFECYCLE_POLL', 10),
 
-    fundLifecycleWallets($this->systemUser, $this->testUser);
+        'system_user_email' => env('XCHANGE_LIFECYCLE_SYSTEM_USER_EMAIL', env('SYSTEM_USER_ID')),
+        'test_user_email' => env('XCHANGE_LIFECYCLE_TEST_USER_EMAIL', 'lester@hurtado.ph'),
+        'test_user_mobile' => env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987'),
 
-    $this->vouchers = app(VoucherAccessContract::class);
-    $this->generatePayCode = app(GeneratePayCode::class);
-    $this->submitPayCodeClaim = app(SubmitPayCodeClaim::class);
-});
+        'system_float' => (float) env('XCHANGE_LIFECYCLE_SYSTEM_FLOAT', 1_000_000),
+        'user_float' => (float) env('XCHANGE_LIFECYCLE_USER_FLOAT', 10_000),
 
-function seedInstructionItemsFromPricingConfig(): void
-{
-    $items = (array) config('x-change.pricelist', []);
+        'user_model' => env('XCHANGE_LIFECYCLE_USER_MODEL', \App\Models\User::class),
+    ],
 
-    foreach ($items as $index => $data) {
-        if (! is_array($data)) {
-            continue;
-        }
+    'seeders' => [
+        'system_user' => env('XCHANGE_LIFECYCLE_SEEDER_SYSTEM_USER'),
+        'test_user' => env('XCHANGE_LIFECYCLE_SEEDER_TEST_USER'),
+        'system_wallet' => env('XCHANGE_LIFECYCLE_SEEDER_SYSTEM_WALLET'),
+        'test_wallet' => env('XCHANGE_LIFECYCLE_SEEDER_TEST_WALLET'),
+        'instruction_items' => env('XCHANGE_LIFECYCLE_SEEDER_INSTRUCTION_ITEMS'),
+    ],
 
-        $meta = [
-            'description' => $data['description'] ?? null,
-            'label' => $data['label'] ?? null,
-            'category' => $data['category'] ?? 'other',
-        ];
+    'scenarios' => [
 
-        if (! empty($data['deprecated'])) {
-            $meta['deprecated'] = true;
-            $meta['deprecated_reason'] = $data['deprecated_reason'] ?? 'No longer in use';
-        }
+        /*
+        |--------------------------------------------------------------------------
+        | Legacy lifecycle scenarios
+        |--------------------------------------------------------------------------
+        */
 
-        DB::table('instruction_items')->updateOrInsert(
-            ['index' => $index],
-            [
-                'name' => inferInstructionItemName($index, $data),
-                'type' => inferInstructionItemType($index, $data),
-                'price' => (int) ($data['price'] ?? 0),
-                'currency' => (string) ($data['currency'] ?? 'PHP'),
-                'meta' => json_encode($meta, JSON_UNESCAPED_SLASHES),
-                'revenue_destination_type' => null,
-                'revenue_destination_id' => null,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]
-        );
-    }
-}
+        'basic_cash' => [
+            'label' => 'Basic Cash',
+            'amount' => 12.50,
+            'currency' => 'PHP',
+            'cash' => [],
+            'inputs' => [
+                'fields' => [],
+            ],
+            'feedback' => [],
+            'claim' => [],
+            'expect' => [
+                'tariffs' => ['cash'],
+            ],
+        ],
 
-function inferInstructionItemName(string $index, array $data): string
-{
-    if (! empty($data['label']) && is_string($data['label'])) {
-        return $data['label'];
-    }
-
-    return str($index)->replace(['.', '_'], ' ')->title()->toString();
-}
-
-function inferInstructionItemType(string $index, array $data): string
-{
-    if (! empty($data['category']) && is_string($data['category'])) {
-        return $data['category'];
-    }
-
-    return match (true) {
-        str_starts_with($index, 'inputs.fields.') => 'input_fields',
-        str_starts_with($index, 'feedback.') => 'feedback',
-        str_starts_with($index, 'validation.') => 'validation',
-        str_starts_with($index, 'cash.validation.') => 'validation',
-        str_starts_with($index, 'rider.') => 'rider',
-        str_starts_with($index, 'voucher_type.') => 'base',
-        $index === 'cash.amount' => 'base',
-        default => 'other',
-    };
-}
-
-function ensureLifecycleUser(string $email, string $mobile, string $name): User
-{
-    /** @var User $user */
-    $user = User::query()->firstOrCreate(
-        ['email' => $email],
-        [
-            'name' => $name,
-            'password' => bcrypt('password'),
-        ]
-    );
-
-    if ($mobile !== '' && $user instanceof HasMobileChannel && $user->getMobileChannel() !== $mobile) {
-        $user->setMobileChannel($mobile);
-        $user->refresh();
-    }
-
-    return $user;
-}
-
-function fundLifecycleWallets(User $systemUser, User $testUser): void
-{
-    $systemFloat = (float) config('x-change.lifecycle.defaults.system_float', 1_000_000);
-    $userFloat = (float) config('x-change.lifecycle.defaults.user_float', 10_000);
-
-    if ($systemFloat > 0 && method_exists($systemUser, 'depositFloat')) {
-        $systemUser->depositFloat($systemFloat);
-    }
-
-    if ($userFloat > 0 && $systemUser->getKey() !== $testUser->getKey() && method_exists($systemUser, 'transferFloat')) {
-        $systemUser->transferFloat($testUser, $userFloat);
-    }
-}
-
-function makeBaseVoucherInput(array $overrides = []): array
-{
-    return array_replace_recursive([
-        'issuer_id' => 1,
-        'wallet_id' => 1,
-        'cash' => [
+        'bio' => [
+            'label' => 'Bio Information',
             'amount' => 25,
             'currency' => 'PHP',
-            'validation' => [
-                'secret' => null,
-                'mobile' => null,
-                'payable' => null,
-                'country' => 'PH',
-                'location' => null,
-                'radius' => null,
-                'mobile_verification' => null,
-            ],
-            'settlement_rail' => 'INSTAPAY',
-            'fee_strategy' => 'absorb',
-            'slice_mode' => null,
-            'slices' => null,
-            'max_slices' => null,
-            'min_withdrawal' => null,
-        ],
-        'inputs' => [
-            'fields' => [],
-        ],
-        'feedback' => [
-            'mobile' => null,
-            'email' => null,
-            'webhook' => null,
-        ],
-        'rider' => [
-            'message' => null,
-            'url' => null,
-            'redirect_timeout' => null,
-            'splash' => null,
-            'splash_timeout' => null,
-            'og_source' => null,
-        ],
-        'count' => 1,
-        'prefix' => 'TEST',
-        'mask' => '****',
-        'ttl' => null,
-        'starts_at' => null,
-        'expires_at' => null,
-        'validation' => null,
-        'metadata' => null,
-        'voucher_type' => null,
-        'target_amount' => null,
-        'rules' => null,
-        '_meta' => [
-            'idempotency_key' => 'test-'.str()->uuid(),
-        ],
-    ], $overrides);
-}
-
-function makeClaimPayload(array $overrides = []): array
-{
-    return array_replace_recursive([
-        'mobile' => '639171234567',
-        'recipient_country' => 'PH',
-        'bank_account' => [
-            'bank_code' => 'GXCHPHM2XXX',
-            'account_number' => '09173011987',
-        ],
-        'inputs' => [],
-    ], $overrides);
-}
-
-it('blocks redemption before starts_at', function () {
-    Date::setTestNow(CarbonImmutable::parse('2026-04-17 08:00:00', 'Asia/Manila'));
-
-    $generated = $this->generatePayCode->handle(makeBaseVoucherInput([
-        'starts_at' => '2026-04-17T10:00:00+08:00',
-    ]));
-
-    $voucher = $this->vouchers->findByCodeOrFail($generated->code);
-
-    expect(fn () => $this->submitPayCodeClaim->handle(
-        $voucher,
-        makeClaimPayload()
-    ))->toThrow(Throwable::class);
-});
-
-it('blocks redemption after expires_at', function () {
-    Date::setTestNow(CarbonImmutable::parse('2026-04-17 12:00:00', 'Asia/Manila'));
-
-    $generated = $this->generatePayCode->handle(makeBaseVoucherInput([
-        'expires_at' => '2026-04-17T11:00:00+08:00',
-    ]));
-
-    $voucher = $this->vouchers->findByCodeOrFail($generated->code);
-
-    expect(fn () => $this->submitPayCodeClaim->handle(
-        $voucher,
-        makeClaimPayload()
-    ))->toThrow(Throwable::class);
-});
-
-it('requires the correct secret', function () {
-    $generated = $this->generatePayCode->handle(makeBaseVoucherInput([
-        'cash' => [
-            'validation' => [
-                'secret' => '123456',
-            ],
-        ],
-    ]));
-
-    $voucher = $this->vouchers->findByCodeOrFail($generated->code);
-
-    expect(fn () => $this->submitPayCodeClaim->handle(
-        $voucher,
-        makeClaimPayload([
-            'secret' => 'WRONG',
-        ])
-    ))->toThrow(Throwable::class);
-
-    $result = $this->submitPayCodeClaim->handle(
-        $voucher,
-        makeClaimPayload([
-            'secret' => '123456',
-        ])
-    );
-
-    expect(data_get($result, 'claimed', true))->toBeTrue();
-});
-
-it('restricts redemption to the configured mobile', function () {
-    $generated = $this->generatePayCode->handle(makeBaseVoucherInput([
-        'cash' => [
-            'validation' => [
-                'mobile' => '639173011987',
-            ],
-        ],
-    ]));
-
-    $voucher = $this->vouchers->findByCodeOrFail($generated->code);
-
-    expect(fn () => $this->submitPayCodeClaim->handle(
-        $voucher,
-        makeClaimPayload([
-            'mobile' => '639199999999',
-        ])
-    ))->toThrow(Throwable::class);
-});
-
-it('requires configured input fields before completion', function () {
-    $generated = $this->generatePayCode->handle(makeBaseVoucherInput([
-        'inputs' => [
-            'fields' => ['name', 'email', 'birth_date'],
-        ],
-    ]));
-
-    $voucher = $this->vouchers->findByCodeOrFail($generated->code);
-
-    expect(fn () => $this->submitPayCodeClaim->handle(
-        $voucher,
-        makeClaimPayload([
+            'cash' => [],
             'inputs' => [
-                'name' => 'Juan Dela Cruz',
+                'fields' => ['name', 'email', 'address', 'birth_date'],
             ],
-        ])
-    ))->toThrow(Throwable::class);
-});
+            'feedback' => [],
+            'claim' => [
+                'inputs' => [
+                    'name' => 'Juan Dela Cruz',
+                    'email' => 'juan@example.com',
+                    'address' => 'Makati City',
+                    'birth_date' => '1990-01-01',
+                ],
+            ],
+            'expect' => [
+                'tariffs' => ['cash'],
+            ],
+        ],
+
+        'otp' => [
+            'label' => 'OTP',
+            'amount' => 25,
+            'currency' => 'PHP',
+            'cash' => [],
+            'inputs' => [
+                'fields' => ['otp'],
+            ],
+            'feedback' => [],
+            'claim' => [
+                'inputs' => [
+                    'otp' => '123456',
+                ],
+            ],
+            'expect' => [
+                'tariffs' => ['cash', 'otp'],
+            ],
+        ],
+
+        'signature' => [
+            'label' => 'Signature',
+            'amount' => 25,
+            'currency' => 'PHP',
+            'cash' => [],
+            'inputs' => [
+                'fields' => ['signature'],
+            ],
+            'feedback' => [],
+            'claim' => [
+                'inputs' => [
+                    'signature' => 'demo-signature',
+                ],
+            ],
+            'expect' => [
+                'tariffs' => ['cash', 'signature'],
+            ],
+        ],
+
+        'location' => [
+            'label' => 'Location',
+            'amount' => 25,
+            'currency' => 'PHP',
+            'cash' => [],
+            'inputs' => [
+                'fields' => ['location'],
+            ],
+            'feedback' => [],
+            'claim' => [
+                'inputs' => [
+                    'location' => [
+                        'lat' => 14.5995,
+                        'lng' => 120.9842,
+                    ],
+                ],
+            ],
+            'expect' => [
+                'tariffs' => ['cash', 'location'],
+            ],
+        ],
+
+        'selfie' => [
+            'label' => 'Selfie',
+            'amount' => 25,
+            'currency' => 'PHP',
+            'cash' => [],
+            'inputs' => [
+                'fields' => ['selfie'],
+            ],
+            'feedback' => [],
+            'claim' => [
+                'inputs' => [
+                    'selfie' => 'demo-selfie',
+                ],
+            ],
+            'expect' => [
+                'tariffs' => ['cash', 'selfie'],
+            ],
+        ],
+
+        'webhook' => [
+            'label' => 'Webhook Feedback',
+            'amount' => 25,
+            'currency' => 'PHP',
+            'cash' => [],
+            'inputs' => [
+                'fields' => [],
+            ],
+            'feedback' => [
+                'webhook' => 'https://example.test/webhook',
+            ],
+            'claim' => [],
+            'expect' => [
+                'tariffs' => ['cash', 'webhook'],
+            ],
+        ],
+
+        'full_stack' => [
+            'label' => 'Full Stack',
+            'amount' => 25,
+            'currency' => 'PHP',
+            'cash' => [],
+            'inputs' => [
+                'fields' => ['name', 'email', 'address', 'birth_date', 'otp', 'signature', 'location', 'selfie'],
+            ],
+            'feedback' => [
+                'webhook' => 'https://example.test/webhook',
+            ],
+            'claim' => [
+                'inputs' => [
+                    'name' => 'Juan Dela Cruz',
+                    'email' => 'juan@example.com',
+                    'address' => 'Makati City',
+                    'birth_date' => '1990-01-01',
+                    'otp' => '123456',
+                    'signature' => 'demo-signature',
+                    'location' => [
+                        'lat' => 14.5995,
+                        'lng' => 120.9842,
+                    ],
+                    'selfie' => 'demo-selfie',
+                ],
+            ],
+            'expect' => [
+                'tariffs' => ['cash', 'otp', 'signature', 'location', 'selfie', 'webhook'],
+            ],
+        ],
+
+        'divisible_open' => [
+            'label' => 'Divisible Open',
+            'amount' => 300,
+            'currency' => 'PHP',
+            'cash' => [
+                'divisible' => true,
+                'withdrawable' => true,
+                'slice_mode' => 'open',
+            ],
+            'inputs' => [
+                'fields' => [],
+            ],
+            'feedback' => [],
+            'claim' => [
+                'amount' => 100,
+            ],
+            'expect' => [
+                'tariffs' => ['cash'],
+            ],
+        ],
+
+        'divisible_fixed' => [
+            'label' => 'Divisible Fixed',
+            'amount' => 300,
+            'currency' => 'PHP',
+            'cash' => [
+                'divisible' => true,
+                'withdrawable' => true,
+                'slice_mode' => 'fixed',
+                'max_slices' => 3,
+            ],
+            'inputs' => [
+                'fields' => [],
+            ],
+            'feedback' => [],
+            'claim' => [],
+            'expect' => [
+                'tariffs' => ['cash'],
+            ],
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
+        | Contract-bridge lifecycle scenarios
+        |--------------------------------------------------------------------------
+        */
+
+        'secret_required' => [
+            'label' => 'Secret Required',
+            'amount' => 25,
+            'currency' => 'PHP',
+            'cash' => [
+                'validation' => [
+                    'secret' => 'ABC123',
+                ],
+            ],
+            'inputs' => [
+                'fields' => [],
+            ],
+            'feedback' => [],
+            'meta' => [
+                'family' => 'contract',
+                'tags' => ['secret'],
+            ],
+            'attempts' => [
+                'wrong_secret_fails' => [
+                    'claim' => [
+                        'secret' => 'WRONG-SECRET',
+                    ],
+                    'expect' => [
+                        'status' => 'failed',
+                        'message_contains' => ['secret'],
+                    ],
+                ],
+                'correct_secret_succeeds' => [
+                    'claim' => [
+                        'secret' => 'ABC123',
+                    ],
+                    'expect' => [
+                        'status' => 'succeeded',
+                    ],
+                ],
+            ],
+            'expect' => [
+                'tariffs' => ['cash'],
+            ],
+        ],
+
+        'mobile_locked' => [
+            'label' => 'Mobile Locked',
+            'amount' => 25,
+            'currency' => 'PHP',
+            'cash' => [
+                'validation' => [
+                    'mobile' => '639171234567',
+                ],
+            ],
+            'inputs' => [
+                'fields' => [],
+            ],
+            'feedback' => [],
+            'meta' => [
+                'family' => 'contract',
+                'tags' => ['mobile'],
+            ],
+            'attempts' => [
+                'wrong_mobile_fails' => [
+                    'claim' => [
+                        'mobile' => '639179999999',
+                    ],
+                    'expect' => [
+                        'status' => 'failed',
+                        'message_contains' => ['mobile'],
+                    ],
+                ],
+                'correct_mobile_succeeds' => [
+                    'claim' => [
+                        'mobile' => '639171234567',
+                    ],
+                    'expect' => [
+                        'status' => 'succeeded',
+                    ],
+                ],
+            ],
+            'expect' => [
+                'tariffs' => ['cash'],
+            ],
+        ],
+
+        'bio_inputs_required' => [
+            'label' => 'Bio Inputs Required',
+            'amount' => 25,
+            'currency' => 'PHP',
+            'cash' => [],
+            'inputs' => [
+                'fields' => ['name', 'email', 'birth_date'],
+            ],
+            'feedback' => [],
+            'meta' => [
+                'family' => 'contract',
+                'tags' => ['bio', 'presence'],
+            ],
+            'attempts' => [
+                'missing_fields_fail' => [
+                    'claim' => [
+                        'inputs' => [
+                            'name' => 'Juan Dela Cruz',
+                        ],
+                    ],
+                    'expect' => [
+                        'status' => 'failed',
+                        'message_contains' => ['email', 'birth date'],
+                    ],
+                ],
+                'complete_fields_succeed' => [
+                    'claim' => [
+                        'inputs' => [
+                            'name' => 'Juan Dela Cruz',
+                            'email' => 'juan@example.com',
+                            'birth_date' => '1990-01-01',
+                        ],
+                    ],
+                    'expect' => [
+                        'status' => 'succeeded',
+                    ],
+                ],
+            ],
+            'expect' => [
+                'tariffs' => ['cash'],
+            ],
+        ],
+
+        'otp_required' => [
+            'label' => 'OTP Required',
+            'amount' => 25,
+            'currency' => 'PHP',
+            'cash' => [],
+            'inputs' => [
+                'fields' => ['otp'],
+            ],
+            'validation' => [
+                'otp' => [
+                    'required' => true,
+                    'on_failure' => 'block',
+                ],
+            ],
+            'feedback' => [],
+            'meta' => [
+                'family' => 'contract',
+                'tags' => ['otp', 'presence', 'semantic'],
+            ],
+            'attempts' => [
+                'missing_otp_fails' => [
+                    'claim' => [
+                        'inputs' => [],
+                    ],
+                    'expect' => [
+                        'status' => 'failed',
+                    ],
+                ],
+                'unverified_otp_fails' => [
+                    'claim' => [
+                        'inputs' => [
+                            'otp' => [
+                                'otp_code' => '123456',
+                                'verified' => false,
+                            ],
+                        ],
+                    ],
+                    'expect' => [
+                        'status' => 'failed',
+                    ],
+                ],
+                'verified_otp_succeeds' => [
+                    'claim' => [
+                        'inputs' => [
+                            'otp' => [
+                                'otp_code' => '123456',
+                                'verified' => true,
+                                'verified_at' => '2026-04-19T10:30:00+08:00',
+                            ],
+                        ],
+                    ],
+                    'expect' => [
+                        'status' => 'succeeded',
+                    ],
+                ],
+            ],
+            'expect' => [
+                'tariffs' => ['cash', 'otp'],
+            ],
+        ],
+
+        'signature_required' => [
+            'label' => 'Signature Required',
+            'amount' => 25,
+            'currency' => 'PHP',
+            'cash' => [],
+            'inputs' => [
+                'fields' => ['signature'],
+            ],
+            'feedback' => [],
+            'meta' => [
+                'family' => 'contract',
+                'tags' => ['signature', 'presence'],
+            ],
+            'attempts' => [
+                'missing_signature_fails' => [
+                    'claim' => [
+                        'inputs' => [],
+                    ],
+                    'expect' => [
+                        'status' => 'failed',
+                    ],
+                ],
+                'provided_signature_succeeds' => [
+                    'claim' => [
+                        'inputs' => [
+                            'signature' => 'data:image/png;base64,DEMO_SIGNATURE',
+                        ],
+                    ],
+                    'expect' => [
+                        'status' => 'succeeded',
+                    ],
+                ],
+            ],
+            'expect' => [
+                'tariffs' => ['cash', 'signature'],
+            ],
+        ],
+
+        'selfie_required' => [
+            'label' => 'Selfie Required',
+            'amount' => 25,
+            'currency' => 'PHP',
+            'cash' => [],
+            'inputs' => [
+                'fields' => ['selfie'],
+            ],
+            'feedback' => [],
+            'meta' => [
+                'family' => 'contract',
+                'tags' => ['selfie', 'presence'],
+            ],
+            'attempts' => [
+                'missing_selfie_fails' => [
+                    'claim' => [
+                        'inputs' => [],
+                    ],
+                    'expect' => [
+                        'status' => 'failed',
+                    ],
+                ],
+                'provided_selfie_succeeds' => [
+                    'claim' => [
+                        'inputs' => [
+                            'selfie' => 'data:image/jpeg;base64,DEMO_SELFIE',
+                        ],
+                    ],
+                    'expect' => [
+                        'status' => 'succeeded',
+                    ],
+                ],
+            ],
+            'expect' => [
+                'tariffs' => ['cash', 'selfie'],
+            ],
+        ],
+
+        'location_required' => [
+            'label' => 'Location Required',
+            'amount' => 25,
+            'currency' => 'PHP',
+            'cash' => [],
+            'inputs' => [
+                'fields' => ['location'],
+            ],
+            'feedback' => [],
+            'meta' => [
+                'family' => 'contract',
+                'tags' => ['location', 'presence'],
+            ],
+            'attempts' => [
+                'missing_location_fails' => [
+                    'claim' => [
+                        'inputs' => [],
+                    ],
+                    'expect' => [
+                        'status' => 'failed',
+                        'message_contains' => ['location'],
+                    ],
+                ],
+                'provided_location_succeeds' => [
+                    'claim' => [
+                        'inputs' => [
+                            'location' => [
+                                'lat' => 14.5995,
+                                'lng' => 120.9842,
+                            ],
+                        ],
+                    ],
+                    'expect' => [
+                        'status' => 'succeeded',
+                    ],
+                ],
+            ],
+            'expect' => [
+                'tariffs' => ['cash', 'location'],
+            ],
+        ],
+
+        'location_radius' => [
+            'label' => 'Location Radius',
+            'amount' => 25,
+            'currency' => 'PHP',
+            'cash' => [],
+            'inputs' => [
+                'fields' => ['location'],
+            ],
+            'validation' => [
+                'location' => [
+                    'required' => true,
+                    'target_lat' => 14.5995,
+                    'target_lng' => 120.9842,
+                    'radius_meters' => 100,
+                    'on_failure' => 'block',
+                ],
+            ],
+            'feedback' => [],
+            'meta' => [
+                'family' => 'contract',
+                'tags' => ['location', 'radius', 'semantic'],
+            ],
+            'attempts' => [
+                'outside_radius_fails' => [
+                    'claim' => [
+                        'inputs' => [
+                            'location' => [
+                                'lat' => 14.6095,
+                                'lng' => 120.9942,
+                            ],
+                        ],
+                    ],
+                    'expect' => [
+                        'status' => 'failed',
+                    ],
+                ],
+                'inside_radius_succeeds' => [
+                    'claim' => [
+                        'inputs' => [
+                            'location' => [
+                                'lat' => 14.5995,
+                                'lng' => 120.9842,
+                            ],
+                        ],
+                    ],
+                    'expect' => [
+                        'status' => 'succeeded',
+                    ],
+                ],
+            ],
+            'expect' => [
+                'tariffs' => ['cash', 'location'],
+            ],
+        ],
+
+        'starts_future' => [
+            'label' => 'Starts Future',
+            'amount' => 25,
+            'currency' => 'PHP',
+            'cash' => [],
+            'starts_at' => '2026-04-20T01:00:00+08:00',
+            'inputs' => [
+                'fields' => [],
+            ],
+            'feedback' => [],
+            'meta' => [
+                'family' => 'contract',
+                'tags' => ['time', 'starts_at'],
+            ],
+            'attempts' => [
+                'before_start_fails' => [
+                    'claim' => [],
+                    'expect' => [
+                        'status' => 'failed',
+                    ],
+                ],
+            ],
+            'expect' => [
+                'tariffs' => ['cash'],
+            ],
+        ],
+
+        'expired_voucher' => [
+            'label' => 'Expired Voucher',
+            'amount' => 25,
+            'currency' => 'PHP',
+            'cash' => [],
+            'expires_at' => '2026-04-19T21:00:00+08:00',
+            'inputs' => [
+                'fields' => [],
+            ],
+            'feedback' => [],
+            'meta' => [
+                'family' => 'contract',
+                'tags' => ['time', 'expires_at'],
+            ],
+            'attempts' => [
+                'after_expiry_fails' => [
+                    'claim' => [],
+                    'expect' => [
+                        'status' => 'failed',
+                    ],
+                ],
+            ],
+            'expect' => [
+                'tariffs' => ['cash'],
+            ],
+        ],
+
+        'kyc_required_unapproved' => [
+            'label' => 'KYC Required Unapproved',
+            'amount' => 25,
+            'currency' => 'PHP',
+            'cash' => [],
+            'inputs' => [
+                'fields' => ['kyc'],
+            ],
+            'feedback' => [],
+            'meta' => [
+                'family' => 'contract',
+                'tags' => ['kyc', 'presence', 'contact'],
+            ],
+            'claim' => [
+                'inputs' => [
+                    'kyc' => [
+                        'transaction_id' => 'MOCK-KYC-123',
+                        'status' => 'approved',
+                        'name' => 'Juan Dela Cruz',
+                        'id_number' => 'ABC123456',
+                        'id_type' => 'National ID',
+                    ],
+                ],
+            ],
+            'expect' => [
+                'status' => 'failed',
+            ],
+        ],
+
+        'kyc_required_approved' => [
+            'label' => 'KYC Required Approved',
+            'amount' => 25,
+            'currency' => 'PHP',
+            'cash' => [],
+            'inputs' => [
+                'fields' => ['kyc'],
+            ],
+            'feedback' => [],
+            'meta' => [
+                'family' => 'contract',
+                'tags' => ['kyc', 'presence', 'contact'],
+            ],
+            'claim' => [
+                'inputs' => [
+                    'kyc' => [
+                        'transaction_id' => 'MOCK-KYC-123',
+                        'status' => 'approved',
+                        'name' => 'Juan Dela Cruz',
+                        'id_number' => 'ABC123456',
+                        'id_type' => 'National ID',
+                    ],
+                ],
+            ],
+            'expect' => [
+                'status' => 'succeeded',
+            ],
+        ],
+    ],
+];
