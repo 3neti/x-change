@@ -35,8 +35,11 @@ use LBHurtado\XChange\Contracts\DisbursementReconciliationContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusFetcherContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
+use LBHurtado\XChange\Contracts\EventLifecycleServiceContract;
+use LBHurtado\XChange\Contracts\EventStoreContract;
 use LBHurtado\XChange\Contracts\PricelistServiceContract;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
+use LBHurtado\XChange\Contracts\ReconciliationLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\RedemptionCompletionContextContract;
 use LBHurtado\XChange\Contracts\RedemptionCompletionStoreContract;
 use LBHurtado\XChange\Contracts\RedemptionContextResolverContract;
@@ -73,12 +76,15 @@ use LBHurtado\XChange\Services\DefaultRedemptionValidationService;
 use LBHurtado\XChange\Services\DefaultWithdrawalExecutionService;
 use LBHurtado\XChange\Services\DefaultWithdrawalProcessorService;
 use LBHurtado\XChange\Services\DefaultWithdrawalValidationService;
+use LBHurtado\XChange\Services\EventLifecycleService;
 use LBHurtado\XChange\Services\InstructionBackedPricingService;
 use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
 use LBHurtado\XChange\Services\PricelistService;
+use LBHurtado\XChange\Services\ReconciliationLifecycleService;
 use LBHurtado\XChange\Services\SystemWalletProxy;
 use LBHurtado\XChange\Services\VoucherAccessService;
 use LBHurtado\XChange\Services\VoucherLifecycleService;
+use LBHurtado\XChange\Support\Logging\CacheEventStore;
 
 class XChangeServiceProvider extends ServiceProvider
 {
@@ -216,6 +222,12 @@ class XChangeServiceProvider extends ServiceProvider
 
         $this->app->bind(VoucherAccessContract::class, VoucherAccessService::class);
         $this->app->bind(VoucherLifecycleServiceContract::class, VoucherLifecycleService::class);
+
+        $this->app->bind(ReconciliationLifecycleServiceContract::class, ReconciliationLifecycleService::class);
+
+        $this->app->bind(EventLifecycleServiceContract::class, EventLifecycleService::class);
+
+        $this->app->singleton(EventStoreContract::class, CacheEventStore::class);
 
         $this->app->singleton(PayoutProvider::class, function ($app) {
             $provider = config(
@@ -374,7 +386,7 @@ class XChangeServiceProvider extends ServiceProvider
         }
 
         // New lifecycle API surface for Scramble / public API.
-        $this->loadRoutesFrom(__DIR__ . '/../../routes/lifecycle-api.php');
+        $this->loadRoutesFrom(__DIR__.'/../../routes/lifecycle-api.php');
     }
 
     protected function bootExceptionRendering(): void

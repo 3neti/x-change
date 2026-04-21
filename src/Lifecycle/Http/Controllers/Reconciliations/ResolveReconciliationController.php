@@ -7,17 +7,19 @@ namespace LBHurtado\XChange\Lifecycle\Http\Controllers\Reconciliations;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use LBHurtado\XChange\Contracts\ReconciliationLifecycleServiceContract;
-use LBHurtado\XChange\Lifecycle\Http\Resources\Reconciliations\ReconciliationResource;
+use LBHurtado\XChange\Lifecycle\Http\Requests\Reconciliations\ResolveReconciliationRequest;
+use LBHurtado\XChange\Lifecycle\Http\Resources\Reconciliations\ReconciliationResolutionResource;
 
-class ShowReconciliationController extends Controller
+class ResolveReconciliationController extends Controller
 {
     public function __invoke(
         string $reconciliation,
+        ResolveReconciliationRequest $request,
         ReconciliationLifecycleServiceContract $reconciliations,
     ): JsonResponse {
-        $result = $reconciliations->show($reconciliation);
+        $result = $reconciliations->resolve($reconciliation, $request->validated());
 
-        return ReconciliationResource::make($result)
+        return ReconciliationResolutionResource::make($result)
             ->response()
             ->setStatusCode(200);
     }

@@ -25,5 +25,11 @@ it('registers the first lifecycle routes', function () {
         ->and(Route::has('api.x.v1.vouchers.show'))->toBeTrue()
         ->and(Route::has('api.x.v1.vouchers.code.show'))->toBeTrue()
         ->and(Route::has('api.x.v1.vouchers.status.show'))->toBeTrue()
-        ->and(Route::has('api.x.v1.vouchers.cancel'))->toBeTrue();
+        ->and(Route::has('api.x.v1.vouchers.cancel'))->toBeTrue()
+        ->and(Route::has('api.x.v1.reconciliations.index'))->toBeTrue()
+        ->and(Route::has('api.x.v1.reconciliations.show'))->toBeTrue()
+        ->and(Route::has('api.x.v1.reconciliations.resolve'))->toBeTrue()
+        ->and(Route::has('api.x.v1.events.index'))->toBeTrue()
+        ->and(Route::has('api.x.v1.events.show'))->toBeTrue()
+        ->and(Route::has('api.x.v1.events.idempotency.show'))->toBeTrue();
 });

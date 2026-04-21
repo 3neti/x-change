@@ -7,11 +7,16 @@ use LBHurtado\XChange\Lifecycle\Http\Controllers\Claims\CompleteVoucherClaimCont
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Claims\ShowVoucherClaimStatusController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Claims\StartVoucherClaimController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Claims\SubmitVoucherClaimController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Events\ListEventsController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Events\ShowEventController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Events\ShowIdempotencyKeyController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Issuers\CreateIssuerController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Issuers\CreateIssuerWalletController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Pricelist\EstimateVoucherController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Pricelist\ListPricelistItemsController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Pricelist\ShowPricelistController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Reconciliations\ListReconciliationsController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Reconciliations\ResolveReconciliationController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Reconciliations\ShowReconciliationController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Vouchers\CancelVoucherController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Vouchers\CreateVoucherController;
@@ -59,6 +64,14 @@ Route::prefix('api/x/v1')->as('api.x.v1.')->group(function (): void {
     });
 
     Route::prefix('reconciliations')->group(function (): void {
+        Route::get('/', ListReconciliationsController::class)->name('reconciliations.index');
         Route::get('{reconciliation}', ShowReconciliationController::class)->name('reconciliations.show');
+        Route::post('{reconciliation}/resolve', ResolveReconciliationController::class)->name('reconciliations.resolve');
+    });
+
+    Route::prefix('events')->group(function (): void {
+        Route::get('/', ListEventsController::class)->name('events.index');
+        Route::get('{event}', ShowEventController::class)->name('events.show');
+        Route::get('idempotency/{key}', ShowIdempotencyKeyController::class)->name('events.idempotency.show');
     });
 });

@@ -5,19 +5,20 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Lifecycle\Http\Controllers\Reconciliations;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use LBHurtado\XChange\Contracts\ReconciliationLifecycleServiceContract;
-use LBHurtado\XChange\Lifecycle\Http\Resources\Reconciliations\ReconciliationResource;
+use LBHurtado\XChange\Lifecycle\Http\Resources\Reconciliations\ReconciliationCollectionResource;
 
-class ShowReconciliationController extends Controller
+class ListReconciliationsController extends Controller
 {
     public function __invoke(
-        string $reconciliation,
+        Request $request,
         ReconciliationLifecycleServiceContract $reconciliations,
     ): JsonResponse {
-        $result = $reconciliations->show($reconciliation);
+        $result = $reconciliations->list($request->query());
 
-        return ReconciliationResource::make($result)
+        return ReconciliationCollectionResource::make($result)
             ->response()
             ->setStatusCode(200);
     }

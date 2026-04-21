@@ -134,7 +134,7 @@ return [
 
     'integrations' => [
         'system_wallet_resolver' => \LBHurtado\XChange\Support\Resolvers\NullSystemWalletResolver::class,
-        'audit_logger' => \LBHurtado\XChange\Support\Logging\NullAuditLogger::class,
+        'audit_logger' =>  \LBHurtado\XChange\Support\Logging\CacheAuditLogger::class,
     ],
 
     'integration_contracts' => [
