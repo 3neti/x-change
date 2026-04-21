@@ -7,15 +7,15 @@ namespace LBHurtado\XChange\Lifecycle\Http\Controllers\Wallets;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
-use LBHurtado\XChange\Lifecycle\Http\Resources\Wallets\WalletBalanceResource;
+use LBHurtado\XChange\Lifecycle\Http\Resources\Wallets\WalletResource;
 
-class ShowWalletBalanceController extends Controller
+class ShowWalletController extends Controller
 {
     public function __invoke(string $wallet, WalletAccessContract $wallets): JsonResponse
     {
-        $result = $wallets->balance($wallet);
+        $result = $wallets->find($wallet);
 
-        return WalletBalanceResource::make($result)
+        return WalletResource::make($result)
             ->response()
             ->setStatusCode(200);
     }

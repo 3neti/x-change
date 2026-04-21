@@ -11,7 +11,10 @@ use LBHurtado\XChange\Lifecycle\Http\Controllers\Pricelist\EstimateVoucherContro
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Pricelist\ShowPricelistController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Reconciliations\ShowReconciliationController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Vouchers\CreateVoucherController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Wallets\CreateWalletTopUpController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Wallets\ListWalletLedgerController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Wallets\ShowWalletBalanceController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Wallets\ShowWalletController;
 
 Route::prefix('api/x/v1')->as('api.x.v1.')->group(function (): void {
     Route::prefix('issuers')->group(function (): void {
@@ -20,7 +23,10 @@ Route::prefix('api/x/v1')->as('api.x.v1.')->group(function (): void {
     });
 
     Route::prefix('wallets')->group(function (): void {
+        Route::get('{wallet}', ShowWalletController::class)->name('wallets.show');
         Route::get('{wallet}/balance', ShowWalletBalanceController::class)->name('wallets.balance.show');
+        Route::get('{wallet}/ledger', ListWalletLedgerController::class)->name('wallets.ledger.index');
+        Route::post('{wallet}/top-ups', CreateWalletTopUpController::class)->name('wallets.topups.store');
     });
 
     Route::prefix('pricelist')->group(function (): void {

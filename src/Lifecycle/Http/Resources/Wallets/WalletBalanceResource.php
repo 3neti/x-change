@@ -12,10 +12,19 @@ class WalletBalanceResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
+            'success' => true,
             'data' => [
-                'balance' => $this->resource,
+                'wallet_id' => data_get($this->resource, 'wallet_id') !== null
+                    ? (int) data_get($this->resource, 'wallet_id')
+                    : null,
+                'balance' => data_get($this->resource, 'balance') !== null
+                    ? (float) data_get($this->resource, 'balance')
+                    : null,
+                'currency' => data_get($this->resource, 'currency') !== null
+                    ? (string) data_get($this->resource, 'currency')
+                    : null,
             ],
-            'meta' => new \stdClass(),
+            'meta' => [],
         ];
     }
 }
