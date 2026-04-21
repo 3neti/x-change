@@ -13,7 +13,12 @@ use LBHurtado\XChange\Lifecycle\Http\Controllers\Pricelist\EstimateVoucherContro
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Pricelist\ListPricelistItemsController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Pricelist\ShowPricelistController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Reconciliations\ShowReconciliationController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Vouchers\CancelVoucherController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Vouchers\CreateVoucherController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Vouchers\ListVouchersController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Vouchers\ShowVoucherByCodeController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Vouchers\ShowVoucherController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Vouchers\ShowVoucherStatusController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Wallets\CreateWalletTopUpController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Wallets\ListWalletLedgerController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Wallets\ShowWalletBalanceController;
@@ -40,6 +45,13 @@ Route::prefix('api/x/v1')->as('api.x.v1.')->group(function (): void {
     Route::prefix('vouchers')->group(function (): void {
         Route::post('estimate', EstimateVoucherController::class)->name('vouchers.estimate');
         Route::post('/', CreateVoucherController::class)->name('vouchers.store');
+
+        Route::get('/', ListVouchersController::class)->name('vouchers.index');
+        Route::get('{voucher}', ShowVoucherController::class)->name('vouchers.show');
+        Route::get('code/{code}', ShowVoucherByCodeController::class)->name('vouchers.code.show');
+        Route::get('{voucher}/status', ShowVoucherStatusController::class)->name('vouchers.status.show');
+        Route::post('{voucher}/cancel', CancelVoucherController::class)->name('vouchers.cancel');
+
         Route::post('code/{code}/claim/start', StartVoucherClaimController::class)->name('vouchers.claim.start');
         Route::post('code/{code}/claim/submit', SubmitVoucherClaimController::class)->name('vouchers.claim.submit');
         Route::post('code/{code}/claim/complete', CompleteVoucherClaimController::class)->name('vouchers.claim.complete');

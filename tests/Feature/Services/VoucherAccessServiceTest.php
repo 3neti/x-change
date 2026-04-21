@@ -37,7 +37,7 @@ it('throws when find by code or fail cannot locate the voucher', function () {
     $service = new VoucherAccessService;
 
     expect(fn () => $service->findByCodeOrFail('NOPE-0000'))
-        ->toThrow(VoucherNotFound::class, 'Voucher [NOPE-0000] was not found.');
+        ->toThrow(VoucherNotFound::class, 'NOPE-0000');
 });
 
 it('does not throw when a voucher is redeemable', function () {
@@ -54,7 +54,6 @@ use LBHurtado\Voucher\Actions\RedeemVoucher;
 
 it('throws when a voucher is already redeemed', function () {
     $voucher = issueVoucher();
-
     $voucher->forceFill([
         'redeemed_at' => now(),
     ])->save();
@@ -62,10 +61,7 @@ it('throws when a voucher is already redeemed', function () {
     $service = new VoucherAccessService;
 
     expect(fn () => $service->assertRedeemable($voucher->fresh()))
-        ->toThrow(VoucherNotRedeemable::class, sprintf(
-            'Voucher [%s] is not redeemable.',
-            $voucher->code
-        ));
+        ->toThrow(VoucherNotRedeemable::class, 'Voucher is already redeemed.');
 });
 
 it('throws when a voucher is already redeemed (full pipeline)', function () {

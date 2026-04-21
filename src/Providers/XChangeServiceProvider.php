@@ -44,6 +44,8 @@ use LBHurtado\XChange\Contracts\RedemptionExecutionContract;
 use LBHurtado\XChange\Contracts\RedemptionFlowPreparationContract;
 use LBHurtado\XChange\Contracts\RedemptionProcessorContract;
 use LBHurtado\XChange\Contracts\RedemptionValidationContract;
+use LBHurtado\XChange\Contracts\VoucherAccessContract;
+use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\WithdrawalExecutionContract;
 use LBHurtado\XChange\Contracts\WithdrawalProcessorContract;
 use LBHurtado\XChange\Contracts\WithdrawalValidationContract;
@@ -75,6 +77,8 @@ use LBHurtado\XChange\Services\InstructionBackedPricingService;
 use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
 use LBHurtado\XChange\Services\PricelistService;
 use LBHurtado\XChange\Services\SystemWalletProxy;
+use LBHurtado\XChange\Services\VoucherAccessService;
+use LBHurtado\XChange\Services\VoucherLifecycleService;
 
 class XChangeServiceProvider extends ServiceProvider
 {
@@ -209,6 +213,9 @@ class XChangeServiceProvider extends ServiceProvider
         });
 
         $this->app->bind(PricelistServiceContract::class, PricelistService::class);
+
+        $this->app->bind(VoucherAccessContract::class, VoucherAccessService::class);
+        $this->app->bind(VoucherLifecycleServiceContract::class, VoucherLifecycleService::class);
 
         $this->app->singleton(PayoutProvider::class, function ($app) {
             $provider = config(

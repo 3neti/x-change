@@ -20,5 +20,10 @@ it('registers the first lifecycle routes', function () {
         ->and(Route::has('api.x.v1.wallets.ledger.index'))->toBeTrue()
         ->and(Route::has('api.x.v1.wallets.topups.store'))->toBeTrue()
         ->and(Route::has('api.x.v1.vouchers.claim.complete'))->toBeTrue()
-        ->and(Route::has('api.x.v1.vouchers.claim.status.show'))->toBeTrue();
+        ->and(Route::has('api.x.v1.vouchers.claim.status.show'))->toBeTrue()
+        ->and(Route::has('api.x.v1.vouchers.index'))->toBeTrue()
+        ->and(Route::has('api.x.v1.vouchers.show'))->toBeTrue()
+        ->and(Route::has('api.x.v1.vouchers.code.show'))->toBeTrue()
+        ->and(Route::has('api.x.v1.vouchers.status.show'))->toBeTrue()
+        ->and(Route::has('api.x.v1.vouchers.cancel'))->toBeTrue();
 });
