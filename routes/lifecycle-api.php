@@ -8,6 +8,7 @@ use LBHurtado\XChange\Lifecycle\Http\Controllers\Claims\SubmitVoucherClaimContro
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Issuers\CreateIssuerController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Issuers\CreateIssuerWalletController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Pricelist\EstimateVoucherController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Pricelist\ListPricelistItemsController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Pricelist\ShowPricelistController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Reconciliations\ShowReconciliationController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Vouchers\CreateVoucherController;
@@ -31,6 +32,7 @@ Route::prefix('api/x/v1')->as('api.x.v1.')->group(function (): void {
 
     Route::prefix('pricelist')->group(function (): void {
         Route::get('/', ShowPricelistController::class)->name('pricelist.show');
+        Route::get('/items', ListPricelistItemsController::class)->name('pricelist.items.index');
     });
 
     Route::prefix('vouchers')->group(function (): void {

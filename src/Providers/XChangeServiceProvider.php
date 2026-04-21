@@ -35,6 +35,7 @@ use LBHurtado\XChange\Contracts\DisbursementReconciliationContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusFetcherContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
+use LBHurtado\XChange\Contracts\PricelistServiceContract;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
 use LBHurtado\XChange\Contracts\RedemptionCompletionContextContract;
 use LBHurtado\XChange\Contracts\RedemptionCompletionStoreContract;
@@ -72,6 +73,7 @@ use LBHurtado\XChange\Services\DefaultWithdrawalProcessorService;
 use LBHurtado\XChange\Services\DefaultWithdrawalValidationService;
 use LBHurtado\XChange\Services\InstructionBackedPricingService;
 use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
+use LBHurtado\XChange\Services\PricelistService;
 use LBHurtado\XChange\Services\SystemWalletProxy;
 
 class XChangeServiceProvider extends ServiceProvider
@@ -205,6 +207,8 @@ class XChangeServiceProvider extends ServiceProvider
 
             return $app->make($service);
         });
+
+        $this->app->bind(PricelistServiceContract::class, PricelistService::class);
 
         $this->app->singleton(PayoutProvider::class, function ($app) {
             $provider = config(

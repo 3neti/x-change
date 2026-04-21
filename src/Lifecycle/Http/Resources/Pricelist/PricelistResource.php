@@ -12,10 +12,19 @@ class PricelistResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
+            'success' => true,
             'data' => [
-                'pricelist' => $this->resource,
+                'name' => data_get($this->resource, 'name') !== null
+                    ? (string) data_get($this->resource, 'name')
+                    : null,
+                'currency' => data_get($this->resource, 'currency') !== null
+                    ? (string) data_get($this->resource, 'currency')
+                    : null,
+                'items' => PricelistItemResource::collection(
+                    collect(data_get($this->resource, 'items', []))
+                ),
             ],
-            'meta' => new \stdClass(),
+            'meta' => [],
         ];
     }
 }
