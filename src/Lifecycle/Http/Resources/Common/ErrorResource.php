@@ -11,15 +11,11 @@ class ErrorResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $error = is_array($this->resource) ? $this->resource : [];
-
         return [
-            'error' => [
-                'code' => $error['code'] ?? 'UNSPECIFIED_ERROR',
-                'message' => $error['message'] ?? 'An error occurred.',
-                'details' => $error['details'] ?? new \stdClass(),
-                'correlation_id' => $error['correlation_id'] ?? null,
-            ],
+            'success' => false,
+            'message' => (string) data_get($this->resource, 'message'),
+            'code' => (string) data_get($this->resource, 'code'),
+            'errors' => (array) data_get($this->resource, 'errors', []),
         ];
     }
 }

@@ -4,19 +4,6 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Lifecycle\Http\Requests\Pricelist;
 
-use Illuminate\Foundation\Http\FormRequest;
+use LBHurtado\XChange\Http\Requests\EstimatePayCodeRequest as LegacyEstimatePayCodeRequest;
 
-class EstimateVoucherRequest extends FormRequest
-{
-    public function authorize(): bool
-    {
-        return true;
-    }
-
-    public function rules(): array
-    {
-        return [
-            // TODO: Mirror public voucher estimate payload.
-        ];
-    }
-}
+class EstimateVoucherRequest extends LegacyEstimatePayCodeRequest {}

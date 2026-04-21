@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Lifecycle\Http\Controllers\Wallets;
 
+use Dedoc\Scramble\Attributes\ExcludeAllRoutesFromDocs;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 
+#[ExcludeAllRoutesFromDocs]
 class ShowWalletBalanceController extends Controller
 {
     public function __invoke(mixed $wallet): JsonResponse

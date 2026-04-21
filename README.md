@@ -1,150 +1,135 @@
 # x-change
 
-A modular Laravel package for **Pay Code issuance**, **wallet-based transactions**, and **issuer onboarding**, designed with a clean API contract, DTO-driven architecture, and full test coverage.
+A modular Laravel platform for **Pay Code issuance**, **wallet-based transactions**, and **voucher lifecycle orchestration**, designed with a clean architecture, DTO-driven contracts, and full scenario-based test coverage.
 
 ---
 
-# 🧩 Core Architecture
+## 🚀 Key Features
 
-The system follows a layered, contract-first architecture:
-
-HTTP → Request → Controller → Action → Service → External / Domain → DTO → API Response
-
----
-
-# 📦 Key Components
-
-## 1. Actions (Application Layer)
-
-Actions orchestrate business logic.
-
-Examples:
-- GeneratePayCode
-- EstimatePayCodeCost
-- OnboardIssuer
-- OpenIssuerWallet
-
-### Responsibilities
-- Coordinate services
-- Normalize outputs into DTOs
-- Enforce domain flow
-
-### Rule
-All actions MUST return DTOs (never raw arrays)
+- Pay Code issuance with dynamic pricing  
+- Wallet-based debit/credit flows  
+- Scenario-driven lifecycle simulation engine  
+- Multi-attempt contract validation (OTP, KYC, location, etc.)  
+- Reconciliation-aware disbursement flows  
+- JSON + CLI execution modes  
+- Fully testable via Pest  
 
 ---
 
-## 2. DTOs (Data Transfer Objects)
+## 🔄 Lifecycle Engine
 
-Located in:
-src/Data/
+The Lifecycle Engine is a scenario-based simulation framework for:
 
-Examples:
-- GeneratePayCodeResultData
-- PricingEstimateData
-- OnboardIssuerResultData
-- OpenIssuerWalletResultData
-- DebitData
-- WalletData
-- IssuerData
+- voucher issuance  
+- redemption attempts  
+- validation rules  
+- disbursement + reconciliation  
 
-### Purpose
-- Define strict output contracts
-- Provide serialization (toArray())
-- Enable consistent API responses
+### Run a scenario
 
----
+```bash
+php artisan xchange:lifecycle:run secret_required
+```
 
-## 3. Controllers (Transport Layer)
+### Run a specific attempt
 
-Controllers:
-- Accept validated input
-- Call Actions
-- Return standardized API responses
+```bash
+php artisan xchange:lifecycle:run secret_required --only-attempt=wrong_secret_fails
+```
 
----
+### JSON output
 
-## 4. ApiResponseFactory
-
-Standardizes all responses:
-
-{
-  "success": true,
-  "data": {...},
-  "meta": {...}
-}
+```bash
+php artisan xchange:lifecycle:run secret_required --json
+```
 
 ---
 
-## 5. Request Validation
+## 🧠 Reconciliation Model
 
-Key Pattern:
+| Provider Status | System Status | Behavior |
+|----------------|--------------|---------|
+| completed      | succeeded    | finalized |
+| failed         | pending      | requires review |
+| unknown        | unknown      | investigation |
 
-| Case | Rule |
-|------|------|
-| Required object | required|array |
-| Allow empty array | present|array |
-
----
-
-## 6. Services
-
-- PricingService
-- IdempotencyService
-- ApiResponseFactory
+> Failed provider responses are NOT automatically finalized as failed.  
+> They are preserved as **pending + needs_review** for safety.
 
 ---
 
-## 7. Contracts
+## 🧪 Testing
 
-- IssuerOnboardingContract
-- WalletProvisioningContract
-- AuditLoggerContract
+Run full lifecycle suite:
 
----
+```bash
+./vendor/bin/pest packages/x-change/tests/Feature/Console
+```
 
-## 8. Reports
+Coverage includes:
 
-- xchange-revenue-pending
-- xchange-revenue-collections
-- xchange-revenue-summary
-- xchange-revenue-by-instruction
-
----
-
-# 🔁 Flow Overview
-
-Pay Code Generation → DTO → API  
-Onboarding → DTO → API  
+- contract scenarios  
+- presence validation  
+- KYC flows  
+- reconciliation recording  
+- reconciliation resolution  
+- CLI + JSON execution  
 
 ---
 
-# 🔒 Idempotency
+## 🧩 Architecture
 
-POST /pay-codes  
+```
+HTTP → Controller → Action → Service → Domain → DTO → Response
+```
+
+### Layers
+
+**Actions**
+- Orchestrate business logic  
+- Return DTOs  
+
+**DTOs**
+- Strongly typed outputs  
+- Serialization via toArray()  
+
+**Services**
+- Pricing  
+- Idempotency  
+- External integrations  
+
+**Contracts**
+- External abstraction layer  
+
+---
+
+## 🔒 Idempotency
+
 Same request → same response  
-Different payload → 409  
+Different payload → 409 conflict  
 
 ---
 
-# 🧪 Testing
+## 🎯 Design Principles
 
-55 passed  
-0 failed  
-2 skipped  
-360 assertions  
-
----
-
-# 🚀 Next Steps
-
-- Transaction history
-- Wallet API
-- KYC integration
+- Contract-first  
+- Scenario-driven  
+- Deterministic execution  
+- Safety-first reconciliation  
+- Test-backed guarantees  
 
 ---
 
-# 🧠 Mental Model
+## 🛣️ Roadmap
+
+- Scenario grouping (`--group`)  
+- Lifecycle UI dashboard  
+- CI regression testing  
+- Extract lifecycle engine as standalone package  
+
+---
+
+## 🧠 Mental Model
 
 Controllers → JSON  
 Actions → DTO  

@@ -35,6 +35,7 @@
         "spatie/laravel-data": "^4.21"
     },
     "require-dev": {
+        "dedoc/scramble": "^0.13.20",
         "orchestra/testbench": "^11.0",
         "pestphp/pest": "^4.4",
         "pestphp/pest-plugin-laravel": "^4.1"

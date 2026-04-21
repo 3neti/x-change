@@ -6,21 +6,20 @@ namespace LBHurtado\XChange\Lifecycle\Http\Controllers\Issuers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
-use LBHurtado\XChange\Http\Controllers\Onboarding\OnboardIssuerController as LegacyOnboardIssuerController;
+use LBHurtado\XChange\Actions\Onboarding\OnboardIssuer;
 use LBHurtado\XChange\Lifecycle\Http\Requests\Issuers\CreateIssuerRequest;
+use LBHurtado\XChange\Lifecycle\Http\Resources\Issuers\IssuerResource;
 
-/**
- * Lifecycle API wrapper around the existing onboarding controller.
- *
- * This preserves current behavior while exposing the new public lifecycle route surface.
- */
 class CreateIssuerController extends Controller
 {
-    public function __invoke(CreateIssuerRequest $request): JsonResponse
-    {
-        /** @var LegacyOnboardIssuerController $controller */
-        $controller = app(LegacyOnboardIssuerController::class);
+    public function __invoke(
+        CreateIssuerRequest $request,
+        OnboardIssuer $action,
+    ): JsonResponse {
+        $result = $action->handle($request->validated());
 
-        return $controller($request);
+        return IssuerResource::make($result)
+            ->response()
+            ->setStatusCode(201);
     }
 }

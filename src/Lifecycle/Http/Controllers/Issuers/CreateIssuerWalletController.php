@@ -6,21 +6,20 @@ namespace LBHurtado\XChange\Lifecycle\Http\Controllers\Issuers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
-use LBHurtado\XChange\Http\Controllers\Onboarding\OpenIssuerWalletController as LegacyOpenIssuerWalletController;
+use LBHurtado\XChange\Actions\Onboarding\OpenIssuerWallet;
 use LBHurtado\XChange\Lifecycle\Http\Requests\Issuers\CreateIssuerWalletRequest;
+use LBHurtado\XChange\Lifecycle\Http\Resources\Issuers\IssuerWalletResource;
 
-/**
- * Lifecycle API wrapper around the existing issuer wallet opening controller.
- *
- * This preserves current behavior while exposing the new public lifecycle route surface.
- */
 class CreateIssuerWalletController extends Controller
 {
-    public function __invoke(CreateIssuerWalletRequest $request): JsonResponse
-    {
-        /** @var LegacyOpenIssuerWalletController $controller */
-        $controller = app(LegacyOpenIssuerWalletController::class);
+    public function __invoke(
+        CreateIssuerWalletRequest $request,
+        OpenIssuerWallet $action,
+    ): JsonResponse {
+        $result = $action->handle($request->validated());
 
-        return $controller($request);
+        return IssuerWalletResource::make($result)
+            ->response()
+            ->setStatusCode(201);
     }
 }

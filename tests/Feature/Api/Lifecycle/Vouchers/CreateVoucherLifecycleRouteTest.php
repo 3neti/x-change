@@ -97,7 +97,33 @@ it('returns a generated voucher via the lifecycle route surface', function () {
         ->assertCreated()
         ->assertJson([
             'success' => true,
-            'data' => $result->toArray(),
+            'data' => [
+                'voucher_id' => 99,
+                'code' => 'TEST-1234',
+                'amount' => 100.0,
+                'currency' => 'PHP',
+                'issuer' => [
+                    'id' => 1,
+                ],
+                'cost' => [
+                    'currency' => 'PHP',
+                    'base_fee' => 1.0,
+                    'components' => [],
+                    'total' => 1.0,
+                ],
+                'wallet' => [
+                    'balance_before' => 1000.0,
+                    'balance_after' => 999.0,
+                ],
+                'debit' => [
+                    'id' => 501,
+                    'amount' => null,
+                ],
+                'links' => [
+                    'redeem' => 'https://example.test/disburse?code=TEST-1234',
+                    'redeem_path' => '/disburse?code=TEST-1234',
+                ],
+            ],
             'meta' => [
                 'idempotency' => [
                     'key' => null,

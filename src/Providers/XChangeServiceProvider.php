@@ -361,6 +361,9 @@ class XChangeServiceProvider extends ServiceProvider
         if ((bool) $config->get('x-change.routes.api', true)) {
             $this->loadRoutesFrom($this->packagePath('routes/api.php'));
         }
+
+        // New lifecycle API surface for Scramble / public API.
+        $this->loadRoutesFrom(__DIR__ . '/../../routes/lifecycle-api.php');
     }
 
     protected function bootExceptionRendering(): void
