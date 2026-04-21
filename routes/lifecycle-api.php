@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Claims\CompleteVoucherClaimController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Claims\ShowVoucherClaimStatusController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Claims\StartVoucherClaimController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Claims\SubmitVoucherClaimController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Issuers\CreateIssuerController;
@@ -40,6 +42,8 @@ Route::prefix('api/x/v1')->as('api.x.v1.')->group(function (): void {
         Route::post('/', CreateVoucherController::class)->name('vouchers.store');
         Route::post('code/{code}/claim/start', StartVoucherClaimController::class)->name('vouchers.claim.start');
         Route::post('code/{code}/claim/submit', SubmitVoucherClaimController::class)->name('vouchers.claim.submit');
+        Route::post('code/{code}/claim/complete', CompleteVoucherClaimController::class)->name('vouchers.claim.complete');
+        Route::get('code/{code}/claim/status', ShowVoucherClaimStatusController::class)->name('vouchers.claim.status.show');
     });
 
     Route::prefix('reconciliations')->group(function (): void {

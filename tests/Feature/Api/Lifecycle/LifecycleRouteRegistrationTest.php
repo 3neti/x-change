@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Route;
+
 it('registers the first lifecycle routes', function () {
     $routes = collect(app('router')->getRoutes()->getRoutesByName());
 
@@ -16,6 +18,7 @@ it('registers the first lifecycle routes', function () {
         ->and(Route::has('api.x.v1.wallets.show'))->toBeTrue()
         ->and(Route::has('api.x.v1.wallets.balance.show'))->toBeTrue()
         ->and(Route::has('api.x.v1.wallets.ledger.index'))->toBeTrue()
-        ->and(Route::has('api.x.v1.wallets.topups.store'))->toBeTrue();
-
+        ->and(Route::has('api.x.v1.wallets.topups.store'))->toBeTrue()
+        ->and(Route::has('api.x.v1.vouchers.claim.complete'))->toBeTrue()
+        ->and(Route::has('api.x.v1.vouchers.claim.status.show'))->toBeTrue();
 });
