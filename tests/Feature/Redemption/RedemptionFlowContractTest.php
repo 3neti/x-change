@@ -12,8 +12,6 @@ use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Tests\Fakes\User;
 
-uses(RefreshDatabase::class);
-
 beforeEach(function () {
     Config::set('x-change.onboarding.issuer_model', User::class);
 

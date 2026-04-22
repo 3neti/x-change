@@ -48,11 +48,6 @@ abstract class TestCase extends Orchestra
         $this->fakeAuditLogger = new FakeAuditLogger;
         $this->app->instance(AuditLoggerContract::class, $this->fakeAuditLogger);
 
-//        // Test-only helper tables owned by this test suite.
-//        if (! Schema::hasTable('users')) {
-//            $this->runMigrationDirectory(__DIR__.'/database/migrations');
-//        }
-
         $this->seedInstructionItems();
     }
 
