@@ -3,12 +3,14 @@
 declare(strict_types=1);
 
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Actions\Redemption\RecordVoucherClaim;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
 use LBHurtado\XChange\Contracts\ClaimExecutorContract;
 use LBHurtado\XChange\Data\Redemption\RedeemPayCodeResultData;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
+use LBHurtado\XChange\Models\VoucherClaim;
 
 it('submits a claim through the selected executor and normalizes redeem result', function () {
     $voucher = Mockery::mock(Voucher::class);
@@ -60,7 +62,14 @@ it('submits a claim through the selected executor and normalizes redeem result',
         ->with($voucher, $payload)
         ->andReturn($executor);
 
-    $action = new SubmitPayCodeClaim($factory);
+    $recordVoucherClaim = Mockery::mock(RecordVoucherClaim::class);
+    $recordVoucherClaim
+        ->shouldReceive('handle')
+        ->once()
+        ->with($voucher, Mockery::type(SubmitPayCodeClaimResultData::class), $payload)
+        ->andReturn(new VoucherClaim);
+
+    $action = new SubmitPayCodeClaim($factory, $recordVoucherClaim);
 
     $result = $action->handle($voucher, $payload);
 
@@ -132,7 +141,14 @@ it('submits a claim through the selected executor and normalizes withdraw result
         ->with($voucher, $payload)
         ->andReturn($executor);
 
-    $action = new SubmitPayCodeClaim($factory);
+    $recordVoucherClaim = Mockery::mock(RecordVoucherClaim::class);
+    $recordVoucherClaim
+        ->shouldReceive('handle')
+        ->once()
+        ->with($voucher, Mockery::type(SubmitPayCodeClaimResultData::class), $payload)
+        ->andReturn(new VoucherClaim);
+
+    $action = new SubmitPayCodeClaim($factory, $recordVoucherClaim);
 
     $result = $action->handle($voucher, $payload);
 
@@ -178,7 +194,10 @@ it('throws for unsupported executor result types', function () {
         ->with($voucher, $payload)
         ->andReturn($executor);
 
-    $action = new SubmitPayCodeClaim($factory);
+    $recordVoucherClaim = Mockery::mock(RecordVoucherClaim::class);
+    $recordVoucherClaim->shouldNotReceive('handle');
+
+    $action = new SubmitPayCodeClaim($factory, $recordVoucherClaim);
 
     expect(fn () => $action->handle($voucher, $payload))
         ->toThrow(RuntimeException::class, 'Unsupported claim execution result type');

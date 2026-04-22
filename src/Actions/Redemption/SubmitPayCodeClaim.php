@@ -17,6 +17,7 @@ class SubmitPayCodeClaim
 
     public function __construct(
         protected ClaimExecutionFactoryContract $factory,
+        protected RecordVoucherClaim $recordVoucherClaim,
     ) {}
 
     /**
@@ -28,12 +29,17 @@ class SubmitPayCodeClaim
 
         $result = $executor->handle($voucher, $payload);
 
-        return $this->normalizeResult($result, $payload);
+        $normalized = $this->normalizeResult($result, $payload);
+
+        $this->recordVoucherClaim->handle($voucher, $normalized, $payload);
+
+        return $normalized;
     }
 
     /**
-     * @param  mixed  $result
-     * @param  array<string, mixed>  $payload
+     * @param mixed $result
+     * @param array<string, mixed> $payload
+     * @return SubmitPayCodeClaimResultData
      */
     protected function normalizeResult(mixed $result, array $payload): SubmitPayCodeClaimResultData
     {

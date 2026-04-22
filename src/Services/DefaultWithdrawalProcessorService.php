@@ -23,80 +23,6 @@ use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
 use Propaganistas\LaravelPhone\PhoneNumber;
 use RuntimeException;
 
-/**
- * DefaultWithdrawalProcessorService
- *
- * This service is the core execution engine for voucher withdrawals (divisible vouchers).
- *
- * It is responsible for:
- *  - validating withdrawal eligibility at the domain level
- *  - resolving withdrawal amount based on slice mode (fixed/open)
- *  - constructing a payout request for external disbursement
- *  - enforcing settlement rail rules (INSTAPAY vs PESONET vs EMI constraints)
- *  - invoking the payout provider (emi-core)
- *  - recording wallet withdrawal and updating voucher metadata
- *
- * ---
- *
- * ⚠️ IMPORTANT ARCHITECTURAL NOTES
- *
- * 1. This is the FIRST LAYER where real money leaves the system.
- *    Everything before this (prepare/start/complete) is UX + validation only.
- *
- * 2. This class bridges:
- *      Voucher Domain → EMI Core → External Banking Rails
- *
- * 3. This class is intentionally DEFAULT and OVERRIDABLE.
- *    Host applications MAY override this to:
- *      - plug custom payout providers
- *      - change fee strategies
- *      - integrate reconciliation systems
- *      - alter metadata storage
- *
- * ---
- *
- * 💡 DESIGN INTENT
- *
- * - Keep orchestration here, not in controllers
- * - Keep transport (HTTP) out
- * - Keep UI concerns out
- *
- * ---
- *
- * 🔌 DEPENDENCIES
- *
- * - PayoutProvider (emi-core)
- * - BankRegistry (money-issuer)
- * - Voucher domain model
- * - Wallet withdrawal action
- *
- * ---
- *
- * 🔁 TRANSACTION BOUNDARIES
- *
- * External calls (gateway) happen OUTSIDE DB transaction.
- * State mutation (wallet + voucher metadata) happens INSIDE DB transaction.
- *
- * ---
- *
- * 🚨 FAILURE HANDLING
- *
- * - Gateway failure → record pending disbursement
- * - Throw exception → upstream handles audit + API response
- *
- * ---
- *
- * 📦 RETURN CONTRACT
- *
- * array{
- *   success: bool,
- *   amount: float,
- *   slice_number: int,
- *   remaining_slices: int,
- *   bank_code: string,
- *   account_number: string
- * }
- */
 class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
 {
     public function __construct(
@@ -122,8 +48,6 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
         $this->assertVoucherIsWithdrawable($voucher);
         $this->assertOriginalRedeemer($voucher, $contact);
 
-        // Fixed mode → always fixed slice amount
-        // Open mode → user-defined but validated
         $withdrawAmount = $this->resolveAmount(
             $voucher,
             $amount !== null && $amount !== '' ? (float) $amount : null,
@@ -148,7 +72,6 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
 
         $rail = SettlementRail::from($input->settlement_rail);
 
-        // Prevent invalid rail usage
         if ($rail === SettlementRail::PESONET && $this->bankRegistry->isEMI($input->bank_code)) {
             $bankName = $this->bankRegistry->getBankName($input->bank_code);
 
@@ -158,7 +81,6 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
         }
 
         try {
-            // 🚨 EXTERNAL I/O — do NOT wrap in DB transaction
             $response = $this->gateway->disburse($input);
 
             if ($response->status === PayoutStatus::FAILED) {
@@ -238,16 +160,12 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
                 ],
             ]);
 
-            // If gateway fails → mark as PENDING
-            // This enables reconciliation flows later
             $this->recordPendingDisbursement($voucher, $input, $e);
 
             throw new RuntimeException('Disbursement failed: '.$e->getMessage());
         }
 
         return DB::transaction(function () use ($voucher, $contact, $withdrawAmount, $sliceNumber, $input, $response): WithdrawPayCodeResultData {
-            // wallet withdrawal
-            // voucher metadata update
             $bankName = $this->bankRegistry->getBankName($input->bank_code);
             $providerName = $response->provider ?? 'unknown';
             $normalizedStatus = $response->status->value;
@@ -277,34 +195,49 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
                 $amountCentavos
             );
 
-            $voucher->metadata = array_merge($voucher->metadata ?? [], [
-                'disbursement' => [
-                    'gateway' => $providerName,
-                    'transaction_id' => $response->transaction_id,
-                    'status' => $normalizedStatus,
-                    'amount' => $input->amount,
-                    'currency' => 'PHP',
-                    'settlement_rail' => $rail->value,
-                    'fee_amount' => $feeAmount,
-                    'total_cost' => ($input->amount * 100) + $feeAmount,
-                    'fee_strategy' => $feeStrategy,
-                    'recipient_identifier' => $input->account_number,
-                    'disbursed_at' => now()->toIso8601String(),
-                    'transaction_uuid' => $response->uuid,
-                    'recipient_name' => $bankName,
-                    'payment_method' => 'bank_transfer',
-                    'cash_withdrawal_uuid' => $withdrawal->uuid,
-                    'slice_number' => $sliceNumber,
-                    'metadata' => [
-                        'bank_code' => $input->bank_code,
-                        'bank_name' => $bankName,
-                        'bank_logo' => $this->bankRegistry->getBankLogo($input->bank_code),
-                        'rail' => $input->settlement_rail,
-                        'is_emi' => $this->bankRegistry->isEMI($input->bank_code),
-                    ],
+            $metadata = $voucher->metadata ?? [];
+
+            if ($voucher->redeemed_at === null) {
+                $voucher->redeemed_at = now();
+            }
+
+            $originalRedeemer = data_get($metadata, 'redemption.original_redeemer');
+
+            if (! is_array($originalRedeemer) || $originalRedeemer === []) {
+                data_set($metadata, 'redemption.original_redeemer', [
+                    'contact_id' => $contact->id,
+                    'mobile' => $contact->mobile,
+                    'country' => $contact->country ?? null,
+                ]);
+            }
+
+            data_set($metadata, 'disbursement', [
+                'gateway' => $providerName,
+                'transaction_id' => $response->transaction_id,
+                'status' => $normalizedStatus,
+                'amount' => $input->amount,
+                'currency' => 'PHP',
+                'settlement_rail' => $rail->value,
+                'fee_amount' => $feeAmount,
+                'total_cost' => ($input->amount * 100) + $feeAmount,
+                'fee_strategy' => $feeStrategy,
+                'recipient_identifier' => $input->account_number,
+                'disbursed_at' => now()->toIso8601String(),
+                'transaction_uuid' => $response->uuid,
+                'recipient_name' => $bankName,
+                'payment_method' => 'bank_transfer',
+                'cash_withdrawal_uuid' => $withdrawal->uuid,
+                'slice_number' => $sliceNumber,
+                'metadata' => [
+                    'bank_code' => $input->bank_code,
+                    'bank_name' => $bankName,
+                    'bank_logo' => $this->bankRegistry->getBankLogo($input->bank_code),
+                    'rail' => $input->settlement_rail,
+                    'is_emi' => $this->bankRegistry->isEMI($input->bank_code),
                 ],
             ]);
 
+            $voucher->metadata = $metadata;
             $voucher->save();
             $voucher->refresh();
 
@@ -360,14 +293,38 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
 
     protected function assertVoucherIsWithdrawable(Voucher $voucher): void
     {
-        // 1. Ensure voucher supports withdrawal
-        // This enforces divisibility at the domain level.
         if (! method_exists($voucher, 'isDivisible') || ! $voucher->isDivisible()) {
             throw new RuntimeException('This voucher is not divisible.');
         }
 
-        // 2. Ensure withdrawal is still allowed
-        // Prevents over-withdrawal / exhaustion.
+        if ($this->isOpenSliceVoucher($voucher)) {
+            $state = is_object($voucher->state) && property_exists($voucher->state, 'value')
+                ? $voucher->state->value
+                : (string) $voucher->state;
+
+            if ($state !== 'active') {
+                throw new RuntimeException('This voucher cannot accept further withdrawals.');
+            }
+
+            if (method_exists($voucher, 'isExpired') && $voucher->isExpired()) {
+                throw new RuntimeException('This voucher cannot accept further withdrawals.');
+            }
+
+            if (method_exists($voucher, 'getRemainingBalance') && (float) $voucher->getRemainingBalance() <= 0) {
+                throw new RuntimeException('This voucher cannot accept further withdrawals.');
+            }
+
+            if (method_exists($voucher, 'getMaxSlices') && method_exists($voucher, 'getConsumedSlices')) {
+                $maxSlices = $voucher->getMaxSlices();
+
+                if ($maxSlices !== null && $voucher->getConsumedSlices() >= $maxSlices) {
+                    throw new RuntimeException('This voucher cannot accept further withdrawals.');
+                }
+            }
+
+            return;
+        }
+
         if (! method_exists($voucher, 'canWithdraw') || ! $voucher->canWithdraw()) {
             throw new RuntimeException('This voucher cannot accept further withdrawals.');
         }
@@ -375,12 +332,30 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
 
     protected function assertOriginalRedeemer(Voucher $voucher, Contact $contact): void
     {
-        // Only the original redeemer can withdraw
-        // This ensures ownership consistency of the voucher lifecycle.
         $originalContact = $voucher->contact;
 
-        if (! $originalContact || $originalContact->id !== $contact->id) {
-            throw new RuntimeException('Only the original redeemer can withdraw from this voucher.');
+        if ($originalContact) {
+            if ($originalContact->id !== $contact->id) {
+                throw new RuntimeException('Only the original redeemer can withdraw from this voucher.');
+            }
+
+            return;
+        }
+
+        $originalRedeemer = data_get($voucher->metadata, 'redemption.original_redeemer');
+
+        if (is_array($originalRedeemer) && $originalRedeemer !== []) {
+            $originalContactId = data_get($originalRedeemer, 'contact_id');
+
+            if ($originalContactId !== null && (int) $originalContactId !== (int) $contact->id) {
+                throw new RuntimeException('Only the original redeemer can withdraw from this voucher.');
+            }
+
+            $originalMobile = data_get($originalRedeemer, 'mobile');
+
+            if ($originalMobile !== null && (string) $originalMobile !== (string) $contact->mobile) {
+                throw new RuntimeException('Only the original redeemer can withdraw from this voucher.');
+            }
         }
     }
 
@@ -403,7 +378,7 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
         }
 
         $minWithdrawal = method_exists($voucher, 'getMinWithdrawal')
-            ? (float) $voucher->getMinWithdrawal()
+            ? (float) ($voucher->getMinWithdrawal() ?? 0.0)
             : 0.0;
 
         if ($amount < $minWithdrawal) {
@@ -485,30 +460,31 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
     {
         $bankName = $this->bankRegistry->getBankName($input->bank_code);
 
-        $voucher->metadata = array_merge($voucher->metadata ?? [], [
-            'disbursement' => [
-                'gateway' => 'unknown',
-                'transaction_id' => $input->reference,
-                'status' => PayoutStatus::PENDING->value,
-                'amount' => $input->amount,
-                'currency' => 'PHP',
-                'settlement_rail' => $input->settlement_rail,
-                'recipient_identifier' => $input->account_number,
-                'disbursed_at' => now()->toIso8601String(),
-                'recipient_name' => $bankName,
-                'payment_method' => 'bank_transfer',
-                'error' => $e->getMessage(),
-                'requires_reconciliation' => true,
-                'metadata' => [
-                    'bank_code' => $input->bank_code,
-                    'bank_name' => $bankName,
-                    'bank_logo' => $this->bankRegistry->getBankLogo($input->bank_code),
-                    'rail' => $input->settlement_rail,
-                    'is_emi' => $this->bankRegistry->isEMI($input->bank_code),
-                ],
+        $metadata = $voucher->metadata ?? [];
+
+        data_set($metadata, 'disbursement', [
+            'gateway' => 'unknown',
+            'transaction_id' => $input->reference,
+            'status' => PayoutStatus::PENDING->value,
+            'amount' => $input->amount,
+            'currency' => 'PHP',
+            'settlement_rail' => $input->settlement_rail,
+            'recipient_identifier' => $input->account_number,
+            'disbursed_at' => now()->toIso8601String(),
+            'recipient_name' => $bankName,
+            'payment_method' => 'bank_transfer',
+            'error' => $e->getMessage(),
+            'requires_reconciliation' => true,
+            'metadata' => [
+                'bank_code' => $input->bank_code,
+                'bank_name' => $bankName,
+                'bank_logo' => $this->bankRegistry->getBankLogo($input->bank_code),
+                'rail' => $input->settlement_rail,
+                'is_emi' => $this->bankRegistry->isEMI($input->bank_code),
             ],
         ]);
 
+        $voucher->metadata = $metadata;
         $voucher->save();
     }
 
@@ -525,5 +501,13 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
         }
 
         return str_repeat('*', $length - 4).substr($accountNumber, -4);
+    }
+
+    protected function isOpenSliceVoucher(Voucher $voucher): bool
+    {
+        return method_exists($voucher, 'isDivisible')
+            && $voucher->isDivisible()
+            && method_exists($voucher, 'getSliceMode')
+            && $voucher->getSliceMode() === 'open';
     }
 }
