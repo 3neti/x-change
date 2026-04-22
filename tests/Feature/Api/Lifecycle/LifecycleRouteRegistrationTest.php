@@ -34,5 +34,9 @@ it('registers the first lifecycle routes', function () {
         ->and(Route::has('api.x.v1.events.idempotency.show'))->toBeTrue()
         ->and(Route::has('api.x.v1.withdrawals.store'))->toBeTrue()
         ->and(Route::has('api.x.v1.withdrawals.index'))->toBeTrue()
-        ->and(Route::has('api.x.v1.withdrawals.show'))->toBeTrue();
+        ->and(Route::has('api.x.v1.withdrawals.show'))->toBeTrue()
+        ->and(Route::has('api.x.v1.users.store'))->toBeTrue()
+        ->and(Route::has('api.x.v1.users.show'))->toBeTrue()
+        ->and(Route::has('api.x.v1.users.kyc.submit'))->toBeTrue()
+        ->and(Route::has('api.x.v1.users.kyc.show'))->toBeTrue();
 });

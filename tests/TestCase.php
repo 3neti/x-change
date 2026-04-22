@@ -14,6 +14,7 @@ use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\EmiCore\EmiCoreServiceProvider;
 use LBHurtado\Instruction\Database\Seeders\InstructionItemSeeder;
 use LBHurtado\Instruction\InstructionServiceProvider;
+use LBHurtado\ModelChannel\ModelChannelServiceProvider;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\VoucherServiceProvider;
 use LBHurtado\Wallet\WalletServiceProvider as LBHurtadoWalletServiceProvider;
@@ -47,10 +48,10 @@ abstract class TestCase extends Orchestra
         $this->fakeAuditLogger = new FakeAuditLogger;
         $this->app->instance(AuditLoggerContract::class, $this->fakeAuditLogger);
 
-        // Test-only helper tables owned by this test suite.
-        if (! Schema::hasTable('users')) {
-            $this->runMigrationDirectory(__DIR__.'/database/migrations');
-        }
+//        // Test-only helper tables owned by this test suite.
+//        if (! Schema::hasTable('users')) {
+//            $this->runMigrationDirectory(__DIR__.'/database/migrations');
+//        }
 
         $this->seedInstructionItems();
     }
@@ -68,6 +69,7 @@ abstract class TestCase extends Orchestra
             BavixWalletServiceProvider::class,
             CashServiceProvider::class,
             LBHurtadoWalletServiceProvider::class,
+            ModelChannelServiceProvider::class,
             VouchersServiceProvider::class,
             ContactServiceProvider::class,
             VoucherServiceProvider::class,
@@ -143,12 +145,16 @@ abstract class TestCase extends Orchestra
         $app['config']->set('data.date_format', 'Y-m-d\\TH:i:sP');
 
         config()->set('x-change.onboarding.issuer_model', \LBHurtado\XChange\Tests\Fakes\User::class);
+
+        $app['config']->set('model-channel.rules.mobile', ['string']);
     }
 
     protected function defineDatabaseMigrations(): void
     {
         // Laravel default tables, including users. Loaded once only.
         $this->loadLaravelMigrations();
+
+        $this->loadMigrationsFrom(__DIR__.'/database/migrations');
 
         // Lower-level dependencies first.
         $this->runBaseWalletTablesMigrations();
@@ -158,6 +164,9 @@ abstract class TestCase extends Orchestra
 
         // Cash package migrations.
         $this->loadCashPackageMigrations();
+
+        // Model Channel package migrations.
+        $this->loadModelChannelPackageMigrations();
 
         // Contact package migrations.
         $this->loadContactPackageMigrations();
@@ -238,6 +247,13 @@ abstract class TestCase extends Orchestra
     {
         $this->runMigrationFilesFromCandidates([
             $this->packageRoot(CashServiceProvider::class).'/database/migrations',
+        ]);
+    }
+
+    protected function loadModelChannelPackageMigrations(): void
+    {
+        $this->runMigrationFilesFromCandidates([
+            $this->packageRoot(ModelChannelServiceProvider::class).'/database/migrations',
         ]);
     }
 

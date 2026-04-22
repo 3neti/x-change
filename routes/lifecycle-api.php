@@ -18,6 +18,10 @@ use LBHurtado\XChange\Lifecycle\Http\Controllers\Pricelist\ShowPricelistControll
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Reconciliations\ListReconciliationsController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Reconciliations\ResolveReconciliationController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Reconciliations\ShowReconciliationController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Users\CreateUserController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Users\ShowUserController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Users\ShowUserKycController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Users\SubmitUserKycController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Vouchers\CancelVoucherController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Vouchers\CreateVoucherController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Vouchers\ListVouchersController;
@@ -82,5 +86,12 @@ Route::prefix('api/x/v1')->as('api.x.v1.')->group(function (): void {
         Route::post('/', CreateVoucherWithdrawalController::class)->name('withdrawals.store');
         Route::get('/', ListVoucherWithdrawalsController::class)->name('withdrawals.index');
         Route::get('{withdrawal}', ShowVoucherWithdrawalController::class)->name('withdrawals.show');
+    });
+
+    Route::prefix('users')->group(function (): void {
+        Route::post('/', CreateUserController::class)->name('users.store');
+        Route::get('{user}', ShowUserController::class)->name('users.show');
+        Route::post('{user}/kyc', SubmitUserKycController::class)->name('users.kyc.submit');
+        Route::get('{user}/kyc', ShowUserKycController::class)->name('users.kyc.show');
     });
 });

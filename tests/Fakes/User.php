@@ -15,11 +15,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
+use LBHurtado\ModelChannel\Traits\HasChannels;
+use LBHurtado\XChange\Contracts\HasLifecycleMetadata;
 
-class User extends Authenticatable implements Confirmable, Customer, HasMobileChannel
+class User extends Authenticatable implements Confirmable, Customer, HasLifecycleMetadata, HasMobileChannel
 {
     use CanConfirm;
     use CanPay;
+    use HasChannels;
     use HasFactory;
     use HasRedeemers;
     use HasVouchers;
@@ -28,15 +31,18 @@ class User extends Authenticatable implements Confirmable, Customer, HasMobileCh
 
     protected $table = 'users';
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array
-     */
     protected $fillable = [
         'name',
         'email',
         'password',
+        'country',
+        'metadata',
+    ];
+
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+        'metadata' => 'array',
     ];
 
     /**
@@ -54,15 +60,33 @@ class User extends Authenticatable implements Confirmable, Customer, HasMobileCh
         return $this->mobile;
     }
 
-    public function setMobileChannel(string|null $mobile): static
+    public function setMobileChannel(?string $mobile): static
     {
         $this->mobile = $mobile;
 
         return $this;
     }
 
-    public function hasMobileChannel(): bool
+    /**
+     * @param  array<string,mixed>  $attributes
+     */
+    public function putLifecycleMetadata(string $key, array $attributes): void
     {
-        // TODO: Implement hasMobileChannel() method.
+        $metadata = (array) ($this->metadata ?? []);
+        $metadata[$key] = $attributes;
+
+        $this->metadata = $metadata;
+        $this->save();
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    public function getLifecycleMetadata(string $key): array
+    {
+        $metadata = (array) ($this->metadata ?? []);
+        $value = $metadata[$key] ?? [];
+
+        return is_array($value) ? $value : [];
     }
 }
