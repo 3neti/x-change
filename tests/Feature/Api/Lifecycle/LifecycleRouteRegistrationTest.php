@@ -31,5 +31,8 @@ it('registers the first lifecycle routes', function () {
         ->and(Route::has('api.x.v1.reconciliations.resolve'))->toBeTrue()
         ->and(Route::has('api.x.v1.events.index'))->toBeTrue()
         ->and(Route::has('api.x.v1.events.show'))->toBeTrue()
-        ->and(Route::has('api.x.v1.events.idempotency.show'))->toBeTrue();
+        ->and(Route::has('api.x.v1.events.idempotency.show'))->toBeTrue()
+        ->and(Route::has('api.x.v1.withdrawals.store'))->toBeTrue()
+        ->and(Route::has('api.x.v1.withdrawals.index'))->toBeTrue()
+        ->and(Route::has('api.x.v1.withdrawals.show'))->toBeTrue();
 });

@@ -28,6 +28,9 @@ use LBHurtado\XChange\Lifecycle\Http\Controllers\Wallets\CreateWalletTopUpContro
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Wallets\ListWalletLedgerController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Wallets\ShowWalletBalanceController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Wallets\ShowWalletController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Withdrawals\CreateVoucherWithdrawalController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Withdrawals\ListVoucherWithdrawalsController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Withdrawals\ShowVoucherWithdrawalController;
 
 Route::prefix('api/x/v1')->as('api.x.v1.')->group(function (): void {
     Route::prefix('issuers')->group(function (): void {
@@ -73,5 +76,11 @@ Route::prefix('api/x/v1')->as('api.x.v1.')->group(function (): void {
         Route::get('/', ListEventsController::class)->name('events.index');
         Route::get('{event}', ShowEventController::class)->name('events.show');
         Route::get('idempotency/{key}', ShowIdempotencyKeyController::class)->name('events.idempotency.show');
+    });
+
+    Route::prefix('withdrawals')->group(function (): void {
+        Route::post('/', CreateVoucherWithdrawalController::class)->name('withdrawals.store');
+        Route::get('/', ListVoucherWithdrawalsController::class)->name('withdrawals.index');
+        Route::get('{withdrawal}', ShowVoucherWithdrawalController::class)->name('withdrawals.show');
     });
 });

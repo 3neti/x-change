@@ -50,6 +50,7 @@ use LBHurtado\XChange\Contracts\RedemptionValidationContract;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\WithdrawalExecutionContract;
+use LBHurtado\XChange\Contracts\WithdrawalLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\WithdrawalProcessorContract;
 use LBHurtado\XChange\Contracts\WithdrawalValidationContract;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
@@ -84,6 +85,7 @@ use LBHurtado\XChange\Services\ReconciliationLifecycleService;
 use LBHurtado\XChange\Services\SystemWalletProxy;
 use LBHurtado\XChange\Services\VoucherAccessService;
 use LBHurtado\XChange\Services\VoucherLifecycleService;
+use LBHurtado\XChange\Services\WithdrawalLifecycleService;
 use LBHurtado\XChange\Support\Logging\CacheEventStore;
 
 class XChangeServiceProvider extends ServiceProvider
@@ -228,6 +230,11 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->bind(EventLifecycleServiceContract::class, EventLifecycleService::class);
 
         $this->app->singleton(EventStoreContract::class, CacheEventStore::class);
+
+        $this->app->bind(
+            WithdrawalLifecycleServiceContract::class,
+            (string) config('x-change.lifecycle.withdrawals.service', WithdrawalLifecycleService::class),
+        );
 
         $this->app->singleton(PayoutProvider::class, function ($app) {
             $provider = config(
