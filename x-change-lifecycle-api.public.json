@@ -1,0 +1,3942 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Laravel",
+        "version": "0.0.1"
+    },
+    "servers": [
+        {
+            "url": "http://x-change-sandbox.test/api/x/v1"
+        }
+    ],
+    "paths": {
+        "/vouchers/{voucher}/cancel": {
+            "post": {
+                "operationId": "x.v1.vouchers.cancel",
+                "tags": [
+                    "CancelVoucher"
+                ],
+                "parameters": [
+                    {
+                        "name": "voucher",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CancelVoucherRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`VoucherCancellationResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VoucherCancellationResource"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/vouchers/code/{code}/claim/complete": {
+            "post": {
+                "operationId": "x.v1.vouchers.claim.complete",
+                "tags": [
+                    "CompleteVoucherClaim"
+                ],
+                "parameters": [
+                    {
+                        "name": "code",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CompleteVoucherClaimRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`VoucherClaimCompletionResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VoucherClaimCompletionResource"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/issuers": {
+            "post": {
+                "operationId": "x.v1.issuers.store",
+                "tags": [
+                    "CreateIssuer"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateIssuerRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`IssuerResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IssuerResource"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/issuers/{issuer}/wallets": {
+            "post": {
+                "operationId": "x.v1.issuers.wallets.store",
+                "tags": [
+                    "CreateIssuerWallet"
+                ],
+                "parameters": [
+                    {
+                        "name": "issuer",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateIssuerWalletRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`IssuerWalletResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IssuerWalletResource"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/vouchers": {
+            "post": {
+                "operationId": "x.v1.vouchers.store",
+                "tags": [
+                    "CreateVoucher"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateVoucherRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`VoucherResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/VoucherResource"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "meta": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "idempotency": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "key": {
+                                                                    "type": [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "replayed": {
+                                                                    "type": "boolean"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "key",
+                                                                "replayed"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "idempotency"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "meta"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "`VoucherResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/VoucherResource"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "meta": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "idempotency": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "key": {
+                                                                    "type": [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "replayed": {
+                                                                    "type": "boolean"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "key",
+                                                                "replayed"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "idempotency"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "meta"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            },
+            "get": {
+                "operationId": "x.v1.vouchers.index",
+                "tags": [
+                    "ListVouchers"
+                ],
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 100
+                        }
+                    },
+                    {
+                        "name": "issuer_id",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "cursor",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`VoucherCollectionResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VoucherCollectionResource"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/wallets/{wallet}/top-ups": {
+            "post": {
+                "operationId": "x.v1.wallets.topups.store",
+                "tags": [
+                    "CreateWalletTopUp"
+                ],
+                "parameters": [
+                    {
+                        "name": "wallet",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateWalletTopUpRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`WalletTopUpResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WalletTopUpResource"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/vouchers/estimate": {
+            "post": {
+                "operationId": "x.v1.vouchers.estimate",
+                "tags": [
+                    "EstimateVoucher"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EstimateVoucherRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`VoucherEstimateResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VoucherEstimateResource"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/events": {
+            "get": {
+                "operationId": "x.v1.events.index",
+                "tags": [
+                    "ListEvents"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`EventCollectionResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EventCollectionResource"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/pricelist/items": {
+            "get": {
+                "operationId": "x.v1.pricelist.items.index",
+                "tags": [
+                    "ListPricelistItems"
+                ],
+                "parameters": [
+                    {
+                        "name": "category",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 100
+                        }
+                    },
+                    {
+                        "name": "active",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "boolean",
+                                "null"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`PricelistItemCollectionResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PricelistItemCollectionResource"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/reconciliations": {
+            "get": {
+                "operationId": "x.v1.reconciliations.index",
+                "tags": [
+                    "ListReconciliations"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`ReconciliationCollectionResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReconciliationCollectionResource"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/wallets/{wallet}/ledger": {
+            "get": {
+                "operationId": "x.v1.wallets.ledger.index",
+                "tags": [
+                    "ListWalletLedger"
+                ],
+                "parameters": [
+                    {
+                        "name": "wallet",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "cursor",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`WalletLedgerCollectionResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WalletLedgerCollectionResource"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/reconciliations/{reconciliation}/resolve": {
+            "post": {
+                "operationId": "x.v1.reconciliations.resolve",
+                "tags": [
+                    "ResolveReconciliation"
+                ],
+                "parameters": [
+                    {
+                        "name": "reconciliation",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ResolveReconciliationRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`ReconciliationResolutionResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReconciliationResolutionResource"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/events/{event}": {
+            "get": {
+                "operationId": "x.v1.events.show",
+                "tags": [
+                    "ShowEvent"
+                ],
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`EventResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EventResource"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/events/idempotency/{key}": {
+            "get": {
+                "operationId": "x.v1.events.idempotency.show",
+                "tags": [
+                    "ShowIdempotencyKey"
+                ],
+                "parameters": [
+                    {
+                        "name": "key",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`IdempotencyKeyResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IdempotencyKeyResource"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/pricelist": {
+            "get": {
+                "operationId": "x.v1.pricelist.show",
+                "tags": [
+                    "ShowPricelist"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`PricelistResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PricelistResource"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/reconciliations/{reconciliation}": {
+            "get": {
+                "operationId": "x.v1.reconciliations.show",
+                "tags": [
+                    "ShowReconciliation"
+                ],
+                "parameters": [
+                    {
+                        "name": "reconciliation",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`ReconciliationResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReconciliationResource"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/vouchers/{voucher}": {
+            "get": {
+                "operationId": "x.v1.vouchers.show",
+                "tags": [
+                    "ShowVoucher"
+                ],
+                "parameters": [
+                    {
+                        "name": "voucher",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`VoucherDetailResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VoucherDetailResource"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/vouchers/code/{code}": {
+            "get": {
+                "operationId": "x.v1.vouchers.code.show",
+                "tags": [
+                    "ShowVoucherByCode"
+                ],
+                "parameters": [
+                    {
+                        "name": "code",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`VoucherDetailResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VoucherDetailResource"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/vouchers/code/{code}/claim/status": {
+            "get": {
+                "operationId": "x.v1.vouchers.claim.status.show",
+                "tags": [
+                    "ShowVoucherClaimStatus"
+                ],
+                "parameters": [
+                    {
+                        "name": "code",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`VoucherClaimStatusResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VoucherClaimStatusResource"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/vouchers/{voucher}/status": {
+            "get": {
+                "operationId": "x.v1.vouchers.status.show",
+                "tags": [
+                    "ShowVoucherStatus"
+                ],
+                "parameters": [
+                    {
+                        "name": "voucher",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`VoucherStatusResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VoucherStatusResource"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/wallets/{wallet}": {
+            "get": {
+                "operationId": "x.v1.wallets.show",
+                "tags": [
+                    "ShowWallet"
+                ],
+                "parameters": [
+                    {
+                        "name": "wallet",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`WalletResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WalletResource"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/wallets/{wallet}/balance": {
+            "get": {
+                "operationId": "x.v1.wallets.balance.show",
+                "tags": [
+                    "ShowWalletBalance"
+                ],
+                "parameters": [
+                    {
+                        "name": "wallet",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`WalletBalanceResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WalletBalanceResource"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/vouchers/code/{code}/claim/start": {
+            "post": {
+                "operationId": "x.v1.vouchers.claim.start",
+                "tags": [
+                    "StartVoucherClaim"
+                ],
+                "parameters": [
+                    {
+                        "name": "code",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`VoucherClaimStartResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VoucherClaimStartResource"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "const": "Invalid voucher code."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "const": "PAY_CODE_INVALID"
+                                        },
+                                        "errors": {
+                                            "type": "object",
+                                            "properties": {
+                                                "code": {
+                                                    "type": "array",
+                                                    "prefixItems": [
+                                                        {
+                                                            "type": "string",
+                                                            "const": "Invalid voucher code."
+                                                        }
+                                                    ],
+                                                    "minItems": 1,
+                                                    "maxItems": 1,
+                                                    "additionalItems": false
+                                                }
+                                            },
+                                            "required": [
+                                                "code"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message",
+                                        "code",
+                                        "errors"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/vouchers/code/{code}/claim/submit": {
+            "post": {
+                "operationId": "x.v1.vouchers.claim.submit",
+                "tags": [
+                    "SubmitVoucherClaim"
+                ],
+                "parameters": [
+                    {
+                        "name": "code",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SubmitVoucherClaimRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`VoucherClaimSubmissionResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/VoucherClaimSubmissionResource"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "meta": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "idempotency": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "key": {
+                                                                    "type": [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "replayed": {
+                                                                    "type": "boolean"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "key",
+                                                                "replayed"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "idempotency"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "meta"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "const": "Invalid voucher code."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "const": "PAY_CODE_INVALID"
+                                        },
+                                        "errors": {
+                                            "type": "object",
+                                            "properties": {
+                                                "code": {
+                                                    "type": "array",
+                                                    "prefixItems": [
+                                                        {
+                                                            "type": "string",
+                                                            "const": "Invalid voucher code."
+                                                        }
+                                                    ],
+                                                    "minItems": 1,
+                                                    "maxItems": 1,
+                                                    "additionalItems": false
+                                                }
+                                            },
+                                            "required": [
+                                                "code"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message",
+                                        "code",
+                                        "errors"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "CancelVoucherRequest": {
+                "type": "object",
+                "properties": {
+                    "reason": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "notes": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "metadata": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "reason"
+                ],
+                "title": "CancelVoucherRequest"
+            },
+            "CompleteVoucherClaimRequest": {
+                "type": "object",
+                "properties": {
+                    "reference_id": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "status": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "notes": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "metadata": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "reference_id",
+                    "status"
+                ],
+                "title": "CompleteVoucherClaimRequest"
+            },
+            "CreateIssuerRequest": {
+                "type": "object",
+                "description": "Lifecycle alias/wrapper for the existing onboarding request.\n\nExtending the legacy request preserves current validation behavior.",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "email": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "email",
+                        "maxLength": 255
+                    },
+                    "mobile": {
+                        "type": "string",
+                        "maxLength": 50
+                    },
+                    "country": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 10
+                    },
+                    "identity": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "metadata": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "name",
+                    "mobile"
+                ],
+                "title": "CreateIssuerRequest"
+            },
+            "CreateIssuerWalletRequest": {
+                "type": "object",
+                "description": "Lifecycle alias/wrapper for the existing wallet opening request.\n\nExtending the legacy request preserves current validation behavior.",
+                "properties": {
+                    "issuer_id": {
+                        "type": "integer"
+                    },
+                    "metadata": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "wallet": {
+                        "type": "object",
+                        "properties": {
+                            "slug": {
+                                "type": "string"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "slug",
+                            "name"
+                        ]
+                    }
+                },
+                "required": [
+                    "issuer_id",
+                    "wallet"
+                ],
+                "title": "CreateIssuerWalletRequest"
+            },
+            "CreateVoucherRequest": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 1
+                    },
+                    "prefix": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "mask": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "ttl": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "metadata": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "issuer_id": {
+                        "type": "integer"
+                    },
+                    "cash": {
+                        "type": "object",
+                        "properties": {
+                            "amount": {
+                                "type": "number",
+                                "minimum": 0.01
+                            },
+                            "currency": {
+                                "type": "string",
+                                "maxLength": 10
+                            },
+                            "settlement_rail": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 50
+                            },
+                            "validation": {
+                                "type": [
+                                    "object",
+                                    "null"
+                                ],
+                                "properties": {
+                                    "secret": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "mobile": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "payable": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "country": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 10
+                                    },
+                                    "location": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "radius": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    }
+                                }
+                            }
+                        },
+                        "required": [
+                            "amount",
+                            "currency"
+                        ]
+                    },
+                    "inputs": {
+                        "type": "object",
+                        "properties": {
+                            "fields": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "required": [
+                            "fields"
+                        ]
+                    },
+                    "feedback": {
+                        "type": "object",
+                        "properties": {
+                            "email": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "email"
+                            },
+                            "mobile": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "webhook": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "uri"
+                            }
+                        }
+                    },
+                    "rider": {
+                        "type": "object",
+                        "properties": {
+                            "message": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "url": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "uri"
+                            },
+                            "redirect_timeout": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "splash": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "splash_timeout": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "og_source": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "required": [
+                    "cash",
+                    "inputs",
+                    "feedback",
+                    "rider"
+                ],
+                "title": "CreateVoucherRequest"
+            },
+            "CreateWalletTopUpRequest": {
+                "type": "object",
+                "properties": {
+                    "amount": {
+                        "type": "number",
+                        "minimum": 0.01
+                    },
+                    "currency": {
+                        "type": "string",
+                        "maxLength": 10
+                    },
+                    "reference": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255
+                    },
+                    "metadata": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "amount",
+                    "currency"
+                ],
+                "title": "CreateWalletTopUpRequest"
+            },
+            "EstimateVoucherRequest": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 1
+                    },
+                    "prefix": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "mask": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "ttl": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "metadata": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "cash": {
+                        "type": "object",
+                        "properties": {
+                            "amount": {
+                                "type": "number",
+                                "minimum": 0.01
+                            },
+                            "currency": {
+                                "type": "string",
+                                "maxLength": 10
+                            },
+                            "settlement_rail": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 50
+                            },
+                            "validation": {
+                                "type": [
+                                    "object",
+                                    "null"
+                                ],
+                                "properties": {
+                                    "secret": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "mobile": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "payable": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "country": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 10
+                                    },
+                                    "location": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "radius": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    }
+                                }
+                            }
+                        },
+                        "required": [
+                            "amount",
+                            "currency"
+                        ]
+                    },
+                    "inputs": {
+                        "type": "object",
+                        "properties": {
+                            "fields": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "required": [
+                            "fields"
+                        ]
+                    },
+                    "feedback": {
+                        "type": "object",
+                        "properties": {
+                            "email": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "email"
+                            },
+                            "mobile": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "webhook": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "uri"
+                            }
+                        }
+                    },
+                    "rider": {
+                        "type": "object",
+                        "properties": {
+                            "message": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "url": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "uri"
+                            },
+                            "redirect_timeout": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "splash": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "splash_timeout": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "og_source": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "required": [
+                    "cash",
+                    "inputs",
+                    "feedback",
+                    "rider"
+                ],
+                "title": "EstimateVoucherRequest"
+            },
+            "EventCollectionResource": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/EventSummaryResource"
+                                }
+                            }
+                        },
+                        "required": [
+                            "items"
+                        ]
+                    },
+                    "meta": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0,
+                        "additionalItems": false
+                    }
+                },
+                "required": [
+                    "success",
+                    "data",
+                    "meta"
+                ],
+                "title": "EventCollectionResource"
+            },
+            "EventResource": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "event": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "type": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "status": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "actor": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "resource_type": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "resource_id": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "correlation_id": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "idempotency_key": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "occurred_at": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "payload": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "id",
+                                    "type",
+                                    "status",
+                                    "actor",
+                                    "resource_type",
+                                    "resource_id",
+                                    "correlation_id",
+                                    "idempotency_key",
+                                    "occurred_at",
+                                    "payload"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "event"
+                        ]
+                    },
+                    "meta": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0,
+                        "additionalItems": false
+                    }
+                },
+                "required": [
+                    "success",
+                    "data",
+                    "meta"
+                ],
+                "title": "EventResource"
+            },
+            "EventSummaryResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "type": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "status": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "resource_type": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "resource_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "occurred_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "type",
+                    "status",
+                    "resource_type",
+                    "resource_id",
+                    "occurred_at"
+                ],
+                "title": "EventSummaryResource"
+            },
+            "IdempotencyKeyResource": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "idempotency": {
+                                "type": "object",
+                                "properties": {
+                                    "key": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "replayed": {
+                                        "type": [
+                                            "boolean",
+                                            "null"
+                                        ]
+                                    },
+                                    "first_seen_at": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "last_seen_at": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "request_fingerprint": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "response_status": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "key",
+                                    "replayed",
+                                    "first_seen_at",
+                                    "last_seen_at",
+                                    "request_fingerprint",
+                                    "response_status"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "idempotency"
+                        ]
+                    },
+                    "meta": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0,
+                        "additionalItems": false
+                    }
+                },
+                "required": [
+                    "success",
+                    "data",
+                    "meta"
+                ],
+                "title": "IdempotencyKeyResource"
+            },
+            "IssuerResource": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "issuer": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    },
+                                    "name": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "email": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "mobile": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "country": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "id",
+                                    "name",
+                                    "email",
+                                    "mobile",
+                                    "country"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "issuer"
+                        ]
+                    },
+                    "meta": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0,
+                        "additionalItems": false
+                    }
+                },
+                "required": [
+                    "success",
+                    "data",
+                    "meta"
+                ],
+                "title": "IssuerResource"
+            },
+            "IssuerWalletResource": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "issuer": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "id"
+                                ]
+                            },
+                            "wallet": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    },
+                                    "slug": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "name": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "balance": {
+                                        "type": [
+                                            "number",
+                                            "null"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "id",
+                                    "slug",
+                                    "name",
+                                    "balance"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "issuer",
+                            "wallet"
+                        ]
+                    },
+                    "meta": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0,
+                        "additionalItems": false
+                    }
+                },
+                "required": [
+                    "success",
+                    "data",
+                    "meta"
+                ],
+                "title": "IssuerWalletResource"
+            },
+            "PricelistItemCollectionResource": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/PricelistItemResource"
+                                }
+                            }
+                        },
+                        "required": [
+                            "items"
+                        ]
+                    },
+                    "meta": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0,
+                        "additionalItems": false
+                    }
+                },
+                "required": [
+                    "success",
+                    "data",
+                    "meta"
+                ],
+                "title": "PricelistItemCollectionResource"
+            },
+            "PricelistItemResource": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "category": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "amount": {
+                        "type": [
+                            "number",
+                            "null"
+                        ]
+                    },
+                    "currency": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "active": {
+                        "type": [
+                            "boolean",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "code",
+                    "name",
+                    "category",
+                    "amount",
+                    "currency",
+                    "active"
+                ],
+                "title": "PricelistItemResource"
+            },
+            "PricelistResource": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "currency": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/PricelistItemResource"
+                                }
+                            }
+                        },
+                        "required": [
+                            "name",
+                            "currency",
+                            "items"
+                        ]
+                    },
+                    "meta": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0,
+                        "additionalItems": false
+                    }
+                },
+                "required": [
+                    "success",
+                    "data",
+                    "meta"
+                ],
+                "title": "PricelistResource"
+            },
+            "ReconciliationCollectionResource": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/ReconciliationSummaryResource"
+                                }
+                            }
+                        },
+                        "required": [
+                            "items"
+                        ]
+                    },
+                    "meta": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0,
+                        "additionalItems": false
+                    }
+                },
+                "required": [
+                    "success",
+                    "data",
+                    "meta"
+                ],
+                "title": "ReconciliationCollectionResource"
+            },
+            "ReconciliationResolutionResource": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "reconciliation_id": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "status": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "resolution": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "resolved": {
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ]
+                            },
+                            "notes": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "messages": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "required": [
+                            "reconciliation_id",
+                            "status",
+                            "resolution",
+                            "resolved",
+                            "notes",
+                            "messages"
+                        ]
+                    },
+                    "meta": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0,
+                        "additionalItems": false
+                    }
+                },
+                "required": [
+                    "success",
+                    "data",
+                    "meta"
+                ],
+                "title": "ReconciliationResolutionResource"
+            },
+            "ReconciliationResource": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "reconciliation": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "reference": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "status": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "provider_status": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "amount": {
+                                        "type": [
+                                            "number",
+                                            "null"
+                                        ]
+                                    },
+                                    "currency": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "reason": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "resolved": {
+                                        "type": [
+                                            "boolean",
+                                            "null"
+                                        ]
+                                    },
+                                    "resolved_at": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "id",
+                                    "reference",
+                                    "status",
+                                    "provider_status",
+                                    "amount",
+                                    "currency",
+                                    "reason",
+                                    "resolved",
+                                    "resolved_at"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "reconciliation"
+                        ]
+                    },
+                    "meta": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0,
+                        "additionalItems": false
+                    }
+                },
+                "required": [
+                    "success",
+                    "data",
+                    "meta"
+                ],
+                "title": "ReconciliationResource"
+            },
+            "ReconciliationSummaryResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "reference": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "status": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "provider_status": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "amount": {
+                        "type": [
+                            "number",
+                            "null"
+                        ]
+                    },
+                    "currency": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "reference",
+                    "status",
+                    "provider_status",
+                    "amount",
+                    "currency"
+                ],
+                "title": "ReconciliationSummaryResource"
+            },
+            "ResolveReconciliationRequest": {
+                "type": "object",
+                "properties": {
+                    "resolution": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "notes": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "metadata": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "resolution"
+                ],
+                "title": "ResolveReconciliationRequest"
+            },
+            "SubmitVoucherClaimRequest": {
+                "type": "object",
+                "properties": {
+                    "mobile": {
+                        "type": "string"
+                    },
+                    "recipient_country": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 10
+                    },
+                    "secret": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "amount": {
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "minimum": 0.01
+                    },
+                    "inputs": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "bank_account": {
+                        "type": "object",
+                        "properties": {
+                            "bank_code": {
+                                "type": "string"
+                            },
+                            "account_number": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "bank_code",
+                            "account_number"
+                        ]
+                    }
+                },
+                "required": [
+                    "mobile",
+                    "inputs",
+                    "bank_account"
+                ],
+                "title": "SubmitVoucherClaimRequest"
+            },
+            "VoucherCancellationResource": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "voucher_id": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "code": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "status": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "cancelled": {
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ]
+                            },
+                            "reason": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "messages": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "required": [
+                            "voucher_id",
+                            "code",
+                            "status",
+                            "cancelled",
+                            "reason",
+                            "messages"
+                        ]
+                    },
+                    "meta": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0,
+                        "additionalItems": false
+                    }
+                },
+                "required": [
+                    "success",
+                    "data",
+                    "meta"
+                ],
+                "title": "VoucherCancellationResource"
+            },
+            "VoucherClaimCompletionResource": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "voucher_code": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "reference_id": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "status": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "completed": {
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ]
+                            },
+                            "notes": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "messages": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "required": [
+                            "voucher_code",
+                            "reference_id",
+                            "status",
+                            "completed",
+                            "notes",
+                            "messages"
+                        ]
+                    },
+                    "meta": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0,
+                        "additionalItems": false
+                    }
+                },
+                "required": [
+                    "success",
+                    "data",
+                    "meta"
+                ],
+                "title": "VoucherClaimCompletionResource"
+            },
+            "VoucherClaimStartResource": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "voucher_code": {
+                                "type": "string"
+                            },
+                            "can_start": {
+                                "type": "boolean"
+                            },
+                            "entry_route": {
+                                "type": "string"
+                            },
+                            "profile": {
+                                "type": "object",
+                                "properties": {
+                                    "instrument_kind": {
+                                        "type": "string"
+                                    },
+                                    "redemption_mode": {
+                                        "type": "string"
+                                    },
+                                    "requires_form_flow": {
+                                        "type": "boolean"
+                                    },
+                                    "is_divisible": {
+                                        "type": "boolean"
+                                    },
+                                    "can_withdraw": {
+                                        "type": "boolean"
+                                    },
+                                    "slice_mode": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "driver_name": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "instrument_kind",
+                                    "redemption_mode",
+                                    "requires_form_flow",
+                                    "is_divisible",
+                                    "can_withdraw",
+                                    "slice_mode",
+                                    "driver_name"
+                                ]
+                            },
+                            "requirements": {
+                                "type": "object",
+                                "properties": {
+                                    "required_inputs": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required_validation": {
+                                        "type": "object",
+                                        "additionalProperties": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "has_kyc": {
+                                        "type": "boolean"
+                                    },
+                                    "has_otp": {
+                                        "type": "boolean"
+                                    },
+                                    "has_location": {
+                                        "type": "boolean"
+                                    },
+                                    "has_selfie": {
+                                        "type": "boolean"
+                                    },
+                                    "has_signature": {
+                                        "type": "boolean"
+                                    },
+                                    "has_bio_fields": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": [
+                                    "required_inputs",
+                                    "required_validation",
+                                    "has_kyc",
+                                    "has_otp",
+                                    "has_location",
+                                    "has_selfie",
+                                    "has_signature",
+                                    "has_bio_fields"
+                                ]
+                            },
+                            "flow": {
+                                "type": "object",
+                                "properties": {
+                                    "driver_name": {
+                                        "type": "string"
+                                    },
+                                    "driver_version": {
+                                        "type": "string"
+                                    },
+                                    "reference_id_template": {
+                                        "type": "string"
+                                    },
+                                    "on_complete_callback": {
+                                        "type": "string"
+                                    },
+                                    "on_cancel_callback": {
+                                        "type": "string"
+                                    },
+                                    "step_names": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "step_handlers": {
+                                        "type": "object",
+                                        "additionalProperties": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "flow_instructions": {}
+                                },
+                                "required": [
+                                    "driver_name",
+                                    "driver_version",
+                                    "reference_id_template",
+                                    "on_complete_callback",
+                                    "on_cancel_callback",
+                                    "step_names",
+                                    "step_handlers",
+                                    "flow_instructions"
+                                ]
+                            },
+                            "messages": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "required": [
+                            "voucher_code",
+                            "can_start",
+                            "entry_route",
+                            "profile",
+                            "requirements",
+                            "flow",
+                            "messages"
+                        ]
+                    },
+                    "meta": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0,
+                        "additionalItems": false
+                    }
+                },
+                "required": [
+                    "success",
+                    "data",
+                    "meta"
+                ],
+                "title": "VoucherClaimStartResource"
+            },
+            "VoucherClaimStatusResource": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "voucher_code": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "claim_type": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "status": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "claimed": {
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ]
+                            },
+                            "fully_claimed": {
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ]
+                            },
+                            "requested_amount": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ]
+                            },
+                            "disbursed_amount": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ]
+                            },
+                            "remaining_balance": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ]
+                            },
+                            "currency": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "messages": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "required": [
+                            "voucher_code",
+                            "claim_type",
+                            "status",
+                            "claimed",
+                            "fully_claimed",
+                            "requested_amount",
+                            "disbursed_amount",
+                            "remaining_balance",
+                            "currency",
+                            "messages"
+                        ]
+                    },
+                    "meta": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0,
+                        "additionalItems": false
+                    }
+                },
+                "required": [
+                    "success",
+                    "data",
+                    "meta"
+                ],
+                "title": "VoucherClaimStatusResource"
+            },
+            "VoucherClaimSubmissionResource": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "voucher_code": {
+                                "type": "string"
+                            },
+                            "claim_type": {
+                                "type": "string"
+                            },
+                            "claimed": {
+                                "type": "boolean"
+                            },
+                            "status": {
+                                "type": "string"
+                            },
+                            "requested_amount": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ]
+                            },
+                            "disbursed_amount": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ]
+                            },
+                            "currency": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "remaining_balance": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ]
+                            },
+                            "fully_claimed": {
+                                "type": "boolean"
+                            },
+                            "disbursement": {
+                                "type": "object",
+                                "properties": {
+                                    "status": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "bank_code": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "account_number": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "status",
+                                    "bank_code",
+                                    "account_number"
+                                ]
+                            },
+                            "messages": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "required": [
+                            "voucher_code",
+                            "claim_type",
+                            "claimed",
+                            "status",
+                            "requested_amount",
+                            "disbursed_amount",
+                            "currency",
+                            "remaining_balance",
+                            "fully_claimed",
+                            "disbursement",
+                            "messages"
+                        ]
+                    }
+                },
+                "required": [
+                    "success",
+                    "data"
+                ],
+                "title": "VoucherClaimSubmissionResource"
+            },
+            "VoucherCollectionResource": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/VoucherSummaryResource"
+                                }
+                            }
+                        },
+                        "required": [
+                            "items"
+                        ]
+                    },
+                    "meta": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0,
+                        "additionalItems": false
+                    }
+                },
+                "required": [
+                    "success",
+                    "data",
+                    "meta"
+                ],
+                "title": "VoucherCollectionResource"
+            },
+            "VoucherDetailResource": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "voucher": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    },
+                                    "voucher_id": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    },
+                                    "code": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "amount": {
+                                        "type": [
+                                            "number",
+                                            "null"
+                                        ]
+                                    },
+                                    "currency": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "status": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "issuer_id": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    },
+                                    "claimed": {
+                                        "type": [
+                                            "boolean",
+                                            "null"
+                                        ]
+                                    },
+                                    "fully_claimed": {
+                                        "type": [
+                                            "boolean",
+                                            "null"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "id",
+                                    "voucher_id",
+                                    "code",
+                                    "amount",
+                                    "currency",
+                                    "status",
+                                    "issuer_id",
+                                    "claimed",
+                                    "fully_claimed"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "voucher"
+                        ]
+                    },
+                    "meta": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0,
+                        "additionalItems": false
+                    }
+                },
+                "required": [
+                    "success",
+                    "data",
+                    "meta"
+                ],
+                "title": "VoucherDetailResource"
+            },
+            "VoucherEstimateResource": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "currency": {
+                                "type": "string"
+                            },
+                            "base_fee": {
+                                "type": "number"
+                            },
+                            "components": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "amount": {
+                                            "type": "number"
+                                        }
+                                    },
+                                    "required": [
+                                        "name",
+                                        "amount"
+                                    ]
+                                }
+                            },
+                            "total": {
+                                "type": "number"
+                            }
+                        },
+                        "required": [
+                            "currency",
+                            "base_fee",
+                            "components",
+                            "total"
+                        ]
+                    },
+                    "meta": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0,
+                        "additionalItems": false
+                    }
+                },
+                "required": [
+                    "success",
+                    "data",
+                    "meta"
+                ],
+                "title": "VoucherEstimateResource"
+            },
+            "VoucherResource": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "voucher_id": {
+                                "type": "integer"
+                            },
+                            "code": {
+                                "type": "string"
+                            },
+                            "amount": {
+                                "type": "number"
+                            },
+                            "currency": {
+                                "type": "string"
+                            },
+                            "issuer": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "id"
+                                ]
+                            },
+                            "cost": {
+                                "type": "object",
+                                "properties": {
+                                    "currency": {
+                                        "type": "string"
+                                    },
+                                    "base_fee": {
+                                        "type": "number"
+                                    },
+                                    "components": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "name": {
+                                                    "type": "string"
+                                                },
+                                                "amount": {
+                                                    "type": "number"
+                                                }
+                                            },
+                                            "required": [
+                                                "name",
+                                                "amount"
+                                            ]
+                                        }
+                                    },
+                                    "total": {
+                                        "type": "number"
+                                    }
+                                },
+                                "required": [
+                                    "currency",
+                                    "base_fee",
+                                    "components",
+                                    "total"
+                                ]
+                            },
+                            "wallet": {
+                                "type": "object",
+                                "properties": {
+                                    "balance_before": {
+                                        "type": "number"
+                                    },
+                                    "balance_after": {
+                                        "type": "number"
+                                    }
+                                },
+                                "required": [
+                                    "balance_before",
+                                    "balance_after"
+                                ]
+                            },
+                            "debit": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    },
+                                    "amount": {
+                                        "type": [
+                                            "number",
+                                            "null"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "id",
+                                    "amount"
+                                ]
+                            },
+                            "links": {
+                                "type": "object",
+                                "properties": {
+                                    "redeem": {
+                                        "type": "string"
+                                    },
+                                    "redeem_path": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "redeem",
+                                    "redeem_path"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "voucher_id",
+                            "code",
+                            "amount",
+                            "currency",
+                            "issuer",
+                            "cost",
+                            "wallet",
+                            "debit",
+                            "links"
+                        ]
+                    }
+                },
+                "required": [
+                    "success",
+                    "data"
+                ],
+                "title": "VoucherResource"
+            },
+            "VoucherStatusResource": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "voucher_id": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "code": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "status": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "claimed": {
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ]
+                            },
+                            "fully_claimed": {
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ]
+                            },
+                            "remaining_balance": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ]
+                            },
+                            "currency": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "voucher_id",
+                            "code",
+                            "status",
+                            "claimed",
+                            "fully_claimed",
+                            "remaining_balance",
+                            "currency"
+                        ]
+                    },
+                    "meta": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0,
+                        "additionalItems": false
+                    }
+                },
+                "required": [
+                    "success",
+                    "data",
+                    "meta"
+                ],
+                "title": "VoucherStatusResource"
+            },
+            "VoucherSummaryResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "voucher_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "code": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "amount": {
+                        "type": [
+                            "number",
+                            "null"
+                        ]
+                    },
+                    "currency": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "status": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "issuer_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "voucher_id",
+                    "code",
+                    "amount",
+                    "currency",
+                    "status",
+                    "issuer_id"
+                ],
+                "title": "VoucherSummaryResource"
+            },
+            "WalletBalanceResource": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "wallet_id": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "balance": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ]
+                            },
+                            "currency": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "wallet_id",
+                            "balance",
+                            "currency"
+                        ]
+                    },
+                    "meta": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0,
+                        "additionalItems": false
+                    }
+                },
+                "required": [
+                    "success",
+                    "data",
+                    "meta"
+                ],
+                "title": "WalletBalanceResource"
+            },
+            "WalletLedgerCollectionResource": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/WalletLedgerEntryResource"
+                                }
+                            }
+                        },
+                        "required": [
+                            "items"
+                        ]
+                    },
+                    "meta": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0,
+                        "additionalItems": false
+                    }
+                },
+                "required": [
+                    "success",
+                    "data",
+                    "meta"
+                ],
+                "title": "WalletLedgerCollectionResource"
+            },
+            "WalletLedgerEntryResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "type": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "amount": {
+                        "type": [
+                            "number",
+                            "null"
+                        ]
+                    },
+                    "currency": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "reference": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "type",
+                    "amount",
+                    "currency",
+                    "reference",
+                    "created_at"
+                ],
+                "title": "WalletLedgerEntryResource"
+            },
+            "WalletResource": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "wallet": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    },
+                                    "slug": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "name": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "balance": {
+                                        "type": [
+                                            "number",
+                                            "null"
+                                        ]
+                                    },
+                                    "currency": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "id",
+                                    "slug",
+                                    "name",
+                                    "balance",
+                                    "currency"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "wallet"
+                        ]
+                    },
+                    "meta": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0,
+                        "additionalItems": false
+                    }
+                },
+                "required": [
+                    "success",
+                    "data",
+                    "meta"
+                ],
+                "title": "WalletResource"
+            },
+            "WalletTopUpResource": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "top_up": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    },
+                                    "wallet_id": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    },
+                                    "amount": {
+                                        "type": [
+                                            "number",
+                                            "null"
+                                        ]
+                                    },
+                                    "currency": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "reference": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "status": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "id",
+                                    "wallet_id",
+                                    "amount",
+                                    "currency",
+                                    "reference",
+                                    "status"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "top_up"
+                        ]
+                    },
+                    "meta": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0,
+                        "additionalItems": false
+                    }
+                },
+                "required": [
+                    "success",
+                    "data",
+                    "meta"
+                ],
+                "title": "WalletTopUpResource"
+            }
+        },
+        "responses": {
+            "ValidationException": {
+                "description": "Validation error",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "description": "Errors overview."
+                                },
+                                "errors": {
+                                    "type": "object",
+                                    "description": "A detailed description of each field that failed validation.",
+                                    "additionalProperties": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            },
+                            "required": [
+                                "message",
+                                "errors"
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
