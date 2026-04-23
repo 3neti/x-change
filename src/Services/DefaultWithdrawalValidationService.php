@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\WithdrawalValidationContract;
+use LBHurtado\XChange\Models\VoucherClaim;
 use RuntimeException;
 
 class DefaultWithdrawalValidationService implements WithdrawalValidationContract
@@ -123,6 +124,56 @@ class DefaultWithdrawalValidationService implements WithdrawalValidationContract
             if ($maxSlices !== null && $voucher->getConsumedSlices() >= $maxSlices) {
                 throw new RuntimeException('This voucher has no remaining slices.');
             }
+        }
+
+        $this->validateOpenSliceClaimInterval($voucher, $payload);
+    }
+
+    protected function validateOpenSliceClaimInterval(Voucher $voucher, array $payload): void
+    {
+        $minInterval = (int) config('x-change.withdrawal.open_slice_min_interval_seconds', 0);
+
+        if ($minInterval <= 0) {
+            return;
+        }
+
+        $currentAccountNumber = (string) data_get($payload, 'bank_account.account_number', '');
+
+        if ($currentAccountNumber === '') {
+            return;
+        }
+
+        $lastWithdrawClaim = VoucherClaim::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->where('claim_type', 'withdraw')
+            ->latest('claim_number')
+            ->latest('id')
+            ->first();
+
+        if (! $lastWithdrawClaim) {
+            return;
+        }
+
+        $previousAccountNumber = (string) data_get($lastWithdrawClaim->meta, 'disbursement.account_number', '');
+
+        if ($previousAccountNumber === '' || $previousAccountNumber !== $currentAccountNumber) {
+            return;
+        }
+
+        $lastAttemptedAt = $lastWithdrawClaim->attempted_at;
+
+        if (! $lastAttemptedAt) {
+            return;
+        }
+
+        $elapsed = (float) $lastAttemptedAt->diffInRealSeconds(now(), true);
+
+        if ($elapsed < $minInterval) {
+            $remaining = (int) ceil($minInterval - $elapsed);
+
+            throw new RuntimeException(
+                "Please wait {$remaining} more second(s) before sending another withdrawal to the same destination account."
+            );
         }
     }
 }

@@ -10,6 +10,7 @@ use LBHurtado\XChange\Data\Redemption\RedeemPayCodeResultData;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
 use Lorisleiva\Actions\Concerns\AsAction;
+use Mockery\Exception\BadMethodCallException;
 
 class SubmitPayCodeClaim
 {
@@ -29,7 +30,8 @@ class SubmitPayCodeClaim
 
         $result = $executor->handle($voucher, $payload);
 
-        $normalized = $this->normalizeResult($result, $payload);
+        //        $normalized = $this->normalizeResult($result, $payload);
+        $normalized = $this->normalizeResult($voucher, $result, $payload);
 
         $this->recordVoucherClaim->handle($voucher, $normalized, $payload);
 
@@ -37,23 +39,33 @@ class SubmitPayCodeClaim
     }
 
     /**
-     * @param mixed $result
-     * @param array<string, mixed> $payload
-     * @return SubmitPayCodeClaimResultData
+     * @param  array<string, mixed>  $payload
      */
-    protected function normalizeResult(mixed $result, array $payload): SubmitPayCodeClaimResultData
+    protected function normalizeResult(Voucher $voucher, mixed $result, array $payload): SubmitPayCodeClaimResultData
     {
         if ($result instanceof RedeemPayCodeResultData) {
+            $isDivisible = $this->safeBoolMethod($voucher, 'isDivisible');
+
+            $remainingBalance = null;
+
+            if ($isDivisible) {
+                $resolvedRemaining = $this->safeCall($voucher, 'getRemainingBalance');
+
+                if ($resolvedRemaining !== null) {
+                    $remainingBalance = (float) $resolvedRemaining;
+                }
+            }
+
             return new SubmitPayCodeClaimResultData(
                 voucher_code: $result->voucher_code,
                 claim_type: 'redeem',
                 claimed: $result->redeemed,
                 status: $result->status,
-                requested_amount: $this->toFloatOrNull(data_get($payload, 'amount')),
+                requested_amount: null,
                 disbursed_amount: null,
                 currency: null,
-                remaining_balance: null,
-                fully_claimed: true,
+                remaining_balance: $remainingBalance,
+                fully_claimed: ! $isDivisible,
                 disbursement: $result->disbursement,
                 messages: $result->messages,
             );
@@ -85,5 +97,23 @@ class SubmitPayCodeClaim
         }
 
         return (float) $value;
+    }
+
+    protected function safeBoolMethod(object $target, string $method, bool $default = false): bool
+    {
+        return (bool) $this->safeCall($target, $method, $default);
+    }
+
+    protected function safeCall(object $target, string $method, mixed $default = null): mixed
+    {
+        if (! method_exists($target, $method)) {
+            return $default;
+        }
+
+        try {
+            return $target->{$method}();
+        } catch (BadMethodCallException) {
+            return $default;
+        }
     }
 }

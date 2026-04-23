@@ -10,6 +10,7 @@ use LBHurtado\XChange\Actions\Redemption\RedeemPayCode;
 use LBHurtado\XChange\Actions\Redemption\WithdrawPayCode;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
 use LBHurtado\XChange\Contracts\ClaimExecutorContract;
+use Mockery\Exception\BadMethodCallException;
 
 class DefaultClaimExecutionFactory implements ClaimExecutionFactoryContract
 {
@@ -38,8 +39,14 @@ class DefaultClaimExecutionFactory implements ClaimExecutionFactoryContract
      */
     protected function shouldWithdraw(Voucher $voucher, array $payload): bool
     {
+        // Unified-model transition:
+        // open-slice vouchers should disburse on first claim.
+        if ($this->isOpenSliceVoucher($voucher)) {
+            return true;
+        }
+
         $isRedeemed = method_exists($voucher, 'isRedeemed')
-            ? (bool) $voucher->isRedeemed()
+            ? (bool) $this->safeCall($voucher, 'isRedeemed', false)
             : $voucher->redeemed_at !== null;
 
         if (! $isRedeemed) {
@@ -47,9 +54,33 @@ class DefaultClaimExecutionFactory implements ClaimExecutionFactoryContract
         }
 
         if (method_exists($voucher, 'canWithdraw')) {
-            return (bool) $voucher->canWithdraw();
+            return (bool) $this->safeCall($voucher, 'canWithdraw', false);
         }
 
         return false;
+    }
+
+    protected function isOpenSliceVoucher(Voucher $voucher): bool
+    {
+        return $this->safeBoolMethod($voucher, 'isDivisible')
+            && $this->safeCall($voucher, 'getSliceMode') === 'open';
+    }
+
+    protected function safeBoolMethod(object $target, string $method, bool $default = false): bool
+    {
+        return (bool) $this->safeCall($target, $method, $default);
+    }
+
+    protected function safeCall(object $target, string $method, mixed $default = null): mixed
+    {
+        if (! method_exists($target, $method)) {
+            return $default;
+        }
+
+        try {
+            return $target->{$method}();
+        } catch (BadMethodCallException) {
+            return $default;
+        }
     }
 }

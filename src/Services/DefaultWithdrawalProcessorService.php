@@ -408,35 +408,75 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
         int $sliceNumber,
     ): PayoutRequestData {
         $rawBank = data_get($payload, 'bank_account');
+        $bankAccount = null;
 
-        if (! is_string($rawBank) || trim($rawBank) === '') {
-            $bankCode = data_get($payload, 'bank_code');
-            $accountNumber = data_get($payload, 'account_number');
+        if (is_array($rawBank)) {
+            $bankCode = data_get($rawBank, 'bank_code');
+            $accountNumber = data_get($rawBank, 'account_number');
 
-            if (is_string($bankCode) && trim($bankCode) !== '' && is_string($accountNumber) && trim($accountNumber) !== '') {
-                $rawBank = trim($bankCode).':'.trim($accountNumber);
+            if (
+                is_string($bankCode) && trim($bankCode) !== ''
+                && is_string($accountNumber) && trim($accountNumber) !== ''
+            ) {
+                $bankAccount = BankAccount::fromBankAccount(
+                    trim($bankCode).':'.trim($accountNumber)
+                );
             }
         }
 
-        if ((! is_string($rawBank) || trim($rawBank) === '') && property_exists($voucher, 'redeemer') && $voucher->redeemer) {
-            $rawBank = Arr::get($voucher->redeemer->metadata ?? [], 'redemption.bank_account');
-        }
+        if ($bankAccount === null && is_string($rawBank) && trim($rawBank) !== '') {
+            $fallbackBankAccount = is_string($contact->bank_account) && trim($contact->bank_account) !== ''
+                ? $contact->bank_account
+                : null;
 
-        $fallbackBankAccount = is_string($contact->bank_account) && trim($contact->bank_account) !== ''
-            ? $contact->bank_account
-            : null;
-
-        if (is_string($rawBank) && trim($rawBank) !== '') {
             $bankAccount = $fallbackBankAccount
                 ? BankAccount::fromBankAccountWithFallback($rawBank, $fallbackBankAccount)
                 : BankAccount::fromBankAccount($rawBank);
-        } elseif ($fallbackBankAccount) {
-            $bankAccount = BankAccount::fromBankAccount($fallbackBankAccount);
-        } else {
+        }
+
+        if ($bankAccount === null) {
+            $bankCode = data_get($payload, 'bank_code');
+            $accountNumber = data_get($payload, 'account_number');
+
+            if (
+                is_string($bankCode) && trim($bankCode) !== ''
+                && is_string($accountNumber) && trim($accountNumber) !== ''
+            ) {
+                $bankAccount = BankAccount::fromBankAccount(
+                    trim($bankCode).':'.trim($accountNumber)
+                );
+            }
+        }
+
+        if ($bankAccount === null && property_exists($voucher, 'redeemer') && $voucher->redeemer) {
+            $fallbackRawBank = Arr::get($voucher->redeemer->metadata ?? [], 'redemption.bank_account');
+
+            if (is_string($fallbackRawBank) && trim($fallbackRawBank) !== '') {
+                $fallbackBankAccount = is_string($contact->bank_account) && trim($contact->bank_account) !== ''
+                    ? $contact->bank_account
+                    : null;
+
+                $bankAccount = $fallbackBankAccount
+                    ? BankAccount::fromBankAccountWithFallback($fallbackRawBank, $fallbackBankAccount)
+                    : BankAccount::fromBankAccount($fallbackRawBank);
+            }
+        }
+
+        if ($bankAccount === null) {
+            $fallbackBankAccount = is_string($contact->bank_account) && trim($contact->bank_account) !== ''
+                ? $contact->bank_account
+                : null;
+
+            if ($fallbackBankAccount) {
+                $bankAccount = BankAccount::fromBankAccount($fallbackBankAccount);
+            }
+        }
+
+        if ($bankAccount === null) {
             throw new RuntimeException('Bank account information is required for withdrawal.');
         }
 
-        $reference = "{$voucher->code}-{$contact->mobile}-S{$sliceNumber}";
+        $reference = "{$voucher->code}-{$bankAccount->getAccountNumber()}-S{$sliceNumber}";
 
         $settlementRailEnum = data_get($voucher->instructions, 'cash.settlement_rail');
         $via = $settlementRailEnum instanceof SettlementRail

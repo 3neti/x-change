@@ -15,6 +15,7 @@ use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Models\VoucherClaim;
 use RuntimeException;
 
 class RunLifecycleScenarioCommand extends Command
@@ -74,6 +75,53 @@ class RunLifecycleScenarioCommand extends Command
 
         $defaults = (array) config('x-change.lifecycle.defaults', []);
         $scenario = array_replace_recursive($defaults, $scenario);
+
+        $claims = $this->normalizeScenarioClaims($scenario);
+
+        if ($claims !== null) {
+            $issuerId = (int) ($this->option('issuer') ?: $scenario['issuer_id'] ?? 1);
+            $walletId = (int) ($this->option('wallet') ?: $scenario['wallet_id'] ?? 1);
+            $amount = (float) ($this->option('amount') ?: $scenario['amount'] ?? 25);
+            $timeout = (int) ($this->option('timeout') ?: $scenario['timeout'] ?? 180);
+            $poll = max(1, (int) ($this->option('poll') ?: $scenario['poll'] ?? 10));
+            $maxPolls = $this->resolveMaxPolls($timeout, $poll);
+
+            $issuer = $this->resolveIssuerModel($issuerId);
+            $baseClaimMobile = $this->resolveScenarioMobile($scenario, $issuer);
+            $idempotencyKey = 'lifecycle-'.(string) str()->uuid();
+
+            if (! $this->option('json')) {
+                $this->info("Running scenario: {$scenarioKey}");
+                $this->line('Estimating cost...');
+            }
+
+            $lifecycleInput = $this->buildLifecycleInput($scenario, $issuerId, $walletId, $amount, $idempotencyKey);
+            $estimate = $estimatePayCodeCost->handle($lifecycleInput)->toArray();
+
+            if (! $this->option('json')) {
+                $this->renderEstimateSummary($estimate);
+                $this->line('Generating voucher...');
+            }
+
+            $generated = $generatePayCode->handle($lifecycleInput);
+            $voucher = $vouchers->findByCodeOrFail($generated->code);
+
+            return $this->runSequentialClaimsScenario(
+                scenarioKey: $scenarioKey,
+                scenario: $scenario,
+                issuer: $issuer,
+                generated: $generated,
+                voucher: $voucher,
+                claims: $claims,
+                baseClaimMobile: $baseClaimMobile,
+                timeout: $timeout,
+                poll: $poll,
+                maxPolls: $maxPolls,
+                idempotencyKey: $idempotencyKey,
+                submitPayCodeClaim: $submitPayCodeClaim,
+            );
+        }
+
         $attempts = $this->normalizeScenarioAttempts($scenario);
         try {
             $attempts = $this->filterAttemptsForOption($attempts);
@@ -1076,6 +1124,383 @@ class RunLifecycleScenarioCommand extends Command
                 ->all();
         }
 
+        $claims = data_get($payload, 'claims');
+
+        if (is_array($claims) && ! array_is_list($claims)) {
+            $payload['claims'] = collect($claims)
+                ->map(function (array $claim, string $name) {
+                    return array_merge(['name' => $name], $claim);
+                })
+                ->values()
+                ->all();
+        }
+
         return $payload;
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>|null
+     */
+    protected function normalizeScenarioClaims(array $scenario): ?array
+    {
+        $claims = data_get($scenario, 'claims');
+
+        if (! is_array($claims) || $claims === []) {
+            return null;
+        }
+
+        return $claims;
+    }
+
+    protected function runSequentialClaimsScenario(
+        string $scenarioKey,
+        array $scenario,
+        Model $issuer,
+        $generated,
+        $voucher,
+        array $claims,
+        string $baseClaimMobile,
+        int $timeout,
+        int $poll,
+        int $maxPolls,
+        string $idempotencyKey,
+        SubmitPayCodeClaim $submitPayCodeClaim,
+    ): int {
+        $claimResults = [];
+        $commandStatus = self::SUCCESS;
+
+        foreach ($claims as $claimKey => $claimStep) {
+            $voucher = $voucher->fresh();
+
+            $claimMobile = $this->resolveClaimMobile($scenario, $claimStep, $baseClaimMobile);
+
+            $claimPayload = $this->buildClaimPayload($scenario, $claimStep, $claimMobile);
+
+            $waitBeforeSeconds = max(0, (int) data_get($claimStep, 'wait_before_seconds', 0));
+
+            if ($waitBeforeSeconds > 0) {
+                if (! $this->option('json')) {
+                    $this->line(sprintf(
+                        'Waiting %d second(s) before claim %s...',
+                        $waitBeforeSeconds,
+                        $claimKey
+                    ));
+                }
+
+                sleep($waitBeforeSeconds);
+                $voucher = $voucher->fresh();
+            } else {
+                $autoWaitSeconds = $this->resolveAutoWaitSecondsForClaim($voucher, $claimPayload);
+
+                if ($autoWaitSeconds > 0) {
+                    if (! $this->option('json')) {
+                        $this->line(sprintf(
+                            'Auto-waiting %d second(s) before claim %s to respect withdrawal interval...',
+                            $autoWaitSeconds,
+                            $claimKey
+                        ));
+                    }
+
+                    sleep($autoWaitSeconds);
+                    $voucher = $voucher->fresh();
+                    $waitBeforeSeconds = $autoWaitSeconds;
+                }
+            }
+
+            if (! $this->option('json')) {
+                $this->line(sprintf(
+                    'Submitting claim for voucher %s (claim: %s)...',
+                    $voucher->code,
+                    $claimKey
+                ));
+            }
+
+            $claimPayload = $this->buildClaimPayload(
+                scenario: $scenario,
+                attempt: [
+                    'claim' => (array) data_get($claimStep, 'claim', []),
+                ],
+                mobile: $claimMobile,
+            );
+
+            try {
+                $claim = $submitPayCodeClaim->handle($voucher, $claimPayload);
+
+                if (! $this->option('json')) {
+                    $this->line('Polling disbursement status...');
+                }
+
+                $finalCheck = $this->pollDisbursement(
+                    code: $voucher->code,
+                    timeout: $timeout,
+                    poll: $poll,
+                    maxPolls: $maxPolls,
+                    acceptPending: (bool) $this->option('accept-pending'),
+                );
+
+                $latestLedger = $this->resolveLatestVoucherClaimLedger($voucher->fresh());
+
+                $actual = [
+                    'status' => 'succeeded',
+                    'message' => $this->resolveSuccessMessage($claim, $finalCheck),
+                    'claim' => $claim->toArray(),
+                    'disbursement_check' => $finalCheck,
+                    'ledger' => $latestLedger,
+                ];
+            } catch (\Throwable $e) {
+                $latestLedger = $this->resolveLatestVoucherClaimLedger($voucher->fresh());
+                $actual = [
+                    'status' => 'failed',
+                    'message' => $e->getMessage(),
+                    'error' => [
+                        'class' => $e::class,
+                        'message' => $e->getMessage(),
+                    ],
+                    'ledger' => $latestLedger,
+                ];
+            }
+
+            $evaluation = $this->evaluateClaimExpectation($claimStep, $actual);
+
+            $claimResults[$claimKey] = [
+                'claim_mobile' => $claimMobile,
+                'wait_before_seconds' => $waitBeforeSeconds,
+                'claim_payload' => $claimPayload,
+                'expect' => (array) data_get($claimStep, 'expect', []),
+                'actual' => $actual,
+                'evaluation' => $evaluation,
+                'status' => $actual['status'],
+                'message' => $actual['message'],
+                'claim' => $actual['claim'] ?? null,
+                'disbursement_check' => $actual['disbursement_check'] ?? null,
+                'ledger' => $actual['ledger'] ?? null,
+                'error' => $actual['error'] ?? null,
+            ];
+
+            if (! $evaluation['passed']) {
+                $commandStatus = self::FAILURE;
+            }
+
+            if (! $this->option('json')) {
+                $this->renderClaimEvaluation($claimKey, $evaluation, $actual);
+            }
+        }
+
+        $walletTransactions = $this->recentWalletTransactions(
+            issuer: $issuer,
+            idempotencyKey: $idempotencyKey,
+            voucherCode: $generated->code,
+            limit: 10,
+        );
+
+        $claimSummary = $this->summarizeClaims($claimResults);
+
+        if (! $this->option('json')) {
+            $this->renderClaimsSummary($claimSummary);
+        }
+
+        $this->renderResult([
+            'scenario' => $scenarioKey,
+            'label' => $scenario['label'] ?? $scenarioKey,
+            'selected_attempt' => null,
+            'issuer' => $this->formatUserSummary($issuer),
+            'claim_mobile' => $baseClaimMobile,
+            'claims' => $claimResults,
+            'attempt_summary' => $claimSummary,
+            'estimate' => $estimate = $generated->cost?->toArray() ?? null,
+            'generated' => $generated->toArray(),
+            'wallet_transactions' => $walletTransactions,
+        ]);
+
+        return $commandStatus;
+    }
+
+    protected function resolveClaimMobile(array $scenario, array $claimStep, string $defaultMobile): string
+    {
+        $mobile = (string) (
+            data_get($claimStep, 'claim.mobile')
+                ?: data_get($scenario, 'claim.mobile')
+                ?: $defaultMobile
+        );
+
+        if ($mobile === '') {
+            throw new RuntimeException('Lifecycle claim mobile could not be resolved.');
+        }
+
+        return $mobile;
+    }
+
+    /**
+     * @param  array<string, mixed>  $claimStep
+     * @param  array<string, mixed>  $actual
+     * @return array<string, mixed>
+     */
+    protected function evaluateClaimExpectation(array $claimStep, array $actual): array
+    {
+        $expectedStatus = (string) data_get($claimStep, 'expect.status', 'succeeded');
+        $expectedClaimType = data_get($claimStep, 'expect.claim_type');
+
+        $actualStatus = (string) ($actual['status'] ?? 'failed');
+        $actualClaimType = (string) data_get($actual, 'claim.claim_type', '');
+
+        $checks = [];
+
+        $checks['status'] = [
+            'passed' => $expectedStatus === $actualStatus,
+            'expected' => $expectedStatus,
+            'actual' => $actualStatus,
+        ];
+
+        if ($expectedClaimType !== null) {
+            $checks['claim_type'] = [
+                'passed' => (string) $expectedClaimType === $actualClaimType,
+                'expected' => (string) $expectedClaimType,
+                'actual' => $actualClaimType,
+            ];
+        }
+
+        $passed = collect($checks)->every(fn (array $check) => (bool) ($check['passed'] ?? false));
+
+        return [
+            'passed' => $passed,
+            'checks' => $checks,
+            'summary' => $passed
+                ? strtoupper($actualStatus).' as expected'
+                : 'Claim expectation mismatch',
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $evaluation
+     * @param  array<string, mixed>  $actual
+     */
+    protected function renderClaimEvaluation(string $claimKey, array $evaluation, array $actual): void
+    {
+        $summary = (string) data_get($evaluation, 'summary', 'Unknown');
+
+        if ((bool) data_get($evaluation, 'passed', false)) {
+            $this->info(sprintf('Claim [%s]: %s', $claimKey, $summary));
+        } else {
+            $this->error(sprintf('Claim [%s]: %s', $claimKey, $summary));
+        }
+
+        $statusCheck = (array) data_get($evaluation, 'checks.status', []);
+        $this->line(sprintf(
+            '  Status check: expected=%s actual=%s',
+            $statusCheck['expected'] ?? 'n/a',
+            $statusCheck['actual'] ?? 'n/a',
+        ));
+
+        $claimTypeCheck = (array) data_get($evaluation, 'checks.claim_type', []);
+        if ($claimTypeCheck !== []) {
+            $this->line(sprintf(
+                '  Claim type check: expected=%s actual=%s',
+                $claimTypeCheck['expected'] ?? 'n/a',
+                $claimTypeCheck['actual'] ?? 'n/a',
+            ));
+        }
+
+        $actualMessage = (string) ($actual['message'] ?? '');
+        if ($actualMessage !== '') {
+            $this->line('  Actual message: '.$actualMessage);
+        }
+    }
+
+    /**
+     * @param  array<string, array<string, mixed>>  $claimResults
+     * @return array<string, int>
+     */
+    protected function summarizeClaims(array $claimResults): array
+    {
+        $total = count($claimResults);
+        $passed = collect($claimResults)
+            ->filter(fn (array $result) => (bool) data_get($result, 'evaluation.passed', false))
+            ->count();
+
+        $failed = $total - $passed;
+
+        return [
+            'passed' => $passed,
+            'failed' => $failed,
+            'total' => $total,
+        ];
+    }
+
+    protected function renderClaimsSummary(array $summary): void
+    {
+        $this->newLine();
+        $this->info('Claims Summary:');
+        $this->line('  Passed: '.$summary['passed']);
+        $this->line('  Failed: '.$summary['failed']);
+        $this->line('  Total: '.$summary['total']);
+    }
+
+    protected function resolveLatestVoucherClaimLedger($voucher): ?array
+    {
+        $ledger = \LBHurtado\XChange\Models\VoucherClaim::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->latest('claim_number')
+            ->latest('id')
+            ->first();
+
+        return $ledger?->toArray();
+    }
+
+    protected function resolveAutoWaitSecondsForClaim($voucher, array $claimPayload): int
+    {
+        if (! $this->isOpenSliceVoucher($voucher)) {
+            return 0;
+        }
+
+        $minInterval = (int) config('x-change.withdrawal.open_slice_min_interval_seconds', 0);
+
+        if ($minInterval <= 0) {
+            return 0;
+        }
+
+        $currentAccountNumber = (string) data_get($claimPayload, 'bank_account.account_number', '');
+
+        if ($currentAccountNumber === '') {
+            return 0;
+        }
+
+        $lastWithdrawClaim = VoucherClaim::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->where('claim_type', 'withdraw')
+            ->latest('claim_number')
+            ->latest('id')
+            ->first();
+
+        if (! $lastWithdrawClaim) {
+            return 0;
+        }
+
+        $previousAccountNumber = (string) data_get($lastWithdrawClaim->meta, 'disbursement.account_number', '');
+
+        if ($previousAccountNumber === '' || $previousAccountNumber !== $currentAccountNumber) {
+            return 0;
+        }
+
+        $lastAttemptedAt = $lastWithdrawClaim->attempted_at;
+
+        if (! $lastAttemptedAt) {
+            return 0;
+        }
+
+        $elapsed = (float) $lastAttemptedAt->diffInRealSeconds(now(), true);
+
+        if ($elapsed >= $minInterval) {
+            return 0;
+        }
+
+        return (int) ceil($minInterval - $elapsed);
+    }
+
+    protected function isOpenSliceVoucher($voucher): bool
+    {
+        return method_exists($voucher, 'isDivisible')
+            && $voucher->isDivisible()
+            && method_exists($voucher, 'getSliceMode')
+            && $voucher->getSliceMode() === 'open';
     }
 }

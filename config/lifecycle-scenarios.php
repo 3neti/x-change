@@ -822,5 +822,116 @@ return [
                 'status' => 'succeeded',
             ],
         ],
+
+        'divisible_open_two_slices' => [
+            'label' => 'Divisible Open Two Slices',
+            'amount' => 300,
+            'currency' => 'PHP',
+            'cash' => [
+                'amount' => 300,
+                'currency' => 'PHP',
+                'validation' => [
+                    'country' => 'PH',
+                ],
+                'settlement_rail' => 'INSTAPAY',
+                'fee_strategy' => 'absorb',
+                'slice_mode' => 'open',
+                'max_slices' => 3,
+                'min_withdrawal' => 50,
+            ],
+            'inputs' => [
+                'fields' => [],
+            ],
+            'feedback' => [
+                'mobile' => null,
+                'email' => null,
+                'webhook' => null,
+            ],
+            'rider' => [
+                'message' => null,
+                'url' => null,
+                'redirect_timeout' => null,
+                'splash' => null,
+                'splash_timeout' => null,
+                'og_source' => null,
+            ],
+            'claims' => [
+                'claim_1_withdraw' => [
+                    'claim' => [
+                        'amount' => 100,
+                    ],
+                    'expect' => [
+                        'status' => 'succeeded',
+                        'claim_type' => 'withdraw',
+                    ],
+                ],
+                'claim_2_withdraw' => [
+                    'wait_before_seconds' => 10,
+                    'claim' => [
+                        'amount' => 50,
+                    ],
+                    'expect' => [
+                        'status' => 'succeeded',
+                        'claim_type' => 'withdraw',
+                    ],
+                ],
+            ],
+        ],
+
+        'divisible_open_three_slices_enforced_interval' => [
+            'label' => 'Divisible Open Three Slices (Enforced Interval)',
+
+            'amount' => 150,
+            'currency' => 'PHP',
+
+            'cash' => [
+                'amount' => 150,
+                'currency' => 'PHP',
+                'validation' => [
+                    'country' => 'PH',
+                ],
+                'settlement_rail' => 'INSTAPAY',
+                'fee_strategy' => 'absorb',
+                'slice_mode' => 'open',
+                'max_slices' => 3,
+                'min_withdrawal' => 25,
+            ],
+
+            'bank_code' => 'GXCHPHM2XXX',
+            'account_number' => '09173011987',
+            'mobile' => '639171234567',
+
+            'claims' => [
+                'claim_1_withdraw' => [
+                    'claim' => [
+                        'amount' => 75,
+                    ],
+                    'expect' => [
+                        'status' => 'succeeded',
+                        'claim_type' => 'withdraw',
+                    ],
+                ],
+
+                'claim_2_withdraw' => [
+                    'claim' => [
+                        'amount' => 50,
+                    ],
+                    'expect' => [
+                        'status' => 'succeeded',
+                        'claim_type' => 'withdraw',
+                    ],
+                ],
+
+                'claim_3_withdraw' => [
+                    'claim' => [
+                        'amount' => 25,
+                    ],
+                    'expect' => [
+                        'status' => 'succeeded',
+                        'claim_type' => 'withdraw',
+                    ],
+                ],
+            ],
+        ],
     ],
 ];

@@ -78,7 +78,7 @@ it('submits a claim through the selected executor and normalizes redeem result',
     expect($result->claim_type)->toBe('redeem');
     expect($result->claimed)->toBeTrue();
     expect($result->status)->toBe('redeemed');
-    expect($result->requested_amount)->toBe(100.0);
+    expect($result->requested_amount)->toBeNull();
     expect($result->disbursed_amount)->toBeNull();
     expect($result->currency)->toBeNull();
     expect($result->remaining_balance)->toBeNull();

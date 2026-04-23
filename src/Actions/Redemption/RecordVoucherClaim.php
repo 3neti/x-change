@@ -77,7 +77,11 @@ class RecordVoucherClaim
 
     protected function shouldSetCompletedAt(string $status): bool
     {
-        return in_array($this->normalizeStatus($status), ['succeeded', 'failed', 'pending_review'], true);
+        return in_array(
+            $this->normalizeStatus($status),
+            ['succeeded', 'failed', 'pending_review', 'redeemed', 'withdrawn'],
+            true
+        );
     }
 
     protected function resolveFailureMessage(SubmitPayCodeClaimResultData $result): ?string
