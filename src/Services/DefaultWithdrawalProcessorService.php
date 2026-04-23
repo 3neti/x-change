@@ -23,6 +23,41 @@ use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
 use Propaganistas\LaravelPhone\PhoneNumber;
 use RuntimeException;
 
+/**
+ * Withdrawal processor service.
+ *
+ * ⚠️ Refactor Status: Legacy Execution Orchestrator (Phase 1 – Cash Extraction)
+ *
+ * This class still coordinates the x-change withdrawal execution flow:
+ * - Resolves claimant/contact context
+ * - Checks current withdrawal eligibility
+ * - Resolves or prepares payout details
+ * - Calls the payout provider
+ * - Records reconciliation metadata
+ * - Performs wallet/cash mutation through existing package actions
+ *
+ * Refactor Note:
+ * Some withdrawal rules are being progressively extracted to the `3neti/cash`
+ * package. Do not add new domain/business rules here unless they are strictly
+ * x-change orchestration or infrastructure concerns.
+ *
+ * Candidate responsibilities for future extraction:
+ * - Amount resolution
+ * - Ownership/original-claimer authorization
+ * - Withdrawal execution policy
+ * - Settlement rail eligibility
+ *
+ * Responsibilities that should likely remain in x-change:
+ * - Provider adapter calls
+ * - Reconciliation recording
+ * - API/lifecycle result shaping
+ *
+ * Future Plan:
+ * - Delegate additional cash-domain rules to the cash package in later slices
+ * - Mark as @deprecated only after execution orchestration is replaced
+ *
+ * @internal Legacy execution orchestrator during cash extraction
+ */
 class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
 {
     public function __construct(
