@@ -4,21 +4,15 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "05342f932c38c783af8abb270276a852",
+    "content-hash": "05ecf540811654701e944552d7522d2c",
     "packages": [
         {
             "name": "3neti/cash",
-            "version": "v1.1.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/3neti/cash.git",
-                "reference": "c11231c2894d04ddf066b03b21efee486a76ead6"
-            },
+            "version": "dev-main",
             "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/3neti/cash/zipball/c11231c2894d04ddf066b03b21efee486a76ead6",
-                "reference": "c11231c2894d04ddf066b03b21efee486a76ead6",
-                "shasum": ""
+                "type": "path",
+                "url": "/Users/rli/PhpstormProjects/packages/cash",
+                "reference": "c11231c2894d04ddf066b03b21efee486a76ead6"
             },
             "require": {
                 "3neti/wallet": "^v1.0",
@@ -47,7 +41,16 @@
                     "LBHurtado\\Cash\\Database\\Factories\\": "database/factories/"
                 }
             },
-            "notification-url": "https://packagist.org/downloads/",
+            "autoload-dev": {
+                "psr-4": {
+                    "LBHurtado\\Cash\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "vendor/bin/pest"
+                ]
+            },
             "license": [
                 "proprietary"
             ],
@@ -58,11 +61,10 @@
                 }
             ],
             "description": "A package to enable assigning cash to Eloquent Models",
-            "support": {
-                "issues": "https://github.com/3neti/cash/issues",
-                "source": "https://github.com/3neti/cash/tree/v1.1.0"
-            },
-            "time": "2026-04-09T15:09:55+00:00"
+            "transport-options": {
+                "symlink": true,
+                "relative": false
+            }
         },
         {
             "name": "3neti/contact",
@@ -644,10 +646,10 @@
             "dist": {
                 "type": "path",
                 "url": "/Users/rli/PhpstormProjects/packages/voucher",
-                "reference": "298a3f89972857d5fd8635f62dd04586139b64d8"
+                "reference": "61fc9d04879e6576fbaa09a33460debacdc5d290"
             },
             "require": {
-                "3neti/cash": "^1.0",
+                "3neti/cash": "dev-main",
                 "3neti/contact": "^1.0",
                 "3neti/emi-core": "^1.0",
                 "3neti/laravel-model-input": "^1.0",

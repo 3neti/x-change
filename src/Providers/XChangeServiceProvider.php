@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\Cash\Contracts\WithdrawalIntervalEnforcerContract;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider;
 use LBHurtado\PaymentGateway\Contracts\WalletProxy;
@@ -88,6 +89,7 @@ use LBHurtado\XChange\Services\UserLifecycleService;
 use LBHurtado\XChange\Services\VoucherAccessService;
 use LBHurtado\XChange\Services\VoucherLifecycleService;
 use LBHurtado\XChange\Services\WithdrawalLifecycleService;
+use LBHurtado\XChange\Services\XChangeWithdrawalIntervalEnforcer;
 use LBHurtado\XChange\Support\Logging\CacheEventStore;
 
 class XChangeServiceProvider extends ServiceProvider
@@ -248,6 +250,11 @@ class XChangeServiceProvider extends ServiceProvider
 
             return $app->make($provider);
         });
+
+        $this->app->bind(
+            WithdrawalIntervalEnforcerContract::class,
+            XChangeWithdrawalIntervalEnforcer::class,
+        );
     }
 
     public function boot(): void

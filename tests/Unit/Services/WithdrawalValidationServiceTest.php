@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use LBHurtado\Cash\Services\DefaultCashWithdrawalValidationService;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Services\DefaultWithdrawalValidationService;
+use LBHurtado\XChange\Services\XChangeWithdrawalIntervalEnforcer;
 
 function makeVoucher(string $state = 'active'): Voucher
 {
@@ -28,7 +30,11 @@ it('passes validation for a withdrawable open-slice voucher with valid amount', 
     $voucher->shouldReceive('getMaxSlices')->once()->andReturn(3);
     $voucher->shouldReceive('getConsumedSlices')->once()->andReturn(1);
 
-    $service = new DefaultWithdrawalValidationService;
+    $service = new DefaultWithdrawalValidationService(
+        new DefaultCashWithdrawalValidationService(
+            new XChangeWithdrawalIntervalEnforcer,
+        ),
+    );
 
     $service->validate($voucher, [
         'amount' => 100.00,
@@ -43,7 +49,11 @@ it('fails validation when voucher is not withdrawable', function () {
     $voucher->shouldReceive('isDivisible')->once()->andReturnFalse();
     $voucher->shouldReceive('canWithdraw')->once()->andReturnFalse();
 
-    $service = new DefaultWithdrawalValidationService;
+    $service = new DefaultWithdrawalValidationService(
+        new DefaultCashWithdrawalValidationService(
+            new XChangeWithdrawalIntervalEnforcer,
+        ),
+    );
 
     expect(fn () => $service->validate($voucher, [
         'amount' => 100.00,
@@ -58,7 +68,11 @@ it('fails validation when open-slice amount exceeds remaining balance', function
     $voucher->shouldReceive('isExpired')->once()->andReturnFalse();
     $voucher->shouldReceive('getRemainingBalance')->once()->andReturn(100.00);
 
-    $service = new DefaultWithdrawalValidationService;
+    $service = new DefaultWithdrawalValidationService(
+        new DefaultCashWithdrawalValidationService(
+            new XChangeWithdrawalIntervalEnforcer,
+        ),
+    );
 
     expect(fn () => $service->validate($voucher, [
         'amount' => 200.00,
@@ -74,7 +88,11 @@ it('fails validation when open-slice amount is below minimum withdrawal amount',
     $voucher->shouldReceive('getRemainingBalance')->once()->andReturn(300.00);
     $voucher->shouldReceive('getMinWithdrawal')->once()->andReturn(50.00);
 
-    $service = new DefaultWithdrawalValidationService;
+    $service = new DefaultWithdrawalValidationService(
+        new DefaultCashWithdrawalValidationService(
+            new XChangeWithdrawalIntervalEnforcer,
+        ),
+    );
 
     expect(fn () => $service->validate($voucher, [
         'amount' => 25.00,
@@ -88,7 +106,11 @@ it('fails validation when open-slice amount is missing', function () {
     $voucher->shouldReceive('getSliceMode')->once()->andReturn('open');
     $voucher->shouldReceive('isExpired')->once()->andReturnFalse();
 
-    $service = new DefaultWithdrawalValidationService;
+    $service = new DefaultWithdrawalValidationService(
+        new DefaultCashWithdrawalValidationService(
+            new XChangeWithdrawalIntervalEnforcer,
+        ),
+    );
 
     expect(fn () => $service->validate($voucher, [
         'amount' => null,
@@ -102,7 +124,11 @@ it('fails validation when open-slice amount is non-numeric', function () {
     $voucher->shouldReceive('getSliceMode')->once()->andReturn('open');
     $voucher->shouldReceive('isExpired')->once()->andReturnFalse();
 
-    $service = new DefaultWithdrawalValidationService;
+    $service = new DefaultWithdrawalValidationService(
+        new DefaultCashWithdrawalValidationService(
+            new XChangeWithdrawalIntervalEnforcer,
+        ),
+    );
 
     expect(fn () => $service->validate($voucher, [
         'amount' => 'abc',
@@ -116,7 +142,11 @@ it('fails validation when open-slice amount is not greater than zero', function 
     $voucher->shouldReceive('getSliceMode')->once()->andReturn('open');
     $voucher->shouldReceive('isExpired')->once()->andReturnFalse();
 
-    $service = new DefaultWithdrawalValidationService;
+    $service = new DefaultWithdrawalValidationService(
+        new DefaultCashWithdrawalValidationService(
+            new XChangeWithdrawalIntervalEnforcer,
+        ),
+    );
 
     expect(fn () => $service->validate($voucher, [
         'amount' => 0,
@@ -130,7 +160,11 @@ it('fails validation when open-slice voucher is expired', function () {
     $voucher->shouldReceive('getSliceMode')->once()->andReturn('open');
     $voucher->shouldReceive('isExpired')->once()->andReturnTrue();
 
-    $service = new DefaultWithdrawalValidationService;
+    $service = new DefaultWithdrawalValidationService(
+        new DefaultCashWithdrawalValidationService(
+            new XChangeWithdrawalIntervalEnforcer,
+        ),
+    );
 
     expect(fn () => $service->validate($voucher, [
         'amount' => 100.00,
@@ -148,7 +182,11 @@ it('fails validation when open-slice voucher has no remaining slices', function 
     $voucher->shouldReceive('getMaxSlices')->once()->andReturn(3);
     $voucher->shouldReceive('getConsumedSlices')->once()->andReturn(3);
 
-    $service = new DefaultWithdrawalValidationService;
+    $service = new DefaultWithdrawalValidationService(
+        new DefaultCashWithdrawalValidationService(
+            new XChangeWithdrawalIntervalEnforcer,
+        ),
+    );
 
     expect(fn () => $service->validate($voucher, [
         'amount' => 100.00,

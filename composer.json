@@ -15,6 +15,13 @@
             "options": {
                 "symlink": true
             }
+        },
+        {
+            "type": "path",
+            "url": "/Users/rli/PhpstormProjects/packages/cash",
+            "options": {
+                "symlink": true
+            }
         }
     ],
     "require": {
