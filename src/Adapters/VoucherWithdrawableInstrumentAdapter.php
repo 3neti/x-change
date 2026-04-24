@@ -103,4 +103,17 @@ class VoucherWithdrawableInstrumentAdapter implements WithdrawableInstrumentCont
             ? $this->voucher->getKey()
             : null;
     }
+
+    public function getOriginalClaimantId(): string|int|null
+    {
+        $value = data_get($this->voucher->redeemer, 'id');
+
+        if ($value !== null) {
+            return $value;
+        }
+
+        $value = data_get($this->voucher->meta, 'redeemer.id');
+
+        return $value !== null ? (string) $value : null;
+    }
 }

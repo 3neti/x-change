@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Services;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use LBHurtado\Cash\Contracts\CashClaimantAuthorizationContract;
 use LBHurtado\Cash\Contracts\CashWithdrawalAmountResolverContract;
 use LBHurtado\Contact\Classes\BankAccount;
 use LBHurtado\Contact\Models\Contact;
@@ -17,6 +18,7 @@ use LBHurtado\EmiCore\Enums\SettlementRail;
 use LBHurtado\MoneyIssuer\Support\BankRegistry;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Actions\WithdrawCash;
+use LBHurtado\XChange\Adapters\ContactClaimantIdentityAdapter;
 use LBHurtado\XChange\Adapters\VoucherWithdrawableInstrumentAdapter;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
@@ -70,6 +72,7 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
         protected DisbursementReconciliationStoreContract $reconciliations,
         protected DisbursementStatusResolverContract $statusResolver,
         protected CashWithdrawalAmountResolverContract $amountResolver,
+        protected CashClaimantAuthorizationContract $claimantAuthorization,
     ) {}
 
     public function process(Voucher $voucher, array $payload): WithdrawPayCodeResultData
@@ -372,31 +375,10 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
 
     protected function assertOriginalRedeemer(Voucher $voucher, Contact $contact): void
     {
-        $originalContact = $voucher->contact;
+        $instrument = new VoucherWithdrawableInstrumentAdapter($voucher);
+        $claimant = new ContactClaimantIdentityAdapter($contact);
 
-        if ($originalContact) {
-            if ($originalContact->id !== $contact->id) {
-                throw new RuntimeException('Only the original redeemer can withdraw from this voucher.');
-            }
-
-            return;
-        }
-
-        $originalRedeemer = data_get($voucher->metadata, 'redemption.original_redeemer');
-
-        if (is_array($originalRedeemer) && $originalRedeemer !== []) {
-            $originalContactId = data_get($originalRedeemer, 'contact_id');
-
-            if ($originalContactId !== null && (int) $originalContactId !== (int) $contact->id) {
-                throw new RuntimeException('Only the original redeemer can withdraw from this voucher.');
-            }
-
-            $originalMobile = data_get($originalRedeemer, 'mobile');
-
-            if ($originalMobile !== null && (string) $originalMobile !== (string) $contact->mobile) {
-                throw new RuntimeException('Only the original redeemer can withdraw from this voucher.');
-            }
-        }
+        $this->claimantAuthorization->authorize($instrument, $claimant);
     }
 
     protected function resolveAmount(Voucher $voucher, ?float $amount): float
