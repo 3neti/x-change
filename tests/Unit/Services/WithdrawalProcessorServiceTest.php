@@ -12,29 +12,27 @@ use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Services\DefaultWithdrawalProcessorService;
 use LBHurtado\XChange\Services\WithdrawalBankAccountResolver;
+use LBHurtado\XChange\Services\WithdrawalDisbursementExecutor;
 use LBHurtado\XChange\Services\WithdrawalExecutionContextResolver;
 use LBHurtado\XChange\Services\WithdrawalPayoutRequestFactory;
 
-it('resolves amount for fixed-slice vouchers', function () {
+function withdrawalProcessorForAmountResolution(): DefaultWithdrawalProcessorService
+{
     $gateway = Mockery::mock(PayoutProvider::class);
-    $bankRegistry = Mockery::mock(BankRegistry::class);
     $reconciliations = Mockery::mock(DisbursementReconciliationStoreContract::class);
     $statusResolver = Mockery::mock(DisbursementStatusResolverContract::class);
-    $amountResolver = new DefaultCashWithdrawalAmountResolverService;
-    $claimantAuthorization = new DefaultCashClaimantAuthorizationService;
-    $withdrawalEligibility = new DefaultCashWithdrawalEligibilityService;
-    $executionContextResolver = new WithdrawalExecutionContextResolver;
-    $bankAccountResolver = new WithdrawalBankAccountResolver;
-    $payoutRequestFactory = new WithdrawalPayoutRequestFactory;
 
-    $service = new class($gateway, $bankRegistry, $reconciliations, $statusResolver, $amountResolver, $claimantAuthorization, $withdrawalEligibility, $executionContextResolver, $bankAccountResolver, $payoutRequestFactory) extends DefaultWithdrawalProcessorService
+    return new class(Mockery::mock(BankRegistry::class), new DefaultCashWithdrawalAmountResolverService, new DefaultCashClaimantAuthorizationService, new DefaultCashWithdrawalEligibilityService, new WithdrawalExecutionContextResolver, new WithdrawalBankAccountResolver, new WithdrawalPayoutRequestFactory, new WithdrawalDisbursementExecutor(gateway: $gateway, reconciliations: $reconciliations, statusResolver: $statusResolver)) extends DefaultWithdrawalProcessorService
     {
         public function exposeResolveAmount(Voucher $voucher, ?float $amount): float
         {
             return $this->resolveAmount($voucher, $amount);
         }
     };
+}
 
+it('resolves amount for fixed-slice vouchers', function () {
+    $service = withdrawalProcessorForAmountResolution();
     $voucher = Mockery::mock(Voucher::class);
     $voucher->shouldReceive('getSliceMode')->once()->andReturn('fixed');
     $voucher->shouldReceive('getSliceAmount')->once()->andReturn(250.00);
@@ -45,25 +43,7 @@ it('resolves amount for fixed-slice vouchers', function () {
 });
 
 it('resolves amount for open-slice vouchers within remaining balance', function () {
-    $gateway = Mockery::mock(PayoutProvider::class);
-    $bankRegistry = Mockery::mock(BankRegistry::class);
-    $reconciliations = Mockery::mock(DisbursementReconciliationStoreContract::class);
-    $statusResolver = Mockery::mock(DisbursementStatusResolverContract::class);
-    $amountResolver = new DefaultCashWithdrawalAmountResolverService;
-    $claimantAuthorization = new DefaultCashClaimantAuthorizationService;
-    $withdrawalEligibility = new DefaultCashWithdrawalEligibilityService;
-    $executionContextResolver = new WithdrawalExecutionContextResolver;
-    $bankAccountResolver = new WithdrawalBankAccountResolver;
-    $payoutRequestFactory = new WithdrawalPayoutRequestFactory;
-
-    $service = new class($gateway, $bankRegistry, $reconciliations, $statusResolver, $amountResolver, $claimantAuthorization, $withdrawalEligibility, $executionContextResolver, $bankAccountResolver, $payoutRequestFactory) extends DefaultWithdrawalProcessorService
-    {
-        public function exposeResolveAmount(Voucher $voucher, ?float $amount): float
-        {
-            return $this->resolveAmount($voucher, $amount);
-        }
-    };
-
+    $service = withdrawalProcessorForAmountResolution();
     $voucher = Mockery::mock(Voucher::class);
     $voucher->shouldReceive('getSliceMode')->once()->andReturn('open');
     $voucher->shouldReceive('getMinWithdrawal')->once()->andReturn(100.00);
@@ -75,25 +55,7 @@ it('resolves amount for open-slice vouchers within remaining balance', function 
 });
 
 it('fails when open-slice amount exceeds remaining balance', function () {
-    $gateway = Mockery::mock(PayoutProvider::class);
-    $bankRegistry = Mockery::mock(BankRegistry::class);
-    $reconciliations = Mockery::mock(DisbursementReconciliationStoreContract::class);
-    $statusResolver = Mockery::mock(DisbursementStatusResolverContract::class);
-    $amountResolver = new DefaultCashWithdrawalAmountResolverService;
-    $claimantAuthorization = new DefaultCashClaimantAuthorizationService;
-    $withdrawalEligibility = new DefaultCashWithdrawalEligibilityService;
-    $executionContextResolver = new WithdrawalExecutionContextResolver;
-    $bankAccountResolver = new WithdrawalBankAccountResolver;
-    $payoutRequestFactory = new WithdrawalPayoutRequestFactory;
-
-    $service = new class($gateway, $bankRegistry, $reconciliations, $statusResolver, $amountResolver, $claimantAuthorization, $withdrawalEligibility, $executionContextResolver, $bankAccountResolver, $payoutRequestFactory) extends DefaultWithdrawalProcessorService
-    {
-        public function exposeResolveAmount(Voucher $voucher, ?float $amount): float
-        {
-            return $this->resolveAmount($voucher, $amount);
-        }
-    };
-
+    $service = withdrawalProcessorForAmountResolution();
     $voucher = Mockery::mock(Voucher::class);
     $voucher->shouldReceive('getSliceMode')->once()->andReturn('open');
     $voucher->shouldReceive('getMinWithdrawal')->once()->andReturn(100.00);

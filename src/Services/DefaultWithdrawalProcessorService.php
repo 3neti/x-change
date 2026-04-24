@@ -9,9 +9,7 @@ use Illuminate\Support\Facades\Log;
 use LBHurtado\Cash\Contracts\CashClaimantAuthorizationContract;
 use LBHurtado\Cash\Contracts\CashWithdrawalAmountResolverContract;
 use LBHurtado\Cash\Contracts\CashWithdrawalEligibilityContract;
-use LBHurtado\Contact\Classes\BankAccount;
 use LBHurtado\Contact\Models\Contact;
-use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\EmiCore\Data\PayoutRequestData;
 use LBHurtado\EmiCore\Enums\PayoutStatus;
 use LBHurtado\EmiCore\Enums\SettlementRail;
@@ -20,11 +18,8 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Actions\WithdrawCash;
 use LBHurtado\XChange\Adapters\ContactClaimantIdentityAdapter;
 use LBHurtado\XChange\Adapters\VoucherWithdrawableInstrumentAdapter;
-use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
-use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Contracts\WithdrawalProcessorContract;
 use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
-use LBHurtado\XChange\Data\WithdrawalExecutionContextData;
 use Propaganistas\LaravelPhone\PhoneNumber;
 use RuntimeException;
 
@@ -68,16 +63,14 @@ use RuntimeException;
 class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
 {
     public function __construct(
-        protected PayoutProvider $gateway,
         protected BankRegistry $bankRegistry,
-        protected DisbursementReconciliationStoreContract $reconciliations,
-        protected DisbursementStatusResolverContract $statusResolver,
         protected CashWithdrawalAmountResolverContract $amountResolver,
         protected CashClaimantAuthorizationContract $claimantAuthorization,
         protected CashWithdrawalEligibilityContract $withdrawalEligibility,
         protected WithdrawalExecutionContextResolver $executionContextResolver,
         protected WithdrawalBankAccountResolver $bankAccountResolver,
         protected WithdrawalPayoutRequestFactory $payoutRequestFactory,
+        protected WithdrawalDisbursementExecutor $disbursementExecutor,
     ) {}
 
     public function process(Voucher $voucher, array $payload): WithdrawPayCodeResultData
@@ -142,43 +135,13 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
         }
 
         try {
-            $response = $this->gateway->disburse($input);
+            $disbursement = $this->disbursementExecutor->execute(
+                voucher: $voucher,
+                input: $input,
+                sliceNumber: $sliceNumber,
+            );
 
-            if ($response->status === PayoutStatus::FAILED) {
-                throw new RuntimeException('Gateway returned failed status - disbursement failed');
-            }
-
-            $this->reconciliations->record([
-                'voucher_id' => $voucher->id,
-                'voucher_code' => $voucher->code,
-                'claim_type' => 'withdraw',
-                'provider' => $response->provider ?? 'unknown',
-                'provider_reference' => $input->reference,
-                'provider_transaction_id' => $response->transaction_id ?? null,
-                'transaction_uuid' => $response->uuid ?? null,
-                'status' => $this->statusResolver->resolveFromGatewayResponse($response),
-                'internal_status' => 'recorded',
-                'amount' => $input->amount,
-                'currency' => 'PHP',
-                'bank_code' => $input->bank_code,
-                'account_number_masked' => $this->maskAccountNumber($input->account_number),
-                'settlement_rail' => $input->settlement_rail,
-                'attempt_count' => 1,
-                'attempted_at' => now(),
-                'completed_at' => $this->statusResolver->resolveFromGatewayResponse($response) === 'succeeded' ? now() : null,
-                'raw_request' => $input->toArray(),
-                'raw_response' => method_exists($response, 'toArray') ? $response->toArray() : [
-                    'status' => $response->status?->value ?? null,
-                    'transaction_id' => $response->transaction_id ?? null,
-                    'uuid' => $response->uuid ?? null,
-                    'provider' => $response->provider ?? null,
-                ],
-                'meta' => [
-                    'flow' => 'withdraw',
-                    'voucher_code' => $voucher->code,
-                    'slice_number' => $sliceNumber,
-                ],
-            ]);
+            $response = $disbursement->response;
         } catch (\Throwable $e) {
             Log::warning('[DefaultWithdrawalProcessorService] Gateway disbursement failed — recording pending', [
                 'voucher' => $voucher->code,
@@ -187,43 +150,9 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
                 'error' => $e->getMessage(),
             ]);
 
-            $this->reconciliations->record([
-                'voucher_id' => $voucher->id,
-                'voucher_code' => $voucher->code,
-                'claim_type' => 'withdraw',
-                'provider' => 'unknown',
-                'provider_reference' => $input->reference,
-                'provider_transaction_id' => null,
-                'transaction_uuid' => null,
-                'status' => $this->statusResolver->resolveFromGatewayException($e),
-                'internal_status' => 'recorded',
-                'amount' => $input->amount,
-                'currency' => 'PHP',
-                'bank_code' => $input->bank_code,
-                'account_number_masked' => $this->maskAccountNumber($input->account_number),
-                'settlement_rail' => $input->settlement_rail,
-                'attempt_count' => 1,
-                'attempted_at' => now(),
-                'raw_request' => $input->toArray(),
-                'raw_response' => [
-                    'exception' => $e::class,
-                    'message' => $e->getMessage(),
-                ],
-                'needs_review' => $this->statusResolver->resolveFromGatewayException($e) === 'unknown',
-                'review_reason' => $this->statusResolver->resolveFromGatewayException($e) === 'unknown'
-                    ? 'Gateway outcome uncertain'
-                    : null,
-                'error_message' => $e->getMessage(),
-                'meta' => [
-                    'flow' => 'withdraw',
-                    'voucher_code' => $voucher->code,
-                    'slice_number' => $sliceNumber,
-                ],
-            ]);
-
             $this->recordPendingDisbursement($voucher, $input, $e);
 
-            throw new RuntimeException('Disbursement failed: '.$e->getMessage());
+            throw $e;
         }
 
         return DB::transaction(function () use ($voucher, $contact, $withdrawAmount, $sliceNumber, $input, $response): WithdrawPayCodeResultData {
@@ -232,9 +161,10 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
             $normalizedStatus = $response->status->value;
             $rail = SettlementRail::from($input->settlement_rail);
 
-            $feeAmount = method_exists($this->gateway, 'getRailFee')
-                ? $this->gateway->getRailFee($rail)
-                : 0;
+            // TODO: Move rail fee resolution into a dedicated fee/rail service.
+            // The provider call has been extracted out of this processor.
+
+            $feeAmount = 0;
 
             $feeStrategy = data_get($voucher->instructions, 'cash.fee_strategy', 'absorb');
 
