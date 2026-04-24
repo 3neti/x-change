@@ -25,6 +25,7 @@ use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Contracts\WithdrawalProcessorContract;
 use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
+use LBHurtado\XChange\Data\WithdrawalExecutionContextData;
 use Propaganistas\LaravelPhone\PhoneNumber;
 use RuntimeException;
 
@@ -75,6 +76,7 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
         protected CashWithdrawalAmountResolverContract $amountResolver,
         protected CashClaimantAuthorizationContract $claimantAuthorization,
         protected CashWithdrawalEligibilityContract $withdrawalEligibility,
+        protected WithdrawalExecutionContextResolver $executionContextResolver,
     ) {}
 
     public function process(Voucher $voucher, array $payload): WithdrawPayCodeResultData
@@ -98,9 +100,16 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
             $amount !== null && $amount !== '' ? (float) $amount : null,
         );
 
-        $sliceNumber = method_exists($voucher, 'getConsumedSlices')
-            ? $voucher->getConsumedSlices() + 1
-            : 1;
+        $bankAccount = $this->resolveBankAccount($voucher, $contact, $payload);
+
+        $executionContext = $this->executionContextResolver->resolve(
+            $voucher,
+            $bankAccount->getAccountNumber(),
+        );
+
+        $claimNumber = $executionContext->claimNumber;
+        $sliceNumber = $executionContext->sliceNumber;
+        $providerReference = $executionContext->providerReference;
 
         Log::info('[DefaultWithdrawalProcessorService] Processing withdrawal', [
             'voucher' => $voucher->code,
@@ -113,7 +122,13 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
             $voucher->redeemer = $voucher->redeemers->first();
         }
 
-        $input = $this->buildPayoutRequest($voucher, $contact, $payload, $withdrawAmount, $sliceNumber);
+        $input = $this->buildPayoutRequest(
+            $voucher,
+            $contact,
+            $bankAccount,
+            $providerReference,
+            $withdrawAmount,
+        );
 
         $rail = SettlementRail::from($input->settlement_rail);
 
@@ -358,13 +373,8 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
         return $this->amountResolver->resolve($instrument, $amount);
     }
 
-    protected function buildPayoutRequest(
-        Voucher $voucher,
-        Contact $contact,
-        array $payload,
-        float $amount,
-        int $sliceNumber,
-    ): PayoutRequestData {
+    protected function resolveBankAccount(Voucher $voucher, Contact $contact, array $payload): BankAccount
+    {
         $rawBank = data_get($payload, 'bank_account');
         $bankAccount = null;
 
@@ -434,15 +444,23 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
             throw new RuntimeException('Bank account information is required for withdrawal.');
         }
 
-        $reference = "{$voucher->code}-{$bankAccount->getAccountNumber()}-S{$sliceNumber}";
+        return $bankAccount;
+    }
 
+    protected function buildPayoutRequest(
+        Voucher $voucher,
+        Contact $contact,
+        BankAccount $bankAccount,
+        string $providerReference,
+        float $amount,
+    ): PayoutRequestData {
         $settlementRailEnum = data_get($voucher->instructions, 'cash.settlement_rail');
         $via = $settlementRailEnum instanceof SettlementRail
             ? $settlementRailEnum->value
             : ((float) $amount < 50000 ? 'INSTAPAY' : 'PESONET');
 
         return PayoutRequestData::from([
-            'reference' => $reference,
+            'reference' => $providerReference,
             'amount' => $amount,
             'account_number' => $bankAccount->getAccountNumber(),
             'bank_code' => $bankAccount->getBankCode(),
