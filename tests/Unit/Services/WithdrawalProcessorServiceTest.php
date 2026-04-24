@@ -11,6 +11,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Services\DefaultWithdrawalProcessorService;
+use LBHurtado\XChange\Services\WithdrawalBankAccountResolver;
 use LBHurtado\XChange\Services\WithdrawalExecutionContextResolver;
 
 it('resolves amount for fixed-slice vouchers', function () {
@@ -22,8 +23,9 @@ it('resolves amount for fixed-slice vouchers', function () {
     $claimantAuthorization = new DefaultCashClaimantAuthorizationService;
     $withdrawalEligibility = new DefaultCashWithdrawalEligibilityService;
     $executionContextResolver = new WithdrawalExecutionContextResolver;
+    $bankAccountResolver = new WithdrawalBankAccountResolver;
 
-    $service = new class($gateway, $bankRegistry, $reconciliations, $statusResolver, $amountResolver, $claimantAuthorization, $withdrawalEligibility, $executionContextResolver) extends DefaultWithdrawalProcessorService
+    $service = new class($gateway, $bankRegistry, $reconciliations, $statusResolver, $amountResolver, $claimantAuthorization, $withdrawalEligibility, $executionContextResolver, $bankAccountResolver) extends DefaultWithdrawalProcessorService
     {
         public function exposeResolveAmount(Voucher $voucher, ?float $amount): float
         {
@@ -49,8 +51,9 @@ it('resolves amount for open-slice vouchers within remaining balance', function 
     $claimantAuthorization = new DefaultCashClaimantAuthorizationService;
     $withdrawalEligibility = new DefaultCashWithdrawalEligibilityService;
     $executionContextResolver = new WithdrawalExecutionContextResolver;
+    $bankAccountResolver = new WithdrawalBankAccountResolver;
 
-    $service = new class($gateway, $bankRegistry, $reconciliations, $statusResolver, $amountResolver, $claimantAuthorization, $withdrawalEligibility, $executionContextResolver) extends DefaultWithdrawalProcessorService
+    $service = new class($gateway, $bankRegistry, $reconciliations, $statusResolver, $amountResolver, $claimantAuthorization, $withdrawalEligibility, $executionContextResolver, $bankAccountResolver) extends DefaultWithdrawalProcessorService
     {
         public function exposeResolveAmount(Voucher $voucher, ?float $amount): float
         {
@@ -77,8 +80,9 @@ it('fails when open-slice amount exceeds remaining balance', function () {
     $claimantAuthorization = new DefaultCashClaimantAuthorizationService;
     $withdrawalEligibility = new DefaultCashWithdrawalEligibilityService;
     $executionContextResolver = new WithdrawalExecutionContextResolver;
+    $bankAccountResolver = new WithdrawalBankAccountResolver;
 
-    $service = new class($gateway, $bankRegistry, $reconciliations, $statusResolver, $amountResolver, $claimantAuthorization, $withdrawalEligibility, $executionContextResolver) extends DefaultWithdrawalProcessorService
+    $service = new class($gateway, $bankRegistry, $reconciliations, $statusResolver, $amountResolver, $claimantAuthorization, $withdrawalEligibility, $executionContextResolver, $bankAccountResolver) extends DefaultWithdrawalProcessorService
     {
         public function exposeResolveAmount(Voucher $voucher, ?float $amount): float
         {
