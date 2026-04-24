@@ -15,7 +15,29 @@ class VoucherWithdrawableInstrumentAdapter implements WithdrawableInstrumentCont
 
     public function isWithdrawable(): bool
     {
-        return method_exists($this->voucher, 'canWithdraw') && (bool) $this->voucher->canWithdraw();
+        /**
+         * TODO (refactor): Open-slice compatibility shim
+         *
+         * Voucher::canWithdraw() does NOT consider divisible open-slice vouchers
+         * as withdrawable after initial claim. However, in x-change lifecycle,
+         * open-slice vouchers must still allow subsequent withdrawals as long as:
+         * - slice mode is 'open'
+         * - remaining balance / slices exist
+         * - validation rules pass
+         *
+         * This adapter overrides that behavior to preserve legacy semantics.
+         *
+         * Future plan:
+         * - Move this logic into a first-class domain concept in cash (e.g. WithdrawalMode)
+         * - Or update voucher::canWithdraw() to correctly handle open-slice semantics
+         * - Then REMOVE this shim
+         */
+        if ($this->isDivisible() && $this->getSliceMode() === 'open') {
+            return true;
+        }
+
+        return method_exists($this->voucher, 'canWithdraw')
+            && $this->voucher->canWithdraw();
     }
 
     public function isDivisible(): bool

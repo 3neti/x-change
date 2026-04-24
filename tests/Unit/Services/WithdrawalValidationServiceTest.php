@@ -46,7 +46,7 @@ it('passes validation for a withdrawable open-slice voucher with valid amount', 
 it('fails validation when voucher is not withdrawable', function () {
     $voucher = Mockery::mock(makeVoucher('active'))->makePartial();
 
-    $voucher->shouldReceive('isDivisible')->once()->andReturnFalse();
+    $voucher->shouldReceive('isDivisible')->andReturnFalse();
     $voucher->shouldReceive('canWithdraw')->once()->andReturnFalse();
 
     $service = new DefaultWithdrawalValidationService(

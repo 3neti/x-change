@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use LBHurtado\Cash\Contracts\CashClaimantAuthorizationContract;
 use LBHurtado\Cash\Contracts\CashWithdrawalAmountResolverContract;
+use LBHurtado\Cash\Contracts\CashWithdrawalEligibilityContract;
 use LBHurtado\Contact\Classes\BankAccount;
 use LBHurtado\Contact\Models\Contact;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
@@ -47,9 +48,9 @@ use RuntimeException;
  *
  * Already delegated to cash:
  * - Amount resolution
+ * - Ownership/original-claimer authorization
  *
  * Candidate responsibilities for future extraction:
- * - Ownership/original-claimer authorization
  * - Withdrawal execution policy
  * - Settlement rail eligibility
  *
@@ -73,6 +74,7 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
         protected DisbursementStatusResolverContract $statusResolver,
         protected CashWithdrawalAmountResolverContract $amountResolver,
         protected CashClaimantAuthorizationContract $claimantAuthorization,
+        protected CashWithdrawalEligibilityContract $withdrawalEligibility,
     ) {}
 
     public function process(Voucher $voucher, array $payload): WithdrawPayCodeResultData
@@ -336,41 +338,9 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
 
     protected function assertVoucherIsWithdrawable(Voucher $voucher): void
     {
-        if (! method_exists($voucher, 'isDivisible') || ! $voucher->isDivisible()) {
-            throw new RuntimeException('This voucher is not divisible.');
-        }
+        $instrument = new VoucherWithdrawableInstrumentAdapter($voucher);
 
-        if ($this->isOpenSliceVoucher($voucher)) {
-            $state = is_object($voucher->state) && property_exists($voucher->state, 'value')
-                ? $voucher->state->value
-                : (string) $voucher->state;
-
-            if ($state !== 'active') {
-                throw new RuntimeException('This voucher cannot accept further withdrawals.');
-            }
-
-            if (method_exists($voucher, 'isExpired') && $voucher->isExpired()) {
-                throw new RuntimeException('This voucher cannot accept further withdrawals.');
-            }
-
-            if (method_exists($voucher, 'getRemainingBalance') && (float) $voucher->getRemainingBalance() <= 0) {
-                throw new RuntimeException('This voucher cannot accept further withdrawals.');
-            }
-
-            if (method_exists($voucher, 'getMaxSlices') && method_exists($voucher, 'getConsumedSlices')) {
-                $maxSlices = $voucher->getMaxSlices();
-
-                if ($maxSlices !== null && $voucher->getConsumedSlices() >= $maxSlices) {
-                    throw new RuntimeException('This voucher cannot accept further withdrawals.');
-                }
-            }
-
-            return;
-        }
-
-        if (! method_exists($voucher, 'canWithdraw') || ! $voucher->canWithdraw()) {
-            throw new RuntimeException('This voucher cannot accept further withdrawals.');
-        }
+        $this->withdrawalEligibility->assertEligible($instrument);
     }
 
     protected function assertOriginalRedeemer(Voucher $voucher, Contact $contact): void

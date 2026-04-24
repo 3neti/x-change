@@ -26,6 +26,7 @@
     ],
     "require": {
         "php": "^8.2",
+        "3neti/cash": "dev-main",
         "3neti/contact": "^1.1",
         "3neti/instruction": "^0.2",
         "3neti/laravel-model-channel": "^1.1",
