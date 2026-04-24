@@ -15,7 +15,6 @@ use LBHurtado\EmiCore\Enums\PayoutStatus;
 use LBHurtado\EmiCore\Enums\SettlementRail;
 use LBHurtado\MoneyIssuer\Support\BankRegistry;
 use LBHurtado\Voucher\Models\Voucher;
-use LBHurtado\Wallet\Actions\WithdrawCash;
 use LBHurtado\XChange\Adapters\ContactClaimantIdentityAdapter;
 use LBHurtado\XChange\Adapters\VoucherWithdrawableInstrumentAdapter;
 use LBHurtado\XChange\Contracts\WithdrawalProcessorContract;
@@ -71,6 +70,7 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
         protected WithdrawalBankAccountResolver $bankAccountResolver,
         protected WithdrawalPayoutRequestFactory $payoutRequestFactory,
         protected WithdrawalDisbursementExecutor $disbursementExecutor,
+        protected WithdrawalWalletSettlementService $walletSettlementService,
     ) {}
 
     public function process(Voucher $voucher, array $payload): WithdrawPayCodeResultData
@@ -101,7 +101,6 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
             $bankAccount->getAccountNumber(),
         );
 
-        $claimNumber = $executionContext->claimNumber;
         $sliceNumber = $executionContext->sliceNumber;
         $providerReference = $executionContext->providerReference;
 
@@ -156,80 +155,18 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
         }
 
         return DB::transaction(function () use ($voucher, $contact, $withdrawAmount, $sliceNumber, $input, $response): WithdrawPayCodeResultData {
-            $bankName = $this->bankRegistry->getBankName($input->bank_code);
-            $providerName = $response->provider ?? 'unknown';
+            $voucher->refresh();
+
             $normalizedStatus = $response->status->value;
             $rail = SettlementRail::from($input->settlement_rail);
 
-            // TODO: Move rail fee resolution into a dedicated fee/rail service.
-            // The provider call has been extracted out of this processor.
-
-            $feeAmount = 0;
-
-            $feeStrategy = data_get($voucher->instructions, 'cash.fee_strategy', 'absorb');
-
-            $amountCentavos = (int) round($withdrawAmount * 100);
-
-            $withdrawal = WithdrawCash::run(
-                $voucher->cash,
-                $response->transaction_id,
-                'Disbursed to external bank account',
-                [
-                    'voucher_id' => $voucher->id,
-                    'voucher_code' => $voucher->code,
-                    'flow' => 'withdraw',
-                    'counterparty' => $bankName,
-                    'reference' => $input->account_number,
-                    'idempotency_key' => $response->uuid,
-                    'slice_number' => $sliceNumber,
-                ],
-                $amountCentavos
+            $this->walletSettlementService->settle(
+                voucher: $voucher,
+                input: $input,
+                withdrawAmount: $withdrawAmount,
+                sliceNumber: $sliceNumber,
             );
 
-            $metadata = $voucher->metadata ?? [];
-
-            if ($voucher->redeemed_at === null) {
-                $voucher->redeemed_at = now();
-            }
-
-            $originalRedeemer = data_get($metadata, 'redemption.original_redeemer');
-
-            if (! is_array($originalRedeemer) || $originalRedeemer === []) {
-                data_set($metadata, 'redemption.original_redeemer', [
-                    'contact_id' => $contact->id,
-                    'mobile' => $contact->mobile,
-                    'country' => $contact->country ?? null,
-                ]);
-            }
-
-            data_set($metadata, 'disbursement', [
-                'gateway' => $providerName,
-                'transaction_id' => $response->transaction_id,
-                'status' => $normalizedStatus,
-                'amount' => $input->amount,
-                'currency' => 'PHP',
-                'settlement_rail' => $rail->value,
-                'fee_amount' => $feeAmount,
-                'total_cost' => ($input->amount * 100) + $feeAmount,
-                'fee_strategy' => $feeStrategy,
-                'recipient_identifier' => $input->account_number,
-                'disbursed_at' => now()->toIso8601String(),
-                'transaction_uuid' => $response->uuid,
-                'recipient_name' => $bankName,
-                'payment_method' => 'bank_transfer',
-                'cash_withdrawal_uuid' => $withdrawal->uuid,
-                'slice_number' => $sliceNumber,
-                'metadata' => [
-                    'bank_code' => $input->bank_code,
-                    'bank_name' => $bankName,
-                    'bank_logo' => $this->bankRegistry->getBankLogo($input->bank_code),
-                    'rail' => $input->settlement_rail,
-                    'is_emi' => $this->bankRegistry->isEMI($input->bank_code),
-                ],
-            ]);
-
-            $voucher->metadata = $metadata;
-            $voucher->save();
             $voucher->refresh();
 
             $remainingBalance = method_exists($voucher, 'getRemainingBalance')
@@ -248,6 +185,8 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
                 'remaining_slices' => $remainingSlices,
                 'remaining_balance' => $remainingBalance,
             ]);
+
+            $providerName = $response->provider ?? 'unknown';
 
             return new WithdrawPayCodeResultData(
                 voucher_code: (string) $voucher->code,
@@ -349,13 +288,5 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
         }
 
         return str_repeat('*', $length - 4).substr($accountNumber, -4);
-    }
-
-    protected function isOpenSliceVoucher(Voucher $voucher): bool
-    {
-        return method_exists($voucher, 'isDivisible')
-            && $voucher->isDivisible()
-            && method_exists($voucher, 'getSliceMode')
-            && $voucher->getSliceMode() === 'open';
     }
 }

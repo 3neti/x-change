@@ -15,6 +15,7 @@ use LBHurtado\XChange\Services\WithdrawalBankAccountResolver;
 use LBHurtado\XChange\Services\WithdrawalDisbursementExecutor;
 use LBHurtado\XChange\Services\WithdrawalExecutionContextResolver;
 use LBHurtado\XChange\Services\WithdrawalPayoutRequestFactory;
+use LBHurtado\XChange\Services\WithdrawalWalletSettlementService;
 
 function withdrawalProcessorForAmountResolution(): DefaultWithdrawalProcessorService
 {
@@ -22,7 +23,7 @@ function withdrawalProcessorForAmountResolution(): DefaultWithdrawalProcessorSer
     $reconciliations = Mockery::mock(DisbursementReconciliationStoreContract::class);
     $statusResolver = Mockery::mock(DisbursementStatusResolverContract::class);
 
-    return new class(Mockery::mock(BankRegistry::class), new DefaultCashWithdrawalAmountResolverService, new DefaultCashClaimantAuthorizationService, new DefaultCashWithdrawalEligibilityService, new WithdrawalExecutionContextResolver, new WithdrawalBankAccountResolver, new WithdrawalPayoutRequestFactory, new WithdrawalDisbursementExecutor(gateway: $gateway, reconciliations: $reconciliations, statusResolver: $statusResolver)) extends DefaultWithdrawalProcessorService
+    return new class(Mockery::mock(BankRegistry::class), new DefaultCashWithdrawalAmountResolverService, new DefaultCashClaimantAuthorizationService, new DefaultCashWithdrawalEligibilityService, new WithdrawalExecutionContextResolver, new WithdrawalBankAccountResolver, new WithdrawalPayoutRequestFactory, new WithdrawalDisbursementExecutor(gateway: $gateway, reconciliations: $reconciliations, statusResolver: $statusResolver), new WithdrawalWalletSettlementService) extends DefaultWithdrawalProcessorService
     {
         public function exposeResolveAmount(Voucher $voucher, ?float $amount): float
         {
