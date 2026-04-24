@@ -34,9 +34,13 @@ class VoucherWithdrawableInstrumentAdapter implements WithdrawableInstrumentCont
 
     public function getSliceAmount(): ?float
     {
-        return method_exists($this->voucher, 'getSliceAmount')
-            ? ($this->voucher->getSliceAmount() !== null ? (float) $this->voucher->getSliceAmount() : null)
-            : null;
+        if (! method_exists($this->voucher, 'getSliceAmount')) {
+            return null;
+        }
+
+        $value = $this->voucher->getSliceAmount();
+
+        return $value !== null ? (float) $value : null;
     }
 
     public function getRemainingBalance(): float

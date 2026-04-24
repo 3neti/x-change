@@ -5,15 +5,22 @@ declare(strict_types=1);
 use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Services\DefaultWithdrawalProcessorService;
+use LBHurtado\Cash\Services\DefaultCashWithdrawalAmountResolverService;
 
 it('resolves amount for fixed-slice vouchers', function () {
     $gateway = Mockery::mock(\LBHurtado\EmiCore\Contracts\PayoutProvider::class);
     $bankRegistry = Mockery::mock(\LBHurtado\MoneyIssuer\Support\BankRegistry::class);
     $reconciliations = Mockery::mock(DisbursementReconciliationStoreContract::class);
     $statusResolver = Mockery::mock(DisbursementStatusResolverContract::class);
+    $amountResolver = new DefaultCashWithdrawalAmountResolverService();
 
-    $service = new class($gateway, $bankRegistry, $reconciliations, $statusResolver) extends DefaultWithdrawalProcessorService
-    {
+    $service = new class(
+        $gateway,
+        $bankRegistry,
+        $reconciliations,
+        $statusResolver,
+        $amountResolver,
+    ) extends DefaultWithdrawalProcessorService {
         public function exposeResolveAmount(\LBHurtado\Voucher\Models\Voucher $voucher, ?float $amount): float
         {
             return $this->resolveAmount($voucher, $amount);
@@ -34,9 +41,15 @@ it('resolves amount for open-slice vouchers within remaining balance', function 
     $bankRegistry = Mockery::mock(\LBHurtado\MoneyIssuer\Support\BankRegistry::class);
     $reconciliations = Mockery::mock(DisbursementReconciliationStoreContract::class);
     $statusResolver = Mockery::mock(DisbursementStatusResolverContract::class);
+    $amountResolver = new DefaultCashWithdrawalAmountResolverService();
 
-    $service = new class($gateway, $bankRegistry, $reconciliations, $statusResolver) extends DefaultWithdrawalProcessorService
-    {
+    $service = new class(
+        $gateway,
+        $bankRegistry,
+        $reconciliations,
+        $statusResolver,
+        $amountResolver,
+    ) extends DefaultWithdrawalProcessorService {
         public function exposeResolveAmount(\LBHurtado\Voucher\Models\Voucher $voucher, ?float $amount): float
         {
             return $this->resolveAmount($voucher, $amount);
@@ -58,9 +71,15 @@ it('fails when open-slice amount exceeds remaining balance', function () {
     $bankRegistry = Mockery::mock(\LBHurtado\MoneyIssuer\Support\BankRegistry::class);
     $reconciliations = Mockery::mock(DisbursementReconciliationStoreContract::class);
     $statusResolver = Mockery::mock(DisbursementStatusResolverContract::class);
+    $amountResolver = new DefaultCashWithdrawalAmountResolverService();
 
-    $service = new class($gateway, $bankRegistry, $reconciliations, $statusResolver) extends DefaultWithdrawalProcessorService
-    {
+    $service = new class(
+        $gateway,
+        $bankRegistry,
+        $reconciliations,
+        $statusResolver,
+        $amountResolver,
+    ) extends DefaultWithdrawalProcessorService {
         public function exposeResolveAmount(\LBHurtado\Voucher\Models\Voucher $voucher, ?float $amount): float
         {
             return $this->resolveAmount($voucher, $amount);

@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Services;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use LBHurtado\Cash\Contracts\CashWithdrawalAmountResolverContract;
 use LBHurtado\Contact\Classes\BankAccount;
 use LBHurtado\Contact\Models\Contact;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
@@ -16,6 +17,7 @@ use LBHurtado\EmiCore\Enums\SettlementRail;
 use LBHurtado\MoneyIssuer\Support\BankRegistry;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Actions\WithdrawCash;
+use LBHurtado\XChange\Adapters\VoucherWithdrawableInstrumentAdapter;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Contracts\WithdrawalProcessorContract;
@@ -41,8 +43,10 @@ use RuntimeException;
  * package. Do not add new domain/business rules here unless they are strictly
  * x-change orchestration or infrastructure concerns.
  *
- * Candidate responsibilities for future extraction:
+ * Already delegated to cash:
  * - Amount resolution
+ *
+ * Candidate responsibilities for future extraction:
  * - Ownership/original-claimer authorization
  * - Withdrawal execution policy
  * - Settlement rail eligibility
@@ -65,6 +69,7 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
         protected BankRegistry $bankRegistry,
         protected DisbursementReconciliationStoreContract $reconciliations,
         protected DisbursementStatusResolverContract $statusResolver,
+        protected CashWithdrawalAmountResolverContract $amountResolver,
     ) {}
 
     public function process(Voucher $voucher, array $payload): WithdrawPayCodeResultData
@@ -396,43 +401,9 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
 
     protected function resolveAmount(Voucher $voucher, ?float $amount): float
     {
-        $sliceMode = method_exists($voucher, 'getSliceMode')
-            ? $voucher->getSliceMode()
-            : null;
+        $instrument = new VoucherWithdrawableInstrumentAdapter($voucher);
 
-        if ($sliceMode === 'fixed') {
-            if (! method_exists($voucher, 'getSliceAmount')) {
-                throw new RuntimeException('Fixed-slice voucher is missing slice amount support.');
-            }
-
-            return (float) $voucher->getSliceAmount();
-        }
-
-        if ($amount === null) {
-            throw new \InvalidArgumentException('Amount is required for open-mode vouchers.');
-        }
-
-        $minWithdrawal = method_exists($voucher, 'getMinWithdrawal')
-            ? (float) ($voucher->getMinWithdrawal() ?? 0.0)
-            : 0.0;
-
-        if ($amount < $minWithdrawal) {
-            throw new \InvalidArgumentException(
-                "Withdrawal amount ({$amount}) is below minimum ({$minWithdrawal})."
-            );
-        }
-
-        $remainingBalance = method_exists($voucher, 'getRemainingBalance')
-            ? (float) $voucher->getRemainingBalance()
-            : 0.0;
-
-        if ($amount > $remainingBalance) {
-            throw new \InvalidArgumentException(
-                "Withdrawal amount ({$amount}) exceeds remaining balance ({$remainingBalance})."
-            );
-        }
-
-        return $amount;
+        return $this->amountResolver->resolve($instrument, $amount);
     }
 
     protected function buildPayoutRequest(
