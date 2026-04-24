@@ -77,6 +77,7 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
         protected CashWithdrawalEligibilityContract $withdrawalEligibility,
         protected WithdrawalExecutionContextResolver $executionContextResolver,
         protected WithdrawalBankAccountResolver $bankAccountResolver,
+        protected WithdrawalPayoutRequestFactory $payoutRequestFactory,
     ) {}
 
     public function process(Voucher $voucher, array $payload): WithdrawPayCodeResultData
@@ -122,7 +123,7 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
             $voucher->redeemer = $voucher->redeemers->first();
         }
 
-        $input = $this->buildPayoutRequest(
+        $input = $this->payoutRequestFactory->make(
             $voucher,
             $contact,
             $bankAccount,
@@ -371,31 +372,6 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
         $instrument = new VoucherWithdrawableInstrumentAdapter($voucher);
 
         return $this->amountResolver->resolve($instrument, $amount);
-    }
-
-    protected function buildPayoutRequest(
-        Voucher $voucher,
-        Contact $contact,
-        BankAccount $bankAccount,
-        string $providerReference,
-        float $amount,
-    ): PayoutRequestData {
-        $settlementRailEnum = data_get($voucher->instructions, 'cash.settlement_rail');
-        $via = $settlementRailEnum instanceof SettlementRail
-            ? $settlementRailEnum->value
-            : ((float) $amount < 50000 ? 'INSTAPAY' : 'PESONET');
-
-        return PayoutRequestData::from([
-            'reference' => $providerReference,
-            'amount' => $amount,
-            'account_number' => $bankAccount->getAccountNumber(),
-            'bank_code' => $bankAccount->getBankCode(),
-            'settlement_rail' => $via,
-            'external_id' => (string) $voucher->id,
-            'external_code' => $voucher->code,
-            'user_id' => $voucher->user_id,
-            'mobile' => $contact->mobile,
-        ]);
     }
 
     protected function recordPendingDisbursement(Voucher $voucher, PayoutRequestData $input, \Throwable $e): void
