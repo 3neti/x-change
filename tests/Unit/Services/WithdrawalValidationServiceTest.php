@@ -86,7 +86,7 @@ it('passes validation for a withdrawable open-slice voucher with valid amount', 
 
     expect(fn () => $service->validate($voucher, [
         'amount' => 25.00,
-    ]))->toThrow(InvalidArgumentException::class, 'Withdrawal amount is below the minimum withdrawal amount.');
+    ]))->toThrow(InvalidArgumentException::class, 'Withdrawal amount must be at least 50.');
  });
 
  it('fails validation when open-slice amount is missing', function () {
@@ -178,10 +178,10 @@ it('delegates open-slice amount bounds to cash package', function () {
 
     $bounds->shouldReceive('assertWithinBounds')
         ->once()
-        ->withArgs(fn ($instrument, $amount, $minimumAmount) =>
+        ->withArgs(fn ($instrument, $amount, $minimumAmount = null) =>
             $instrument instanceof VoucherWithdrawableInstrumentAdapter
             && $amount === 50
-            && $minimumAmount === (float) config('x-change.withdrawal.open_slice_min_amount', 1)
+            && $minimumAmount === null
         );
 
     $service = new DefaultWithdrawalValidationService(

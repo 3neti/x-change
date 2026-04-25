@@ -56,7 +56,6 @@ class DefaultWithdrawalValidationService implements WithdrawalValidationContract
         $this->amountBounds->assertWithinBounds(
             instrument: $instrument,
             amount: data_get($payload, 'amount'),
-            minimumAmount: (float) config('x-change.withdrawal.open_slice_min_amount', 1),
         );
 
         $this->validator->validate($instrument, $payload);
