@@ -75,7 +75,6 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
         protected WithdrawalExecutionContextResolver $executionContextResolver,
         protected WithdrawalBankAccountResolver $bankAccountResolver,
         protected WithdrawalPayoutRequestFactory $payoutRequestFactory,
-        protected WithdrawalRailGuard $railGuard,
         protected WithdrawalWalletSettlementService $walletSettlementService,
         protected WithdrawalResultFactory $resultFactory,
     ) {}
@@ -111,7 +110,6 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
         }
 
         $input = $context->payoutRequest;
-        $this->railGuard->assertAllowed($input);
 
         $disbursement = $context->disbursement;
 

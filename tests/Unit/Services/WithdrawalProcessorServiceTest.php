@@ -13,13 +13,12 @@ use LBHurtado\XChange\Services\WithdrawalBankAccountResolver;
 use LBHurtado\XChange\Services\WithdrawalExecutionContextResolver;
 use LBHurtado\XChange\Services\WithdrawalPayoutRequestFactory;
 use LBHurtado\XChange\Services\WithdrawalPipeline;
-use LBHurtado\XChange\Services\WithdrawalRailGuard;
 use LBHurtado\XChange\Services\WithdrawalResultFactory;
 use LBHurtado\XChange\Services\WithdrawalWalletSettlementService;
 
 function withdrawalProcessorForAmountResolution(): DefaultWithdrawalProcessorService
 {
-    return new class(Mockery::mock(BankRegistry::class), new DefaultCashWithdrawalAmountResolverService, new DefaultCashClaimantAuthorizationService, new DefaultCashWithdrawalEligibilityService, new WithdrawalPipeline(pipeline: app(Pipeline::class), steps: []), new WithdrawalExecutionContextResolver, new WithdrawalBankAccountResolver, new WithdrawalPayoutRequestFactory, new WithdrawalRailGuard(Mockery::mock(BankRegistry::class)), new WithdrawalWalletSettlementService, new WithdrawalResultFactory) extends DefaultWithdrawalProcessorService
+    return new class(Mockery::mock(BankRegistry::class), new DefaultCashWithdrawalAmountResolverService, new DefaultCashClaimantAuthorizationService, new DefaultCashWithdrawalEligibilityService, new WithdrawalPipeline(pipeline: app(Pipeline::class), steps: []), new WithdrawalExecutionContextResolver, new WithdrawalBankAccountResolver, new WithdrawalPayoutRequestFactory, new WithdrawalWalletSettlementService, new WithdrawalResultFactory) extends DefaultWithdrawalProcessorService
     {
         public function exposeResolveAmount(Voucher $voucher, ?float $amount): float
         {
