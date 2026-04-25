@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 
+use LBHurtado\Cash\Exceptions\WithdrawalApprovalRequired;
 use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
 use LBHurtado\XChange\Data\WithdrawalPipelineContextData;
 use LBHurtado\XChange\Services\DefaultWithdrawalProcessorService;
 use LBHurtado\XChange\Services\WithdrawalPipeline;
+use LBHurtado\XChange\Services\WithdrawalResultFactory;
 
 it('returns result built by withdrawal pipeline', function () {
     $voucher = issueVoucher();
@@ -41,7 +43,9 @@ it('returns result built by withdrawal pipeline', function () {
             result: $expected,
         ));
 
-    $service = new DefaultWithdrawalProcessorService($pipeline);
+    $withdrawalResultFactory = app(WithdrawalResultFactory::class);
+
+    $service = new DefaultWithdrawalProcessorService($pipeline, $withdrawalResultFactory);
 
     expect($service->process($voucher, ['mobile' => '09171234567']))->toBe($expected);
 });
@@ -57,7 +61,40 @@ it('fails when withdrawal pipeline does not build result', function () {
             payload: [],
         ));
 
-    $service = new DefaultWithdrawalProcessorService($pipeline);
+    $withdrawalResultFactory = app(WithdrawalResultFactory::class);
+
+    $service = new DefaultWithdrawalProcessorService($pipeline, $withdrawalResultFactory);
 
     $service->process($voucher, []);
-})->throws(LogicException::class, 'Withdrawal result was not built.');
+})->throws(RuntimeException::class, 'Withdrawal pipeline did not build a withdrawal result.');
+
+it('returns approval required result when withdrawal policy requires approval', function () {
+    $voucher = issueVoucher(validVoucherInstructions(
+        amount: 1000.00,
+        settlementRail: 'INSTAPAY',
+    ));
+
+    $pipeline = Mockery::mock(WithdrawalPipeline::class);
+
+    $pipeline->shouldReceive('process')
+        ->once()
+        ->andThrow(WithdrawalApprovalRequired::forThreshold(
+            amount: 1500.00,
+            threshold: 1000.00,
+        ));
+
+    $service = new DefaultWithdrawalProcessorService(
+        withdrawalPipeline: $pipeline,
+        withdrawalResultFactory: app(WithdrawalResultFactory::class),
+    );
+
+    $result = $service->process($voucher, [
+        'mobile' => '09171234567',
+        'amount' => 1500.00,
+    ]);
+
+    expect($result->withdrawn)->toBeFalse()
+        ->and($result->status)->toBe('approval_required')
+        ->and($result->disbursed_amount)->toBe(0.0)
+        ->and($result->messages)->toContain('Withdrawal approval is required for amounts above 1000.');
+});
