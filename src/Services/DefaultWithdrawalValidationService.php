@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services;
 
+use LBHurtado\Cash\Contracts\CashWithdrawalAmountBoundsContract;
 use LBHurtado\Cash\Contracts\CashWithdrawalValidationContract;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Adapters\VoucherWithdrawableInstrumentAdapter;
@@ -45,11 +46,18 @@ class DefaultWithdrawalValidationService implements WithdrawalValidationContract
 {
     public function __construct(
         protected CashWithdrawalValidationContract $validator,
+        protected CashWithdrawalAmountBoundsContract $amountBounds,
     ) {}
 
     public function validate(Voucher $voucher, array $payload): void
     {
         $instrument = new VoucherWithdrawableInstrumentAdapter($voucher);
+
+        $this->amountBounds->assertWithinBounds(
+            instrument: $instrument,
+            amount: data_get($payload, 'amount'),
+            minimumAmount: (float) config('x-change.withdrawal.open_slice_min_amount', 1),
+        );
 
         $this->validator->validate($instrument, $payload);
     }
