@@ -50,6 +50,17 @@ use LBHurtado\XChange\Data\WithdrawalPipelineContextData;
  * Future Plan:
  * - Delegate additional cash-domain rules to the cash package in later slices
  * - Mark as @deprecated only after execution orchestration is replaced
+ * Pipeline Note:
+ *
+ * Initial withdrawal gates are delegated to WithdrawalPipeline:
+ *
+ * - claimant/contact resolution
+ * - cash eligibility
+ * - claimant authorization
+ *
+ * Add future pre-execution gates as pipeline steps rather than expanding this
+ *
+ * processor directly.
  *
  * @internal Legacy execution orchestrator during cash extraction
  */
@@ -73,22 +84,6 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
 
     public function process(Voucher $voucher, array $payload): WithdrawPayCodeResultData
     {
-//        $mobile = data_get($payload, 'mobile');
-//        $country = (string) data_get($payload, 'recipient_country', 'PH');
-//        $amount = data_get($payload, 'amount');
-//
-//        if (! is_string($mobile) || trim($mobile) === '') {
-//            throw new \InvalidArgumentException('Mobile number is required.');
-//        }
-//
-//        $phoneNumber = new PhoneNumber($mobile, $country);
-//        $contact = Contact::fromPhoneNumber($phoneNumber);
-//
-//        $this->assertVoucherIsWithdrawable($voucher);
-//        $this->assertOriginalRedeemer($voucher, $contact);
-
-        $amount = data_get($payload, 'amount');
-
         $context = $this->withdrawalPipeline->process(
             new WithdrawalPipelineContextData(
                 voucher: $voucher,
@@ -102,12 +97,9 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
             throw new \LogicException('Withdrawal claimant was not resolved.');
         }
 
-        $withdrawAmount = $this->resolveAmount(
-            $voucher,
-            $amount !== null && $amount !== '' ? (float) $amount : null,
-        );
+        $withdrawAmount = $context->withdrawAmount;
 
-        $bankAccount = $this->bankAccountResolver->resolve($voucher, $contact, $payload);
+        $bankAccount = $context->bankAccount;
 
         $executionContext = $this->executionContextResolver->resolve(
             $voucher,
@@ -115,7 +107,6 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
         );
 
         $sliceNumber = $executionContext->sliceNumber;
-        $providerReference = $executionContext->providerReference;
 
         Log::info('[DefaultWithdrawalProcessorService] Processing withdrawal', [
             'voucher' => $voucher->code,
@@ -128,14 +119,7 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
             $voucher->redeemer = $voucher->redeemers->first();
         }
 
-        $input = $this->payoutRequestFactory->make(
-            $voucher,
-            $contact,
-            $bankAccount,
-            $providerReference,
-            $withdrawAmount,
-        );
-
+        $input = $context->payoutRequest;
         $this->railGuard->assertAllowed($input);
 
         try {
