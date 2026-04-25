@@ -10,8 +10,6 @@ use LBHurtado\Cash\Contracts\CashClaimantAuthorizationContract;
 use LBHurtado\Cash\Contracts\CashWithdrawalAmountResolverContract;
 use LBHurtado\Cash\Contracts\CashWithdrawalEligibilityContract;
 use LBHurtado\Contact\Models\Contact;
-use LBHurtado\EmiCore\Data\PayoutRequestData;
-use LBHurtado\EmiCore\Enums\PayoutStatus;
 use LBHurtado\EmiCore\Enums\SettlementRail;
 use LBHurtado\MoneyIssuer\Support\BankRegistry;
 use LBHurtado\Voucher\Models\Voucher;
@@ -71,6 +69,8 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
         protected WithdrawalPayoutRequestFactory $payoutRequestFactory,
         protected WithdrawalDisbursementExecutor $disbursementExecutor,
         protected WithdrawalWalletSettlementService $walletSettlementService,
+        protected WithdrawalResultFactory $resultFactory,
+        protected WithdrawalPendingDisbursementRecorder $pendingDisbursementRecorder,
     ) {}
 
     public function process(Voucher $voucher, array $payload): WithdrawPayCodeResultData
@@ -149,16 +149,13 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
                 'error' => $e->getMessage(),
             ]);
 
-            $this->recordPendingDisbursement($voucher, $input, $e);
+            $this->pendingDisbursementRecorder->record($voucher, $input, $e);
 
             throw $e;
         }
 
         return DB::transaction(function () use ($voucher, $contact, $withdrawAmount, $sliceNumber, $input, $response): WithdrawPayCodeResultData {
             $voucher->refresh();
-
-            $normalizedStatus = $response->status->value;
-            $rail = SettlementRail::from($input->settlement_rail);
 
             $this->walletSettlementService->settle(
                 voucher: $voucher,
@@ -169,55 +166,25 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
 
             $voucher->refresh();
 
-            $remainingBalance = method_exists($voucher, 'getRemainingBalance')
-                ? (float) $voucher->getRemainingBalance()
-                : null;
-
-            $remainingSlices = method_exists($voucher, 'getRemainingSlices')
-                ? (int) $voucher->getRemainingSlices()
-                : null;
+            $result = $this->resultFactory->make(
+                voucher: $voucher,
+                contact: $contact,
+                input: $input,
+                response: $response,
+                withdrawAmount: $withdrawAmount,
+                sliceNumber: $sliceNumber,
+            );
 
             Log::info('[DefaultWithdrawalProcessorService] Withdrawal disbursed successfully', [
                 'voucher' => $voucher->code,
                 'transaction_id' => $response->transaction_id,
                 'amount' => $withdrawAmount,
                 'slice_number' => $sliceNumber,
-                'remaining_slices' => $remainingSlices,
-                'remaining_balance' => $remainingBalance,
+                'remaining_slices' => $result->remaining_slices,
+                'remaining_balance' => $result->remaining_balance,
             ]);
 
-            $providerName = $response->provider ?? 'unknown';
-
-            return new WithdrawPayCodeResultData(
-                voucher_code: (string) $voucher->code,
-                withdrawn: true,
-                status: 'withdrawn',
-                requested_amount: $withdrawAmount,
-                disbursed_amount: $withdrawAmount,
-                currency: 'PHP',
-                remaining_balance: $remainingBalance,
-                slice_number: $sliceNumber,
-                remaining_slices: $remainingSlices,
-                slice_mode: method_exists($voucher, 'getSliceMode') ? $voucher->getSliceMode() : null,
-                redeemer: [
-                    'mobile' => $contact->mobile,
-                    'country' => $contact->country ?? null,
-                    'contact_id' => $contact->id,
-                ],
-                bank_account: [
-                    'bank_code' => $input->bank_code,
-                    'account_number' => $input->account_number,
-                ],
-                disbursement: [
-                    'status' => $normalizedStatus,
-                    'bank_code' => $input->bank_code,
-                    'account_number' => $input->account_number,
-                    'transaction_id' => $response->transaction_id,
-                    'gateway' => $providerName,
-                    'settlement_rail' => $rail->value,
-                ],
-                messages: ['Voucher withdrawal successful.'],
-            );
+            return $result;
         });
     }
 
@@ -241,38 +208,6 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
         $instrument = new VoucherWithdrawableInstrumentAdapter($voucher);
 
         return $this->amountResolver->resolve($instrument, $amount);
-    }
-
-    protected function recordPendingDisbursement(Voucher $voucher, PayoutRequestData $input, \Throwable $e): void
-    {
-        $bankName = $this->bankRegistry->getBankName($input->bank_code);
-
-        $metadata = $voucher->metadata ?? [];
-
-        data_set($metadata, 'disbursement', [
-            'gateway' => 'unknown',
-            'transaction_id' => $input->reference,
-            'status' => PayoutStatus::PENDING->value,
-            'amount' => $input->amount,
-            'currency' => 'PHP',
-            'settlement_rail' => $input->settlement_rail,
-            'recipient_identifier' => $input->account_number,
-            'disbursed_at' => now()->toIso8601String(),
-            'recipient_name' => $bankName,
-            'payment_method' => 'bank_transfer',
-            'error' => $e->getMessage(),
-            'requires_reconciliation' => true,
-            'metadata' => [
-                'bank_code' => $input->bank_code,
-                'bank_name' => $bankName,
-                'bank_logo' => $this->bankRegistry->getBankLogo($input->bank_code),
-                'rail' => $input->settlement_rail,
-                'is_emi' => $this->bankRegistry->isEMI($input->bank_code),
-            ],
-        ]);
-
-        $voucher->metadata = $metadata;
-        $voucher->save();
     }
 
     protected function maskAccountNumber(?string $accountNumber): ?string
