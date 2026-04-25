@@ -8,6 +8,7 @@ use LBHurtado\Contact\Classes\BankAccount;
 use LBHurtado\Contact\Models\Contact;
 use LBHurtado\EmiCore\Data\PayoutRequestData;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
 
 class WithdrawalPipelineContextData
 {
@@ -19,6 +20,8 @@ class WithdrawalPipelineContextData
         public ?BankAccount $bankAccount = null,
         public ?PayoutRequestData $payoutRequest = null,
         public ?WithdrawalDisbursementExecutionData $disbursement = null,
+        public ?WithdrawalWalletSettlementData $settlement = null,
+        public ?WithdrawPayCodeResultData $result = null,
         public ?int $sliceNumber = null,
     ) {}
 
@@ -60,6 +63,20 @@ class WithdrawalPipelineContextData
     public function withSliceNumber(int $sliceNumber): self
     {
         $this->sliceNumber = $sliceNumber;
+
+        return $this;
+    }
+
+    public function withSettlement(WithdrawalWalletSettlementData $settlement): self
+    {
+        $this->settlement = $settlement;
+
+        return $this;
+    }
+
+    public function withResult(WithdrawPayCodeResultData $result): self
+    {
+        $this->result = $result;
 
         return $this;
     }

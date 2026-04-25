@@ -2,61 +2,62 @@
 
 declare(strict_types=1);
 
-use Illuminate\Pipeline\Pipeline;
-use LBHurtado\Cash\Services\DefaultCashClaimantAuthorizationService;
-use LBHurtado\Cash\Services\DefaultCashWithdrawalAmountResolverService;
-use LBHurtado\Cash\Services\DefaultCashWithdrawalEligibilityService;
-use LBHurtado\MoneyIssuer\Support\BankRegistry;
-use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
+use LBHurtado\XChange\Data\WithdrawalPipelineContextData;
 use LBHurtado\XChange\Services\DefaultWithdrawalProcessorService;
-use LBHurtado\XChange\Services\WithdrawalBankAccountResolver;
-use LBHurtado\XChange\Services\WithdrawalExecutionContextResolver;
-use LBHurtado\XChange\Services\WithdrawalPayoutRequestFactory;
 use LBHurtado\XChange\Services\WithdrawalPipeline;
-use LBHurtado\XChange\Services\WithdrawalResultFactory;
-use LBHurtado\XChange\Services\WithdrawalWalletSettlementService;
 
-function withdrawalProcessorForAmountResolution(): DefaultWithdrawalProcessorService
-{
-    return new class(Mockery::mock(BankRegistry::class), new DefaultCashWithdrawalAmountResolverService, new DefaultCashClaimantAuthorizationService, new DefaultCashWithdrawalEligibilityService, new WithdrawalPipeline(pipeline: app(Pipeline::class), steps: []), new WithdrawalExecutionContextResolver, new WithdrawalBankAccountResolver, new WithdrawalPayoutRequestFactory, new WithdrawalWalletSettlementService, new WithdrawalResultFactory) extends DefaultWithdrawalProcessorService
-    {
-        public function exposeResolveAmount(Voucher $voucher, ?float $amount): float
-        {
-            return $this->resolveAmount($voucher, $amount);
-        }
-    };
-}
+it('returns result built by withdrawal pipeline', function () {
+    $voucher = issueVoucher();
 
-it('resolves amount for fixed-slice vouchers', function () {
-    $service = withdrawalProcessorForAmountResolution();
-    $voucher = Mockery::mock(Voucher::class);
-    $voucher->shouldReceive('getSliceMode')->once()->andReturn('fixed');
-    $voucher->shouldReceive('getSliceAmount')->once()->andReturn(250.00);
+    $expected = new WithdrawPayCodeResultData(
+        voucher_code: (string) $voucher->code,
+        withdrawn: true,
+        status: 'withdrawn',
+        requested_amount: 100.00,
+        disbursed_amount: 100.00,
+        currency: 'PHP',
+        remaining_balance: 0.0,
+        slice_number: 1,
+        remaining_slices: 0,
+        slice_mode: null,
+        redeemer: [],
+        bank_account: [],
+        disbursement: [],
+        messages: ['Voucher withdrawal successful.'],
+    );
 
-    $result = $service->exposeResolveAmount($voucher, null);
+    $pipeline = Mockery::mock(WithdrawalPipeline::class);
+    $pipeline->shouldReceive('process')
+        ->once()
+        ->withArgs(fn ($context) =>
+            $context instanceof WithdrawalPipelineContextData
+            && $context->voucher->is($voucher)
+            && $context->payload === ['mobile' => '09171234567']
+        )
+        ->andReturn(new WithdrawalPipelineContextData(
+            voucher: $voucher,
+            payload: ['mobile' => '09171234567'],
+            result: $expected,
+        ));
 
-    expect($result)->toBe(250.00);
+    $service = new DefaultWithdrawalProcessorService($pipeline);
+
+    expect($service->process($voucher, ['mobile' => '09171234567']))->toBe($expected);
 });
 
-it('resolves amount for open-slice vouchers within remaining balance', function () {
-    $service = withdrawalProcessorForAmountResolution();
-    $voucher = Mockery::mock(Voucher::class);
-    $voucher->shouldReceive('getSliceMode')->once()->andReturn('open');
-    $voucher->shouldReceive('getMinWithdrawal')->once()->andReturn(100.00);
-    $voucher->shouldReceive('getRemainingBalance')->once()->andReturn(500.00);
+it('fails when withdrawal pipeline does not build result', function () {
+    $voucher = issueVoucher();
 
-    $result = $service->exposeResolveAmount($voucher, 200.00);
+    $pipeline = Mockery::mock(WithdrawalPipeline::class);
+    $pipeline->shouldReceive('process')
+        ->once()
+        ->andReturn(new WithdrawalPipelineContextData(
+            voucher: $voucher,
+            payload: [],
+        ));
 
-    expect($result)->toBe(200.00);
-});
+    $service = new DefaultWithdrawalProcessorService($pipeline);
 
-it('fails when open-slice amount exceeds remaining balance', function () {
-    $service = withdrawalProcessorForAmountResolution();
-    $voucher = Mockery::mock(Voucher::class);
-    $voucher->shouldReceive('getSliceMode')->once()->andReturn('open');
-    $voucher->shouldReceive('getMinWithdrawal')->once()->andReturn(100.00);
-    $voucher->shouldReceive('getRemainingBalance')->once()->andReturn(150.00);
-
-    expect(fn () => $service->exposeResolveAmount($voucher, 200.00))
-        ->toThrow(InvalidArgumentException::class, 'exceeds remaining balance');
-});
+    $service->process($voucher, []);
+})->throws(LogicException::class, 'Withdrawal result was not built.');
