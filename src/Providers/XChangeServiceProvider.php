@@ -11,6 +11,7 @@ use Illuminate\Pipeline\Pipeline;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 use LBHurtado\Cash\Contracts\WithdrawalIntervalEnforcerContract;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider;
@@ -269,20 +270,17 @@ class XChangeServiceProvider extends ServiceProvider
         );
 
         $this->app->bind(WithdrawalPipeline::class, function ($app) {
+            $steps = config('x-change.withdrawal.pipeline.steps', []);
+
+            foreach ($steps as $step) {
+                if (! is_string($step) || ! class_exists($step)) {
+                    throw new InvalidArgumentException("Invalid withdrawal pipeline step: {$step}");
+                }
+            }
+
             return new WithdrawalPipeline(
                 pipeline: $app->make(Pipeline::class),
-                steps: [
-                    ResolveWithdrawalClaimantStep::class,
-                    AssertWithdrawalEligibilityStep::class,
-                    AuthorizeWithdrawalClaimantStep::class,
-                    ResolveWithdrawalAmountStep::class,
-                    ResolveWithdrawalBankAccountStep::class,
-                    BuildWithdrawalPayoutRequestStep::class,
-                    GuardWithdrawalRailStep::class,
-                    ExecuteWithdrawalDisbursementStep::class,
-                    WithdrawalWalletSettlementStep::class,
-                    BuildWithdrawalResultStep::class,
-                ],
+                steps: $steps,
             );
         });
     }

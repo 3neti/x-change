@@ -17,6 +17,16 @@ use LBHurtado\XChange\Services\SessionCompletionStore;
 use LBHurtado\XChange\Services\TerminologyService;
 use LBHurtado\XChange\Services\VoucherAccessService;
 use LBHurtado\XChange\Services\VoucherEntryRouteService;
+use LBHurtado\XChange\Services\WithdrawalPipelineSteps\AssertWithdrawalEligibilityStep;
+use LBHurtado\XChange\Services\WithdrawalPipelineSteps\AuthorizeWithdrawalClaimantStep;
+use LBHurtado\XChange\Services\WithdrawalPipelineSteps\BuildWithdrawalPayoutRequestStep;
+use LBHurtado\XChange\Services\WithdrawalPipelineSteps\BuildWithdrawalResultStep;
+use LBHurtado\XChange\Services\WithdrawalPipelineSteps\ExecuteWithdrawalDisbursementStep;
+use LBHurtado\XChange\Services\WithdrawalPipelineSteps\GuardWithdrawalRailStep;
+use LBHurtado\XChange\Services\WithdrawalPipelineSteps\ResolveWithdrawalAmountStep;
+use LBHurtado\XChange\Services\WithdrawalPipelineSteps\ResolveWithdrawalBankAccountStep;
+use LBHurtado\XChange\Services\WithdrawalPipelineSteps\ResolveWithdrawalClaimantStep;
+use LBHurtado\XChange\Services\WithdrawalPipelineSteps\WithdrawalWalletSettlementStep;
 use LBHurtado\XChange\Support\Logging\NullAuditLogger;
 use LBHurtado\XChange\Support\Resolvers\NullSystemWalletResolver;
 //use LBHurtado\XChange\Support\Resolvers\NullUserResolver;
@@ -563,5 +573,20 @@ return [
 
     'withdrawal' => [
         'open_slice_min_interval_seconds' => 10,
+        'pipeline' => [
+            'steps' => [
+                ResolveWithdrawalClaimantStep::class,
+                AssertWithdrawalEligibilityStep::class,
+                AuthorizeWithdrawalClaimantStep::class,
+                ResolveWithdrawalAmountStep::class,
+                ResolveWithdrawalBankAccountStep::class,
+                BuildWithdrawalPayoutRequestStep::class,
+                GuardWithdrawalRailStep::class,
+                ExecuteWithdrawalDisbursementStep::class,
+                WithdrawalWalletSettlementStep::class,
+                BuildWithdrawalResultStep::class,
+            ],
+
+        ],
     ],
 ];
