@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services;
 
+use Closure;
 use Illuminate\Pipeline\Pipeline;
 use LBHurtado\XChange\Data\WithdrawalPipelineContextData;
 
@@ -40,18 +41,47 @@ class WithdrawalPipeline
 
     public function process(WithdrawalPipelineContextData $context): WithdrawalPipelineContextData
     {
-        $steps = array_values(array_filter(
-            $this->steps,
-            function (string|object $step) use ($context): bool {
-                $stepClass = is_string($step) ? $step : $step::class;
+        $steps = [];
 
-                return $stepClass::shouldRun($context);
-            },
-        ));
+        foreach ($this->steps as $step) {
+            $stepClass = is_string($step) ? $step : $step::class;
 
-        return $this->pipeline
-            ->send($context)
-            ->through($steps)
-            ->thenReturn();
+            if (! $stepClass::shouldRun($context)) {
+                $context->traceStep($stepClass, 'skipped');
+
+                continue;
+            }
+
+            $steps[] = $this->wrapObservedStep($step, $stepClass);
+        }
+
+        try {
+            return $this->pipeline
+                ->send($context)
+                ->through($steps)
+                ->thenReturn();
+        } catch (\Throwable $e) {
+            throw $e;
+        }
+    }
+
+    protected function wrapObservedStep(string|object $step, string $stepClass): Closure
+    {
+        return function (WithdrawalPipelineContextData $context, Closure $next) use ($step, $stepClass): mixed {
+            try {
+                $result = app(Pipeline::class)
+                    ->send($context)
+                    ->through([$step])
+                    ->thenReturn();
+
+                $context->traceStep($stepClass, 'ran');
+
+                return $next($result);
+            } catch (\Throwable $e) {
+                $context->traceStep($stepClass, 'failed', $e);
+
+                throw $e;
+            }
+        };
     }
 }

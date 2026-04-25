@@ -8,6 +8,7 @@ use LBHurtado\Contact\Classes\BankAccount;
 use LBHurtado\Contact\Models\Contact;
 use LBHurtado\EmiCore\Data\PayoutRequestData;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Contracts\WithdrawalPipelineStepContract;
 use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
 
 class WithdrawalPipelineContextData
@@ -23,6 +24,8 @@ class WithdrawalPipelineContextData
         public ?WithdrawalWalletSettlementData $settlement = null,
         public ?WithdrawPayCodeResultData $result = null,
         public ?int $sliceNumber = null,
+        /** @var array<int, WithdrawalPipelineStepTraceData> */
+        public array $stepTrace = [],
     ) {}
 
     public function withContact(Contact $contact): self
@@ -77,6 +80,23 @@ class WithdrawalPipelineContextData
     public function withResult(WithdrawPayCodeResultData $result): self
     {
         $this->result = $result;
+
+        return $this;
+    }
+
+    public function traceStep(string $step, string $status, ?\Throwable $error = null): self
+    {
+        if (! is_subclass_of($step, WithdrawalPipelineStepContract::class)) {
+            return $this;
+        }
+
+        $this->stepTrace[] = new WithdrawalPipelineStepTraceData(
+            step: $step,
+            group: $step::group(),
+            description: $step::description(),
+            status: $status,
+            error: $error?->getMessage(),
+        );
 
         return $this;
     }
