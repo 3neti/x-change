@@ -283,6 +283,11 @@ class XChangeServiceProvider extends ServiceProvider
                 steps: $steps,
             );
         });
+
+        $this->app->bind(
+            WithdrawalIntervalEnforcerContract::class,
+            XChangeWithdrawalIntervalEnforcer::class,
+        );
     }
 
     public function boot(): void
