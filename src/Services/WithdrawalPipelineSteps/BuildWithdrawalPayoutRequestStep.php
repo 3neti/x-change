@@ -5,13 +5,28 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\WithdrawalPipelineSteps;
 
 use Closure;
+use LBHurtado\XChange\Contracts\WithdrawalPipelineStepContract;
 use LBHurtado\XChange\Data\WithdrawalPipelineContextData;
+use LBHurtado\XChange\Enums\WithdrawalPipelineStepGroup;
 use LBHurtado\XChange\Services\WithdrawalExecutionContextResolver;
 use LBHurtado\XChange\Services\WithdrawalPayoutRequestFactory;
+use LBHurtado\XChange\Support\WithdrawalPipeline\HasWithdrawalPipelineStepMetadata;
 use LogicException;
 
-class BuildWithdrawalPayoutRequestStep
+class BuildWithdrawalPayoutRequestStep implements WithdrawalPipelineStepContract
 {
+    use HasWithdrawalPipelineStepMetadata;
+
+    public static function group(): WithdrawalPipelineStepGroup
+    {
+        return WithdrawalPipelineStepGroup::INTEGRATION;
+    }
+
+    public static function description(): string
+    {
+        return 'Build the provider-agnostic payout request object to be used by the disbursement executor.';
+    }
+
     public function __construct(
         protected WithdrawalExecutionContextResolver $executionContextResolver,
         protected WithdrawalPayoutRequestFactory $payoutRequestFactory,

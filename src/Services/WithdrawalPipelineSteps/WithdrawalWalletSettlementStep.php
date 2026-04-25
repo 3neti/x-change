@@ -6,12 +6,27 @@ namespace LBHurtado\XChange\Services\WithdrawalPipelineSteps;
 
 use Closure;
 use Illuminate\Support\Facades\DB;
+use LBHurtado\XChange\Contracts\WithdrawalPipelineStepContract;
+use LBHurtado\XChange\Enums\WithdrawalPipelineStepGroup;
+use LBHurtado\XChange\Support\WithdrawalPipeline\HasWithdrawalPipelineStepMetadata;
 use LogicException;
 use LBHurtado\XChange\Data\WithdrawalPipelineContextData;
 use LBHurtado\XChange\Services\WithdrawalWalletSettlementService;
 
-class WithdrawalWalletSettlementStep
+class WithdrawalWalletSettlementStep implements WithdrawalPipelineStepContract
 {
+    use HasWithdrawalPipelineStepMetadata;
+
+    public static function group(): WithdrawalPipelineStepGroup
+    {
+        return WithdrawalPipelineStepGroup::SETTLEMENT;
+    }
+
+    public static function description(): string
+    {
+        return 'Apply wallet-level settlement by debiting the voucher wallet and recording financial transfers for the withdrawal.';
+    }
+
     public function __construct(
         protected WithdrawalWalletSettlementService $walletSettlementService,
     ) {}

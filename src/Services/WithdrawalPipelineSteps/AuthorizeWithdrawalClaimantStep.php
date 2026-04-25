@@ -5,14 +5,29 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\WithdrawalPipelineSteps;
 
 use Closure;
+use LBHurtado\XChange\Contracts\WithdrawalPipelineStepContract;
+use LBHurtado\XChange\Enums\WithdrawalPipelineStepGroup;
+use LBHurtado\XChange\Support\WithdrawalPipeline\HasWithdrawalPipelineStepMetadata;
 use LogicException;
 use LBHurtado\Cash\Contracts\CashClaimantAuthorizationContract;
 use LBHurtado\XChange\Adapters\ContactClaimantIdentityAdapter;
 use LBHurtado\XChange\Adapters\VoucherWithdrawableInstrumentAdapter;
 use LBHurtado\XChange\Data\WithdrawalPipelineContextData;
 
-class AuthorizeWithdrawalClaimantStep
+class AuthorizeWithdrawalClaimantStep implements WithdrawalPipelineStepContract
 {
+    use HasWithdrawalPipelineStepMetadata;
+
+    public static function group(): WithdrawalPipelineStepGroup
+    {
+        return WithdrawalPipelineStepGroup::CASH_DOMAIN;
+    }
+
+    public static function description(): string
+    {
+        return 'Authorize that the resolved claimant is allowed to withdraw against the voucher (ownership, binding, or policy rules).';
+    }
+
     public function __construct(
         protected CashClaimantAuthorizationContract $claimantAuthorization,
     ) {}

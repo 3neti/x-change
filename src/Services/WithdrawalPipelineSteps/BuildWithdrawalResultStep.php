@@ -5,12 +5,27 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\WithdrawalPipelineSteps;
 
 use Closure;
+use LBHurtado\XChange\Contracts\WithdrawalPipelineStepContract;
+use LBHurtado\XChange\Enums\WithdrawalPipelineStepGroup;
+use LBHurtado\XChange\Support\WithdrawalPipeline\HasWithdrawalPipelineStepMetadata;
 use LogicException;
 use LBHurtado\XChange\Data\WithdrawalPipelineContextData;
 use LBHurtado\XChange\Services\WithdrawalResultFactory;
 
-class BuildWithdrawalResultStep
+class BuildWithdrawalResultStep implements WithdrawalPipelineStepContract
 {
+    use HasWithdrawalPipelineStepMetadata;
+
+    public static function group(): WithdrawalPipelineStepGroup
+    {
+        return WithdrawalPipelineStepGroup::RESULT;
+    }
+
+    public static function description(): string
+    {
+        return 'Construct the final withdrawal result payload from pipeline context, including execution and settlement outcomes.';
+    }
+
     public function __construct(
         protected WithdrawalResultFactory $resultFactory,
     ) {}

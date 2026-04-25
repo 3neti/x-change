@@ -6,13 +6,28 @@ namespace LBHurtado\XChange\Services\WithdrawalPipelineSteps;
 
 use Closure;
 use Illuminate\Support\Facades\Log;
+use LBHurtado\XChange\Contracts\WithdrawalPipelineStepContract;
+use LBHurtado\XChange\Enums\WithdrawalPipelineStepGroup;
+use LBHurtado\XChange\Support\WithdrawalPipeline\HasWithdrawalPipelineStepMetadata;
 use LogicException;
 use LBHurtado\XChange\Data\WithdrawalPipelineContextData;
 use LBHurtado\XChange\Services\WithdrawalDisbursementExecutor;
 use LBHurtado\XChange\Services\WithdrawalPendingDisbursementRecorder;
 
-class ExecuteWithdrawalDisbursementStep
+class ExecuteWithdrawalDisbursementStep implements WithdrawalPipelineStepContract
 {
+    use HasWithdrawalPipelineStepMetadata;
+
+    public static function group(): WithdrawalPipelineStepGroup
+    {
+        return WithdrawalPipelineStepGroup::EXECUTION;
+    }
+
+    public static function description(): string
+    {
+        return 'Execute the external payout/disbursement through the configured provider and capture the execution result.';
+    }
+
     public function __construct(
         protected WithdrawalDisbursementExecutor $disbursementExecutor,
         protected WithdrawalPendingDisbursementRecorder $pendingDisbursementRecorder,

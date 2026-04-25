@@ -7,7 +7,10 @@ namespace LBHurtado\XChange\Services\WithdrawalPipelineSteps;
 use Closure;
 use InvalidArgumentException;
 use LBHurtado\Contact\Models\Contact;
+use LBHurtado\XChange\Contracts\WithdrawalPipelineStepContract;
 use LBHurtado\XChange\Data\WithdrawalPipelineContextData;
+use LBHurtado\XChange\Enums\WithdrawalPipelineStepGroup;
+use LBHurtado\XChange\Support\WithdrawalPipeline\HasWithdrawalPipelineStepMetadata;
 use Propaganistas\LaravelPhone\PhoneNumber;
 
 // TODO: Revisit mobile canonicalization.
@@ -20,8 +23,20 @@ use Propaganistas\LaravelPhone\PhoneNumber;
 // - bank payout payloads
 // - voucher validation mobile locks
 // - reconciliation/audit metadata
-class ResolveWithdrawalClaimantStep
+class ResolveWithdrawalClaimantStep implements WithdrawalPipelineStepContract
 {
+    use HasWithdrawalPipelineStepMetadata;
+
+    public static function group(): WithdrawalPipelineStepGroup
+    {
+        return WithdrawalPipelineStepGroup::PRE_AUTH;
+    }
+
+    public static function description(): string
+    {
+        return 'Resolve and normalize the withdrawal claimant (contact) from the incoming request payload.';
+    }
+
     public function handle(WithdrawalPipelineContextData $context, Closure $next): mixed
     {
         $mobile = data_get($context->payload, 'mobile');
