@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Providers;
 use App\Models\User;
 use FrittenKeeZ\Vouchers\Models\Voucher;
 use Illuminate\Http\Request;
+use Illuminate\Pipeline\Pipeline;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\ValidationException;
@@ -89,6 +90,10 @@ use LBHurtado\XChange\Services\UserLifecycleService;
 use LBHurtado\XChange\Services\VoucherAccessService;
 use LBHurtado\XChange\Services\VoucherLifecycleService;
 use LBHurtado\XChange\Services\WithdrawalLifecycleService;
+use LBHurtado\XChange\Services\WithdrawalPipeline;
+use LBHurtado\XChange\Services\WithdrawalPipelineSteps\AssertWithdrawalEligibilityStep;
+use LBHurtado\XChange\Services\WithdrawalPipelineSteps\AuthorizeWithdrawalClaimantStep;
+use LBHurtado\XChange\Services\WithdrawalPipelineSteps\ResolveWithdrawalClaimantStep;
 use LBHurtado\XChange\Services\XChangeWithdrawalIntervalEnforcer;
 use LBHurtado\XChange\Support\Logging\CacheEventStore;
 
@@ -255,6 +260,17 @@ class XChangeServiceProvider extends ServiceProvider
             WithdrawalIntervalEnforcerContract::class,
             XChangeWithdrawalIntervalEnforcer::class,
         );
+
+        $this->app->bind(WithdrawalPipeline::class, function ($app) {
+            return new WithdrawalPipeline(
+                pipeline: $app->make(Pipeline::class),
+                steps: [
+                    ResolveWithdrawalClaimantStep::class,
+                    AssertWithdrawalEligibilityStep::class,
+                    AuthorizeWithdrawalClaimantStep::class,
+                ],
+            );
+        });
     }
 
     public function boot(): void

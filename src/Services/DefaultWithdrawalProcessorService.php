@@ -9,15 +9,12 @@ use Illuminate\Support\Facades\Log;
 use LBHurtado\Cash\Contracts\CashClaimantAuthorizationContract;
 use LBHurtado\Cash\Contracts\CashWithdrawalAmountResolverContract;
 use LBHurtado\Cash\Contracts\CashWithdrawalEligibilityContract;
-use LBHurtado\Contact\Models\Contact;
 use LBHurtado\MoneyIssuer\Support\BankRegistry;
 use LBHurtado\Voucher\Models\Voucher;
-use LBHurtado\XChange\Adapters\ContactClaimantIdentityAdapter;
 use LBHurtado\XChange\Adapters\VoucherWithdrawableInstrumentAdapter;
 use LBHurtado\XChange\Contracts\WithdrawalProcessorContract;
 use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
-use Propaganistas\LaravelPhone\PhoneNumber;
-use RuntimeException;
+use LBHurtado\XChange\Data\WithdrawalPipelineContextData;
 
 /**
  * Withdrawal processor service.
@@ -63,6 +60,7 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
         protected CashWithdrawalAmountResolverContract $amountResolver,
         protected CashClaimantAuthorizationContract $claimantAuthorization,
         protected CashWithdrawalEligibilityContract $withdrawalEligibility,
+        protected WithdrawalPipeline $withdrawalPipeline,
         protected WithdrawalExecutionContextResolver $executionContextResolver,
         protected WithdrawalBankAccountResolver $bankAccountResolver,
         protected WithdrawalPayoutRequestFactory $payoutRequestFactory,
@@ -75,19 +73,34 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
 
     public function process(Voucher $voucher, array $payload): WithdrawPayCodeResultData
     {
-        $mobile = data_get($payload, 'mobile');
-        $country = (string) data_get($payload, 'recipient_country', 'PH');
+//        $mobile = data_get($payload, 'mobile');
+//        $country = (string) data_get($payload, 'recipient_country', 'PH');
+//        $amount = data_get($payload, 'amount');
+//
+//        if (! is_string($mobile) || trim($mobile) === '') {
+//            throw new \InvalidArgumentException('Mobile number is required.');
+//        }
+//
+//        $phoneNumber = new PhoneNumber($mobile, $country);
+//        $contact = Contact::fromPhoneNumber($phoneNumber);
+//
+//        $this->assertVoucherIsWithdrawable($voucher);
+//        $this->assertOriginalRedeemer($voucher, $contact);
+
         $amount = data_get($payload, 'amount');
 
-        if (! is_string($mobile) || trim($mobile) === '') {
-            throw new \InvalidArgumentException('Mobile number is required.');
+        $context = $this->withdrawalPipeline->process(
+            new WithdrawalPipelineContextData(
+                voucher: $voucher,
+                payload: $payload,
+            ),
+        );
+
+        $contact = $context->contact;
+
+        if ($contact === null) {
+            throw new \LogicException('Withdrawal claimant was not resolved.');
         }
-
-        $phoneNumber = new PhoneNumber($mobile, $country);
-        $contact = Contact::fromPhoneNumber($phoneNumber);
-
-        $this->assertVoucherIsWithdrawable($voucher);
-        $this->assertOriginalRedeemer($voucher, $contact);
 
         $withdrawAmount = $this->resolveAmount(
             $voucher,
@@ -178,21 +191,6 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
 
             return $result;
         });
-    }
-
-    protected function assertVoucherIsWithdrawable(Voucher $voucher): void
-    {
-        $instrument = new VoucherWithdrawableInstrumentAdapter($voucher);
-
-        $this->withdrawalEligibility->assertEligible($instrument);
-    }
-
-    protected function assertOriginalRedeemer(Voucher $voucher, Contact $contact): void
-    {
-        $instrument = new VoucherWithdrawableInstrumentAdapter($voucher);
-        $claimant = new ContactClaimantIdentityAdapter($contact);
-
-        $this->claimantAuthorization->authorize($instrument, $claimant);
     }
 
     protected function resolveAmount(Voucher $voucher, ?float $amount): float
