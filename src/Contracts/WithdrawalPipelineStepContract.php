@@ -14,5 +14,7 @@ interface WithdrawalPipelineStepContract
 
     public static function description(): string;
 
+    public static function shouldRun(WithdrawalPipelineContextData $context): bool;
+
     public function handle(WithdrawalPipelineContextData $context, Closure $next): mixed;
 }

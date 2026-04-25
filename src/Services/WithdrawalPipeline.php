@@ -40,9 +40,18 @@ class WithdrawalPipeline
 
     public function process(WithdrawalPipelineContextData $context): WithdrawalPipelineContextData
     {
+        $steps = array_values(array_filter(
+            $this->steps,
+            function (string|object $step) use ($context): bool {
+                $stepClass = is_string($step) ? $step : $step::class;
+
+                return $stepClass::shouldRun($context);
+            },
+        ));
+
         return $this->pipeline
             ->send($context)
-            ->through($this->steps)
+            ->through($steps)
             ->thenReturn();
     }
 }
