@@ -14,20 +14,6 @@ function payoutRequestFactory(): WithdrawalPayoutRequestFactory
     return new WithdrawalPayoutRequestFactory;
 }
 
-function fakePayoutContact(
-    ?string $name = 'Juan Dela Cruz',
-    ?string $mobile = '09171234567',
-): Contact {
-    $contact = new Contact;
-    $contact->setAttribute('meta', SchemalessAttributes::createForModel($contact, 'meta'));
-    $contact->mobile = $mobile;
-    if ($name !== null) {
-        $contact->name = $name;
-    }
-
-    return $contact;
-}
-
 it('builds a payout request from withdrawal context', function () {
     $voucher = issueVoucher(validVoucherInstructions(
         amount: 750.00,

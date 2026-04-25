@@ -51,3 +51,18 @@ it('settles wallet withdrawal and stores settlement on context', function () {
 
     expect($result->settlement)->toBe($settlement);
 });
+
+it('fails when payout request is missing before wallet settlement', function () {
+    $step = new WithdrawalWalletSettlementStep(
+        Mockery::mock(WithdrawalWalletSettlementService::class),
+    );
+
+    $context = new WithdrawalPipelineContextData(
+        voucher: issueVoucher(),
+        payload: [],
+        withdrawAmount: 100.00,
+        sliceNumber: 1,
+    );
+
+    $step->handle($context, fn ($ctx) => $ctx);
+})->throws(LogicException::class, 'Withdrawal payout request must be built before wallet settlement.');

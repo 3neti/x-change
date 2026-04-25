@@ -93,3 +93,29 @@ it('builds withdrawal result and stores it on context', function () {
 
     expect($result->result)->toBe($expected);
 });
+
+it('fails when settlement is missing before result construction', function () {
+    $voucher = issueVoucher();
+
+    $step = new BuildWithdrawalResultStep(
+        Mockery::mock(WithdrawalResultFactory::class),
+    );
+
+    $context = new WithdrawalPipelineContextData(
+        voucher: $voucher,
+        payload: [],
+        contact: fakePayoutContact(),
+        withdrawAmount: 100.00,
+        payoutRequest: PayoutRequestData::from([
+            'reference' => $voucher->code.'-09173011987-S1',
+            'amount' => 100.00,
+            'account_number' => '09173011987',
+            'bank_code' => 'GXCHPHM2XXX',
+            'settlement_rail' => 'INSTAPAY',
+        ]),
+        disbursement: fakeWithdrawalDisbursementExecution(),
+        sliceNumber: 1,
+    );
+
+    $step->handle($context, fn ($ctx) => $ctx);
+})->throws(LogicException::class, 'Withdrawal wallet settlement must be completed before result construction.');

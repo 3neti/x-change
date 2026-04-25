@@ -5,13 +5,19 @@ declare(strict_types=1);
 use Bavix\Wallet\Interfaces\Wallet;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use LBHurtado\Contact\Models\Contact;
+use LBHurtado\EmiCore\Data\PayoutRequestData;
+use LBHurtado\EmiCore\Data\PayoutResultData;
+use LBHurtado\EmiCore\Enums\PayoutStatus;
 use LBHurtado\Voucher\Actions\GenerateVouchers;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Data\WithdrawalDisbursementExecutionData;
 use LBHurtado\XChange\Tests\Fakes\FakeAuditLogger;
 use LBHurtado\XChange\Tests\Fakes\FakePayoutProvider;
 use LBHurtado\XChange\Tests\Fakes\User;
 use LBHurtado\XChange\Tests\TestCase;
+use Propaganistas\LaravelPhone\PhoneNumber;
 
 uses(TestCase::class)->in('Unit', 'Feature');
 
@@ -229,4 +235,49 @@ function validOpenIssuerWalletPayload(
         ],
         'metadata' => [],
     ], $overrides);
+}
+
+function validPayoutRequestData(): PayoutRequestData
+{
+    return PayoutRequestData::from([
+        'reference' => 'TEST-09173011987-S1',
+        'amount' => 100.00,
+        'account_number' => '09173011987',
+        'bank_code' => 'GXCHPHM2XXX',
+        'settlement_rail' => 'INSTAPAY',
+    ]);
+}
+
+function fakeWithdrawalDisbursementExecution(): WithdrawalDisbursementExecutionData
+{
+    $input = validPayoutRequestData();
+
+    return new WithdrawalDisbursementExecutionData(
+        input: $input,
+        response: PayoutResultData::from([
+            'uuid' => (string) Str::uuid(),
+            'transaction_id' => 'TXN-123',
+            'status' => PayoutStatus::PENDING,
+            'provider' => 'netbank',
+            'raw' => [],
+        ]),
+        status: 'pending',
+        message: null,
+    );
+}
+
+function fakePayoutContact(
+    ?string $name = 'Juan Dela Cruz',
+    string $mobile = '09171234567',
+    string $country = 'PH',
+): Contact {
+    $phone = new PhoneNumber($mobile, $country);
+    $contact = Contact::fromPhoneNumber($phone) ?? new Contact;
+    // Fallback if fromPhoneNumber returns null (e.g., not persisted)
+    $contact->mobile = $phone->formatForMobileDialingInCountry($country);
+    if ($name !== null) {
+        $contact->name = $name;
+    }
+
+    return $contact;
 }
