@@ -19,6 +19,7 @@ use LBHurtado\XChange\Services\VoucherAccessService;
 use LBHurtado\XChange\Services\VoucherEntryRouteService;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\AssertWithdrawalEligibilityStep;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\AuthorizeWithdrawalClaimantStep;
+use LBHurtado\XChange\Services\WithdrawalPipelineSteps\AuthorizeWithdrawalPolicyStep;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\BuildWithdrawalPayoutRequestStep;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\BuildWithdrawalResultStep;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\ExecuteWithdrawalDisbursementStep;
@@ -579,6 +580,9 @@ return [
                 AssertWithdrawalEligibilityStep::class,
                 AuthorizeWithdrawalClaimantStep::class,
                 ResolveWithdrawalAmountStep::class,
+
+                AuthorizeWithdrawalPolicyStep::class,
+
                 ResolveWithdrawalBankAccountStep::class,
                 BuildWithdrawalPayoutRequestStep::class,
                 GuardWithdrawalRailStep::class,
