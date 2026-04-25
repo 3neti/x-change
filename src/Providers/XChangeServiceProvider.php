@@ -94,6 +94,7 @@ use LBHurtado\XChange\Services\WithdrawalPipeline;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\AssertWithdrawalEligibilityStep;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\AuthorizeWithdrawalClaimantStep;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\BuildWithdrawalPayoutRequestStep;
+use LBHurtado\XChange\Services\WithdrawalPipelineSteps\ExecuteWithdrawalDisbursementStep;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\GuardWithdrawalRailStep;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\ResolveWithdrawalAmountStep;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\ResolveWithdrawalBankAccountStep;
@@ -276,6 +277,7 @@ class XChangeServiceProvider extends ServiceProvider
                     ResolveWithdrawalBankAccountStep::class,
                     BuildWithdrawalPayoutRequestStep::class,
                     GuardWithdrawalRailStep::class,
+                    ExecuteWithdrawalDisbursementStep::class,
                 ],
             );
         });

@@ -76,10 +76,8 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
         protected WithdrawalBankAccountResolver $bankAccountResolver,
         protected WithdrawalPayoutRequestFactory $payoutRequestFactory,
         protected WithdrawalRailGuard $railGuard,
-        protected WithdrawalDisbursementExecutor $disbursementExecutor,
         protected WithdrawalWalletSettlementService $walletSettlementService,
         protected WithdrawalResultFactory $resultFactory,
-        protected WithdrawalPendingDisbursementRecorder $pendingDisbursementRecorder,
     ) {}
 
     public function process(Voucher $voucher, array $payload): WithdrawPayCodeResultData
@@ -99,14 +97,7 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
 
         $withdrawAmount = $context->withdrawAmount;
 
-        $bankAccount = $context->bankAccount;
-
-        $executionContext = $this->executionContextResolver->resolve(
-            $voucher,
-            $bankAccount->getAccountNumber(),
-        );
-
-        $sliceNumber = $executionContext->sliceNumber;
+        $sliceNumber = $context->sliceNumber;
 
         Log::info('[DefaultWithdrawalProcessorService] Processing withdrawal', [
             'voucher' => $voucher->code,
@@ -122,26 +113,13 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
         $input = $context->payoutRequest;
         $this->railGuard->assertAllowed($input);
 
-        try {
-            $disbursement = $this->disbursementExecutor->execute(
-                voucher: $voucher,
-                input: $input,
-                sliceNumber: $sliceNumber,
-            );
+        $disbursement = $context->disbursement;
 
-            $response = $disbursement->response;
-        } catch (\Throwable $e) {
-            Log::warning('[DefaultWithdrawalProcessorService] Gateway disbursement failed — recording pending', [
-                'voucher' => $voucher->code,
-                'slice' => $sliceNumber,
-                'amount' => $withdrawAmount,
-                'error' => $e->getMessage(),
-            ]);
-
-            $this->pendingDisbursementRecorder->record($voucher, $input, $e);
-
-            throw $e;
+        if ($disbursement === null) {
+            throw new \LogicException('Withdrawal disbursement was not executed.');
         }
+
+        $response = $disbursement->response;
 
         return DB::transaction(function () use ($voucher, $contact, $withdrawAmount, $sliceNumber, $input, $response): WithdrawPayCodeResultData {
             $voucher->refresh();

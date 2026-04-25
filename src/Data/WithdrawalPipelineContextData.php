@@ -18,7 +18,8 @@ class WithdrawalPipelineContextData
         public ?float $withdrawAmount = null,
         public ?BankAccount $bankAccount = null,
         public ?PayoutRequestData $payoutRequest = null,
-
+        public ?WithdrawalDisbursementExecutionData $disbursement = null,
+        public ?int $sliceNumber = null,
     ) {}
 
     public function withContact(Contact $contact): self
@@ -45,6 +46,20 @@ class WithdrawalPipelineContextData
     public function withPayoutRequest(PayoutRequestData $payoutRequest): self
     {
         $this->payoutRequest = $payoutRequest;
+
+        return $this;
+    }
+
+    public function withDisbursement(WithdrawalDisbursementExecutionData $disbursement): self
+    {
+        $this->disbursement = $disbursement;
+
+        return $this;
+    }
+
+    public function withSliceNumber(int $sliceNumber): self
+    {
+        $this->sliceNumber = $sliceNumber;
 
         return $this;
     }

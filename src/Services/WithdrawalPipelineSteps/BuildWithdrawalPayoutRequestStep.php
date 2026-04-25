@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\WithdrawalPipelineSteps;
 
 use Closure;
-use LogicException;
 use LBHurtado\XChange\Data\WithdrawalPipelineContextData;
 use LBHurtado\XChange\Services\WithdrawalExecutionContextResolver;
 use LBHurtado\XChange\Services\WithdrawalPayoutRequestFactory;
+use LogicException;
 
 class BuildWithdrawalPayoutRequestStep
 {
@@ -45,6 +45,8 @@ class BuildWithdrawalPayoutRequestStep
                 $context->withdrawAmount,
             ),
         );
+
+        $context->withSliceNumber($executionContext->sliceNumber);
 
         return $next($context);
     }

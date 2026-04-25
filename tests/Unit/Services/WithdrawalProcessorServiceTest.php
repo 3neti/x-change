@@ -2,20 +2,16 @@
 
 declare(strict_types=1);
 
+use Illuminate\Pipeline\Pipeline;
 use LBHurtado\Cash\Services\DefaultCashClaimantAuthorizationService;
 use LBHurtado\Cash\Services\DefaultCashWithdrawalAmountResolverService;
 use LBHurtado\Cash\Services\DefaultCashWithdrawalEligibilityService;
-use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\MoneyIssuer\Support\BankRegistry;
 use LBHurtado\Voucher\Models\Voucher;
-use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
-use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Services\DefaultWithdrawalProcessorService;
 use LBHurtado\XChange\Services\WithdrawalBankAccountResolver;
-use LBHurtado\XChange\Services\WithdrawalDisbursementExecutor;
 use LBHurtado\XChange\Services\WithdrawalExecutionContextResolver;
 use LBHurtado\XChange\Services\WithdrawalPayoutRequestFactory;
-use LBHurtado\XChange\Services\WithdrawalPendingDisbursementRecorder;
 use LBHurtado\XChange\Services\WithdrawalPipeline;
 use LBHurtado\XChange\Services\WithdrawalRailGuard;
 use LBHurtado\XChange\Services\WithdrawalResultFactory;
@@ -23,27 +19,7 @@ use LBHurtado\XChange\Services\WithdrawalWalletSettlementService;
 
 function withdrawalProcessorForAmountResolution(): DefaultWithdrawalProcessorService
 {
-    $gateway = Mockery::mock(PayoutProvider::class);
-    $reconciliations = Mockery::mock(DisbursementReconciliationStoreContract::class);
-    $statusResolver = Mockery::mock(DisbursementStatusResolverContract::class);
-
-    return new class(Mockery::mock(BankRegistry::class),
-        new DefaultCashWithdrawalAmountResolverService,
-        new DefaultCashClaimantAuthorizationService,
-        new DefaultCashWithdrawalEligibilityService,
-        new WithdrawalPipeline(
-            pipeline: app(\Illuminate\Pipeline\Pipeline::class),
-            steps: []
-        ),
-        new WithdrawalExecutionContextResolver,
-        new WithdrawalBankAccountResolver,
-        new WithdrawalPayoutRequestFactory,
-        new WithdrawalRailGuard(Mockery::mock(BankRegistry::class)),
-        new WithdrawalDisbursementExecutor(gateway: $gateway, reconciliations: $reconciliations, statusResolver: $statusResolver),
-        new WithdrawalWalletSettlementService,
-        new WithdrawalResultFactory,
-        new WithdrawalPendingDisbursementRecorder(Mockery::mock(BankRegistry::class))
-    ) extends DefaultWithdrawalProcessorService
+    return new class(Mockery::mock(BankRegistry::class), new DefaultCashWithdrawalAmountResolverService, new DefaultCashClaimantAuthorizationService, new DefaultCashWithdrawalEligibilityService, new WithdrawalPipeline(pipeline: app(Pipeline::class), steps: []), new WithdrawalExecutionContextResolver, new WithdrawalBankAccountResolver, new WithdrawalPayoutRequestFactory, new WithdrawalRailGuard(Mockery::mock(BankRegistry::class)), new WithdrawalWalletSettlementService, new WithdrawalResultFactory) extends DefaultWithdrawalProcessorService
     {
         public function exposeResolveAmount(Voucher $voucher, ?float $amount): float
         {
