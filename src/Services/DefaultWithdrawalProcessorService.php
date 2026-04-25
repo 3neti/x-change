@@ -10,7 +10,6 @@ use LBHurtado\Cash\Contracts\CashClaimantAuthorizationContract;
 use LBHurtado\Cash\Contracts\CashWithdrawalAmountResolverContract;
 use LBHurtado\Cash\Contracts\CashWithdrawalEligibilityContract;
 use LBHurtado\Contact\Models\Contact;
-use LBHurtado\EmiCore\Enums\SettlementRail;
 use LBHurtado\MoneyIssuer\Support\BankRegistry;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Adapters\ContactClaimantIdentityAdapter;
@@ -67,6 +66,7 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
         protected WithdrawalExecutionContextResolver $executionContextResolver,
         protected WithdrawalBankAccountResolver $bankAccountResolver,
         protected WithdrawalPayoutRequestFactory $payoutRequestFactory,
+        protected WithdrawalRailGuard $railGuard,
         protected WithdrawalDisbursementExecutor $disbursementExecutor,
         protected WithdrawalWalletSettlementService $walletSettlementService,
         protected WithdrawalResultFactory $resultFactory,
@@ -123,15 +123,7 @@ class DefaultWithdrawalProcessorService implements WithdrawalProcessorContract
             $withdrawAmount,
         );
 
-        $rail = SettlementRail::from($input->settlement_rail);
-
-        if ($rail === SettlementRail::PESONET && $this->bankRegistry->isEMI($input->bank_code)) {
-            $bankName = $this->bankRegistry->getBankName($input->bank_code);
-
-            throw new RuntimeException(
-                "Cannot disburse to {$bankName} via PESONET. E-money institutions require INSTAPAY."
-            );
-        }
+        $this->railGuard->assertAllowed($input);
 
         try {
             $disbursement = $this->disbursementExecutor->execute(

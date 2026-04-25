@@ -16,6 +16,7 @@ use LBHurtado\XChange\Services\WithdrawalDisbursementExecutor;
 use LBHurtado\XChange\Services\WithdrawalExecutionContextResolver;
 use LBHurtado\XChange\Services\WithdrawalPayoutRequestFactory;
 use LBHurtado\XChange\Services\WithdrawalPendingDisbursementRecorder;
+use LBHurtado\XChange\Services\WithdrawalRailGuard;
 use LBHurtado\XChange\Services\WithdrawalResultFactory;
 use LBHurtado\XChange\Services\WithdrawalWalletSettlementService;
 
@@ -25,7 +26,7 @@ function withdrawalProcessorForAmountResolution(): DefaultWithdrawalProcessorSer
     $reconciliations = Mockery::mock(DisbursementReconciliationStoreContract::class);
     $statusResolver = Mockery::mock(DisbursementStatusResolverContract::class);
 
-    return new class(Mockery::mock(BankRegistry::class), new DefaultCashWithdrawalAmountResolverService, new DefaultCashClaimantAuthorizationService, new DefaultCashWithdrawalEligibilityService, new WithdrawalExecutionContextResolver, new WithdrawalBankAccountResolver, new WithdrawalPayoutRequestFactory, new WithdrawalDisbursementExecutor(gateway: $gateway, reconciliations: $reconciliations, statusResolver: $statusResolver), new WithdrawalWalletSettlementService, new WithdrawalResultFactory, new WithdrawalPendingDisbursementRecorder(Mockery::mock(BankRegistry::class))) extends DefaultWithdrawalProcessorService
+    return new class(Mockery::mock(BankRegistry::class), new DefaultCashWithdrawalAmountResolverService, new DefaultCashClaimantAuthorizationService, new DefaultCashWithdrawalEligibilityService, new WithdrawalExecutionContextResolver, new WithdrawalBankAccountResolver, new WithdrawalPayoutRequestFactory, new WithdrawalRailGuard(Mockery::mock(BankRegistry::class)), new WithdrawalDisbursementExecutor(gateway: $gateway, reconciliations: $reconciliations, statusResolver: $statusResolver), new WithdrawalWalletSettlementService, new WithdrawalResultFactory, new WithdrawalPendingDisbursementRecorder(Mockery::mock(BankRegistry::class))) extends DefaultWithdrawalProcessorService
     {
         public function exposeResolveAmount(Voucher $voucher, ?float $amount): float
         {
