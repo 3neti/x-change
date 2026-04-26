@@ -5,6 +5,8 @@ declare(strict_types=1);
 use LBHurtado\Cash\Contracts\CashWithdrawalAuthorizationPolicyContract;
 use LBHurtado\Cash\Data\WithdrawalAuthorizationContextData;
 use LBHurtado\XChange\Adapters\VoucherWithdrawableInstrumentAdapter;
+use LBHurtado\XChange\Contracts\VendorRegistryContract;
+use LBHurtado\XChange\Data\VendorIdentityData;
 use LBHurtado\XChange\Data\WithdrawalPipelineContextData;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\AuthorizeWithdrawalPolicyStep;
 
@@ -39,7 +41,16 @@ it('delegates withdrawal authorization policy to cash package', function () {
                 && $authorizationContext->approved === false;
         });
 
-    $step = new AuthorizeWithdrawalPolicyStep($policy);
+    $registry = Mockery::mock(VendorRegistryContract::class);
+
+    $registry->shouldReceive('resolve')
+        ->once()
+        ->withArgs(fn ($alias, $context) => $alias === null
+            && $context['voucher_id'] === $voucher->id
+        )
+        ->andReturnNull();
+
+    $step = new AuthorizeWithdrawalPolicyStep($policy, $registry);
 
     $result = $step->handle($context, fn ($context) => $context);
 
@@ -59,6 +70,7 @@ it('fails when withdrawal amount is missing before authorization policy', functi
 
     $step = new AuthorizeWithdrawalPolicyStep(
         Mockery::mock(CashWithdrawalAuthorizationPolicyContract::class),
+        Mockery::mock(VendorRegistryContract::class),
     );
 
     $step->handle($context, fn ($context) => $context);
@@ -84,7 +96,7 @@ it('passes vendor alias and voucher mandates to cash authorization policy', func
     $context = new WithdrawalPipelineContextData(
         voucher: $voucher,
         payload: [
-            'vendor_alias' => 'MERALCO',
+            'vendor_alias' => 'meralco',
         ],
     );
 
@@ -104,7 +116,23 @@ it('passes vendor alias and voucher mandates to cash authorization policy', func
             return true;
         });
 
-    $step = new AuthorizeWithdrawalPolicyStep($policy);
+    $registry = Mockery::mock(VendorRegistryContract::class);
+
+    $registry->shouldReceive('resolve')
+        ->once()
+        ->withArgs(fn ($alias, $context) =>
+            $alias === 'meralco'
+            && $context['voucher_id'] === $voucher->id
+        )
+        ->andReturn(new VendorIdentityData(
+            canonicalAlias: 'MERALCO',
+            vendorId: 'vendor.meralco',
+            displayName: 'Manila Electric Company',
+            aliases: ['MERALCO', 'MERALCO ONLINE'],
+            meta: ['category' => 'utility'],
+        ));
+
+    $step = new AuthorizeWithdrawalPolicyStep($policy, $registry);
 
     $result = $step->handle($context, fn ($context) => $context);
 

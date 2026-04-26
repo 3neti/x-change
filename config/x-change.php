@@ -609,4 +609,22 @@ return [
             ],
         ],
     ],
+    'vendors' => [
+        'registry' => env('XCHANGE_VENDOR_REGISTRY', 'config'),
+
+        'aliases' => [
+            'MERALCO' => [
+                'id' => 'vendor.meralco',
+                'name' => 'Manila Electric Company',
+                'aliases' => [
+                    'meralco',
+                    'MERALCO ONLINE',
+                    'MANILA ELECTRIC COMPANY',
+                ],
+                'meta' => [
+                    'category' => 'utility',
+                ],
+            ],
+        ],
+    ],
 ];

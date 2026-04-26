@@ -51,6 +51,7 @@ use LBHurtado\XChange\Contracts\RedemptionFlowPreparationContract;
 use LBHurtado\XChange\Contracts\RedemptionProcessorContract;
 use LBHurtado\XChange\Contracts\RedemptionValidationContract;
 use LBHurtado\XChange\Contracts\UserLifecycleServiceContract;
+use LBHurtado\XChange\Contracts\VendorRegistryContract;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\WithdrawalExecutionContract;
@@ -68,6 +69,7 @@ use LBHurtado\XChange\Listeners\HandleConfirmedDisbursement;
 use LBHurtado\XChange\Listeners\RecordFailedVoucherDisbursement;
 use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
 use LBHurtado\XChange\Services\ApiResponseFactory;
+use LBHurtado\XChange\Services\ConfigVendorRegistry;
 use LBHurtado\XChange\Services\DefaultClaimExecutionFactory;
 use LBHurtado\XChange\Services\DefaultDisbursementReconciliationService;
 use LBHurtado\XChange\Services\DefaultDisbursementReconciliationStore;
@@ -288,6 +290,16 @@ class XChangeServiceProvider extends ServiceProvider
                 'null' => $app->make(NullWithdrawalOtpApprovalService::class),
                 default => throw new InvalidArgumentException(
                     'Unsupported withdrawal OTP driver: '.config('x-change.withdrawal.otp.driver')
+                ),
+            };
+        });
+
+        $this->app->bind(VendorRegistryContract::class, function ($app) {
+            return match (config('x-change.vendors.registry', 'config')) {
+                'config' => $app->make(ConfigVendorRegistry::class),
+
+                default => throw new InvalidArgumentException(
+                    'Unsupported vendor registry: '.config('x-change.vendors.registry')
                 ),
             };
         });

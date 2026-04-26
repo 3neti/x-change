@@ -8,6 +8,7 @@ use Closure;
 use LBHurtado\Cash\Contracts\CashWithdrawalAuthorizationPolicyContract;
 use LBHurtado\Cash\Data\WithdrawalAuthorizationContextData;
 use LBHurtado\XChange\Adapters\VoucherWithdrawableInstrumentAdapter;
+use LBHurtado\XChange\Contracts\VendorRegistryContract;
 use LBHurtado\XChange\Contracts\WithdrawalPipelineStepContract;
 use LBHurtado\XChange\Data\WithdrawalPipelineContextData;
 use LBHurtado\XChange\Enums\WithdrawalPipelineStepGroup;
@@ -19,6 +20,7 @@ class AuthorizeWithdrawalPolicyStep implements WithdrawalPipelineStepContract
 
     public function __construct(
         protected CashWithdrawalAuthorizationPolicyContract $authorizationPolicy,
+        protected VendorRegistryContract $vendorRegistry,
     ) {}
 
     public static function group(): WithdrawalPipelineStepGroup
@@ -39,6 +41,16 @@ class AuthorizeWithdrawalPolicyStep implements WithdrawalPipelineStepContract
 
         $instrument = new VoucherWithdrawableInstrumentAdapter($context->voucher);
 
+        $vendor = $this->vendorRegistry->resolve(
+            alias: data_get($context->payload, 'vendor_alias'),
+            context: [
+                'voucher_id' => $context->voucher->id,
+                'payload' => $context->payload,
+            ],
+        );
+
+        $vendorAlias = $vendor?->canonicalAlias;
+
         $this->authorizationPolicy->authorize(
             instrument: $instrument,
             context: new WithdrawalAuthorizationContextData(
@@ -50,7 +62,7 @@ class AuthorizeWithdrawalPolicyStep implements WithdrawalPipelineStepContract
                 ]),
                 claimantId: $context->contact?->id ? (string) $context->contact->id : null,
                 vendorId: data_get($context->payload, 'vendor_id'),
-                vendorAlias: data_get($context->payload, 'vendor_alias'),
+                vendorAlias: $vendorAlias,
                 approvalThreshold: data_get($context->voucher->instructions ?? [], 'cash.approval_threshold'),
                 approved: (bool) data_get($context->payload, 'authorization.approved', false),
             ),
