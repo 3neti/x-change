@@ -98,6 +98,14 @@ class WithdrawalResultFactory
             ] : [],
             disbursement: [],
             messages: [$exception->getMessage()],
+            approval_requirements: method_exists($exception, 'requirements')
+                ? $exception->requirements()
+                : ['approval'],
+            approval_meta: method_exists($exception, 'meta')
+                ? $exception->meta()
+                : [
+                    'source' => 'cash_authorization',
+                ],
         );
     }
 }

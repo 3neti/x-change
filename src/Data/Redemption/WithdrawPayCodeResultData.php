@@ -29,5 +29,7 @@ class WithdrawPayCodeResultData extends Data
         public array $bank_account,
         public array $disbursement,
         public array $messages = [],
+        public array $approval_requirements = [],
+        public array $approval_meta = [],
     ) {}
 }

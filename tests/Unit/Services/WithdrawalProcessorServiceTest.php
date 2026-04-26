@@ -98,3 +98,42 @@ it('returns approval required result when withdrawal policy requires approval', 
         ->and($result->disbursed_amount)->toBe(0.0)
         ->and($result->messages)->toContain('Withdrawal approval is required for amounts above 1000.');
 });
+
+it('returns approval required details from cash authorization decision', function () {
+    $voucher = issueVoucher(validVoucherInstructions(
+        amount: 1000.00,
+        settlementRail: 'INSTAPAY',
+    ));
+
+    $pipeline = Mockery::mock(WithdrawalPipeline::class);
+
+    $pipeline->shouldReceive('process')
+        ->once()
+        ->andThrow(new WithdrawalApprovalRequired(
+            message: 'Withdrawal approval is required for amounts above 1000.',
+            requirements: ['approval'],
+            meta: [
+                'source' => 'threshold',
+                'threshold' => 1000.00,
+                'amount' => 1500.00,
+            ],
+        ));
+
+    $service = new DefaultWithdrawalProcessorService(
+        withdrawalPipeline: $pipeline,
+        withdrawalResultFactory: app(WithdrawalResultFactory::class),
+    );
+
+    $result = $service->process($voucher, [
+        'mobile' => '09171234567',
+        'amount' => 1500.00,
+    ]);
+
+    expect($result->withdrawn)->toBeFalse()
+        ->and($result->status)->toBe('approval_required')
+        ->and($result->messages)->toContain('Withdrawal approval is required for amounts above 1000.')
+        ->and($result->approval_requirements)->toBe(['approval'])
+        ->and($result->approval_meta['source'])->toBe('threshold')
+        ->and($result->approval_meta['threshold'])->toBe(1000.00)
+        ->and($result->approval_meta['amount'])->toBe(1500.00);
+});
