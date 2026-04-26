@@ -597,6 +597,16 @@ return [
         'otp' => [
             'driver' => env('XCHANGE_WITHDRAWAL_OTP_DRIVER', 'null'),
             'required' => env('XCHANGE_WITHDRAWAL_OTP_REQUIRED', false),
+            'label' => env('OTP_LABEL', config('app.name', 'x-change')),
+
+            'txtcmdr' => [
+                'base_url' => env('TXTCMDR_API_URL', 'http://txtcmdr.test'),
+                'api_token' => env('TXTCMDR_API_TOKEN'),
+                'sender_id' => env('TXTCMDR_DEFAULT_SENDER_ID', 'cashless'),
+                'timeout' => env('TXTCMDR_TIMEOUT', 30),
+                'verify_ssl' => env('TXTCMDR_VERIFY_SSL', true),
+                'test_mobile' => env('TXTCMDR_TEST_MOBILE'),
+            ],
         ],
     ],
 ];
