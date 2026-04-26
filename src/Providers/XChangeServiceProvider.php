@@ -33,6 +33,7 @@ use LBHurtado\XChange\Console\Commands\ReconcilePendingDisbursementsCommand;
 use LBHurtado\XChange\Console\Commands\Revenue\CollectRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Revenue\ShowPendingRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Wallet\GetWalletBalanceCommand;
+use LBHurtado\XChange\Contracts\ApprovalWorkflowContract;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
@@ -70,6 +71,7 @@ use LBHurtado\XChange\Listeners\RecordFailedVoucherDisbursement;
 use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\ConfigVendorRegistry;
+use LBHurtado\XChange\Services\DefaultApprovalWorkflowService;
 use LBHurtado\XChange\Services\DefaultClaimExecutionFactory;
 use LBHurtado\XChange\Services\DefaultDisbursementReconciliationService;
 use LBHurtado\XChange\Services\DefaultDisbursementReconciliationStore;
@@ -302,6 +304,17 @@ class XChangeServiceProvider extends ServiceProvider
                     'Unsupported vendor registry: '.config('x-change.vendors.registry')
                 ),
             };
+        });
+
+        $this->app->bind(ApprovalWorkflowContract::class, function ($app) {
+            $handlers = [];
+
+            foreach (config('x-change.approval_workflow.handlers', []) as $requirement => $handlerClass) {
+                $handler = $app->make($handlerClass);
+                $handlers[$requirement] = $handler;
+            }
+
+            return new DefaultApprovalWorkflowService($handlers);
         });
     }
 

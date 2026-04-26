@@ -627,4 +627,10 @@ return [
             ],
         ],
     ],
+    'approval_workflow' => [
+        'handlers' => [
+            'approval' => \LBHurtado\XChange\Services\ApprovalHandlers\ManualApprovalRequirementHandler::class,
+            'otp' => \LBHurtado\XChange\Services\ApprovalHandlers\OtpApprovalRequirementHandler::class,
+        ],
+    ],
 ];
