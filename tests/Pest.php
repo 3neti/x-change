@@ -59,7 +59,7 @@ function fundTestUserWallet(User $user, int $amount = 1_000_000): void
 function validVoucherInstructions(
     float $amount = 100.00,
     ?string $settlementRail = 'INSTAPAY',
-    array $overrides = []
+    array $overrides = [],
 ): VoucherInstructionsData {
     $data = array_replace_recursive([
         'cash' => [

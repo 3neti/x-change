@@ -68,21 +68,18 @@ it('passes vendor alias and voucher mandates to cash authorization policy', func
     $voucher = issueVoucher(validVoucherInstructions(
         amount: 1000.00,
         settlementRail: 'INSTAPAY',
-    ));
-
-    $instructions = $voucher->instructions ?? [];
-    data_set($instructions, 'cash.mandates', [
-        [
-            'alias' => 'MERALCO',
-            'max_amount' => 1000.00,
+        overrides: [
+            'cash' => [
+                'type' => 'withdrawable',
+                'mandates' => [
+                    [
+                        'alias' => 'MERALCO',
+                        'max_amount' => 1000.00,
+                    ],
+                ],
+            ],
         ],
-    ]);
-
-    $voucher = Mockery::mock($voucher)->makePartial();
-
-    $voucher->shouldReceive('getAttribute')
-        ->with('instructions')
-        ->andReturn($instructions);
+    ));
 
     $context = new WithdrawalPipelineContextData(
         voucher: $voucher,
