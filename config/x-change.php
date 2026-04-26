@@ -19,6 +19,7 @@ use LBHurtado\XChange\Services\VoucherAccessService;
 use LBHurtado\XChange\Services\VoucherEntryRouteService;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\AssertWithdrawalEligibilityStep;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\AuthorizeWithdrawalClaimantStep;
+use LBHurtado\XChange\Services\WithdrawalPipelineSteps\AuthorizeWithdrawalOtpStep;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\AuthorizeWithdrawalPolicyStep;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\BuildWithdrawalPayoutRequestStep;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\BuildWithdrawalResultStep;
@@ -581,6 +582,7 @@ return [
                 AuthorizeWithdrawalClaimantStep::class,
                 ResolveWithdrawalAmountStep::class,
 
+                AuthorizeWithdrawalOtpStep::class,
                 AuthorizeWithdrawalPolicyStep::class,
 
                 ResolveWithdrawalBankAccountStep::class,
@@ -591,6 +593,10 @@ return [
                 BuildWithdrawalResultStep::class,
             ],
 
+        ],
+        'otp' => [
+            'driver' => env('XCHANGE_WITHDRAWAL_OTP_DRIVER', 'null'),
+            'required' => env('XCHANGE_WITHDRAWAL_OTP_REQUIRED', false),
         ],
     ],
 ];

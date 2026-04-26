@@ -55,6 +55,7 @@ use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\WithdrawalExecutionContract;
 use LBHurtado\XChange\Contracts\WithdrawalLifecycleServiceContract;
+use LBHurtado\XChange\Contracts\WithdrawalOtpApprovalServiceContract;
 use LBHurtado\XChange\Contracts\WithdrawalProcessorContract;
 use LBHurtado\XChange\Contracts\WithdrawalValidationContract;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
@@ -84,6 +85,7 @@ use LBHurtado\XChange\Services\DefaultWithdrawalValidationService;
 use LBHurtado\XChange\Services\EventLifecycleService;
 use LBHurtado\XChange\Services\InstructionBackedPricingService;
 use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
+use LBHurtado\XChange\Services\NullWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\PricelistService;
 use LBHurtado\XChange\Services\ReconciliationLifecycleService;
 use LBHurtado\XChange\Services\SystemWalletProxy;
@@ -287,6 +289,11 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->bind(
             WithdrawalIntervalEnforcerContract::class,
             XChangeWithdrawalIntervalEnforcer::class,
+        );
+
+        $this->app->bind(
+            WithdrawalOtpApprovalServiceContract::class,
+            NullWithdrawalOtpApprovalService::class,
         );
     }
 
