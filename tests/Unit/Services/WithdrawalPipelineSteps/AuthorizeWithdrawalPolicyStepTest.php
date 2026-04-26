@@ -63,3 +63,53 @@ it('fails when withdrawal amount is missing before authorization policy', functi
 
     $step->handle($context, fn ($context) => $context);
 })->throws(LogicException::class, 'Withdrawal amount must be resolved before authorization policy.');
+
+it('passes vendor alias and voucher mandates to cash authorization policy', function () {
+    $voucher = issueVoucher(validVoucherInstructions(
+        amount: 1000.00,
+        settlementRail: 'INSTAPAY',
+    ));
+
+    $instructions = $voucher->instructions ?? [];
+    data_set($instructions, 'cash.mandates', [
+        [
+            'alias' => 'MERALCO',
+            'max_amount' => 1000.00,
+        ],
+    ]);
+
+    $voucher = Mockery::mock($voucher)->makePartial();
+
+    $voucher->shouldReceive('getAttribute')
+        ->with('instructions')
+        ->andReturn($instructions);
+
+    $context = new WithdrawalPipelineContextData(
+        voucher: $voucher,
+        payload: [
+            'vendor_alias' => 'MERALCO',
+        ],
+    );
+
+    $context->withdrawAmount = 300.00;
+
+    $policy = Mockery::mock(CashWithdrawalAuthorizationPolicyContract::class);
+
+    $policy->shouldReceive('authorize')
+        ->once()
+        ->withArgs(function ($instrument, $authorizationContext) {
+            expect($instrument)->toBeInstanceOf(VoucherWithdrawableInstrumentAdapter::class);
+            expect($authorizationContext)->toBeInstanceOf(WithdrawalAuthorizationContextData::class);
+            expect($authorizationContext->vendorAlias)->toBe('MERALCO');
+            expect(data_get($authorizationContext->payload, 'cash.mandates.0.alias'))->toBe('MERALCO');
+            expect((float) data_get($authorizationContext->payload, 'cash.mandates.0.max_amount'))->toBe(1000.00);
+
+            return true;
+        });
+
+    $step = new AuthorizeWithdrawalPolicyStep($policy);
+
+    $result = $step->handle($context, fn ($context) => $context);
+
+    expect($result)->toBe($context);
+});

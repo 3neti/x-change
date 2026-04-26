@@ -43,9 +43,14 @@ class AuthorizeWithdrawalPolicyStep implements WithdrawalPipelineStepContract
             instrument: $instrument,
             context: new WithdrawalAuthorizationContextData(
                 amount: $context->withdrawAmount,
-                payload: $context->payload,
+                payload: array_merge($context->payload, [
+                    'cash' => [
+                        'mandates' => data_get($context->voucher->instructions ?? [], 'cash.mandates', []),
+                    ],
+                ]),
                 claimantId: $context->contact?->id ? (string) $context->contact->id : null,
                 vendorId: data_get($context->payload, 'vendor_id'),
+                vendorAlias: data_get($context->payload, 'vendor_alias'),
                 approvalThreshold: data_get($context->voucher->instructions ?? [], 'cash.approval_threshold'),
                 approved: (bool) data_get($context->payload, 'authorization.approved', false),
             ),
