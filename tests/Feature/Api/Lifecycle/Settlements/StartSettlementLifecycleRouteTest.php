@@ -27,6 +27,12 @@ it('returns settlement preparation metadata via the lifecycle route surface', fu
     $response->assertJsonPath('data.capabilities.can_disburse', true);
     $response->assertJsonPath('data.capabilities.can_collect', true);
     $response->assertJsonPath('data.capabilities.can_settle', true);
+    $response->assertJsonPath('data.envelope.required', true);
+    $response->assertJsonPath('data.envelope.exists', false);
+    $response->assertJsonPath('data.envelope.ready', false);
+    $response->assertJsonPath('data.envelope.missing.0', 'settlement_envelope');
+    $response->assertJsonPath('data.requirements.missing.0', 'settlement_envelope');
+    $response->assertJsonPath('data.messages.0', 'Settlement envelope is not ready.');
 });
 
 it('returns not found when settlement voucher code does not exist', function () {

@@ -12,6 +12,7 @@ use LBHurtado\XChange\Data\Redemption\RedemptionFlowData;
 use LBHurtado\XChange\Data\Redemption\RedemptionRequirementsData;
 use LBHurtado\XChange\Data\Redemption\VoucherRedemptionProfileData;
 use LBHurtado\XChange\Data\Settlement\PrepareSettlementResultData;
+use LBHurtado\XChange\Data\Settlement\SettlementEnvelopeReadinessData;
 use LBHurtado\XChange\Data\VoucherFlow\VoucherFlowCapabilitiesData;
 use LBHurtado\XChange\Enums\VoucherFlowType;
 
@@ -151,8 +152,18 @@ it('routes settlement vouchers to settlement preparation service', function () {
         can_start: false,
         entry_route: 'settle',
         requires_envelope: true,
+        envelope: new SettlementEnvelopeReadinessData(
+            required: true,
+            exists: false,
+            ready: false,
+            missing: ['settlement_envelope'],
+            meta: [
+                'driver' => 'null',
+            ],
+        ),
         requirements: [
             'envelope' => true,
+            'missing' => ['settlement_envelope'],
         ],
         capabilities: [
             'can_disburse' => true,
@@ -160,7 +171,7 @@ it('routes settlement vouchers to settlement preparation service', function () {
             'can_settle' => true,
         ],
         messages: [
-            'Settlement preparation is not yet implemented.',
+            'Settlement envelope is not ready.',
         ],
     );
 

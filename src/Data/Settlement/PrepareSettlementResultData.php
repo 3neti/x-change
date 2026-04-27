@@ -11,13 +11,14 @@ class PrepareSettlementResultData extends Data
     /**
      * @param  array<string, mixed>  $requirements
      * @param  array<string, mixed>  $capabilities
-     * @param  array<string, mixed>  $messages
+     * @param  array<int, string>  $messages
      */
     public function __construct(
         public string $voucher_code,
         public bool $can_start,
         public string $entry_route,
         public bool $requires_envelope,
+        public SettlementEnvelopeReadinessData $envelope,
         public array $requirements = [],
         public array $capabilities = [],
         public array $messages = [],
