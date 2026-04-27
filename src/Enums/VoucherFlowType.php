@@ -57,7 +57,6 @@ use InvalidArgumentException;
  * - consistent behavior across the system
  * - backward compatibility via alias mapping
  * - future extensibility through config-driven capabilities
- *
  */
 enum VoucherFlowType: string
 {
@@ -96,5 +95,20 @@ enum VoucherFlowType: string
             self::Collectible => 'inward',
             self::Settlement => 'bilateral',
         };
+    }
+
+    public function isDisbursable(): bool
+    {
+        return $this->value == self::Disbursable;
+    }
+
+    public function isCollectible(): bool
+    {
+        return $this->value == self::Collectible;
+    }
+
+    public function isSettlement(): bool
+    {
+        return $this == self::Settlement;
     }
 }

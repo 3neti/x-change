@@ -8,19 +8,36 @@ use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\Arr;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\RedemptionFlowPreparationContract;
+use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Data\Redemption\PrepareRedemptionResultData;
 use LBHurtado\XChange\Data\Redemption\RedemptionFlowData;
 use LBHurtado\XChange\Data\Redemption\RedemptionRequirementsData;
 use LBHurtado\XChange\Data\Redemption\VoucherRedemptionProfileData;
+use RuntimeException;
 
 class DefaultRedemptionFlowPreparationService implements RedemptionFlowPreparationContract
 {
     public function __construct(
         protected Container $container,
+        protected VoucherFlowCapabilityResolverContract $flowResolver,
     ) {}
 
     public function prepare(Voucher $voucher): PrepareRedemptionResultData
     {
+        $capabilities = $this->flowResolver->resolve($voucher);
+
+        if ($capabilities->type->isSettlement()) {
+            throw new RuntimeException(
+                'Settlement vouchers cannot prepare ordinary outward claim flow until settlement preparation is implemented.'
+            );
+        }
+
+        if (! $capabilities->can_disburse) {
+            throw new RuntimeException(
+                "Voucher flow [{$capabilities->type->value}] cannot prepare outward claim flow."
+            );
+        }
+
         $messages = [];
         $canStart = true;
         $entryRoute = 'disburse';

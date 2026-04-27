@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 use Illuminate\Container\Container;
+use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Contracts\RedemptionFlowPreparationContract;
+use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Data\Redemption\PrepareRedemptionResultData;
 use LBHurtado\XChange\Services\DefaultRedemptionFlowPreparationService;
 
@@ -34,7 +37,8 @@ it('prepares redemption flow metadata from voucher instructions', function () {
 
     $voucher = issueVoucher($instructions);
 
-    $service = new DefaultRedemptionFlowPreparationService(new Container);
+    $flowResolver = app(VoucherFlowCapabilityResolverContract::class);
+    $service = new DefaultRedemptionFlowPreparationService(new Container, $flowResolver);
 
     $result = $service->prepare($voucher);
 
@@ -108,7 +112,8 @@ it('routes redeemed withdrawable vouchers to withdraw entry', function () {
     $voucher->shouldReceive('canWithdraw')->andReturn(true);
     $voucher->shouldReceive('getSliceMode')->andReturn('open');
 
-    $service = new DefaultRedemptionFlowPreparationService(new Container);
+    $flowResolver = app(VoucherFlowCapabilityResolverContract::class);
+    $service = new DefaultRedemptionFlowPreparationService(new Container, $flowResolver);
 
     $result = $service->prepare($voucher);
 
@@ -118,4 +123,71 @@ it('routes redeemed withdrawable vouchers to withdraw entry', function () {
     expect($result->profile->is_divisible)->toBeTrue();
     expect($result->profile->can_withdraw)->toBeTrue();
     expect($result->profile->slice_mode)->toBe('open');
+});
+
+it('rejects collectible vouchers for outward redemption preparation', function () {
+    $voucher = new Voucher;
+    $voucher->setAttribute('metadata', [
+        'flow_type' => 'collectible',
+    ]);
+
+    $service = app(RedemptionFlowPreparationContract::class);
+
+    expect(fn () => $service->prepare($voucher, []))
+        ->toThrow(RuntimeException::class, 'cannot prepare outward claim flow');
+});
+
+it('rejects legacy payable vouchers for outward redemption preparation', function () {
+    $voucher = new Voucher;
+    $voucher->setAttribute('metadata', [
+        'voucher_type' => 'payable',
+    ]);
+
+    $service = app(RedemptionFlowPreparationContract::class);
+
+    expect(fn () => $service->prepare($voucher, []))
+        ->toThrow(RuntimeException::class, 'cannot prepare outward claim flow');
+});
+
+it('rejects settlement vouchers from ordinary outward redemption preparation', function () {
+    $voucher = issueVoucher(validVoucherInstructions());
+
+    $flowResolver = Mockery::mock(VoucherFlowCapabilityResolverContract::class);
+
+    $flowResolver->shouldReceive('resolve')
+        ->once()
+        ->with($voucher)
+        ->andReturn(new \LBHurtado\XChange\Data\VoucherFlow\VoucherFlowCapabilitiesData(
+            type: \LBHurtado\XChange\Enums\VoucherFlowType::Settlement,
+            label: 'Settlement Voucher',
+            direction: 'both',
+            can_disburse: true,
+            can_collect: true,
+            can_settle: true,
+            supports_open_slices: true,
+            supports_delegated_spend: false,
+            requires_envelope: true,
+            pay_code_route: 'settle',
+            qr_type: 'settlement',
+        ));
+
+    $service = new DefaultRedemptionFlowPreparationService(
+        new Container,
+        $flowResolver,
+    );
+
+    expect(fn () => $service->prepare($voucher))
+        ->toThrow(RuntimeException::class, 'Settlement vouchers cannot prepare ordinary outward claim flow');
+});
+
+it('allows legacy redeemable vouchers for outward redemption preparation', function () {
+    $voucher = issueVoucher(validVoucherInstructions(100.00, 'INSTAPAY', [
+        'voucher_type' => 'redeemable',
+    ]));
+
+    $service = app(\LBHurtado\XChange\Contracts\RedemptionFlowPreparationContract::class);
+
+    $result = $service->prepare($voucher, []);
+
+    expect($result)->not->toBeNull();
 });
