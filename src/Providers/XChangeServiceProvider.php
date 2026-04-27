@@ -54,6 +54,7 @@ use LBHurtado\XChange\Contracts\RedemptionValidationContract;
 use LBHurtado\XChange\Contracts\UserLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\VendorRegistryContract;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
+use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\WithdrawalExecutionContract;
 use LBHurtado\XChange\Contracts\WithdrawalLifecycleServiceContract;
@@ -83,6 +84,7 @@ use LBHurtado\XChange\Services\DefaultRedemptionExecutionService;
 use LBHurtado\XChange\Services\DefaultRedemptionFlowPreparationService;
 use LBHurtado\XChange\Services\DefaultRedemptionProcessorService;
 use LBHurtado\XChange\Services\DefaultRedemptionValidationService;
+use LBHurtado\XChange\Services\DefaultVoucherFlowCapabilityResolver;
 use LBHurtado\XChange\Services\DefaultWithdrawalExecutionService;
 use LBHurtado\XChange\Services\DefaultWithdrawalProcessorService;
 use LBHurtado\XChange\Services\DefaultWithdrawalValidationService;
@@ -316,6 +318,11 @@ class XChangeServiceProvider extends ServiceProvider
 
             return new DefaultApprovalWorkflowService($handlers);
         });
+
+        $this->app->bind(
+            VoucherFlowCapabilityResolverContract::class,
+            DefaultVoucherFlowCapabilityResolver::class,
+        );
     }
 
     public function boot(): void

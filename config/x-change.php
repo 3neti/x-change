@@ -633,4 +633,53 @@ return [
             'otp' => \LBHurtado\XChange\Services\ApprovalHandlers\OtpApprovalRequirementHandler::class,
         ],
     ],
+    'voucher_flow_types' => [
+        'default' => 'disbursable',
+
+        'canonical' => [
+            'disbursable' => [
+                'label' => 'Cash Out Voucher',
+                'direction' => 'outward',
+                'can_disburse' => true,
+                'can_collect' => false,
+                'can_settle' => false,
+                'supports_open_slices' => true,
+                'supports_delegated_spend' => true,
+                'requires_envelope' => false,
+                'pay_code_route' => 'disburse',
+                'qr_type' => 'claim',
+            ],
+
+            'collectible' => [
+                'label' => 'Pay In Voucher',
+                'direction' => 'inward',
+                'can_disburse' => false,
+                'can_collect' => true,
+                'can_settle' => false,
+                'supports_open_slices' => false,
+                'supports_delegated_spend' => false,
+                'requires_envelope' => false,
+                'pay_code_route' => 'pay',
+                'qr_type' => 'payment',
+            ],
+
+            'settlement' => [
+                'label' => 'Settlement Voucher',
+                'direction' => 'bilateral',
+                'can_disburse' => true,
+                'can_collect' => true,
+                'can_settle' => true,
+                'supports_open_slices' => true,
+                'supports_delegated_spend' => true,
+                'requires_envelope' => true,
+                'pay_code_route' => 'settle',
+                'qr_type' => 'hybrid',
+            ],
+        ],
+
+        'aliases' => [
+            'redeemable' => 'disbursable',
+            'payable' => 'collectible',
+        ],
+    ],
 ];
