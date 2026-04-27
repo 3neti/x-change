@@ -10,6 +10,7 @@ use LBHurtado\XChange\Actions\Redemption\RedeemPayCode;
 use LBHurtado\XChange\Actions\Redemption\WithdrawPayCode;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
 use LBHurtado\XChange\Contracts\ClaimExecutorContract;
+use LBHurtado\XChange\Contracts\SettlementExecutionContract;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Data\VoucherFlow\VoucherFlowCapabilitiesData;
 use Mockery\Exception\BadMethodCallException;
@@ -23,12 +24,14 @@ class DefaultClaimExecutionFactory implements ClaimExecutionFactoryContract
         protected VoucherFlowCapabilityResolverContract $flowResolver,
     ) {}
 
-    /**
-     * @param  array<string, mixed>  $payload
-     */
-    public function make(Voucher $voucher, array $payload): ClaimExecutorContract
+
+    public function make(Voucher $voucher, array $payload): ClaimExecutorContract|SettlementExecutionContract
     {
         $capabilities = $this->flowResolver->resolve($voucher);
+
+        if ($capabilities->type->isSettlement()) {
+            return $this->container->make(SettlementExecutionContract::class);
+        }
 
         if (! $capabilities->can_disburse) {
             throw new RuntimeException(

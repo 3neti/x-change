@@ -6,11 +6,13 @@ namespace LBHurtado\XChange\Actions\Redemption;
 
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
+use LBHurtado\XChange\Contracts\SettlementExecutionContract;
 use LBHurtado\XChange\Data\Redemption\RedeemPayCodeResultData;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
+use LBHurtado\XChange\Data\Settlement\SettlementExecutionResultData;
 use Lorisleiva\Actions\Concerns\AsAction;
-use Mockery\Exception\BadMethodCallException;
+use BadMethodCallException;
 
 class SubmitPayCodeClaim
 {
@@ -27,6 +29,12 @@ class SubmitPayCodeClaim
     public function handle(Voucher $voucher, array $payload): SubmitPayCodeClaimResultData
     {
         $executor = $this->factory->make($voucher, $payload);
+
+        if ($executor instanceof SettlementExecutionContract) {
+            return $this->fromSettlementResult(
+                $executor->execute($voucher, $payload)
+            );
+        }
 
         $result = $executor->handle($voucher, $payload);
 
@@ -115,5 +123,25 @@ class SubmitPayCodeClaim
         } catch (BadMethodCallException) {
             return $default;
         }
+    }
+
+    protected function fromSettlementResult(SettlementExecutionResultData $result): SubmitPayCodeClaimResultData
+    {
+        return new SubmitPayCodeClaimResultData(
+            voucher_code: $result->voucher_code,
+            claim_type: 'settlement',
+            claimed: false,
+            status: $result->status,
+            requested_amount: null,
+            disbursed_amount: null,
+            currency: null,
+            remaining_balance: null,
+            fully_claimed: false,
+            disbursement: null,
+            messages: [
+                $result->message,
+            ],
+            settlement: $result->meta,
+        );
     }
 }

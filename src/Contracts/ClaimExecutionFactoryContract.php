@@ -11,5 +11,5 @@ interface ClaimExecutionFactoryContract
     /**
      * @param  array<string, mixed>  $payload
      */
-    public function make(Voucher $voucher, array $payload): ClaimExecutorContract;
+    public function make(Voucher $voucher, array $payload): ClaimExecutorContract|SettlementExecutionContract;
 }

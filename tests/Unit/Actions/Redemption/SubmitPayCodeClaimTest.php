@@ -7,9 +7,11 @@ use LBHurtado\XChange\Actions\Redemption\RecordVoucherClaim;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
 use LBHurtado\XChange\Contracts\ClaimExecutorContract;
+use LBHurtado\XChange\Contracts\SettlementExecutionContract;
 use LBHurtado\XChange\Data\Redemption\RedeemPayCodeResultData;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
+use LBHurtado\XChange\Data\Settlement\SettlementExecutionResultData;
 use LBHurtado\XChange\Models\VoucherClaim;
 
 it('submits a claim through the selected executor and normalizes redeem result', function () {
@@ -201,4 +203,53 @@ it('throws for unsupported executor result types', function () {
 
     expect(fn () => $action->handle($voucher, $payload))
         ->toThrow(RuntimeException::class, 'Unsupported claim execution result type');
+});
+
+it('submits settlement claims through the selected settlement executor and normalizes result', function () {
+    $voucher = new Voucher;
+    $voucher->code = 'SETTLE-1234';
+
+    $executor = Mockery::mock(SettlementExecutionContract::class);
+
+    $payload = [
+        'mobile' => '639171234567',
+        'amount' => 1000,
+    ];
+
+    $executor->shouldReceive('execute')
+        ->once()
+        ->with($voucher, $payload)
+        ->andReturn(new SettlementExecutionResultData(
+            voucher_code: 'SETTLE-1234',
+            status: 'pending',
+            message: 'Settlement execution is pending.',
+            meta: [
+                'settlement_mode' => 'stub',
+            ],
+        ));
+
+    $factory = Mockery::mock(ClaimExecutionFactoryContract::class);
+    $factory->shouldReceive('make')
+        ->once()
+        ->with($voucher, $payload)
+        ->andReturn($executor);
+
+    $recorder = Mockery::mock(RecordVoucherClaim::class);
+    $recorder->shouldReceive('handle')->never();
+
+    $action = new SubmitPayCodeClaim(
+        $factory,
+        $recorder,
+    );
+
+    $result = $action->handle($voucher, $payload);
+
+    expect($result->voucher_code)->toBe('SETTLE-1234');
+    expect($result->claim_type)->toBe('settlement');
+    expect($result->claimed)->toBeFalse();
+    expect($result->status)->toBe('pending');
+    expect($result->messages)->toContain('Settlement execution is pending.');
+    expect($result->settlement)->toMatchArray([
+        'settlement_mode' => 'stub',
+    ]);
 });
