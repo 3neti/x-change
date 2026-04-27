@@ -177,7 +177,7 @@ it('rejects settlement vouchers from ordinary outward redemption preparation', f
     );
 
     expect(fn () => $service->prepare($voucher))
-        ->toThrow(RuntimeException::class, 'Settlement vouchers cannot prepare ordinary outward claim flow');
+        ->toThrow(RuntimeException::class, 'Settlement vouchers cannot prepare ordinary outward claim flow until settlement preparation is implemented.');
 });
 
 it('allows legacy redeemable vouchers for outward redemption preparation', function () {
