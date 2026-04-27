@@ -6,6 +6,59 @@ namespace LBHurtado\XChange\Enums;
 
 use InvalidArgumentException;
 
+/**
+ * VoucherFlowType
+ *
+ * ------------------------------------------------------------------------
+ * Overview
+ * ------------------------------------------------------------------------
+ *
+ * Defines the canonical flow classification of a voucher.
+ *
+ * These types represent the *capability envelope* of a voucher,
+ * not its exact runtime behavior.
+ *
+ *
+ * ------------------------------------------------------------------------
+ * Canonical Types
+ * ------------------------------------------------------------------------
+ *
+ * - disbursable  → outbound money (cash-out, payouts, withdrawals)
+ * - collectible  → inbound money (payments, top-ups, collections)
+ * - settlement   → bi-directional, policy-driven flows
+ *
+ *
+ * ------------------------------------------------------------------------
+ * Important Notes
+ * ------------------------------------------------------------------------
+ *
+ * - This enum replaces legacy voucher types such as:
+ *     - redeemable → disbursable
+ *     - payable    → collectible
+ *
+ * - Actual behavior (e.g. whether a voucher can disburse or collect)
+ *   is determined by the Voucher Flow Capability Resolver,
+ *   not by this enum alone.
+ *
+ * - Always resolve capabilities via:
+ *
+ *     VoucherFlowCapabilityResolverContract
+ *
+ *   instead of branching directly on this enum.
+ *
+ *
+ * ------------------------------------------------------------------------
+ * Design Intent
+ * ------------------------------------------------------------------------
+ *
+ * This enum provides a stable, normalized vocabulary for voucher flows,
+ * enabling:
+ *
+ * - consistent behavior across the system
+ * - backward compatibility via alias mapping
+ * - future extensibility through config-driven capabilities
+ *
+ */
 enum VoucherFlowType: string
 {
     case Disbursable = 'disbursable';
