@@ -10,13 +10,17 @@ use LBHurtado\XChange\Actions\Redemption\RedeemPayCode;
 use LBHurtado\XChange\Actions\Redemption\WithdrawPayCode;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
 use LBHurtado\XChange\Contracts\ClaimExecutorContract;
+use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
+use LBHurtado\XChange\Data\VoucherFlow\VoucherFlowCapabilitiesData;
 use Mockery\Exception\BadMethodCallException;
+use RuntimeException;
 
 class DefaultClaimExecutionFactory implements ClaimExecutionFactoryContract
 {
     public function __construct(
         protected Container $container,
         protected RedeemPayCode $redeemExecutor,
+        protected VoucherFlowCapabilityResolverContract $flowResolver,
     ) {}
 
     /**
@@ -24,7 +28,15 @@ class DefaultClaimExecutionFactory implements ClaimExecutionFactoryContract
      */
     public function make(Voucher $voucher, array $payload): ClaimExecutorContract
     {
-        if ($this->shouldWithdraw($voucher, $payload)) {
+        $capabilities = $this->flowResolver->resolve($voucher);
+
+        if (! $capabilities->can_disburse) {
+            throw new RuntimeException(
+                "Voucher flow [{$capabilities->type->value}] cannot execute outward claims."
+            );
+        }
+
+        if ($this->shouldWithdraw($voucher, $payload, $capabilities)) {
             /** @var ClaimExecutorContract $executor */
             $executor = $this->container->make(WithdrawPayCode::class);
 
@@ -37,10 +49,15 @@ class DefaultClaimExecutionFactory implements ClaimExecutionFactoryContract
     /**
      * @param  array<string, mixed>  $payload
      */
-    protected function shouldWithdraw(Voucher $voucher, array $payload): bool
-    {
-        // Unified-model transition:
-        // open-slice vouchers should disburse on first claim.
+    protected function shouldWithdraw(
+        Voucher $voucher,
+        array $payload,
+        VoucherFlowCapabilitiesData $capabilities,
+    ): bool {
+        if (! $capabilities->can_disburse) {
+            return false;
+        }
+
         if ($this->isOpenSliceVoucher($voucher)) {
             return true;
         }
