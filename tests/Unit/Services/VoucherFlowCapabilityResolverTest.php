@@ -97,3 +97,19 @@ it('resolves helper methods', function () {
     expect($resolver->canCollect($collectible))->toBeTrue();
     expect($resolver->canSettle($settlement))->toBeTrue();
 });
+
+it('resolves settlement type from persisted voucher instruction metadata', function () {
+    $voucher = issueVoucher(validVoucherInstructions(100.00, 'INSTAPAY', [
+        'voucher_type' => 'settlement',
+        'target_amount' => 100.00,
+    ]));
+
+    $voucher = Voucher::query()
+        ->whereKey($voucher->getKey())
+        ->firstOrFail();
+
+    $resolver = app(VoucherFlowCapabilityResolverContract::class);
+
+    expect($resolver->typeOf($voucher))
+        ->toBe(VoucherFlowType::Settlement);
+});

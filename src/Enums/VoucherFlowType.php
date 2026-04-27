@@ -99,16 +99,16 @@ enum VoucherFlowType: string
 
     public function isDisbursable(): bool
     {
-        return $this->value == self::Disbursable;
+        return $this === self::Disbursable;
     }
 
     public function isCollectible(): bool
     {
-        return $this->value == self::Collectible;
+        return $this === self::Collectible;
     }
 
     public function isSettlement(): bool
     {
-        return $this == self::Settlement;
+        return $this === self::Settlement;
     }
 }

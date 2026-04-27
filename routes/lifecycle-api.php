@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use LBHurtado\XChange\Http\Controllers\Lifecycle\Settlements\StartSettlementLifecycleController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Claims\CompleteVoucherClaimController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Claims\ShowVoucherClaimStatusController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Claims\StartVoucherClaimController;
@@ -37,6 +38,9 @@ use LBHurtado\XChange\Lifecycle\Http\Controllers\Withdrawals\ListVoucherWithdraw
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Withdrawals\ShowVoucherWithdrawalController;
 
 Route::prefix('api/x/v1')->as('api.x.v1.')->group(function (): void {
+    Route::post('/settlements/{voucher}/start', StartSettlementLifecycleController::class)
+        ->name('settlements.start');
+
     Route::prefix('issuers')->group(function (): void {
         Route::post('/', CreateIssuerController::class)->name('issuers.store');
         Route::post('{issuer}/wallets', CreateIssuerWalletController::class)->name('issuers.wallets.store');

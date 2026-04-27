@@ -161,7 +161,6 @@ use LBHurtado\XChange\Enums\VoucherFlowType;
  * - unified voucher flows
  * - consistent behavior across disbursement, payment, and settlement
  * - extensible financial orchestration
- *
  */
 class DefaultVoucherFlowCapabilityResolver implements VoucherFlowCapabilityResolverContract
 {
@@ -188,11 +187,9 @@ class DefaultVoucherFlowCapabilityResolver implements VoucherFlowCapabilityResol
 
     public function typeOf(Voucher $voucher): VoucherFlowType
     {
-        $raw = $this->rawFlowType($voucher);
-
         return VoucherFlowType::normalize(
-            $raw,
-            (string) config('x-change.voucher_flow_types.default', 'disbursable')
+            $this->rawFlowType($voucher),
+            (string) config('x-change.voucher_flow_types.default', 'disbursable'),
         );
     }
 
@@ -220,12 +217,31 @@ class DefaultVoucherFlowCapabilityResolver implements VoucherFlowCapabilityResol
         ] as $attribute) {
             $value = $voucher->getAttribute($attribute);
 
+            if ($value instanceof \BackedEnum) {
+                return (string) $value->value;
+            }
+
             if (is_string($value) && trim($value) !== '') {
                 return trim($value);
             }
         }
 
+        try {
+            $value = $voucher->instructions?->voucher_type ?? null;
+
+            if ($value instanceof \BackedEnum) {
+                return (string) $value->value;
+            }
+
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+        } catch (\Throwable) {
+            //
+        }
+
         foreach ([
+            'metadata.instructions.voucher_type',
             'metadata.flow_type',
             'metadata.voucher_flow_type',
             'metadata.voucher_type',
@@ -235,11 +251,46 @@ class DefaultVoucherFlowCapabilityResolver implements VoucherFlowCapabilityResol
         ] as $path) {
             $value = data_get($voucher, $path);
 
+            if ($value instanceof \BackedEnum) {
+                return (string) $value->value;
+            }
+
             if (is_string($value) && trim($value) !== '') {
                 return trim($value);
             }
         }
 
         return null;
+    }
+
+    protected function rawTypeFrom(Voucher $voucher): ?string
+    {
+        $modelType = $voucher->getAttribute('voucher_type');
+
+        if ($modelType instanceof \BackedEnum) {
+            return (string) $modelType->value;
+        }
+
+        if (is_string($modelType) && $modelType !== '') {
+            return $modelType;
+        }
+
+        try {
+            $instructionType = $voucher->instructions?->voucher_type ?? null;
+
+            if ($instructionType instanceof \BackedEnum) {
+                return (string) $instructionType->value;
+            }
+
+            if (is_string($instructionType) && $instructionType !== '') {
+                return $instructionType;
+            }
+        } catch (\Throwable) {
+            // Ignore malformed/legacy instruction payloads and fall back below.
+        }
+
+        return data_get($voucher->getAttribute('metadata'), 'instructions.voucher_type')
+            ?? data_get($voucher->getAttribute('metadata'), 'voucher_type')
+            ?? data_get($voucher->getAttribute('meta'), 'voucher_type');
     }
 }
