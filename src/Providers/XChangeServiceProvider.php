@@ -51,6 +51,7 @@ use LBHurtado\XChange\Contracts\RedemptionExecutionContract;
 use LBHurtado\XChange\Contracts\RedemptionFlowPreparationContract;
 use LBHurtado\XChange\Contracts\RedemptionProcessorContract;
 use LBHurtado\XChange\Contracts\RedemptionValidationContract;
+use LBHurtado\XChange\Contracts\SettlementFlowPreparationContract;
 use LBHurtado\XChange\Contracts\UserLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\VendorRegistryContract;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
@@ -84,6 +85,7 @@ use LBHurtado\XChange\Services\DefaultRedemptionExecutionService;
 use LBHurtado\XChange\Services\DefaultRedemptionFlowPreparationService;
 use LBHurtado\XChange\Services\DefaultRedemptionProcessorService;
 use LBHurtado\XChange\Services\DefaultRedemptionValidationService;
+use LBHurtado\XChange\Services\DefaultSettlementFlowPreparationService;
 use LBHurtado\XChange\Services\DefaultVoucherFlowCapabilityResolver;
 use LBHurtado\XChange\Services\DefaultWithdrawalExecutionService;
 use LBHurtado\XChange\Services\DefaultWithdrawalProcessorService;
@@ -322,6 +324,11 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->bind(
             VoucherFlowCapabilityResolverContract::class,
             DefaultVoucherFlowCapabilityResolver::class,
+        );
+
+        $this->app->bind(
+            SettlementFlowPreparationContract::class,
+            DefaultSettlementFlowPreparationService::class,
         );
     }
 
