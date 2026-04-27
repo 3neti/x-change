@@ -46,6 +46,37 @@ function capabilityResolverReturning(VoucherFlowType $type): VoucherFlowCapabili
     return $resolver;
 }
 
+function prepareFlowCapabilityResolver(VoucherFlowType $type): VoucherFlowCapabilityResolverContract
+{
+    $resolver = Mockery::mock(VoucherFlowCapabilityResolverContract::class);
+
+    $resolver->shouldReceive('resolve')
+        ->once()
+        ->andReturn(new VoucherFlowCapabilitiesData(
+            type: $type,
+            label: $type->label(),
+            direction: $type->direction(),
+            can_disburse: $type !== VoucherFlowType::Collectible,
+            can_collect: $type !== VoucherFlowType::Disbursable,
+            can_settle: $type === VoucherFlowType::Settlement,
+            supports_open_slices: $type !== VoucherFlowType::Collectible,
+            supports_delegated_spend: $type === VoucherFlowType::Disbursable,
+            requires_envelope: $type === VoucherFlowType::Settlement,
+            pay_code_route: match ($type) {
+                VoucherFlowType::Disbursable => 'disburse',
+                VoucherFlowType::Collectible => 'pay',
+                VoucherFlowType::Settlement => 'settle',
+            },
+            qr_type: match ($type) {
+                VoucherFlowType::Disbursable => 'claim',
+                VoucherFlowType::Collectible => 'payment',
+                VoucherFlowType::Settlement => 'settlement',
+            },
+        ));
+
+    return $resolver;
+}
+
 it('delegates ordinary redemption preparation to the configured service', function () {
     $voucher = new Voucher;
     $voucher->code = 'TEST-1234';
@@ -112,6 +143,9 @@ it('routes settlement vouchers to settlement preparation service', function () {
     $voucher = new Voucher;
     $voucher->code = 'SETTLE-1234';
 
+    $redemptionService = Mockery::mock(RedemptionFlowPreparationContract::class);
+    $redemptionService->shouldReceive('prepare')->never();
+
     $expected = new PrepareSettlementResultData(
         voucher_code: 'SETTLE-1234',
         can_start: false,
@@ -130,21 +164,19 @@ it('routes settlement vouchers to settlement preparation service', function () {
         ],
     );
 
-    $redemptionPreparation = Mockery::mock(RedemptionFlowPreparationContract::class);
-    $settlementPreparation = Mockery::mock(SettlementFlowPreparationContract::class);
-
-    $redemptionPreparation->shouldReceive('prepare')->never();
-
-    $settlementPreparation->shouldReceive('prepare')
+    $settlementService = Mockery::mock(SettlementFlowPreparationContract::class);
+    $settlementService->shouldReceive('prepare')
         ->once()
         ->with($voucher)
         ->andReturn($expected);
 
     $action = new PreparePayCodeRedemptionFlow(
-        $redemptionPreparation,
-        $settlementPreparation,
-        capabilityResolverReturning(VoucherFlowType::Settlement),
+        $redemptionService,
+        $settlementService,
+        prepareFlowCapabilityResolver(VoucherFlowType::Settlement),
     );
 
     expect($action->handle($voucher))->toBe($expected);
 });
+
+

@@ -17,8 +17,8 @@ class PreparePayCodeRedemptionFlow
     use AsAction;
 
     public function __construct(
-        protected RedemptionFlowPreparationContract $redemptionPreparation,
-        protected SettlementFlowPreparationContract $settlementPreparation,
+        protected RedemptionFlowPreparationContract $service,
+        protected SettlementFlowPreparationContract $settlementService,
         protected VoucherFlowCapabilityResolverContract $flowResolver,
     ) {}
 
@@ -27,9 +27,9 @@ class PreparePayCodeRedemptionFlow
         $capabilities = $this->flowResolver->resolve($voucher);
 
         if ($capabilities->type->isSettlement()) {
-            return $this->settlementPreparation->prepare($voucher);
+            return $this->settlementService->prepare($voucher);
         }
 
-        return $this->redemptionPreparation->prepare($voucher);
+        return $this->service->prepare($voucher);
     }
 }
