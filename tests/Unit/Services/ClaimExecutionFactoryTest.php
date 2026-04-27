@@ -33,6 +33,37 @@ function disbursableFlowResolver(): VoucherFlowCapabilityResolverContract
     return $resolver;
 }
 
+function flowResolverFor(VoucherFlowType $type, bool $canDisburse): \LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract
+{
+    $resolver = Mockery::mock(\LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract::class);
+
+    $resolver->shouldReceive('resolve')
+        ->byDefault()
+        ->andReturn(new \LBHurtado\XChange\Data\VoucherFlow\VoucherFlowCapabilitiesData(
+            type: $type,
+            label: $type->label(),
+            direction: $type->direction(),
+            can_disburse: $canDisburse,
+            can_collect: $type === VoucherFlowType::Collectible || $type === VoucherFlowType::Settlement,
+            can_settle: $type === VoucherFlowType::Settlement,
+            supports_open_slices: $type !== VoucherFlowType::Collectible,
+            supports_delegated_spend: $type !== VoucherFlowType::Collectible,
+            requires_envelope: $type === VoucherFlowType::Settlement,
+            pay_code_route: match ($type) {
+                VoucherFlowType::Disbursable => 'disburse',
+                VoucherFlowType::Collectible => 'pay',
+                VoucherFlowType::Settlement => 'settle',
+            },
+            qr_type: match ($type) {
+                VoucherFlowType::Disbursable => 'claim',
+                VoucherFlowType::Collectible => 'payment',
+                VoucherFlowType::Settlement => 'hybrid',
+            },
+        ));
+
+    return $resolver;
+}
+
 it('returns redeem executor for a normal voucher', function () {
     $voucher = Mockery::mock(\LBHurtado\Voucher\Models\Voucher::class);
     $voucher->shouldReceive('isDivisible')->once()->andReturn(false);
@@ -112,4 +143,84 @@ it('rejects collectible vouchers for outward claim execution', function () {
 
     expect(fn () => $factory->make($voucher, []))
         ->toThrow(RuntimeException::class, 'cannot execute outward claims');
+});
+
+it('routes open-slice disbursable vouchers to withdrawal executor', function () {
+    $voucher = Mockery::mock(\LBHurtado\Voucher\Models\Voucher::class);
+
+    $voucher->shouldReceive('isDivisible')->once()->andReturn(true);
+    $voucher->shouldReceive('getSliceMode')->once()->andReturn('open');
+    $voucher->shouldReceive('isRedeemed')->never();
+    $voucher->shouldReceive('canWithdraw')->never();
+
+    $redeemExecutor = Mockery::mock(RedeemPayCode::class);
+    $withdrawExecutor = Mockery::mock(WithdrawPayCode::class);
+
+    $container = new Container;
+    $container->instance(WithdrawPayCode::class, $withdrawExecutor);
+
+    $factory = new DefaultClaimExecutionFactory(
+        $container,
+        $redeemExecutor,
+        disbursableFlowResolver(),
+    );
+
+    $result = $factory->make($voucher, []);
+
+    expect($result)->toBe($withdrawExecutor);
+});
+
+it('does not allow settlement vouchers to blindly execute outward claims yet', function () {
+    $voucher = Mockery::mock(\LBHurtado\Voucher\Models\Voucher::class);
+
+    $voucher->shouldReceive('isDivisible')->never();
+    $voucher->shouldReceive('getSliceMode')->never();
+    $voucher->shouldReceive('isRedeemed')->never();
+    $voucher->shouldReceive('canWithdraw')->never();
+
+    $redeemExecutor = Mockery::mock(RedeemPayCode::class);
+
+    $container = new Container;
+
+    $factory = new DefaultClaimExecutionFactory(
+        $container,
+        $redeemExecutor,
+        flowResolverFor(VoucherFlowType::Settlement, canDisburse: false),
+    );
+
+    expect(fn () => $factory->make($voucher, []))
+        ->toThrow(RuntimeException::class, 'cannot execute outward claims');
+});
+
+it('rejects legacy payable vouchers for outward claim execution', function () {
+    $voucher = new \LBHurtado\Voucher\Models\Voucher;
+    $voucher->setAttribute('metadata', [
+        'voucher_type' => 'payable',
+    ]);
+
+    $factory = app(\LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract::class);
+
+    expect(fn () => $factory->make($voucher, []))
+        ->toThrow(RuntimeException::class, 'cannot execute outward claims');
+});
+
+it('allows legacy redeemable vouchers for outward claim execution', function () {
+    $voucher = Mockery::mock(\LBHurtado\Voucher\Models\Voucher::class);
+
+    $voucher->shouldReceive('isDivisible')->once()->andReturn(false);
+    $voucher->shouldReceive('isRedeemed')->once()->andReturn(false);
+    $voucher->shouldReceive('canWithdraw')->never();
+    $voucher->shouldReceive('getSliceMode')->never();
+
+    $redeemExecutor = Mockery::mock(RedeemPayCode::class);
+
+    $container = new Container;
+
+    $factory = new DefaultClaimExecutionFactory(
+        $container,
+        $redeemExecutor,
+        flowResolverFor(\LBHurtado\XChange\Enums\VoucherFlowType::Disbursable, canDisburse: true),
+    );
+
+    expect($factory->make($voucher, []))->toBe($redeemExecutor);
 });
