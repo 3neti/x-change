@@ -66,6 +66,7 @@ use LBHurtado\XChange\Contracts\VendorRegistryContract;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
+use LBHurtado\XChange\Contracts\VoucherPaymentQrGeneratorContract;
 use LBHurtado\XChange\Contracts\WithdrawalExecutionContract;
 use LBHurtado\XChange\Contracts\WithdrawalLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\WithdrawalOtpApprovalServiceContract;
@@ -105,6 +106,7 @@ use LBHurtado\XChange\Services\DefaultRedemptionValidationService;
 use LBHurtado\XChange\Services\DefaultSettlementExecutionService;
 use LBHurtado\XChange\Services\DefaultSettlementFlowPreparationService;
 use LBHurtado\XChange\Services\DefaultVoucherFlowCapabilityResolver;
+use LBHurtado\XChange\Services\DefaultVoucherPaymentQrGenerator;
 use LBHurtado\XChange\Services\DefaultWithdrawalExecutionService;
 use LBHurtado\XChange\Services\DefaultWithdrawalProcessorService;
 use LBHurtado\XChange\Services\DefaultWithdrawalValidationService;
@@ -409,6 +411,11 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->bind(
             PayCodePresentationResolverContract::class,
             DefaultPayCodePresentationResolver::class,
+        );
+
+        $this->app->bind(
+            VoucherPaymentQrGeneratorContract::class,
+            DefaultVoucherPaymentQrGenerator::class,
         );
     }
 
