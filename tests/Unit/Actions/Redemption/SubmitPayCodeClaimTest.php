@@ -349,3 +349,68 @@ it('initiates approval workflow when withdrawal result requires approval', funct
     expect($result)->toBeInstanceOf(ClaimApprovalInitiationResultData::class);
     expect($result->status)->toBe('pending_approval');
 });
+
+it('does not initiate approval workflow during approval replay', function () {
+    $voucher = new Voucher;
+    $voucher->code = 'REPLAY-1234';
+
+    $payload = [
+        'mobile' => '639171234567',
+        'amount' => 1000,
+        'approval' => [
+            'resume' => true,
+        ],
+    ];
+
+    $withdrawResult = new WithdrawPayCodeResultData(
+        voucher_code: 'REPLAY-1234',
+        withdrawn: false,
+        status: 'approval_required',
+        requested_amount: 1000,
+        disbursed_amount: 0,
+        currency: 'PHP',
+        remaining_balance: 1000,
+        slice_number: null,
+        remaining_slices: null,
+        slice_mode: null,
+        redeemer: [],
+        bank_account: [],
+        disbursement: [],
+        messages: ['Approval required.'],
+        approval_requirements: ['otp'],
+        approval_meta: [],
+    );
+
+    $executor = Mockery::mock(ClaimExecutorContract::class);
+    $executor->shouldReceive('handle')
+        ->once()
+        ->with($voucher, $payload)
+        ->andReturn($withdrawResult);
+
+    $factory = Mockery::mock(ClaimExecutionFactoryContract::class);
+    $factory->shouldReceive('make')
+        ->once()
+        ->with($voucher, $payload)
+        ->andReturn($executor);
+
+    $workflow = Mockery::mock(ApprovalWorkflowContract::class);
+    $workflow->shouldReceive('resolve')->never();
+
+    $initiation = Mockery::mock(ClaimApprovalInitiationContract::class);
+    $initiation->shouldReceive('initiate')->never();
+
+    $recorder = Mockery::mock(RecordVoucherClaim::class);
+    $recorder->shouldReceive('handle')->once();
+
+    $action = new SubmitPayCodeClaim(
+        $factory,
+        $recorder,
+        $workflow,
+        $initiation,
+    );
+
+    $result = $action->handle($voucher, $payload);
+
+    expect($result)->toBeInstanceOf(SubmitPayCodeClaimResultData::class);
+    expect($result->status)->toBe('approval_required');
+});

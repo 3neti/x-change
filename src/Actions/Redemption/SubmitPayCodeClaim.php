@@ -46,14 +46,15 @@ class SubmitPayCodeClaim
         if (
             $result instanceof WithdrawPayCodeResultData
             && $result->status === 'approval_required'
+            && ! $this->isApprovalReplay($payload)
         ) {
-            $approval = $this->approvalWorkflow()->resolve($result, [
+            $approval = $this->approvalWorkflow->resolve($result, [
                 'voucher_code' => $voucher->code,
                 'payload' => $payload,
             ]);
 
             if ($approval->status === 'pending') {
-                return $this->approvalInitiation()->initiate(
+                return $this->approvalInitiation->initiate(
                     $voucher,
                     $payload,
                     $approval->toArray(),
@@ -177,5 +178,11 @@ class SubmitPayCodeClaim
     {
         return $this->approvalInitiation
             ??= app(ClaimApprovalInitiationContract::class);
+    }
+
+    protected function isApprovalReplay(array $payload): bool
+    {
+        return data_get($payload, 'approval.resume') === true
+            || data_get($payload, 'otp.verified') === true;
     }
 }
