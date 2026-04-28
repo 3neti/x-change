@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use LBHurtado\XChange\Http\Controllers\Lifecycle\Claims\ApproveVoucherClaimController;
 use LBHurtado\XChange\Http\Controllers\Lifecycle\Claims\VerifyVoucherClaimOtpController;
 use LBHurtado\XChange\Http\Controllers\Lifecycle\Settlements\StartSettlementLifecycleController;
+use LBHurtado\XChange\Http\Controllers\Lifecycle\Vouchers\ShowVoucherPaymentQrController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Claims\CompleteVoucherClaimController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Claims\ShowVoucherClaimStatusController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Claims\StartVoucherClaimController;
@@ -79,6 +80,9 @@ Route::prefix('api/x/v1')->as('api.x.v1.')->group(function (): void {
             ->name('vouchers.claim.approve');
         Route::post('code/{code}/claim/otp/verify', VerifyVoucherClaimOtpController::class)
             ->name('vouchers.claim.otp.verify');
+
+        Route::get('code/{code}/payment-qr', ShowVoucherPaymentQrController::class)
+            ->name('vouchers.payment-qr.show');
     });
 
     Route::prefix('reconciliations')->group(function (): void {

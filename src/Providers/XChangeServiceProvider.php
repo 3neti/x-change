@@ -82,6 +82,7 @@ use LBHurtado\XChange\Exceptions\PayCodeWalletNotResolved;
 use LBHurtado\XChange\Exceptions\VoucherCannotCollect;
 use LBHurtado\XChange\Exceptions\VoucherCannotDisburse;
 use LBHurtado\XChange\Exceptions\VoucherFlowCapabilityException;
+use LBHurtado\XChange\Exceptions\VoucherNotFound;
 use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
 use LBHurtado\XChange\Listeners\HandleConfirmedDisbursement;
 use LBHurtado\XChange\Listeners\RecordFailedVoucherDisbursement;
@@ -688,6 +689,19 @@ class XChangeServiceProvider extends ServiceProvider
                     'can_settle' => $e->capabilities?->can_settle,
                 ],
                 $status,
+            );
+        });
+
+        $exceptions->renderable(function (VoucherNotFound $e, Request $request) {
+            if (! $request->expectsJson()) {
+                return null;
+            }
+
+            return $this->apiResponses()->errorFromThrowable(
+                $e,
+                'VOUCHER_NOT_FOUND',
+                [],
+                404,
             );
         });
     }
