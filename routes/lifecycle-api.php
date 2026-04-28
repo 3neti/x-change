@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use LBHurtado\XChange\Http\Controllers\Lifecycle\Claims\ApproveVoucherClaimController;
+use LBHurtado\XChange\Http\Controllers\Lifecycle\Claims\VerifyVoucherClaimOtpController;
 use LBHurtado\XChange\Http\Controllers\Lifecycle\Settlements\StartSettlementLifecycleController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Claims\CompleteVoucherClaimController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Claims\ShowVoucherClaimStatusController;
@@ -72,6 +74,11 @@ Route::prefix('api/x/v1')->as('api.x.v1.')->group(function (): void {
         Route::post('code/{code}/claim/submit', SubmitVoucherClaimController::class)->name('vouchers.claim.submit');
         Route::post('code/{code}/claim/complete', CompleteVoucherClaimController::class)->name('vouchers.claim.complete');
         Route::get('code/{code}/claim/status', ShowVoucherClaimStatusController::class)->name('vouchers.claim.status.show');
+
+        Route::post('code/{code}/claim/approve', ApproveVoucherClaimController::class)
+            ->name('vouchers.claim.approve');
+        Route::post('code/{code}/claim/otp/verify', VerifyVoucherClaimOtpController::class)
+            ->name('vouchers.claim.otp.verify');
     });
 
     Route::prefix('reconciliations')->group(function (): void {

@@ -682,4 +682,8 @@ return [
             'payable' => 'collectible',
         ],
     ],
+
+    'claim_approval' => [
+        'ttl_minutes' => env('X_CHANGE_CLAIM_APPROVAL_TTL_MINUTES', 15),
+    ],
 ];

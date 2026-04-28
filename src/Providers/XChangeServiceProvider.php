@@ -34,6 +34,8 @@ use LBHurtado\XChange\Console\Commands\Revenue\CollectRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Revenue\ShowPendingRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Wallet\GetWalletBalanceCommand;
 use LBHurtado\XChange\Contracts\ApprovalWorkflowContract;
+use LBHurtado\XChange\Contracts\ClaimApprovalExecutionContract;
+use LBHurtado\XChange\Contracts\ClaimApprovalWorkflowStoreContract;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
@@ -74,8 +76,10 @@ use LBHurtado\XChange\Listeners\HandleConfirmedDisbursement;
 use LBHurtado\XChange\Listeners\RecordFailedVoucherDisbursement;
 use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
 use LBHurtado\XChange\Services\ApiResponseFactory;
+use LBHurtado\XChange\Services\CacheClaimApprovalWorkflowStore;
 use LBHurtado\XChange\Services\ConfigVendorRegistry;
 use LBHurtado\XChange\Services\DefaultApprovalWorkflowService;
+use LBHurtado\XChange\Services\DefaultClaimApprovalExecutionService;
 use LBHurtado\XChange\Services\DefaultClaimExecutionFactory;
 use LBHurtado\XChange\Services\DefaultDisbursementReconciliationService;
 use LBHurtado\XChange\Services\DefaultDisbursementReconciliationStore;
@@ -343,6 +347,16 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->bind(
             SettlementExecutionContract::class,
             DefaultSettlementExecutionService::class,
+        );
+
+        $this->app->bind(
+            ClaimApprovalWorkflowStoreContract::class,
+            CacheClaimApprovalWorkflowStore::class,
+        );
+
+        $this->app->bind(
+            ClaimApprovalExecutionContract::class,
+            DefaultClaimApprovalExecutionService::class,
         );
     }
 
