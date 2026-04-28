@@ -7,6 +7,8 @@ use LBHurtado\Cash\Contracts\CashWithdrawalValidationContract;
 use LBHurtado\Cash\Services\DefaultCashWithdrawalAmountBoundsService;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Adapters\VoucherWithdrawableInstrumentAdapter;
+use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
+use LBHurtado\XChange\Exceptions\VoucherCannotDisburse;
 use LBHurtado\XChange\Services\DefaultWithdrawalValidationService;
 
 function withdrawalValidationService(): DefaultWithdrawalValidationService
@@ -14,6 +16,7 @@ function withdrawalValidationService(): DefaultWithdrawalValidationService
     return new DefaultWithdrawalValidationService(
         validator: app(CashWithdrawalValidationContract::class),
         amountBounds: new DefaultCashWithdrawalAmountBoundsService,
+        flowResolver: app(VoucherFlowCapabilityResolverContract::class)
     );
 }
 
@@ -187,10 +190,59 @@ it('delegates open-slice amount bounds to cash package', function () {
     $service = new DefaultWithdrawalValidationService(
         validator: app(CashWithdrawalValidationContract::class),
         amountBounds: $bounds,
+        flowResolver: app(VoucherFlowCapabilityResolverContract::class)
     );
 
     $service->validate($voucher, [
         'mobile' => '09171234567',
         'amount' => 50,
     ]);
+});
+
+it('rejects collectible vouchers before cash withdrawal validation', function () {
+    $voucher = new \LBHurtado\Voucher\Models\Voucher;
+    $voucher->setAttribute('metadata', [
+        'flow_type' => 'collectible',
+    ]);
+
+    $validator = Mockery::mock(\LBHurtado\Cash\Contracts\CashWithdrawalValidationContract::class);
+    $validator->shouldReceive('validate')->never();
+
+    $amountBounds = Mockery::mock(\LBHurtado\Cash\Contracts\CashWithdrawalAmountBoundsContract::class);
+    $amountBounds->shouldReceive('assertWithinBounds')->never();
+
+    $service = new \LBHurtado\XChange\Services\DefaultWithdrawalValidationService(
+        $validator,
+        $amountBounds,
+        app(\LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract::class),
+    );
+
+    expect(fn () => $service->validate($voucher, [
+        'amount' => 100,
+    ]))->toThrow(VoucherCannotDisburse::class);
+});
+
+it('allows disbursable vouchers to reach cash withdrawal validation', function () {
+    $voucher = Mockery::mock(\LBHurtado\Voucher\Models\Voucher::class)->makePartial();
+    $voucher->setAttribute('metadata', [
+        'flow_type' => 'disbursable',
+    ]);
+
+    $validator = Mockery::mock(\LBHurtado\Cash\Contracts\CashWithdrawalValidationContract::class);
+    $validator->shouldReceive('validate')->once();
+
+    $amountBounds = Mockery::mock(\LBHurtado\Cash\Contracts\CashWithdrawalAmountBoundsContract::class);
+    $amountBounds->shouldReceive('assertWithinBounds')->once();
+
+    $service = new \LBHurtado\XChange\Services\DefaultWithdrawalValidationService(
+        $validator,
+        $amountBounds,
+        app(\LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract::class),
+    );
+
+    $service->validate($voucher, [
+        'amount' => 100,
+    ]);
+
+    expect(true)->toBeTrue();
 });

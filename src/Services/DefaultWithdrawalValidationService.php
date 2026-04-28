@@ -8,7 +8,9 @@ use LBHurtado\Cash\Contracts\CashWithdrawalAmountBoundsContract;
 use LBHurtado\Cash\Contracts\CashWithdrawalValidationContract;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Adapters\VoucherWithdrawableInstrumentAdapter;
+use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Contracts\WithdrawalValidationContract;
+use LBHurtado\XChange\Exceptions\VoucherCannotDisburse;
 
 /**
  * Withdrawal validation service (legacy wrapper).
@@ -47,10 +49,17 @@ class DefaultWithdrawalValidationService implements WithdrawalValidationContract
     public function __construct(
         protected CashWithdrawalValidationContract $validator,
         protected CashWithdrawalAmountBoundsContract $amountBounds,
+        protected VoucherFlowCapabilityResolverContract $flowResolver,
     ) {}
 
     public function validate(Voucher $voucher, array $payload): void
     {
+        $capabilities = $this->flowResolver->resolve($voucher);
+
+        if (! $capabilities->can_disburse) {
+            throw VoucherCannotDisburse::forVoucher($voucher, $capabilities);
+        }
+
         $instrument = new VoucherWithdrawableInstrumentAdapter($voucher);
 
         $this->amountBounds->assertWithinBounds(
