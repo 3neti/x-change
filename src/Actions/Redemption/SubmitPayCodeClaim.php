@@ -4,15 +4,18 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Actions\Redemption;
 
+use BadMethodCallException;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Contracts\ApprovalWorkflowContract;
+use LBHurtado\XChange\Contracts\ClaimApprovalInitiationContract;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
 use LBHurtado\XChange\Contracts\SettlementExecutionContract;
+use LBHurtado\XChange\Data\Claims\ClaimApprovalInitiationResultData;
 use LBHurtado\XChange\Data\Redemption\RedeemPayCodeResultData;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
 use LBHurtado\XChange\Data\Settlement\SettlementExecutionResultData;
 use Lorisleiva\Actions\Concerns\AsAction;
-use BadMethodCallException;
 
 class SubmitPayCodeClaim
 {
@@ -21,12 +24,14 @@ class SubmitPayCodeClaim
     public function __construct(
         protected ClaimExecutionFactoryContract $factory,
         protected RecordVoucherClaim $recordVoucherClaim,
+        protected ?ApprovalWorkflowContract $approvalWorkflow = null,
+        protected ?ClaimApprovalInitiationContract $approvalInitiation = null,
     ) {}
 
     /**
      * @param  array<string, mixed>  $payload
      */
-    public function handle(Voucher $voucher, array $payload): SubmitPayCodeClaimResultData
+    public function handle(Voucher $voucher, array $payload): SubmitPayCodeClaimResultData|ClaimApprovalInitiationResultData
     {
         $executor = $this->factory->make($voucher, $payload);
 
@@ -38,7 +43,24 @@ class SubmitPayCodeClaim
 
         $result = $executor->handle($voucher, $payload);
 
-        //        $normalized = $this->normalizeResult($result, $payload);
+        if (
+            $result instanceof WithdrawPayCodeResultData
+            && $result->status === 'approval_required'
+        ) {
+            $approval = $this->approvalWorkflow()->resolve($result, [
+                'voucher_code' => $voucher->code,
+                'payload' => $payload,
+            ]);
+
+            if ($approval->status === 'pending') {
+                return $this->approvalInitiation()->initiate(
+                    $voucher,
+                    $payload,
+                    $approval->toArray(),
+                );
+            }
+        }
+
         $normalized = $this->normalizeResult($voucher, $result, $payload);
 
         $this->recordVoucherClaim->handle($voucher, $normalized, $payload);
@@ -143,5 +165,17 @@ class SubmitPayCodeClaim
             ],
             settlement: $result->meta,
         );
+    }
+
+    protected function approvalWorkflow(): ApprovalWorkflowContract
+    {
+        return $this->approvalWorkflow
+            ??= app(ApprovalWorkflowContract::class);
+    }
+
+    protected function approvalInitiation(): ClaimApprovalInitiationContract
+    {
+        return $this->approvalInitiation
+            ??= app(ClaimApprovalInitiationContract::class);
     }
 }

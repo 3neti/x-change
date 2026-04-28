@@ -35,8 +35,11 @@ use LBHurtado\XChange\Console\Commands\Revenue\ShowPendingRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Wallet\GetWalletBalanceCommand;
 use LBHurtado\XChange\Contracts\ApprovalWorkflowContract;
 use LBHurtado\XChange\Contracts\ClaimApprovalExecutionContract;
+use LBHurtado\XChange\Contracts\ClaimApprovalInitiationContract;
+use LBHurtado\XChange\Contracts\ClaimApprovalNotificationContract;
 use LBHurtado\XChange\Contracts\ClaimApprovalWorkflowStoreContract;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
+use LBHurtado\XChange\Contracts\ClaimOtpChallengeContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusFetcherContract;
@@ -80,6 +83,7 @@ use LBHurtado\XChange\Services\CacheClaimApprovalWorkflowStore;
 use LBHurtado\XChange\Services\ConfigVendorRegistry;
 use LBHurtado\XChange\Services\DefaultApprovalWorkflowService;
 use LBHurtado\XChange\Services\DefaultClaimApprovalExecutionService;
+use LBHurtado\XChange\Services\DefaultClaimApprovalInitiationService;
 use LBHurtado\XChange\Services\DefaultClaimExecutionFactory;
 use LBHurtado\XChange\Services\DefaultDisbursementReconciliationService;
 use LBHurtado\XChange\Services\DefaultDisbursementReconciliationStore;
@@ -99,6 +103,8 @@ use LBHurtado\XChange\Services\DefaultWithdrawalProcessorService;
 use LBHurtado\XChange\Services\DefaultWithdrawalValidationService;
 use LBHurtado\XChange\Services\EventLifecycleService;
 use LBHurtado\XChange\Services\InstructionBackedPricingService;
+use LBHurtado\XChange\Services\NullClaimApprovalNotificationService;
+use LBHurtado\XChange\Services\NullClaimOtpChallengeService;
 use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
 use LBHurtado\XChange\Services\NullSettlementEnvelopeReadinessService;
 use LBHurtado\XChange\Services\NullWithdrawalOtpApprovalService;
@@ -357,6 +363,21 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->bind(
             ClaimApprovalExecutionContract::class,
             DefaultClaimApprovalExecutionService::class,
+        );
+
+        $this->app->bind(
+            ClaimApprovalInitiationContract::class,
+            DefaultClaimApprovalInitiationService::class,
+        );
+
+        $this->app->bind(
+            ClaimApprovalNotificationContract::class,
+            NullClaimApprovalNotificationService::class,
+        );
+
+        $this->app->bind(
+            ClaimOtpChallengeContract::class,
+            NullClaimOtpChallengeService::class,
         );
     }
 
