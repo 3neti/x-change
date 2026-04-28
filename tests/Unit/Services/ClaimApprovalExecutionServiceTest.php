@@ -37,7 +37,14 @@ it('resumes claim submission after manual approval', function () {
             status: 'succeeded',
         ));
 
-    $service = new DefaultClaimApprovalExecutionService($store, $submit);
+    $otpVerification = Mockery::mock(\LBHurtado\XChange\Contracts\ClaimOtpVerificationContract::class);
+    $otpVerification->shouldReceive('verify')->andReturnTrue();
+
+    $service = new DefaultClaimApprovalExecutionService(
+        $store,
+        $submit,
+        $otpVerification,
+    );
 
     $result = $service->approve($voucher, [
         'approved_by' => 'tester',
@@ -75,7 +82,14 @@ it('resumes claim submission after otp verification', function () {
             status: 'succeeded',
         ));
 
-    $service = new DefaultClaimApprovalExecutionService($store, $submit);
+    $otpVerification = Mockery::mock(\LBHurtado\XChange\Contracts\ClaimOtpVerificationContract::class);
+    $otpVerification->shouldReceive('verify')->andReturnTrue();
+
+    $service = new DefaultClaimApprovalExecutionService(
+        $store,
+        $submit,
+        $otpVerification,
+    );
 
     $result = $service->verifyOtp($voucher, [
         'otp' => '123456',
@@ -93,7 +107,14 @@ it('fails when no pending approval workflow exists', function () {
 
     $submit = Mockery::mock(SubmitPayCodeClaim::class);
 
-    $service = new DefaultClaimApprovalExecutionService($store, $submit);
+    $otpVerification = Mockery::mock(\LBHurtado\XChange\Contracts\ClaimOtpVerificationContract::class);
+    $otpVerification->shouldReceive('verify')->andReturnTrue();
+
+    $service = new DefaultClaimApprovalExecutionService(
+        $store,
+        $submit,
+        $otpVerification,
+    );
 
     expect(fn () => $service->approve($voucher, []))
         ->toThrow(RuntimeException::class, 'No pending claim approval workflow found.');

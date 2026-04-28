@@ -2,7 +2,25 @@
 
 declare(strict_types=1);
 
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ClaimApprovalWorkflowStoreContract;
+use LBHurtado\XChange\Contracts\ClaimOtpVerificationContract;
+
+beforeEach(function () {
+    $this->app->bind(
+        ClaimOtpVerificationContract::class,
+        fn () => new class implements ClaimOtpVerificationContract
+        {
+            public function verify(
+                Voucher $voucher,
+                string $code,
+                array $workflow
+            ): bool {
+                return $code === '123456';
+            }
+        }
+    );
+});
 
 it('verifies otp approval workflow through the lifecycle route surface', function () {
     $voucher = issueVoucher(validVoucherInstructions());

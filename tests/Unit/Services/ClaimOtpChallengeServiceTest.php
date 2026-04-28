@@ -44,3 +44,28 @@ it('requests otp through withdrawal otp approval service', function () {
         'target' => '639171234567',
     ]);
 });
+
+it('verifies otp through withdrawal otp approval service', function () {
+    $otp = Mockery::mock(WithdrawalOtpApprovalServiceContract::class);
+
+    $otp->shouldReceive('verify')
+        ->once()
+        ->withArgs(function (string $mobile, string $reference, string $code, array $context): bool {
+            return $mobile === '639171234567'
+                && $reference === 'OTP-1234'
+                && $code === '123456'
+                && $context['voucher_code'] === 'OTP-1234';
+        })
+        ->andReturnTrue();
+
+    $result = $otp->verify(
+        mobile: '639171234567',
+        reference: 'OTP-1234',
+        code: '123456',
+        context: [
+            'voucher_code' => 'OTP-1234',
+        ],
+    );
+
+    expect($result)->toBeTrue();
+});

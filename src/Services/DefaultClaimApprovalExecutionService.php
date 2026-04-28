@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services;
 
+use LBHurtado\XChange\Contracts\ClaimOtpVerificationContract;
 use RuntimeException;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
@@ -16,6 +17,7 @@ class DefaultClaimApprovalExecutionService implements ClaimApprovalExecutionCont
     public function __construct(
         protected ClaimApprovalWorkflowStoreContract $store,
         protected SubmitPayCodeClaim $submitClaim,
+        protected ClaimOtpVerificationContract $otpVerification,
     ) {}
 
     public function approve(Voucher $voucher, array $payload): SubmitPayCodeClaimResultData
@@ -60,6 +62,10 @@ class DefaultClaimApprovalExecutionService implements ClaimApprovalExecutionCont
 
         if ($otp === '') {
             throw new RuntimeException('OTP is required.');
+        }
+
+        if (! $this->otpVerification->verify($voucher, $otp, $workflow)) {
+            throw new RuntimeException('OTP verification failed.');
         }
 
         $this->store->forget($voucher);

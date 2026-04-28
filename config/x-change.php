@@ -686,25 +686,18 @@ return [
     'claim_approval' => [
         'ttl_minutes' => env('X_CHANGE_CLAIM_APPROVAL_TTL_MINUTES', 15),
         'otp' => [
-
             'driver' => env('X_CHANGE_CLAIM_APPROVAL_OTP_DRIVER', 'null'),
-
             'drivers' => [
-
                 'null' => [
-
-                    'service' => \LBHurtado\XChange\Services\NullClaimOtpChallengeService::class,
+                    'challenge' => \LBHurtado\XChange\Services\NullClaimOtpChallengeService::class,
+                    'verify' => \LBHurtado\XChange\Services\NullClaimOtpVerificationService::class,
 
                 ],
-
                 'withdrawal_otp' => [
-
-                    'service' => \LBHurtado\XChange\Services\WithdrawalOtpApprovalBackedClaimOtpChallengeService::class,
-
+                    'challenge' => \LBHurtado\XChange\Services\WithdrawalOtpApprovalBackedClaimOtpChallengeService::class,
+                    'verify' => \LBHurtado\XChange\Services\WithdrawalOtpApprovalBackedClaimOtpVerificationService::class,
                 ],
-
             ],
-
         ],
     ],
 ];

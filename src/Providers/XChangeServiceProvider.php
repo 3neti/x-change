@@ -40,6 +40,7 @@ use LBHurtado\XChange\Contracts\ClaimApprovalNotificationContract;
 use LBHurtado\XChange\Contracts\ClaimApprovalWorkflowStoreContract;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
 use LBHurtado\XChange\Contracts\ClaimOtpChallengeContract;
+use LBHurtado\XChange\Contracts\ClaimOtpVerificationContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusFetcherContract;
@@ -378,10 +379,22 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->bind(ClaimOtpChallengeContract::class, function ($app) {
             $driver = (string) config('x-change.claim_approval.otp.driver', 'null');
 
-            $service = config("x-change.claim_approval.otp.drivers.{$driver}.service");
+            $service = config("x-change.claim_approval.otp.drivers.{$driver}.challenge");
 
             if (! is_string($service) || ! class_exists($service)) {
-                throw new InvalidArgumentException("Unsupported claim approval OTP driver [{$driver}].");
+                throw new InvalidArgumentException("Unsupported claim approval OTP challenge driver [{$driver}].");
+            }
+
+            return $app->make($service);
+        });
+
+        $this->app->bind(ClaimOtpVerificationContract::class, function ($app) {
+            $driver = (string) config('x-change.claim_approval.otp.driver', 'null');
+
+            $service = config("x-change.claim_approval.otp.drivers.{$driver}.verify");
+
+            if (! is_string($service) || ! class_exists($service)) {
+                throw new InvalidArgumentException("Unsupported claim approval OTP verify driver [{$driver}].");
             }
 
             return $app->make($service);
