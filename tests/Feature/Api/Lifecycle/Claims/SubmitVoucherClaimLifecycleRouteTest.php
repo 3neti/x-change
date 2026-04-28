@@ -185,3 +185,27 @@ it('validates required claim submit payload fields through the lifecycle route s
             'code' => 'VALIDATION_ERROR',
         ]);
 });
+
+it('blocks collectible vouchers from lifecycle claim submission', function () {
+    $voucher = issueVoucher(validVoucherInstructions(100.00, 'INSTAPAY', [
+        'voucher_type' => 'payable',
+    ]));
+
+    $response = $this->postJson(route('api.x.v1.vouchers.claim.submit', [
+        'code' => $voucher->code,
+    ]), [
+        'mobile' => '09171234567',
+        'recipient_country' => 'PH',
+        'amount' => 100,
+        'inputs' => [],
+        'bank_account' => [
+            'bank_code' => 'GXCHPHM2XXX',
+            'account_number' => '09171234567',
+        ],
+    ]);
+
+    $response->assertStatus(422);
+    $response->assertJsonPath('code', 'VOUCHER_CANNOT_DISBURSE');
+    $response->assertJsonPath('errors.type', 'capability_violation');
+    $response->assertJsonPath('errors.flow', 'collectible');
+});

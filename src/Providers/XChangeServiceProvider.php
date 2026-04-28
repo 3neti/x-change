@@ -47,6 +47,7 @@ use LBHurtado\XChange\Contracts\DisbursementStatusFetcherContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Contracts\EventLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\EventStoreContract;
+use LBHurtado\XChange\Contracts\PayCodePresentationResolverContract;
 use LBHurtado\XChange\Contracts\PricelistServiceContract;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
 use LBHurtado\XChange\Contracts\ReconciliationLifecycleServiceContract;
@@ -76,6 +77,10 @@ use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Exceptions\PayCodeWalletNotResolved;
+use LBHurtado\XChange\Exceptions\VoucherCannotCollect;
+use LBHurtado\XChange\Exceptions\VoucherCannotDisburse;
+use LBHurtado\XChange\Exceptions\VoucherFlowCapabilityException;
+use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
 use LBHurtado\XChange\Listeners\HandleConfirmedDisbursement;
 use LBHurtado\XChange\Listeners\RecordFailedVoucherDisbursement;
 use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
@@ -90,6 +95,7 @@ use LBHurtado\XChange\Services\DefaultDisbursementReconciliationService;
 use LBHurtado\XChange\Services\DefaultDisbursementReconciliationStore;
 use LBHurtado\XChange\Services\DefaultDisbursementStatusFetcherService;
 use LBHurtado\XChange\Services\DefaultDisbursementStatusResolverService;
+use LBHurtado\XChange\Services\DefaultPayCodePresentationResolver;
 use LBHurtado\XChange\Services\DefaultRedemptionCompletionContextService;
 use LBHurtado\XChange\Services\DefaultRedemptionContextResolverService;
 use LBHurtado\XChange\Services\DefaultRedemptionExecutionService;
@@ -399,6 +405,11 @@ class XChangeServiceProvider extends ServiceProvider
 
             return $app->make($service);
         });
+
+        $this->app->bind(
+            PayCodePresentationResolverContract::class,
+            DefaultPayCodePresentationResolver::class,
+        );
     }
 
     public function boot(): void
@@ -634,6 +645,34 @@ class XChangeServiceProvider extends ServiceProvider
                 'IDEMPOTENCY_CONFLICT',
                 [],
                 409,
+            );
+        });
+
+        $exceptions->renderable(function (VoucherFlowCapabilityException $e, Request $request) {
+            if (! $request->expectsJson()) {
+                return null;
+            }
+
+            $code = match (true) {
+                $e instanceof VoucherCannotDisburse => 'VOUCHER_CANNOT_DISBURSE',
+                $e instanceof VoucherCannotCollect => 'VOUCHER_CANNOT_COLLECT',
+                $e instanceof VoucherRequiresSettlementEnvelope => 'VOUCHER_REQUIRES_SETTLEMENT_ENVELOPE',
+                default => 'VOUCHER_FLOW_CAPABILITY_VIOLATION',
+            };
+
+            $status = $e instanceof VoucherRequiresSettlementEnvelope ? 409 : 422;
+
+            return $this->apiResponses()->errorFromThrowable(
+                $e,
+                $code,
+                [
+                    'type' => 'capability_violation',
+                    'flow' => $e->capabilities?->type->value,
+                    'can_disburse' => $e->capabilities?->can_disburse,
+                    'can_collect' => $e->capabilities?->can_collect,
+                    'can_settle' => $e->capabilities?->can_settle,
+                ],
+                $status,
             );
         });
     }
