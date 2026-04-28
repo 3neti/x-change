@@ -34,6 +34,7 @@
         "3neti/report-registry": "^1.1",
         "3neti/voucher": "dev-main",
         "brick/money": "^0.10.3",
+        "endroid/qr-code": "^6.1",
         "illuminate/contracts": "^13.0",
         "illuminate/events": "^13.0",
         "illuminate/http": "^13.0",
@@ -44,6 +45,7 @@
     },
     "require-dev": {
         "dedoc/scramble": "^0.13.20",
+        "khanamiryan/qrcode-detector-decoder": "^2.0",
         "orchestra/testbench": "^11.0",
         "pestphp/pest": "^4.4",
         "pestphp/pest-plugin-laravel": "^4.1"

@@ -708,5 +708,9 @@ return [
             'json' => \LBHurtado\XChange\Services\DefaultVoucherPaymentQrRenderer::class,
             'png_base64' => \LBHurtado\XChange\Services\Base64PngVoucherPaymentQrRenderer::class,
         ],
+        'png' => [
+            'size' => env('XCHANGE_PAYMENT_QR_PNG_SIZE', 300),
+            'margin' => env('XCHANGE_PAYMENT_QR_PNG_MARGIN', 10),
+        ],
     ],
 ];
