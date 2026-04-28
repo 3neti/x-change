@@ -13,8 +13,8 @@ use LBHurtado\XChange\Contracts\ClaimExecutorContract;
 use LBHurtado\XChange\Contracts\SettlementExecutionContract;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Data\VoucherFlow\VoucherFlowCapabilitiesData;
+use LBHurtado\XChange\Exceptions\VoucherCannotDisburse;
 use Mockery\Exception\BadMethodCallException;
-use RuntimeException;
 
 class DefaultClaimExecutionFactory implements ClaimExecutionFactoryContract
 {
@@ -23,7 +23,6 @@ class DefaultClaimExecutionFactory implements ClaimExecutionFactoryContract
         protected RedeemPayCode $redeemExecutor,
         protected VoucherFlowCapabilityResolverContract $flowResolver,
     ) {}
-
 
     public function make(Voucher $voucher, array $payload): ClaimExecutorContract|SettlementExecutionContract
     {
@@ -34,8 +33,9 @@ class DefaultClaimExecutionFactory implements ClaimExecutionFactoryContract
         }
 
         if (! $capabilities->can_disburse) {
-            throw new RuntimeException(
-                "Voucher flow [{$capabilities->type->value}] cannot execute outward claims."
+            throw VoucherCannotDisburse::forVoucher(
+                $voucher,
+                $capabilities,
             );
         }
 
