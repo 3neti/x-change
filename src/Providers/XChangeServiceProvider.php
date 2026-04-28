@@ -375,10 +375,17 @@ class XChangeServiceProvider extends ServiceProvider
             NullClaimApprovalNotificationService::class,
         );
 
-        $this->app->bind(
-            ClaimOtpChallengeContract::class,
-            NullClaimOtpChallengeService::class,
-        );
+        $this->app->bind(ClaimOtpChallengeContract::class, function ($app) {
+            $driver = (string) config('x-change.claim_approval.otp.driver', 'null');
+
+            $service = config("x-change.claim_approval.otp.drivers.{$driver}.service");
+
+            if (! is_string($service) || ! class_exists($service)) {
+                throw new InvalidArgumentException("Unsupported claim approval OTP driver [{$driver}].");
+            }
+
+            return $app->make($service);
+        });
     }
 
     public function boot(): void
