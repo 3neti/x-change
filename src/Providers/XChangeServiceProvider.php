@@ -126,6 +126,7 @@ use LBHurtado\XChange\Services\TxtcmdrWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\UserLifecycleService;
 use LBHurtado\XChange\Services\VoucherAccessService;
 use LBHurtado\XChange\Services\VoucherLifecycleService;
+use LBHurtado\XChange\Services\VoucherPaymentQrRendererFactory;
 use LBHurtado\XChange\Services\WithdrawalLifecycleService;
 use LBHurtado\XChange\Services\WithdrawalPipeline;
 use LBHurtado\XChange\Services\XChangeWithdrawalIntervalEnforcer;
@@ -422,7 +423,7 @@ class XChangeServiceProvider extends ServiceProvider
 
         $this->app->bind(
             VoucherPaymentQrRendererContract::class,
-            DefaultVoucherPaymentQrRenderer::class,
+            fn ($app) => $app->make(VoucherPaymentQrRendererFactory::class)->make(),
         );
     }
 

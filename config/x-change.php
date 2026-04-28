@@ -700,4 +700,13 @@ return [
             ],
         ],
     ],
+
+    'payment_qr' => [
+        'renderer' => env('XCHANGE_PAYMENT_QR_RENDERER', 'json'),
+
+        'renderers' => [
+            'json' => \LBHurtado\XChange\Services\DefaultVoucherPaymentQrRenderer::class,
+            'png_base64' => \LBHurtado\XChange\Services\Base64PngVoucherPaymentQrRenderer::class,
+        ],
+    ],
 ];
