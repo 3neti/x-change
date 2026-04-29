@@ -6,6 +6,9 @@ namespace LBHurtado\XChange\Providers;
 
 use App\Models\User;
 use FrittenKeeZ\Vouchers\Models\Voucher;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Pipeline\Pipeline;
 use Illuminate\Support\Facades\Event;
@@ -599,6 +602,47 @@ class XChangeServiceProvider extends ServiceProvider
             );
         });
 
+        $exceptions->renderable(function (VoucherNotFound $e, Request $request) {
+            if (! $request->expectsJson()) {
+                return null;
+            }
+
+            return $this->apiResponses()->errorFromThrowable(
+                $e,
+                'VOUCHER_NOT_FOUND',
+                [],
+                404,
+            );
+        });
+
+        $exceptions->renderable(function (VoucherFlowCapabilityException $e, Request $request) {
+            if (! $request->expectsJson()) {
+                return null;
+            }
+
+            $code = match (true) {
+                $e instanceof VoucherCannotDisburse => 'VOUCHER_CANNOT_DISBURSE',
+                $e instanceof VoucherCannotCollect => 'VOUCHER_CANNOT_COLLECT',
+                $e instanceof VoucherRequiresSettlementEnvelope => 'VOUCHER_REQUIRES_SETTLEMENT_ENVELOPE',
+                default => 'VOUCHER_FLOW_CAPABILITY_VIOLATION',
+            };
+
+            $status = $e instanceof VoucherRequiresSettlementEnvelope ? 409 : 422;
+
+            return $this->apiResponses()->errorFromThrowable(
+                $e,
+                $code,
+                [
+                    'type' => 'capability_violation',
+                    'flow' => $e->capabilities?->type->value,
+                    'can_disburse' => $e->capabilities?->can_disburse,
+                    'can_collect' => $e->capabilities?->can_collect,
+                    'can_settle' => $e->capabilities?->can_settle,
+                ],
+                $status,
+            );
+        });
+
         $exceptions->renderable(function (InsufficientWalletBalance $e, Request $request) {
             if (! $request->expectsJson()) {
                 return null;
@@ -664,42 +708,40 @@ class XChangeServiceProvider extends ServiceProvider
             );
         });
 
-        $exceptions->renderable(function (VoucherFlowCapabilityException $e, Request $request) {
+        $exceptions->renderable(function (AuthenticationException $e, Request $request) {
             if (! $request->expectsJson()) {
                 return null;
             }
 
-            $code = match (true) {
-                $e instanceof VoucherCannotDisburse => 'VOUCHER_CANNOT_DISBURSE',
-                $e instanceof VoucherCannotCollect => 'VOUCHER_CANNOT_COLLECT',
-                $e instanceof VoucherRequiresSettlementEnvelope => 'VOUCHER_REQUIRES_SETTLEMENT_ENVELOPE',
-                default => 'VOUCHER_FLOW_CAPABILITY_VIOLATION',
-            };
-
-            $status = $e instanceof VoucherRequiresSettlementEnvelope ? 409 : 422;
-
             return $this->apiResponses()->errorFromThrowable(
                 $e,
-                $code,
-                [
-                    'type' => 'capability_violation',
-                    'flow' => $e->capabilities?->type->value,
-                    'can_disburse' => $e->capabilities?->can_disburse,
-                    'can_collect' => $e->capabilities?->can_collect,
-                    'can_settle' => $e->capabilities?->can_settle,
-                ],
-                $status,
+                'UNAUTHENTICATED',
+                [],
+                401,
             );
         });
 
-        $exceptions->renderable(function (VoucherNotFound $e, Request $request) {
+        $exceptions->renderable(function (AuthorizationException $e, Request $request) {
             if (! $request->expectsJson()) {
                 return null;
             }
 
             return $this->apiResponses()->errorFromThrowable(
                 $e,
-                'VOUCHER_NOT_FOUND',
+                'FORBIDDEN',
+                [],
+                403,
+            );
+        });
+
+        $exceptions->renderable(function (ModelNotFoundException $e, Request $request) {
+            if (! $request->expectsJson()) {
+                return null;
+            }
+
+            return $this->apiResponses()->errorFromThrowable(
+                $e,
+                'RESOURCE_NOT_FOUND',
                 [],
                 404,
             );
