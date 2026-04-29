@@ -4,163 +4,43 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services;
 
+use BackedEnum;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Data\VoucherFlow\VoucherFlowCapabilitiesData;
 use LBHurtado\XChange\Enums\VoucherFlowType;
 
 /**
- * Voucher Flow Capability System
+ * Resolves the canonical flow capabilities of a voucher.
  *
- * ------------------------------------------------------------------------
- * Overview
- * ------------------------------------------------------------------------
+ * The resolver treats an explicit `flow_type` as authoritative. This is
+ * important for lifecycle scenarios such as collectible Pay Codes, where the
+ * voucher may still look "disbursable" from legacy/default fields but the
+ * instruction metadata intentionally declares a different behavior.
  *
- * The Voucher Flow Capability System defines how a voucher behaves
- * based on its canonical "flow type".
+ * Resolution priority:
  *
- * Instead of hardcoding behavior across the system (e.g. "if redeemable...",
- * "if payable..."), this system centralizes behavior into a single,
- * config-driven capability model.
+ * 1. Explicit instruction metadata:
+ *      - instructions.metadata.flow_type
+ *      - metadata.instructions.metadata.flow_type
+ *      - metadata.instructions.rules.metadata.flow_type
  *
- * This allows the platform to support multiple financial flows:
+ * 2. Direct voucher/model metadata:
+ *      - flow_type
+ *      - voucher_flow_type
+ *      - metadata.flow_type
+ *      - meta.flow_type
  *
- * - Disbursable  → outbound money (cash-out, payouts, withdrawals)
- * - Collectible  → inbound money (payments, top-ups, collections)
- * - Settlement   → bi-directional, policy-driven flows (loans, insurance, escrow)
+ * 3. Legacy voucher type fallback:
+ *      - voucher_type
+ *      - instructions.voucher_type
+ *      - metadata.instructions.voucher_type
  *
+ * 4. Config default:
+ *      - config('x-change.voucher_flow_types.default', 'disbursable')
  *
- * ------------------------------------------------------------------------
- * Key Concepts
- * ------------------------------------------------------------------------
- *
- * 1. VoucherFlowType (Enum)
- *
- * Defines the canonical flow classification of a voucher:
- *
- * - disbursable
- * - collectible
- * - settlement
- *
- * Legacy values (e.g. "redeemable", "payable") are mapped to these
- * canonical types via config aliases.
- *
- *
- * 2. Capabilities (DTO)
- *
- * Each flow type resolves into a set of explicit capabilities:
- *
- * - can_disburse      → allows outward money movement
- * - can_collect       → allows inward money movement
- * - can_settle        → allows both directions under rules
- * - requires_envelope → requires settlement envelope readiness
- * - supports_slicing  → allows partial claims (open / fixed slices)
- *
- * These capabilities are returned as a strongly-typed DTO:
- *
- *     VoucherFlowCapabilitiesData
- *
- *
- * 3. Resolver (this class)
- *
- * This service:
- *
- * - Determines the canonical flow type of a voucher
- * - Applies alias normalization
- * - Falls back to default config when unspecified
- * - Returns the resolved capabilities for that voucher
- *
- *
- * ------------------------------------------------------------------------
- * Design Principles
- * ------------------------------------------------------------------------
- *
- * 1. Behavior is Config-Driven
- *
- * All flow definitions and capabilities are defined in:
- *
- *     config('x-change.voucher_flow_types')
- *
- * This allows new behaviors to be introduced without changing code.
- *
- *
- * 2. Type ≠ Behavior
- *
- * A voucher type defines a capability envelope, not exact behavior.
- *
- * Example:
- * - "settlement" allows both collect + disburse
- * - but actual execution may still depend on:
- *     - authorization policy
- *     - envelope readiness
- *     - lifecycle stage
- *
- *
- * 3. Backward Compatibility
- *
- * Legacy voucher types are supported via alias mapping:
- *
- *     redeemable → disbursable
- *     payable    → collectible
- *
- * This ensures existing systems continue to function during migration.
- *
- *
- * 4. Single Source of Truth
- *
- * All voucher behavior decisions SHOULD flow through this resolver.
- *
- * Avoid scattering logic like:
- *
- *     if ($voucher->isRedeemable()) ...
- *
- * Instead:
- *
- *     $capabilities = $resolver->resolve($voucher);
- *
- *
- * ------------------------------------------------------------------------
- * Usage
- * ------------------------------------------------------------------------
- *
- * Resolve capabilities:
- *
- *     $capabilities = app(VoucherFlowCapabilityResolverContract::class)
- *         ->resolve($voucher);
- *
- * Example:
- *
- *     if ($capabilities->can_disburse) {
- *         // allow withdrawal
- *     }
- *
- *
- * ------------------------------------------------------------------------
- * Future Extensions
- * ------------------------------------------------------------------------
- *
- * This system is designed to support:
- *
- * - Authorization policies (OTP, delegated spend, thresholds)
- * - Settlement modes (disburse-then-collect, escrow, insurance)
- * - Stage-based voucher lifecycles
- * - Envelope-gated execution
- *
- * These features will build on top of this capability layer.
- *
- *
- * ------------------------------------------------------------------------
- * Summary
- * ------------------------------------------------------------------------
- *
- * This system transforms vouchers from simple "types" into
- * programmable financial objects with explicit capabilities.
- *
- * It is the foundation for:
- *
- * - unified voucher flows
- * - consistent behavior across disbursement, payment, and settlement
- * - extensible financial orchestration
+ * This preserves backward compatibility while allowing newer instruction
+ * contracts to override inferred behavior explicitly.
  */
 class DefaultVoucherFlowCapabilityResolver implements VoucherFlowCapabilityResolverContract
 {
@@ -210,87 +90,79 @@ class DefaultVoucherFlowCapabilityResolver implements VoucherFlowCapabilityResol
 
     protected function rawFlowType(Voucher $voucher): ?string
     {
-        foreach ([
-            'flow_type',
-            'voucher_flow_type',
-            'voucher_type',
-        ] as $attribute) {
-            $value = $voucher->getAttribute($attribute);
+        foreach ($this->flowTypeCandidates($voucher) as $value) {
+            $normalized = $this->normalizeRawValue($value);
 
-            if ($value instanceof \BackedEnum) {
-                return (string) $value->value;
-            }
-
-            if (is_string($value) && trim($value) !== '') {
-                return trim($value);
-            }
-        }
-
-        try {
-            $value = $voucher->instructions?->voucher_type ?? null;
-
-            if ($value instanceof \BackedEnum) {
-                return (string) $value->value;
-            }
-
-            if (is_string($value) && trim($value) !== '') {
-                return trim($value);
-            }
-        } catch (\Throwable) {
-            //
-        }
-
-        foreach ([
-            'metadata.instructions.voucher_type',
-            'metadata.flow_type',
-            'metadata.voucher_flow_type',
-            'metadata.voucher_type',
-            'meta.flow_type',
-            'meta.voucher_flow_type',
-            'meta.voucher_type',
-        ] as $path) {
-            $value = data_get($voucher, $path);
-
-            if ($value instanceof \BackedEnum) {
-                return (string) $value->value;
-            }
-
-            if (is_string($value) && trim($value) !== '') {
-                return trim($value);
+            if ($normalized !== null) {
+                return $normalized;
             }
         }
 
         return null;
     }
 
-    protected function rawTypeFrom(Voucher $voucher): ?string
+    /**
+     * @return array<int, mixed>
+     */
+    protected function flowTypeCandidates(Voucher $voucher): array
     {
-        $modelType = $voucher->getAttribute('voucher_type');
+        $metadata = $voucher->getAttribute('metadata');
+        $meta = $voucher->getAttribute('meta');
 
-        if ($modelType instanceof \BackedEnum) {
-            return (string) $modelType->value;
+        return [
+            // Highest priority: explicit instruction-level flow declaration.
+            $this->instructionMetadataFlowType($voucher),
+            data_get($metadata, 'instructions.metadata.flow_type'),
+            data_get($metadata, 'instructions.rules.metadata.flow_type'),
+            data_get($metadata, 'instructions.flow_type'),
+            data_get($metadata, 'rules.metadata.flow_type'),
+            data_get($metadata, 'rules.flow_type'),
+
+            // Direct model / metadata flow declarations.
+            $voucher->getAttribute('flow_type'),
+            $voucher->getAttribute('voucher_flow_type'),
+            data_get($metadata, 'flow_type'),
+            data_get($metadata, 'voucher_flow_type'),
+            data_get($meta, 'flow_type'),
+            data_get($meta, 'voucher_flow_type'),
+
+            // Legacy voucher type fallback.
+            $voucher->getAttribute('voucher_type'),
+            $this->instructionVoucherType($voucher),
+            data_get($metadata, 'instructions.voucher_type'),
+            data_get($metadata, 'voucher_type'),
+            data_get($meta, 'voucher_type'),
+        ];
+    }
+
+    protected function normalizeRawValue(mixed $value): ?string
+    {
+        if ($value instanceof BackedEnum) {
+            return (string) $value->value;
         }
 
-        if (is_string($modelType) && $modelType !== '') {
-            return $modelType;
+        if (is_string($value) && trim($value) !== '') {
+            return trim($value);
         }
 
+        return null;
+    }
+
+    protected function instructionMetadataFlowType(Voucher $voucher): mixed
+    {
         try {
-            $instructionType = $voucher->instructions?->voucher_type ?? null;
-
-            if ($instructionType instanceof \BackedEnum) {
-                return (string) $instructionType->value;
-            }
-
-            if (is_string($instructionType) && $instructionType !== '') {
-                return $instructionType;
-            }
+            return data_get($voucher->instructions?->metadata, 'flow_type');
         } catch (\Throwable) {
-            // Ignore malformed/legacy instruction payloads and fall back below.
+            return null;
         }
+    }
 
-        return data_get($voucher->getAttribute('metadata'), 'instructions.voucher_type')
-            ?? data_get($voucher->getAttribute('metadata'), 'voucher_type')
-            ?? data_get($voucher->getAttribute('meta'), 'voucher_type');
+    protected function instructionVoucherType(Voucher $voucher): mixed
+    {
+        try {
+            return $voucher->instructions?->voucher_type ?? null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 }

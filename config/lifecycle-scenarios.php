@@ -825,6 +825,9 @@ return [
 
         'divisible_open_two_slices' => [
             'label' => 'Divisible Open Two Slices',
+            'metadata' => [
+                'flow_type' => 'disbursable',
+            ],
             'amount' => 300,
             'currency' => 'PHP',
             'cash' => [
@@ -881,6 +884,10 @@ return [
         'divisible_open_three_slices_enforced_interval' => [
             'label' => 'Divisible Open Three Slices (Enforced Interval)',
 
+            'metadata' => [
+                'flow_type' => 'disbursable',
+            ],
+
             'amount' => 150,
             'currency' => 'PHP',
 
@@ -929,6 +936,90 @@ return [
                     'expect' => [
                         'status' => 'succeeded',
                         'claim_type' => 'withdraw',
+                    ],
+                ],
+            ],
+        ],
+
+        'collectible_basic_payment' => [
+            'label' => 'Collectible Basic Payment QR',
+
+            'metadata' => [
+                'flow_type' => 'collectible',
+            ],
+
+            'amount' => 100,
+            'currency' => 'PHP',
+
+            'issuer' => [
+                'email' => 'system@example.test',
+                'mobile' => '639178251991',
+                'wallet_balance' => 1_000_000,
+            ],
+
+            'cash' => [
+                'settlement_rail' => 'INSTAPAY',
+                'validation' => [
+                    'secret' => null,
+                    'mobile' => null,
+                    'payable' => null,
+                    'country' => 'PH',
+                    'location' => null,
+                    'radius' => null,
+                ],
+            ],
+
+            'inputs' => [
+                'fields' => [],
+            ],
+
+            'feedback' => [
+                'email' => 'example@example.com',
+                'mobile' => '09171234567',
+                'webhook' => 'https://example.com/webhook',
+            ],
+
+            'rider' => [
+                'message' => null,
+                'url' => null,
+                'redirect_timeout' => null,
+                'splash' => null,
+                'splash_timeout' => null,
+                'og_source' => null,
+            ],
+
+            'count' => 1,
+            'prefix' => 'PAY',
+            'mask' => '****',
+            'ttl' => null,
+
+            /**
+             * 🔥 THIS IS THE FIX
+             */
+            'claims' => [
+                [
+                    'name' => 'default',
+
+                    'claim_mobile' => '639171234567',
+
+                    'claim_payload' => [
+                        'mobile' => '639171234567',
+                        'recipient_country' => 'PH',
+                        'bank_account' => [
+                            'bank_code' => 'GXCHPHM2XXX',
+                            'account_number' => '09173011987',
+                        ],
+                        'inputs' => [],
+                    ],
+
+                    /**
+                     * ✅ EXPECT FAILURE (NOT SUCCESS)
+                     */
+                    'expect' => [
+                        'status' => 'failed',
+                        'message_contains' => [
+                            'cannot execute outward claims',
+                        ],
                     ],
                 ],
             ],

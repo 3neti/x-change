@@ -3,8 +3,11 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Artisan;
-use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
+use LBHurtado\XChange\Enums\VoucherFlowType;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
+use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Tests\Fakes\User as FakeLifecycleUser;
 
 beforeEach(function () {
@@ -106,4 +109,28 @@ it('runs the divisible open three slices enforced interval scenario successfully
         ->values();
 
     expect($reconciliations)->toHaveCount(3);
+});
+
+it('issues open slice lifecycle scenarios as disbursable vouchers', function () {
+    $exitCode = Artisan::call('xchange:lifecycle:run', [
+        'scenario' => 'divisible_open_three_slices_enforced_interval',
+        '--timeout' => 1,
+        '--poll' => 1,
+        '--accept-pending' => true,
+        '--json' => true,
+    ]);
+
+    expect($exitCode)->toBe(0);
+
+    $voucher = Voucher::query()
+        ->latest('id')
+        ->first();
+
+    expect($voucher)->not->toBeNull();
+
+    $capabilities = app(VoucherFlowCapabilityResolverContract::class)
+        ->resolve($voucher);
+
+    expect($capabilities->type)->toBe(VoucherFlowType::Disbursable);
+    expect($capabilities->can_disburse)->toBeTrue();
 });
