@@ -18,6 +18,7 @@ class CollectVoucherFunds
     public function __construct(
         protected VoucherFlowCapabilityResolverContract $capabilities,
         protected VoucherPaymentConfirmationContract $confirmation,
+        protected RecordVoucherCollection $collections,
     ) {}
 
     public function handle(Voucher $voucher, Wallet $wallet, array $payload): VoucherPaymentResultData
@@ -26,6 +27,18 @@ class CollectVoucherFunds
 
         if (! $capabilities->can_collect) {
             throw VoucherCannotCollect::forVoucher($voucher, $capabilities);
+        }
+
+        $result = $this->confirmation->confirm($voucher, $payload);
+
+        if (! $result->succeeded()) {
+            $this->collections->handle(
+                voucher: $voucher,
+                result: $result,
+                payload: $payload,
+            );
+
+            return $result;
         }
 
         return DB::transaction(function () use ($voucher, $wallet, $payload): VoucherPaymentResultData {
@@ -46,7 +59,7 @@ class CollectVoucherFunds
                 'meta' => $result->meta,
             ]);
 
-            return new VoucherPaymentResultData(
+            $collected = new VoucherPaymentResultData(
                 voucher_code: $result->voucher_code,
                 status: 'collected',
                 amount: $result->amount,
@@ -64,6 +77,15 @@ class CollectVoucherFunds
                 meta: $result->meta,
                 messages: ['Voucher funds collected successfully.'],
             );
+
+            $this->collections->handle(
+                voucher: $voucher,
+                result: $collected,
+                payload: $payload,
+                walletTransaction: $transaction,
+            );
+
+            return $collected;
         });
     }
 }

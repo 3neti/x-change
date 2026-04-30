@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Artisan;
+use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Tests\Fakes\User as FakeLifecycleUser;
 
 beforeEach(function () {
@@ -57,6 +58,21 @@ it('confirms collectible voucher payment and credits issuer wallet', function ()
 
     expect((float) $wallet->fresh()->balanceFloat)
         ->toBe($balanceBefore + 100.00);
+
+    $collection = VoucherCollection::query()
+        ->where('voucher_id', $voucher->id)
+        ->latest('id')
+        ->first();
+
+    expect($collection)->not->toBeNull()
+        ->and($collection->status)->toBe('collected')
+        ->and($collection->requested_amount_minor)->toBe(10000)
+        ->and($collection->collected_amount_minor)->toBe(10000)
+        ->and($collection->provider)->toBe('manual')
+        ->and($collection->provider_reference)->toBe('REF-123')
+        ->and($collection->provider_transaction_id)->toBe('TXN-123')
+        ->and($collection->payer_mobile)->toBe('09171234567')
+        ->and($collection->wallet_transaction_id)->not->toBeNull();
 });
 
 it('blocks payment confirmation for disbursable voucher', function () {

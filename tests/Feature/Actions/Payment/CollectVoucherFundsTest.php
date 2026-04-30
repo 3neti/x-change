@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use LBHurtado\XChange\Actions\Payment\CollectVoucherFunds;
 use LBHurtado\XChange\Exceptions\VoucherCannotCollect;
+use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 beforeEach(function () {
@@ -49,6 +50,21 @@ it('credits wallet when collecting funds for collectible voucher', function () {
         ->and($result->amount)->toBe(100.00)
         ->and((float) $wallet->balanceFloat)->toBe($balanceBefore + 100.00)
         ->and(data_get($result->wallet, 'transaction_id'))->not->toBeNull();
+
+    $collection = VoucherCollection::query()
+        ->where('voucher_id', $voucher->id)
+        ->latest('id')
+        ->first();
+
+    expect($collection)->not->toBeNull()
+        ->and($collection->status)->toBe('collected')
+        ->and($collection->requested_amount_minor)->toBe(10000)
+        ->and($collection->collected_amount_minor)->toBe(10000)
+        ->and($collection->provider)->toBe('manual')
+        ->and($collection->provider_reference)->toBe('REF-123')
+        ->and($collection->provider_transaction_id)->toBe('TXN-123')
+        ->and($collection->payer_mobile)->toBe('09171234567')
+        ->and($collection->wallet_transaction_id)->not->toBeNull();
 });
 
 it('does not credit wallet when payment confirmation did not succeed', function () {
@@ -78,6 +94,17 @@ it('does not credit wallet when payment confirmation did not succeed', function 
 
     expect($result->status)->toBe('failed')
         ->and((float) $wallet->fresh()->balanceFloat)->toBe($balanceBefore);
+
+    $collection = VoucherCollection::query()
+        ->where('voucher_id', $voucher->id)
+        ->latest('id')
+        ->first();
+
+    expect($collection)->not->toBeNull()
+        ->and($collection->status)->toBe('failed')
+        ->and($collection->requested_amount_minor)->toBe(10000)
+        ->and($collection->collected_amount_minor)->toBe(0)
+        ->and($collection->wallet_transaction_id)->toBeNull();
 });
 
 it('blocks collection for disbursable vouchers', function () {
@@ -99,3 +126,4 @@ it('blocks collection for disbursable vouchers', function () {
         'status' => 'succeeded',
     ]);
 })->throws(VoucherCannotCollect::class);
+
