@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Actions\PayCode;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
 use LBHurtado\XChange\Data\PricingEstimateData;
+use LBHurtado\XChange\Services\VoucherIssuancePayloadNormalizer;
 
 class EstimatePayCodeCost
 {
@@ -19,6 +20,7 @@ class EstimatePayCodeCost
      */
     public function handle(array $input): PricingEstimateData
     {
+        $input = app(VoucherIssuancePayloadNormalizer::class)->normalize($input);
         $instructions = VoucherInstructionsData::from($input);
 
         $estimate = $this->pricing->estimate($instructions);

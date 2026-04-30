@@ -16,6 +16,7 @@ use LBHurtado\XChange\Data\PayCodeLinksData;
 use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Services\InstructionRevenueAllocatorService;
+use LBHurtado\XChange\Services\VoucherIssuancePayloadNormalizer;
 use RuntimeException;
 
 class GeneratePayCode
@@ -33,6 +34,7 @@ class GeneratePayCode
      */
     public function handle(array $input): GeneratePayCodeResultData
     {
+        $input = app(VoucherIssuancePayloadNormalizer::class)->normalize($input);
         $issuer = $this->users->resolve($input);
 
         if (! $issuer) {

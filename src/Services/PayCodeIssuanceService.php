@@ -19,6 +19,7 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
             throw new PayCodeIssuanceFailed('Pay Code issuance requires a valid authenticatable issuer.');
         }
 
+        $input = app(VoucherIssuancePayloadNormalizer::class)->normalize($input);
         $instructions = VoucherInstructionsData::createFromAttribs($input);
 
         /** @var \Illuminate\Contracts\Auth\Authenticatable|null $previousUser */
