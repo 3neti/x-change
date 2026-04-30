@@ -27,6 +27,7 @@ use LBHurtado\XChange\Lifecycle\Http\Controllers\Users\ShowUserController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Users\ShowUserKycController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Users\SubmitUserKycController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Vouchers\CancelVoucherController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Vouchers\ConfirmVoucherPaymentController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Vouchers\CreateVoucherController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Vouchers\ListVouchersController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Vouchers\ShowVoucherByCodeController;
@@ -76,13 +77,12 @@ Route::prefix('api/x/v1')->as('api.x.v1.')->group(function (): void {
         Route::post('code/{code}/claim/complete', CompleteVoucherClaimController::class)->name('vouchers.claim.complete');
         Route::get('code/{code}/claim/status', ShowVoucherClaimStatusController::class)->name('vouchers.claim.status.show');
 
-        Route::post('code/{code}/claim/approve', ApproveVoucherClaimController::class)
-            ->name('vouchers.claim.approve');
-        Route::post('code/{code}/claim/otp/verify', VerifyVoucherClaimOtpController::class)
-            ->name('vouchers.claim.otp.verify');
+        Route::post('code/{code}/claim/approve', ApproveVoucherClaimController::class)->name('vouchers.claim.approve');
+        Route::post('code/{code}/claim/otp/verify', VerifyVoucherClaimOtpController::class)->name('vouchers.claim.otp.verify');
+        Route::get('code/{code}/payment-qr', ShowVoucherPaymentQrController::class)->name('vouchers.payment-qr.show');
 
-        Route::get('code/{code}/payment-qr', ShowVoucherPaymentQrController::class)
-            ->name('vouchers.payment-qr.show');
+        Route::post(
+            'code/{code}/payment-confirmations', ConfirmVoucherPaymentController::class)->name('vouchers.payment-confirmations.store');
     });
 
     Route::prefix('reconciliations')->group(function (): void {

@@ -68,6 +68,7 @@ use LBHurtado\XChange\Contracts\SettlementReadinessGateContract;
 use LBHurtado\XChange\Contracts\UserLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\VendorRegistryContract;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
+use LBHurtado\XChange\Contracts\VoucherCollectionWalletResolverContract;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\VoucherPaymentConfirmationContract;
@@ -113,6 +114,7 @@ use LBHurtado\XChange\Services\DefaultRedemptionValidationService;
 use LBHurtado\XChange\Services\DefaultSettlementExecutionService;
 use LBHurtado\XChange\Services\DefaultSettlementFlowPreparationService;
 use LBHurtado\XChange\Services\DefaultSettlementReadinessGate;
+use LBHurtado\XChange\Services\DefaultVoucherCollectionWalletResolver;
 use LBHurtado\XChange\Services\DefaultVoucherFlowCapabilityResolver;
 use LBHurtado\XChange\Services\DefaultVoucherPaymentConfirmationService;
 use LBHurtado\XChange\Services\DefaultVoucherPaymentQrGenerator;
@@ -442,6 +444,11 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->bind(
             VoucherPaymentConfirmationContract::class,
             DefaultVoucherPaymentConfirmationService::class,
+        );
+
+        $this->app->bind(
+            VoucherCollectionWalletResolverContract::class,
+            DefaultVoucherCollectionWalletResolver::class,
         );
     }
 
