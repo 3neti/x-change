@@ -3,7 +3,10 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Artisan;
+use LBHurtado\EmiCore\Data\PayoutRequestData;
+use LBHurtado\XChange\Exceptions\VoucherCannotDisburse;
 use LBHurtado\XChange\Models\VoucherCollection;
+use LBHurtado\XChange\Services\WithdrawalWalletSettlementService;
 use LBHurtado\XChange\Tests\Fakes\User as FakeLifecycleUser;
 
 beforeEach(function () {
@@ -138,3 +141,32 @@ it('returns not found for unknown voucher code', function () {
 
     $response->assertNotFound();
 });
+
+it('blocks collectible voucher wallet settlement', function () {
+    $voucher = issueVoucher(validVoucherInstructions(
+        amount: 0.00,
+        settlementRail: 'INSTAPAY',
+        overrides: [
+            'target_amount' => 100.00,
+            'metadata' => [
+                'flow_type' => 'collectible',
+            ],
+        ],
+    ));
+
+    $input = new PayoutRequestData(
+        reference: 'REF-123',
+        bank_code: 'GXCHPHM2XXX',
+        account_number: '09173011987',
+        amount: 100.00,
+        currency: 'PHP',
+        settlement_rail: 'INSTAPAY',
+    );
+
+    app(WithdrawalWalletSettlementService::class)->settle(
+        voucher: $voucher,
+        input: $input,
+        withdrawAmount: 100.00,
+        sliceNumber: 1,
+    );
+})->throws(VoucherCannotDisburse::class);

@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Lifecycle\Http\Controllers\Vouchers;
 
 use LBHurtado\XChange\Actions\Payment\CollectVoucherFunds;
-use LBHurtado\XChange\Contracts\VoucherCollectionWalletResolverContract;
 use LBHurtado\XChange\Lifecycle\Http\Requests\Vouchers\ConfirmVoucherPaymentRequest;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\VoucherAccessService;
+use LBHurtado\XChange\Services\VoucherCapabilityGuard;
 
 class ConfirmVoucherPaymentController
 {
@@ -16,15 +16,16 @@ class ConfirmVoucherPaymentController
         string $code,
         ConfirmVoucherPaymentRequest $request,
         VoucherAccessService $vouchers,
-        VoucherCollectionWalletResolverContract $wallets,
         CollectVoucherFunds $collect,
         ApiResponseFactory $responses,
+        VoucherCapabilityGuard $guard,
     ) {
         $voucher = $vouchers->findByCodeOrFail($code);
 
+        $guard->ensureCanCollect($voucher);
+
         $result = $collect->handle(
             voucher: $voucher,
-            wallet: $wallets->resolve($voucher),
             payload: $request->payload(),
         );
 

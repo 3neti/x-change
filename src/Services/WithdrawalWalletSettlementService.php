@@ -13,35 +13,23 @@ use RuntimeException;
 
 class WithdrawalWalletSettlementService
 {
+    public function __construct(
+        protected VoucherCapabilityGuard $guard,
+    ) {}
+
     public function settle(
         Voucher $voucher,
         PayoutRequestData $input,
         float $withdrawAmount,
         int $sliceNumber,
     ): WithdrawalWalletSettlementData {
+        $this->guard->ensureCanDisburse($voucher);
+
         // TODO: Move rail fee resolution into a dedicated fee/rail service.
         // Provider call has already been extracted out of the processor.
         $feeAmount = 0;
 
         $feeStrategy = data_get($voucher->instructions, 'cash.fee_strategy', 'absorb');
-
-//        $cash = null;
-//
-//        if ($voucher instanceof Wallet) {
-//            $cash = $voucher;
-//        } elseif ($voucher->relationLoaded('user')) {
-//            $cash = $voucher->getRelation('user');
-//        } elseif (method_exists($voucher, 'user')) {
-//            $cash = $voucher->user()->first();
-//        }
-//
-//        if (! $cash instanceof Wallet && auth()->user() instanceof Wallet) {
-//            $cash = auth()->user();
-//        }
-//
-//        if (! $cash instanceof Wallet) {
-//            throw new RuntimeException('Voucher wallet owner is required for withdrawal settlement.');
-//        }
 
         $cash = $this->resolveCashWallet($voucher);
 

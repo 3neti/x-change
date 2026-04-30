@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use LBHurtado\XChange\Actions\Payment\CollectVoucherFunds;
+use LBHurtado\XChange\Contracts\VoucherPaymentConfirmationContract;
 use LBHurtado\XChange\Exceptions\VoucherCannotCollect;
 use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Tests\Fakes\User;
@@ -27,7 +28,7 @@ it('credits wallet when collecting funds for collectible voucher', function () {
     $wallet = $user->wallet;
     $balanceBefore = (float) $wallet->balanceFloat;
 
-    $result = app(CollectVoucherFunds::class)->handle($voucher, $wallet, [
+    $result = app(CollectVoucherFunds::class)->handle($voucher, [
         'amount' => 100.00,
         'currency' => 'PHP',
         'status' => 'succeeded',
@@ -83,7 +84,7 @@ it('does not credit wallet when payment confirmation did not succeed', function 
     $wallet = $user->wallet;
     $balanceBefore = (float) $wallet->balanceFloat;
 
-    $result = app(CollectVoucherFunds::class)->handle($voucher, $wallet, [
+    $result = app(CollectVoucherFunds::class)->handle($voucher, [
         'amount' => 100.00,
         'currency' => 'PHP',
         'status' => 'failed',
@@ -120,7 +121,34 @@ it('blocks collection for disbursable vouchers', function () {
         ],
     ));
 
-    app(CollectVoucherFunds::class)->handle($voucher, $user->wallet, [
+    app(CollectVoucherFunds::class)->handle($voucher, [
+        'amount' => 100.00,
+        'currency' => 'PHP',
+        'status' => 'succeeded',
+    ]);
+})->throws(VoucherCannotCollect::class);
+
+it('does not call payment confirmation when voucher cannot collect', function () {
+    $user = actingAsTestUser();
+
+    $voucher = issueVoucher(validVoucherInstructions(
+        amount: 100.00,
+        settlementRail: 'INSTAPAY',
+        overrides: [
+            'metadata' => [
+                'flow_type' => 'disbursable',
+            ],
+        ],
+    ));
+
+    $wallet = $user->wallet;
+
+    $confirmation = Mockery::mock(VoucherPaymentConfirmationContract::class);
+    $confirmation->shouldNotReceive('confirm');
+
+    app()->instance(VoucherPaymentConfirmationContract::class, $confirmation);
+
+    app(CollectVoucherFunds::class)->handle($voucher, [
         'amount' => 100.00,
         'currency' => 'PHP',
         'status' => 'succeeded',

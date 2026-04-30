@@ -4,30 +4,27 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Actions\Payment;
 
-use Bavix\Wallet\Interfaces\Wallet;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use LBHurtado\Voucher\Models\Voucher;
-use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Contracts\VoucherPaymentConfirmationContract;
 use LBHurtado\XChange\Data\Payment\VoucherPaymentResultData;
-use LBHurtado\XChange\Exceptions\VoucherCannotCollect;
+use LBHurtado\XChange\Services\VoucherCapabilityGuard;
+use LBHurtado\XChange\Services\WalletResolver;
 
 class CollectVoucherFunds
 {
     public function __construct(
-        protected VoucherFlowCapabilityResolverContract $capabilities,
+        protected VoucherCapabilityGuard $guard,
         protected VoucherPaymentConfirmationContract $confirmation,
         protected RecordVoucherCollection $collections,
     ) {}
 
-    public function handle(Voucher $voucher, Wallet $wallet, array $payload): VoucherPaymentResultData
+    public function handle(Voucher $voucher, array $payload): VoucherPaymentResultData
     {
-        $capabilities = $this->capabilities->resolve($voucher);
+        $this->guard->ensureCanCollect($voucher);
 
-        if (! $capabilities->can_collect) {
-            throw VoucherCannotCollect::forVoucher($voucher, $capabilities);
-        }
+        $wallet = app(WalletResolver::class)
+            ->resolveForCollection($voucher, auth()->user());
 
         $result = $this->confirmation->confirm($voucher, $payload);
 
@@ -41,20 +38,13 @@ class CollectVoucherFunds
             return $result;
         }
 
-        return DB::transaction(function () use ($voucher, $wallet, $payload): VoucherPaymentResultData {
-            $result = $this->confirmation->confirm($voucher, $payload);
-
-            if (! $result->succeeded()) {
-                return $result;
-            }
-
+        return DB::transaction(function () use ($voucher, $wallet, $payload, $result): VoucherPaymentResultData {
             $transaction = $wallet->depositFloat($result->amount, [
                 'reason' => 'voucher_collection',
-                'voucher_code' => $result->voucher_code,
+                'voucher_code' => $voucher->code,
                 'provider' => $result->provider,
                 'provider_reference' => $result->provider_reference,
                 'provider_transaction_id' => $result->provider_transaction_id,
-                'idempotency_key' => $payload['idempotency_key'] ?? (string) Str::uuid(),
                 'payer' => $result->payer,
                 'meta' => $result->meta,
             ]);
@@ -69,10 +59,7 @@ class CollectVoucherFunds
                 provider_transaction_id: $result->provider_transaction_id,
                 payer: $result->payer,
                 wallet: [
-                    'transaction_id' => $transaction->id ?? null,
-                    'balance' => method_exists($wallet, 'balanceFloat')
-                        ? $wallet->balanceFloat
-                        : null,
+                    'transaction_id' => $transaction->getKey(),
                 ],
                 meta: $result->meta,
                 messages: ['Voucher funds collected successfully.'],
