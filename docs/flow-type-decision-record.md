@@ -355,6 +355,35 @@ x-change is built on:
 
 ---
 
+## 12. Why flow_type is persisted in instructions metadata
+
+### Decision
+
+`flow_type` is stored inside:
+voucher.metadata.instructions.metadata.flow_type
+
+NOT inferred dynamically.
+
+### Rationale
+
+- lifecycle scenarios must explicitly define behavior
+- avoids ambiguity between collectible and disbursable
+- enables deterministic capability resolution
+- aligns with instruction-driven architecture
+
+### Why inside instructions.metadata?
+
+Because:
+
+- instructions represent the executable contract
+- metadata travels with the instruction payload
+- voucher becomes a pure execution artifact
+
+### Key Insight
+
+> Flow type is part of the **instruction**, not the voucher shell
+
+
 ## Final Thought
 
 x-change intentionally avoids:

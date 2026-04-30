@@ -33,6 +33,40 @@ Each voucher flow is defined by **orthogonal axes**:
 
 ---
 
+## Flow Type Resolution (Runtime)
+
+Flow type is not derived implicitly.
+
+It is explicitly declared and persisted via instruction metadata:
+scenario.metadata.flow_type
+→ instructions.metadata.flow_type
+→ voucher.metadata.instructions.metadata.flow_type
+→ VoucherFlowCapabilityResolver
+
+### Source of Truth
+
+The system resolves flow type in this order:
+
+1. `voucher.metadata.instructions.metadata.flow_type`
+2. fallback rules (if not present)
+
+### Why this matters
+
+- ensures deterministic behavior
+- allows lifecycle scenarios to define flow explicitly
+- removes ambiguity between collectible vs disbursable
+- enables future hybrid / settlement flows
+
+### Example
+
+```php
+'instructions' => [
+    'metadata' => [
+        'flow_type' => 'collectible',
+    ],
+]
+```
+
 ## Primary Flow Matrix
 
 | Flow Type | UX Label | Direction | Initiator | Authorizer | Recipient | Cash Capability | QR Type | Envelope | Close Condition |

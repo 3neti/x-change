@@ -16,6 +16,34 @@ Every transaction begins with **presentation of a Pay Code**.
 ## Core Principle
 
 > All flows are **presentation-triggered**.
+Additionally:
+
+> All flows are **flow-type resolved**
+Every Pay Code presentation resolves to a voucher, and that voucher declares:
+- whether it can collect
+- whether it can disburse
+- whether it is settlement-capable
+
+via:
+voucher.metadata.instructions.metadata.flow_type
+---
+
+## Flow-Type Aware Presentation
+
+Before execution:
+present Pay Code
+→ resolve voucher
+→ resolve flow_type
+→ enforce capability
+→ proceed
+
+### Example
+
+| flow_type | behavior |
+|----------|---------|
+| disbursable | withdraw allowed |
+| collectible | payment allowed |
+| settlement | both allowed |
 
 ```
 present Pay Code → resolve voucher → validate → authorize → execute → record
@@ -24,6 +52,7 @@ present Pay Code → resolve voucher → validate → authorize → execute → 
 No flow bypasses Pay Code.
 
 ---
+
 
 ## Presentation Flow Types
 
