@@ -9,6 +9,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\VoucherPaymentConfirmationContract;
 use LBHurtado\XChange\Data\Payment\VoucherPaymentResultData;
 use LBHurtado\XChange\Services\VoucherCapabilityGuard;
+use LBHurtado\XChange\Services\VoucherCollectionIdempotencyService;
 use LBHurtado\XChange\Services\WalletResolver;
 
 class CollectVoucherFunds
@@ -17,11 +18,16 @@ class CollectVoucherFunds
         protected VoucherCapabilityGuard $guard,
         protected VoucherPaymentConfirmationContract $confirmation,
         protected RecordVoucherCollection $collections,
+        protected VoucherCollectionIdempotencyService $idempotency,
     ) {}
 
     public function handle(Voucher $voucher, array $payload): VoucherPaymentResultData
     {
         $this->guard->ensureCanCollect($voucher);
+
+        if ($replay = $this->idempotency->findReplay($voucher, $payload)) {
+            return $replay;
+        }
 
         $wallet = app(WalletResolver::class)
             ->resolveForCollection($voucher, auth()->user());

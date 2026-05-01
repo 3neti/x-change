@@ -170,3 +170,47 @@ it('blocks collectible voucher wallet settlement', function () {
         sliceNumber: 1,
     );
 })->throws(VoucherCannotDisburse::class);
+
+it('does not double credit wallet when payment confirmation is replayed', function () {
+    $issuer = actingAsTestUser(1_000_000);
+
+    $wallet = $issuer->wallet;
+    $balanceBefore = (float) $wallet->balanceFloat;
+
+    $voucher = issueVoucher(validVoucherInstructions(
+        amount: 0.00,
+        settlementRail: 'INSTAPAY',
+        overrides: [
+            'target_amount' => 100.00,
+            'metadata' => [
+                'flow_type' => 'collectible',
+                'issuer_id' => (string) $issuer->id,
+            ],
+        ],
+    ));
+
+    $payload = [
+        'amount' => 100.00,
+        'currency' => 'PHP',
+        'status' => 'succeeded',
+        'provider' => 'manual',
+        'provider_reference' => 'REF-API-IDEM-1',
+        'provider_transaction_id' => 'TXN-API-IDEM-1',
+        'idempotency_key' => 'api-idem-1',
+    ];
+
+    $first = $this->postJson(route('api.x.v1.vouchers.payment-confirmations.store', [
+        'code' => $voucher->code,
+    ]), $payload);
+
+    $second = $this->postJson(route('api.x.v1.vouchers.payment-confirmations.store', [
+        'code' => $voucher->code,
+    ]), $payload);
+
+    $first->assertOk();
+    $second->assertOk();
+    $second->assertJsonPath('data.meta.replayed', true);
+
+    expect((float) $wallet->fresh()->balanceFloat)->toBe($balanceBefore + 100.00);
+    expect(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(1);
+});
