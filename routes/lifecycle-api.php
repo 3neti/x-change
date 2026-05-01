@@ -16,6 +16,7 @@ use LBHurtado\XChange\Lifecycle\Http\Controllers\Events\ShowEventController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Events\ShowIdempotencyKeyController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Issuers\CreateIssuerController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Issuers\CreateIssuerWalletController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Payment\HandleVoucherPaymentWebhookController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Pricelist\EstimateVoucherController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Pricelist\ListPricelistItemsController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Pricelist\ShowPricelistController;
@@ -109,4 +110,6 @@ Route::prefix('api/x/v1')->as('api.x.v1.')->group(function (): void {
         Route::post('{user}/kyc', SubmitUserKycController::class)->name('users.kyc.submit');
         Route::get('{user}/kyc', ShowUserKycController::class)->name('users.kyc.show');
     });
+
+    Route::post('payment/webhooks/{provider}', HandleVoucherPaymentWebhookController::class)->name('payment.webhooks.handle');
 });

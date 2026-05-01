@@ -718,8 +718,12 @@ return [
         'default_provider' => env('X_CHANGE_PAYMENT_PROVIDER', 'manual'),
 
         'providers' => [
-            // 'netbank' => \App\Payments\NetbankVoucherPaymentProvider::class,
-            // 'gcash' => \App\Payments\GcashVoucherPaymentProvider::class,
+            // ...
+        ],
+
+        'webhook_parsers' => [
+            // 'netbank' => \App\Payments\NetbankVoucherPaymentWebhookParser::class,
+            // 'gcash' => \App\Payments\GcashVoucherPaymentWebhookParser::class,
         ],
     ],
 ];
