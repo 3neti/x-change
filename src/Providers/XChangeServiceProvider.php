@@ -72,6 +72,7 @@ use LBHurtado\XChange\Contracts\VoucherCollectionWalletResolverContract;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\VoucherPaymentConfirmationContract;
+use LBHurtado\XChange\Contracts\VoucherPaymentProviderContract;
 use LBHurtado\XChange\Contracts\VoucherPaymentQrGeneratorContract;
 use LBHurtado\XChange\Contracts\VoucherPaymentQrRendererContract;
 use LBHurtado\XChange\Contracts\WithdrawalExecutionContract;
@@ -130,6 +131,7 @@ use LBHurtado\XChange\Services\NullClaimOtpChallengeService;
 use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
 use LBHurtado\XChange\Services\NullSettlementEnvelopeReadinessService;
 use LBHurtado\XChange\Services\NullWithdrawalOtpApprovalService;
+use LBHurtado\XChange\Services\PaymentProviders\ManualVoucherPaymentProvider;
 use LBHurtado\XChange\Services\PricelistService;
 use LBHurtado\XChange\Services\ReconciliationLifecycleService;
 use LBHurtado\XChange\Services\SystemWalletProxy;
@@ -450,6 +452,11 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->bind(
             VoucherCollectionWalletResolverContract::class,
             DefaultVoucherCollectionWalletResolver::class,
+        );
+
+        $this->app->bind(
+            VoucherPaymentProviderContract::class,
+            ManualVoucherPaymentProvider::class,
         );
     }
 

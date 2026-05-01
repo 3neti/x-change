@@ -713,4 +713,13 @@ return [
             'margin' => env('XCHANGE_PAYMENT_QR_PNG_MARGIN', 10),
         ],
     ],
+
+    'payment' => [
+        'default_provider' => env('X_CHANGE_PAYMENT_PROVIDER', 'manual'),
+
+        'providers' => [
+            // 'netbank' => \App\Payments\NetbankVoucherPaymentProvider::class,
+            // 'gcash' => \App\Payments\GcashVoucherPaymentProvider::class,
+        ],
+    ],
 ];
