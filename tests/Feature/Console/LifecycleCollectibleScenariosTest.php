@@ -167,8 +167,6 @@ it('runs collectible basic payment end-to-end', function () {
 
     expect($debitedAtIssuance)->toBeLessThan($targetAmount);
 
-    $this->actingAs($issuer);
-
     $paymentResponse = $this->postJson(route('api.x.v1.vouchers.payment-confirmations.store', [
         'code' => $voucher->code,
     ]), [

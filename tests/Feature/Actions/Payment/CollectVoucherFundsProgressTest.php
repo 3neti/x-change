@@ -108,6 +108,8 @@ it('optionally auto-closes collectible voucher when target amount is reached', f
 
 function issueCollectibleVoucherForFundsProgressTest(float $targetAmount = 100.00): Voucher
 {
+    $user = actingAsTestUser(1_000_000);
+
     return issueVoucher(validVoucherInstructions(
         amount: 0.00,
         settlementRail: 'INSTAPAY',
@@ -115,7 +117,9 @@ function issueCollectibleVoucherForFundsProgressTest(float $targetAmount = 100.0
             'target_amount' => $targetAmount,
             'metadata' => [
                 'flow_type' => 'collectible',
-                'issuer_id' => (string) optional(auth()->user())->id,
+                'issuer_id' => (string) $user->id,
+                'collection_wallet_id' => $user->wallet->id,
+
             ],
         ],
     ));

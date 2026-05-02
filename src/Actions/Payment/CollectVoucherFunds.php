@@ -6,12 +6,12 @@ namespace LBHurtado\XChange\Actions\Payment;
 
 use Illuminate\Support\Facades\DB;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Contracts\VoucherCollectionWalletResolverContract;
 use LBHurtado\XChange\Contracts\VoucherPaymentConfirmationContract;
 use LBHurtado\XChange\Data\Payment\VoucherPaymentResultData;
 use LBHurtado\XChange\Services\VoucherCapabilityGuard;
 use LBHurtado\XChange\Services\VoucherCollectionIdempotencyService;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
-use LBHurtado\XChange\Services\WalletResolver;
 
 class CollectVoucherFunds
 {
@@ -21,6 +21,7 @@ class CollectVoucherFunds
         protected RecordVoucherCollection $collections,
         protected VoucherCollectionIdempotencyService $idempotency,
         protected VoucherCollectionProgressService $progress,
+        protected VoucherCollectionWalletResolverContract $wallets,
     ) {}
 
     public function handle(Voucher $voucher, array $payload): VoucherPaymentResultData
@@ -31,8 +32,7 @@ class CollectVoucherFunds
             return $replay;
         }
 
-        $wallet = app(WalletResolver::class)
-            ->resolveForCollection($voucher, auth()->user());
+        $wallet = $this->wallets->resolve($voucher);
 
         $result = $this->confirmation->confirm($voucher, $payload);
 

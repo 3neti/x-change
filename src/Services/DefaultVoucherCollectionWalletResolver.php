@@ -4,45 +4,66 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services;
 
-use Bavix\Wallet\Interfaces\Wallet;
+use Bavix\Wallet\Models\Wallet;
 use Illuminate\Database\Eloquent\Model;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\VoucherCollectionWalletResolverContract;
-use RuntimeException;
+use LBHurtado\XChange\Exceptions\PayCodeWalletNotResolved;
 
 class DefaultVoucherCollectionWalletResolver implements VoucherCollectionWalletResolverContract
 {
     public function resolve(Voucher $voucher): Wallet
     {
-        $issuerId = data_get($voucher->metadata, 'instructions.metadata.issuer_id');
-
-        if (blank($issuerId)) {
-            throw new RuntimeException('Voucher issuer could not be resolved for collection.');
+        if ($wallet = $this->resolveExplicitCollectionWallet($voucher)) {
+            return $wallet;
         }
 
-        $userModel = (string) config('x-change.lifecycle.defaults.user_model');
-
-        if ($userModel === '' || ! class_exists($userModel)) {
-            $userModel = (string) config('x-change.onboarding.issuer_model');
+        if ($wallet = $this->resolveIssuerWallet($voucher)) {
+            return $wallet;
         }
 
-        if ($userModel === '' || ! class_exists($userModel)) {
-            throw new RuntimeException('Collection wallet user model is not configured.');
+        throw new PayCodeWalletNotResolved('Unable to resolve collection wallet for voucher.');
+    }
+
+    protected function resolveExplicitCollectionWallet(Voucher $voucher): ?Wallet
+    {
+        $walletId = data_get($voucher->metadata, 'instructions.metadata.collection_wallet_id')
+            ?? data_get($voucher->metadata, 'collection_wallet_id');
+
+        if (! $walletId) {
+            return null;
         }
 
-        /** @var Model|null $issuer */
-        $issuer = $userModel::query()->find($issuerId);
+        return Wallet::query()->find($walletId);
+    }
 
-        if (! $issuer || ! property_exists($issuer, 'wallet') && ! method_exists($issuer, 'getAttribute')) {
-            throw new RuntimeException('Voucher issuer wallet could not be resolved.');
+    protected function resolveIssuerWallet(Voucher $voucher): ?Wallet
+    {
+        $issuerId = data_get($voucher->metadata, 'instructions.metadata.issuer_id')
+            ?? data_get($voucher->metadata, 'instructions.metadata.metadata.issuer_id')
+            ?? data_get($voucher->metadata, 'issuer_id');
+
+        if (! $issuerId) {
+            return null;
+        }
+
+        $issuerModel = config('x-change.lifecycle.defaults.user_model')
+            ?: config('x-change.onboarding.issuer_model');
+
+        if (! is_string($issuerModel) || $issuerModel === '' || ! class_exists($issuerModel)) {
+            return null;
+        }
+
+        $issuer = $issuerModel::query()->find($issuerId);
+
+        if (! $issuer instanceof Model) {
+            return null;
         }
 
         $wallet = $issuer->wallet;
 
-        if (! $wallet instanceof Wallet) {
-            throw new RuntimeException('Resolved issuer does not expose a valid wallet.');
-        }
-
-        return $wallet;
+        return $wallet instanceof Wallet
+            ? $wallet
+            : null;
     }
 }

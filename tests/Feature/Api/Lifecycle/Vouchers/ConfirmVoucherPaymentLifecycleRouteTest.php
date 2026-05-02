@@ -214,3 +214,42 @@ it('does not double credit wallet when payment confirmation is replayed', functi
     expect((float) $wallet->fresh()->balanceFloat)->toBe($balanceBefore + 100.00);
     expect(VoucherCollection::query()->where('voucher_id', $voucher->id)->count())->toBe(1);
 });
+
+it('confirms collectible voucher payment without authenticated user', function () {
+    $issuer = actingAsTestUser(1_000_000);
+
+    $wallet = $issuer->wallet;
+    $balanceBefore = (float) $wallet->balanceFloat;
+
+    $voucher = issueVoucher(validVoucherInstructions(
+        amount: 0.00,
+        settlementRail: 'INSTAPAY',
+        overrides: [
+            'target_amount' => 100.00,
+            'metadata' => [
+                'flow_type' => 'collectible',
+                'issuer_id' => (string) $issuer->id,
+            ],
+        ],
+    ));
+
+    auth()->logout();
+
+    $response = $this->postJson(route('api.x.v1.vouchers.payment-confirmations.store', [
+        'code' => $voucher->code,
+    ]), [
+        'amount' => 100.00,
+        'currency' => 'PHP',
+        'status' => 'succeeded',
+        'provider' => 'manual',
+        'provider_reference' => 'REF-NO-AUTH-COLLECT-1',
+        'provider_transaction_id' => 'TXN-NO-AUTH-COLLECT-1',
+        'idempotency_key' => 'idem-no-auth-collect-1',
+    ]);
+
+    $response->assertOk();
+    $response->assertJsonPath('success', true);
+    $response->assertJsonPath('data.status', 'collected');
+
+    expect((float) $wallet->fresh()->balanceFloat)->toBe($balanceBefore + 100.00);
+});

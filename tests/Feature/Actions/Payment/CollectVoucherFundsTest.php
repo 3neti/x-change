@@ -21,6 +21,8 @@ it('credits wallet when collecting funds for collectible voucher', function () {
         overrides: [
             'metadata' => [
                 'flow_type' => 'collectible',
+                'issuer_id' => (string) $user->id,
+                'collection_wallet_id' => $user->wallet->id,
             ],
         ],
     ));
@@ -77,6 +79,8 @@ it('does not credit wallet when payment confirmation did not succeed', function 
         overrides: [
             'metadata' => [
                 'flow_type' => 'collectible',
+                'issuer_id' => (string) $user->id,
+                'collection_wallet_id' => $user->wallet->id,
             ],
         ],
     ));

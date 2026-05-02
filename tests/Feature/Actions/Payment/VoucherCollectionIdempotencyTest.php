@@ -18,6 +18,8 @@ it('replays same idempotency key and same payload without double crediting walle
             'target_amount' => 100.00,
             'metadata' => [
                 'flow_type' => 'collectible',
+                'issuer_id' => (string) $user->id,
+                'collection_wallet_id' => $user->wallet->id,
             ],
         ],
     ));
@@ -56,6 +58,8 @@ it('throws conflict when same idempotency key is reused with different payload',
             'target_amount' => 100.00,
             'metadata' => [
                 'flow_type' => 'collectible',
+                'issuer_id' => (string) $user->id,
+                'collection_wallet_id' => $user->wallet->id,
             ],
         ],
     ));
@@ -93,6 +97,8 @@ it('replays same provider reference without double crediting wallet', function (
             'target_amount' => 100.00,
             'metadata' => [
                 'flow_type' => 'collectible',
+                'issuer_id' => (string) $user->id,
+                'collection_wallet_id' => $user->wallet->id,
             ],
         ],
     ));
@@ -126,6 +132,8 @@ it('throws conflict when provider reference is reused with different payload', f
             'target_amount' => 100.00,
             'metadata' => [
                 'flow_type' => 'collectible',
+                'issuer_id' => (string) $user->id,
+                'collection_wallet_id' => $user->wallet->id,
             ],
         ],
     ));

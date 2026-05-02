@@ -646,7 +646,7 @@
             "dist": {
                 "type": "path",
                 "url": "/Users/rli/PhpstormProjects/packages/voucher",
-                "reference": "4b711c794a55608dd1f5d0f59b66d394eb25beef"
+                "reference": "df61a3f109c281dee067d422c495fcee447afc57"
             },
             "require": {
                 "3neti/cash": "dev-main",

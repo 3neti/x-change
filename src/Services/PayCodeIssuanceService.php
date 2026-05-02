@@ -20,6 +20,7 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
         }
 
         $input = app(VoucherIssuancePayloadNormalizer::class)->normalize($input);
+        $input = $this->withCollectionWalletContext($issuer, $input);
         $instructions = VoucherInstructionsData::createFromAttribs($input);
 
         /** @var \Illuminate\Contracts\Auth\Authenticatable|null $previousUser */
@@ -74,5 +75,24 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
         $base = rtrim((string) config('app.url', ''), '/');
 
         return $base === '' ? $path : $base.$path;
+    }
+
+    protected function withCollectionWalletContext(Authenticatable $issuer, array $input): array
+    {
+        $flowType = data_get($input, 'metadata.flow_type');
+
+        if ($flowType !== 'collectible') {
+            return $input;
+        }
+
+        data_set($input, 'metadata.issuer_id', (string) $issuer->getAuthIdentifier());
+
+        $walletId = data_get($input, 'metadata.collection_wallet_id');
+
+        if (! $walletId && isset($issuer->wallet)) {
+            data_set($input, 'metadata.collection_wallet_id', $issuer->wallet->id);
+        }
+
+        return $input;
     }
 }

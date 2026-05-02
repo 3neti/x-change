@@ -19,6 +19,7 @@ it('handles webhook and credits collectible voucher wallet', function () {
             'metadata' => [
                 'flow_type' => 'collectible',
                 'issuer_id' => (string) $issuer->id,
+                'collection_wallet_id' => $issuer->wallet->id,
             ],
         ],
     ));
@@ -64,6 +65,7 @@ it('replays duplicate webhook without double crediting wallet', function () {
             'metadata' => [
                 'flow_type' => 'collectible',
                 'issuer_id' => (string) $issuer->id,
+                'collection_wallet_id' => $issuer->wallet->id,
             ],
         ],
     ));
