@@ -284,6 +284,56 @@ Scenario
 
 ---
 
+## Why is `cash.amount` zero for collectible vouchers?
+
+Because collectible vouchers are not prepaid.
+
+They represent a request to receive funds. The requested amount belongs in `target_amount`, not `cash.amount`.
+
+---
+
+## When is the issuer wallet credited?
+
+Only after a successful payment confirmation or provider webhook.
+
+Issuance does not credit or debit the target amount.
+
+---
+
+## Why does collection not use `auth()->user()`?
+
+Payment providers and webhook callbacks usually do not operate inside an authenticated browser session.
+
+The collection wallet must be resolved from voucher metadata so the flow works safely for APIs, webhooks, QR flows, and console scenarios.
+
+---
+
+## What prevents duplicate payment confirmation?
+
+The collection layer applies idempotency using:
+
+```text
+idempotency_key
+provider + provider_reference
+```
+
+
+Duplicate confirmations replay the previous result when the payload matches. Conflicting replays are rejected.
+
+---
+
+## What happens if payment fails?
+
+A failed collection attempt is recorded in the collection ledger, but the issuer wallet is not credited and collection progress is not updated.
+
+---
+
+## Can a collectible voucher be withdrawn?
+
+No.
+
+Collectible vouchers may collect inward payment. They cannot be redeemed or withdrawn as outward cash value.
+
 ## Final Insight
 
 > Flow type is not a label.  

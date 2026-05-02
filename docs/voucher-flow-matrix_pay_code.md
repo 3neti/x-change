@@ -74,7 +74,18 @@ No flow bypasses Pay Code.
 | `collectible` | Pay In Voucher | payment | inward | payer | payer/provider | voucher / issuer | collect | payment QR | optional | target reached |
 | `settlement` | Settlement Voucher | staged | bilateral | staged actors | policy/envelope | staged recipients | collect + disburse | hybrid QR | often required | settlement rules satisfied |
 
+
+## Pay Code Purpose Matrix
+| Flow Type | Pay Code Purpose | Presentation Route | QR Meaning |
+|---|---|---|---|
+| disbursable | Claim or withdraw prepaid value | `/disburse?code=...` | Redeem/withdraw value |
+| collectible | Pay issuer/requestor | `/pay?code=...` | Send payment to issuer wallet |
+| settlement | Settlement envelope or staged action | `/settle?code=...` | Continue settlement flow |
 ---
+
+```md
+A collectible Pay Code is not a cash-out instrument. It is a payable instruction.
+```
 
 ## Pay Code Presentation Flows (Detailed)
 

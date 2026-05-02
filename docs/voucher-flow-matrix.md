@@ -75,6 +75,17 @@ The system resolves flow type in this order:
 | `collectible` | Pay In Voucher | inward | payer | payer / provider | voucher (issuer or owner wallet) | collect | payment QR | optional | target reached or manual close |
 | `settlement` | Settlement Voucher | bilateral | staged actors | policy / envelope / owner | staged (borrower, merchant, insurer, etc.) | collect + disburse | hybrid QR | often required | settlement rules satisfied |
 
+## Capability Flow Matrix
+
+| Flow Type | Meaning | `cash.amount` | `target_amount` | Can Collect | Can Disburse | Wallet Movement |
+|---|---:|---:|---:|---:|---:|---|
+| disbursable | Prepaid value to be claimed or withdrawn | > 0 | optional/null | No | Yes | Issuer wallet debited at issuance |
+| collectible | Request to receive money | 0 | > 0 | Yes | No | Issuer wallet credited after payment confirmation |
+| settlement | Two-sided or envelope-gated value movement | depends on rules | depends on rules | Conditional | Conditional | Determined by settlement policy |
+
+Note:
+For collectible vouchers, `target_amount` is not issuance cost. It is the amount requested from the payer.
+
 ---
 
 ## Extended Behavioral Matrix

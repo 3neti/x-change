@@ -383,6 +383,49 @@ Because:
 
 > Flow type is part of the **instruction**, not the voucher shell
 
+## 13. Decision: Collectible Vouchers Resolve Wallet From Voucher Context
+
+### Status
+
+Accepted.
+
+### Context
+
+Collectible vouchers receive funds through payment confirmation and provider webhooks. Webhooks are not guaranteed to have an authenticated user session.
+
+Earlier collection logic depended on the current authenticated user to resolve the collection wallet. That made the flow unsuitable for provider callbacks and lifecycle automation.
+
+### Decision
+
+Collectible collection now resolves the destination wallet from voucher metadata.
+
+Preferred:
+
+```text
+instructions.metadata.collection_wallet_id
+```
+
+Fallback:
+
+```text
+instructions.metadata.issuer_id
+```
+
+`PayCodeIssuanceService` enriches collectible issuance payloads with collection wallet context.
+
+### Consequences
+
+Positive:
+
+- collection is webhook-safe
+- lifecycle scenarios can run without authenticated user state
+- issuer wallet credit is deterministic
+- duplicate payment confirmations cannot credit the wrong wallet
+
+Tradeoffs:
+
+- directly-created test vouchers must include wallet metadata
+- collectible issuance must preserve metadata fields through the voucher package
 
 ## Final Thought
 
