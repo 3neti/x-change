@@ -284,3 +284,8 @@ function fakePayoutContact(
 
     return $contact;
 }
+
+function settlementEnvelopeDriversPath(): string
+{
+    return dirname(__DIR__, 1).'/config/envelope-drivers';
+}

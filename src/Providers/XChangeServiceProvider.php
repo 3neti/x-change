@@ -35,6 +35,7 @@ use LBHurtado\XChange\Console\Commands\PayCode\GeneratePayCodeCommand;
 use LBHurtado\XChange\Console\Commands\ReconcilePendingDisbursementsCommand;
 use LBHurtado\XChange\Console\Commands\Revenue\CollectRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Revenue\ShowPendingRevenueCommand;
+use LBHurtado\XChange\Console\Commands\Settlement\EvaluateSettlementEnvelopeCommand;
 use LBHurtado\XChange\Console\Commands\Wallet\GetWalletBalanceCommand;
 use LBHurtado\XChange\Contracts\ApprovalWorkflowContract;
 use LBHurtado\XChange\Contracts\ClaimApprovalExecutionContract;
@@ -134,6 +135,7 @@ use LBHurtado\XChange\Services\NullWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\PaymentProviders\ManualVoucherPaymentProvider;
 use LBHurtado\XChange\Services\PricelistService;
 use LBHurtado\XChange\Services\ReconciliationLifecycleService;
+use LBHurtado\XChange\Services\SettlementEnvelopeReadinessService;
 use LBHurtado\XChange\Services\SystemWalletProxy;
 use LBHurtado\XChange\Services\TxtcmdrWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\UserLifecycleService;
@@ -458,6 +460,16 @@ class XChangeServiceProvider extends ServiceProvider
             VoucherPaymentProviderContract::class,
             ManualVoucherPaymentProvider::class,
         );
+
+        $this->app->bind(
+            SettlementEnvelopeReadinessContract::class,
+            SettlementEnvelopeReadinessService::class,
+        );
+
+        $this->app->bind(
+            SettlementReadinessGateContract::class,
+            DefaultSettlementReadinessGate::class,
+        );
     }
 
     public function boot(): void
@@ -484,6 +496,8 @@ class XChangeServiceProvider extends ServiceProvider
                 RunLifecycleScenarioCommand::class,
                 CollectRevenueCommand::class,
                 ShowPendingRevenueCommand::class,
+
+                EvaluateSettlementEnvelopeCommand::class,
             ]);
         }
 

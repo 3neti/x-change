@@ -12,6 +12,23 @@ class NullSettlementEnvelopeReadinessService implements SettlementEnvelopeReadin
 {
     public function check(Voucher $voucher): SettlementEnvelopeReadinessData
     {
-        return SettlementEnvelopeReadinessData::notAvailable(required: true);
+        return $this->evaluate($voucher);
+    }
+
+    public function evaluate(
+        Voucher $voucher,
+        string $gate = 'settleable',
+        array $context = [],
+    ): SettlementEnvelopeReadinessData {
+        return SettlementEnvelopeReadinessData::notAvailable(
+            required: (bool) ($context['requires_envelope'] ?? true),
+            meta: [
+                'voucher_id' => $voucher->getKey(),
+                'voucher_code' => $voucher->code ?? null,
+                'driver' => $context['driver'] ?? 'null',
+                'gate' => $gate,
+                'service' => static::class,
+            ],
+        );
     }
 }
