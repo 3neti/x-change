@@ -13,7 +13,9 @@ use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
+use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
+use LBHurtado\XChange\Data\Settlement\SettlementEnvelopeReadinessData;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
 use RuntimeException;
@@ -45,6 +47,7 @@ class RunLifecycleScenarioCommand extends Command
         GeneratePayCode $generatePayCode,
         SubmitPayCodeClaim $submitPayCodeClaim,
         VoucherAccessContract $vouchers,
+        SettlementEnvelopeReadinessContract $settlementEnvelopeReadiness,
     ): int {
         if ($this->option('list')) {
             return $this->listScenarios();
@@ -190,6 +193,21 @@ class RunLifecycleScenarioCommand extends Command
         }
 
         $voucher = $vouchers->findByCodeOrFail($code);
+
+        if (($scenario['mode'] ?? null) === 'settlement_envelope_evaluation') {
+            return $this->runSettlementEnvelopeScenario(
+                scenarioKey: $scenarioKey,
+                scenario: $scenario,
+                issuer: $issuer,
+                generated: $generated,
+                voucher: $voucher,
+                attempts: $attempts,
+                baseClaimMobile: $baseClaimMobile,
+                estimate: $estimate,
+                idempotencyKey: $idempotencyKey,
+                readiness: $settlementEnvelopeReadiness,
+            );
+        }
 
         $attemptResults = [];
         $commandStatus = self::SUCCESS;
@@ -1152,6 +1170,131 @@ class RunLifecycleScenarioCommand extends Command
         return $claims;
     }
 
+    protected function runSettlementEnvelopeScenario(
+        string $scenarioKey,
+        array $scenario,
+        Model $issuer,
+               $generated,
+               $voucher,
+        array $attempts,
+        string $baseClaimMobile,
+        array $estimate,
+        string $idempotencyKey,
+        SettlementEnvelopeReadinessContract $readiness,
+    ): int {
+        $attemptResults = [];
+        $commandStatus = self::SUCCESS;
+
+        foreach ($attempts as $attemptKey => $attempt) {
+            $gate = (string) (
+            data_get($attempt, 'settlement.gate')
+                ?: data_get($scenario, 'settlement.gate')
+                ?: config('x-change.settlement.default_gate', 'settleable')
+            );
+
+            $driver = (string) (
+            data_get($attempt, 'settlement.driver')
+                ?: data_get($scenario, 'settlement.driver')
+                ?: data_get($scenario, 'metadata.settlement_driver')
+                    ?: config('x-change.settlement.default_driver', 'philhealth-bst')
+            );
+
+            if (! $this->option('json')) {
+                $this->line(sprintf(
+                    'Evaluating settlement envelope for voucher %s (attempt: %s)...',
+                    $voucher->code,
+                    $attemptKey
+                ));
+            }
+
+            $context = [
+                'requires_envelope' => true,
+                'driver' => $driver,
+                'payload' => (array) data_get($attempt, 'settlement.payload', []),
+                'documents' => (array) data_get($attempt, 'settlement.documents', []),
+                'checklist' => (array) data_get($attempt, 'settlement.checklist', []),
+                'wallet_info' => (array) data_get($attempt, 'settlement.wallet_info', []),
+                'bio_fields' => (array) data_get($attempt, 'settlement.bio_fields', []),
+                'claims' => (array) data_get($attempt, 'settlement.claims', []),
+            ];
+
+            try {
+                $result = $readiness->evaluate(
+                    voucher: $voucher,
+                    gate: $gate,
+                    context: $context,
+                );
+
+                $actual = [
+                    'status' => $result->ready ? 'ready' : 'blocked',
+                    'message' => $result->ready
+                        ? 'Settlement envelope is ready.'
+                        : 'Settlement envelope is not ready.',
+                    'settlement' => $this->formatSettlementReadiness($result),
+                ];
+            } catch (\Throwable $e) {
+                $actual = [
+                    'status' => 'failed',
+                    'message' => $e->getMessage(),
+                    'error' => [
+                        'class' => $e::class,
+                        'message' => $e->getMessage(),
+                    ],
+                ];
+            }
+
+            $evaluation = $this->evaluateSettlementExpectation($attempt, $actual);
+
+            $attemptResults[$attemptKey] = [
+                'settlement_context' => $context,
+                'expect' => (array) data_get($attempt, 'expect', []),
+                'actual' => $actual,
+                'evaluation' => $evaluation,
+                'status' => $actual['status'],
+                'message' => $actual['message'],
+                'settlement' => $actual['settlement'] ?? null,
+                'error' => $actual['error'] ?? null,
+            ];
+
+            if (! $evaluation['passed']) {
+                $commandStatus = self::FAILURE;
+            }
+
+            if (! $this->option('json')) {
+                $this->renderSettlementEvaluation($attemptKey, $evaluation, $actual);
+            }
+        }
+
+        $walletTransactions = $this->recentWalletTransactions(
+            issuer: $issuer,
+            idempotencyKey: $idempotencyKey,
+            voucherCode: $generated->code,
+            limit: 10,
+        );
+
+        $attemptSummary = $this->summarizeAttempts($attemptResults);
+
+        if (! $this->option('json')) {
+            $this->renderAttemptsSummary($attemptSummary);
+        }
+
+        $this->renderResult([
+            'scenario' => $scenarioKey,
+            'label' => $scenario['label'] ?? $scenarioKey,
+            'mode' => 'settlement_envelope_evaluation',
+            'selected_attempt' => $this->option('only-attempt'),
+            'issuer' => $this->formatUserSummary($issuer),
+            'claim_mobile' => $baseClaimMobile,
+            'attempts' => $attemptResults,
+            'attempt_summary' => $attemptSummary,
+            'estimate' => $estimate,
+            'generated' => $generated->toArray(),
+            'wallet_transactions' => $walletTransactions,
+        ]);
+
+        return $commandStatus;
+    }
+
     protected function runSequentialClaimsScenario(
         string $scenarioKey,
         array $scenario,
@@ -1502,5 +1645,133 @@ class RunLifecycleScenarioCommand extends Command
             && $voucher->isDivisible()
             && method_exists($voucher, 'getSliceMode')
             && $voucher->getSliceMode() === 'open';
+    }
+
+    protected function formatSettlementReadiness(
+        SettlementEnvelopeReadinessData $readiness,
+    ): array {
+        return [
+            'required' => $readiness->required,
+            'exists' => $readiness->exists,
+            'ready' => $readiness->ready,
+            'driver' => $readiness->driver,
+            'gate' => $readiness->gate,
+            'satisfied' => $readiness->satisfied,
+            'missing' => $readiness->missing,
+            'failed' => $readiness->failed,
+            'warnings' => $readiness->warnings,
+            'checklist' => $readiness->checklist,
+            'payload' => $readiness->payload,
+            'documents' => $readiness->documents,
+            'meta' => $readiness->meta,
+        ];
+    }
+
+    protected function evaluateSettlementExpectation(array $attempt, array $actual): array
+    {
+        $expectedStatus = (string) data_get($attempt, 'expect.status', 'ready');
+        $actualStatus = (string) ($actual['status'] ?? 'failed');
+
+        $checks = [];
+
+        $checks['status'] = [
+            'passed' => $expectedStatus === $actualStatus,
+            'expected' => $expectedStatus,
+            'actual' => $actualStatus,
+        ];
+
+        $expectedMissing = array_values((array) data_get($attempt, 'expect.missing', []));
+        $actualMissing = array_values((array) data_get($actual, 'settlement.missing', []));
+
+        if ($expectedMissing !== []) {
+            $missingDiff = array_values(array_diff($expectedMissing, $actualMissing));
+
+            $checks['missing'] = [
+                'passed' => $missingDiff === [],
+                'expected' => $expectedMissing,
+                'actual' => $actualMissing,
+                'missing' => $missingDiff,
+            ];
+        }
+
+        $expectedSatisfied = array_values((array) data_get($attempt, 'expect.satisfied', []));
+        $actualSatisfied = array_values((array) data_get($actual, 'settlement.satisfied', []));
+
+        if ($expectedSatisfied !== []) {
+            $satisfiedDiff = array_values(array_diff($expectedSatisfied, $actualSatisfied));
+
+            $checks['satisfied'] = [
+                'passed' => $satisfiedDiff === [],
+                'expected' => $expectedSatisfied,
+                'actual' => $actualSatisfied,
+                'missing' => $satisfiedDiff,
+            ];
+        }
+
+        $expectedReady = data_get($attempt, 'expect.ready');
+
+        if ($expectedReady !== null) {
+            $actualReady = (bool) data_get($actual, 'settlement.ready', false);
+
+            $checks['ready'] = [
+                'passed' => (bool) $expectedReady === $actualReady,
+                'expected' => (bool) $expectedReady,
+                'actual' => $actualReady,
+            ];
+        }
+
+        $passed = collect($checks)->every(fn (array $check) => (bool) ($check['passed'] ?? false));
+
+        return [
+            'passed' => $passed,
+            'checks' => $checks,
+            'summary' => $passed
+                ? strtoupper($actualStatus).' as expected'
+                : 'Settlement envelope expectation mismatch',
+        ];
+    }
+
+    protected function renderSettlementEvaluation(
+        string $attemptKey,
+        array $evaluation,
+        array $actual,
+    ): void {
+        $summary = (string) data_get($evaluation, 'summary', 'Unknown');
+
+        if ((bool) data_get($evaluation, 'passed', false)) {
+            $this->info(sprintf('Settlement attempt [%s]: %s', $attemptKey, $summary));
+        } else {
+            $this->error(sprintf('Settlement attempt [%s]: %s', $attemptKey, $summary));
+        }
+
+        $statusCheck = (array) data_get($evaluation, 'checks.status', []);
+
+        $this->line(sprintf(
+            '  Status check: expected=%s actual=%s',
+            $statusCheck['expected'] ?? 'n/a',
+            $statusCheck['actual'] ?? 'n/a',
+        ));
+
+        $this->line(sprintf(
+            '  Ready: %s',
+            data_get($actual, 'settlement.ready') ? 'yes' : 'no',
+        ));
+
+        $missing = (array) data_get($actual, 'settlement.missing', []);
+        $satisfied = (array) data_get($actual, 'settlement.satisfied', []);
+
+        if ($satisfied !== []) {
+            $this->line('  Satisfied: '.implode(', ', $satisfied));
+        }
+
+        if ($missing !== []) {
+            $this->line('  Missing: '.implode(', ', $missing));
+        }
+
+        $actualMessage = (string) ($actual['message'] ?? '');
+
+        if ($actualMessage !== '') {
+            $this->line('  Actual message: '.$actualMessage);
+        }
     }
 }

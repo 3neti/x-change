@@ -1024,5 +1024,51 @@ return [
                 ],
             ],
         ],
+
+        'settlement_philhealth_bst' => [
+            'label' => 'Settlement — PhilHealth BST',
+            'flow_type' => 'settlement',
+            'mode' => 'settlement_envelope_evaluation',
+
+            'metadata' => [
+                'flow_type' => 'settlement',
+                'settlement_driver' => 'philhealth-bst',
+            ],
+
+            'attempts' => [
+                [
+                    'name' => 'blocked_missing_amount_verification',
+                    'settlement' => [
+                        'payload' => [
+                            'patient_name' => 'Juan Dela Cruz',
+                            'patient_mobile' => '09171234567',
+                        ],
+                        'checklist' => [
+                            'amount_verified' => false,
+                        ],
+                    ],
+                    'expect' => [
+                        'status' => 'blocked',
+                        'missing' => ['amount_verified'],
+                    ],
+                ],
+                [
+                    'name' => 'ready_after_amount_verification',
+                    'settlement' => [
+                        'payload' => [
+                            'patient_name' => 'Juan Dela Cruz',
+                            'patient_mobile' => '09171234567',
+                        ],
+                        'checklist' => [
+                            'amount_verified' => true,
+                        ],
+                    ],
+                    'expect' => [
+                        'status' => 'ready',
+                        'satisfied' => ['payload_present', 'amount_verified'],
+                    ],
+                ],
+            ],
+        ],
     ],
 ];
