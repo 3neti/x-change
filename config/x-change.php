@@ -21,6 +21,7 @@ use LBHurtado\XChange\Services\WithdrawalPipelineSteps\AssertWithdrawalEligibili
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\AuthorizeWithdrawalClaimantStep;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\AuthorizeWithdrawalOtpStep;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\AuthorizeWithdrawalPolicyStep;
+use LBHurtado\XChange\Services\WithdrawalPipelineSteps\BlockSettlementVoucherWithdrawalStep;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\BuildWithdrawalPayoutRequestStep;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\BuildWithdrawalResultStep;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\ExecuteWithdrawalDisbursementStep;
@@ -581,6 +582,8 @@ return [
                 AssertWithdrawalEligibilityStep::class,
                 AuthorizeWithdrawalClaimantStep::class,
                 ResolveWithdrawalAmountStep::class,
+
+                BlockSettlementVoucherWithdrawalStep::class,
 
                 AuthorizeWithdrawalOtpStep::class,
                 AuthorizeWithdrawalPolicyStep::class,

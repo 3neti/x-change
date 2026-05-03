@@ -9,6 +9,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\VoucherCollectionWalletResolverContract;
 use LBHurtado\XChange\Contracts\VoucherPaymentConfirmationContract;
 use LBHurtado\XChange\Data\Payment\VoucherPaymentResultData;
+use LBHurtado\XChange\Services\SettlementCollectionGate;
 use LBHurtado\XChange\Services\VoucherCapabilityGuard;
 use LBHurtado\XChange\Services\VoucherCollectionIdempotencyService;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
@@ -22,6 +23,7 @@ class CollectVoucherFunds
         protected VoucherCollectionIdempotencyService $idempotency,
         protected VoucherCollectionProgressService $progress,
         protected VoucherCollectionWalletResolverContract $wallets,
+        protected SettlementCollectionGate $settlementCollectionGate,
     ) {}
 
     public function handle(Voucher $voucher, array $payload): VoucherPaymentResultData
@@ -31,6 +33,11 @@ class CollectVoucherFunds
         if ($replay = $this->idempotency->findReplay($voucher, $payload)) {
             return $replay;
         }
+
+        $this->settlementCollectionGate->ensureCollectibleSettlementIsReady(
+            voucher: $voucher,
+            context: $this->settlementCollectionGate->contextFromVoucher($voucher),
+        );
 
         $wallet = $this->wallets->resolve($voucher);
 

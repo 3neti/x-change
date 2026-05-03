@@ -135,6 +135,7 @@ use LBHurtado\XChange\Services\NullWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\PaymentProviders\ManualVoucherPaymentProvider;
 use LBHurtado\XChange\Services\PricelistService;
 use LBHurtado\XChange\Services\ReconciliationLifecycleService;
+use LBHurtado\XChange\Services\SettlementCollectionGate;
 use LBHurtado\XChange\Services\SettlementEnvelopeReadinessService;
 use LBHurtado\XChange\Services\SystemWalletProxy;
 use LBHurtado\XChange\Services\TxtcmdrWithdrawalOtpApprovalService;
@@ -470,6 +471,8 @@ class XChangeServiceProvider extends ServiceProvider
             SettlementReadinessGateContract::class,
             DefaultSettlementReadinessGate::class,
         );
+
+        $this->app->singleton(SettlementCollectionGate::class);
     }
 
     public function boot(): void

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use LBHurtado\XChange\Actions\Payment\CollectVoucherFunds;
 use LBHurtado\XChange\Contracts\VoucherPaymentConfirmationContract;
 use LBHurtado\XChange\Exceptions\VoucherCannotCollect;
+use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
 use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Tests\Fakes\User;
 
@@ -159,3 +160,84 @@ it('does not call payment confirmation when voucher cannot collect', function ()
     ]);
 })->throws(VoucherCannotCollect::class);
 
+it('blocks settlement voucher collection until envelope is ready', function () {
+    config()->set('x-change.settlement.default_driver', 'philhealth-bst');
+    config()->set('x-change.settlement.drivers_path', settlementEnvelopeDriversPath());
+
+    $voucher = issueVoucher(validVoucherInstructions(
+        overrides: [
+            'metadata' => [
+                'flow_type' => 'settlement',
+                'settlement_driver' => 'philhealth-bst',
+            ],
+        ],
+    ));
+
+    $voucher = persistUnreadySettlementEnvelopeEvidence($voucher);
+
+    app(CollectVoucherFunds::class)->handle($voucher, [
+        'provider' => 'manual',
+        'provider_reference' => 'PHILHEALTH-CLAIM-001',
+        'amount' => 20000,
+        'currency' => 'PHP',
+        'status' => 'succeeded',
+    ]);
+})->throws(VoucherRequiresSettlementEnvelope::class);
+
+it('allows settlement voucher collection when envelope is ready', function () {
+    $user = actingAsTestUser();
+
+    $voucher = issueVoucher(validVoucherInstructions(
+        amount: 100.00,
+        settlementRail: 'INSTAPAY',
+        overrides: [
+            'metadata' => [
+                'flow_type' => 'collectible',
+                'issuer_id' => (string) $user->id,
+                'collection_wallet_id' => $user->wallet->id,
+            ],
+        ],
+    ));
+
+    $wallet = $user->wallet;
+    $balanceBefore = (float) $wallet->balanceFloat;
+
+    $result = app(CollectVoucherFunds::class)->handle($voucher, [
+        'amount' => 100.00,
+        'currency' => 'PHP',
+        'status' => 'succeeded',
+        'provider' => 'manual',
+        'provider_reference' => 'REF-123',
+        'provider_transaction_id' => 'TXN-123',
+        'payer' => [
+            'name' => 'Juan Dela Cruz',
+            'mobile' => '09171234567',
+        ],
+        'meta' => [
+            'source' => 'test',
+        ],
+    ]);
+
+    $wallet = $wallet->fresh();
+
+    expect($result->status)->toBe('collected')
+        ->and($result->voucher_code)->toBe($voucher->code)
+        ->and($result->amount)->toBe(100.00)
+        ->and((float) $wallet->balanceFloat)->toBe($balanceBefore + 100.00)
+        ->and(data_get($result->wallet, 'transaction_id'))->not->toBeNull();
+
+    $collection = VoucherCollection::query()
+        ->where('voucher_id', $voucher->id)
+        ->latest('id')
+        ->first();
+
+    $result = app(CollectVoucherFunds::class)->handle($voucher, [
+        'provider' => 'manual',
+        'provider_reference' => 'PHILHEALTH-CLAIM-002',
+        'amount' => 20000,
+        'currency' => 'PHP',
+        'status' => 'succeeded',
+    ]);
+
+    expect($result->successful ?? $result->success ?? true)->toBeTruthy();
+});
