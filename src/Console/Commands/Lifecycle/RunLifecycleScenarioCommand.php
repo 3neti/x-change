@@ -209,6 +209,18 @@ class RunLifecycleScenarioCommand extends Command
             );
         }
 
+        if (($scenario['mode'] ?? null) === 'settlement_three_party_flow') {
+            return $this->runSettlementThreePartyScenario(
+                scenarioKey: $scenarioKey,
+                scenario: $scenario,
+                issuer: $issuer,
+                generated: $generated,
+                voucher: $voucher,
+                estimate: $estimate,
+                idempotencyKey: $idempotencyKey,
+            );
+        }
+
         $attemptResults = [];
         $commandStatus = self::SUCCESS;
 
@@ -1773,5 +1785,187 @@ class RunLifecycleScenarioCommand extends Command
         if ($actualMessage !== '') {
             $this->line('  Actual message: '.$actualMessage);
         }
+    }
+
+    protected function runSettlementThreePartyScenario(
+        string $scenarioKey,
+        array $scenario,
+        Model $issuer,
+               $generated,
+               $voucher,
+        array $estimate,
+        string $idempotencyKey,
+    ): int {
+        $phases = [];
+
+        /*
+         * Phase 1: Hospital issued the voucher.
+         */
+        $phases['issue'] = [
+            'role' => 'hospital',
+            'status' => 'issued',
+            'message' => 'Hospital issued settlement voucher.',
+            'voucher_code' => $voucher->code,
+            'amount' => data_get($scenario, 'amount'),
+            'currency' => data_get($scenario, 'currency', 'PHP'),
+            'hospital' => data_get($scenario, 'hospital', []),
+            'evaluation' => [
+                'passed' => true,
+                'summary' => 'Hospital issuance recorded.',
+            ],
+        ];
+
+        /*
+         * Phase 2: Patient attests. For first scaffold, this is semantic output only.
+         * Later we can delegate to SubmitSettlementAttestation when the settlement
+         * executor payload shape is finalized.
+         */
+        $attestationPayload = (array) data_get($scenario, 'phases.attest.payload', []);
+
+        $phases['attest'] = [
+            'role' => 'patient',
+            'status' => 'attested',
+            'message' => 'Patient attested care receipt. No funds were disbursed to patient.',
+            'payload' => $attestationPayload,
+            'claim_type' => 'redeem',
+            'disbursement' => false,
+            'patient' => data_get($scenario, 'patient', []),
+            'evaluation' => [
+                'passed' => true,
+                'summary' => 'Patient attestation recorded.',
+            ],
+        ];
+
+        /*
+         * Phase 3: Evaluate before completion.
+         */
+        $beforeContext = (array) data_get($scenario, 'phases.evaluate_before_completion.settlement', []);
+
+        $beforeReadiness = app(\LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract::class)
+            ->evaluate(
+                voucher: $voucher,
+                gate: 'settleable',
+                context: [
+                    'requires_envelope' => true,
+                    'driver' => data_get($scenario, 'metadata.settlement_driver', 'philhealth-bst'),
+                    ...$beforeContext,
+                ],
+            );
+
+        $phases['evaluate_before_completion'] = [
+            'role' => 'system',
+            'status' => $beforeReadiness->ready ? 'ready' : 'blocked',
+            'message' => $beforeReadiness->ready
+                ? 'Settlement envelope is ready.'
+                : 'Settlement envelope is not ready.',
+            'settlement' => $this->formatSettlementReadiness($beforeReadiness),
+            'evaluation' => [
+                'passed' => ! $beforeReadiness->ready
+                    && in_array('amount_verified', $beforeReadiness->missing, true),
+                'summary' => 'Envelope is blocked before amount verification.',
+            ],
+        ];
+
+        /*
+         * Phase 4: Complete envelope.
+         */
+        $readyContext = (array) data_get($scenario, 'phases.complete_envelope.settlement', []);
+
+        $readyReadiness = app(\LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract::class)
+            ->evaluate(
+                voucher: $voucher,
+                gate: 'settleable',
+                context: [
+                    'requires_envelope' => true,
+                    'driver' => data_get($scenario, 'metadata.settlement_driver', 'philhealth-bst'),
+                    ...$readyContext,
+                ],
+            );
+
+        /*
+         * Persist ready evidence on the voucher because collection reads persisted
+         * settlement envelope evidence.
+         */
+        $metadata = is_array($voucher->metadata ?? null)
+            ? $voucher->metadata
+            : [];
+
+        $voucher->forceFill([
+            'metadata' => [
+                ...$metadata,
+                'flow_type' => 'settlement',
+                'settlement_driver' => data_get($scenario, 'metadata.settlement_driver', 'philhealth-bst'),
+                'settlement_payload' => data_get($readyContext, 'payload', []),
+                'settlement_documents' => data_get($readyContext, 'documents', []),
+                'settlement_checklist' => data_get($readyContext, 'checklist', []),
+            ],
+        ])->save();
+
+        $voucher = $voucher->refresh();
+
+        $phases['complete_envelope'] = [
+            'role' => 'system',
+            'status' => $readyReadiness->ready ? 'ready' : 'blocked',
+            'message' => $readyReadiness->ready
+                ? 'Settlement envelope completed.'
+                : 'Settlement envelope remains incomplete.',
+            'settlement' => $this->formatSettlementReadiness($readyReadiness),
+            'evaluation' => [
+                'passed' => $readyReadiness->ready,
+                'summary' => $readyReadiness->ready
+                    ? 'Envelope became settleable.'
+                    : 'Envelope did not become settleable.',
+            ],
+        ];
+
+        /*
+         * Phase 5: PhilHealth pays / hospital receives.
+         *
+         * For now we can keep this phase semantic-only unless we want the lifecycle
+         * runner to actually call CollectSettlementPayment. If collection wallet
+         * setup is already stable in lifecycle prepare, we can wire the real action.
+         */
+        $paymentPayload = (array) data_get($scenario, 'phases.settle.payment', []);
+
+        $phases['settle'] = [
+            'role' => 'philhealth',
+            'recipient_role' => 'hospital',
+            'status' => $readyReadiness->ready ? 'settleable' : 'blocked',
+            'message' => $readyReadiness->ready
+                ? 'PhilHealth may now pay the hospital using the settlement voucher.'
+                : 'PhilHealth payment is blocked because envelope is not ready.',
+            'payment' => $paymentPayload,
+            'evaluation' => [
+                'passed' => $readyReadiness->ready,
+                'summary' => 'Settlement payment is allowed after envelope readiness.',
+            ],
+        ];
+
+        $summary = [
+            'passed' => collect($phases)->where('evaluation.passed', true)->count(),
+            'failed' => collect($phases)->where('evaluation.passed', false)->count(),
+            'total' => count($phases),
+        ];
+
+        $this->renderResult([
+            'scenario' => $scenarioKey,
+            'label' => $scenario['label'] ?? $scenarioKey,
+            'mode' => 'settlement_three_party_flow',
+            'roles' => [
+                'issuer' => 'hospital',
+                'attestor' => 'patient',
+                'payer' => 'philhealth',
+                'recipient' => 'hospital',
+            ],
+            'issuer' => $this->formatUserSummary($issuer),
+            'phases' => $phases,
+            'phase_summary' => $summary,
+            'estimate' => $estimate,
+            'generated' => $generated->toArray(),
+        ]);
+
+        return $summary['failed'] === 0
+            ? self::SUCCESS
+            : self::FAILURE;
     }
 }

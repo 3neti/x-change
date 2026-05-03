@@ -1070,5 +1070,130 @@ return [
                 ],
             ],
         ],
+
+        'settlement_philhealth_bst_three_party' => [
+            'label' => 'Settlement — PhilHealth BST Three-Party Flow',
+            'mode' => 'settlement_three_party_flow',
+
+            'amount' => 20000,
+            'currency' => 'PHP',
+            'claim_mobile' => '639171234567',
+
+            'metadata' => [
+                'flow_type' => 'settlement',
+                'settlement_driver' => 'philhealth-bst',
+                'settlement_role_model' => 'three_party',
+                'settlement_issuer_role' => 'hospital',
+                'settlement_attestor_role' => 'patient',
+                'settlement_payer_role' => 'philhealth',
+                'settlement_recipient_role' => 'hospital',
+            ],
+
+            'hospital' => [
+                'name' => 'Demo General Hospital',
+                'gross_bill' => 30000,
+                'patient_payable' => 10000,
+                'philhealth_cover' => 20000,
+            ],
+
+            'patient' => [
+                'name' => 'Juan Dela Cruz',
+                'mobile' => '09171234567',
+                'birth_date' => '1985-01-15',
+            ],
+
+            'payer' => [
+                'name' => 'PhilHealth',
+                'provider' => 'manual',
+                'provider_reference' => 'PHILHEALTH-BST-CLAIM-001',
+            ],
+
+            'phases' => [
+                'issue' => [
+                    'expect' => [
+                        'issuer_role' => 'hospital',
+                        'amount' => 20000,
+                    ],
+                ],
+
+                'attest' => [
+                    'payload' => [
+                        'mobile' => '639171234567',
+                        'inputs' => [
+                            'name' => 'Juan Dela Cruz',
+                            'birth_date' => '1985-01-15',
+                            'signature' => 'demo-signature',
+                        ],
+                        'settlement_attestation' => true,
+                    ],
+                    'expect' => [
+                        'role' => 'patient',
+                        'claim_type' => 'redeem',
+                        'disbursement' => false,
+                    ],
+                ],
+
+                'evaluate_before_completion' => [
+                    'settlement' => [
+                        'payload' => [
+                            'patient_name' => 'Juan Dela Cruz',
+                            'patient_mobile' => '09171234567',
+                            'diagnosis' => 'Demo diagnosis',
+                            'procedure' => 'Demo procedure',
+                            'gross_bill' => 30000,
+                            'patient_payable' => 10000,
+                            'philhealth_cover' => 20000,
+                        ],
+                        'checklist' => [
+                            'amount_verified' => false,
+                        ],
+                    ],
+                    'expect' => [
+                        'ready' => false,
+                        'missing' => ['amount_verified'],
+                    ],
+                ],
+
+                'complete_envelope' => [
+                    'settlement' => [
+                        'payload' => [
+                            'patient_name' => 'Juan Dela Cruz',
+                            'patient_mobile' => '09171234567',
+                            'diagnosis' => 'Demo diagnosis',
+                            'procedure' => 'Demo procedure',
+                            'gross_bill' => 30000,
+                            'patient_payable' => 10000,
+                            'philhealth_cover' => 20000,
+                        ],
+                        'documents' => [
+                            'loa' => 'demo://documents/loa.pdf',
+                            'mdr' => 'demo://documents/mdr.pdf',
+                        ],
+                        'checklist' => [
+                            'amount_verified' => true,
+                        ],
+                    ],
+                    'expect' => [
+                        'ready' => true,
+                        'satisfied' => ['payload_present', 'amount_verified'],
+                    ],
+                ],
+
+                'settle' => [
+                    'payment' => [
+                        'provider' => 'manual',
+                        'provider_reference' => 'PHILHEALTH-BST-CLAIM-001',
+                        'amount' => 20000,
+                        'currency' => 'PHP',
+                        'status' => 'succeeded',
+                    ],
+                    'expect' => [
+                        'payer_role' => 'philhealth',
+                        'recipient_role' => 'hospital',
+                        'status' => 'collected',
+                    ],
+                ],
+            ],
+        ],
     ],
 ];
