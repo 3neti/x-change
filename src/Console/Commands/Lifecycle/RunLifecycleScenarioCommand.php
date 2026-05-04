@@ -14,9 +14,12 @@ use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Actions\Settlement\SubmitSettlementAttestation;
+use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\ScenarioRunnerRegistry;
+use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleUserSummary;
+use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\SettlementScenarioSupport;
+use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\WalletTransactionSnapshot;
 use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
-use LBHurtado\XChange\Data\Settlement\SettlementEnvelopeReadinessData;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
 use RuntimeException;
@@ -168,10 +171,10 @@ class RunLifecycleScenarioCommand extends Command
         $code = $generated->code;
 
         if ($this->option('no-claim')) {
-            $walletTransactions = $this->recentWalletTransactions(
+            $walletTransactions = app(WalletTransactionSnapshot::class)->recentFor(
                 issuer: $issuer,
                 idempotencyKey: $idempotencyKey,
-                voucherCode: null,
+                voucherCode: $generated->code,
                 limit: 10,
             );
 
@@ -179,7 +182,7 @@ class RunLifecycleScenarioCommand extends Command
                 'scenario' => $scenarioKey,
                 'label' => $scenario['label'] ?? $scenarioKey,
                 'selected_attempt' => $this->option('only-attempt'),
-                'issuer' => $this->formatUserSummary($issuer),
+                'issuer' => app(LifecycleUserSummary::class)->fromModel($issuer),
                 'claim_mobile' => $baseClaimMobile,
                 'attempts' => array_keys($attempts),
                 'attempt_summary' => [
@@ -195,7 +198,7 @@ class RunLifecycleScenarioCommand extends Command
 
         $voucher = $vouchers->findByCodeOrFail($code);
 
-        $registry = app(\LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\ScenarioRunnerRegistry::class);
+        $registry = app(ScenarioRunnerRegistry::class);
 
         if ($registry->has($scenario['mode'] ?? null)) {
             $result = $registry->for($scenario['mode'])->run(
@@ -293,10 +296,10 @@ class RunLifecycleScenarioCommand extends Command
             ->latest('id')
             ->first();
 
-        $walletTransactions = $this->recentWalletTransactions(
+        $walletTransactions = app(WalletTransactionSnapshot::class)->recentFor(
             issuer: $issuer,
             idempotencyKey: $idempotencyKey,
-            voucherCode: $code,
+            voucherCode: $generated->code,
             limit: 10,
         );
 
@@ -310,7 +313,7 @@ class RunLifecycleScenarioCommand extends Command
             'scenario' => $scenarioKey,
             'label' => $scenario['label'] ?? $scenarioKey,
             'selected_attempt' => $this->option('only-attempt'),
-            'issuer' => $this->formatUserSummary($issuer),
+            'issuer' => app(LifecycleUserSummary::class)->fromModel($issuer),
             'claim_mobile' => $baseClaimMobile,
             'attempts' => $attemptResults,
             'attempt_summary' => $attemptSummary,
@@ -745,93 +748,6 @@ class RunLifecycleScenarioCommand extends Command
     }
 
     /**
-     * @return array<string, mixed>
-     */
-    protected function formatUserSummary(Model $user): array
-    {
-        return [
-            'id' => $user->getKey(),
-            'email' => $user->getAttribute('email'),
-            'mobile' => $user instanceof HasMobileChannel ? $user->getMobileChannel() : null,
-        ];
-    }
-
-    /**
-     * @return array<int, array<string, mixed>>
-     */
-    protected function recentWalletTransactions(
-        Model $issuer,
-        string $idempotencyKey,
-        ?string $voucherCode = null,
-        int $limit = 10,
-    ): array {
-        if (! isset($issuer->wallet) || ! $issuer->wallet) {
-            return [];
-        }
-
-        $wallet = $issuer->wallet;
-
-        if (! method_exists($wallet, 'transactions')) {
-            return [];
-        }
-
-        $transactions = $wallet->transactions()
-            ->latest('id')
-            ->limit(max($limit, 1) * 5)
-            ->get();
-
-        return $transactions
-            ->filter(function ($transaction) use ($idempotencyKey, $voucherCode) {
-                $meta = $this->normalizeTransactionMeta(
-                    $transaction->meta ?? $transaction->metadata ?? null
-                );
-
-                if (data_get($meta, 'idempotency_key') === $idempotencyKey) {
-                    return true;
-                }
-
-                if ($voucherCode !== null && $voucherCode !== '') {
-                    return data_get($meta, 'voucher_code') === $voucherCode
-                        || data_get($meta, 'external_code') === $voucherCode
-                        || data_get($meta, 'code') === $voucherCode;
-                }
-
-                return false;
-            })
-            ->take($limit)
-            ->map(function ($transaction): array {
-                $amountMinor = $this->resolveTransactionAmountMinor($transaction);
-                $currency = (string) ($transaction->currency ?? 'PHP');
-                $meta = $this->normalizeTransactionMeta(
-                    $transaction->meta ?? $transaction->metadata ?? null
-                );
-
-                return [
-                    'id' => $transaction->id ?? null,
-                    'uuid' => $transaction->uuid ?? null,
-                    'type' => $transaction->type ?? $transaction->transaction_type ?? null,
-                    'confirmed' => isset($transaction->confirmed)
-                        ? (bool) $transaction->confirmed
-                        : null,
-                    'amount_minor' => $amountMinor,
-                    'amount' => $amountMinor / 100,
-                    'currency' => $currency,
-                    'formatted_amount' => Number::currency($amountMinor / 100, in: $currency),
-                    'reason' => data_get($meta, 'reason'),
-                    'voucher_code' => data_get($meta, 'voucher_code')
-                        ?? data_get($meta, 'external_code')
-                            ?? data_get($meta, 'code'),
-                    'reference' => data_get($meta, 'reference'),
-                    'idempotency_key' => data_get($meta, 'idempotency_key'),
-                    'created_at' => optional($transaction->created_at)?->toIso8601String(),
-                    'meta' => $meta,
-                ];
-            })
-            ->values()
-            ->all();
-    }
-
-    /**
      * @param  array<int, array<string, mixed>>  $transactions
      */
     protected function renderWalletTransactionsTable(array $transactions): void
@@ -852,45 +768,6 @@ class RunLifecycleScenarioCommand extends Command
             ['ID', 'Type', 'Amount', 'Reason', 'Voucher', 'Idempotency Key', 'Created At'],
             $rows
         );
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    protected function normalizeTransactionMeta(mixed $meta): array
-    {
-        if (is_array($meta)) {
-            return $meta;
-        }
-
-        if (is_string($meta) && $meta !== '') {
-            $decoded = json_decode($meta, true);
-
-            return is_array($decoded) ? $decoded : [];
-        }
-
-        if (is_object($meta)) {
-            return (array) $meta;
-        }
-
-        return [];
-    }
-
-    protected function resolveTransactionAmountMinor(object $transaction): int
-    {
-        $candidates = [
-            $transaction->amount ?? null,
-            $transaction->amount_int ?? null,
-            $transaction->amount_minor ?? null,
-        ];
-
-        foreach ($candidates as $candidate) {
-            if (is_numeric($candidate)) {
-                return (int) $candidate;
-            }
-        }
-
-        return 0;
     }
 
     /**
@@ -1181,8 +1058,8 @@ class RunLifecycleScenarioCommand extends Command
         string $scenarioKey,
         array $scenario,
         Model $issuer,
-               $generated,
-               $voucher,
+        $generated,
+        $voucher,
         array $attempts,
         string $baseClaimMobile,
         array $estimate,
@@ -1194,16 +1071,16 @@ class RunLifecycleScenarioCommand extends Command
 
         foreach ($attempts as $attemptKey => $attempt) {
             $gate = (string) (
-            data_get($attempt, 'settlement.gate')
-                ?: data_get($scenario, 'settlement.gate')
-                ?: config('x-change.settlement.default_gate', 'settleable')
+                data_get($attempt, 'settlement.gate')
+                    ?: data_get($scenario, 'settlement.gate')
+                    ?: config('x-change.settlement.default_gate', 'settleable')
             );
 
             $driver = (string) (
-            data_get($attempt, 'settlement.driver')
-                ?: data_get($scenario, 'settlement.driver')
-                ?: data_get($scenario, 'metadata.settlement_driver')
-                    ?: config('x-change.settlement.default_driver', 'philhealth-bst')
+                data_get($attempt, 'settlement.driver')
+                    ?: data_get($scenario, 'settlement.driver')
+                    ?: data_get($scenario, 'metadata.settlement_driver')
+                        ?: config('x-change.settlement.default_driver', 'philhealth-bst')
             );
 
             if (! $this->option('json')) {
@@ -1237,7 +1114,7 @@ class RunLifecycleScenarioCommand extends Command
                     'message' => $result->ready
                         ? 'Settlement envelope is ready.'
                         : 'Settlement envelope is not ready.',
-                    'settlement' => $this->formatSettlementReadiness($result),
+                    'settlement' => app(SettlementScenarioSupport::class)->formatReadiness($result),
                 ];
             } catch (\Throwable $e) {
                 $actual = [
@@ -1272,7 +1149,7 @@ class RunLifecycleScenarioCommand extends Command
             }
         }
 
-        $walletTransactions = $this->recentWalletTransactions(
+        $walletTransactions = app(WalletTransactionSnapshot::class)->recentFor(
             issuer: $issuer,
             idempotencyKey: $idempotencyKey,
             voucherCode: $generated->code,
@@ -1290,7 +1167,7 @@ class RunLifecycleScenarioCommand extends Command
             'label' => $scenario['label'] ?? $scenarioKey,
             'mode' => 'settlement_envelope_evaluation',
             'selected_attempt' => $this->option('only-attempt'),
-            'issuer' => $this->formatUserSummary($issuer),
+            'issuer' => app(LifecycleUserSummary::class)->fromModel($issuer),
             'claim_mobile' => $baseClaimMobile,
             'attempts' => $attemptResults,
             'attempt_summary' => $attemptSummary,
@@ -1436,7 +1313,7 @@ class RunLifecycleScenarioCommand extends Command
             }
         }
 
-        $walletTransactions = $this->recentWalletTransactions(
+        $walletTransactions = app(WalletTransactionSnapshot::class)->recentFor(
             issuer: $issuer,
             idempotencyKey: $idempotencyKey,
             voucherCode: $generated->code,
@@ -1453,7 +1330,7 @@ class RunLifecycleScenarioCommand extends Command
             'scenario' => $scenarioKey,
             'label' => $scenario['label'] ?? $scenarioKey,
             'selected_attempt' => null,
-            'issuer' => $this->formatUserSummary($issuer),
+            'issuer' => app(LifecycleUserSummary::class)->fromModel($issuer),
             'claim_mobile' => $baseClaimMobile,
             'claims' => $claimResults,
             'attempt_summary' => $claimSummary,
@@ -1587,7 +1464,7 @@ class RunLifecycleScenarioCommand extends Command
 
     protected function resolveLatestVoucherClaimLedger($voucher): ?array
     {
-        $ledger = \LBHurtado\XChange\Models\VoucherClaim::query()
+        $ledger = VoucherClaim::query()
             ->where('voucher_id', $voucher->getKey())
             ->latest('claim_number')
             ->latest('id')
@@ -1652,26 +1529,6 @@ class RunLifecycleScenarioCommand extends Command
             && $voucher->isDivisible()
             && method_exists($voucher, 'getSliceMode')
             && $voucher->getSliceMode() === 'open';
-    }
-
-    protected function formatSettlementReadiness(
-        SettlementEnvelopeReadinessData $readiness,
-    ): array {
-        return [
-            'required' => $readiness->required,
-            'exists' => $readiness->exists,
-            'ready' => $readiness->ready,
-            'driver' => $readiness->driver,
-            'gate' => $readiness->gate,
-            'satisfied' => $readiness->satisfied,
-            'missing' => $readiness->missing,
-            'failed' => $readiness->failed,
-            'warnings' => $readiness->warnings,
-            'checklist' => $readiness->checklist,
-            'payload' => $readiness->payload,
-            'documents' => $readiness->documents,
-            'meta' => $readiness->meta,
-        ];
     }
 
     protected function evaluateSettlementExpectation(array $attempt, array $actual): array
@@ -1786,8 +1643,8 @@ class RunLifecycleScenarioCommand extends Command
         string $scenarioKey,
         array $scenario,
         Model $issuer,
-               $generated,
-               $voucher,
+        $generated,
+        $voucher,
         array $estimate,
         string $idempotencyKey,
     ): int {
@@ -1865,7 +1722,7 @@ class RunLifecycleScenarioCommand extends Command
 
         $persistedEnvelope = (array) data_get($voucher->metadata ?? [], 'settlement_envelope', []);
 
-        $beforeReadiness = app(\LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract::class)
+        $beforeReadiness = app(SettlementEnvelopeReadinessContract::class)
             ->evaluate(
                 voucher: $voucher,
                 gate: 'settleable',
@@ -1893,7 +1750,7 @@ class RunLifecycleScenarioCommand extends Command
             'message' => $beforeReadiness->ready
                 ? 'Settlement envelope is ready.'
                 : 'Settlement envelope is not ready.',
-            'settlement' => $this->formatSettlementReadiness($beforeReadiness),
+            'settlement' => app(SettlementScenarioSupport::class)->formatReadiness($beforeReadiness),
             'evaluation' => [
                 'passed' => ! $beforeReadiness->ready
                     && in_array('amount_verified', $beforeReadiness->missing, true),
@@ -1906,7 +1763,7 @@ class RunLifecycleScenarioCommand extends Command
          */
         $readyContext = (array) data_get($scenario, 'phases.complete_envelope.settlement', []);
 
-        $readyReadiness = app(\LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract::class)
+        $readyReadiness = app(SettlementEnvelopeReadinessContract::class)
             ->evaluate(
                 voucher: $voucher,
                 gate: 'settleable',
@@ -1975,7 +1832,7 @@ class RunLifecycleScenarioCommand extends Command
             'message' => $readyReadiness->ready
                 ? 'Settlement envelope completed.'
                 : 'Settlement envelope remains incomplete.',
-            'settlement' => $this->formatSettlementReadiness($readyReadiness),
+            'settlement' => app(SettlementScenarioSupport::class)->formatReadiness($readyReadiness),
             'evaluation' => [
                 'passed' => $readyReadiness->ready,
                 'summary' => $readyReadiness->ready
@@ -2023,7 +1880,7 @@ class RunLifecycleScenarioCommand extends Command
                 'payer' => 'philhealth',
                 'recipient' => 'hospital',
             ],
-            'issuer' => $this->formatUserSummary($issuer),
+            'issuer' => app(LifecycleUserSummary::class)->fromModel($issuer),
             'phases' => $phases,
             'phase_summary' => $summary,
             'estimate' => $estimate,
