@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Route;
 use LBHurtado\XChange\Http\Controllers\Lifecycle\Claims\ApproveVoucherClaimController;
 use LBHurtado\XChange\Http\Controllers\Lifecycle\Claims\VerifyVoucherClaimOtpController;
+use LBHurtado\XChange\Http\Controllers\Lifecycle\Settlements\ShowSettlementReadinessLifecycleController;
 use LBHurtado\XChange\Http\Controllers\Lifecycle\Settlements\StartSettlementLifecycleController;
 use LBHurtado\XChange\Http\Controllers\Lifecycle\Vouchers\ShowVoucherPaymentQrController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Claims\CompleteVoucherClaimController;
@@ -82,8 +83,9 @@ Route::prefix('api/x/v1')->as('api.x.v1.')->group(function (): void {
         Route::post('code/{code}/claim/otp/verify', VerifyVoucherClaimOtpController::class)->name('vouchers.claim.otp.verify');
         Route::get('code/{code}/payment-qr', ShowVoucherPaymentQrController::class)->name('vouchers.payment-qr.show');
 
-        Route::post(
-            'code/{code}/payment-confirmations', ConfirmVoucherPaymentController::class)->name('vouchers.payment-confirmations.store');
+        Route::post('code/{code}/payment-confirmations', ConfirmVoucherPaymentController::class)->name('vouchers.payment-confirmations.store');
+
+        Route::get('code/{code}/settlement/readiness', ShowSettlementReadinessLifecycleController::class)->name('x-change.lifecycle.vouchers.settlement.readiness');
     });
 
     Route::prefix('reconciliations')->group(function (): void {
