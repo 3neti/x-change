@@ -195,8 +195,11 @@ class RunLifecycleScenarioCommand extends Command
 
         $voucher = $vouchers->findByCodeOrFail($code);
 
-        if (($scenario['mode'] ?? null) === 'settlement_envelope_evaluation') {
-            return $this->runSettlementEnvelopeScenario(
+        $registry = app(\LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\ScenarioRunnerRegistry::class);
+
+        if ($registry->has($scenario['mode'] ?? null)) {
+            $result = $registry->for($scenario['mode'])->run(
+                command: $this,
                 scenarioKey: $scenarioKey,
                 scenario: $scenario,
                 issuer: $issuer,
@@ -206,20 +209,11 @@ class RunLifecycleScenarioCommand extends Command
                 baseClaimMobile: $baseClaimMobile,
                 estimate: $estimate,
                 idempotencyKey: $idempotencyKey,
-                readiness: $settlementEnvelopeReadiness,
             );
-        }
 
-        if (($scenario['mode'] ?? null) === 'settlement_three_party_flow') {
-            return $this->runSettlementThreePartyScenario(
-                scenarioKey: $scenarioKey,
-                scenario: $scenario,
-                issuer: $issuer,
-                generated: $generated,
-                voucher: $voucher,
-                estimate: $estimate,
-                idempotencyKey: $idempotencyKey,
-            );
+            $this->renderResult($result->payload);
+
+            return $result->exitCode;
         }
 
         $attemptResults = [];
