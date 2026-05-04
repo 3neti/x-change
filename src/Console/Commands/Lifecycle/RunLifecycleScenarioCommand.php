@@ -13,6 +13,7 @@ use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
+use LBHurtado\XChange\Actions\Settlement\SubmitSettlementAttestation;
 use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Data\Settlement\SettlementEnvelopeReadinessData;
@@ -1816,30 +1817,59 @@ class RunLifecycleScenarioCommand extends Command
         ];
 
         /*
-         * Phase 2: Patient attests. For first scaffold, this is semantic output only.
-         * Later we can delegate to SubmitSettlementAttestation when the settlement
-         * executor payload shape is finalized.
+         * Phase 2: Beneficiary / patient attests through the real settlement
+         * attestation action. This must persist patient evidence into the settlement
+         * envelope metadata.
          */
         $attestationPayload = (array) data_get($scenario, 'phases.attest.payload', []);
 
-        $phases['attest'] = [
-            'role' => 'patient',
-            'status' => 'attested',
-            'message' => 'Patient attested care receipt. No funds were disbursed to patient.',
-            'payload' => $attestationPayload,
-            'claim_type' => 'redeem',
-            'disbursement' => false,
-            'patient' => data_get($scenario, 'patient', []),
-            'evaluation' => [
-                'passed' => true,
-                'summary' => 'Patient attestation recorded.',
-            ],
-        ];
+        try {
+            $attestationResult = app(SubmitSettlementAttestation::class)
+                ->handle($voucher, $attestationPayload);
+
+            $voucher = $voucher->refresh();
+
+            $phases['attest'] = [
+                'role' => 'patient',
+                'status' => 'attested',
+                'message' => 'Patient attested care receipt. No funds were disbursed to patient.',
+                'payload' => $attestationPayload,
+                'claim' => $attestationResult->toArray(),
+                'claim_type' => $attestationResult->claim_type,
+                'disbursement' => false,
+                'patient' => data_get($scenario, 'patient', []),
+                'settlement_envelope' => data_get($voucher->metadata ?? [], 'settlement_envelope', []),
+                'evaluation' => [
+                    'passed' => true,
+                    'summary' => 'Patient attestation persisted into settlement envelope metadata.',
+                ],
+            ];
+        } catch (\Throwable $exception) {
+            $phases['attest'] = [
+                'role' => 'patient',
+                'status' => 'failed',
+                'message' => $exception->getMessage(),
+                'payload' => $attestationPayload,
+                'claim_type' => 'redeem',
+                'disbursement' => false,
+                'patient' => data_get($scenario, 'patient', []),
+                'error' => [
+                    'type' => get_class($exception),
+                    'message' => $exception->getMessage(),
+                ],
+                'evaluation' => [
+                    'passed' => false,
+                    'summary' => 'Patient attestation failed.',
+                ],
+            ];
+        }
 
         /*
          * Phase 3: Evaluate before completion.
          */
         $beforeContext = (array) data_get($scenario, 'phases.evaluate_before_completion.settlement', []);
+
+        $persistedEnvelope = (array) data_get($voucher->metadata ?? [], 'settlement_envelope', []);
 
         $beforeReadiness = app(\LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract::class)
             ->evaluate(
@@ -1848,7 +1878,18 @@ class RunLifecycleScenarioCommand extends Command
                 context: [
                     'requires_envelope' => true,
                     'driver' => data_get($scenario, 'metadata.settlement_driver', 'philhealth-bst'),
-                    ...$beforeContext,
+                    'payload' => [
+                        ...(array) data_get($persistedEnvelope, 'payload', []),
+                        ...(array) data_get($beforeContext, 'payload', []),
+                    ],
+                    'documents' => [
+                        ...(array) data_get($persistedEnvelope, 'documents', []),
+                        ...(array) data_get($beforeContext, 'documents', []),
+                    ],
+                    'checklist' => [
+                        ...(array) data_get($persistedEnvelope, 'checklist', []),
+                        ...(array) data_get($beforeContext, 'checklist', []),
+                    ],
                 ],
             );
 
@@ -1890,14 +1931,45 @@ class RunLifecycleScenarioCommand extends Command
             ? $voucher->metadata
             : [];
 
+        $existingEnvelope = (array) data_get($metadata, 'settlement_envelope', []);
+
+        $settlementPayload = [
+            ...(array) data_get($existingEnvelope, 'payload', []),
+            ...(array) data_get($readyContext, 'payload', []),
+        ];
+
+        $settlementDocuments = [
+            ...(array) data_get($existingEnvelope, 'documents', []),
+            ...(array) data_get($readyContext, 'documents', []),
+        ];
+
+        $settlementChecklist = [
+            ...(array) data_get($existingEnvelope, 'checklist', []),
+            ...(array) data_get($readyContext, 'checklist', []),
+        ];
+
+        $settlementEnvelope = [
+            ...$existingEnvelope,
+            'driver' => data_get($scenario, 'metadata.settlement_driver', 'philhealth-bst'),
+            'payload' => $settlementPayload,
+            'documents' => $settlementDocuments,
+            'checklist' => $settlementChecklist,
+            'updated_at' => now()->toISOString(),
+        ];
+
         $voucher->forceFill([
             'metadata' => [
                 ...$metadata,
                 'flow_type' => 'settlement',
                 'settlement_driver' => data_get($scenario, 'metadata.settlement_driver', 'philhealth-bst'),
-                'settlement_payload' => data_get($readyContext, 'payload', []),
-                'settlement_documents' => data_get($readyContext, 'documents', []),
-                'settlement_checklist' => data_get($readyContext, 'checklist', []),
+                'settlement_envelope' => $settlementEnvelope,
+
+                /*
+                 * Backward-compatible flattened keys.
+                 */
+                'settlement_payload' => $settlementPayload,
+                'settlement_documents' => $settlementDocuments,
+                'settlement_checklist' => $settlementChecklist,
             ],
         ])->save();
 

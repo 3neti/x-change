@@ -56,8 +56,13 @@ it('shows patient attestation separate from settlement payment', function () {
 
     expect($json['phases']['issue']['role'])->toBe('hospital')
         ->and($json['phases']['attest']['role'])->toBe('patient')
-        ->and($json['phases']['attest']['claim_type'])->toBe('redeem')
+        ->and($json['phases']['attest']['claim_type'])->toBe('settlement')
+        ->and($json['phases']['attest']['settlement_envelope']['attestation']['claim_type'])->toBe('redeem')
         ->and($json['phases']['attest']['disbursement'])->toBeFalse()
+        ->and($json['phases']['attest']['settlement_envelope']['attestation']['attested'])->toBeTrue()
+        ->and($json['phases']['attest']['settlement_envelope']['payload'])->toMatchArray([
+            'patient_name' => 'Juan Dela Cruz',
+        ])
         ->and($json['phases']['settle']['role'])->toBe('philhealth')
         ->and($json['phases']['settle']['recipient_role'])->toBe('hospital');
 });
@@ -80,5 +85,23 @@ it('shows envelope blocked before verification and settleable after completion',
         ->and($json['phases']['complete_envelope']['settlement']['satisfied'])
         ->toContain('payload_present')
         ->and($json['phases']['complete_envelope']['settlement']['satisfied'])
+        ->toContain('amount_verified');
+});
+
+it('uses real settlement attestation to persist patient evidence before readiness evaluation', function () {
+    Artisan::call('xchange:lifecycle:run', [
+        'scenario' => 'settlement_philhealth_bst_three_party',
+        '--json' => true,
+    ]);
+
+    $json = json_decode(Artisan::output(), true);
+
+    expect($json['phases']['attest']['status'])->toBe('attested')
+        ->and($json['phases']['attest']['evaluation']['passed'])->toBeTrue()
+        ->and($json['phases']['attest']['settlement_envelope']['attestation']['attested'])->toBeTrue()
+        ->and($json['phases']['attest']['settlement_envelope']['payload'])->toHaveKey('patient_name')
+        ->and($json['phases']['evaluate_before_completion']['settlement']['satisfied'])
+        ->toContain('payload_present')
+        ->and($json['phases']['evaluate_before_completion']['settlement']['missing'])
         ->toContain('amount_verified');
 });

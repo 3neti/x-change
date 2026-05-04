@@ -2,104 +2,216 @@
 
 ## Purpose
 
-This document defines the domain model for settlement vouchers in x-change.
+This document defines the generic domain model for settlement vouchers in x-change.
 
-Settlement vouchers are different from ordinary disbursable vouchers and ordinary collectible vouchers. They involve three parties:
+A settlement voucher is different from an ordinary disbursable voucher or ordinary collectible voucher. It represents a conditional claim where payment should move only after a required evidence envelope is fulfilled.
+
+The model involves three primary roles:
 
 ```text
-Hospital   → issuer / service provider / settlement recipient
-Patient    → attestor / redeemer / proof-of-care participant
-PhilHealth → payer / funding party
+Service Provider      → issuer / claimant / settlement recipient
+Beneficiary           → attestor / redeemer / proof participant
+Payer                 → insurer / funding party / obligor
 ```
 
-The key rule is:
+Canonical rule:
 
 ```text
-The patient redeems to attest.
-PhilHealth pays to settle.
-The hospital receives settlement.
+The provider issues the settlement voucher.
+The beneficiary redeems only to attest.
+The payer pays only when the settlement envelope is ready.
+The provider receives settlement.
 ```
 
 ---
 
-## Core Example
+## Generic Examples
 
-A PhilHealth beneficiary undergoes a hospital procedure.
+### Healthcare Insurance
+
+```text
+Service Provider: Hospital
+Beneficiary:      Patient / insured member
+Payer:            PhilHealth / HMO / insurer
+```
+
+Example:
 
 ```text
 Gross bill:                 ₱30,000
-Patient payable after cover: ₱10,000
-PhilHealth settlement value: ₱20,000
+Beneficiary payable:         ₱10,000
+Insurance settlement value:  ₱20,000
 ```
 
-The hospital issues a settlement voucher for the PhilHealth-covered amount:
+The hospital issues a settlement voucher for the covered amount.  
+The patient redeems the voucher to attest that care was actually received.  
+The insurer pays the hospital only after the settlement envelope is fulfilled.
+
+---
+
+### Motor Vehicle Insurance
 
 ```text
-Settlement voucher amount: ₱20,000
-Settlement driver: philhealth-bst
+Service Provider: Repair shop
+Beneficiary:      Car owner / insured party
+Payer:            Insurance company
 ```
 
-The patient does not receive this ₱20,000.
+Example:
 
-Instead, the patient redeems the voucher to confirm that care was actually received.
+```text
+Repair estimate:          ₱80,000
+Owner participation:      ₱10,000
+Insurance settlement:     ₱70,000
+```
+
+The repair shop issues or prepares a settlement voucher for the covered repair amount.  
+The car owner redeems the voucher to attest that the repair work is real, authorized, and connected to the insured incident.  
+The insurer pays the repair shop through the settlement voucher payment endpoint only after the required envelope is complete.
+
+---
+
+### Contracting / Subcontracting
+
+```text
+Service Provider: Contractor / subcontractor
+Beneficiary:      Project owner / recipient / inspector / approving party
+Payer:            Principal / lender / funder / government agency
+```
+
+Example:
+
+```text
+Work completed:       Milestone or service delivery
+Beneficiary confirms: Work was received or inspected
+Payer releases:       Contracted settlement amount
+```
+
+The subcontractor or service provider issues a settlement voucher.  
+The beneficiary or approving party attests that the work, delivery, inspection, or milestone is valid.  
+The payer releases funds only when the settlement envelope is fulfilled.
 
 ---
 
 ## Roles
 
-### Hospital
+### Service Provider
 
-The hospital is the voucher issuer.
+The service provider is the party that renders the service, performs the repair, delivers the work, or creates the reimbursable claim.
 
-It creates the settlement voucher after rendering care and computing the covered claim amount.
-
-The hospital may also attach clinical and billing information, such as:
+Examples:
 
 ```text
-procedure details
-diagnosis
-prescriptions
-x-ray or laboratory results
-professional fees
-hospital fees
-claim documents
+hospital
+clinic
+repair shop
+contractor
+subcontractor
+developer
+supplier
+school
+training provider
+housing developer
 ```
 
-The hospital is also the settlement recipient once PhilHealth pays.
+The service provider may be:
+
+```text
+voucher issuer
+claimant
+settlement recipient
+```
+
+The service provider typically supplies claim details such as:
+
+```text
+invoice
+statement of account
+diagnosis or service report
+repair estimate
+work order
+delivery receipt
+inspection report
+photos
+supporting documents
+```
+
+The service provider receives payment once the payer settles the voucher.
 
 ---
 
-### Patient
+### Beneficiary
 
-The patient is the attestor.
+The beneficiary is the party whose condition, identity, consent, receipt, or participation proves that the claim is legitimate.
 
-The patient redeems the settlement voucher only to prove or acknowledge facts such as:
+Examples:
+
+```text
+patient
+insured member
+car owner
+home buyer
+project owner
+recipient
+student
+borrower
+authorized representative
+```
+
+The beneficiary redeems the settlement voucher only to attest facts such as:
 
 ```text
 I exist.
-I received the care.
-I consent to the claim.
+I received the service.
+I authorized the claim.
+I saw or accepted the work.
+I participated in the transaction.
 I can provide identity, signature, selfie, location, or other required evidence.
 ```
 
-In this flow:
+In settlement flows:
 
 ```text
 redemption is not payment
 redemption is attestation
 ```
 
-The patient does not receive the settlement amount.
+The beneficiary does not receive the settlement amount unless the specific business model explicitly says so.
 
 ---
 
-### PhilHealth
+### Payer
 
-PhilHealth is the payer.
+The payer is the party obligated to release funds once the envelope is complete.
 
-PhilHealth pays only when the settlement envelope is ready.
+Examples:
 
-The payer-side action is collection/payment confirmation, not patient redemption.
+```text
+insurance company
+PhilHealth
+HMO
+principal contractor
+government agency
+housing loan provider
+Pag-IBIG
+bank
+lender
+employer
+grantor
+program sponsor
+```
+
+The payer pays only when the settlement envelope is ready.
+
+The payer-side action is:
+
+```text
+settlement payment
+collection
+payment confirmation
+```
+
+not beneficiary redemption.
 
 ---
 
@@ -110,12 +222,15 @@ The settlement envelope is the evidence layer.
 It may contain:
 
 ```text
-patient identity
-patient signature
-patient selfie
+beneficiary identity
+beneficiary signature
+beneficiary selfie
 location evidence
-hospital claim payload
-medical documents
+service provider claim payload
+invoice or billing details
+repair estimate
+medical records
+inspection report
 authorization documents
 manual checklist flags
 payer validation flags
@@ -134,15 +249,15 @@ before the voucher becomes settleable.
 
 ---
 
-## Correct Flow
+## Correct Generic Flow
 
 ```text
-1. Hospital issues settlement voucher
-2. Patient redeems / attests
-3. Hospital and/or patient completes settlement envelope
+1. Service provider issues settlement voucher
+2. Beneficiary redeems / attests
+3. Service provider and/or beneficiary completes the settlement envelope
 4. Settlement envelope is evaluated
-5. PhilHealth pays using the settlement voucher
-6. Hospital receives settlement
+5. Payer pays using the settlement voucher
+6. Service provider receives settlement
 7. Voucher is considered settled
 ```
 
@@ -160,7 +275,7 @@ In settlement vouchers:
 redeem = attest
 ```
 
-The patient’s redemption creates proof. It does not move the settlement amount to the patient.
+The beneficiary’s redemption creates proof. It does not necessarily move money to the beneficiary.
 
 ---
 
@@ -182,20 +297,20 @@ CollectSettlementPayment
 
 ---
 
-### Withdrawal is not part of the PhilHealth settlement story
+### Withdrawal is not part of the core settlement story
 
 Withdrawal belongs to cash-out or disbursement scenarios.
 
-In the PhilHealth settlement flow:
+In a settlement flow:
 
 ```text
-Hospital does not withdraw.
-Patient does not withdraw.
-PhilHealth pays.
-Hospital receives.
+The beneficiary does not withdraw.
+The service provider does not redeem its own voucher.
+The payer pays.
+The service provider receives.
 ```
 
-A settlement voucher must therefore be blocked from ordinary claimant withdrawal or disbursement.
+A settlement voucher must therefore be blocked from ordinary claimant withdrawal or disbursement unless a specific settlement driver explicitly allows such behavior.
 
 ---
 
@@ -222,7 +337,7 @@ These wrappers do not replace the generic engine. They clarify intent.
 
 ## Mapping to Code
 
-### Patient attestation
+### Beneficiary attestation
 
 ```text
 SubmitSettlementAttestation
@@ -232,8 +347,8 @@ SubmitSettlementAttestation
 Meaning:
 
 ```text
-Patient redeems/attests.
-No settlement funds are released to the patient.
+Beneficiary redeems/attests.
+No settlement funds are released to the beneficiary.
 ```
 
 ---
@@ -249,8 +364,21 @@ CollectSettlementPayment
 Meaning:
 
 ```text
-PhilHealth pays hospital, but only after the envelope is ready.
+Payer pays the service provider, but only after the envelope is ready.
 ```
+
+---
+
+### Settlement envelope metadata
+
+Patient/beneficiary attestation is persisted into:
+
+```text
+metadata.settlement_envelope.attestation
+metadata.settlement_envelope.payload
+```
+
+This lets later readiness evaluation use persisted evidence, not only one-time request payloads.
 
 ---
 
@@ -277,7 +405,7 @@ BlockSettlementVoucherWithdrawalStep
 Enforces:
 
 ```text
-Settlement vouchers cannot be disbursed to the claimant.
+Settlement vouchers cannot be disbursed to the claimant through ordinary withdrawal flow.
 ```
 
 ---
@@ -287,16 +415,34 @@ Settlement vouchers cannot be disbursed to the claimant.
 Use this sentence as the canonical model:
 
 ```text
-A settlement voucher is issued by the provider, attested by the patient, and paid by the payer.
+A settlement voucher is issued by the service provider, attested by the beneficiary, and paid by the payer.
 ```
 
-For PhilHealth:
+For healthcare:
 
 ```text
 The hospital issues the settlement voucher.
 The patient redeems it only to attest care.
-PhilHealth pays against it only when the envelope is ready.
+The insurer pays against it only when the envelope is ready.
 The hospital receives settlement.
+```
+
+For car insurance:
+
+```text
+The repair shop issues or prepares the settlement voucher.
+The car owner redeems it only to attest the repair claim.
+The insurer pays against it only when the envelope is ready.
+The repair shop receives settlement.
+```
+
+For contracting:
+
+```text
+The service provider issues the settlement voucher.
+The beneficiary or approving party attests delivery or completion.
+The payer releases funds only when the envelope is ready.
+The service provider receives settlement.
 ```
 
 ---
@@ -307,9 +453,12 @@ Use these conventions:
 
 ```text
 Use "redemption" only for generic voucher mechanics.
-Use "attestation" for patient-side settlement behavior.
+Use "attestation" for beneficiary-side settlement behavior.
 Use "collection/payment" for payer-side settlement behavior.
 Use "withdrawal/disbursement" only for cash-out or outward payout flows.
+Use "service provider" instead of hospital when describing the generic role.
+Use "beneficiary" or "attestor" instead of patient when describing the generic role.
+Use "payer" or "obligor" instead of PhilHealth when describing the generic role.
 ```
 
 ---
@@ -319,9 +468,9 @@ Use "withdrawal/disbursement" only for cash-out or outward payout flows.
 This model prevents a single party from controlling the whole claim.
 
 ```text
-Hospital declares the claim.
-Patient confirms the reality of care.
-PhilHealth releases funds only after the envelope is ready.
+Service provider declares the claim.
+Beneficiary confirms the reality of the service or event.
+Payer releases funds only after the envelope is ready.
 ```
 
 This is the trust model.
