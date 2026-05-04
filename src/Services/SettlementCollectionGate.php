@@ -75,15 +75,30 @@ class SettlementCollectionGate
             ...$this->rawMetadata($voucher),
         ];
 
+        $envelope = (array) data_get($metadata, 'settlement_envelope', []);
+
         return [
             'requires_envelope' => true,
-            'driver' => $metadata['settlement_driver']
-                ?? $metadata['envelope_driver']
+            'driver' => data_get($envelope, 'driver')
+                ?? $metadata['settlement_driver']
+                    ?? $metadata['envelope_driver']
                     ?? config('x-change.settlement.default_driver', 'philhealth-bst'),
             'gate' => config('x-change.settlement.default_gate', 'settleable'),
-            'payload' => $metadata['settlement_payload'] ?? [],
-            'documents' => $metadata['settlement_documents'] ?? [],
-            'checklist' => $metadata['settlement_checklist'] ?? [],
+            'payload' => (array) (
+                data_get($envelope, 'payload')
+                ?? $metadata['settlement_payload']
+                ?? []
+            ),
+            'documents' => (array) (
+                data_get($envelope, 'documents')
+                ?? $metadata['settlement_documents']
+                ?? []
+            ),
+            'checklist' => (array) (
+                data_get($envelope, 'checklist')
+                ?? $metadata['settlement_checklist']
+                ?? []
+            ),
             'wallet_info' => $metadata['wallet_info'] ?? [],
             'bio_fields' => $metadata['bio_fields'] ?? [],
             'claims' => $metadata['settlement_claims'] ?? [],

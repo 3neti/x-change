@@ -6,6 +6,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Actions\Settlement\SubmitSettlementAttestation;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
+use LBHurtado\XChange\Services\SettlementEnvelopeMetadataSyncService;
 
 it('submits settlement attestation through the pay code claim action', function () {
     $voucher = new Voucher;
@@ -32,8 +33,18 @@ it('submits settlement attestation through the pay code claim action', function 
             ],
         ));
 
+    $sync = Mockery::mock(SettlementEnvelopeMetadataSyncService::class);
+    $sync
+        ->shouldReceive('syncPatientAttestation')
+        ->once()
+        ->withArgs(fn ($actualVoucher, array $payload) => $actualVoucher instanceof Voucher
+            && $payload['settlement_attestation'] === true
+            && $payload['claim_type'] === 'redeem')
+        ->andReturn($voucher);
+
     $result = app()->makeWith(SubmitSettlementAttestation::class, [
         'submitPayCodeClaim' => $submitPayCodeClaim,
+        'envelopeSync' => $sync,
     ])->handle($voucher, [
         'mobile' => '09171234567',
         'signature' => 'base64-signature',
