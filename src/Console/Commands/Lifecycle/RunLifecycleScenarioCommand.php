@@ -201,8 +201,10 @@ class RunLifecycleScenarioCommand extends Command
 
         $registry = app(ScenarioRunnerRegistry::class);
 
-        if ($registry->has($scenario['mode'] ?? null)) {
-            $result = $registry->for($scenario['mode'])->run(
+        $mode = $scenario['mode'] ?? 'default';
+
+        if ($registry->has($mode)) {
+            $result = $registry->for($mode)->run(
                 new ScenarioRunContext(
                     command: $this,
                     scenarioKey: $scenarioKey,
