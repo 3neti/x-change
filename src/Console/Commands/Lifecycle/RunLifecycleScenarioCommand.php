@@ -14,6 +14,7 @@ use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Actions\Settlement\SubmitSettlementAttestation;
+use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\ScenarioRunContext;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\ScenarioRunnerRegistry;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleUserSummary;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\SettlementScenarioSupport;
@@ -202,16 +203,19 @@ class RunLifecycleScenarioCommand extends Command
 
         if ($registry->has($scenario['mode'] ?? null)) {
             $result = $registry->for($scenario['mode'])->run(
-                command: $this,
-                scenarioKey: $scenarioKey,
-                scenario: $scenario,
-                issuer: $issuer,
-                generated: $generated,
-                voucher: $voucher,
-                attempts: $attempts,
-                baseClaimMobile: $baseClaimMobile,
-                estimate: $estimate,
-                idempotencyKey: $idempotencyKey,
+                new ScenarioRunContext(
+                    command: $this,
+                    scenarioKey: $scenarioKey,
+                    scenario: $scenario,
+                    issuer: $issuer,
+                    generated: $generated,
+                    voucher: $voucher,
+                    attempts: $attempts,
+                    baseClaimMobile: $baseClaimMobile,
+                    estimate: $estimate,
+                    idempotencyKey: $idempotencyKey,
+                    readiness: $settlementEnvelopeReadiness,
+                )
             );
 
             $this->renderResult($result->payload);

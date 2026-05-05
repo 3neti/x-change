@@ -13,20 +13,15 @@ use LBHurtado\XChange\Data\Settlement\SettlementEnvelopeReadinessData;
 
 final class SettlementThreePartyScenarioRunner implements ScenarioRunnerContract
 {
-    public function run(
-        Command $command,
-        string $scenarioKey,
-        array $scenario,
-        Model $issuer,
-        mixed $generated,
-        mixed $voucher,
-        array $attempts,
-        string $baseClaimMobile,
-        array $estimate,
-        string $idempotencyKey,
-        ?SettlementEnvelopeReadinessContract $readiness = null,
-    ): ScenarioRunResult {
-        $readiness ??= app(SettlementEnvelopeReadinessContract::class);
+    public function run(ScenarioRunContext $context): ScenarioRunResult
+    {
+        $scenarioKey = $context->scenarioKey;
+        $scenario = $context->scenario;
+        $issuer = $context->issuer;
+        $generated = $context->generated;
+        $voucher = $context->voucher;
+        $estimate = $context->estimate;
+        $readiness = $context->readiness ?? app(SettlementEnvelopeReadinessContract::class);
 
         $phases = [];
 
