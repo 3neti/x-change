@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Artisan;
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Tests\Fakes\User as FakeLifecycleUser;
 
 beforeEach(function () {
@@ -44,6 +45,19 @@ it('runs the philhealth bst three party settlement lifecycle scenario', function
             'failed' => 0,
             'total' => 5,
         ]);
+
+    $voucher = Voucher::query()->latest('id')->first();
+    $metadata = $voucher->fresh()->metadata;
+
+    expect(data_get($metadata, 'settlement_envelope.payload.patient_name'))->toBe('Juan Dela Cruz')
+        ->and(data_get($metadata, 'settlement_envelope.payload.philhealth_cover'))->toBe(20000)
+        ->and(data_get($metadata, 'settlement_envelope.documents.loa'))->toBe('demo://documents/loa.pdf')
+        ->and(data_get($metadata, 'settlement_envelope.documents.mdr'))->toBe('demo://documents/mdr.pdf')
+        ->and(data_get($metadata, 'settlement_envelope.checklist.amount_verified'))->toBeTrue()
+        ->and(data_get($metadata, 'settlement_payload.patient_name'))->toBe('Juan Dela Cruz')
+        ->and(data_get($metadata, 'settlement_documents.loa'))->toBe('demo://documents/loa.pdf')
+        ->and(data_get($metadata, 'settlement_checklist.amount_verified'))->toBeTrue();
+    ;
 });
 
 it('shows patient attestation separate from settlement payment', function () {
@@ -105,3 +119,4 @@ it('uses real settlement attestation to persist patient evidence before readines
         ->and($json['phases']['evaluate_before_completion']['settlement']['missing'])
         ->toContain('amount_verified');
 });
+

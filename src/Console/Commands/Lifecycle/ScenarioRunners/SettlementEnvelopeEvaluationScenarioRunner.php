@@ -8,6 +8,8 @@ use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Number;
 use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
+use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\SettlementEnvelopeContextBuilder;
+use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\SettlementPhaseSummary;
 use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
 use LBHurtado\XChange\Data\Settlement\SettlementEnvelopeReadinessData;
 
@@ -30,12 +32,11 @@ final class SettlementEnvelopeEvaluationScenarioRunner implements ScenarioRunner
         $attemptResults = [];
         $exitCode = Command::SUCCESS;
 
+        $contexts = app(SettlementEnvelopeContextBuilder::class);
+        $summaries = app(SettlementPhaseSummary::class);
+
         foreach ($attempts as $attemptKey => $attempt) {
-            $gate = (string) (
-            data_get($attempt, 'settlement.gate')
-                ?: data_get($scenario, 'settlement.gate')
-                ?: config('x-change.settlement.default_gate', 'settleable')
-            );
+            $gate = $contexts->resolveGate($scenario, $attempt);
 
             $driver = (string) (
             data_get($attempt, 'settlement.driver')
@@ -52,16 +53,7 @@ final class SettlementEnvelopeEvaluationScenarioRunner implements ScenarioRunner
                 ));
             }
 
-            $context = [
-                'requires_envelope' => true,
-                'driver' => $driver,
-                'payload' => (array) data_get($attempt, 'settlement.payload', []),
-                'documents' => (array) data_get($attempt, 'settlement.documents', []),
-                'checklist' => (array) data_get($attempt, 'settlement.checklist', []),
-                'wallet_info' => (array) data_get($attempt, 'settlement.wallet_info', []),
-                'bio_fields' => (array) data_get($attempt, 'settlement.bio_fields', []),
-                'claims' => (array) data_get($attempt, 'settlement.claims', []),
-            ];
+            $context = $contexts->fromScenarioAttempt($scenario, $attempt);
 
             try {
                 $result = $readiness->evaluate(
@@ -117,7 +109,7 @@ final class SettlementEnvelopeEvaluationScenarioRunner implements ScenarioRunner
             limit: 10,
         );
 
-        $attemptSummary = $this->summarizeAttempts($attemptResults);
+        $attemptSummary = $summaries->fromAttempts($attemptResults);
 
         if (! $command->option('json')) {
             $this->renderAttemptsSummary($command, $attemptSummary);

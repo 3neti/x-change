@@ -8,6 +8,9 @@ use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
 use LBHurtado\XChange\Actions\Settlement\SubmitSettlementAttestation;
+use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\SettlementEnvelopeContextBuilder;
+use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\SettlementEnvelopePersister;
+use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\SettlementPhaseSummary;
 use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
 use LBHurtado\XChange\Data\Settlement\SettlementEnvelopeReadinessData;
 
@@ -15,6 +18,9 @@ final class SettlementThreePartyScenarioRunner implements ScenarioRunnerContract
 {
     public function run(ScenarioRunContext $context): ScenarioRunResult
     {
+        $contexts = app(SettlementEnvelopeContextBuilder::class);
+        $summaries = app(SettlementPhaseSummary::class);
+
         $scenarioKey = $context->scenarioKey;
         $scenario = $context->scenario;
         $issuer = $context->issuer;
@@ -82,28 +88,14 @@ final class SettlementThreePartyScenarioRunner implements ScenarioRunnerContract
             ];
         }
 
-        $beforeContext = (array) data_get($scenario, 'phases.evaluate_before_completion.settlement', []);
-        $persistedEnvelope = (array) data_get($voucher->metadata ?? [], 'settlement_envelope', []);
-
         $beforeReadiness = $readiness->evaluate(
             voucher: $voucher,
             gate: 'settleable',
-            context: [
-                'requires_envelope' => true,
-                'driver' => data_get($scenario, 'metadata.settlement_driver', 'philhealth-bst'),
-                'payload' => [
-                    ...(array) data_get($persistedEnvelope, 'payload', []),
-                    ...(array) data_get($beforeContext, 'payload', []),
-                ],
-                'documents' => [
-                    ...(array) data_get($persistedEnvelope, 'documents', []),
-                    ...(array) data_get($beforeContext, 'documents', []),
-                ],
-                'checklist' => [
-                    ...(array) data_get($persistedEnvelope, 'checklist', []),
-                    ...(array) data_get($beforeContext, 'checklist', []),
-                ],
-            ],
+            context: $contexts->fromPersistedEnvelopeAndScenarioPhase(
+                voucher: $voucher,
+                scenario: $scenario,
+                phaseKey: 'evaluate_before_completion',
+            ),
         );
 
         $phases['evaluate_before_completion'] = [
@@ -127,53 +119,16 @@ final class SettlementThreePartyScenarioRunner implements ScenarioRunnerContract
             gate: 'settleable',
             context: [
                 'requires_envelope' => true,
-                'driver' => data_get($scenario, 'metadata.settlement_driver', 'philhealth-bst'),
+                'driver' => $contexts->resolveDriver($scenario),
                 ...$readyContext,
             ],
         );
 
-        $metadata = is_array($voucher->metadata ?? null)
-            ? $voucher->metadata
-            : [];
-
-        $existingEnvelope = (array) data_get($metadata, 'settlement_envelope', []);
-
-        $settlementPayload = [
-            ...(array) data_get($existingEnvelope, 'payload', []),
-            ...(array) data_get($readyContext, 'payload', []),
-        ];
-
-        $settlementDocuments = [
-            ...(array) data_get($existingEnvelope, 'documents', []),
-            ...(array) data_get($readyContext, 'documents', []),
-        ];
-
-        $settlementChecklist = [
-            ...(array) data_get($existingEnvelope, 'checklist', []),
-            ...(array) data_get($readyContext, 'checklist', []),
-        ];
-
-        $settlementEnvelope = [
-            ...$existingEnvelope,
-            'driver' => data_get($scenario, 'metadata.settlement_driver', 'philhealth-bst'),
-            'payload' => $settlementPayload,
-            'documents' => $settlementDocuments,
-            'checklist' => $settlementChecklist,
-            'updated_at' => now()->toISOString(),
-        ];
-
-        $voucher->forceFill([
-            'metadata' => [
-                ...$metadata,
-                'flow_type' => 'settlement',
-                'settlement_driver' => data_get($scenario, 'metadata.settlement_driver', 'philhealth-bst'),
-                'settlement_envelope' => $settlementEnvelope,
-
-                'settlement_payload' => $settlementPayload,
-                'settlement_documents' => $settlementDocuments,
-                'settlement_checklist' => $settlementChecklist,
-            ],
-        ])->save();
+        $voucher = app(SettlementEnvelopePersister::class)->completeEnvelope(
+            voucher: $voucher,
+            scenario: $scenario,
+            readyContext: $readyContext,
+        );
 
         $voucher = $voucher->refresh();
 
@@ -208,11 +163,7 @@ final class SettlementThreePartyScenarioRunner implements ScenarioRunnerContract
             ],
         ];
 
-        $summary = [
-            'passed' => collect($phases)->where('evaluation.passed', true)->count(),
-            'failed' => collect($phases)->where('evaluation.passed', false)->count(),
-            'total' => count($phases),
-        ];
+        $summary = $summaries->fromPhases($phases);
 
         return new ScenarioRunResult(
             exitCode: $summary['failed'] === 0 ? Command::SUCCESS : Command::FAILURE,
