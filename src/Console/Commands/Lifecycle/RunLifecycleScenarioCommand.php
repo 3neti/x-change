@@ -9,6 +9,7 @@ use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Number;
+use InvalidArgumentException;
 use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
@@ -16,6 +17,7 @@ use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Actions\Settlement\SubmitSettlementAttestation;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\ScenarioRunContext;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\ScenarioRunnerRegistry;
+use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleScenarioRepository;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleUserSummary;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\SettlementScenarioSupport;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\WalletTransactionSnapshot;
@@ -53,9 +55,10 @@ class RunLifecycleScenarioCommand extends Command
         SubmitPayCodeClaim $submitPayCodeClaim,
         VoucherAccessContract $vouchers,
         SettlementEnvelopeReadinessContract $settlementEnvelopeReadiness,
+        LifecycleScenarioRepository $scenarioRepository,
     ): int {
         if ($this->option('list')) {
-            return $this->listScenarios();
+            return $this->listScenarios($scenarioRepository);
         }
         if ($this->option('prepare') || $this->option('fresh')) {
             Artisan::call('xchange:lifecycle:prepare', array_filter([
@@ -71,10 +74,11 @@ class RunLifecycleScenarioCommand extends Command
         }
 
         $scenarioKey = (string) $this->argument('scenario');
-        $scenario = $this->resolveScenario($scenarioKey);
 
-        if ($scenario === null) {
-            $this->error("Unknown scenario: {$scenarioKey}");
+        try {
+            $scenario = $scenarioRepository->findOrFail($scenarioKey);
+        } catch (InvalidArgumentException $e) {
+            $this->error($e->getMessage());
 
             return self::FAILURE;
         }
@@ -130,10 +134,14 @@ class RunLifecycleScenarioCommand extends Command
             );
         }
 
-        $attempts = $this->normalizeScenarioAttempts($scenario);
         try {
-            $attempts = $this->filterAttemptsForOption($attempts);
-        } catch (RuntimeException $e) {
+            $attempts = $scenarioRepository->attemptsFor(
+                scenario: $scenario,
+                selectedAttempt: is_string($this->option('only-attempt'))
+                    ? (string) $this->option('only-attempt')
+                    : null,
+            );
+        } catch (InvalidArgumentException $e) {
             $this->error($e->getMessage());
 
             return self::FAILURE;
@@ -201,7 +209,7 @@ class RunLifecycleScenarioCommand extends Command
 
         $registry = app(ScenarioRunnerRegistry::class);
 
-        $mode = $scenario['mode'] ?? 'default';
+        $mode = $scenarioRepository->modeFor($scenario);
 
         if ($registry->has($mode)) {
             $result = $registry->for($mode)->run(
@@ -332,11 +340,11 @@ class RunLifecycleScenarioCommand extends Command
         return $commandStatus;
     }
 
-    protected function listScenarios(): int
+    protected function listScenarios(LifecycleScenarioRepository $scenarioRepository): int
     {
-        $scenarios = config('x-change.lifecycle.scenarios', []);
+        $scenarios = $scenarioRepository->all();
 
-        if (empty($scenarios)) {
+        if ($scenarios === []) {
             $this->warn('No lifecycle scenarios found.');
 
             return self::SUCCESS;
@@ -345,8 +353,11 @@ class RunLifecycleScenarioCommand extends Command
         $this->info('Available lifecycle scenarios:');
 
         foreach ($scenarios as $key => $scenario) {
-            $label = $scenario['label'] ?? $key;
-            $this->line(sprintf(' - %s (%s)', $key, $label));
+            $this->line(sprintf(
+                ' - %s (%s)',
+                $key,
+                $scenarioRepository->labelFor((string) $key, (array) $scenario),
+            ));
         }
 
         return self::SUCCESS;
