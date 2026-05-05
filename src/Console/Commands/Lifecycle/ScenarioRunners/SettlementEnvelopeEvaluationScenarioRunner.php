@@ -7,7 +7,7 @@ namespace LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Number;
-use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
+use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleUserSummary;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\SettlementEnvelopeContextBuilder;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\SettlementPhaseSummary;
 use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
@@ -122,7 +122,7 @@ final class SettlementEnvelopeEvaluationScenarioRunner implements ScenarioRunner
                 'label' => $scenario['label'] ?? $scenarioKey,
                 'mode' => 'settlement_envelope_evaluation',
                 'selected_attempt' => $command->option('only-attempt'),
-                'issuer' => $this->formatUserSummary($issuer),
+                'issuer' => app(LifecycleUserSummary::class)->fromModel($issuer),
                 'claim_mobile' => $baseClaimMobile,
                 'attempts' => $attemptResults,
                 'attempt_summary' => $attemptSummary,
@@ -282,15 +282,6 @@ final class SettlementEnvelopeEvaluationScenarioRunner implements ScenarioRunner
         $command->line('  Passed: '.$summary['passed']);
         $command->line('  Failed: '.$summary['failed']);
         $command->line('  Total: '.$summary['total']);
-    }
-
-    private function formatUserSummary(Model $user): array
-    {
-        return [
-            'id' => $user->getKey(),
-            'email' => $user->getAttribute('email'),
-            'mobile' => $user instanceof HasMobileChannel ? $user->getMobileChannel() : null,
-        ];
     }
 
     private function recentWalletTransactions(

@@ -17,6 +17,7 @@ use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Actions\Settlement\SubmitSettlementAttestation;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\ScenarioRunContext;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\ScenarioRunnerRegistry;
+use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleResultRenderer;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleScenarioRepository;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleUserSummary;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\SettlementScenarioSupport;
@@ -56,6 +57,7 @@ class RunLifecycleScenarioCommand extends Command
         VoucherAccessContract $vouchers,
         SettlementEnvelopeReadinessContract $settlementEnvelopeReadiness,
         LifecycleScenarioRepository $scenarioRepository,
+        LifecycleResultRenderer $renderer,
     ): int {
         if ($this->option('list')) {
             return $this->listScenarios($scenarioRepository);
@@ -70,7 +72,7 @@ class RunLifecycleScenarioCommand extends Command
 
         $existingCode = $this->option('check-only');
         if (is_string($existingCode) && trim($existingCode) !== '') {
-            return $this->runCheckOnly(trim($existingCode));
+            return $this->runCheckOnly(trim($existingCode), $renderer);
         }
 
         $scenarioKey = (string) $this->argument('scenario');
@@ -131,6 +133,7 @@ class RunLifecycleScenarioCommand extends Command
                 maxPolls: $maxPolls,
                 idempotencyKey: $idempotencyKey,
                 submitPayCodeClaim: $submitPayCodeClaim,
+                renderer: $renderer,
             );
         }
 
@@ -187,22 +190,25 @@ class RunLifecycleScenarioCommand extends Command
                 limit: 10,
             );
 
-            return $this->renderResult([
-                'scenario' => $scenarioKey,
-                'label' => $scenario['label'] ?? $scenarioKey,
-                'selected_attempt' => $this->option('only-attempt'),
-                'issuer' => app(LifecycleUserSummary::class)->fromModel($issuer),
-                'claim_mobile' => $baseClaimMobile,
-                'attempts' => array_keys($attempts),
-                'attempt_summary' => [
-                    'passed' => 0,
-                    'failed' => 0,
-                    'total' => count($attempts),
+            return $renderer->render(
+                command: $this,
+                payload: [
+                    'scenario' => $scenarioKey,
+                    'label' => $scenario['label'] ?? $scenarioKey,
+                    'selected_attempt' => $this->option('only-attempt'),
+                    'issuer' => app(LifecycleUserSummary::class)->fromModel($issuer),
+                    'claim_mobile' => $baseClaimMobile,
+                    'attempts' => array_keys($attempts),
+                    'attempt_summary' => [
+                        'passed' => 0,
+                        'failed' => 0,
+                        'total' => count($attempts),
+                    ],
+                    'estimate' => $estimate,
+                    'generated' => $generated->toArray(),
+                    'wallet_transactions' => $walletTransactions,
                 ],
-                'estimate' => $estimate,
-                'generated' => $generated->toArray(),
-                'wallet_transactions' => $walletTransactions,
-            ]);
+            );
         }
 
         $voucher = $vouchers->findByCodeOrFail($code);
@@ -228,9 +234,11 @@ class RunLifecycleScenarioCommand extends Command
                 )
             );
 
-            $this->renderResult($result->payload);
-
-            return $result->exitCode;
+            return $renderer->render(
+                command: $this,
+                payload: $result->payload,
+                exitCode: $result->exitCode,
+            );
         }
 
         $attemptResults = [];
@@ -323,21 +331,23 @@ class RunLifecycleScenarioCommand extends Command
             $this->renderAttemptsSummary($attemptSummary);
         }
 
-        $this->renderResult([
-            'scenario' => $scenarioKey,
-            'label' => $scenario['label'] ?? $scenarioKey,
-            'selected_attempt' => $this->option('only-attempt'),
-            'issuer' => app(LifecycleUserSummary::class)->fromModel($issuer),
-            'claim_mobile' => $baseClaimMobile,
-            'attempts' => $attemptResults,
-            'attempt_summary' => $attemptSummary,
-            'estimate' => $estimate,
-            'generated' => $generated->toArray(),
-            'reconciliation' => $reconciliation?->toArray(),
-            'wallet_transactions' => $walletTransactions,
-        ]);
-
-        return $commandStatus;
+        return $renderer->render(
+            command: $this,
+            payload: [
+                'scenario' => $scenarioKey,
+                'label' => $scenario['label'] ?? $scenarioKey,
+                'selected_attempt' => $this->option('only-attempt'),
+                'issuer' => app(LifecycleUserSummary::class)->fromModel($issuer),
+                'claim_mobile' => $baseClaimMobile,
+                'attempts' => $attemptResults,
+                'attempt_summary' => $attemptSummary,
+                'estimate' => $estimate,
+                'generated' => $generated->toArray(),
+                'reconciliation' => $reconciliation?->toArray(),
+                'wallet_transactions' => $walletTransactions,
+            ],
+            exitCode: $commandStatus,
+        );
     }
 
     protected function listScenarios(LifecycleScenarioRepository $scenarioRepository): int
@@ -560,7 +570,7 @@ class RunLifecycleScenarioCommand extends Command
         return $last;
     }
 
-    protected function runCheckOnly(string $code): int
+    protected function runCheckOnly(string $code, LifecycleResultRenderer $renderer): int
     {
         $timeout = (int) ($this->option('timeout') ?: config('x-change.lifecycle.defaults.timeout', 180));
         $poll = max(1, (int) ($this->option('poll') ?: config('x-change.lifecycle.defaults.poll', 10)));
@@ -578,11 +588,14 @@ class RunLifecycleScenarioCommand extends Command
             acceptPending: (bool) $this->option('accept-pending'),
         );
 
-        return $this->renderResult([
-            'mode' => 'check-only',
-            'voucher_code' => $code,
-            'disbursement_check' => $payload,
-        ]);
+        return $renderer->render(
+            command: $this,
+            payload: [
+                'mode' => 'check-only',
+                'voucher_code' => $code,
+                'disbursement_check' => $payload,
+            ],
+        );
     }
 
     protected function renderResult(array $payload): int
@@ -1209,6 +1222,7 @@ class RunLifecycleScenarioCommand extends Command
         int $maxPolls,
         string $idempotencyKey,
         SubmitPayCodeClaim $submitPayCodeClaim,
+        LifecycleResultRenderer $renderer,
     ): int {
         $claimResults = [];
         $commandStatus = self::SUCCESS;
@@ -1343,20 +1357,22 @@ class RunLifecycleScenarioCommand extends Command
             $this->renderClaimsSummary($claimSummary);
         }
 
-        $this->renderResult([
-            'scenario' => $scenarioKey,
-            'label' => $scenario['label'] ?? $scenarioKey,
-            'selected_attempt' => null,
-            'issuer' => app(LifecycleUserSummary::class)->fromModel($issuer),
-            'claim_mobile' => $baseClaimMobile,
-            'claims' => $claimResults,
-            'attempt_summary' => $claimSummary,
-            'estimate' => $estimate = $generated->cost?->toArray() ?? null,
-            'generated' => $generated->toArray(),
-            'wallet_transactions' => $walletTransactions,
-        ]);
-
-        return $commandStatus;
+        return $renderer->render(
+            command: $this,
+            payload: [
+                'scenario' => $scenarioKey,
+                'label' => $scenario['label'] ?? $scenarioKey,
+                'selected_attempt' => null,
+                'issuer' => app(LifecycleUserSummary::class)->fromModel($issuer),
+                'claim_mobile' => $baseClaimMobile,
+                'claims' => $claimResults,
+                'attempt_summary' => $claimSummary,
+                'estimate' => $generated->cost?->toArray() ?? null,
+                'generated' => $generated->toArray(),
+                'wallet_transactions' => $walletTransactions,
+            ],
+            exitCode: $commandStatus,
+        );
     }
 
     protected function resolveClaimMobile(array $scenario, array $claimStep, string $defaultMobile): string

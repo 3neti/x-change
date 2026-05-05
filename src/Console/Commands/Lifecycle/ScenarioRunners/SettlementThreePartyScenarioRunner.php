@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners;
 
 use Illuminate\Console\Command;
-use Illuminate\Database\Eloquent\Model;
-use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
 use LBHurtado\XChange\Actions\Settlement\SubmitSettlementAttestation;
+use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleUserSummary;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\SettlementEnvelopeContextBuilder;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\SettlementEnvelopePersister;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\SettlementPhaseSummary;
@@ -177,7 +176,7 @@ final class SettlementThreePartyScenarioRunner implements ScenarioRunnerContract
                     'payer' => 'philhealth',
                     'recipient' => 'hospital',
                 ],
-                'issuer' => $this->formatUserSummary($issuer),
+                'issuer' => app(LifecycleUserSummary::class)->fromModel($issuer),
                 'phases' => $phases,
                 'phase_summary' => $summary,
                 'estimate' => $estimate,
@@ -202,15 +201,6 @@ final class SettlementThreePartyScenarioRunner implements ScenarioRunnerContract
             'payload' => $readiness->payload,
             'documents' => $readiness->documents,
             'meta' => $readiness->meta,
-        ];
-    }
-
-    private function formatUserSummary(Model $user): array
-    {
-        return [
-            'id' => $user->getKey(),
-            'email' => $user->getAttribute('email'),
-            'mobile' => $user instanceof HasMobileChannel ? $user->getMobileChannel() : null,
         ];
     }
 }
