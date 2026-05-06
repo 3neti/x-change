@@ -11,8 +11,6 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Number;
 use InvalidArgumentException;
 use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
-use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
-use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\ScenarioRunContext;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\ScenarioRunnerRegistry;
@@ -22,7 +20,6 @@ use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\Lifecyc
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleUserSummary;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\WalletTransactionSnapshot;
 use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
-use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
 use RuntimeException;
@@ -358,89 +355,6 @@ class RunLifecycleScenarioCommand extends Command
         return self::SUCCESS;
     }
 
-    protected function resolveScenario(string $key): ?array
-    {
-        $scenarios = (array) config('x-change.lifecycle.scenarios', []);
-
-        return $scenarios[$key] ?? null;
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    protected function buildLifecycleInput(
-        array $scenario,
-        int $issuerId,
-        int $walletId,
-        float $amount,
-        string $idempotencyKey,
-    ): array {
-        return [
-            'issuer_id' => $issuerId,
-            'wallet_id' => $walletId,
-
-            'cash' => [
-                'amount' => $amount,
-                'currency' => $scenario['currency'] ?? 'PHP',
-                'validation' => [
-                    'secret' => data_get($scenario, 'cash.validation.secret'),
-                    'mobile' => data_get($scenario, 'cash.validation.mobile'),
-                    'payable' => data_get($scenario, 'cash.validation.payable'),
-                    'country' => data_get($scenario, 'cash.validation.country', 'PH'),
-                    'location' => data_get($scenario, 'cash.validation.location'),
-                    'radius' => data_get($scenario, 'cash.validation.radius'),
-                    'mobile_verification' => data_get($scenario, 'cash.validation.mobile_verification'),
-                ],
-                'settlement_rail' => data_get($scenario, 'cash.settlement_rail', 'INSTAPAY'),
-                'fee_strategy' => data_get($scenario, 'cash.fee_strategy', 'absorb'),
-                'slice_mode' => data_get($scenario, 'cash.slice_mode'),
-                'slices' => data_get($scenario, 'cash.slices'),
-                'max_slices' => data_get($scenario, 'cash.max_slices'),
-                'min_withdrawal' => data_get($scenario, 'cash.min_withdrawal'),
-            ],
-
-            'inputs' => [
-                'fields' => (array) data_get($scenario, 'inputs.fields', []),
-            ],
-
-            'feedback' => [
-                'mobile' => data_get($scenario, 'feedback.mobile'),
-                'email' => data_get($scenario, 'feedback.email'),
-                'webhook' => data_get($scenario, 'feedback.webhook'),
-            ],
-
-            'rider' => [
-                'message' => data_get($scenario, 'rider.message'),
-                'url' => data_get($scenario, 'rider.url'),
-                'redirect_timeout' => data_get($scenario, 'rider.redirect_timeout'),
-                'splash' => data_get($scenario, 'rider.splash'),
-                'splash_timeout' => data_get($scenario, 'rider.splash_timeout'),
-                'og_source' => data_get($scenario, 'rider.og_source'),
-            ],
-
-            'count' => (int) data_get($scenario, 'count', 1),
-            'prefix' => data_get($scenario, 'prefix', 'TEST'),
-            'mask' => data_get($scenario, 'mask', '****'),
-            'ttl' => data_get($scenario, 'ttl'),
-
-            'starts_at' => data_get($scenario, 'starts_at'),
-            'expires_at' => data_get($scenario, 'expires_at'),
-
-            'validation' => data_get($scenario, 'validation'),
-            'metadata' => data_get($scenario, 'metadata'),
-            'voucher_type' => data_get($scenario, 'voucher_type'),
-            'target_amount' => data_get($scenario, 'target_amount'),
-            'rules' => data_get($scenario, 'rules'),
-
-            '_meta' => [
-                'idempotency_key' => $idempotencyKey,
-            ],
-        ];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
     protected function buildClaimPayload(array $scenario, array $attempt, string $mobile): array
     {
         $payload = array_replace_recursive(
@@ -464,9 +378,6 @@ class RunLifecycleScenarioCommand extends Command
         return $payload;
     }
 
-    /**
-     * @return array<string, mixed>
-     */
     protected function pollDisbursement(
         string $code,
         int $timeout,
@@ -651,68 +562,6 @@ class RunLifecycleScenarioCommand extends Command
         return $class;
     }
 
-    protected function resolveIssuerModel(int $issuerId): Model
-    {
-        $class = $this->userModelClass();
-
-        /** @var Model|null $issuer */
-        $issuer = $class::query()->find($issuerId);
-
-        if (! $issuer) {
-            throw new RuntimeException(sprintf(
-                'Unable to resolve lifecycle issuer [%s] using model [%s].',
-                $issuerId,
-                $class,
-            ));
-        }
-
-        if (! $issuer instanceof HasMobileChannel) {
-            throw new RuntimeException(sprintf(
-                'Lifecycle issuer model [%s] must implement [%s].',
-                $class,
-                HasMobileChannel::class,
-            ));
-        }
-
-        return $issuer;
-    }
-
-    protected function resolveScenarioMobile(array $scenario, Model $issuer): string
-    {
-        $mobile = (string) (
-            data_get($scenario, 'mobile')
-                ?: ($issuer instanceof HasMobileChannel ? $issuer->getMobileChannel() : null)
-                ?: ''
-        );
-
-        if ($mobile === '') {
-            throw new RuntimeException(
-                'Lifecycle scenario requires a mobile number either in scenario config or on the issuer mobile channel.'
-            );
-        }
-
-        return $mobile;
-    }
-
-    /**
-     * @return array<string, array<string, mixed>>
-     */
-    protected function normalizeScenarioAttempts(array $scenario): array
-    {
-        $attempts = data_get($scenario, 'attempts');
-
-        if (is_array($attempts) && $attempts !== []) {
-            return $attempts;
-        }
-
-        return [
-            'default' => [
-                'claim' => (array) data_get($scenario, 'claim', []),
-                'expect' => (array) data_get($scenario, 'expect', []),
-            ],
-        ];
-    }
-
     protected function resolveAttemptMobile(array $scenario, array $attempt, string $defaultMobile): string
     {
         $mobile = (string) (
@@ -733,11 +582,6 @@ class RunLifecycleScenarioCommand extends Command
         return (string) data_get($attempt, 'expect.status', $default);
     }
 
-    /**
-     * @param  array<string, mixed>  $attempt
-     * @param  array<string, mixed>  $actual
-     * @return array<string, mixed>
-     */
     protected function evaluateAttemptExpectation(array $attempt, array $actual): array
     {
         $expectedStatus = $this->expectedAttemptStatus($attempt);
@@ -818,10 +662,6 @@ class RunLifecycleScenarioCommand extends Command
         return 'Expectation mismatch';
     }
 
-    /**
-     * @param  mixed  $claim
-     * @param  array<string, mixed>  $finalCheck
-     */
     protected function resolveSuccessMessage($claim, array $finalCheck): string
     {
         $status = (string) data_get($finalCheck, 'status', '');
@@ -833,10 +673,6 @@ class RunLifecycleScenarioCommand extends Command
         return 'Claim submitted successfully.';
     }
 
-    /**
-     * @param  array<string, mixed>  $evaluation
-     * @param  array<string, mixed>  $actual
-     */
     protected function renderAttemptEvaluation(string $attemptKey, array $evaluation, array $actual): void
     {
         $summary = (string) data_get($evaluation, 'summary', 'Unknown');
@@ -874,37 +710,6 @@ class RunLifecycleScenarioCommand extends Command
         }
     }
 
-    /**
-     * @param  array<string, array<string, mixed>>  $attempts
-     * @return array<string, array<string, mixed>>
-     */
-    protected function filterAttemptsForOption(array $attempts): array
-    {
-        $onlyAttempt = $this->option('only-attempt');
-
-        if (! is_string($onlyAttempt) || trim($onlyAttempt) === '') {
-            return $attempts;
-        }
-
-        $onlyAttempt = trim($onlyAttempt);
-
-        if (! array_key_exists($onlyAttempt, $attempts)) {
-            throw new RuntimeException(sprintf(
-                'Unknown attempt [%s]. Available attempts: %s',
-                $onlyAttempt,
-                implode(', ', array_keys($attempts))
-            ));
-        }
-
-        return [
-            $onlyAttempt => $attempts[$onlyAttempt],
-        ];
-    }
-
-    /**
-     * @param  array<string, array<string, mixed>>  $attemptResults
-     * @return array<string, int>
-     */
     protected function summarizeAttempts(array $attemptResults): array
     {
         $total = count($attemptResults);
@@ -921,9 +726,6 @@ class RunLifecycleScenarioCommand extends Command
         ];
     }
 
-    /**
-     * @param  array<string, int>  $summary
-     */
     protected function renderAttemptsSummary(array $summary): void
     {
         $this->newLine();
@@ -933,14 +735,6 @@ class RunLifecycleScenarioCommand extends Command
         $this->line('  Total: '.$summary['total']);
     }
 
-    /**
-     * @param  array<string, mixed>  $payload
-     * @return array<string, mixed>
-     */
-
-    /**
-     * @return array<string, array<string, mixed>>|null
-     */
     protected function normalizeScenarioClaims(array $scenario): ?array
     {
         $claims = data_get($scenario, 'claims');
@@ -1133,11 +927,6 @@ class RunLifecycleScenarioCommand extends Command
         return $mobile;
     }
 
-    /**
-     * @param  array<string, mixed>  $claimStep
-     * @param  array<string, mixed>  $actual
-     * @return array<string, mixed>
-     */
     protected function evaluateClaimExpectation(array $claimStep, array $actual): array
     {
         $expectedStatus = (string) data_get($claimStep, 'expect.status', 'succeeded');
@@ -1173,10 +962,6 @@ class RunLifecycleScenarioCommand extends Command
         ];
     }
 
-    /**
-     * @param  array<string, mixed>  $evaluation
-     * @param  array<string, mixed>  $actual
-     */
     protected function renderClaimEvaluation(string $claimKey, array $evaluation, array $actual): void
     {
         $summary = (string) data_get($evaluation, 'summary', 'Unknown');
@@ -1209,10 +994,6 @@ class RunLifecycleScenarioCommand extends Command
         }
     }
 
-    /**
-     * @param  array<string, array<string, mixed>>  $claimResults
-     * @return array<string, int>
-     */
     protected function summarizeClaims(array $claimResults): array
     {
         $total = count($claimResults);
@@ -1305,113 +1086,5 @@ class RunLifecycleScenarioCommand extends Command
             && $voucher->isDivisible()
             && method_exists($voucher, 'getSliceMode')
             && $voucher->getSliceMode() === 'open';
-    }
-
-    protected function evaluateSettlementExpectation(array $attempt, array $actual): array
-    {
-        $expectedStatus = (string) data_get($attempt, 'expect.status', 'ready');
-        $actualStatus = (string) ($actual['status'] ?? 'failed');
-
-        $checks = [];
-
-        $checks['status'] = [
-            'passed' => $expectedStatus === $actualStatus,
-            'expected' => $expectedStatus,
-            'actual' => $actualStatus,
-        ];
-
-        $expectedMissing = array_values((array) data_get($attempt, 'expect.missing', []));
-        $actualMissing = array_values((array) data_get($actual, 'settlement.missing', []));
-
-        if ($expectedMissing !== []) {
-            $missingDiff = array_values(array_diff($expectedMissing, $actualMissing));
-
-            $checks['missing'] = [
-                'passed' => $missingDiff === [],
-                'expected' => $expectedMissing,
-                'actual' => $actualMissing,
-                'missing' => $missingDiff,
-            ];
-        }
-
-        $expectedSatisfied = array_values((array) data_get($attempt, 'expect.satisfied', []));
-        $actualSatisfied = array_values((array) data_get($actual, 'settlement.satisfied', []));
-
-        if ($expectedSatisfied !== []) {
-            $satisfiedDiff = array_values(array_diff($expectedSatisfied, $actualSatisfied));
-
-            $checks['satisfied'] = [
-                'passed' => $satisfiedDiff === [],
-                'expected' => $expectedSatisfied,
-                'actual' => $actualSatisfied,
-                'missing' => $satisfiedDiff,
-            ];
-        }
-
-        $expectedReady = data_get($attempt, 'expect.ready');
-
-        if ($expectedReady !== null) {
-            $actualReady = (bool) data_get($actual, 'settlement.ready', false);
-
-            $checks['ready'] = [
-                'passed' => (bool) $expectedReady === $actualReady,
-                'expected' => (bool) $expectedReady,
-                'actual' => $actualReady,
-            ];
-        }
-
-        $passed = collect($checks)->every(fn (array $check) => (bool) ($check['passed'] ?? false));
-
-        return [
-            'passed' => $passed,
-            'checks' => $checks,
-            'summary' => $passed
-                ? strtoupper($actualStatus).' as expected'
-                : 'Settlement envelope expectation mismatch',
-        ];
-    }
-
-    protected function renderSettlementEvaluation(
-        string $attemptKey,
-        array $evaluation,
-        array $actual,
-    ): void {
-        $summary = (string) data_get($evaluation, 'summary', 'Unknown');
-
-        if ((bool) data_get($evaluation, 'passed', false)) {
-            $this->info(sprintf('Settlement attempt [%s]: %s', $attemptKey, $summary));
-        } else {
-            $this->error(sprintf('Settlement attempt [%s]: %s', $attemptKey, $summary));
-        }
-
-        $statusCheck = (array) data_get($evaluation, 'checks.status', []);
-
-        $this->line(sprintf(
-            '  Status check: expected=%s actual=%s',
-            $statusCheck['expected'] ?? 'n/a',
-            $statusCheck['actual'] ?? 'n/a',
-        ));
-
-        $this->line(sprintf(
-            '  Ready: %s',
-            data_get($actual, 'settlement.ready') ? 'yes' : 'no',
-        ));
-
-        $missing = (array) data_get($actual, 'settlement.missing', []);
-        $satisfied = (array) data_get($actual, 'settlement.satisfied', []);
-
-        if ($satisfied !== []) {
-            $this->line('  Satisfied: '.implode(', ', $satisfied));
-        }
-
-        if ($missing !== []) {
-            $this->line('  Missing: '.implode(', ', $missing));
-        }
-
-        $actualMessage = (string) ($actual['message'] ?? '');
-
-        if ($actualMessage !== '') {
-            $this->line('  Actual message: '.$actualMessage);
-        }
     }
 }
