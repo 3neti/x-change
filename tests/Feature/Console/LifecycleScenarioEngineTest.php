@@ -97,18 +97,24 @@ it('runs no-claim lifecycle scenario through the engine', function () {
         ->and(data_get($result->payload, 'attempt_summary.total'))->not->toBeNull();
 });
 
-it('bridges sequential claim scenarios for now', function () {
+it('runs sequential claim scenarios through the registered runner', function () {
     $issuer = prepareEngineLifecycleIssuer();
 
     $command = new class extends Command {
         public function option($key = null): mixed
         {
-            return false;
+            return match ($key) {
+                'json' => true,
+                'accept-pending' => true,
+                default => false,
+            };
         }
 
         public function info($string, $verbosity = null): void {}
 
         public function line($string, $style = null, $verbosity = null): void {}
+
+        public function error($string, $verbosity = null): void {}
     };
 
     $result = app(LifecycleScenarioEngine::class)->run(
@@ -118,10 +124,13 @@ it('bridges sequential claim scenarios for now', function () {
             issuer: (string) $issuer->getKey(),
             wallet: (string) $issuer->getKey(),
             json: true,
+            acceptPending: true,
         ),
     );
 
     expect($result->exitCode)->toBe(Command::SUCCESS)
-        ->and($result->payload['_bridge'])->toBe('sequential_claims')
-        ->and($result->payload['bootstrap'])->not->toBeNull();
+        ->and($result->payload['_bridge'] ?? null)->toBeNull()
+        ->and($result->payload['scenario'])->toBe('collectible_basic_payment')
+        ->and($result->payload['claims'])->toBeArray()
+        ->and($result->payload['attempt_summary'])->toBeArray();
 });

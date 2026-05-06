@@ -48,20 +48,16 @@ final class LifecycleScenarioEngine
         $claims = data_get($scenario, 'claims');
 
         if (is_array($claims)) {
-            return $this->runSequentialClaimsScenario(
-                command: $command,
-                scenarioKey: $scenarioKey,
-                scenario: $scenario,
-                claims: $claims,
-                options: $options,
-            );
+            $scenario['mode'] = $scenario['mode'] ?? 'sequential_claims';
         }
 
         try {
-            $attempts = $this->scenarioRepository->attemptsFor(
-                scenario: $scenario,
-                selectedAttempt: $options->onlyAttempt,
-            );
+            $attempts = is_array($claims)
+                ? []
+                : $this->scenarioRepository->attemptsFor(
+                    scenario: $scenario,
+                    selectedAttempt: $options->onlyAttempt,
+                );
         } catch (InvalidArgumentException $e) {
             return new LifecycleScenarioEngineResult(
                 exitCode: Command::FAILURE,
@@ -159,60 +155,6 @@ final class LifecycleScenarioEngine
                 'message' => "No lifecycle scenario runner registered for mode [{$mode}].",
                 'scenario' => $scenarioKey,
                 'mode' => $mode,
-            ],
-        );
-    }
-
-    /**
-     * This remains command-adjacent for now because sequential claim execution still lives
-     * inside RunLifecycleScenarioCommand.
-     *
-     * In the next slice, extract SequentialClaimsScenarioRunner and delete this bridge.
-     *
-     * @param  array<string, mixed>  $scenario
-     * @param  array<string, mixed>  $claims
-     */
-    private function runSequentialClaimsScenario(
-        Command $command,
-        string $scenarioKey,
-        array $scenario,
-        array $claims,
-        LifecycleScenarioRunOptions $options,
-    ): LifecycleScenarioEngineResult {
-        if (! $options->json) {
-            $command->info("Running scenario: {$scenarioKey}");
-            $command->line('Estimating cost...');
-        }
-
-        $bootstrap = $this->bootstrapper->bootstrap(
-            scenario: $scenario,
-            issuerOption: $options->issuer,
-            walletOption: $options->wallet,
-            amountOption: $options->amount,
-            timeoutOption: $options->timeout,
-            pollOption: $options->poll,
-            maxPollsOption: $options->maxPolls,
-        );
-
-        if (! $options->json) {
-            $command->line('Generating voucher...');
-        }
-
-        /**
-         * Temporary bridge:
-         *
-         * We intentionally return a special payload instead of duplicating the current
-         * command's runSequentialClaimsScenario() logic here. The command will detect
-         * this bridge payload and delegate to its existing method for now.
-         */
-        return new LifecycleScenarioEngineResult(
-            exitCode: Command::SUCCESS,
-            payload: [
-                '_bridge' => 'sequential_claims',
-                'scenario_key' => $scenarioKey,
-                'scenario' => $scenario,
-                'claims' => $claims,
-                'bootstrap' => $bootstrap,
             ],
         );
     }

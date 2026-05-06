@@ -13,6 +13,7 @@ final class ScenarioRunnerRegistry
         return in_array($mode, [
             null,
             'default',
+            'sequential_claims',
             'settlement_envelope_evaluation',
             'settlement_three_party_flow',
         ], true);
@@ -22,6 +23,7 @@ final class ScenarioRunnerRegistry
     {
         return match ($mode) {
             null, 'default' => app(DefaultClaimScenarioRunner::class),
+            'sequential_claims' => app(SequentialClaimsScenarioRunner::class),
             'settlement_envelope_evaluation' => app(SettlementEnvelopeEvaluationScenarioRunner::class),
             'settlement_three_party_flow' => app(SettlementThreePartyScenarioRunner::class),
             default => throw new RuntimeException("No lifecycle scenario runner registered for mode [{$mode}]."),
