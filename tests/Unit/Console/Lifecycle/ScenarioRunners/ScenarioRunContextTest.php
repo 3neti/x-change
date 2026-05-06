@@ -5,9 +5,12 @@ declare(strict_types=1);
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\ScenarioRunContext;
+use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\ConsoleLifecycleOutput;
+use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
 
 it('exposes scenario metadata helpers', function () {
-    $command = new class extends Command {
+    $command = new class extends Command
+    {
         protected $signature = 'test:scenario-context';
 
         public function option($key = null): mixed
@@ -26,6 +29,7 @@ it('exposes scenario metadata helpers', function () {
 
     $context = new ScenarioRunContext(
         command: $command,
+        output: new ConsoleLifecycleOutput($command),
         scenarioKey: 'settlement_philhealth_bst',
         scenario: [
             'label' => 'Settlement PhilHealth BST',
@@ -42,6 +46,7 @@ it('exposes scenario metadata helpers', function () {
             'total' => 100,
         ],
         idempotencyKey: 'test-key',
+        readiness: app(SettlementEnvelopeReadinessContract::class),
     );
 
     expect($context->mode())->toBe('settlement_envelope_evaluation')
@@ -51,7 +56,8 @@ it('exposes scenario metadata helpers', function () {
 });
 
 it('falls back to scenario key as label', function () {
-    $command = new class extends Command {
+    $command = new class extends Command
+    {
         protected $signature = 'test:scenario-context-fallback';
 
         public function option($key = null): mixed
@@ -62,6 +68,7 @@ it('falls back to scenario key as label', function () {
 
     $context = new ScenarioRunContext(
         command: $command,
+        output: new ConsoleLifecycleOutput($command),
         scenarioKey: 'basic_cash',
         scenario: [],
         issuer: new class extends Model {},
@@ -71,6 +78,7 @@ it('falls back to scenario key as label', function () {
         baseClaimMobile: '639178251991',
         estimate: [],
         idempotencyKey: 'test-key',
+        readiness: app(SettlementEnvelopeReadinessContract::class),
     );
 
     expect($context->mode())->toBeNull()

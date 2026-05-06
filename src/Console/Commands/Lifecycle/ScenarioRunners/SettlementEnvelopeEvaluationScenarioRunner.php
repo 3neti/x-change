@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Number;
+use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleOutputContract;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleUserSummary;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\SettlementEnvelopeContextBuilder;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\SettlementPhaseSummary;
@@ -18,6 +19,7 @@ final class SettlementEnvelopeEvaluationScenarioRunner implements ScenarioRunner
     public function run(ScenarioRunContext $context): ScenarioRunResult
     {
         $command = $context->command;
+        $output = $context->output;
         $scenarioKey = $context->scenarioKey;
         $scenario = $context->scenario;
         $issuer = $context->issuer;
@@ -46,7 +48,7 @@ final class SettlementEnvelopeEvaluationScenarioRunner implements ScenarioRunner
             );
 
             if (! $command->option('json')) {
-                $command->line(sprintf(
+                $output->line(sprintf(
                     'Evaluating settlement envelope for voucher %s (attempt: %s)...',
                     $voucher->code,
                     $attemptKey
@@ -217,7 +219,7 @@ final class SettlementEnvelopeEvaluationScenarioRunner implements ScenarioRunner
     }
 
     private function renderSettlementEvaluation(
-        Command $command,
+        LifecycleOutputContract $output,
         string $attemptKey,
         array $evaluation,
         array $actual,
@@ -225,20 +227,20 @@ final class SettlementEnvelopeEvaluationScenarioRunner implements ScenarioRunner
         $summary = (string) data_get($evaluation, 'summary', 'Unknown');
 
         if ((bool) data_get($evaluation, 'passed', false)) {
-            $command->info(sprintf('Settlement attempt [%s]: %s', $attemptKey, $summary));
+            $output->info(sprintf('Settlement attempt [%s]: %s', $attemptKey, $summary));
         } else {
-            $command->error(sprintf('Settlement attempt [%s]: %s', $attemptKey, $summary));
+            $output->error(sprintf('Settlement attempt [%s]: %s', $attemptKey, $summary));
         }
 
         $statusCheck = (array) data_get($evaluation, 'checks.status', []);
 
-        $command->line(sprintf(
+        $output->line(sprintf(
             '  Status check: expected=%s actual=%s',
             $statusCheck['expected'] ?? 'n/a',
             $statusCheck['actual'] ?? 'n/a',
         ));
 
-        $command->line(sprintf(
+        $output->line(sprintf(
             '  Ready: %s',
             data_get($actual, 'settlement.ready') ? 'yes' : 'no',
         ));
@@ -247,17 +249,17 @@ final class SettlementEnvelopeEvaluationScenarioRunner implements ScenarioRunner
         $satisfied = (array) data_get($actual, 'settlement.satisfied', []);
 
         if ($satisfied !== []) {
-            $command->line('  Satisfied: '.implode(', ', $satisfied));
+            $output->line('  Satisfied: '.implode(', ', $satisfied));
         }
 
         if ($missing !== []) {
-            $command->line('  Missing: '.implode(', ', $missing));
+            $output->line('  Missing: '.implode(', ', $missing));
         }
 
         $actualMessage = (string) ($actual['message'] ?? '');
 
         if ($actualMessage !== '') {
-            $command->line('  Actual message: '.$actualMessage);
+            $output->line('  Actual message: '.$actualMessage);
         }
     }
 

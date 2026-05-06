@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners;
 use Illuminate\Console\Command;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleDisbursementPoller;
+use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleOutputContract;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleUserSummary;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\WalletTransactionSnapshot;
 use Throwable;
@@ -22,6 +23,7 @@ final class SequentialClaimsScenarioRunner implements ScenarioRunnerContract
     public function run(ScenarioRunContext $context): ScenarioRunResult
     {
         $command = $context->command;
+        $output = $context->output;
         $scenario = $context->scenario;
         $claims = (array) data_get($scenario, 'claims', []);
 
@@ -105,7 +107,7 @@ final class SequentialClaimsScenarioRunner implements ScenarioRunnerContract
 
             if (! $context->wantsJson()) {
                 $this->renderAttemptEvaluation(
-                    command: $command,
+                    output: $output,
                     attemptKey: (string) $claimKey,
                     evaluation: $evaluation,
                     actual: $actual,
@@ -291,7 +293,7 @@ final class SequentialClaimsScenarioRunner implements ScenarioRunnerContract
     }
 
     private function renderAttemptEvaluation(
-        Command $command,
+        LifecycleOutputContract $output,
         string $attemptKey,
         array $evaluation,
         array $actual,
@@ -299,15 +301,15 @@ final class SequentialClaimsScenarioRunner implements ScenarioRunnerContract
         $summary = (string) data_get($evaluation, 'summary', 'Unknown');
 
         if ((bool) data_get($evaluation, 'passed', false)) {
-            $command->info(sprintf('Claim [%s]: %s', $attemptKey, $summary));
+            $output->info(sprintf('Claim [%s]: %s', $attemptKey, $summary));
         } else {
-            $command->error(sprintf('Claim [%s]: %s', $attemptKey, $summary));
+            $output->error(sprintf('Claim [%s]: %s', $attemptKey, $summary));
         }
 
         $statusCheck = (array) data_get($evaluation, 'checks.status', []);
         $messageCheck = (array) data_get($evaluation, 'checks.message_contains', []);
 
-        $command->line(sprintf(
+        $output->line(sprintf(
             '  Status check: expected=%s actual=%s',
             $statusCheck['expected'] ?? 'n/a',
             $statusCheck['actual'] ?? 'n/a',
@@ -316,7 +318,7 @@ final class SequentialClaimsScenarioRunner implements ScenarioRunnerContract
         $expectedFragments = (array) ($messageCheck['expected'] ?? []);
 
         if ($expectedFragments !== []) {
-            $command->line(sprintf(
+            $output->line(sprintf(
                 '  Message check: %s',
                 (bool) ($messageCheck['passed'] ?? false)
                     ? 'matched'
@@ -327,7 +329,7 @@ final class SequentialClaimsScenarioRunner implements ScenarioRunnerContract
         $actualMessage = (string) ($actual['message'] ?? '');
 
         if ($actualMessage !== '') {
-            $command->line('  Actual message: '.$actualMessage);
+            $output->line('  Actual message: '.$actualMessage);
         }
     }
 

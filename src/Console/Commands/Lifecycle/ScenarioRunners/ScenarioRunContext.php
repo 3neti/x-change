@@ -6,12 +6,14 @@ namespace LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners;
 
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
+use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleOutputContract;
 use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
 
 final readonly class ScenarioRunContext
 {
     public function __construct(
         public Command $command,
+        public LifecycleOutputContract $output,
         public string $scenarioKey,
         public array $scenario,
         public Model $issuer,
@@ -21,7 +23,7 @@ final readonly class ScenarioRunContext
         public string $baseClaimMobile,
         public array $estimate,
         public string $idempotencyKey,
-        public ?SettlementEnvelopeReadinessContract $readiness = null,
+        public SettlementEnvelopeReadinessContract $readiness,
     ) {}
 
     public function mode(): ?string
@@ -41,6 +43,11 @@ final readonly class ScenarioRunContext
 
     public function wantsJson(): bool
     {
-        return (bool) $this->command->option('json');
+        return $this->output->isJson();
+    }
+
+    public function acceptPending(): bool
+    {
+        return $this->output->acceptPending();
     }
 }

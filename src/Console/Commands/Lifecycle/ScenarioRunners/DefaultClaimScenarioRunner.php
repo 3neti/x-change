@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners;
 use Illuminate\Console\Command;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleDisbursementPoller;
+use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleOutputContract;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleUserSummary;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\WalletTransactionSnapshot;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
@@ -22,6 +23,7 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
     public function run(ScenarioRunContext $context): ScenarioRunResult
     {
         $command = $context->command;
+        $output = $context->output;
         $scenarioKey = $context->scenarioKey;
         $scenario = $context->scenario;
         $issuer = $context->issuer;
@@ -49,7 +51,7 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
             );
 
             if (! $context->wantsJson()) {
-                $command->line(sprintf(
+                $output->line(sprintf(
                     'Attempt [%s] using mobile %s...',
                     $attemptKey,
                     $attemptMobile,
@@ -66,7 +68,7 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
                 $claim = app(SubmitPayCodeClaim::class)->handle($voucher, $claimPayload);
 
                 if (! $context->wantsJson()) {
-                    $command->line('Polling disbursement status...');
+                    $output->line('Polling disbursement status...');
                 }
 
                 $finalCheck = $this->poller->poll(
@@ -74,7 +76,7 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
                     timeout: $timeout,
                     poll: $poll,
                     maxPolls: $maxPolls,
-                    acceptPending: (bool) $command->option('accept-pending'),
+                    acceptPending: $context->acceptPending(),
                     command: $command,
                     json: $context->wantsJson(),
                 );
@@ -113,7 +115,7 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
 
             if (! $context->wantsJson()) {
                 $this->renderAttemptEvaluation(
-                    command: $command,
+                    output: $output,
                     attemptKey: (string) $attemptKey,
                     evaluation: $evaluation,
                     actual: $actual,
@@ -302,7 +304,7 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
     }
 
     private function renderAttemptEvaluation(
-        Command $command,
+        LifecycleOutputContract $output,
         string $attemptKey,
         array $evaluation,
         array $actual,
@@ -310,9 +312,9 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
         $summary = (string) data_get($evaluation, 'summary', 'Unknown');
 
         if ((bool) data_get($evaluation, 'passed', false)) {
-            $command->info(sprintf('Attempt [%s]: %s', $attemptKey, $summary));
+            $output->info(sprintf('Attempt [%s]: %s', $attemptKey, $summary));
         } else {
-            $command->error(sprintf('Attempt [%s]: %s', $attemptKey, $summary));
+            $output->error(sprintf('Attempt [%s]: %s', $attemptKey, $summary));
         }
 
         $checks = (array) data_get($evaluation, 'checks', []);
@@ -320,7 +322,7 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
         $statusCheck = (array) ($checks['status'] ?? []);
         $messageCheck = (array) ($checks['message_contains'] ?? []);
 
-        $command->line(sprintf(
+        $output->line(sprintf(
             '  Status check: expected=%s actual=%s',
             $statusCheck['expected'] ?? 'n/a',
             $statusCheck['actual'] ?? 'n/a',
@@ -329,7 +331,7 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
         $expectedFragments = (array) ($messageCheck['expected'] ?? []);
 
         if ($expectedFragments !== []) {
-            $command->line(sprintf(
+            $output->line(sprintf(
                 '  Message check: %s',
                 (bool) ($messageCheck['passed'] ?? false)
                     ? 'matched'
@@ -340,7 +342,7 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
         $actualMessage = (string) ($actual['message'] ?? '');
 
         if ($actualMessage !== '') {
-            $command->line('  Actual message: '.$actualMessage);
+            $output->line('  Actual message: '.$actualMessage);
         }
     }
 

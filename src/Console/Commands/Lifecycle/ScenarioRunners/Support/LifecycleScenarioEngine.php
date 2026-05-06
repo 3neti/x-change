@@ -6,7 +6,6 @@ namespace LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support;
 
 use Illuminate\Console\Command;
 use InvalidArgumentException;
-use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\ScenarioRunContext;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\ScenarioRunnerRegistry;
 use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
@@ -17,7 +16,6 @@ final class LifecycleScenarioEngine
         private readonly LifecycleScenarioRepository $scenarioRepository,
         private readonly LifecycleScenarioBootstrapper $bootstrapper,
         private readonly ScenarioRunnerRegistry $registry,
-        private readonly SubmitPayCodeClaim $submitPayCodeClaim,
         private readonly SettlementEnvelopeReadinessContract $settlementEnvelopeReadiness,
         private readonly WalletTransactionSnapshot $walletTransactions,
     ) {}
@@ -26,7 +24,10 @@ final class LifecycleScenarioEngine
         Command $command,
         string $scenarioKey,
         LifecycleScenarioRunOptions $options,
+        ?LifecycleOutputContract $output = null,
     ): LifecycleScenarioEngineResult {
+        $output ??= new ConsoleLifecycleOutput($command);
+
         try {
             $scenario = $this->scenarioRepository->findOrFail($scenarioKey);
         } catch (InvalidArgumentException $e) {
@@ -70,14 +71,14 @@ final class LifecycleScenarioEngine
             );
         }
 
-        if (! $options->json) {
-            $command->info("Running scenario: {$scenarioKey}");
+        if (! $output->isJson()) {
+            $output->info("Running scenario: {$scenarioKey}");
 
             if ($options->onlyAttempt !== null) {
-                $command->line('Selected attempt: '.$options->onlyAttempt);
+                $output->line('Selected attempt: '.$options->onlyAttempt);
             }
 
-            $command->line('Estimating cost...');
+            $output->line('Estimating cost...');
         }
 
         $bootstrap = $this->bootstrapper->bootstrap(
@@ -90,8 +91,8 @@ final class LifecycleScenarioEngine
             maxPollsOption: $options->maxPolls,
         );
 
-        if (! $options->json) {
-            $command->line('Generating voucher...');
+        if (! $output->isJson()) {
+            $output->line('Generating voucher...');
         }
 
         if ($options->noClaim) {
@@ -129,6 +130,7 @@ final class LifecycleScenarioEngine
             $result = $this->registry->for($mode)->run(
                 new ScenarioRunContext(
                     command: $command,
+                    output: $output,
                     scenarioKey: $scenarioKey,
                     scenario: $scenario,
                     issuer: $bootstrap->issuer,

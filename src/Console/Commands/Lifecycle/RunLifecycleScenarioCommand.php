@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Console\Commands\Lifecycle;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
+use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\ConsoleLifecycleOutput;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleDisbursementPoller;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleResultRenderer;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleScenarioEngine;
@@ -60,10 +61,13 @@ class RunLifecycleScenarioCommand extends Command
 
         $scenarioKey = (string) $this->argument('scenario');
 
+        $output = new ConsoleLifecycleOutput($this);
+
         $result = $engine->run(
             command: $this,
             scenarioKey: $scenarioKey,
             options: LifecycleScenarioRunOptions::fromConsoleOptions($this->options()),
+            output: $output,
         );
 
         return $renderer->render(
