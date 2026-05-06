@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Artisan;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
+use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleDisbursementPoller;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleUserSummary;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\WalletTransactionSnapshot;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
@@ -15,6 +15,10 @@ use Throwable;
 
 final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
 {
+    public function __construct(
+        private readonly LifecycleDisbursementPoller $poller,
+    ) {}
+
     public function run(ScenarioRunContext $context): ScenarioRunResult
     {
         $command = $context->command;
@@ -65,13 +69,14 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
                     $command->line('Polling disbursement status...');
                 }
 
-                $finalCheck = $this->pollDisbursement(
-                    command: $command,
+                $finalCheck = $this->poller->poll(
                     code: $voucher->code,
                     timeout: $timeout,
                     poll: $poll,
                     maxPolls: $maxPolls,
                     acceptPending: (bool) $command->option('accept-pending'),
+                    command: $command,
+                    json: $context->wantsJson(),
                 );
 
                 $actual = [
@@ -153,9 +158,6 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
         );
     }
 
-    /**
-     * @return array<string, mixed>
-     */
     private function buildClaimPayload(array $scenario, array $attempt, string $mobile): array
     {
         $payload = array_replace_recursive(
@@ -179,25 +181,6 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
         return $payload;
     }
 
-    private function submitClaim(string $voucherCode, array $payload): array
-    {
-        $result = app(SubmitPayCodeClaim::class)->run($voucherCode, $payload);
-
-        if (is_array($result)) {
-            return $result;
-        }
-
-        if (is_object($result) && method_exists($result, 'toArray')) {
-            return $result->toArray();
-        }
-
-        return [
-            'status' => 'succeeded',
-            'message' => 'Claim submitted.',
-            'result' => $result,
-        ];
-    }
-
     private function normalizeException(Throwable $exception): array
     {
         return [
@@ -215,11 +198,6 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
         return (string) data_get($attempt, 'expect.status', $default);
     }
 
-    /**
-     * @param  array<string, mixed>  $attempt
-     * @param  array<string, mixed>  $actual
-     * @return array<string, mixed>
-     */
     private function evaluateExpectation(array $attempt, array $actual): array
     {
         $expectedStatus = $this->expectedAttemptStatus($attempt);
@@ -323,10 +301,6 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
         ];
     }
 
-    /**
-     * @param  array<string, mixed>  $evaluation
-     * @param  array<string, mixed>  $actual
-     */
     private function renderAttemptEvaluation(
         Command $command,
         string $attemptKey,
@@ -382,9 +356,9 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
     private function resolveAttemptMobile(array $scenario, array $attempt, string $defaultMobile): string
     {
         $mobile = (string) (
-        data_get($attempt, 'claim.mobile')
-            ?: data_get($scenario, 'claim.mobile')
-            ?: $defaultMobile
+            data_get($attempt, 'claim.mobile')
+                ?: data_get($scenario, 'claim.mobile')
+                ?: $defaultMobile
         );
 
         if ($mobile === '') {
@@ -394,10 +368,6 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
         return $mobile;
     }
 
-    /**
-     * @param  mixed  $claim
-     * @param  array<string, mixed>  $finalCheck
-     */
     private function resolveSuccessMessage($claim, array $finalCheck): string
     {
         $status = (string) data_get($finalCheck, 'status', '');
@@ -407,97 +377,5 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
         }
 
         return 'Claim submitted successfully.';
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function pollDisbursement(
-        Command $command,
-        string $code,
-        int $timeout,
-        int $poll,
-        ?int $maxPolls = null,
-        bool $acceptPending = false,
-    ): array {
-        $start = time();
-        $attempt = 0;
-        $last = [
-            'voucher_code' => $code,
-            'current_status' => 'unknown',
-        ];
-
-        do {
-            $attempt++;
-
-            Artisan::call('xchange:disbursement:check', [
-                'code' => $code,
-                '--sync' => true,
-                '--json' => true,
-            ]);
-
-            $output = trim(Artisan::output());
-            $decoded = json_decode($output, true);
-
-            if (is_array($decoded)) {
-                $last = $decoded;
-                $status = $decoded['current_status'] ?? null;
-                $providerTransactionId = $decoded['provider_transaction_id'] ?? null;
-                $needsReview = (bool) ($decoded['needs_review'] ?? false);
-                $provider = $decoded['provider'] ?? null;
-
-                if (! $command->option('json')) {
-                    $elapsed = time() - $start;
-                    $maxPollsLabel = $maxPolls !== null ? (string) $maxPolls : '∞';
-
-                    $command->line(sprintf(
-                        '[poll %d/%s | %ss] status=%s provider_tx=%s needs_review=%s',
-                        $attempt,
-                        $maxPollsLabel,
-                        $elapsed,
-                        $status ?? 'unknown',
-                        $providerTransactionId ?: 'n/a',
-                        $needsReview ? 'yes' : 'no',
-                    ));
-                }
-
-                if (in_array($status, ['succeeded', 'failed'], true)) {
-                    return $decoded;
-                }
-
-                if (
-                    $acceptPending
-                    && $status === 'pending'
-                    && ! $needsReview
-                    && is_string($provider) && $provider !== ''
-                    && is_string($providerTransactionId) && $providerTransactionId !== ''
-                ) {
-                    if (! $command->option('json')) {
-                        $command->info('Trusted pending transaction accepted as good enough.');
-                    }
-
-                    return $decoded;
-                }
-            } elseif (! $command->option('json')) {
-                $elapsed = time() - $start;
-                $command->warn("[poll {$elapsed}s] unable to decode disbursement status response");
-            }
-
-            if ($maxPolls !== null && $attempt >= $maxPolls) {
-                break;
-            }
-
-            if ((time() - $start) >= $timeout) {
-                break;
-            }
-
-            sleep($poll);
-        } while (true);
-
-        $last['current_status'] = $last['current_status'] ?? 'timeout';
-        $last['timed_out'] = true;
-        $last['poll_attempts'] = $attempt;
-
-        return $last;
     }
 }
