@@ -4,12 +4,9 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Console\Commands\Lifecycle;
 
-use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Number;
-use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleResultRenderer;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleScenarioBootstrapResult;
@@ -266,39 +263,6 @@ class RunLifecycleScenarioCommand extends Command
         );
     }
 
-    protected function renderEstimateSummary(array $estimate): void
-    {
-        $currency = (string) ($estimate['currency'] ?? 'PHP');
-
-        if (isset($estimate['total'])) {
-            $this->line('Estimated Tariff: '.Number::currency((float) $estimate['total'], in: $currency));
-        }
-
-        $charges = $estimate['charges'] ?? null;
-
-        if (! is_array($charges) || $charges === []) {
-            return;
-        }
-
-        $this->line('Charge Lines:');
-
-        foreach ($charges as $charge) {
-            $label = (string) ($charge['label'] ?? $charge['index'] ?? 'Unknown');
-            $quantity = (int) ($charge['quantity'] ?? 1);
-            $unitPrice = (float) ($charge['unit_price'] ?? 0);
-            $price = (float) ($charge['price'] ?? 0);
-            $chargeCurrency = (string) ($charge['currency'] ?? $currency);
-
-            $this->line(sprintf(
-                '  - %s | %s × %d = %s',
-                $label,
-                Number::currency($unitPrice, in: $chargeCurrency),
-                $quantity,
-                Number::currency($price, in: $chargeCurrency),
-            ));
-        }
-    }
-
     protected function resolveMaxPolls(int $timeout, int $poll): ?int
     {
         $configured = $this->option('max-polls');
@@ -310,130 +274,6 @@ class RunLifecycleScenarioCommand extends Command
         return (int) ceil($timeout / max(1, $poll));
     }
 
-    protected function assertLifecycleUserModelSupportsMobile(): void
-    {
-        $class = $this->userModelClass();
-
-        if (! is_subclass_of($class, HasMobileChannel::class)) {
-            throw new RuntimeException(sprintf(
-                'Configured lifecycle user model [%s] must implement [%s].',
-                $class,
-                HasMobileChannel::class,
-            ));
-        }
-    }
-
-    protected function userModelClass(): string
-    {
-        $class = (string) config('x-change.lifecycle.defaults.user_model', User::class);
-
-        if ($class === '' || ! class_exists($class)) {
-            throw new RuntimeException('Configured lifecycle user model is invalid.');
-        }
-
-        return $class;
-    }
-
-    protected function resolveAttemptMobile(array $scenario, array $attempt, string $defaultMobile): string
-    {
-        $mobile = (string) (
-            data_get($attempt, 'claim.mobile')
-                ?: data_get($scenario, 'claim.mobile')
-                ?: $defaultMobile
-        );
-
-        if ($mobile === '') {
-            throw new RuntimeException('Lifecycle attempt mobile could not be resolved.');
-        }
-
-        return $mobile;
-    }
-
-    protected function expectedAttemptStatus(array $attempt, string $default = 'succeeded'): string
-    {
-        return (string) data_get($attempt, 'expect.status', $default);
-    }
-
-    protected function evaluateAttemptExpectation(array $attempt, array $actual): array
-    {
-        $expectedStatus = $this->expectedAttemptStatus($attempt);
-        $actualStatus = (string) ($actual['status'] ?? 'failed');
-        $actualMessage = (string) ($actual['message'] ?? '');
-
-        $checks = [];
-
-        $statusPassed = $expectedStatus === $actualStatus;
-        $checks['status'] = [
-            'passed' => $statusPassed,
-            'expected' => $expectedStatus,
-            'actual' => $actualStatus,
-        ];
-
-        $messageNeedles = array_values(array_filter(
-            (array) data_get($attempt, 'expect.message_contains', []),
-            fn ($value) => is_string($value) && trim($value) !== ''
-        ));
-
-        $messagePassed = true;
-        $missingNeedles = [];
-
-        if ($messageNeedles !== []) {
-            $haystack = mb_strtolower($actualMessage);
-
-            foreach ($messageNeedles as $needle) {
-                if (! str_contains($haystack, mb_strtolower($needle))) {
-                    $messagePassed = false;
-                    $missingNeedles[] = $needle;
-                }
-            }
-        }
-
-        $checks['message_contains'] = [
-            'passed' => $messagePassed,
-            'expected' => $messageNeedles,
-            'actual' => $actualMessage,
-            'missing' => $missingNeedles,
-        ];
-
-        $passed = collect($checks)->every(fn (array $check) => (bool) ($check['passed'] ?? false));
-
-        return [
-            'passed' => $passed,
-            'checks' => $checks,
-            'summary' => $this->summarizeEvaluation($passed, $statusPassed, $messagePassed, $expectedStatus, $actualStatus),
-        ];
-    }
-
-    protected function summarizeEvaluation(
-        bool $passed,
-        bool $statusPassed,
-        bool $messagePassed,
-        string $expectedStatus,
-        string $actualStatus,
-    ): string {
-        if ($passed && $actualStatus === 'failed') {
-            return 'FAILED as expected';
-        }
-
-        if ($passed && $actualStatus === 'succeeded') {
-            return 'SUCCEEDED as expected';
-        }
-
-        if (! $statusPassed && $expectedStatus === 'failed' && $actualStatus === 'succeeded') {
-            return 'UNEXPECTED SUCCESS';
-        }
-
-        if (! $statusPassed && $expectedStatus === 'succeeded' && $actualStatus === 'failed') {
-            return 'UNEXPECTED FAILURE';
-        }
-
-        if (! $messagePassed) {
-            return 'STATUS matched, message check failed';
-        }
-
-        return 'Expectation mismatch';
-    }
-
     protected function resolveSuccessMessage($claim, array $finalCheck): string
     {
         $status = (string) data_get($finalCheck, 'status', '');
@@ -443,79 +283,6 @@ class RunLifecycleScenarioCommand extends Command
         }
 
         return 'Claim submitted successfully.';
-    }
-
-    protected function renderAttemptEvaluation(string $attemptKey, array $evaluation, array $actual): void
-    {
-        $summary = (string) data_get($evaluation, 'summary', 'Unknown');
-
-        if ((bool) data_get($evaluation, 'passed', false)) {
-            $this->info(sprintf('Attempt [%s]: %s', $attemptKey, $summary));
-        } else {
-            $this->error(sprintf('Attempt [%s]: %s', $attemptKey, $summary));
-        }
-
-        $checks = (array) data_get($evaluation, 'checks', []);
-
-        $statusCheck = (array) ($checks['status'] ?? []);
-        $messageCheck = (array) ($checks['message_contains'] ?? []);
-
-        $this->line(sprintf(
-            '  Status check: expected=%s actual=%s',
-            $statusCheck['expected'] ?? 'n/a',
-            $statusCheck['actual'] ?? 'n/a',
-        ));
-
-        $expectedFragments = (array) ($messageCheck['expected'] ?? []);
-        if ($expectedFragments !== []) {
-            $this->line(sprintf(
-                '  Message check: %s',
-                (bool) ($messageCheck['passed'] ?? false)
-                    ? 'matched'
-                    : 'missing ['.implode(', ', (array) ($messageCheck['missing'] ?? [])).']'
-            ));
-        }
-
-        $actualMessage = (string) ($actual['message'] ?? '');
-        if ($actualMessage !== '') {
-            $this->line('  Actual message: '.$actualMessage);
-        }
-    }
-
-    protected function summarizeAttempts(array $attemptResults): array
-    {
-        $total = count($attemptResults);
-        $passed = collect($attemptResults)
-            ->filter(fn (array $result) => (bool) data_get($result, 'evaluation.passed', false))
-            ->count();
-
-        $failed = $total - $passed;
-
-        return [
-            'passed' => $passed,
-            'failed' => $failed,
-            'total' => $total,
-        ];
-    }
-
-    protected function renderAttemptsSummary(array $summary): void
-    {
-        $this->newLine();
-        $this->info('Attempts Summary:');
-        $this->line('  Passed: '.$summary['passed']);
-        $this->line('  Failed: '.$summary['failed']);
-        $this->line('  Total: '.$summary['total']);
-    }
-
-    protected function normalizeScenarioClaims(array $scenario): ?array
-    {
-        $claims = data_get($scenario, 'claims');
-
-        if (! is_array($claims) || $claims === []) {
-            return null;
-        }
-
-        return $claims;
     }
 
     protected function runSequentialClaimsScenario(
