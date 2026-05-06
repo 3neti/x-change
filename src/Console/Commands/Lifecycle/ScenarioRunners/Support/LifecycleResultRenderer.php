@@ -34,6 +34,12 @@ final class LifecycleResultRenderer
      */
     public function renderHuman(Command $command, array $payload): void
     {
+        if (($payload['success'] ?? null) === false && isset($payload['message'])) {
+            $command->error((string) $payload['message']);
+
+            return;
+        }
+
         $command->info('Lifecycle scenario completed.');
         $command->line('Scenario: '.($payload['scenario'] ?? $payload['mode'] ?? 'n/a'));
 

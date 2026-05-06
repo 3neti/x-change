@@ -9,18 +9,15 @@ use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Number;
-use InvalidArgumentException;
 use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\ScenarioRunContext;
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\ScenarioRunnerRegistry;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleResultRenderer;
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleScenarioBootstrapper;
+use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleScenarioBootstrapResult;
+use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleScenarioEngine;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleScenarioRepository;
+use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleScenarioRunOptions;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleUserSummary;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\WalletTransactionSnapshot;
-use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
-use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\VoucherClaim;
 use RuntimeException;
 
@@ -48,72 +45,48 @@ class RunLifecycleScenarioCommand extends Command
 
     public function handle(
         SubmitPayCodeClaim $submitPayCodeClaim,
-        SettlementEnvelopeReadinessContract $settlementEnvelopeReadiness,
-        LifecycleScenarioRepository $scenarioRepository,
-        LifecycleScenarioBootstrapper $bootstrapper,
+        LifecycleScenarioEngine $engine,
         LifecycleResultRenderer $renderer,
+        LifecycleScenarioRepository $scenarioRepository,
     ): int {
         if ($this->option('list')) {
             return $this->listScenarios($scenarioRepository);
         }
+
         if ($this->option('prepare') || $this->option('fresh')) {
             Artisan::call('xchange:lifecycle:prepare', array_filter([
                 '--fresh' => (bool) $this->option('fresh'),
                 '--seed' => true,
             ]));
+
             $this->line(Artisan::output());
         }
 
         $existingCode = $this->option('check-only');
+
         if (is_string($existingCode) && trim($existingCode) !== '') {
             return $this->runCheckOnly(trim($existingCode), $renderer);
         }
 
         $scenarioKey = (string) $this->argument('scenario');
 
-        try {
-            $scenario = $scenarioRepository->findOrFail($scenarioKey);
-        } catch (InvalidArgumentException $e) {
-            $this->error($e->getMessage());
+        $result = $engine->run(
+            command: $this,
+            scenarioKey: $scenarioKey,
+            options: LifecycleScenarioRunOptions::fromConsoleOptions($this->options()),
+        );
 
-            return self::FAILURE;
-        }
-
-        $this->assertLifecycleUserModelSupportsMobile();
-
-        $defaults = (array) config('x-change.lifecycle.defaults', []);
-        $scenario = array_replace_recursive($defaults, $scenario);
-
-        $claims = $this->normalizeScenarioClaims($scenario);
-
-        if ($claims !== null) {
-            if (! $this->option('json')) {
-                $this->info("Running scenario: {$scenarioKey}");
-                $this->line('Estimating cost...');
-            }
-
-            $bootstrap = $bootstrapper->bootstrap(
-                scenario: $scenario,
-                issuerOption: is_string($this->option('issuer')) ? (string) $this->option('issuer') : null,
-                walletOption: is_string($this->option('wallet')) ? (string) $this->option('wallet') : null,
-                amountOption: is_string($this->option('amount')) ? (string) $this->option('amount') : null,
-                timeoutOption: is_string($this->option('timeout')) ? (string) $this->option('timeout') : null,
-                pollOption: is_string($this->option('poll')) ? (string) $this->option('poll') : null,
-                maxPollsOption: is_string($this->option('max-polls')) ? (string) $this->option('max-polls') : null,
-            );
-
-            if (! $this->option('json')) {
-                $this->renderEstimateSummary($bootstrap->estimate);
-                $this->line('Generating voucher...');
-            }
+        if (($result->payload['_bridge'] ?? null) === 'sequential_claims') {
+            /** @var LifecycleScenarioBootstrapResult $bootstrap */
+            $bootstrap = $result->payload['bootstrap'];
 
             return $this->runSequentialClaimsScenario(
-                scenarioKey: $scenarioKey,
-                scenario: $scenario,
+                scenarioKey: (string) $result->payload['scenario_key'],
+                scenario: (array) $result->payload['scenario'],
                 issuer: $bootstrap->issuer,
                 generated: $bootstrap->generated,
                 voucher: $bootstrap->voucher,
-                claims: $claims,
+                claims: (array) $result->payload['claims'],
                 baseClaimMobile: $bootstrap->baseClaimMobile,
                 timeout: $bootstrap->timeout,
                 poll: $bootstrap->poll,
@@ -124,211 +97,10 @@ class RunLifecycleScenarioCommand extends Command
             );
         }
 
-        try {
-            $attempts = $scenarioRepository->attemptsFor(
-                scenario: $scenario,
-                selectedAttempt: is_string($this->option('only-attempt'))
-                    ? (string) $this->option('only-attempt')
-                    : null,
-            );
-        } catch (InvalidArgumentException $e) {
-            $this->error($e->getMessage());
-
-            return self::FAILURE;
-        }
-
-        if (! $this->option('json')) {
-            $this->info("Running scenario: {$scenarioKey}");
-
-            if (is_string($this->option('only-attempt')) && trim((string) $this->option('only-attempt')) !== '') {
-                $this->line('Selected attempt: '.$this->option('only-attempt'));
-            }
-
-            $this->line('Estimating cost...');
-        }
-
-        $bootstrap = $bootstrapper->bootstrap(
-            scenario: $scenario,
-            issuerOption: is_string($this->option('issuer')) ? (string) $this->option('issuer') : null,
-            walletOption: is_string($this->option('wallet')) ? (string) $this->option('wallet') : null,
-            amountOption: is_string($this->option('amount')) ? (string) $this->option('amount') : null,
-            timeoutOption: is_string($this->option('timeout')) ? (string) $this->option('timeout') : null,
-            pollOption: is_string($this->option('poll')) ? (string) $this->option('poll') : null,
-            maxPollsOption: is_string($this->option('max-polls')) ? (string) $this->option('max-polls') : null,
-        );
-
-        if (! $this->option('json')) {
-            $this->renderEstimateSummary($bootstrap->estimate);
-            $this->line('Generating voucher...');
-        }
-
-        $code = $bootstrap->generated->code;
-
-        if ($this->option('no-claim')) {
-            $walletTransactions = app(WalletTransactionSnapshot::class)->recentFor(
-                issuer: $bootstrap->issuer,
-                idempotencyKey: $bootstrap->idempotencyKey,
-                voucherCode: $bootstrap->generated->code,
-                limit: 10,
-            );
-
-            return $renderer->render(
-                command: $this,
-                payload: [
-                    'scenario' => $scenarioKey,
-                    'label' => $scenario['label'] ?? $scenarioKey,
-                    'selected_attempt' => $this->option('only-attempt'),
-                    'issuer' => app(LifecycleUserSummary::class)->fromModel($bootstrap->issuer),
-                    'claim_mobile' => $bootstrap->baseClaimMobile,
-                    'attempts' => array_keys($attempts),
-                    'attempt_summary' => [
-                        'passed' => 0,
-                        'failed' => 0,
-                        'total' => count($attempts),
-                    ],
-                    'estimate' => $bootstrap->estimate,
-                    'generated' => $bootstrap->generated->toArray(),
-                    'wallet_transactions' => $walletTransactions,
-                ],
-            );
-        }
-
-        $voucher = $bootstrap->voucher;
-
-        $registry = app(ScenarioRunnerRegistry::class);
-
-        $mode = $scenarioRepository->modeFor($scenario);
-
-        if ($registry->has($mode)) {
-            $result = $registry->for($mode)->run(
-                new ScenarioRunContext(
-                    command: $this,
-                    scenarioKey: $scenarioKey,
-                    scenario: $scenario,
-                    issuer: $bootstrap->issuer,
-                    generated: $bootstrap->generated,
-                    voucher: $bootstrap->voucher,
-                    attempts: $attempts,
-                    baseClaimMobile: $bootstrap->baseClaimMobile,
-                    estimate: $bootstrap->estimate,
-                    idempotencyKey: $bootstrap->idempotencyKey,
-                    readiness: $settlementEnvelopeReadiness,
-                )
-            );
-
-            return $renderer->render(
-                command: $this,
-                payload: $result->payload,
-                exitCode: $result->exitCode,
-            );
-        }
-
-        $attemptResults = [];
-        $commandStatus = self::SUCCESS;
-
-        foreach ($attempts as $attemptKey => $attempt) {
-            $attemptMobile = $this->resolveAttemptMobile($scenario, $attempt, $bootstrap->baseClaimMobile);
-
-            if (! $this->option('json')) {
-                $this->line(sprintf(
-                    'Submitting claim for voucher %s (attempt: %s)...',
-                    $code,
-                    $attemptKey
-                ));
-            }
-
-            $claimPayload = $this->buildClaimPayload($scenario, $attempt, $attemptMobile);
-
-            try {
-                $claim = $submitPayCodeClaim->handle($voucher, $claimPayload);
-
-                if (! $this->option('json')) {
-                    $this->line('Polling disbursement status...');
-                }
-
-                $finalCheck = $this->pollDisbursement(
-                    code: $code,
-                    timeout: $bootstrap->timeout,
-                    poll: $bootstrap->poll,
-                    maxPolls: $bootstrap->maxPolls,
-                    acceptPending: (bool) $this->option('accept-pending'),
-                );
-
-                $actual = [
-                    'status' => 'succeeded',
-                    'message' => $this->resolveSuccessMessage($claim, $finalCheck),
-                    'claim' => $claim->toArray(),
-                    'disbursement_check' => $finalCheck,
-                ];
-            } catch (\Throwable $e) {
-                $actual = [
-                    'status' => 'failed',
-                    'message' => $e->getMessage(),
-                    'error' => [
-                        'class' => $e::class,
-                        'message' => $e->getMessage(),
-                    ],
-                ];
-            }
-
-            $evaluation = $this->evaluateAttemptExpectation($attempt, $actual);
-
-            $attemptResults[$attemptKey] = [
-                'claim_mobile' => $attemptMobile,
-                'claim_payload' => $claimPayload,
-                'expect' => $attempt['expect'] ?? [],
-                'actual' => $actual,
-                'evaluation' => $evaluation,
-                'status' => $actual['status'],
-                'message' => $actual['message'],
-                'claim' => $actual['claim'] ?? null,
-                'disbursement_check' => $actual['disbursement_check'] ?? null,
-                'error' => $actual['error'] ?? null,
-            ];
-
-            if (! $evaluation['passed']) {
-                $commandStatus = self::FAILURE;
-            }
-
-            if (! $this->option('json')) {
-                $this->renderAttemptEvaluation($attemptKey, $evaluation, $actual);
-            }
-        }
-
-        $reconciliation = DisbursementReconciliation::query()
-            ->where('voucher_code', $code)
-            ->latest('id')
-            ->first();
-
-        $walletTransactions = app(WalletTransactionSnapshot::class)->recentFor(
-            issuer: $bootstrap->issuer,
-            idempotencyKey: $bootstrap->idempotencyKey,
-            voucherCode: $bootstrap->generated->code,
-            limit: 10,
-        );
-
-        $attemptSummary = $this->summarizeAttempts($attemptResults);
-
-        if (! $this->option('json')) {
-            $this->renderAttemptsSummary($attemptSummary);
-        }
-
         return $renderer->render(
             command: $this,
-            payload: [
-                'scenario' => $scenarioKey,
-                'label' => $scenario['label'] ?? $scenarioKey,
-                'selected_attempt' => $this->option('only-attempt'),
-                'issuer' => app(LifecycleUserSummary::class)->fromModel($bootstrap->issuer),
-                'claim_mobile' => $bootstrap->baseClaimMobile,
-                'attempts' => $attemptResults,
-                'attempt_summary' => $attemptSummary,
-                'estimate' => $bootstrap->estimate,
-                'generated' => $bootstrap->generated->toArray(),
-                'reconciliation' => $reconciliation?->toArray(),
-                'wallet_transactions' => $walletTransactions,
-            ],
-            exitCode: $commandStatus,
+            payload: $result->payload,
+            exitCode: $result->exitCode,
         );
     }
 
