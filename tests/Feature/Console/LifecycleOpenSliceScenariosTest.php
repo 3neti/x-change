@@ -111,6 +111,7 @@ it('runs the divisible open three slices enforced interval scenario successfully
 
     expect($claims)->toHaveCount(3);
 
+    // Assert runtime override: no waiting in tests
     expect(data_get($claims[0]->meta, 'wait_before_seconds'))->toBe(0)
         ->and(data_get($claims[1]->meta, 'wait_before_seconds'))->toBe(0)
         ->and(data_get($claims[2]->meta, 'wait_before_seconds'))->toBe(0);
@@ -163,4 +164,12 @@ it('issues open slice lifecycle scenarios as disbursable vouchers', function () 
 
     expect($capabilities->type)->toBe(VoucherFlowType::Disbursable);
     expect($capabilities->can_disburse)->toBeTrue();
+});
+
+it('has correct enforced wait configuration in scenario definition', function () {
+    $scenario = config('x-change.lifecycle.scenarios.divisible_open_three_slices_enforced_interval');
+
+    expect(data_get($scenario, 'claims.claim_1_withdraw.wait_before_seconds'))->toBe(0)
+        ->and(data_get($scenario, 'claims.claim_2_withdraw.wait_before_seconds'))->toBe(10)
+        ->and(data_get($scenario, 'claims.claim_3_withdraw.wait_before_seconds'))->toBe(10);
 });
