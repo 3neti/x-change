@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\ScenarioRunContext;
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\ConsoleLifecycleOutput;
 use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
+use LBHurtado\XChange\Lifecycle\Output\ConsoleLifecycleOutput;
+use LBHurtado\XChange\Lifecycle\Runners\ScenarioRunContext;
 
 it('exposes scenario metadata helpers', function () {
     $command = new class extends Command

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleScenarioBootstrapper;
+use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioBootstrapper;
 use LBHurtado\XChange\Tests\Fakes\User as FakeLifecycleUser;
 
 it('builds lifecycle input from scenario values', function () {

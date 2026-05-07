@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleDisbursementPoller;
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleOutputContract;
+use LBHurtado\XChange\Lifecycle\Output\LifecycleOutputContract;
+use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleDisbursementPoller;
 
 it('can poll without a console command dependency', function () {
     $output = new class implements LifecycleOutputContract {

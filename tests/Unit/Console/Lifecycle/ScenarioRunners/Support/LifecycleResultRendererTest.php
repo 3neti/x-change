@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Console\Command;
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleResultRenderer;
+use LBHurtado\XChange\Console\Commands\Lifecycle\LifecycleResultRenderer;
 
 it('renders json payload when json option is enabled', function () {
     $command = new class extends Command {

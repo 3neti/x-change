@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
 use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleUserSummary;
+use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleUserSummary;
 
 it('returns id email and mobile for a model with mobile channel', function () {
     $user = new class extends Model implements HasMobileChannel {

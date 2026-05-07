@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleScenarioRunOptions;
+use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioRunOptions;
 
 it('builds lifecycle scenario run options from console options', function () {
     $options = LifecycleScenarioRunOptions::fromConsoleOptions([

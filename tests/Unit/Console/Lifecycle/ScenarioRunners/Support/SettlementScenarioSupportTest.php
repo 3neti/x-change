@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\SettlementScenarioSupport;
 use LBHurtado\XChange\Data\Settlement\SettlementEnvelopeReadinessData;
+use LBHurtado\XChange\Lifecycle\Runners\Support\SettlementScenarioSupport;
 
 it('formats all settlement readiness fields', function () {
     $readiness = new SettlementEnvelopeReadinessData(

@@ -6,12 +6,11 @@ namespace LBHurtado\XChange\Console\Commands\Lifecycle;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\ConsoleLifecycleOutput;
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleDisbursementPoller;
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleResultRenderer;
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleScenarioEngine;
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleScenarioRepository;
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleScenarioRunOptions;
+use LBHurtado\XChange\Lifecycle\Output\ConsoleLifecycleOutput;
+use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleDisbursementPoller;
+use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioEngine;
+use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioRepository;
+use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioRunOptions;
 
 class RunLifecycleScenarioCommand extends Command
 {

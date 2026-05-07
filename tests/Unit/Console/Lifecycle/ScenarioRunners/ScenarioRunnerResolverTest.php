@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\DefaultClaimScenarioRunner;
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\ScenarioRunnerResolver;
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\SequentialClaimsScenarioRunner;
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\SettlementEnvelopeEvaluationScenarioRunner;
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\SettlementThreePartyScenarioRunner;
+use LBHurtado\XChange\Lifecycle\Runners\DefaultClaimScenarioRunner;
+use LBHurtado\XChange\Lifecycle\Runners\ScenarioRunnerResolver;
+use LBHurtado\XChange\Lifecycle\Runners\SequentialClaimsScenarioRunner;
+use LBHurtado\XChange\Lifecycle\Runners\SettlementEnvelopeEvaluationScenarioRunner;
+use LBHurtado\XChange\Lifecycle\Runners\SettlementThreePartyScenarioRunner;
 
 it('resolves default scenarios to default claim runner', function () {
     $resolution = app(ScenarioRunnerResolver::class)->resolve([

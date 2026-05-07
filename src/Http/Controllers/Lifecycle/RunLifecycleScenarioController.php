@@ -6,9 +6,9 @@ namespace LBHurtado\XChange\Http\Controllers\Lifecycle;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleScenarioEngine;
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleScenarioRunOptions;
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\NullLifecycleOutput;
+use LBHurtado\XChange\Lifecycle\Output\NullLifecycleOutput;
+use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioEngine;
+use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioRunOptions;
 
 final class RunLifecycleScenarioController
 {

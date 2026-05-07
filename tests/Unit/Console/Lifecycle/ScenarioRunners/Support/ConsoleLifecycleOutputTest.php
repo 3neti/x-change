@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Console\Command;
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\ConsoleLifecycleOutput;
+use LBHurtado\XChange\Lifecycle\Output\ConsoleLifecycleOutput;
 
 it('forwards output calls to console command', function () {
     $command = new class extends Command {

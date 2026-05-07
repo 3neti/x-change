@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use Illuminate\Console\Command;
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleScenarioEngine;
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleScenarioRunOptions;
+use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioEngine;
+use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioRunOptions;
 use LBHurtado\XChange\Tests\Fakes\User as FakeLifecycleUser;
 
 function prepareEngineLifecycleIssuer(): FakeLifecycleUser

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleScenarioRepository;
+use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioRepository;
 
 it('loads lifecycle scenarios from config', function () {
     $repository = app(LifecycleScenarioRepository::class);
