@@ -379,7 +379,7 @@ final class SequentialClaimsScenarioRunner implements ScenarioRunnerContract
 
         $runtimeOverride = data_get($scenario, '_runtime.sequential_wait_between_claims_seconds');
 
-        if ($runtimeOverride !== null) {
+        if (app()->environment('testing') && $runtimeOverride !== null) {
             return max(0, (int) $runtimeOverride);
         }
 
