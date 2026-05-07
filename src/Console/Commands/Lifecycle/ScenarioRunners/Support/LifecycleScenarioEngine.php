@@ -7,15 +7,16 @@ namespace LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support;
 use Illuminate\Console\Command;
 use InvalidArgumentException;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\ScenarioRunContext;
-use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\ScenarioRunnerRegistry;
+use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\ScenarioRunnerResolver;
 use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
+use RuntimeException;
 
 final class LifecycleScenarioEngine
 {
     public function __construct(
         private readonly LifecycleScenarioRepository $scenarioRepository,
         private readonly LifecycleScenarioBootstrapper $bootstrapper,
-        private readonly ScenarioRunnerRegistry $registry,
+        private readonly ScenarioRunnerResolver $resolver,
         private readonly SettlementEnvelopeReadinessContract $settlementEnvelopeReadiness,
         private readonly WalletTransactionSnapshot $walletTransactions,
     ) {}
@@ -46,14 +47,25 @@ final class LifecycleScenarioEngine
             $scenario,
         );
 
-        $claims = data_get($scenario, 'claims');
-
-        if (is_array($claims)) {
-            $scenario['mode'] = $scenario['mode'] ?? 'sequential_claims';
+        try {
+            $resolution = $this->resolver->resolve($scenario);
+        } catch (RuntimeException $e) {
+            return new LifecycleScenarioEngineResult(
+                exitCode: Command::FAILURE,
+                payload: [
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                    'scenario' => $scenarioKey,
+                    'mode' => (string) data_get($scenario, 'mode', 'default'),
+                ],
+            );
         }
 
+        $scenario = $resolution->scenario;
+        $mode = $resolution->mode;
+
         try {
-            $attempts = is_array($claims)
+            $attempts = $mode === 'sequential_claims'
                 ? []
                 : $this->scenarioRepository->attemptsFor(
                     scenario: $scenario,
@@ -124,46 +136,32 @@ final class LifecycleScenarioEngine
             );
         }
 
-        $mode = $this->scenarioRepository->modeFor($scenario);
+        $scenario['_runtime'] = [
+            'selected_attempt' => $options->onlyAttempt,
+            'timeout' => $bootstrap->timeout,
+            'poll' => $bootstrap->poll,
+            'max_polls' => $bootstrap->maxPolls,
+        ];
 
-        if ($this->registry->has($mode)) {
-            $scenario['_runtime'] = [
-                'selected_attempt' => $options->onlyAttempt,
-                'timeout' => $bootstrap->timeout,
-                'poll' => $bootstrap->poll,
-                'max_polls' => $bootstrap->maxPolls,
-            ];
-
-            $result = $this->registry->for($mode)->run(
-                new ScenarioRunContext(
-                    output: $output,
-                    scenarioKey: $scenarioKey,
-                    scenario: $scenario,
-                    issuer: $bootstrap->issuer,
-                    generated: $bootstrap->generated,
-                    voucher: $bootstrap->voucher,
-                    attempts: $attempts,
-                    baseClaimMobile: $bootstrap->baseClaimMobile,
-                    estimate: $bootstrap->estimate,
-                    idempotencyKey: $bootstrap->idempotencyKey,
-                    readiness: $this->settlementEnvelopeReadiness,
-                )
-            );
-
-            return new LifecycleScenarioEngineResult(
-                exitCode: $result->exitCode,
-                payload: $result->payload,
-            );
-        }
+        $result = $resolution->runner->run(
+            new ScenarioRunContext(
+                output: $output,
+                scenarioKey: $scenarioKey,
+                scenario: $scenario,
+                issuer: $bootstrap->issuer,
+                generated: $bootstrap->generated,
+                voucher: $bootstrap->voucher,
+                attempts: $attempts,
+                baseClaimMobile: $bootstrap->baseClaimMobile,
+                estimate: $bootstrap->estimate,
+                idempotencyKey: $bootstrap->idempotencyKey,
+                readiness: $this->settlementEnvelopeReadiness,
+            )
+        );
 
         return new LifecycleScenarioEngineResult(
-            exitCode: Command::FAILURE,
-            payload: [
-                'success' => false,
-                'message' => "No lifecycle scenario runner registered for mode [{$mode}].",
-                'scenario' => $scenarioKey,
-                'mode' => $mode,
-            ],
+            exitCode: $result->exitCode,
+            payload: $result->payload,
         );
     }
 }
