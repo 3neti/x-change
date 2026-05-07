@@ -137,6 +137,7 @@ final class LifecycleScenarioEngine
         }
 
         $scenario['_runtime'] = [
+            ...(array) data_get($scenario, '_runtime', []),
             'selected_attempt' => $options->onlyAttempt,
             'timeout' => $bootstrap->timeout,
             'poll' => $bootstrap->poll,

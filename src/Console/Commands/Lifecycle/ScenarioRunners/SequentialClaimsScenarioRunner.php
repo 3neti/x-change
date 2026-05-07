@@ -10,6 +10,7 @@ use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\Lifecyc
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleOutputContract;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleUserSummary;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\WalletTransactionSnapshot;
+use LBHurtado\XChange\Models\VoucherClaim;
 use Throwable;
 
 final class SequentialClaimsScenarioRunner implements ScenarioRunnerContract
@@ -28,8 +29,27 @@ final class SequentialClaimsScenarioRunner implements ScenarioRunnerContract
 
         $claimResults = [];
         $commandStatus = Command::SUCCESS;
+        $claimIndex = 0;
 
         foreach ($claims as $claimKey => $claim) {
+            $waitBeforeSeconds = $this->resolveWaitBeforeSeconds(
+                scenario: $scenario,
+                claim: $claim,
+                claimIndex: $claimIndex,
+            );
+
+            if ($waitBeforeSeconds > 0) {
+                if (! $context->wantsJson()) {
+                    $output->line(sprintf(
+                        'Waiting %d seconds before claim [%s]...',
+                        $waitBeforeSeconds,
+                        $claimKey,
+                    ));
+                }
+
+                sleep($waitBeforeSeconds);
+            }
+
             $claimMobile = $this->resolveClaimMobile(
                 scenario: $scenario,
                 claim: $claim,
@@ -77,6 +97,12 @@ final class SequentialClaimsScenarioRunner implements ScenarioRunnerContract
                         : $submittedClaim,
                     'disbursement_check' => $finalCheck,
                 ];
+
+                $this->persistWaitMetadata(
+                    voucherId: (int) $context->voucher->getKey(),
+                    claimKey: (string) $claimKey,
+                    waitBeforeSeconds: $waitBeforeSeconds,
+                );
             } catch (Throwable $exception) {
                 $actual = $this->normalizeException($exception);
             }
@@ -92,6 +118,7 @@ final class SequentialClaimsScenarioRunner implements ScenarioRunnerContract
 
             $claimResults[$claimKey] = [
                 'claim_mobile' => $claimMobile,
+                'wait_before_seconds' => $waitBeforeSeconds,
                 'claim_payload' => $claimPayload,
                 'expect' => (array) data_get($claim, 'expect', []),
                 'actual' => $actual,
@@ -111,6 +138,8 @@ final class SequentialClaimsScenarioRunner implements ScenarioRunnerContract
                     actual: $actual,
                 );
             }
+
+            $claimIndex++;
         }
 
         $claimSummary = $this->summarizeAttempts($claimResults);
@@ -340,5 +369,58 @@ final class SequentialClaimsScenarioRunner implements ScenarioRunnerContract
         }
 
         return 'Claim submitted successfully.';
+    }
+
+    private function resolveWaitBeforeSeconds(array $scenario, array $claim, int $claimIndex): int
+    {
+        if ($claimIndex === 0) {
+            return 0;
+        }
+
+        $runtimeOverride = data_get($scenario, '_runtime.sequential_wait_between_claims_seconds');
+
+        if ($runtimeOverride !== null) {
+            return max(0, (int) $runtimeOverride);
+        }
+
+        $explicit = data_get($claim, 'wait_before_seconds')
+            ?? data_get($claim, 'wait.before_seconds')
+            ?? data_get($claim, 'delay_before_seconds')
+            ?? data_get($claim, 'pause_before_seconds');
+
+        if ($explicit !== null) {
+            return max(0, (int) $explicit);
+        }
+
+        $default = data_get($scenario, 'sequential.wait_between_claims_seconds')
+            ?? data_get($scenario, 'claims_wait_between_seconds')
+            ?? data_get($scenario, 'wait_between_claims_seconds');
+
+        return max(0, (int) ($default ?? 0));
+    }
+
+    private function persistWaitMetadata(
+        int $voucherId,
+        string $claimKey,
+        int $waitBeforeSeconds,
+    ): void {
+        $claim = VoucherClaim::query()
+            ->where('voucher_id', $voucherId)
+            ->latest('id')
+            ->first();
+
+        if (! $claim) {
+            return;
+        }
+
+        $meta = is_array($claim->meta) ? $claim->meta : [];
+
+        $claim->forceFill([
+            'meta' => [
+                ...$meta,
+                'lifecycle_claim_key' => $claimKey,
+                'wait_before_seconds' => $waitBeforeSeconds,
+            ],
+        ])->save();
     }
 }

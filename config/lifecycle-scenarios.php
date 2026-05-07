@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use App\Models\User;
 
 return [
 
@@ -26,7 +27,7 @@ return [
         'system_float' => (float) env('XCHANGE_LIFECYCLE_SYSTEM_FLOAT', 1_000_000),
         'user_float' => (float) env('XCHANGE_LIFECYCLE_USER_FLOAT', 10_000),
 
-        'user_model' => env('XCHANGE_LIFECYCLE_USER_MODEL', \App\Models\User::class),
+        'user_model' => env('XCHANGE_LIFECYCLE_USER_MODEL', User::class),
     ],
 
     'seeders' => [
@@ -884,6 +885,10 @@ return [
         'divisible_open_three_slices_enforced_interval' => [
             'label' => 'Divisible Open Three Slices (Enforced Interval)',
 
+            'sequential' => [
+                'wait_between_claims_seconds' => 10,
+            ],
+
             'metadata' => [
                 'flow_type' => 'disbursable',
             ],
@@ -910,6 +915,7 @@ return [
 
             'claims' => [
                 'claim_1_withdraw' => [
+                    'wait_before_seconds' => 0,
                     'claim' => [
                         'amount' => 75,
                     ],
@@ -920,6 +926,7 @@ return [
                 ],
 
                 'claim_2_withdraw' => [
+                    'wait_before_seconds' => 10,
                     'claim' => [
                         'amount' => 50,
                     ],
@@ -930,6 +937,7 @@ return [
                 ],
 
                 'claim_3_withdraw' => [
+                    'wait_before_seconds' => 10,
                     'claim' => [
                         'amount' => 25,
                     ],

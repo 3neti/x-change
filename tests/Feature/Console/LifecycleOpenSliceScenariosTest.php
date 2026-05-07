@@ -16,15 +16,41 @@ beforeEach(function () {
         'x-change.withdrawal.open_slice_min_interval_seconds' => 0,
     ]);
 
-    expect(FakeLifecycleUser::class)->not->toBe('');
-    expect(class_exists(FakeLifecycleUser::class))->toBeTrue();
     expect(config('x-change.lifecycle.defaults.user_model'))->toBe(FakeLifecycleUser::class);
     expect(class_exists((string) config('x-change.lifecycle.defaults.user_model')))->toBeTrue();
 
     Artisan::call('xchange:lifecycle:prepare', [
         '--seed' => true,
     ]);
+
+    fastForwardScenarios([
+        'divisible_open_two_slices',
+        'divisible_open_three_slices_enforced_interval',
+    ]);
 });
+
+function fastForwardScenarios(array $keys): void
+{
+    foreach ($keys as $key) {
+        fastForwardScenario($key);
+    }
+}
+
+function fastForwardScenario(string $key): void
+{
+    $scenario = config("x-change.lifecycle.scenarios.{$key}");
+
+    if (! is_array($scenario)) {
+        return;
+    }
+
+    $scenario['_runtime'] = [
+        ...(array) data_get($scenario, '_runtime', []),
+        'sequential_wait_between_claims_seconds' => 0,
+    ];
+
+    config()->set("x-change.lifecycle.scenarios.{$key}", $scenario);
+}
 
 it('runs the divisible open two slices scenario successfully', function () {
     $exitCode = Artisan::call('xchange:lifecycle:run', [
@@ -84,6 +110,10 @@ it('runs the divisible open three slices enforced interval scenario successfully
         ->values();
 
     expect($claims)->toHaveCount(3);
+
+    expect(data_get($claims[0]->meta, 'wait_before_seconds'))->toBe(0)
+        ->and(data_get($claims[1]->meta, 'wait_before_seconds'))->toBe(0)
+        ->and(data_get($claims[2]->meta, 'wait_before_seconds'))->toBe(0);
 
     expect($claims[0]->claim_type)->toBe('withdraw');
     expect($claims[0]->requested_amount_minor)->toBe(7500);
