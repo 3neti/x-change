@@ -22,7 +22,6 @@ final class SequentialClaimsScenarioRunner implements ScenarioRunnerContract
 
     public function run(ScenarioRunContext $context): ScenarioRunResult
     {
-        $command = $context->command;
         $output = $context->output;
         $scenario = $context->scenario;
         $claims = (array) data_get($scenario, 'claims', []);
@@ -38,7 +37,7 @@ final class SequentialClaimsScenarioRunner implements ScenarioRunnerContract
             );
 
             if (! $context->wantsJson()) {
-                $command->line(sprintf(
+                $output->line(sprintf(
                     'Claim [%s] using mobile %s...',
                     $claimKey,
                     $claimMobile,
@@ -58,7 +57,7 @@ final class SequentialClaimsScenarioRunner implements ScenarioRunnerContract
                 );
 
                 if (! $context->wantsJson()) {
-                    $command->line('Polling disbursement status...');
+                    $output->line('Polling disbursement status...');
                 }
 
                 $finalCheck = $this->poller->poll(
@@ -66,9 +65,8 @@ final class SequentialClaimsScenarioRunner implements ScenarioRunnerContract
                     timeout: (int) data_get($scenario, 'timeout', 180),
                     poll: max(1, (int) data_get($scenario, 'poll', 10)),
                     maxPolls: null,
-                    acceptPending: (bool) $command->option('accept-pending'),
-                    command: $command,
-                    json: $context->wantsJson(),
+                    acceptPending: $context->acceptPending(),
+                    output: $output,
                 );
 
                 $actual = [

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners;
 
-use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support\LifecycleOutputContract;
 use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
@@ -12,7 +11,6 @@ use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
 final readonly class ScenarioRunContext
 {
     public function __construct(
-        public Command $command,
         public LifecycleOutputContract $output,
         public string $scenarioKey,
         public array $scenario,
@@ -38,7 +36,7 @@ final readonly class ScenarioRunContext
 
     public function selectedAttempt(): mixed
     {
-        return $this->command->option('only-attempt');
+        return data_get($this->scenario, '_runtime.selected_attempt');
     }
 
     public function wantsJson(): bool

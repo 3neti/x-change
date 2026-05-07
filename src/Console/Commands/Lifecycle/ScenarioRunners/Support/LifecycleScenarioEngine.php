@@ -127,9 +127,15 @@ final class LifecycleScenarioEngine
         $mode = $this->scenarioRepository->modeFor($scenario);
 
         if ($this->registry->has($mode)) {
+            $scenario['_runtime'] = [
+                'selected_attempt' => $options->onlyAttempt,
+                'timeout' => $bootstrap->timeout,
+                'poll' => $bootstrap->poll,
+                'max_polls' => $bootstrap->maxPolls,
+            ];
+
             $result = $this->registry->for($mode)->run(
                 new ScenarioRunContext(
-                    command: $command,
                     output: $output,
                     scenarioKey: $scenarioKey,
                     scenario: $scenario,

@@ -28,12 +28,14 @@ it('exposes scenario metadata helpers', function () {
     $generated = (object) ['code' => 'ABC123'];
 
     $context = new ScenarioRunContext(
-        command: $command,
         output: new ConsoleLifecycleOutput($command),
         scenarioKey: 'settlement_philhealth_bst',
         scenario: [
             'label' => 'Settlement PhilHealth BST',
             'mode' => 'settlement_envelope_evaluation',
+            '_runtime' => [
+                'selected_attempt' => 'blocked',
+            ],
         ],
         issuer: $issuer,
         generated: $generated,
@@ -67,7 +69,6 @@ it('falls back to scenario key as label', function () {
     };
 
     $context = new ScenarioRunContext(
-        command: $command,
         output: new ConsoleLifecycleOutput($command),
         scenarioKey: 'basic_cash',
         scenario: [],

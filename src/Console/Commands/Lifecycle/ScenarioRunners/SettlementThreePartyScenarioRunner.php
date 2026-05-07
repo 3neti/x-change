@@ -17,7 +17,6 @@ final class SettlementThreePartyScenarioRunner implements ScenarioRunnerContract
 {
     public function run(ScenarioRunContext $context): ScenarioRunResult
     {
-        $output = $context->output;
         $contexts = app(SettlementEnvelopeContextBuilder::class);
         $summaries = app(SettlementPhaseSummary::class);
 

@@ -18,7 +18,6 @@ final class SettlementEnvelopeEvaluationScenarioRunner implements ScenarioRunner
 {
     public function run(ScenarioRunContext $context): ScenarioRunResult
     {
-        $command = $context->command;
         $output = $context->output;
         $scenarioKey = $context->scenarioKey;
         $scenario = $context->scenario;
@@ -47,7 +46,7 @@ final class SettlementEnvelopeEvaluationScenarioRunner implements ScenarioRunner
                     ?: config('x-change.settlement.default_driver', 'philhealth-bst')
             );
 
-            if (! $command->option('json')) {
+            if (! $context->wantsJson()) {
                 $output->line(sprintf(
                     'Evaluating settlement envelope for voucher %s (attempt: %s)...',
                     $voucher->code,
@@ -55,13 +54,13 @@ final class SettlementEnvelopeEvaluationScenarioRunner implements ScenarioRunner
                 ));
             }
 
-            $context = $contexts->fromScenarioAttempt($scenario, $attempt);
+            $readinessContext = $contexts->fromScenarioAttempt($scenario, $attempt);
 
             try {
                 $result = $readiness->evaluate(
                     voucher: $voucher,
                     gate: $gate,
-                    context: $context,
+                    context: $readinessContext,
                 );
 
                 $actual = [
@@ -85,7 +84,7 @@ final class SettlementEnvelopeEvaluationScenarioRunner implements ScenarioRunner
             $evaluation = $this->evaluateSettlementExpectation($attempt, $actual);
 
             $attemptResults[$attemptKey] = [
-                'settlement_context' => $context,
+                'settlement_context' => $readinessContext,
                 'expect' => (array) data_get($attempt, 'expect', []),
                 'actual' => $actual,
                 'evaluation' => $evaluation,
@@ -99,8 +98,8 @@ final class SettlementEnvelopeEvaluationScenarioRunner implements ScenarioRunner
                 $exitCode = Command::FAILURE;
             }
 
-            if (! $command->option('json')) {
-                $this->renderSettlementEvaluation($command, (string) $attemptKey, $evaluation, $actual);
+            if (! $context->wantsJson()) {
+                $this->renderSettlementEvaluation($output, (string) $attemptKey, $evaluation, $actual);
             }
         }
 
@@ -113,8 +112,8 @@ final class SettlementEnvelopeEvaluationScenarioRunner implements ScenarioRunner
 
         $attemptSummary = $summaries->fromAttempts($attemptResults);
 
-        if (! $command->option('json')) {
-            $this->renderAttemptsSummary($command, $attemptSummary);
+        if (! $context->wantsJson()) {
+            $this->renderAttemptsSummary($output, $attemptSummary);
         }
 
         return new ScenarioRunResult(
@@ -123,7 +122,7 @@ final class SettlementEnvelopeEvaluationScenarioRunner implements ScenarioRunner
                 'scenario' => $scenarioKey,
                 'label' => $scenario['label'] ?? $scenarioKey,
                 'mode' => 'settlement_envelope_evaluation',
-                'selected_attempt' => $command->option('only-attempt'),
+                'selected_attempt' => $context->selectedAttempt(),
                 'issuer' => app(LifecycleUserSummary::class)->fromModel($issuer),
                 'claim_mobile' => $baseClaimMobile,
                 'attempts' => $attemptResults,
@@ -277,13 +276,13 @@ final class SettlementEnvelopeEvaluationScenarioRunner implements ScenarioRunner
         ];
     }
 
-    private function renderAttemptsSummary(Command $command, array $summary): void
+    private function renderAttemptsSummary(LifecycleOutputContract $output, array $summary): void
     {
-        $command->newLine();
-        $command->info('Attempts Summary:');
-        $command->line('  Passed: '.$summary['passed']);
-        $command->line('  Failed: '.$summary['failed']);
-        $command->line('  Total: '.$summary['total']);
+        $output->line('');
+        $output->info('Attempts Summary:');
+        $output->line('  Passed: '.$summary['passed']);
+        $output->line('  Failed: '.$summary['failed']);
+        $output->line('  Total: '.$summary['total']);
     }
 
     private function recentWalletTransactions(

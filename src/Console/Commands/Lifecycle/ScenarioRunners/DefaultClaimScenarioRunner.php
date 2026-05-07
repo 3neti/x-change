@@ -22,7 +22,6 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
 
     public function run(ScenarioRunContext $context): ScenarioRunResult
     {
-        $command = $context->command;
         $output = $context->output;
         $scenarioKey = $context->scenarioKey;
         $scenario = $context->scenario;
@@ -35,9 +34,16 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
 
         $idempotencyKey = $context->idempotencyKey;
 
-        $timeout = (int) $command->option('timeout');
-        $poll = max((int) $command->option('poll'), 1);
-        $maxPolls = $timeout <= 0 ? 1 : null;
+        $timeout = (int) data_get($scenario, '_runtime.timeout', data_get($scenario, 'timeout', 180));
+        $poll = max((int) data_get($scenario, '_runtime.poll', data_get($scenario, 'poll', 10)), 1);
+        $maxPolls = data_get($scenario, '_runtime.max_polls');
+
+        if ($maxPolls === null) {
+            $maxPolls = max(1, (int) ceil($timeout / $poll));
+        } else {
+            $maxPolls = max(1, (int) $maxPolls);
+        }
+
         $timeout = max($timeout, $poll);
 
         $attemptResults = [];
@@ -77,8 +83,7 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
                     poll: $poll,
                     maxPolls: $maxPolls,
                     acceptPending: $context->acceptPending(),
-                    command: $command,
-                    json: $context->wantsJson(),
+                    output: $output,
                 );
 
                 $actual = [
@@ -126,7 +131,7 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
         $attemptSummary = $this->summarizeAttempts($attemptResults);
 
         if (! $context->wantsJson()) {
-            $this->renderAttemptsSummary($command, $attemptSummary);
+            $this->renderAttemptsSummary($output, $attemptSummary);
         }
 
         $reconciliation = DisbursementReconciliation::query()
@@ -346,13 +351,13 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
         }
     }
 
-    private function renderAttemptsSummary(Command $command, array $summary): void
+    private function renderAttemptsSummary(LifecycleOutputContract $output, array $summary): void
     {
-        $command->newLine();
-        $command->info('Attempts Summary:');
-        $command->line('  Passed: '.$summary['passed']);
-        $command->line('  Failed: '.$summary['failed']);
-        $command->line('  Total: '.$summary['total']);
+        $output->line('');
+        $output->info('Attempts Summary:');
+        $output->line('  Passed: '.$summary['passed']);
+        $output->line('  Failed: '.$summary['failed']);
+        $output->line('  Total: '.$summary['total']);
     }
 
     private function resolveAttemptMobile(array $scenario, array $attempt, string $defaultMobile): string

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Console\Commands\Lifecycle\ScenarioRunners\Support;
 
-use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
 
 final class LifecycleDisbursementPoller
@@ -15,8 +14,7 @@ final class LifecycleDisbursementPoller
         int $poll,
         ?int $maxPolls = null,
         bool $acceptPending = false,
-        ?Command $command = null,
-        bool $json = false,
+        ?LifecycleOutputContract $output = null,
     ): array {
         $start = time();
         $attempt = 0;
@@ -35,8 +33,7 @@ final class LifecycleDisbursementPoller
                 '--json' => true,
             ]);
 
-            $output = trim(Artisan::output());
-            $decoded = json_decode($output, true);
+            $decoded = json_decode(trim(Artisan::output()), true);
 
             if (is_array($decoded)) {
                 $last = $decoded;
@@ -46,11 +43,11 @@ final class LifecycleDisbursementPoller
                 $needsReview = (bool) ($decoded['needs_review'] ?? false);
                 $provider = $decoded['provider'] ?? null;
 
-                if ($command && ! $json) {
+                if ($output && ! $output->isJson()) {
                     $elapsed = time() - $start;
                     $maxPollsLabel = $maxPolls !== null ? (string) $maxPolls : '∞';
 
-                    $command->line(sprintf(
+                    $output->line(sprintf(
                         '[poll %d/%s | %ss] status=%s provider_tx=%s needs_review=%s',
                         $attempt,
                         $maxPollsLabel,
@@ -72,15 +69,16 @@ final class LifecycleDisbursementPoller
                     && is_string($provider) && $provider !== ''
                     && is_string($providerTransactionId) && $providerTransactionId !== ''
                 ) {
-                    if ($command && ! $json) {
-                        $command->info('Trusted pending transaction accepted as good enough.');
+                    if ($output && ! $output->isJson()) {
+                        $output->info('Trusted pending transaction accepted as good enough.');
                     }
 
                     return $decoded;
                 }
-            } elseif ($command && ! $json) {
+            } elseif ($output && ! $output->isJson()) {
                 $elapsed = time() - $start;
-                $command->warn("[poll {$elapsed}s] unable to decode disbursement status response");
+
+                $output->warn("[poll {$elapsed}s] unable to decode disbursement status response");
             }
 
             if ($maxPolls !== null && $attempt >= $maxPolls) {
@@ -92,7 +90,6 @@ final class LifecycleDisbursementPoller
             }
 
             sleep($poll);
-
         } while (true);
 
         $last['current_status'] = $last['current_status'] ?? 'timeout';

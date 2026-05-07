@@ -27,10 +27,10 @@ final class LifecycleScenarioBootstrapper
         array $scenario,
         ?string $issuerOption = null,
         ?string $walletOption = null,
-        ?string $amountOption = null,
-        ?string $timeoutOption = null,
-        ?string $pollOption = null,
-        ?string $maxPollsOption = null,
+        ?float $amountOption = null,
+        ?int $timeoutOption = null,
+        ?int $pollOption = null,
+        ?int $maxPollsOption = null,
     ): LifecycleScenarioBootstrapResult {
         $this->assertLifecycleUserModelSupportsMobile();
 
