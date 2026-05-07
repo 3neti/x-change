@@ -19,7 +19,24 @@ final class LifecycleScenarioRepository
             throw new InvalidArgumentException('Lifecycle scenarios config must be an array.');
         }
 
-        return $scenarios;
+        $normalized = [];
+
+        foreach ($scenarios as $key => $scenario) {
+            if (! is_string($key)) {
+                throw new InvalidArgumentException('Lifecycle scenario keys must be strings.');
+            }
+
+            if (! is_array($scenario)) {
+                throw new InvalidArgumentException(sprintf(
+                    'Lifecycle scenario [%s] must be an array.',
+                    $key,
+                ));
+            }
+
+            $normalized[$key] = $this->normalize($key, $scenario);
+        }
+
+        return $normalized;
     }
 
     /**
@@ -31,29 +48,70 @@ final class LifecycleScenarioRepository
     }
 
     /**
+     * @return array<string, mixed>|null
+     */
+    public function find(string $scenarioKey): ?array
+    {
+        $scenarios = $this->all();
+
+        return $scenarios[$scenarioKey] ?? null;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function findOrFail(string $scenarioKey): array
     {
-        $scenarios = $this->all();
+        $scenario = $this->find($scenarioKey);
 
-        if (! array_key_exists($scenarioKey, $scenarios)) {
+        if ($scenario === null) {
             throw new InvalidArgumentException(sprintf(
                 'Unknown scenario: %s',
                 $scenarioKey,
             ));
         }
 
-        $scenario = $scenarios[$scenarioKey];
+        return $scenario;
+    }
 
-        if (! is_array($scenario)) {
-            throw new InvalidArgumentException(sprintf(
-                'Lifecycle scenario [%s] must be an array.',
-                $scenarioKey,
-            ));
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    public function byCategory(string $category): array
+    {
+        return array_filter(
+            $this->all(),
+            fn (array $scenario): bool => ($scenario['category'] ?? null) === $category,
+        );
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    public function byTag(string $tag): array
+    {
+        return array_filter(
+            $this->all(),
+            fn (array $scenario): bool => in_array($tag, $scenario['tags'] ?? [], true),
+        );
+    }
+
+    /**
+     * @return array<string, array<string, array<string, mixed>>>
+     */
+    public function groupedByCategory(): array
+    {
+        $grouped = [];
+
+        foreach ($this->all() as $key => $scenario) {
+            $category = (string) ($scenario['category'] ?? 'smoke');
+
+            $grouped[$category][$key] = $scenario;
         }
 
-        return $scenario;
+        ksort($grouped);
+
+        return $grouped;
     }
 
     /**
@@ -104,5 +162,39 @@ final class LifecycleScenarioRepository
     public function labelFor(string $scenarioKey, array $scenario): string
     {
         return (string) data_get($scenario, 'label', $scenarioKey);
+    }
+
+    /**
+     * @param  array<string, mixed>  $scenario
+     * @return array<string, mixed>
+     */
+    private function normalize(string $scenarioKey, array $scenario): array
+    {
+        $tags = data_get($scenario, 'tags', []);
+
+        if (! is_array($tags)) {
+            $tags = [$tags];
+        }
+
+        $scenario['key'] = (string) data_get($scenario, 'key', $scenarioKey);
+        $scenario['label'] = $this->labelFor($scenarioKey, $scenario);
+        $scenario['category'] = (string) data_get($scenario, 'category', 'smoke');
+
+        // IMPORTANT:
+        // Do not inject mode when it is absent.
+        // Some scenarios rely on ScenarioRunnerResolver to infer sequential_claims.
+        if (array_key_exists('mode', $scenario)) {
+            $scenario['mode'] = $this->modeFor($scenario);
+        }
+
+        $scenario['tags'] = array_values(array_filter(
+            array_map('strval', $tags),
+            fn (string $tag): bool => trim($tag) !== '',
+        ));
+
+        $scenario['risk'] = (string) data_get($scenario, 'risk', 'medium');
+        $scenario['description'] = (string) data_get($scenario, 'description', '');
+
+        return $scenario;
     }
 }
