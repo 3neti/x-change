@@ -38,5 +38,6 @@ it('registers the first lifecycle routes', function () {
         ->and(Route::has('api.x.v1.users.store'))->toBeTrue()
         ->and(Route::has('api.x.v1.users.show'))->toBeTrue()
         ->and(Route::has('api.x.v1.users.kyc.submit'))->toBeTrue()
-        ->and(Route::has('api.x.v1.users.kyc.show'))->toBeTrue();
+        ->and(Route::has('api.x.v1.users.kyc.show'))->toBeTrue()
+        ->and(Route::has('api.x.v1.lifecycle.scenarios.run'))->toBeTrue();
 });

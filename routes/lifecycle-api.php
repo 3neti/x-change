@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Route;
 use LBHurtado\XChange\Http\Controllers\Lifecycle\Claims\ApproveVoucherClaimController;
 use LBHurtado\XChange\Http\Controllers\Lifecycle\Claims\VerifyVoucherClaimOtpController;
+use LBHurtado\XChange\Http\Controllers\Lifecycle\RunLifecycleScenarioController;
 use LBHurtado\XChange\Http\Controllers\Lifecycle\Settlements\ShowSettlementReadinessLifecycleController;
 use LBHurtado\XChange\Http\Controllers\Lifecycle\Settlements\StartSettlementLifecycleController;
 use LBHurtado\XChange\Http\Controllers\Lifecycle\Vouchers\ShowVoucherPaymentQrController;
@@ -114,4 +115,9 @@ Route::prefix('api/x/v1')->as('api.x.v1.')->group(function (): void {
     });
 
     Route::post('payment/webhooks/{provider}', HandleVoucherPaymentWebhookController::class)->name('payment.webhooks.handle');
+
+    Route::prefix('lifecycle')->group(function () {
+        Route::post('/scenarios/run', RunLifecycleScenarioController::class)
+            ->name('lifecycle.scenarios.run');
+    });
 });

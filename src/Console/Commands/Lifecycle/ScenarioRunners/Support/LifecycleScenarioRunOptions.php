@@ -83,4 +83,20 @@ final readonly class LifecycleScenarioRunOptions
 
         return is_numeric($value) ? (float) $value : null;
     }
+
+    public static function fromApiPayload(array $payload): self
+    {
+        return new self(
+            issuer: self::stringOrNull($payload['issuer'] ?? null),
+            wallet: self::stringOrNull($payload['wallet'] ?? null),
+            amount: self::intOrNull($payload['amount'] ?? null),
+            timeout: self::intOrNull($payload['timeout'] ?? null),
+            poll: self::intOrNull($payload['poll'] ?? null),
+            maxPolls: self::intOrNull($payload['max_polls'] ?? null),
+            onlyAttempt: self::stringOrNull($payload['only_attempt'] ?? null),
+            noClaim: (bool) ($payload['no_claim'] ?? false),
+            acceptPending: (bool) ($payload['accept_pending'] ?? false),
+        );
+    }
 }
+
