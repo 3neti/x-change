@@ -8,6 +8,8 @@ use Illuminate\Console\Command;
 use Illuminate\Contracts\Container\Container;
 use InvalidArgumentException;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
+use LBHurtado\EmiPaynamicsConstellation\Contracts\ConstellationOtpResolver;
+use LBHurtado\EmiPaynamicsConstellation\Support\InteractiveOtpResolver;
 use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
 use LBHurtado\XChange\Lifecycle\Output\ConsoleLifecycleOutput;
 use LBHurtado\XChange\Lifecycle\Output\LifecycleOutputContract;
@@ -62,6 +64,18 @@ final class LifecycleScenarioEngine
                 payload: [
                     'success' => false,
                     'message' => $e->getMessage(),
+                    'scenario' => $scenarioKey,
+                ],
+            );
+        }
+
+        if ($output->isJson() && $this->requiresInteractiveOtp()) {
+            return new LifecycleScenarioEngineResult(
+                exitCode: Command::FAILURE,
+                payload: [
+                    'success' => false,
+                    'message' => 'Cannot use --json with a provider that requires interactive OTP. '
+                        .'Remove --json or set CONSTELLATION_OTP_RESOLVER=null.',
                     'scenario' => $scenarioKey,
                 ],
             );
@@ -230,5 +244,18 @@ final class LifecycleScenarioEngine
         }
 
         return $label;
+    }
+
+    private function requiresInteractiveOtp(): bool
+    {
+        if (! interface_exists(ConstellationOtpResolver::class)) {
+            return false;
+        }
+
+        if (! $this->container->bound(ConstellationOtpResolver::class)) {
+            return false;
+        }
+
+        return $this->container->make(ConstellationOtpResolver::class) instanceof InteractiveOtpResolver;
     }
 }
