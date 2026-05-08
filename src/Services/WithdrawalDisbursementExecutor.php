@@ -27,6 +27,32 @@ class WithdrawalDisbursementExecutor
         PayoutRequestData $input,
         int $sliceNumber,
     ): WithdrawalDisbursementExecutionData {
+        $intentAttributes = [
+            'voucher_id' => $voucher->id,
+            'voucher_code' => $voucher->code,
+            'claim_type' => 'withdraw',
+            'provider' => 'unknown',
+            'provider_reference' => $input->reference,
+            'amount' => $input->amount,
+            'currency' => 'PHP',
+            'bank_code' => $input->bank_code,
+            'account_number_masked' => $this->maskAccountNumber($input->account_number),
+            'settlement_rail' => $input->settlement_rail,
+            'status' => 'intent',
+            'internal_status' => 'intent',
+            'attempt_count' => 1,
+            'attempted_at' => now(),
+            'raw_request' => $input->toArray(),
+            'meta' => [
+                'flow' => 'withdraw',
+                'voucher_code' => $voucher->code,
+                'slice_number' => $sliceNumber,
+            ],
+        ];
+
+        // Record settlement intent BEFORE calling the provider
+        $this->reconciliations->record($intentAttributes);
+
         try {
             $response = $this->gateway->disburse($input);
 
@@ -36,37 +62,21 @@ class WithdrawalDisbursementExecutor
 
             $status = $this->statusResolver->resolveFromGatewayResponse($response);
 
-            $this->reconciliations->record([
-                'voucher_id' => $voucher->id,
-                'voucher_code' => $voucher->code,
-                'claim_type' => 'withdraw',
+            // Update intent with provider response
+            $this->reconciliations->record(array_merge($intentAttributes, [
                 'provider' => $response->provider ?? 'unknown',
-                'provider_reference' => $input->reference,
                 'provider_transaction_id' => $response->transaction_id ?? null,
                 'transaction_uuid' => $response->uuid ?? null,
                 'status' => $status,
                 'internal_status' => 'recorded',
-                'amount' => $input->amount,
-                'currency' => 'PHP',
-                'bank_code' => $input->bank_code,
-                'account_number_masked' => $this->maskAccountNumber($input->account_number),
-                'settlement_rail' => $input->settlement_rail,
-                'attempt_count' => 1,
-                'attempted_at' => now(),
                 'completed_at' => $status === 'succeeded' ? now() : null,
-                'raw_request' => $input->toArray(),
                 'raw_response' => method_exists($response, 'toArray') ? $response->toArray() : [
                     'status' => $response->status?->value ?? null,
                     'transaction_id' => $response->transaction_id ?? null,
                     'uuid' => $response->uuid ?? null,
                     'provider' => $response->provider ?? null,
                 ],
-                'meta' => [
-                    'flow' => 'withdraw',
-                    'voucher_code' => $voucher->code,
-                    'slice_number' => $sliceNumber,
-                ],
-            ]);
+            ]));
 
             return new WithdrawalDisbursementExecutionData(
                 input: $input,
@@ -77,24 +87,10 @@ class WithdrawalDisbursementExecutor
         } catch (Throwable $e) {
             $status = $this->statusResolver->resolveFromGatewayException($e);
 
-            $this->reconciliations->record([
-                'voucher_id' => $voucher->id,
-                'voucher_code' => $voucher->code,
-                'claim_type' => 'withdraw',
-                'provider' => 'unknown',
-                'provider_reference' => $input->reference,
-                'provider_transaction_id' => null,
-                'transaction_uuid' => null,
+            // Update intent with failure
+            $this->reconciliations->record(array_merge($intentAttributes, [
                 'status' => $status,
                 'internal_status' => 'recorded',
-                'amount' => $input->amount,
-                'currency' => 'PHP',
-                'bank_code' => $input->bank_code,
-                'account_number_masked' => $this->maskAccountNumber($input->account_number),
-                'settlement_rail' => $input->settlement_rail,
-                'attempt_count' => 1,
-                'attempted_at' => now(),
-                'raw_request' => $input->toArray(),
                 'raw_response' => [
                     'exception' => $e::class,
                     'message' => $e->getMessage(),
@@ -104,12 +100,7 @@ class WithdrawalDisbursementExecutor
                     ? 'Gateway outcome uncertain'
                     : null,
                 'error_message' => $e->getMessage(),
-                'meta' => [
-                    'flow' => 'withdraw',
-                    'voucher_code' => $voucher->code,
-                    'slice_number' => $sliceNumber,
-                ],
-            ]);
+            ]));
 
             throw new RuntimeException('Disbursement failed: '.$e->getMessage(), previous: $e);
         }

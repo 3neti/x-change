@@ -7,7 +7,6 @@ use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\EmiCore\Data\PayoutRequestData;
 use LBHurtado\EmiCore\Data\PayoutResultData;
 use LBHurtado\EmiCore\Enums\PayoutStatus;
-use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Services\WithdrawalDisbursementExecutor;
@@ -45,7 +44,7 @@ it('executes disbursement and records reconciliation on success', function () {
 
     $reconciliations = Mockery::mock(DisbursementReconciliationStoreContract::class);
     $reconciliations->shouldReceive('record')
-        ->once()
+        ->twice()
         ->withArgs(fn (...$args) => true);
 
     $executor = new WithdrawalDisbursementExecutor(
@@ -88,7 +87,7 @@ it('records reconciliation on provider failure', function () {
 
     $reconciliations = Mockery::mock(DisbursementReconciliationStoreContract::class);
     $reconciliations->shouldReceive('record')
-        ->once()
+        ->twice()
         ->withArgs(fn (...$args) => true);
 
     $executor = new WithdrawalDisbursementExecutor(
