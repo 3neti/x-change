@@ -77,7 +77,7 @@ final class LifecycleScenarioBootstrapper
         );
     }
 
-    public function resolveMaxPolls(int $timeout, int $poll, ?string $maxPollsOption = null): ?int
+    public function resolveMaxPolls(int $timeout, int $poll, int|string|null $maxPollsOption = null): ?int
     {
         if ($maxPollsOption !== null && $maxPollsOption !== '') {
             return max(1, (int) $maxPollsOption);
