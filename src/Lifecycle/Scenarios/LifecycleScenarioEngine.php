@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Lifecycle\Scenarios;
 
 use Illuminate\Console\Command;
+use Illuminate\Contracts\Container\Container;
 use InvalidArgumentException;
+use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
 use LBHurtado\XChange\Lifecycle\Output\ConsoleLifecycleOutput;
 use LBHurtado\XChange\Lifecycle\Output\LifecycleOutputContract;
@@ -23,6 +25,7 @@ final class LifecycleScenarioEngine
         private readonly ScenarioRunnerResolver $resolver,
         private readonly SettlementEnvelopeReadinessContract $settlementEnvelopeReadiness,
         private readonly WalletTransactionSnapshot $walletTransactions,
+        private readonly Container $container,
     ) {}
 
     public function run(
@@ -50,6 +53,19 @@ final class LifecycleScenarioEngine
             (array) config('x-change.lifecycle.defaults', []),
             $scenario,
         );
+
+        try {
+            $resolvedProvider = $this->resolveProvider($options, $scenario, $output);
+        } catch (InvalidArgumentException $e) {
+            return new LifecycleScenarioEngineResult(
+                exitCode: Command::FAILURE,
+                payload: [
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                    'scenario' => $scenarioKey,
+                ],
+            );
+        }
 
         try {
             $resolution = $this->resolver->resolve($scenario);
@@ -164,9 +180,55 @@ final class LifecycleScenarioEngine
             )
         );
 
+        $payload = $result->payload;
+
+        if ($resolvedProvider !== null) {
+            $payload['provider'] = $resolvedProvider;
+        }
+
         return new LifecycleScenarioEngineResult(
             exitCode: $result->exitCode,
-            payload: $result->payload,
+            payload: $payload,
         );
+    }
+
+    /**
+     * Resolve and rebind the payout provider.
+     *
+     * Precedence: CLI/API option → scenario config → container default.
+     *
+     * @return string|null The resolved provider label, or null if unchanged.
+     */
+    private function resolveProvider(
+        LifecycleScenarioRunOptions $options,
+        array $scenario,
+        LifecycleOutputContract $output,
+    ): ?string {
+        $label = $options->provider;
+
+        if ($label === null || $label === '') {
+            $label = data_get($scenario, 'provider');
+        }
+
+        if (! is_string($label) || $label === '') {
+            return null;
+        }
+
+        $class = config("emi.payout_providers.{$label}");
+
+        if (! is_string($class) || ! class_exists($class)) {
+            throw new InvalidArgumentException(
+                "Unknown payout provider [{$label}]. Available: "
+                .implode(', ', array_keys((array) config('emi.payout_providers', [])))
+            );
+        }
+
+        $this->container->singleton(PayoutProvider::class, fn ($app) => $app->make($class));
+
+        if (! $output->isJson()) {
+            $output->line("Provider: {$label} ({$class})");
+        }
+
+        return $label;
     }
 }
