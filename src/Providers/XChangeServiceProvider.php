@@ -122,14 +122,12 @@ use LBHurtado\XChange\Services\DefaultVoucherCollectionWalletResolver;
 use LBHurtado\XChange\Services\DefaultVoucherFlowCapabilityResolver;
 use LBHurtado\XChange\Services\DefaultVoucherPaymentConfirmationService;
 use LBHurtado\XChange\Services\DefaultVoucherPaymentQrGenerator;
-use LBHurtado\XChange\Services\DefaultVoucherPaymentQrRenderer;
 use LBHurtado\XChange\Services\DefaultWithdrawalExecutionService;
 use LBHurtado\XChange\Services\DefaultWithdrawalProcessorService;
 use LBHurtado\XChange\Services\DefaultWithdrawalValidationService;
 use LBHurtado\XChange\Services\EventLifecycleService;
 use LBHurtado\XChange\Services\InstructionBackedPricingService;
 use LBHurtado\XChange\Services\NullClaimApprovalNotificationService;
-use LBHurtado\XChange\Services\NullClaimOtpChallengeService;
 use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
 use LBHurtado\XChange\Services\NullSettlementEnvelopeReadinessService;
 use LBHurtado\XChange\Services\NullWithdrawalOtpApprovalService;
@@ -607,6 +605,20 @@ class XChangeServiceProvider extends ServiceProvider
             $this->packagePath('stubs/scripts/test-netbank-lifecycle.sh.stub') => base_path('scripts/test-netbank-lifecycle.sh'),
             $this->packagePath('stubs/scripts/.xchange-lifecycle.env.example') => base_path('scripts/.xchange-lifecycle.env.example'),
         ], 'x-change-scripts');
+
+        $this->publishes([
+            $this->packagePath('resources/js/pages/x-change') => resource_path('js/pages/x-change'),
+            $this->packagePath('resources/js/components/x-change') => resource_path('js/components/x-change'),
+            $this->packagePath('resources/js/composables/useXChangeDashboardApi.ts') => resource_path('js/composables/useXChangeDashboardApi.ts'),
+        ], 'x-change-pages');
+
+        $this->publishes([
+            $this->packagePath('resources/assets/images') => public_path('images'),
+            $this->packagePath('resources/assets/favicon.ico') => public_path('favicon.ico'),
+            $this->packagePath('resources/assets/favicon.png') => public_path('favicon.png'),
+            $this->packagePath('resources/assets/favicon.svg') => public_path('favicon.svg'),
+            $this->packagePath('resources/assets/apple-touch-icon.png') => public_path('apple-touch-icon.png'),
+        ], 'x-change-assets');
     }
 
     protected function bootRoutes(): void

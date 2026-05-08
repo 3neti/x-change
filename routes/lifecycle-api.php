@@ -13,6 +13,8 @@ use LBHurtado\XChange\Lifecycle\Http\Controllers\Claims\CompleteVoucherClaimCont
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Claims\ShowVoucherClaimStatusController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Claims\StartVoucherClaimController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Claims\SubmitVoucherClaimController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Dashboard\DashboardActivityController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Dashboard\DashboardStatsController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Events\ListEventsController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Events\ShowEventController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Events\ShowIdempotencyKeyController;
@@ -115,6 +117,11 @@ Route::prefix('api/x/v1')->as('api.x.v1.')->group(function (): void {
     });
 
     Route::post('payment/webhooks/{provider}', HandleVoucherPaymentWebhookController::class)->name('payment.webhooks.handle');
+
+    Route::prefix('dashboard')->group(function (): void {
+        Route::get('stats', DashboardStatsController::class)->name('dashboard.stats');
+        Route::get('activity', DashboardActivityController::class)->name('dashboard.activity');
+    });
 
     Route::prefix('lifecycle')->group(function () {
         Route::post('/scenarios/run', RunLifecycleScenarioController::class)

@@ -248,6 +248,13 @@ final class LifecycleScenarioEngine
 
     private function requiresInteractiveOtp(): bool
     {
+        // Only relevant when the active payout provider is Constellation.
+        $activeProvider = $this->container->make(PayoutProvider::class);
+
+        if (! $activeProvider instanceof \LBHurtado\EmiPaynamicsConstellation\Adapters\ConstellationPayoutProvider) {
+            return false;
+        }
+
         if (! interface_exists(ConstellationOtpResolver::class)) {
             return false;
         }
