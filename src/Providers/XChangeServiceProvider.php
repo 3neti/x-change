@@ -28,6 +28,7 @@ use LBHurtado\XChange\Console\Commands\Claim\SubmitPayCodeClaimCommand;
 use LBHurtado\XChange\Console\Commands\Disbursement\CheckDisbursementStatusCommand;
 use LBHurtado\XChange\Console\Commands\Lifecycle\PrepareLifecycleEnvironmentCommand;
 use LBHurtado\XChange\Console\Commands\Lifecycle\RunLifecycleScenarioCommand;
+use LBHurtado\XChange\Console\Commands\Lifecycle\RunLifecycleScenarioGroupCommand;
 use LBHurtado\XChange\Console\Commands\Onboarding\OnboardIssuerCommand;
 use LBHurtado\XChange\Console\Commands\Onboarding\OpenIssuerWalletCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\EstimatePayCodeCostCommand;
@@ -501,6 +502,7 @@ class XChangeServiceProvider extends ServiceProvider
                 ShowPendingRevenueCommand::class,
 
                 EvaluateSettlementEnvelopeCommand::class,
+                RunLifecycleScenarioGroupCommand::class,
             ]);
         }
 

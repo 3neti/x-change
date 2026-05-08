@@ -204,6 +204,41 @@ return [
         'withdrawals' => [
             'service' => \LBHurtado\XChange\Services\WithdrawalLifecycleService::class,
         ],
+        'scenario_groups' => [
+            'pre-deployment' => [
+                'label' => 'Pre-Deployment Checks',
+                'description' => 'Runs critical lifecycle scenarios before deployment.',
+                'categories' => ['smoke', 'contract', 'settlement', 'reconciliation'],
+                'tags' => [],
+                'scenarios' => [],
+            ],
+
+            'post-deployment' => [
+                'label' => 'Post-Deployment Checks',
+                'description' => 'Runs lightweight checks after deployment.',
+                'categories' => ['smoke'],
+                'tags' => [],
+                'scenarios' => [],
+            ],
+
+            'partner-certification' => [
+                'label' => 'Partner Certification',
+                'description' => 'Runs lifecycle scenarios needed to certify partner readiness.',
+                'categories' => ['smoke', 'contract', 'provider', 'settlement', 'reconciliation'],
+                'tags' => [],
+                'scenarios' => [],
+            ],
+
+            'demo' => [
+                'label' => 'Demo Automation',
+                'description' => 'Runs scenarios useful for predictable demos.',
+                'categories' => [],
+                'tags' => ['demo'],
+                'scenarios' => [
+                    // optionally explicit scenario keys
+                ],
+            ],
+        ],
     ],
     /*
     |--------------------------------------------------------------------------
