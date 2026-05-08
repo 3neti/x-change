@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schema;
+use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Tests\Fakes\FakePayoutProvider;
+use LBHurtado\XChange\Tests\Fakes\User;
 
 beforeEach(function () {
-    config()->set('x-change.lifecycle.defaults.user_model', \LBHurtado\XChange\Tests\Fakes\User::class);
+    config()->set('x-change.lifecycle.defaults.user_model', User::class);
     config()->set('x-change.lifecycle.defaults.system_user_email', 'system@example.test');
     config()->set('x-change.lifecycle.defaults.test_user_email', 'lester@hurtado.ph');
     config()->set('x-change.lifecycle.defaults.test_user_mobile', '09173011987');
@@ -134,4 +137,38 @@ it('renders lifecycle results as json', function () {
     expect($payload['attempts'][0]['name'])->toBe('wrong_secret_fails');
     expect($payload['attempts'][0]['status'])->toBe('failed');
     expect(data_get($payload, 'attempts.0.evaluation.summary'))->toBe('FAILED as expected');
+});
+
+it('rebinds the payout provider when --provider is specified', function () {
+    config()->set('emi.payout_providers.fake_alt', FakePayoutProvider::class);
+
+    $this->artisan('xchange:lifecycle:run', [
+        'scenario' => 'basic_cash',
+        '--provider' => 'fake_alt',
+        '--no-claim' => true,
+    ])
+        ->expectsOutputToContain('Provider: fake_alt')
+        ->assertExitCode(0);
+
+    expect(app(PayoutProvider::class))
+        ->toBeInstanceOf(FakePayoutProvider::class);
+});
+
+it('fails with an error when --provider references an unknown label', function () {
+    $this->artisan('xchange:lifecycle:run', [
+        'scenario' => 'basic_cash',
+        '--provider' => 'nonexistent',
+        '--no-claim' => true,
+    ])
+        ->assertExitCode(1);
+});
+
+it('uses the default provider when --provider is not specified', function () {
+    $exitCode = Artisan::call('xchange:lifecycle:run', [
+        'scenario' => 'basic_cash',
+        '--no-claim' => true,
+    ]);
+
+    expect($exitCode)->toBe(0);
+    expect(Artisan::output())->not->toContain('Provider:');
 });

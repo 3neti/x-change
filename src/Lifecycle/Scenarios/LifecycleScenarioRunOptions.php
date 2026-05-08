@@ -14,6 +14,7 @@ final readonly class LifecycleScenarioRunOptions
         public ?int $poll = null,
         public ?int $maxPolls = null,
         public ?string $onlyAttempt = null,
+        public ?string $provider = null,
         public bool $noClaim = false,
         public bool $json = false,
         public bool $acceptPending = false,
@@ -29,6 +30,7 @@ final readonly class LifecycleScenarioRunOptions
             poll: self::intOrNull($options['poll'] ?? null),
             maxPolls: self::intOrNull($options['max-polls'] ?? null),
             onlyAttempt: self::stringOrNull($options['only-attempt'] ?? null),
+            provider: self::stringOrNull($options['provider'] ?? null),
             noClaim: (bool) ($options['no-claim'] ?? false),
             json: (bool) ($options['json'] ?? false),
             acceptPending: (bool) ($options['accept-pending'] ?? false),
@@ -94,9 +96,9 @@ final readonly class LifecycleScenarioRunOptions
             poll: self::intOrNull($payload['poll'] ?? null),
             maxPolls: self::intOrNull($payload['max_polls'] ?? null),
             onlyAttempt: self::stringOrNull($payload['only_attempt'] ?? null),
+            provider: self::stringOrNull($payload['provider'] ?? null),
             noClaim: (bool) ($payload['no_claim'] ?? false),
             acceptPending: (bool) ($payload['accept_pending'] ?? false),
         );
     }
 }
-

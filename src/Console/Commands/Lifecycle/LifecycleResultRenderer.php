@@ -43,6 +43,10 @@ final class LifecycleResultRenderer
         $command->info('Lifecycle scenario completed.');
         $command->line('Scenario: '.($payload['scenario'] ?? $payload['mode'] ?? 'n/a'));
 
+        if (isset($payload['provider']) && $payload['provider'] !== null) {
+            $command->line('Provider: '.$payload['provider']);
+        }
+
         if (isset($payload['issuer']) && is_array($payload['issuer'])) {
             $issuerLabel = $payload['issuer']['email'] ?? ('#'.($payload['issuer']['id'] ?? 'n/a'));
             $issuerMobile = $payload['issuer']['mobile'] ?? 'n/a';

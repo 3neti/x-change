@@ -6,6 +6,8 @@ namespace LBHurtado\XChange\Console\Commands\Lifecycle;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
+use InvalidArgumentException;
+use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\XChange\Lifecycle\Output\ConsoleLifecycleOutput;
 use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleDisbursementPoller;
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioEngine;
@@ -17,7 +19,7 @@ class RunLifecycleScenarioCommand extends Command
     protected $signature = 'xchange:lifecycle:run
       {scenario? : Scenario key from x-change.lifecycle.scenarios}
         {--list : List available scenarios}
-        {--provider=netbank : Provider label}
+        {--provider= : Provider label from emi.payout_providers config}
         {--issuer= : Issuer user id}
         {--wallet= : Wallet owner/user id}
         {--amount= : Override scenario amount}
@@ -60,12 +62,22 @@ class RunLifecycleScenarioCommand extends Command
 
         $scenarioKey = (string) $this->argument('scenario');
 
+        $options = LifecycleScenarioRunOptions::fromConsoleOptions($this->options());
+
+        try {
+            $this->rebindProviderIfRequested($options);
+        } catch (InvalidArgumentException $e) {
+            $this->components->error($e->getMessage());
+
+            return self::FAILURE;
+        }
+
         $output = new ConsoleLifecycleOutput($this);
 
         $result = $engine->run(
             command: $this,
             scenarioKey: $scenarioKey,
-            options: LifecycleScenarioRunOptions::fromConsoleOptions($this->options()),
+            options: $options,
             output: $output,
         );
 
@@ -126,6 +138,30 @@ class RunLifecycleScenarioCommand extends Command
                 'disbursement_check' => $payload,
             ],
         );
+    }
+
+    protected function rebindProviderIfRequested(LifecycleScenarioRunOptions $options): void
+    {
+        $label = $options->provider;
+
+        if ($label === null || $label === '') {
+            return;
+        }
+
+        $class = config("emi.payout_providers.{$label}");
+
+        if (! is_string($class) || ! class_exists($class)) {
+            throw new InvalidArgumentException(
+                "Unknown payout provider [{$label}]. Available: "
+                .implode(', ', array_keys((array) config('emi.payout_providers', [])))
+            );
+        }
+
+        $this->laravel->singleton(PayoutProvider::class, fn ($app) => $app->make($class));
+
+        if (! $this->option('json')) {
+            $this->line("Provider: {$label} ({$class})");
+        }
     }
 
     protected function resolveMaxPolls(int $timeout, int $poll): ?int
