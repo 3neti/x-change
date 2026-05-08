@@ -250,3 +250,11 @@ it('uses the configured limit when listing withdrawals', function () {
 
     expect($result)->toBe([]);
 });
+
+it('exposes withdrawal lifecycle service at the correct config path', function () {
+    expect(config('x-change.lifecycle.withdrawals.service'))
+        ->toBe(\LBHurtado\XChange\Services\WithdrawalLifecycleService::class);
+
+    expect(config('x-change.lifecycle.lifecycle.withdrawals.service'))
+        ->toBeNull();
+});
