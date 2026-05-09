@@ -26,6 +26,7 @@ use LBHurtado\XChange\Console\Commands\Claim\LoadPayCodeRedemptionCompletionCont
 use LBHurtado\XChange\Console\Commands\Claim\PreparePayCodeRedemptionFlowCommand;
 use LBHurtado\XChange\Console\Commands\Claim\SubmitPayCodeClaimCommand;
 use LBHurtado\XChange\Console\Commands\Disbursement\CheckDisbursementStatusCommand;
+use LBHurtado\XChange\Console\Commands\InstallXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Lifecycle\PrepareLifecycleEnvironmentCommand;
 use LBHurtado\XChange\Console\Commands\Lifecycle\RunLifecycleScenarioCommand;
 use LBHurtado\XChange\Console\Commands\Lifecycle\RunLifecycleScenarioGroupCommand;
@@ -501,6 +502,7 @@ class XChangeServiceProvider extends ServiceProvider
 
                 EvaluateSettlementEnvelopeCommand::class,
                 RunLifecycleScenarioGroupCommand::class,
+                InstallXChangeCommand::class,
             ]);
         }
 
@@ -609,17 +611,19 @@ class XChangeServiceProvider extends ServiceProvider
         $this->publishes([
             $this->packagePath('resources/js/pages/x-change') => resource_path('js/pages/x-change'),
             $this->packagePath('resources/js/components/x-change') => resource_path('js/components/x-change'),
+            $this->packagePath('resources/js/layouts/x-change') => resource_path('js/layouts/x-change'),
             $this->packagePath('resources/js/composables/useXChangeDashboardApi.ts') => resource_path('js/composables/useXChangeDashboardApi.ts'),
             $this->packagePath('resources/js/composables/usePayCodeApi.ts') => resource_path('js/composables/usePayCodeApi.ts'),
             $this->packagePath('resources/js/composables/usePayCodeForm.ts') => resource_path('js/composables/usePayCodeForm.ts'),
-        ], 'x-change-pages');
+            $this->packagePath('resources/js/composables/useXChangeRoutes.ts') => resource_path('js/composables/useXChangeRoutes.ts'),
+        ], 'x-change-ui');
 
         $this->publishes([
-            $this->packagePath('resources/assets/images') => public_path('images'),
-            $this->packagePath('resources/assets/favicon.ico') => public_path('favicon.ico'),
-            $this->packagePath('resources/assets/favicon.png') => public_path('favicon.png'),
-            $this->packagePath('resources/assets/favicon.svg') => public_path('favicon.svg'),
-            $this->packagePath('resources/assets/apple-touch-icon.png') => public_path('apple-touch-icon.png'),
+            $this->packagePath('resources/assets/images') => public_path('vendor/x-change/images'),
+            $this->packagePath('resources/assets/favicon.ico') => public_path('vendor/x-change/favicon.ico'),
+            $this->packagePath('resources/assets/favicon.png') => public_path('vendor/x-change/favicon.png'),
+            $this->packagePath('resources/assets/favicon.svg') => public_path('vendor/x-change/favicon.svg'),
+            $this->packagePath('resources/assets/apple-touch-icon.png') => public_path('vendor/x-change/apple-touch-icon.png'),
         ], 'x-change-assets');
     }
 

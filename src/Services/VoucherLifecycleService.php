@@ -92,6 +92,12 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             'issuer_id' => $this->issuerId($voucher),
             'claimed' => $voucher->redeemed_at !== null,
             'fully_claimed' => $voucher->redeemed_at !== null,
+            'created_at' => $voucher->created_at?->toIso8601String(),
+            'expires_at' => $voucher->expires_at?->toIso8601String(),
+            'starts_at' => $voucher->starts_at?->toIso8601String(),
+            'redeemed_at' => $voucher->redeemed_at?->toIso8601String(),
+            'instructions' => $this->instructionsArray($voucher),
+            'claims' => $this->claimsArray($voucher),
         ];
     }
 
@@ -165,5 +171,38 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
         }
 
         return strtolower((string) $voucher->state->value);
+    }
+
+    protected function instructionsArray(Voucher $voucher): ?array
+    {
+        try {
+            $instructions = $voucher->instructions;
+
+            return $instructions ? $instructions->toArray() : null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    protected function claimsArray(Voucher $voucher): array
+    {
+        return $voucher->claims
+            ->map(fn ($claim) => [
+                'claim_number' => $claim->claim_number,
+                'claim_type' => $claim->claim_type,
+                'status' => $claim->status,
+                'disbursed_amount_minor' => $claim->disbursed_amount_minor,
+                'currency' => $claim->currency,
+                'bank_code' => $claim->bank_code,
+                'account_number_masked' => $claim->account_number_masked,
+                'attempted_at' => $claim->attempted_at?->toIso8601String(),
+                'completed_at' => $claim->completed_at?->toIso8601String(),
+                'failure_message' => $claim->failure_message,
+            ])
+            ->values()
+            ->all();
     }
 }

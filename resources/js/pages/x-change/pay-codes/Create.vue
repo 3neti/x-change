@@ -12,15 +12,19 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2, AlertCircle, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-vue-next';
 import { usePayCodeForm } from '@/composables/usePayCodeForm';
+import XChangeLayout from '@/layouts/x-change/XChangeLayout.vue';
+import { useXChangeRoutes } from '@/composables/useXChangeRoutes';
+
+const routes = useXChangeRoutes();
 
 defineOptions({
-    layout: {
+    layout: [XChangeLayout, {
         breadcrumbs: [
             { title: 'Dashboard', href: '/x/dashboard' },
             { title: 'Pay Codes', href: '/x/pay-codes' },
             { title: 'Create', href: '/x/pay-codes/create' },
         ],
-    },
+    }],
 });
 
 const page = usePage();
@@ -83,7 +87,7 @@ const handleSubmit = async () => {
         successCode.value = result.code;
         // Redirect after a brief delay to show success
         setTimeout(() => {
-            router.visit(`/x/pay-codes/${result.code}`);
+            router.visit(routes.payCodes.show(result.code));
         }, 1500);
     }
 };

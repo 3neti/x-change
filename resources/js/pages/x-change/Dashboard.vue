@@ -10,16 +10,17 @@ import {
     type DashboardStats,
     type RecentActivity as RecentActivityType,
 } from '@/composables/useXChangeDashboardApi';
+import XChangeLayout from '@/layouts/x-change/XChangeLayout.vue';
+import { useXChangeRoutes } from '@/composables/useXChangeRoutes';
+
+const routes = useXChangeRoutes();
 
 defineOptions({
-    layout: {
+    layout: [XChangeLayout, {
         breadcrumbs: [
-            {
-                title: 'Dashboard',
-                href: '/x/dashboard',
-            },
+            { title: 'Dashboard', href: '/x/dashboard' },
         ],
-    },
+    }],
 });
 
 const { loading, getStats, getActivity } = useXChangeDashboardApi();

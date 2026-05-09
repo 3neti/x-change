@@ -7,14 +7,15 @@ import {
     useXChangeDashboardApi,
     type DashboardStats,
 } from '@/composables/useXChangeDashboardApi';
+import XChangeLayout from '@/layouts/x-change/XChangeLayout.vue';
 
 defineOptions({
-    layout: {
+    layout: [XChangeLayout, {
         breadcrumbs: [
             { title: 'Dashboard', href: '/x/dashboard' },
             { title: 'Balances', href: '/x/balances' },
         ],
-    },
+    }],
 });
 
 const { getStats } = useXChangeDashboardApi();

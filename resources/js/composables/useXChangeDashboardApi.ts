@@ -1,4 +1,5 @@
 import { ref } from 'vue';
+import { useXChangeRoutes } from './useXChangeRoutes';
 
 export interface DashboardStats {
     vouchers: {
@@ -44,6 +45,7 @@ export interface RecentActivity {
 export function useXChangeDashboardApi() {
     const loading = ref(false);
     const error = ref<Error | null>(null);
+    const routes = useXChangeRoutes();
 
     const fetchJson = async (url: string) => {
         const response = await fetch(url, {
@@ -65,7 +67,7 @@ export function useXChangeDashboardApi() {
         error.value = null;
 
         try {
-            const response = await fetchJson('/api/x/v1/dashboard/stats');
+            const response = await fetchJson(routes.api.dashboardStats);
             return response.data.stats;
         } catch (err) {
             error.value =
@@ -81,7 +83,7 @@ export function useXChangeDashboardApi() {
         error.value = null;
 
         try {
-            const response = await fetchJson('/api/x/v1/dashboard/activity');
+            const response = await fetchJson(routes.api.dashboardActivity);
             return response.data.activity;
         } catch (err) {
             error.value =

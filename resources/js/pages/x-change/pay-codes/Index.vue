@@ -6,14 +6,18 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Plus } from 'lucide-vue-next';
+import XChangeLayout from '@/layouts/x-change/XChangeLayout.vue';
+import { useXChangeRoutes } from '@/composables/useXChangeRoutes';
+
+const routes = useXChangeRoutes();
 
 defineOptions({
-    layout: {
+    layout: [XChangeLayout, {
         breadcrumbs: [
             { title: 'Dashboard', href: '/x/dashboard' },
             { title: 'Pay Codes', href: '/x/pay-codes' },
         ],
-    },
+    }],
 });
 
 interface VoucherSummary {
@@ -50,7 +54,7 @@ const formatAmount = (amount: number, currency: string) => {
 
 onMounted(async () => {
     try {
-        const response = await fetch('/api/x/v1/vouchers', {
+        const response = await fetch(routes.api.vouchers, {
             headers: {
                 Accept: 'application/json',
                 'X-Requested-With': 'XMLHttpRequest',
@@ -73,7 +77,7 @@ onMounted(async () => {
         <div class="flex items-center justify-between">
             <h2 class="text-lg font-semibold">Pay Codes</h2>
             <Button as-child>
-                <Link href="/x/pay-codes/create">
+                <Link :href="routes.payCodes.create">
                     <Plus class="mr-2 h-4 w-4" />
                     Create Pay Code
                 </Link>
@@ -92,7 +96,7 @@ onMounted(async () => {
                 >
                     <p>No pay codes yet.</p>
                     <Button as-child class="mt-4" variant="outline">
-                        <Link href="/x/pay-codes/create">Create your first Pay Code</Link>
+                        <Link :href="routes.payCodes.create">Create your first Pay Code</Link>
                     </Button>
                 </div>
 
@@ -100,7 +104,7 @@ onMounted(async () => {
                     <Link
                         v-for="voucher in vouchers"
                         :key="voucher.id"
-                        :href="`/x/pay-codes/${voucher.code}`"
+                        :href="routes.payCodes.show(voucher.code)"
                         class="flex items-center justify-between px-6 py-4 hover:bg-muted/50 transition-colors"
                     >
                         <div>

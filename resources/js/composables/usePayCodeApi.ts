@@ -1,4 +1,5 @@
 import { ref } from 'vue';
+import { useXChangeRoutes } from './useXChangeRoutes';
 
 export interface PricelistItem {
     code: string | null;
@@ -93,12 +94,14 @@ export function usePayCodeApi() {
         return json;
     };
 
+    const routes = useXChangeRoutes();
+
     const fetchPricelist = async (): Promise<Pricelist | null> => {
         loading.value = true;
         error.value = null;
 
         try {
-            const json = await fetchJson('/api/x/v1/pricelist');
+            const json = await fetchJson(routes.api.pricelist);
             return json.data as Pricelist;
         } catch (err) {
             error.value = normalizeError(err);
@@ -113,7 +116,7 @@ export function usePayCodeApi() {
         error.value = null;
 
         try {
-            const json = await fetchJson('/api/x/v1/pay-codes/estimate', {
+            const json = await fetchJson(routes.api.estimatePayCode, {
                 method: 'POST',
                 body: JSON.stringify(payload),
             });
@@ -132,7 +135,7 @@ export function usePayCodeApi() {
 
         try {
             const idempotencyKey = generateUUID();
-            const json = await fetchJson('/api/x/v1/pay-codes', {
+            const json = await fetchJson(routes.api.generatePayCode, {
                 method: 'POST',
                 headers: {
                     Accept: 'application/json',
@@ -153,7 +156,7 @@ export function usePayCodeApi() {
 
     const getWalletBalance = async (): Promise<{ balance: number; currency: string } | null> => {
         try {
-            const json = await fetchJson('/api/x/v1/dashboard/stats');
+            const json = await fetchJson(routes.api.dashboardStats);
             const stats = json.data?.stats;
             if (stats?.disbursements) {
                 return {

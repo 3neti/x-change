@@ -8,10 +8,11 @@ use LBHurtado\XChange\Http\Controllers\Web\DashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\PayCodeCreatePageController;
 use LBHurtado\XChange\Http\Controllers\Web\PayCodeIndexPageController;
 use LBHurtado\XChange\Http\Controllers\Web\PayCodeShowPageController;
+use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
 
 $middleware = config('x-change.routes.web_middleware', ['web', 'auth']);
 
-Route::prefix('x')->middleware($middleware)->group(function (): void {
+Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->group(function (): void {
     Route::get('dashboard', DashboardPageController::class)->name('x-change.dashboard');
 
     Route::prefix('pay-codes')->group(function (): void {

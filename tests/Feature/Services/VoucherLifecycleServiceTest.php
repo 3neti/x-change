@@ -61,6 +61,38 @@ it('shows a voucher by code', function () {
         ->and($result['code'])->toBe($voucher->code);
 });
 
+it('includes dates, instructions, and claims in detail response', function () {
+    $voucher = issueVoucher();
+
+    $access = Mockery::mock(VoucherAccessContract::class);
+    $access->shouldReceive('findByCodeOrFail')
+        ->once()
+        ->with($voucher->code)
+        ->andReturn($voucher);
+
+    $service = new VoucherLifecycleService($access);
+
+    $result = $service->showByCode($voucher->code);
+
+    // Dates
+    expect($result)->toHaveKey('created_at')
+        ->and($result)->toHaveKey('expires_at')
+        ->and($result)->toHaveKey('starts_at')
+        ->and($result)->toHaveKey('redeemed_at');
+
+    // Instructions
+    expect($result)->toHaveKey('instructions')
+        ->and($result['instructions'])->toBeArray()
+        ->and($result['instructions'])->toHaveKey('cash')
+        ->and($result['instructions'])->toHaveKey('inputs')
+        ->and($result['instructions'])->toHaveKey('feedback')
+        ->and($result['instructions'])->toHaveKey('rider');
+
+    // Claims
+    expect($result)->toHaveKey('claims')
+        ->and($result['claims'])->toBeArray();
+});
+
 it('returns voucher status', function () {
     $voucher = issueVoucher();
 

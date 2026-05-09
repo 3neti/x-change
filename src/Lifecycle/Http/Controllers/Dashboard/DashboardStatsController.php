@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Lifecycle\Http\Controllers\Dashboard;
 
+use Brick\Money\Money;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use LBHurtado\Voucher\Enums\VoucherState;
@@ -23,11 +24,39 @@ class DashboardStatsController extends Controller
         $expiredCount = (clone $vouchers)->where('expires_at', '<', now())->count();
         $cancelledCount = (clone $vouchers)->whereIn('state', [VoucherState::CLOSED, VoucherState::CANCELLED])->count();
 
+        $successStatuses = ['succeeded', 'redeemed'];
+
         $claims = VoucherClaim::query();
         $totalClaims = (clone $claims)->count();
-        $succeededClaims = (clone $claims)->where('status', 'succeeded')->count();
+        $succeededClaims = (clone $claims)->whereIn('status', $successStatuses)->count();
         $failedClaims = (clone $claims)->where('status', 'failed')->count();
-        $totalDisbursedMinor = (clone $claims)->where('status', 'succeeded')->sum('disbursed_amount_minor');
+
+        // Use disbursed_amount_minor when available, otherwise compute from redeemed vouchers
+        $totalDisbursedMinor = (int) (clone $claims)->whereIn('status', $successStatuses)
+            ->whereNotNull('disbursed_amount_minor')
+            ->sum('disbursed_amount_minor');
+
+        // For claims without disbursed_amount_minor, sum from the voucher face value
+        $claimsWithoutAmount = (clone $claims)->whereIn('status', $successStatuses)
+            ->whereNull('disbursed_amount_minor')
+            ->with('voucher')
+            ->get();
+
+        $fallbackDisbursed = $claimsWithoutAmount->sum(function ($claim) {
+            $amount = data_get($claim->voucher, 'cash.amount');
+
+            if ($amount instanceof Money) {
+                return $amount->getMinorAmount()->toInt();
+            }
+
+            if (is_numeric($amount)) {
+                return (int) ($amount * 100);
+            }
+
+            return 0;
+        });
+
+        $totalDisbursedMinor += $fallbackDisbursed;
 
         $reconciliations = DisbursementReconciliation::query();
         $needsReviewCount = (clone $reconciliations)->where('needs_review', true)->count();

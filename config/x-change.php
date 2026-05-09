@@ -2,21 +2,60 @@
 
 declare(strict_types=1);
 
+use App\Models\User;
+use LBHurtado\Instruction\Models\InstructionItem;
+use LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
+use LBHurtado\XChange\Contracts\IdempotencyStoreContract;
+use LBHurtado\XChange\Contracts\IssuerOnboardingContract;
+use LBHurtado\XChange\Contracts\IssuerResolverContract;
+use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
 use LBHurtado\XChange\Contracts\SystemWalletResolverContract;
 use LBHurtado\XChange\Contracts\TerminologyServiceContract;
 use LBHurtado\XChange\Contracts\UserResolverContract;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Contracts\VoucherEntryRouteResolverContract;
+use LBHurtado\XChange\Contracts\WalletAccessContract;
+use LBHurtado\XChange\Contracts\WalletProvisioningContract;
 use LBHurtado\XChange\Services\ApiResponseFactory;
+use LBHurtado\XChange\Services\ApprovalHandlers\ManualApprovalRequirementHandler;
+use LBHurtado\XChange\Services\ApprovalHandlers\OtpApprovalRequirementHandler;
+use LBHurtado\XChange\Services\Base64PngVoucherPaymentQrRenderer;
+use LBHurtado\XChange\Services\CacheIdempotencyStore;
+use LBHurtado\XChange\Services\ContextUserResolver;
+use LBHurtado\XChange\Services\DefaultClaimExecutionFactory;
+use LBHurtado\XChange\Services\DefaultDisbursementReconciliationService;
+use LBHurtado\XChange\Services\DefaultDisbursementReconciliationStore;
+use LBHurtado\XChange\Services\DefaultDisbursementStatusFetcherService;
+use LBHurtado\XChange\Services\DefaultDisbursementStatusResolverService;
+use LBHurtado\XChange\Services\DefaultIssuerOnboardingService;
+use LBHurtado\XChange\Services\DefaultRedemptionCompletionContextService;
+use LBHurtado\XChange\Services\DefaultRedemptionContextResolverService;
+use LBHurtado\XChange\Services\DefaultRedemptionExecutionService;
+use LBHurtado\XChange\Services\DefaultRedemptionFlowPreparationService;
+use LBHurtado\XChange\Services\DefaultRedemptionProcessorService;
+use LBHurtado\XChange\Services\DefaultRedemptionValidationService;
+use LBHurtado\XChange\Services\DefaultVoucherPaymentQrRenderer;
+use LBHurtado\XChange\Services\DefaultWalletProvisioningService;
+use LBHurtado\XChange\Services\DefaultWithdrawalExecutionService;
+use LBHurtado\XChange\Services\DefaultWithdrawalProcessorService;
+use LBHurtado\XChange\Services\DefaultWithdrawalValidationService;
 use LBHurtado\XChange\Services\DisburseFlowStarterService;
+use LBHurtado\XChange\Services\NullClaimOtpChallengeService;
+use LBHurtado\XChange\Services\NullClaimOtpVerificationService;
+use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
 use LBHurtado\XChange\Services\PayCodeIssuanceService;
 use LBHurtado\XChange\Services\PricingService;
 use LBHurtado\XChange\Services\SessionCompletionStore;
+use LBHurtado\XChange\Services\SystemWalletProxy;
 use LBHurtado\XChange\Services\TerminologyService;
 use LBHurtado\XChange\Services\VoucherAccessService;
 use LBHurtado\XChange\Services\VoucherEntryRouteService;
+use LBHurtado\XChange\Services\WalletAccessService;
+use LBHurtado\XChange\Services\WithdrawalLifecycleService;
+use LBHurtado\XChange\Services\WithdrawalOtpApprovalBackedClaimOtpChallengeService;
+use LBHurtado\XChange\Services\WithdrawalOtpApprovalBackedClaimOtpVerificationService;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\AssertWithdrawalEligibilityStep;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\AuthorizeWithdrawalClaimantStep;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\AuthorizeWithdrawalOtpStep;
@@ -30,9 +69,11 @@ use LBHurtado\XChange\Services\WithdrawalPipelineSteps\ResolveWithdrawalAmountSt
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\ResolveWithdrawalBankAccountStep;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\ResolveWithdrawalClaimantStep;
 use LBHurtado\XChange\Services\WithdrawalPipelineSteps\WithdrawalWalletSettlementStep;
-use LBHurtado\XChange\Support\Logging\NullAuditLogger;
+use LBHurtado\XChange\Support\Logging\CacheAuditLogger;
+use LBHurtado\XChange\Support\Resolvers\DefaultIssuerResolver;
 use LBHurtado\XChange\Support\Resolvers\NullSystemWalletResolver;
-//use LBHurtado\XChange\Support\Resolvers\NullUserResolver;
+
+// use LBHurtado\XChange\Support\Resolvers\NullUserResolver;
 
 return [
 
@@ -41,6 +82,12 @@ return [
         'code' => env('XCHANGE_PRODUCT_CODE', 'x-change'),
         'default_currency' => env('XCHANGE_DEFAULT_CURRENCY', 'PHP'),
         'default_country' => env('XCHANGE_DEFAULT_COUNTRY', 'PH'),
+    ],
+
+    'branding' => [
+        'name' => env('XCHANGE_BRAND_NAME', env('XCHANGE_PRODUCT_NAME', 'X-Change')),
+        'logo_light' => env('XCHANGE_LOGO_LIGHT', '/vendor/x-change/images/logo-orange.png'),
+        'logo_dark' => env('XCHANGE_LOGO_DARK', '/vendor/x-change/images/logo-silver.png'),
     ],
 
     'terminology' => [
@@ -100,54 +147,54 @@ return [
     ],
 
     'services' => [
-        'user_resolver' => \LBHurtado\XChange\Services\ContextUserResolver::class,
-        'voucher_access' => \LBHurtado\XChange\Services\VoucherAccessService::class,
-        'entry_route' => \LBHurtado\XChange\Services\VoucherEntryRouteService::class,
-        'disburse_flow' => \LBHurtado\XChange\Services\DisburseFlowStarterService::class,
-        'completion_store' => \LBHurtado\XChange\Services\SessionCompletionStore::class,
-        'terminology' => \LBHurtado\XChange\Services\TerminologyService::class,
-        'api_response' => \LBHurtado\XChange\Services\ApiResponseFactory::class,
-        'pricing' => \LBHurtado\XChange\Services\PricingService::class,
-        'issuance' => \LBHurtado\XChange\Services\PayCodeIssuanceService::class,
-        'wallet_access' => \LBHurtado\XChange\Services\WalletAccessService::class,
-        'idempotency_store' => \LBHurtado\XChange\Services\CacheIdempotencyStore::class,
-        'issuer_onboarding' => \LBHurtado\XChange\Services\DefaultIssuerOnboardingService::class,
-        'wallet_provisioning' => \LBHurtado\XChange\Services\DefaultWalletProvisioningService::class,
-        'issuer_resolver' => \LBHurtado\XChange\Support\Resolvers\DefaultIssuerResolver::class,
-        'redemption_flow_preparation' => \LBHurtado\XChange\Services\DefaultRedemptionFlowPreparationService::class,
-        'redemption_completion_context' => \LBHurtado\XChange\Services\DefaultRedemptionCompletionContextService::class,
-        'redemption_completion_store' => \LBHurtado\XChange\Services\NullRedemptionCompletionStore::class,
-        'claim_execution_factory' => \LBHurtado\XChange\Services\DefaultClaimExecutionFactory::class,
-        'redemption_context_resolver' => \LBHurtado\XChange\Services\DefaultRedemptionContextResolverService::class,
-        'redemption_validation' => \LBHurtado\XChange\Services\DefaultRedemptionValidationService::class,
-        'redemption_processor' => \LBHurtado\XChange\Services\DefaultRedemptionProcessorService::class,
-        'redemption_execution' => \LBHurtado\XChange\Services\DefaultRedemptionExecutionService::class,
-        'withdrawal_validation' => \LBHurtado\XChange\Services\DefaultWithdrawalValidationService::class,
-        'withdrawal_processor' => \LBHurtado\XChange\Services\DefaultWithdrawalProcessorService::class,
-        'withdrawal_execution' => \LBHurtado\XChange\Services\DefaultWithdrawalExecutionService::class,
-        'disbursement_reconciliation_store' => \LBHurtado\XChange\Services\DefaultDisbursementReconciliationStore::class,
-        'disbursement_status_resolver' => \LBHurtado\XChange\Services\DefaultDisbursementStatusResolverService::class,
-        'disbursement_status_fetcher' => \LBHurtado\XChange\Services\DefaultDisbursementStatusFetcherService::class,
-        'disbursement_reconciliation' => \LBHurtado\XChange\Services\DefaultDisbursementReconciliationService::class,
+        'user_resolver' => ContextUserResolver::class,
+        'voucher_access' => VoucherAccessService::class,
+        'entry_route' => VoucherEntryRouteService::class,
+        'disburse_flow' => DisburseFlowStarterService::class,
+        'completion_store' => SessionCompletionStore::class,
+        'terminology' => TerminologyService::class,
+        'api_response' => ApiResponseFactory::class,
+        'pricing' => PricingService::class,
+        'issuance' => PayCodeIssuanceService::class,
+        'wallet_access' => WalletAccessService::class,
+        'idempotency_store' => CacheIdempotencyStore::class,
+        'issuer_onboarding' => DefaultIssuerOnboardingService::class,
+        'wallet_provisioning' => DefaultWalletProvisioningService::class,
+        'issuer_resolver' => DefaultIssuerResolver::class,
+        'redemption_flow_preparation' => DefaultRedemptionFlowPreparationService::class,
+        'redemption_completion_context' => DefaultRedemptionCompletionContextService::class,
+        'redemption_completion_store' => NullRedemptionCompletionStore::class,
+        'claim_execution_factory' => DefaultClaimExecutionFactory::class,
+        'redemption_context_resolver' => DefaultRedemptionContextResolverService::class,
+        'redemption_validation' => DefaultRedemptionValidationService::class,
+        'redemption_processor' => DefaultRedemptionProcessorService::class,
+        'redemption_execution' => DefaultRedemptionExecutionService::class,
+        'withdrawal_validation' => DefaultWithdrawalValidationService::class,
+        'withdrawal_processor' => DefaultWithdrawalProcessorService::class,
+        'withdrawal_execution' => DefaultWithdrawalExecutionService::class,
+        'disbursement_reconciliation_store' => DefaultDisbursementReconciliationStore::class,
+        'disbursement_status_resolver' => DefaultDisbursementStatusResolverService::class,
+        'disbursement_status_fetcher' => DefaultDisbursementStatusFetcherService::class,
+        'disbursement_reconciliation' => DefaultDisbursementReconciliationService::class,
     ],
 
     'service_contracts' => [
-        \LBHurtado\XChange\Contracts\UserResolverContract::class => 'user_resolver',
-        \LBHurtado\XChange\Contracts\VoucherAccessContract::class => 'voucher_access',
-        \LBHurtado\XChange\Contracts\VoucherEntryRouteResolverContract::class => 'entry_route',
-        \LBHurtado\XChange\Contracts\TerminologyServiceContract::class => 'terminology',
-        \LBHurtado\XChange\Contracts\PricingServiceContract::class => 'pricing',
-        \LBHurtado\XChange\Contracts\PayCodeIssuanceContract::class => 'issuance',
-        \LBHurtado\XChange\Contracts\WalletAccessContract::class => 'wallet_access',
-        \LBHurtado\XChange\Contracts\IdempotencyStoreContract::class => 'idempotency_store',
-        \LBHurtado\XChange\Contracts\IssuerOnboardingContract::class => 'issuer_onboarding',
-        \LBHurtado\XChange\Contracts\WalletProvisioningContract::class => 'wallet_provisioning',
-        \LBHurtado\XChange\Contracts\IssuerResolverContract::class => 'issuer_resolver',
+        UserResolverContract::class => 'user_resolver',
+        VoucherAccessContract::class => 'voucher_access',
+        VoucherEntryRouteResolverContract::class => 'entry_route',
+        TerminologyServiceContract::class => 'terminology',
+        PricingServiceContract::class => 'pricing',
+        PayCodeIssuanceContract::class => 'issuance',
+        WalletAccessContract::class => 'wallet_access',
+        IdempotencyStoreContract::class => 'idempotency_store',
+        IssuerOnboardingContract::class => 'issuer_onboarding',
+        WalletProvisioningContract::class => 'wallet_provisioning',
+        IssuerResolverContract::class => 'issuer_resolver',
     ],
 
     'integrations' => [
-        'system_wallet_resolver' => \LBHurtado\XChange\Support\Resolvers\NullSystemWalletResolver::class,
-        'audit_logger' =>  \LBHurtado\XChange\Support\Logging\CacheAuditLogger::class,
+        'system_wallet_resolver' => NullSystemWalletResolver::class,
+        'audit_logger' => CacheAuditLogger::class,
     ],
 
     'integration_contracts' => [
@@ -176,8 +223,8 @@ return [
     ],
 
     'onboarding' => [
-//        'issuer_model' => env('XCHANGE_ONBOARDING_DEFAULT_ISSUER_MODEL', \LBHurtado\XChange\Tests\Fakes\User::class),
-        'issuer_model' => env('XCHANGE_ONBOARDING_DEFAULT_ISSUER_MODEL', App\Models\User::class),
+        //        'issuer_model' => env('XCHANGE_ONBOARDING_DEFAULT_ISSUER_MODEL', \LBHurtado\XChange\Tests\Fakes\User::class),
+        'issuer_model' => env('XCHANGE_ONBOARDING_DEFAULT_ISSUER_MODEL', User::class),
         'default_wallet_slug' => env('XCHANGE_ONBOARDING_DEFAULT_WALLET_SLUG', 'platform'),
         'default_wallet_name' => env('XCHANGE_ONBOARDING_DEFAULT_WALLET_NAME', 'Platform Wallet'),
     ],
@@ -190,8 +237,8 @@ return [
         ],
     ],
     'payout' => [
-        'provider' => \LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider::class,
-        'wallet_proxy' => \LBHurtado\XChange\Services\SystemWalletProxy::class,
+        'provider' => NetbankPayoutProvider::class,
+        'wallet_proxy' => SystemWalletProxy::class,
         'system_user_id' => env('XCHANGE_SYSTEM_USER_ID'),
         'system_user_column' => env('XCHANGE_SYSTEM_USER_COLUMN', 'id'),
         'system_wallet_slug' => env(
@@ -202,7 +249,7 @@ return [
     'lifecycle' => [
         ...require __DIR__.'/lifecycle-scenarios.php',
         'withdrawals' => [
-            'service' => \LBHurtado\XChange\Services\WithdrawalLifecycleService::class,
+            'service' => WithdrawalLifecycleService::class,
         ],
         'scenario_groups' => [
             'pre-deployment' => [
@@ -593,14 +640,14 @@ return [
     'revenue' => [
         'instruction_item_model' => env(
             'XCHANGE_REVENUE_INSTRUCTION_ITEM_MODEL',
-            \LBHurtado\Instruction\Models\InstructionItem::class,
-//            \App\Models\InstructionItem::class
+            InstructionItem::class,
+            //            \App\Models\InstructionItem::class
         ),
 
         'destination' => [
             'model' => env(
                 'XCHANGE_REVENUE_DESTINATION_MODEL',
-                \App\Models\User::class
+                User::class
             ),
             'identifier' => env('XCHANGE_REVENUE_DESTINATION_IDENTIFIER'),
             'identifier_column' => env('XCHANGE_REVENUE_DESTINATION_IDENTIFIER_COLUMN', 'email'),
@@ -665,8 +712,8 @@ return [
     ],
     'approval_workflow' => [
         'handlers' => [
-            'approval' => \LBHurtado\XChange\Services\ApprovalHandlers\ManualApprovalRequirementHandler::class,
-            'otp' => \LBHurtado\XChange\Services\ApprovalHandlers\OtpApprovalRequirementHandler::class,
+            'approval' => ManualApprovalRequirementHandler::class,
+            'otp' => OtpApprovalRequirementHandler::class,
         ],
     ],
     'voucher_flow_types' => [
@@ -725,13 +772,13 @@ return [
             'driver' => env('X_CHANGE_CLAIM_APPROVAL_OTP_DRIVER', 'null'),
             'drivers' => [
                 'null' => [
-                    'challenge' => \LBHurtado\XChange\Services\NullClaimOtpChallengeService::class,
-                    'verify' => \LBHurtado\XChange\Services\NullClaimOtpVerificationService::class,
+                    'challenge' => NullClaimOtpChallengeService::class,
+                    'verify' => NullClaimOtpVerificationService::class,
 
                 ],
                 'withdrawal_otp' => [
-                    'challenge' => \LBHurtado\XChange\Services\WithdrawalOtpApprovalBackedClaimOtpChallengeService::class,
-                    'verify' => \LBHurtado\XChange\Services\WithdrawalOtpApprovalBackedClaimOtpVerificationService::class,
+                    'challenge' => WithdrawalOtpApprovalBackedClaimOtpChallengeService::class,
+                    'verify' => WithdrawalOtpApprovalBackedClaimOtpVerificationService::class,
                 ],
             ],
         ],
@@ -741,8 +788,8 @@ return [
         'renderer' => env('XCHANGE_PAYMENT_QR_RENDERER', 'json'),
 
         'renderers' => [
-            'json' => \LBHurtado\XChange\Services\DefaultVoucherPaymentQrRenderer::class,
-            'png_base64' => \LBHurtado\XChange\Services\Base64PngVoucherPaymentQrRenderer::class,
+            'json' => DefaultVoucherPaymentQrRenderer::class,
+            'png_base64' => Base64PngVoucherPaymentQrRenderer::class,
         ],
         'png' => [
             'size' => env('XCHANGE_PAYMENT_QR_PNG_SIZE', 300),
