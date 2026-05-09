@@ -39,6 +39,28 @@ class InstallXChangeCommand extends Command
             });
         }
 
+        // Publish form-flow and handler assets (if installed)
+        $formFlowProviders = [
+            'LBHurtado\FormFlowManager\FormFlowServiceProvider',
+            'LBHurtado\FormHandlerKYC\KYCHandlerServiceProvider',
+            'LBHurtado\FormHandlerLocation\LocationHandlerServiceProvider',
+            'LBHurtado\FormHandlerOtp\OtpHandlerServiceProvider',
+            'LBHurtado\FormHandlerSelfie\SelfieHandlerServiceProvider',
+            'LBHurtado\FormHandlerSignature\SignatureHandlerServiceProvider',
+        ];
+
+        foreach ($formFlowProviders as $provider) {
+            if (class_exists($provider)) {
+                $shortName = class_basename($provider);
+                $this->components->task("Publishing {$shortName}", function () use ($provider, $force): void {
+                    $this->callSilently('vendor:publish', [
+                        '--provider' => $provider,
+                        '--force' => $force,
+                    ]);
+                });
+            }
+        }
+
         // Run migrations
         if (! $this->option('no-migrate')) {
             $this->components->task('Running migrations', function (): void {

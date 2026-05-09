@@ -166,6 +166,11 @@ const copyCode = async () => {
                         Back to Pay Codes
                     </Link>
                 </Button>
+                <Button v-if="voucher.status === 'active'" as-child>
+                    <a :href="routes.claim.start(voucher.code)">
+                        Start Claim
+                    </a>
+                </Button>
             </div>
 
             <!-- Status Card -->

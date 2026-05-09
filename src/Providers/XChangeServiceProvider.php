@@ -609,6 +609,7 @@ class XChangeServiceProvider extends ServiceProvider
         ], 'x-change-scripts');
 
         $this->publishes([
+            // x-change pages, components, layouts, composables
             $this->packagePath('resources/js/pages/x-change') => resource_path('js/pages/x-change'),
             $this->packagePath('resources/js/components/x-change') => resource_path('js/components/x-change'),
             $this->packagePath('resources/js/layouts/x-change') => resource_path('js/layouts/x-change'),
@@ -616,6 +617,18 @@ class XChangeServiceProvider extends ServiceProvider
             $this->packagePath('resources/js/composables/usePayCodeApi.ts') => resource_path('js/composables/usePayCodeApi.ts'),
             $this->packagePath('resources/js/composables/usePayCodeForm.ts') => resource_path('js/composables/usePayCodeForm.ts'),
             $this->packagePath('resources/js/composables/useXChangeRoutes.ts') => resource_path('js/composables/useXChangeRoutes.ts'),
+
+            // Form-flow shared dependencies (until form-flow packages publish these natively)
+            $this->packagePath('resources/js/components/x-change-shared-financial') => resource_path('js/components/financial'),
+            $this->packagePath('resources/js/components/x-change-shared-phone-input') => resource_path('js/components/ui/phone-input'),
+            $this->packagePath('resources/js/components/NumberInputWithKeypad.vue') => resource_path('js/components/NumberInputWithKeypad.vue'),
+            $this->packagePath('resources/js/components/NumericKeypad.vue') => resource_path('js/components/NumericKeypad.vue'),
+            $this->packagePath('resources/js/composables/useFormFlowSummary.ts') => resource_path('js/composables/useFormFlowSummary.ts'),
+            $this->packagePath('resources/js/composables/useTheme.ts') => resource_path('js/composables/useTheme.ts'),
+            $this->packagePath('resources/js/layouts/PublicLayout.vue') => resource_path('js/layouts/PublicLayout.vue'),
+            $this->packagePath('resources/js/config') => resource_path('js/config'),
+            $this->packagePath('resources/js/data') => resource_path('js/data'),
+            $this->packagePath('resources/documents') => resource_path('documents'),
         ], 'x-change-ui');
 
         $this->publishes([

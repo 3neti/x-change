@@ -15,6 +15,13 @@ export function useXChangeRoutes() {
 
         balances: '/x/balances',
 
+        claim: {
+            start: (code: string) => `/x/claim?code=${code}`,
+            submit: (code: string) => `/x/claim/${code}/submit`,
+            success: (code: string) => `/x/claim/${code}/success`,
+            redirect: (code: string) => `/x/claim/${code}/redirect`,
+        },
+
         api: {
             dashboardStats: '/api/x/v1/dashboard/stats',
             dashboardActivity: '/api/x/v1/dashboard/activity',
