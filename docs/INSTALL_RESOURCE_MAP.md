@@ -1,7 +1,7 @@
 # x-change:install — Resource Installation Map
 
-**Version**: 1.0
-**Last Updated**: 2026-05-09
+**Version**: 1.1
+**Last Updated**: 2026-05-10
 
 This document maps every resource published by `php artisan x-change:install`, where it goes, which package owns it, and why the host app needs it.
 
@@ -39,6 +39,7 @@ Published by `XChangeServiceProvider`. These are the package-owned Vue source fi
 | `resources/js/pages/x-change/pay-codes/Create.vue` | same | Pay Code generation form with live pricing |
 | `resources/js/pages/x-change/pay-codes/Show.vue` | same | Pay Code detail with instructions, claims, dates |
 | `resources/js/pages/x-change/balances/Index.vue` | same | Balance monitoring and reconciliation status |
+| `resources/js/pages/x-change/claim/Entry.vue` | same | Public code entry page with voucher x-ray preview |
 | `resources/js/pages/x-change/claim/Error.vue` | same | Claim error page (invalid/expired/redeemed) |
 | `resources/js/pages/x-change/claim/Success.vue` | same | Post-claim success with rider message and redirect |
 
@@ -53,6 +54,10 @@ Published by `XChangeServiceProvider`. These are the package-owned Vue source fi
 | `resources/js/components/x-change/RecentActivity.vue` | same | Dashboard recent activity table |
 | `resources/js/components/x-change/BalanceWidget.vue` | same | Balance display card |
 | `resources/js/components/x-change/ReconciliationStatusCard.vue` | same | Reconciliation status display |
+| `resources/js/components/x-change/ClaimWidget.vue` | same | Code entry form with live voucher x-ray (adapted from redeem-x RedeemWidget) |
+| `resources/js/components/x-change/VoucherInstructionsDisplay.vue` | same | Voucher instructions x-ray (amount, inputs, validation, rider) |
+| `resources/js/components/x-change/VoucherStatusStamp.vue` | same | Redeemed/expired status stamp overlay |
+| `resources/js/components/x-change/VoucherMetadataDisplay.vue` | same | System metadata display with copy-to-clipboard |
 
 **Why**: Reusable UI components consumed by the x-change pages.
 
@@ -72,6 +77,10 @@ Published by `XChangeServiceProvider`. These are the package-owned Vue source fi
 | `composables/usePayCodeApi.ts` | same | Pay Code estimate, generate, pricelist API client |
 | `composables/usePayCodeForm.ts` | same | Pay Code form state, validation, debounced estimate |
 | `composables/useXChangeRoutes.ts` | same | Centralized route definitions (eliminates hardcoded URLs) |
+| `composables/useVoucherPreview.ts` | same | Live voucher preview via lifecycle API (debounced, typed `InspectResponse`) |
+| `composables/useClipboard.ts` | same | Clipboard copy utility (used by VoucherMetadataDisplay) |
+| `types/voucher.d.ts` | `resources/js/types/` | TypeScript interfaces for `InspectResponse`, `InspectInstructions`, `PreviewPolicy` |
+| `components/InputError.vue` | `resources/js/components/` | Form validation error display component |
 
 **Why**: Typed API clients and form state management. Designed for reuse in future PWA.
 
@@ -81,6 +90,7 @@ These are frontend files required by form-flow's Vue pages but not yet published
 
 | Source (in x-change package) | Destination (host) | Origin | Purpose |
 |---|---|---|---|
+| `components/x-change-shared-tabs/` | `resources/js/components/ui/tabs/` | shadcn-vue | Tabs, TabsList, TabsTrigger, TabsContent (used by ClaimWidget voucher preview) |
 | `components/x-change-shared-financial/` | `resources/js/components/financial/` | redeem-x | Bank selector (`BankEMISelect`), country selector, settlement rail selector |
 | `components/x-change-shared-phone-input/` | `resources/js/components/ui/phone-input/` | redeem-x | Phone number input with country code |
 | `components/NumberInputWithKeypad.vue` | `resources/js/components/` | redeem-x | Numeric input with on-screen keypad (mobile UX) |
