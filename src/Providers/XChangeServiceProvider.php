@@ -621,8 +621,9 @@ class XChangeServiceProvider extends ServiceProvider
             $this->packagePath('resources/js/composables/useClipboard.ts') => resource_path('js/composables/useClipboard.ts'),
             $this->packagePath('resources/js/types/voucher.d.ts') => resource_path('js/types/voucher.d.ts'),
             $this->packagePath('resources/js/components/InputError.vue') => resource_path('js/components/InputError.vue'),
+            $this->packagePath('resources/js/components/x-change-shared-tabs') => resource_path('js/components/ui/tabs'),
 
-            // Form-flow shared dependencies (until form-flow packages publish these natively)
+            // Form-flow shared dependencies
             $this->packagePath('resources/js/components/x-change-shared-financial') => resource_path('js/components/financial'),
             $this->packagePath('resources/js/components/x-change-shared-phone-input') => resource_path('js/components/ui/phone-input'),
             $this->packagePath('resources/js/components/NumberInputWithKeypad.vue') => resource_path('js/components/NumberInputWithKeypad.vue'),
