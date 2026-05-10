@@ -11,6 +11,7 @@ class InstallXChangeCommand extends Command
     protected $signature = 'x-change:install
         {--force : Overwrite existing published files}
         {--no-assets : Skip branding asset publishing}
+        {--no-handlers : Skip form-flow and handler asset publishing}
         {--no-migrate : Skip database migrations}';
 
     protected $description = 'Install the X-Change package UI, assets, and run migrations';
@@ -19,7 +20,7 @@ class InstallXChangeCommand extends Command
     {
         $this->components->info('Installing X-Change...');
 
-        $force = $this->option('force');
+        $force = (bool) $this->option('force');
 
         // Publish UI (pages, components, layouts, composables)
         $this->components->task('Publishing UI files', function () use ($force): void {
@@ -40,24 +41,26 @@ class InstallXChangeCommand extends Command
         }
 
         // Publish form-flow and handler assets (if installed)
-        $formFlowProviders = [
-            'LBHurtado\FormFlowManager\FormFlowServiceProvider',
-            'LBHurtado\FormHandlerKYC\KYCHandlerServiceProvider',
-            'LBHurtado\FormHandlerLocation\LocationHandlerServiceProvider',
-            'LBHurtado\FormHandlerOtp\OtpHandlerServiceProvider',
-            'LBHurtado\FormHandlerSelfie\SelfieHandlerServiceProvider',
-            'LBHurtado\FormHandlerSignature\SignatureHandlerServiceProvider',
-        ];
+        if (! $this->option('no-handlers')) {
+            $formFlowProviders = [
+                'LBHurtado\FormFlowManager\FormFlowServiceProvider',
+                'LBHurtado\FormHandlerKYC\KYCHandlerServiceProvider',
+                'LBHurtado\FormHandlerLocation\LocationHandlerServiceProvider',
+                'LBHurtado\FormHandlerOtp\OtpHandlerServiceProvider',
+                'LBHurtado\FormHandlerSelfie\SelfieHandlerServiceProvider',
+                'LBHurtado\FormHandlerSignature\SignatureHandlerServiceProvider',
+            ];
 
-        foreach ($formFlowProviders as $provider) {
-            if (class_exists($provider)) {
-                $shortName = class_basename($provider);
-                $this->components->task("Publishing {$shortName}", function () use ($provider, $force): void {
-                    $this->callSilently('vendor:publish', [
-                        '--provider' => $provider,
-                        '--force' => $force,
-                    ]);
-                });
+            foreach ($formFlowProviders as $provider) {
+                if (class_exists($provider)) {
+                    $shortName = class_basename($provider);
+                    $this->components->task("Publishing {$shortName}", function () use ($provider, $force): void {
+                        $this->callSilently('vendor:publish', [
+                            '--provider' => $provider,
+                            '--force' => $force,
+                        ]);
+                    });
+                }
             }
         }
 
