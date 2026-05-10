@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
+
+defineOptions({ layout: null });
 import { Button } from '@/components/ui/button';
 import { ExternalLink, CheckCircle2 } from 'lucide-vue-next';
 import { useXChangeRoutes } from '@/composables/useXChangeRoutes';

@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertCircle } from 'lucide-vue-next';
 
+defineOptions({ layout: null });
+
 defineProps<{
     message: string;
     code?: string;

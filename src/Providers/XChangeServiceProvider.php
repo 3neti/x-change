@@ -617,6 +617,10 @@ class XChangeServiceProvider extends ServiceProvider
             $this->packagePath('resources/js/composables/usePayCodeApi.ts') => resource_path('js/composables/usePayCodeApi.ts'),
             $this->packagePath('resources/js/composables/usePayCodeForm.ts') => resource_path('js/composables/usePayCodeForm.ts'),
             $this->packagePath('resources/js/composables/useXChangeRoutes.ts') => resource_path('js/composables/useXChangeRoutes.ts'),
+            $this->packagePath('resources/js/composables/useVoucherPreview.ts') => resource_path('js/composables/useVoucherPreview.ts'),
+            $this->packagePath('resources/js/composables/useClipboard.ts') => resource_path('js/composables/useClipboard.ts'),
+            $this->packagePath('resources/js/types/voucher.d.ts') => resource_path('js/types/voucher.d.ts'),
+            $this->packagePath('resources/js/components/InputError.vue') => resource_path('js/components/InputError.vue'),
 
             // Form-flow shared dependencies (until form-flow packages publish these natively)
             $this->packagePath('resources/js/components/x-change-shared-financial') => resource_path('js/components/financial'),

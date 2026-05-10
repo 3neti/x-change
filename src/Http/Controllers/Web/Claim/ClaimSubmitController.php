@@ -56,15 +56,22 @@ class ClaimSubmitController extends Controller
                 ->withErrors(['error' => 'Mobile number is required.']);
         }
 
-        // Build claim payload matching SubmitPayCodeClaim expectations
+        $phoneNumber = (string) (new PhoneNumber($mobile, $country));
+
+        // Build claim payload matching SubmitPayCodeClaim expectations.
+        // The 'inputs' array must include ALL collected fields (including mobile)
+        // because InputsSpecification checks voucher.instructions.inputs.fields
+        // against context.inputs.
+        $inputs = collect($flatData)
+            ->except(['recipient_country', 'amount', 'settlement_rail'])
+            ->toArray();
+
         $payload = [
-            'mobile' => (string) (new PhoneNumber($mobile, $country)),
+            'mobile' => $phoneNumber,
             'country' => $country,
             'bank_code' => $flatData['bank_code'] ?? null,
             'account_number' => $flatData['account_number'] ?? null,
-            'inputs' => collect($flatData)
-                ->except(['mobile', 'recipient_country', 'bank_code', 'account_number', 'amount', 'settlement_rail'])
-                ->toArray(),
+            'inputs' => $inputs,
         ];
 
         Log::info('[ClaimSubmitController] Submitting claim', [

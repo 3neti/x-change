@@ -11,9 +11,24 @@ This document maps the complete claim flow for x-change Pay Codes — from claim
 ## Flow Diagram
 
 ```
-┌─────────────────────── PHASE 1: x-change PACKAGE ────────────────────┐
+┌─────────────────────── PHASE 0: CODE ENTRY ──────────────────────────┐
 │                                                                       │
-│  Show.vue "Start Claim" button                                        │
+│  GET /x/claim (no code parameter)                                     │
+│       │                                                               │
+│       ▼                                                               │
+│  claim/Entry.vue (standalone, no sidebar — layout: null)              │
+│       │ ClaimWidget.vue with code input + live voucher x-ray          │
+│       │ useVoucherPreview → GET /api/x/v1/vouchers/code/{code}        │
+│       │ tabbed preview: Instructions | System Info                    │
+│       │ non-active states: redeemed/expired stamp                     │
+│       │ on submit: GET /x/claim?code={CODE}                           │
+│                                                                       │
+└───────────────────────────────┬───────────────────────────────────────┘
+                                │
+┌─────────────────────── PHASE 1: x-change PACKAGE ────────────────────┐
+│                                │                                      │
+│  Show.vue "Start Claim" button ─┘                                     │
+│  or Entry.vue submit                                                  │
 │  or shared URL: /x/claim?code=XXXX                                    │
 │       │                                                               │
 │       ▼                                                               │
@@ -97,20 +112,39 @@ This document maps the complete claim flow for x-change Pay Codes — from claim
 
 ---
 
+## Phase 0: Code Entry
+
+**Route**: `GET /x/claim` (no `?code=` parameter) → `ClaimStartController` renders `Entry.vue`
+**Vue**: `pages/x-change/claim/Entry.vue` → wraps `ClaimWidget.vue`
+**Layout**: `null` (standalone page, no sidebar — bypasses `AppLayout` via `app.ts` layout resolver)
+
+The entry page is the canonical redemption URL — the link that goes on QR codes, SMS messages, and shared links. It provides:
+- Code input field with auto-uppercase
+- Live voucher preview ("x-ray") via `useVoucherPreview` composable — debounced API call to `GET /api/x/v1/vouchers/code/{code}`
+- Tabbed display: Instructions tab (amount, required inputs, validation, rider) and System Info tab (metadata)
+- Non-active states: redeemed/expired vouchers show a status stamp (no form, no submit)
+- On submit: `GET /x/claim?code={CODE}` which hits Phase 1
+
+The `ClaimWidget.vue` is adapted from redeem-x's `RedeemWidget.vue`, stripped to claim-only mode.
+
+---
+
 ## Phase 1: Claim Start
 
 **Route**: `GET /x/claim?code=XXXX` → `ClaimStartController` (public, no auth)
 **Location**: `packages/x-change/src/Http/Controllers/Web/Claim/ClaimStartController.php`
 
-1. Validates voucher exists, is not redeemed, and is not expired
-2. If invalid, renders `x-change/claim/Error.vue` with message
-3. Calls `DriverService::transform($voucher)` — builds form-flow instructions from YAML driver
-4. Calls `FormFlowService::startFlow($instructions)` — creates session-based flow
-5. Redirects to `/form-flow/{flow_id}`
+1. If no `?code=` parameter: renders `Entry.vue` (Phase 0)
+2. Validates voucher exists, is not redeemed, and is not expired
+3. If invalid, renders `x-change/claim/Error.vue` with message
+4. Calls `DriverService::transform($voucher)` — builds form-flow instructions from YAML driver
+5. Calls `FormFlowService::startFlow($instructions)` — creates session-based flow
+6. Redirects to `/form-flow/{flow_id}`
 
 **Entry points**:
+- `GET /x/claim` — code entry page (claimant types code manually)
+- `GET /x/claim?code=XXXX` — direct link (from Show.vue, QR code, or shared URL)
 - Show.vue "Start Claim" button (for operators viewing their own vouchers)
-- Shared URL `/x/claim?code=XXXX` (for claimants receiving a link)
 
 ---
 
@@ -224,9 +258,11 @@ Logs the redirect event via the audit logger, then 302s to `rider.url`. Falls ba
 
 ### Public Claim Routes (no auth)
 
+All claim pages render standalone (no sidebar) — `app.ts` layout resolver returns `null` for `x-change/claim/*` and `form-flow/*` page names.
+
 | Route | Method | Controller | Vue Page |
 |-------|--------|-----------|----------|
-| `GET /x/claim?code=X` | `__invoke` | `ClaimStartController` | Error.vue (on failure) |
+| `GET /x/claim` | `__invoke` | `ClaimStartController` | Entry.vue (no code) or redirect (with code) |
 | `POST /x/claim/{code}/complete` | `__invoke` | `ClaimCompleteController` | — (JSON callback) |
 | `POST /x/claim/{code}/submit` | `__invoke` | `ClaimSubmitController` | — (redirect) |
 | `GET /x/claim/{code}/success` | `__invoke` | `ClaimSuccessPageController` | `claim/Success.vue` |
@@ -270,8 +306,19 @@ Logs the redirect event via the audit logger, then 302s to `rider.url`. Falls ba
 - `packages/x-change/src/Actions/Redemption/PreparePayCodeRedemptionFlow.php`
 
 ### Vue Pages
-- `packages/x-change/resources/js/pages/x-change/claim/Error.vue`
-- `packages/x-change/resources/js/pages/x-change/claim/Success.vue`
+- `packages/x-change/resources/js/pages/x-change/claim/Entry.vue` — code entry with voucher x-ray
+- `packages/x-change/resources/js/pages/x-change/claim/Error.vue` — invalid/expired/redeemed error
+- `packages/x-change/resources/js/pages/x-change/claim/Success.vue` — post-claim with rider
+
+### Vue Components
+- `packages/x-change/resources/js/components/x-change/ClaimWidget.vue` — code input + live preview
+- `packages/x-change/resources/js/components/x-change/VoucherInstructionsDisplay.vue` — instructions x-ray
+- `packages/x-change/resources/js/components/x-change/VoucherStatusStamp.vue` — redeemed/expired stamp
+- `packages/x-change/resources/js/components/x-change/VoucherMetadataDisplay.vue` — system metadata
+
+### Composables
+- `packages/x-change/resources/js/composables/useVoucherPreview.ts` — live voucher preview API
+- `packages/x-change/resources/js/types/voucher.d.ts` — typed `InspectResponse` interface
 
 ### Host App Config
 - `config/form-flow-drivers/voucher-redemption.yaml` — YAML driver with x-change callbacks
@@ -286,6 +333,23 @@ Logs the redirect event via the audit logger, then 302s to `rider.url`. Falls ba
 
 ---
 
+## Layout Configuration
+
+Claim and form-flow pages render as standalone public pages (no sidebar). This is configured in `resources/js/app.ts`:
+
+```ts
+layout: (name) => {
+    case name.startsWith('x-change/claim/'):
+        return null;
+    case name.startsWith('form-flow/'):
+        return null;
+}
+```
+
+This matches the UX of redeem-x's `/disburse` flow — centered, mobile-friendly, no dashboard chrome.
+
+---
+
 ## What This Flow Does NOT Handle (Yet)
 
 - Divisible voucher withdrawal (partial slices)
@@ -293,6 +357,5 @@ Logs the redirect event via the audit logger, then 302s to `rider.url`. Falls ba
 - Settlement flow (bilateral)
 - Settlement envelope finalization
 - `/disburse` compatibility alias
-- Code entry page (claimants receive direct links)
 
 These can be added behind the same `/x/claim` surface by extending `ClaimExecutionFactory`.

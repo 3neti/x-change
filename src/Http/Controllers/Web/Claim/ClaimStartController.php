@@ -25,8 +25,8 @@ class ClaimStartController extends Controller
         $code = strtoupper(trim((string) $request->query('code', '')));
 
         if ($code === '') {
-            return Inertia::render('x-change/claim/Error', [
-                'message' => 'No Pay Code provided.',
+            return Inertia::render('x-change/claim/Entry', [
+                'initial_code' => null,
             ]);
         }
 
