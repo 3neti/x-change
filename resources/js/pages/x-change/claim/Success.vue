@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
+import { Card, CardContent } from '@/components/ui/card';
 
 defineOptions({ layout: null });
 import { Button } from '@/components/ui/button';
@@ -70,67 +71,69 @@ onMounted(() => {
     <Head title="Claim Successful" />
 
     <div class="min-h-screen bg-gradient-to-b from-primary/5 via-background to-background px-5 py-8">
-        <div class="mx-auto max-w-md space-y-8">
-            <!-- Hero -->
-            <div class="space-y-4 pt-4 text-center">
-                <CheckCircle2 class="mx-auto h-16 w-16 text-green-500" />
+        <Card class="mx-auto max-w-md border-0 bg-card/80 shadow-sm">
+            <CardContent class="space-y-8 px-6 py-8">
+                <!-- Hero -->
+                <div class="space-y-4 pt-4 text-center">
+                    <CheckCircle2 class="mx-auto h-16 w-16 text-green-500" />
 
-                <!-- Rider message (prominent) -->
-                <div v-if="hasRiderMessage" class="overflow-visible">
+                    <!-- Rider message (prominent) -->
+                    <div v-if="hasRiderMessage" class="overflow-visible">
+                        <div
+                            v-html="renderedMessage"
+                            class="prose prose-lg max-w-none text-center font-semibold dark:prose-invert"
+                        />
+                    </div>
+                    <!-- No rider: amount is the hero -->
+                    <template v-else>
+                        <p v-if="hasNonZeroAmount" class="text-2xl font-bold tracking-tight text-foreground">
+                            {{ voucher.formatted_amount }}
+                        </p>
+                        <p class="text-center text-lg font-medium text-foreground">
+                            {{ hasNonZeroAmount ? 'Disbursed to your account' : 'Pay Code claimed' }}
+                        </p>
+                    </template>
+
+                    <!-- Voucher code badge -->
                     <div
-                        v-html="renderedMessage"
-                        class="prose prose-lg max-w-none text-center font-semibold dark:prose-invert"
-                    />
+                        v-if="!hasRiderMessage"
+                        class="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-4 py-1 font-mono text-sm font-semibold tracking-widest text-primary"
+                    >
+                        {{ voucher.code }}
+                    </div>
                 </div>
-                <!-- No rider: amount is the hero -->
-                <template v-else>
-                    <p v-if="hasNonZeroAmount" class="text-2xl font-bold tracking-tight text-foreground">
-                        {{ voucher.formatted_amount }}
-                    </p>
-                    <p class="text-center text-lg font-medium text-foreground">
-                        {{ hasNonZeroAmount ? 'Disbursed to your account' : 'Pay Code claimed' }}
-                    </p>
-                </template>
 
-                <!-- Voucher code badge -->
-                <div
-                    v-if="!hasRiderMessage"
-                    class="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-4 py-1 font-mono text-sm font-semibold tracking-widest text-primary"
-                >
-                    {{ voucher.code }}
+                <!-- Redirect with countdown -->
+                <div v-if="hasRiderUrl && !isRedirecting" class="space-y-3">
+                    <Button class="w-full rounded-full" @click="handleRedirect">
+                        Continue Now
+                        <ExternalLink :size="14" class="ml-1.5" />
+                    </Button>
+                    <p class="text-center text-[11px] text-gray-400 dark:text-gray-600">
+                        Redirecting in {{ countdown }}s
+                    </p>
                 </div>
-            </div>
 
-            <!-- Redirect with countdown -->
-            <div v-if="hasRiderUrl && !isRedirecting" class="space-y-3">
-                <Button class="w-full rounded-full" @click="handleRedirect">
-                    Continue Now
-                    <ExternalLink :size="14" class="ml-1.5" />
-                </Button>
-                <p class="text-center text-[11px] text-gray-400 dark:text-gray-600">
-                    Redirecting in {{ countdown }}s
+                <!-- Redirecting -->
+                <p v-else-if="hasRiderUrl && isRedirecting" class="text-center text-sm text-muted-foreground">
+                    Redirecting…
                 </p>
-            </div>
 
-            <!-- Redirecting -->
-            <p v-else-if="hasRiderUrl && isRedirecting" class="text-center text-sm text-muted-foreground">
-                Redirecting…
-            </p>
-
-            <!-- Default actions (no rider URL) -->
-            <div v-else class="space-y-3">
-                <Button class="w-full rounded-full" @click="router.visit('/x/claim')">
-                    Redeem Another
-                </Button>
-                <Button
-                    variant="ghost"
-                    size="lg"
-                    class="w-full rounded-full"
-                    @click="router.visit(routes.dashboard)"
-                >
-                    Go to Dashboard
-                </Button>
-            </div>
-        </div>
+                <!-- Default actions (no rider URL) -->
+                <div v-else class="space-y-3">
+                    <Button class="w-full rounded-full" @click="router.visit('/x/claim')">
+                        Redeem Another
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="lg"
+                        class="w-full rounded-full"
+                        @click="router.visit(routes.dashboard)"
+                    >
+                        Go to Dashboard
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
     </div>
 </template>
