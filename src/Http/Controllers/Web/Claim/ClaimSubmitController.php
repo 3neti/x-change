@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
+use LBHurtado\Contact\Models\Contact;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
@@ -62,9 +63,7 @@ class ClaimSubmitController extends Controller
         // The 'inputs' array must include ALL collected fields (including mobile)
         // because InputsSpecification checks voucher.instructions.inputs.fields
         // against context.inputs.
-        $inputs = collect($flatData)
-            ->except(['recipient_country', 'amount', 'settlement_rail'])
-            ->toArray();
+        $inputs = $this->buildInputs($flatData, $collectedData);
 
         $payload = [
             'mobile' => $phoneNumber,
@@ -78,7 +77,16 @@ class ClaimSubmitController extends Controller
             'voucher_code' => $code,
             'mobile' => $mobile,
             'bank_code' => $payload['bank_code'],
+            'input_keys' => array_keys($inputs),
+            'has_kyc' => isset($inputs['kyc']),
+            'kyc_status' => data_get($inputs, 'kyc.status'),
         ]);
+
+        $this->syncApprovedKycToContact(
+            phoneNumber: $phoneNumber,
+            country: $country,
+            kycData: $inputs['kyc'] ?? [],
+        );
 
         try {
             $result = $this->submitAction->handle($voucher, $payload);
@@ -119,5 +127,163 @@ class ClaimSubmitController extends Controller
         }
 
         return $mapped;
+    }
+
+    protected function buildInputs(array $flatData, array $collectedData): array
+    {
+        $inputs = collect($flatData)
+            ->except(['recipient_country', 'amount', 'settlement_rail'])
+            ->toArray();
+
+        $kycData = $this->extractKycData($flatData, $collectedData);
+
+        if ($kycData !== []) {
+            $inputs['kyc'] = $kycData;
+
+            foreach ([
+                'transaction_id',
+                'status',
+                'completed_at',
+                'rejection_reasons',
+                'name',
+                'email',
+                'date_of_birth',
+                'birth_date',
+                'address',
+                'id_type',
+                'id_number',
+                'nationality',
+                'id_card_full',
+                'id_card_cropped',
+                'selfie',
+            ] as $key) {
+                if (array_key_exists($key, $kycData) && ! array_key_exists($key, $inputs)) {
+                    $inputs[$key] = $kycData[$key];
+                }
+            }
+        }
+
+        return $inputs;
+    }
+
+    protected function extractKycData(array $flatData, array $collectedData): array
+    {
+        $candidates = [];
+
+        if (isset($collectedData['kyc_verification']) && is_array($collectedData['kyc_verification'])) {
+            $candidates[] = $collectedData['kyc_verification'];
+        }
+
+        if (isset($flatData['kyc']) && is_array($flatData['kyc'])) {
+            $candidates[] = $flatData['kyc'];
+        }
+
+        $flatKycKeys = [
+            'transaction_id',
+            'status',
+            'completed_at',
+            'rejection_reasons',
+            'name',
+            'email',
+            'date_of_birth',
+            'birth_date',
+            'address',
+            'id_type',
+            'id_number',
+            'nationality',
+            'id_card_full',
+            'id_card_cropped',
+            'selfie',
+        ];
+
+        $flatCandidate = [];
+
+        foreach ($flatKycKeys as $key) {
+            if (array_key_exists($key, $flatData)) {
+                $flatCandidate[$key] = $flatData[$key];
+            }
+        }
+
+        if ($flatCandidate !== []) {
+            $candidates[] = $flatCandidate;
+        }
+
+        foreach ($candidates as $candidate) {
+            $normalized = $this->normalizeKycData($candidate);
+
+            if ($normalized !== []) {
+                return $normalized;
+            }
+        }
+
+        return [];
+    }
+
+    protected function normalizeKycData(array $kycData): array
+    {
+        if (isset($kycData['kyc']) && is_array($kycData['kyc'])) {
+            $kycData = array_merge($kycData['kyc'], $kycData);
+            unset($kycData['kyc']);
+        }
+
+        if (isset($kycData['status']) && is_string($kycData['status'])) {
+            $kycData['status'] = strtolower($kycData['status']);
+        }
+
+        if (($kycData['status'] ?? null) === 'auto_approved') {
+            $kycData['status'] = 'approved';
+        }
+
+        if (($kycData['status'] ?? null) === 'success') {
+            $kycData['status'] = 'approved';
+        }
+
+        if (! isset($kycData['transaction_id']) && isset($kycData['transactionId'])) {
+            $kycData['transaction_id'] = $kycData['transactionId'];
+        }
+
+        if (! isset($kycData['completed_at'])) {
+            $kycData['completed_at'] = now()->toIso8601String();
+        }
+
+        return array_filter(
+            $kycData,
+            static fn ($value) => $value !== null && $value !== ''
+        );
+    }
+
+    protected function syncApprovedKycToContact(string $phoneNumber, string $country, array $kycData): void
+    {
+        $status = strtolower((string) ($kycData['status'] ?? ''));
+
+        if ($status !== 'approved') {
+            return;
+        }
+
+        try {
+            $contact = Contact::fromPhoneNumber(phone($phoneNumber, $country));
+
+            $contact->forceFill([
+                'kyc_status' => 'approved',
+                'kyc_transaction_id' => $kycData['transaction_id'] ?? $contact->kyc_transaction_id,
+                'kyc_submitted_at' => $contact->kyc_submitted_at ?? now(),
+                'kyc_completed_at' => $kycData['completed_at'] ?? now(),
+                'kyc_rejection_reasons' => null,
+            ])->save();
+
+            Log::info('[ClaimSubmitController] Synced approved KYC to contact', [
+                'contact_id' => $contact->id,
+                'mobile' => $phoneNumber,
+                'country' => $country,
+                'transaction_id' => $kycData['transaction_id'] ?? null,
+                'status' => $status,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('[ClaimSubmitController] Failed to sync KYC to contact', [
+                'mobile' => $phoneNumber,
+                'country' => $country,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }
