@@ -8,18 +8,19 @@ export function useXChangeRoutes() {
         dashboard: '/x/dashboard',
 
         payCodes: {
-            index: '/x/pay-codes',
-            create: '/x/pay-codes/create',
-            show: (code: string) => `/x/pay-codes/${code}`,
+            index: () => '/x/pay-codes',
+            create: () => '/x/pay-codes/create',
+            show: (code: string) => `/x/pay-codes/${encodeURIComponent(code)}`,
         },
 
         balances: '/x/balances',
 
         claim: {
-            start: (code: string) => `/x/claim?code=${code}`,
-            submit: (code: string) => `/x/claim/${code}/submit`,
-            success: (code: string) => `/x/claim/${code}/success`,
-            redirect: (code: string) => `/x/claim/${code}/redirect`,
+            start: () => '/x/claim',
+            startWithCode: (code: string) => `/x/claim?code=${encodeURIComponent(code)}`,
+            submit: (code: string) => `/x/claim/${encodeURIComponent(code)}/submit`,
+            success: (code: string) => `/x/claim/${encodeURIComponent(code)}/success`,
+            redirect: (code: string) => `/x/claim/${encodeURIComponent(code)}/redirect`,
         },
 
         api: {

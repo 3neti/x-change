@@ -1,125 +1,221 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
-import { onMounted, ref } from 'vue';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Plus } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
+import { Head, router } from '@inertiajs/vue3';
 import XChangeLayout from '@/layouts/x-change/XChangeLayout.vue';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    PayCodeFilters,
+    PayCodeListTable,
+    PayCodeStatsCards,
+} from '@/components/x-change/pay-codes';
 import { useXChangeRoutes } from '@/composables/useXChangeRoutes';
+import { PlusCircle } from 'lucide-vue-next';
+
+defineOptions({
+    layout: XChangeLayout,
+});
+
+type PayCodeStatus = 'all' | 'active' | 'redeemed' | 'expired' | 'pending' | 'failed';
+
+interface Voucher {
+    code: string;
+    amount?: number | string | null;
+    formatted_amount?: string | null;
+    currency?: string | null;
+    status?: string | null;
+    created_at?: string | null;
+    redeemed_at?: string | null;
+    expires_at?: string | null;
+    starts_at?: string | null;
+    mobile?: string | null;
+    account_number?: string | null;
+    bank_code?: string | null;
+    claim_url?: string | null;
+    instructions?: Record<string, any> | null;
+}
+
+interface PaginatedVouchers {
+    data: Voucher[];
+    links?: any[];
+    meta?: Record<string, any>;
+}
+
+interface Props {
+    vouchers: Voucher[] | PaginatedVouchers;
+    stats?: {
+        total?: number;
+        active?: number;
+        redeemed?: number;
+        expired?: number;
+        total_amount?: string | number;
+        redeemed_amount?: string | number;
+    };
+}
+
+const props = defineProps<Props>();
 
 const routes = useXChangeRoutes();
 
-defineOptions({
-    layout: [XChangeLayout, {
-        breadcrumbs: [
-            { title: 'Dashboard', href: '/x/dashboard' },
-            { title: 'Pay Codes', href: '/x/pay-codes' },
-        ],
-    }],
+const search = ref('');
+const status = ref<PayCodeStatus>('all');
+
+const allVouchers = computed<Voucher[]>(() => {
+    if (Array.isArray(props.vouchers)) {
+        return props.vouchers;
+    }
+
+    return props.vouchers?.data ?? [];
 });
 
-interface VoucherSummary {
-    id: number;
-    code: string;
-    amount: number;
-    currency: string;
-    status: string;
+function isExpired(voucher: Voucher): boolean {
+    if (!voucher.expires_at) {
+        return false;
+    }
+
+    return new Date(voucher.expires_at).getTime() < Date.now();
 }
 
-const vouchers = ref<VoucherSummary[]>([]);
-const loading = ref(true);
-
-const getStatusVariant = (status: string) => {
-    switch (status) {
-        case 'active':
-            return 'default';
-        case 'redeemed':
-            return 'secondary';
-        case 'cancelled':
-        case 'expired':
-            return 'destructive';
-        default:
-            return 'outline';
+function inferredStatus(voucher: Voucher): string {
+    if (voucher.status) {
+        return String(voucher.status).toLowerCase();
     }
-};
 
-const formatAmount = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-PH', {
-        style: 'currency',
-        currency: currency || 'PHP',
-    }).format(amount);
-};
-
-onMounted(async () => {
-    try {
-        const response = await fetch(routes.api.vouchers, {
-            headers: {
-                Accept: 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-        });
-        const json = await response.json();
-        vouchers.value = json.data?.items ?? json.data ?? [];
-    } catch {
-        // silently fail
-    } finally {
-        loading.value = false;
+    if (voucher.redeemed_at) {
+        return 'redeemed';
     }
+
+    if (isExpired(voucher)) {
+        return 'expired';
+    }
+
+    return 'active';
+}
+
+function matchesSearch(voucher: Voucher): boolean {
+    const term = search.value.trim().toLowerCase();
+
+    if (!term) {
+        return true;
+    }
+
+    const searchable = [
+        voucher.code,
+        voucher.mobile,
+        voucher.account_number,
+        voucher.bank_code,
+        voucher.status,
+        voucher.formatted_amount,
+        voucher.amount,
+    ]
+        .filter((value) => value !== null && value !== undefined)
+        .map((value) => String(value).toLowerCase());
+
+    return searchable.some((value) => value.includes(term));
+}
+
+function matchesStatus(voucher: Voucher): boolean {
+    if (status.value === 'all') {
+        return true;
+    }
+
+    return inferredStatus(voucher) === status.value;
+}
+
+const filteredVouchers = computed(() => {
+    return allVouchers.value
+        .filter(matchesSearch)
+        .filter(matchesStatus);
 });
+
+const computedStats = computed(() => {
+    if (props.stats) {
+        return props.stats;
+    }
+
+    return {
+        total: allVouchers.value.length,
+        active: allVouchers.value.filter((voucher) => inferredStatus(voucher) === 'active').length,
+        redeemed: allVouchers.value.filter((voucher) => inferredStatus(voucher) === 'redeemed').length,
+        expired: allVouchers.value.filter((voucher) => inferredStatus(voucher) === 'expired').length,
+    };
+});
+
+function showUrl(code: string): string {
+    if (routes.payCodes?.show) {
+        return routes.payCodes.show(code);
+    }
+
+    return `/x/pay-codes/${code}`;
+}
+
+function claimUrl(code: string): string {
+    if (routes.claim?.startWithCode) {
+        return routes.claim.startWithCode(code);
+    }
+
+    return `/x/claim?code=${code}`;
+}
+
+function goToCreate(): void {
+    if (routes.payCodes?.create) {
+        router.visit(routes.payCodes.create());
+
+        return;
+    }
+
+    router.visit('/x/pay-codes/create');
+}
 </script>
 
 <template>
     <Head title="Pay Codes" />
 
-    <div class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-        <div class="flex items-center justify-between">
-            <h2 class="text-lg font-semibold">Pay Codes</h2>
-            <Button as-child>
-                <Link :href="routes.payCodes.create">
-                    <Plus class="mr-2 h-4 w-4" />
-                    Create Pay Code
-                </Link>
+    <div class="space-y-6">
+        <!-- Header -->
+        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+                <h1 class="text-2xl font-semibold tracking-tight">
+                    Pay Codes
+                </h1>
+                <p class="text-sm text-muted-foreground">
+                    Generate, monitor, and manage disburseable Pay Codes.
+                </p>
+            </div>
+
+            <Button @click="goToCreate">
+                <PlusCircle class="mr-2 h-4 w-4" />
+                Generate Pay Code
             </Button>
         </div>
 
+        <!-- Stats -->
+        <PayCodeStatsCards :stats="computedStats" />
+
+        <!-- List -->
         <Card>
-            <CardContent class="p-0">
-                <div v-if="loading" class="space-y-3 p-6">
-                    <Skeleton v-for="i in 5" :key="i" class="h-12 w-full" />
+            <CardHeader class="space-y-4">
+                <div class="flex flex-col gap-1">
+                    <CardTitle class="text-base">
+                        Pay Code Registry
+                    </CardTitle>
+                    <p class="text-sm text-muted-foreground">
+                        Search and inspect generated Pay Codes.
+                    </p>
                 </div>
 
-                <div
-                    v-else-if="vouchers.length === 0"
-                    class="py-12 text-center text-muted-foreground"
-                >
-                    <p>No pay codes yet.</p>
-                    <Button as-child class="mt-4" variant="outline">
-                        <Link :href="routes.payCodes.create">Create your first Pay Code</Link>
-                    </Button>
-                </div>
+                <PayCodeFilters
+                    v-model:search="search"
+                    v-model:status="status"
+                />
+            </CardHeader>
 
-                <div v-else class="divide-y">
-                    <Link
-                        v-for="voucher in vouchers"
-                        :key="voucher.id"
-                        :href="routes.payCodes.show(voucher.code)"
-                        class="flex items-center justify-between px-6 py-4 hover:bg-muted/50 transition-colors"
-                    >
-                        <div>
-                            <p class="font-mono text-sm font-semibold">
-                                {{ voucher.code }}
-                            </p>
-                            <p class="text-sm text-muted-foreground">
-                                {{ formatAmount(voucher.amount, voucher.currency) }}
-                            </p>
-                        </div>
-                        <Badge :variant="getStatusVariant(voucher.status)">
-                            {{ voucher.status }}
-                        </Badge>
-                    </Link>
-                </div>
+            <CardContent>
+                <PayCodeListTable
+                    :vouchers="filteredVouchers"
+                    :show-url="showUrl"
+                    :claim-url="claimUrl"
+                />
             </CardContent>
         </Card>
     </div>
