@@ -189,20 +189,38 @@ The YAML driver at `config/form-flow-drivers/voucher-redemption.yaml` controls w
 
 Server-to-server callback from form-flow. Logs the completion event and returns JSON acknowledgment. The actual collected data remains in the form-flow session.
 
+The ClaimSubmitController intentionally remains agnostic of specific form-flow drivers and handlers.
+
+Driver-specific normalization logic (KYC, selfie, signature, OTP, etc.) is delegated to support services such as:
+- FormFlowClaimPayloadNormalizer
+- ClaimEvidenceSynchronizer
+
+This keeps x-change decoupled from form-flow implementation details while preserving compatibility with existing voucher redemption contracts.
+
 ### Claim Submit
 
 **Route**: `POST /x/claim/{code}/submit`
 **Controller**: `ClaimSubmitController`
 
 1. Retrieves collected data from form-flow session (via `reference_id` or `flow_id`)
-2. Flattens multi-step data into a single array
-3. Applies field name mappings from `config('x-change.redemption.field_mappings')`
-4. Builds claim payload: `mobile`, `country`, `bank_code`, `account_number`, `inputs`
-5. Calls `SubmitPayCodeClaim::handle($voucher, $payload)`
-6. `ClaimExecutionFactory` selects the appropriate executor (redeem for disburseable vouchers)
-7. `RedeemPayCode` marks the voucher as redeemed, triggering the post-redemption pipeline
-8. Clears form-flow session
-9. Redirects to success page
+2. Passes collected data to `FormFlowClaimPayloadNormalizer`
+3. Normalizer builds canonical claim payload:
+    - mobile
+    - country
+    - bank_code
+    - account_number
+    - inputs
+4. Normalizer also:
+    - preserves compatibility fields
+    - normalizes KYC statuses (`auto_approved` → `approved`)
+    - nests KYC payload into `inputs.kyc`
+    - preserves selfie/signature/location evidence fields
+5. `ClaimEvidenceSynchronizer` synchronizes approved KYC evidence into Contact records
+6. Calls `SubmitPayCodeClaim::handle($voucher, $payload)`
+7. `ClaimExecutionFactory` selects the appropriate executor (redeem for disburseable vouchers)
+8. `RedeemPayCode` marks the voucher as redeemed, triggering the post-redemption pipeline
+9. Clears form-flow session
+10. Redirects to success page
 
 ### Post-Redemption Pipeline
 
@@ -323,6 +341,12 @@ All claim pages render standalone (no sidebar) — `app.ts` layout resolver retu
 ### Host App Config
 - `config/form-flow-drivers/voucher-redemption.yaml` — YAML driver with x-change callbacks
 
+### Claim Payload + Evidence Support
+
+- `packages/x-change/src/Support/Claim/FormFlowClaimPayloadNormalizer.php`
+- `packages/x-change/src/Support/Claim/ClaimEvidenceSynchronizer.php`
+- `packages/x-change/src/Support/Claim/ApprovedKycContactSynchronizer.php`
+
 ### Vocabulary
 
 | Public (UI/API) | Internal (services/DTOs) |
@@ -357,5 +381,8 @@ This matches the UX of redeem-x's `/disburse` flow — centered, mobile-friendly
 - Settlement flow (bilateral)
 - Settlement envelope finalization
 - `/disburse` compatibility alias
+- Generic evidence synchronization contracts (currently KYC-first implementation)
+- Driver capability discovery
+- Asynchronous evidence persistence
 
 These can be added behind the same `/x/claim` surface by extending `ClaimExecutionFactory`.
