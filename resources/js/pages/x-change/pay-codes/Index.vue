@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
+import { computed, onMounted, ref } from 'vue';
 import XChangeLayout from '@/layouts/x-change/XChangeLayout.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,7 +42,7 @@ interface PaginatedVouchers {
 }
 
 interface Props {
-    vouchers: Voucher[] | PaginatedVouchers;
+    vouchers?: Voucher[] | PaginatedVouchers;
     stats?: {
         total?: number;
         active?: number;
@@ -53,19 +53,63 @@ interface Props {
     };
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+    vouchers: () => [],
+    stats: undefined,
+});
+
+const apiVouchers = ref<Voucher[]>([]);
+const isLoading = ref(false);
 
 const routes = useXChangeRoutes();
 
 const search = ref('');
 const status = ref<PayCodeStatus>('all');
 
-const allVouchers = computed<Voucher[]>(() => {
-    if (Array.isArray(props.vouchers)) {
-        return props.vouchers;
+function extractVoucherArray(value: unknown): Voucher[] {
+    if (Array.isArray(value)) {
+        return value;
     }
 
-    return props.vouchers?.data ?? [];
+    if (!value || typeof value !== 'object') {
+        return [];
+    }
+
+    const record = value as Record<string, any>;
+
+    if (Array.isArray(record.data)) {
+        return record.data;
+    }
+
+    if (Array.isArray(record.vouchers)) {
+        return record.vouchers;
+    }
+
+    if (Array.isArray(record.items)) {
+        return record.items;
+    }
+
+    if (record.data && typeof record.data === 'object') {
+        return extractVoucherArray(record.data);
+    }
+
+    if (record.vouchers && typeof record.vouchers === 'object') {
+        return extractVoucherArray(record.vouchers);
+    }
+
+    return [];
+}
+
+const propVouchers = computed<Voucher[]>(() => {
+    return extractVoucherArray(props.vouchers);
+});
+
+const allVouchers = computed<Voucher[]>(() => {
+    const source = propVouchers.value.length > 0
+        ? propVouchers.value
+        : apiVouchers.value;
+
+    return Array.isArray(source) ? source : [];
 });
 
 function isExpired(voucher: Voucher): boolean {
@@ -166,6 +210,34 @@ function goToCreate(): void {
 
     router.visit('/x/pay-codes/create');
 }
+
+async function fetchVouchers(): Promise<void> {
+    if (propVouchers.value.length > 0) {
+        return;
+    }
+
+    isLoading.value = true;
+
+    try {
+        const response = await fetch(routes.api.vouchers, {
+            headers: {
+                Accept: 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch vouchers: ${response.status}`);
+        }
+
+        const payload = await response.json()
+
+        apiVouchers.value = extractVoucherArray(payload);
+    } finally {
+        isLoading.value = false;
+    }
+}
+
+onMounted(fetchVouchers);
 </script>
 
 <template>
@@ -211,6 +283,10 @@ function goToCreate(): void {
             </CardHeader>
 
             <CardContent>
+                <div v-if="isLoading" class="rounded-lg border border-dashed p-8 text-center">
+                    <p class="text-sm text-muted-foreground">Loading Pay Codes…</p>
+                </div>
+
                 <PayCodeListTable
                     :vouchers="filteredVouchers"
                     :show-url="showUrl"

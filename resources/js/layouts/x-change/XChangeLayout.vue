@@ -34,7 +34,7 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Pay Codes',
-        href: routes.payCodes.index,
+        href: routes.payCodes.index(),
         icon: Ticket,
     },
     {

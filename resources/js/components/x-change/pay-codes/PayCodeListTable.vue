@@ -44,6 +44,12 @@ function amountLabel(voucher: Voucher): string {
 function dateLabel(value?: string | null): string {
     if (!value) return '—';
 
+    const timestamp = new Date(value).getTime();
+
+    if (Number.isNaN(timestamp)) {
+        return String(value);
+    }
+
     return new Intl.DateTimeFormat('en-PH', {
         year: 'numeric',
         month: 'short',
@@ -67,6 +73,36 @@ async function copyClaimUrl(code: string): Promise<void> {
 function openClaim(code: string): void {
     const url = props.claimUrl?.(code) ?? `/x/claim?code=${code}`;
     window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function createdAt(voucher: Voucher): string | null {
+    return (
+        voucher.created_at ??
+        (voucher as any).createdAt ??
+        (voucher as any).created ??
+        (voucher as any).issued_at ??
+        (voucher as any).generated_at ??
+        (voucher as any).created_at_human ??
+        (voucher as any).formatted_created_at ??
+        (voucher as any).timestamps?.created_at ??
+        (voucher as any).dates?.created_at ??
+        (voucher as any).meta?.created_at ??
+        null
+    );
+}
+
+function redeemedAt(voucher: Voucher): string | null {
+    return (
+        voucher.redeemed_at ??
+        (voucher as any).redeemedAt ??
+        (voucher as any).redeemed ??
+        (voucher as any).redeemed_at_human ??
+        (voucher as any).formatted_redeemed_at ??
+        (voucher as any).timestamps?.redeemed_at ??
+        (voucher as any).dates?.redeemed_at ??
+        (voucher as any).meta?.redeemed_at ??
+        null
+    );
 }
 </script>
 
@@ -94,8 +130,8 @@ function openClaim(code: string): void {
 
                         <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                             <span>{{ amountLabel(voucher) }}</span>
-                            <span>Created {{ dateLabel(voucher.created_at) }}</span>
-                            <span v-if="voucher.redeemed_at">Redeemed {{ dateLabel(voucher.redeemed_at) }}</span>
+                            <span v-if="createdAt(voucher)">Created {{ dateLabel(createdAt(voucher)) }}</span>
+                            <span v-if="redeemedAt(voucher)">Redeemed {{ dateLabel(redeemedAt(voucher)) }}</span>
                         </div>
                     </div>
 
