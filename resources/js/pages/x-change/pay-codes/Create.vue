@@ -57,6 +57,19 @@ interface PayCodeGenerationForm {
     metadata?: string | null;
 }
 
+interface Props {
+    issuer_id?: number | string | null;
+    issuer?: {
+        id?: number | string | null;
+    } | null;
+}
+
+const props = defineProps<Props>();
+
+const issuerId = computed(() => {
+    return props.issuer_id ?? props.issuer?.id ?? null;
+});
+
 const routes = useXChangeRoutes();
 
 const activeTab = ref<'basic' | 'advanced'>('basic');
@@ -178,8 +191,9 @@ const generatedInstructions = computed(() => {
             ttl_minutes: form.value.ttl_minutes || null,
         },
         feedback: {
-            sms: form.value.feedback_sms === true,
-            email: form.value.feedback_email === true,
+            email: null,
+            mobile: null,
+            webhook: null,
         },
     };
 
@@ -195,21 +209,51 @@ const generatedInstructions = computed(() => {
 });
 
 const requestPayload = computed(() => {
+    const inputFields: string[] = [];
+
+    if (form.value.require_mobile !== false) inputFields.push('mobile');
+    if (form.value.require_kyc) inputFields.push('kyc');
+    if (form.value.require_location) inputFields.push('location');
+    if (form.value.require_otp) inputFields.push('otp');
+    if (form.value.require_selfie) inputFields.push('selfie');
+    if (form.value.require_signature) inputFields.push('signature');
+
     return {
-        amount: normalizedAmount.value,
-        quantity: normalizedQuantity.value,
-        currency: 'PHP',
-
-        instructions: generatedInstructions.value,
-
-        options: {
-            prefix: form.value.prefix || null,
-            mask: form.value.mask || null,
-            code_length: form.value.code_length || null,
-            starts_at: form.value.starts_at || null,
-            expires_at: form.value.expires_at || null,
-            ttl_minutes: form.value.ttl_minutes || null,
+        cash: {
+            amount: normalizedAmount.value,
+            currency: 'PHP',
+            validation: {
+                secret: null,
+                mobile: null,
+                payable: null,
+                country: null,
+                location: null,
+                radius: null,
+            },
         },
+
+        inputs: {
+            fields: inputFields,
+        },
+
+        feedback: {
+            email: null,
+            mobile: null,
+            webhook: null,
+        },
+
+        rider: {
+            message: form.value.rider_message || null,
+            url: form.value.rider_url || null,
+            splash: form.value.splash_enabled ? form.value.splash_content || null : null,
+            splash_timeout: form.value.splash_enabled ? form.value.splash_timeout || null : null,
+        },
+
+        count: normalizedQuantity.value,
+
+        prefix: form.value.prefix || null,
+        mask: form.value.mask || null,
+        ttl: form.value.ttl_minutes || null,
     };
 });
 
@@ -241,7 +285,12 @@ async function submit(): Promise<void> {
         const payload = await response.json().catch(() => ({}));
 
         if (!response.ok || payload?.success === false) {
+            const firstValidationError = payload?.errors
+                ? Object.values(payload.errors).flat().join(' ')
+                : null;
+
             throw new Error(
+                firstValidationError ||
                 payload?.message ||
                 payload?.error ||
                 `Failed to generate Pay Code: ${response.status}`,

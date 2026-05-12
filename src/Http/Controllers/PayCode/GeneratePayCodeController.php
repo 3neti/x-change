@@ -23,6 +23,11 @@ class GeneratePayCodeController extends Controller
         AuditLoggerContract $audit,
         UserResolverContract $users,
     ) {
+        logger()->info('[GeneratePayCodeController] HIT', [
+            'path' => $request->path(),
+            'payload_keys' => array_keys($request->all()),
+        ]);
+
         $payload = $request->validated();
         $key = $idempotency->extractKey($request);
         $correlationId = $request->header((string) config('x-change.api.correlation.header', 'X-Correlation-ID'));
@@ -32,7 +37,15 @@ class GeneratePayCodeController extends Controller
             'correlation_id' => is_string($correlationId) ? $correlationId : null,
         ];
 
-        $issuer = $users->resolve($payload);
+        $issuer = $request->user() ?? $users->resolve($payload);
+
+        $issuerId = is_object($issuer)
+            ? ($issuer->id ?? (method_exists($issuer, 'getKey') ? $issuer->getKey() : null))
+            : null;
+
+        if ($issuerId !== null) {
+            data_set($payload, 'metadata.issuer_id', (string) $issuerId);
+        }
 
         $audit->log('pay_code.generate.requested', [
             'issuer_id' => is_object($issuer) ? ($issuer->id ?? null) : null,

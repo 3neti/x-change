@@ -35,7 +35,23 @@ class GeneratePayCode
     public function handle(array $input): GeneratePayCodeResultData
     {
         $input = app(VoucherIssuancePayloadNormalizer::class)->normalize($input);
+
         $issuer = $this->users->resolve($input);
+
+        if (! $issuer) {
+            $issuerId = data_get($input, 'metadata.issuer_id');
+
+            if ($issuerId) {
+                $issuerModel = config(
+                    'x-change.onboarding.issuer_model',
+                    config('auth.providers.users.model')
+                );
+
+                if (is_string($issuerModel) && class_exists($issuerModel)) {
+                    $issuer = $issuerModel::query()->find($issuerId);
+                }
+            }
+        }
 
         if (! $issuer) {
             throw new PayCodeIssuerNotResolved('Unable to resolve Pay Code issuer.');

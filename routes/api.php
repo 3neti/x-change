@@ -19,8 +19,10 @@ Route::prefix($prefix.'/'.$version)->group(function (): void {
     Route::post('/pay-codes/estimate', EstimatePayCodeController::class)
         ->name('x-change.api.pay-codes.estimate');
 
-    Route::post('/pay-codes', GeneratePayCodeController::class)
-        ->name('x-change.api.pay-codes.generate');
+    Route::middleware(['web', 'auth'])->group(function () {
+        Route::post('/pay-codes', GeneratePayCodeController::class)
+            ->name('x-change.api.pay-codes.generate');
+    });
 
     Route::post('/onboarding/issuers', OnboardIssuerController::class)
         ->name('x-change.api.onboarding.issuers');
