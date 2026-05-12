@@ -39,6 +39,12 @@ const preview = computed(() => {
         amount: props.form?.amount ?? null,
         quantity: props.form?.quantity ?? 1,
 
+        cash: {
+            validation: {
+                secret: props.form?.validation_secret ? 'configured' : null,
+            },
+        },
+
         inputs: {
             fields,
         },

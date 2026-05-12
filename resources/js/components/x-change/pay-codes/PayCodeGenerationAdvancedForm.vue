@@ -12,6 +12,8 @@ interface PayCodeGenerationForm {
     mask?: string | null;
     code_length?: number | string | null;
 
+    validation_secret?: string | null;
+
     starts_at?: string | null;
     expires_at?: string | null;
     ttl_minutes?: number | string | null;
@@ -107,6 +109,22 @@ function updateBoolean(key: keyof PayCodeGenerationForm, value: boolean | 'indet
                         />
                     </div>
                 </div>
+            </div>
+
+            <Separator />
+
+            <!-- Cash Validation -->
+            <div class="space-y-2">
+                <Label for="validation_secret">Secret / PIN</Label>
+                <Input
+                    id="validation_secret"
+                    v-model="form.validation_secret"
+                    type="text"
+                    placeholder="Optional redemption secret"
+                />
+                <p class="text-xs text-muted-foreground">
+                    Redeemer must provide this secret before the Pay Code can be claimed.
+                </p>
             </div>
 
             <Separator />

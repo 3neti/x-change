@@ -62,6 +62,8 @@ interface PayCodeGenerationForm {
     feedback_sms?: boolean;
     feedback_email?: boolean;
 
+    validation_secret?: string | null;
+
     metadata?: string | null;
 }
 
@@ -110,6 +112,8 @@ const form = ref<PayCodeGenerationForm>({
     feedback_sms: false,
     feedback_email: false,
 
+    validation_secret: '',
+
     metadata: '',
 });
 
@@ -145,6 +149,12 @@ const generatedInstructions = computed(() => {
     return {
         amount: normalizedAmount.value,
         quantity: normalizedQuantity.value,
+
+        cash: {
+            validation: {
+                secret: form.value.validation_secret ? 'configured' : null,
+            },
+        },
 
         inputs: {
             fields: voucherInputFields.value,
@@ -196,7 +206,7 @@ const requestPayload = computed(() => {
             amount: normalizedAmount.value,
             currency: 'PHP',
             validation: {
-                secret: null,
+                secret: form.value.validation_secret || null,
                 mobile: null,
                 payable: null,
                 country: null,
@@ -241,6 +251,9 @@ async function submit(): Promise<void> {
 
     submitting.value = true;
     errorMessage.value = null;
+
+    const payloadToSubmit = requestPayload.value;
+    console.log('[Create Pay Code] payload', JSON.stringify(payloadToSubmit, null, 2));
 
     try {
         const response = await fetch(routes.api.generatePayCode, {
