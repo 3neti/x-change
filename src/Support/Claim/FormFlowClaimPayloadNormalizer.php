@@ -58,6 +58,13 @@ class FormFlowClaimPayloadNormalizer
             }
         }
 
+        $otpData = $this->extractOtpData($flatData);
+
+        if ($otpData !== []) {
+            $inputs['otp'] = $otpData;
+            $inputs['otp_verified'] = true;
+        }
+
         return $inputs;
     }
 
@@ -172,5 +179,22 @@ class FormFlowClaimPayloadNormalizer
         }
 
         return $flatData;
+    }
+
+    protected function extractOtpData(array $flatData): array
+    {
+        $otpCode = $flatData['otp_code'] ?? null;
+
+        if (! $otpCode) {
+            return [];
+        }
+
+        return [
+            'otp_code' => $otpCode,
+            'verified' => true,
+            'otp_verified' => true,
+            'verified_at' => $flatData['verified_at'] ?? now()->toIso8601String(),
+            'reference_id' => $flatData['reference_id'] ?? null,
+        ];
     }
 }

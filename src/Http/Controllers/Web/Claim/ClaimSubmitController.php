@@ -64,6 +64,8 @@ class ClaimSubmitController extends Controller
             'input_keys' => array_keys($payload['inputs'] ?? []),
             'has_kyc' => isset($payload['inputs']['kyc']),
             'kyc_status' => data_get($payload, 'inputs.kyc.status'),
+            'has_otp' => isset($payload['inputs']['otp']),
+            'otp_verified' => data_get($payload, 'inputs.otp_verified'),
         ]);
 
         try {
