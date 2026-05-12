@@ -4,39 +4,10 @@ declare(strict_types=1);
 
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
-use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Exceptions\PayCodeWalletNotResolved;
 
-it('returns 401 when issuer cannot be resolved', function () {
-    $payload = [
-        'cash' => [
-            'amount' => 100.0,
-            'currency' => 'PHP',
-        ],
-        'inputs' => [
-            'fields' => [],
-        ],
-        'feedback' => [
-            'email' => 'example@example.com',
-            'mobile' => '09171234567',
-            'webhook' => 'https://example.com/webhook',
-        ],
-        'rider' => [
-            'message' => null,
-            'url' => null,
-            'redirect_timeout' => null,
-            'splash' => null,
-            'splash_timeout' => null,
-            'og_source' => null,
-        ],
-    ];
-
-    $action = Mockery::mock(GeneratePayCode::class);
-    $action->shouldReceive('handle')
-        ->once()
-        ->andThrow(new PayCodeIssuerNotResolved('Unable to resolve Pay Code issuer.'));
-
-    $this->app->instance(GeneratePayCode::class, $action);
+it('returns 401 when request is unauthenticated', function (): void {
+    $payload = validPayCodePayload();
 
     $response = $this->postJson(xchangeApi('pay-codes'), $payload);
 
@@ -44,34 +15,15 @@ it('returns 401 when issuer cannot be resolved', function () {
         ->assertUnauthorized()
         ->assertJson([
             'success' => false,
-            'code' => 'PAY_CODE_ISSUER_NOT_RESOLVED',
-            'message' => 'Unable to resolve Pay Code issuer.',
+            'code' => 'UNAUTHENTICATED',
+            'message' => 'Unauthenticated.',
         ]);
 });
 
-it('returns 422 when wallet cannot be resolved', function () {
-    $payload = [
-        'cash' => [
-            'amount' => 100.0,
-            'currency' => 'PHP',
-        ],
-        'inputs' => [
-            'fields' => [],
-        ],
-        'feedback' => [
-            'email' => 'example@example.com',
-            'mobile' => '09171234567',
-            'webhook' => 'https://example.com/webhook',
-        ],
-        'rider' => [
-            'message' => null,
-            'url' => null,
-            'redirect_timeout' => null,
-            'splash' => null,
-            'splash_timeout' => null,
-            'og_source' => null,
-        ],
-    ];
+it('returns 422 when wallet cannot be resolved', function (): void {
+    actingAsTestUser();
+
+    $payload = validPayCodePayload();
 
     $action = Mockery::mock(GeneratePayCode::class);
     $action->shouldReceive('handle')
@@ -91,29 +43,10 @@ it('returns 422 when wallet cannot be resolved', function () {
         ]);
 });
 
-it('returns 500 when pay code issuance fails', function () {
-    $payload = [
-        'cash' => [
-            'amount' => 100.0,
-            'currency' => 'PHP',
-        ],
-        'inputs' => [
-            'fields' => [],
-        ],
-        'feedback' => [
-            'email' => 'example@example.com',
-            'mobile' => '09171234567',
-            'webhook' => 'https://example.com/webhook',
-        ],
-        'rider' => [
-            'message' => null,
-            'url' => null,
-            'redirect_timeout' => null,
-            'splash' => null,
-            'splash_timeout' => null,
-            'og_source' => null,
-        ],
-    ];
+it('returns 500 when pay code issuance fails', function (): void {
+    actingAsTestUser();
+
+    $payload = validPayCodePayload();
 
     $action = Mockery::mock(GeneratePayCode::class);
     $action->shouldReceive('handle')

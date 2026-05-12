@@ -29,6 +29,14 @@ interface PayCodeGenerationForm {
 
     require_mobile?: boolean;
     require_bank_account?: boolean;
+
+    require_name?: boolean;
+    require_email?: boolean;
+    require_birth_date?: boolean;
+    require_address?: boolean;
+    require_reference_code?: boolean;
+    require_gross_monthly_income?: boolean;
+
     require_kyc?: boolean;
     require_otp?: boolean;
     require_location?: boolean;
@@ -57,19 +65,6 @@ interface PayCodeGenerationForm {
     metadata?: string | null;
 }
 
-interface Props {
-    issuer_id?: number | string | null;
-    issuer?: {
-        id?: number | string | null;
-    } | null;
-}
-
-const props = defineProps<Props>();
-
-const issuerId = computed(() => {
-    return props.issuer_id ?? props.issuer?.id ?? null;
-});
-
 const routes = useXChangeRoutes();
 
 const activeTab = ref<'basic' | 'advanced'>('basic');
@@ -82,6 +77,14 @@ const form = ref<PayCodeGenerationForm>({
 
     require_mobile: true,
     require_bank_account: true,
+
+    require_name: false,
+    require_email: false,
+    require_birth_date: false,
+    require_address: false,
+    require_reference_code: false,
+    require_gross_monthly_income: false,
+
     require_kyc: false,
     require_otp: false,
     require_location: false,
@@ -117,52 +120,36 @@ const canSubmit = computed(() => {
     return normalizedAmount.value > 0 && normalizedQuantity.value > 0 && !submitting.value;
 });
 
+const voucherInputFields = computed<string[]>(() => {
+    const fields: string[] = [];
+
+    if (form.value.require_mobile !== false) fields.push('mobile');
+
+    if (form.value.require_name) fields.push('name');
+    if (form.value.require_email) fields.push('email');
+    if (form.value.require_birth_date) fields.push('birth_date');
+    if (form.value.require_address) fields.push('address');
+    if (form.value.require_reference_code) fields.push('reference_code');
+    if (form.value.require_gross_monthly_income) fields.push('gross_monthly_income');
+
+    if (form.value.require_kyc) fields.push('kyc');
+    if (form.value.require_location) fields.push('location');
+    if (form.value.require_otp) fields.push('otp');
+    if (form.value.require_selfie) fields.push('selfie');
+    if (form.value.require_signature) fields.push('signature');
+
+    return fields;
+});
+
 const generatedInstructions = computed(() => {
-    const fields: any[] = [];
-
-    if (form.value.require_mobile !== false) {
-        fields.push({
-            name: 'mobile',
-            type: 'tel',
-            label: 'Mobile Number',
-            required: true,
-            persist: true,
-            group: 'recipient',
-        });
-    }
-
-    if (form.value.require_bank_account !== false) {
-        fields.push({
-            name: 'settlement_rail',
-            type: 'settlement_rail',
-            label: 'Settlement Rail',
-            required: true,
-            group: 'bank_account',
-        });
-
-        fields.push({
-            name: 'bank_code',
-            type: 'bank_account',
-            label: 'Bank',
-            required: true,
-            group: 'bank_account',
-        });
-
-        fields.push({
-            name: 'account_number',
-            type: 'text',
-            label: 'Account Number',
-            required: true,
-            group: 'bank_account',
-        });
-    }
-
-    const payload: Record<string, any> = {
+    return {
         amount: normalizedAmount.value,
         quantity: normalizedQuantity.value,
+
         inputs: {
-            fields,
+            fields: voucherInputFields.value,
         },
+
         evidence: {
             kyc: form.value.require_kyc === true,
             otp: form.value.require_otp === true,
@@ -170,54 +157,40 @@ const generatedInstructions = computed(() => {
             selfie: form.value.require_selfie === true,
             signature: form.value.require_signature === true,
         },
-        rider: {
-            message: form.value.rider_message || null,
-            url: form.value.rider_url || null,
+
+        redemption_form: {
+            collect_mobile: form.value.require_mobile !== false,
+            collect_bank_account: form.value.require_bank_account !== false,
         },
-        splash: {
-            enabled: form.value.splash_enabled === true,
-            timeout: Number(form.value.splash_timeout || 0),
-            title: form.value.splash_title || null,
-            content: form.value.splash_content || null,
-        },
-        code: {
-            prefix: form.value.prefix || null,
-            mask: form.value.mask || null,
-            length: form.value.code_length || null,
-        },
-        timing: {
-            starts_at: form.value.starts_at || null,
-            expires_at: form.value.expires_at || null,
-            ttl_minutes: form.value.ttl_minutes || null,
-        },
+
         feedback: {
             email: null,
             mobile: null,
             webhook: null,
         },
+
+        rider: {
+            message: form.value.rider_message || null,
+            url: form.value.rider_url || null,
+            splash: form.value.splash_enabled ? form.value.splash_content || null : null,
+            splash_timeout: form.value.splash_enabled ? form.value.splash_timeout || null : null,
+        },
+
+        code: {
+            prefix: form.value.prefix || null,
+            mask: form.value.mask || null,
+            length: form.value.code_length || null,
+        },
+
+        timing: {
+            starts_at: form.value.starts_at || null,
+            expires_at: form.value.expires_at || null,
+            ttl_minutes: form.value.ttl_minutes || null,
+        },
     };
-
-    if (form.value.metadata) {
-        try {
-            payload.metadata = JSON.parse(String(form.value.metadata));
-        } catch {
-            payload.metadata = form.value.metadata;
-        }
-    }
-
-    return payload;
 });
 
 const requestPayload = computed(() => {
-    const inputFields: string[] = [];
-
-    if (form.value.require_mobile !== false) inputFields.push('mobile');
-    if (form.value.require_kyc) inputFields.push('kyc');
-    if (form.value.require_location) inputFields.push('location');
-    if (form.value.require_otp) inputFields.push('otp');
-    if (form.value.require_selfie) inputFields.push('selfie');
-    if (form.value.require_signature) inputFields.push('signature');
-
     return {
         cash: {
             amount: normalizedAmount.value,
@@ -233,7 +206,7 @@ const requestPayload = computed(() => {
         },
 
         inputs: {
-            fields: inputFields,
+            fields: voucherInputFields.value,
         },
 
         feedback: {
@@ -250,7 +223,6 @@ const requestPayload = computed(() => {
         },
 
         count: normalizedQuantity.value,
-
         prefix: form.value.prefix || null,
         mask: form.value.mask || null,
         ttl: form.value.ttl_minutes || null,
@@ -264,7 +236,6 @@ function goBack(): void {
 async function submit(): Promise<void> {
     if (!canSubmit.value) {
         errorMessage.value = 'Please enter a valid amount and quantity.';
-
         return;
     }
 
@@ -306,7 +277,6 @@ async function submit(): Promise<void> {
 
         if (code) {
             router.visit(routes.payCodes.show(code));
-
             return;
         }
 
@@ -325,7 +295,6 @@ async function submit(): Promise<void> {
     <Head title="Generate Pay Code" />
 
     <div class="space-y-6">
-        <!-- Header -->
         <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div class="space-y-2">
                 <Button variant="ghost" class="-ml-3" @click="goBack">
@@ -357,9 +326,7 @@ async function submit(): Promise<void> {
             </AlertDescription>
         </Alert>
 
-        <!-- Main layout -->
         <div class="grid gap-6 lg:grid-cols-[1fr_380px]">
-            <!-- Form column -->
             <div class="space-y-6">
                 <Tabs v-model="activeTab" class="w-full">
                     <TabsList class="grid w-full grid-cols-2">
@@ -385,7 +352,6 @@ async function submit(): Promise<void> {
                 </div>
             </div>
 
-            <!-- Side column -->
             <div class="space-y-6">
                 <PayCodeCostEstimateCard :form="form" />
 

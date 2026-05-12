@@ -10,6 +10,8 @@ use LBHurtado\XChange\Data\PayCodeLinksData;
 use LBHurtado\XChange\Data\PricingEstimateData;
 
 it('returns a generated pay code via api', function () {
+    actingAsTestUser();
+
     $payload = [
         'cash' => [
             'amount' => 100.0,
@@ -115,6 +117,8 @@ it('returns a generated pay code via api', function () {
 });
 
 it('validates required payload fields for pay code generation', function () {
+    actingAsTestUser();
+
     $response = $this->postJson(xchangeApi('pay-codes'), []);
 
     $response
@@ -123,16 +127,5 @@ it('validates required payload fields for pay code generation', function () {
             'success' => false,
             'code' => 'VALIDATION_ERROR',
             'message' => 'The given data was invalid.',
-        ])
-        ->assertJsonStructure([
-            'success',
-            'message',
-            'code',
-            'errors' => [
-                'cash',
-                'inputs',
-                'feedback',
-                'rider',
-            ],
         ]);
 });

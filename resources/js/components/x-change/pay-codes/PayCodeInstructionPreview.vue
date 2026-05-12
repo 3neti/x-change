@@ -18,40 +18,31 @@ const preview = computed(() => {
         return props.instructions;
     }
 
-    const fields: any[] = [];
+    const fields: string[] = [];
 
-    if (props.form?.require_mobile !== false) {
-        fields.push({
-            name: 'mobile',
-            type: 'tel',
-            label: 'Mobile Number',
-            required: true,
-            persist: true,
-        });
-    }
+    if (props.form?.require_mobile !== false) fields.push('mobile');
 
-    if (props.form?.require_bank_account !== false) {
-        fields.push({
-            name: 'bank_code',
-            type: 'bank_account',
-            label: 'Bank',
-            required: true,
-        });
+    if (props.form?.require_name === true) fields.push('name');
+    if (props.form?.require_email === true) fields.push('email');
+    if (props.form?.require_birth_date === true) fields.push('birth_date');
+    if (props.form?.require_address === true) fields.push('address');
+    if (props.form?.require_reference_code === true) fields.push('reference_code');
+    if (props.form?.require_gross_monthly_income === true) fields.push('gross_monthly_income');
 
-        fields.push({
-            name: 'account_number',
-            type: 'text',
-            label: 'Account Number',
-            required: true,
-        });
-    }
+    if (props.form?.require_kyc === true) fields.push('kyc');
+    if (props.form?.require_otp === true) fields.push('otp');
+    if (props.form?.require_location === true) fields.push('location');
+    if (props.form?.require_selfie === true) fields.push('selfie');
+    if (props.form?.require_signature === true) fields.push('signature');
 
     return {
         amount: props.form?.amount ?? null,
         quantity: props.form?.quantity ?? 1,
+
         inputs: {
             fields,
         },
+
         evidence: {
             kyc: props.form?.require_kyc === true,
             otp: props.form?.require_otp === true,
@@ -59,20 +50,30 @@ const preview = computed(() => {
             selfie: props.form?.require_selfie === true,
             signature: props.form?.require_signature === true,
         },
+
+        feedback: {
+            email: null,
+            mobile: null,
+            webhook: null,
+        },
+
         rider: {
             message: props.form?.rider_message || null,
             url: props.form?.rider_url || null,
+            splash: props.form?.splash_enabled ? props.form?.splash_content || null : null,
+            splash_timeout: props.form?.splash_enabled ? props.form?.splash_timeout ?? null : null,
         },
-        splash: {
-            enabled: props.form?.splash_enabled === true,
-            timeout: props.form?.splash_timeout ?? null,
-            title: props.form?.splash_title || null,
-            content: props.form?.splash_content || null,
-        },
+
         code: {
             prefix: props.form?.prefix || null,
             mask: props.form?.mask || null,
             length: props.form?.code_length || null,
+        },
+
+        timing: {
+            starts_at: props.form?.starts_at || null,
+            expires_at: props.form?.expires_at || null,
+            ttl_minutes: props.form?.ttl_minutes || null,
         },
     };
 });

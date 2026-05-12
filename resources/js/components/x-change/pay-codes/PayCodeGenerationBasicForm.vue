@@ -128,6 +128,67 @@ function updateBoolean(key: keyof PayCodeGenerationForm, value: boolean | 'indet
 
             <Separator />
 
+            <div class="space-y-3">
+                <div>
+                    <p class="text-sm font-medium">Personal Information</p>
+                    <p class="text-xs text-muted-foreground">
+                        These fields will be collected during claim. If KYC is enabled, compatible fields may be auto-filled.
+                    </p>
+                </div>
+
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <label class="flex items-center justify-between rounded-lg border p-3">
+                        <span class="text-sm font-medium">Full name</span>
+                        <Checkbox
+                            :checked="form.require_name === true"
+                            @update:model-value="updateBoolean('require_name', $event)"
+                        />
+                    </label>
+
+                    <label class="flex items-center justify-between rounded-lg border p-3">
+                        <span class="text-sm font-medium">Email address</span>
+                        <Checkbox
+                            :checked="form.require_email === true"
+                            @update:model-value="updateBoolean('require_email', $event)"
+                        />
+                    </label>
+
+                    <label class="flex items-center justify-between rounded-lg border p-3">
+                        <span class="text-sm font-medium">Birth date</span>
+                        <Checkbox
+                            :checked="form.require_birth_date === true"
+                            @update:model-value="updateBoolean('require_birth_date', $event)"
+                        />
+                    </label>
+
+                    <label class="flex items-center justify-between rounded-lg border p-3">
+                        <span class="text-sm font-medium">Address</span>
+                        <Checkbox
+                            :checked="form.require_address === true"
+                            @update:model-value="updateBoolean('require_address', $event)"
+                        />
+                    </label>
+
+                    <label class="flex items-center justify-between rounded-lg border p-3">
+                        <span class="text-sm font-medium">Reference code</span>
+                        <Checkbox
+                            :checked="form.require_reference_code === true"
+                            @update:model-value="updateBoolean('require_reference_code', $event)"
+                        />
+                    </label>
+
+                    <label class="flex items-center justify-between rounded-lg border p-3">
+                        <span class="text-sm font-medium">Gross monthly income</span>
+                        <Checkbox
+                            :checked="form.require_gross_monthly_income === true"
+                            @update:model-value="updateBoolean('require_gross_monthly_income', $event)"
+                        />
+                    </label>
+                </div>
+            </div>
+
+            <Separator />
+
             <!-- Evidence Requirements -->
             <div class="space-y-3">
                 <div>

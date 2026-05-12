@@ -190,3 +190,27 @@ it('supports transactionId alias and normalizes it to transaction_id', function 
     expect($payload['inputs']['kyc'])
         ->toHaveKey('transaction_id', 'legacy-transaction-id');
 });
+
+it('aliases full name to name for voucher input validation', function (): void {
+    $payload = app(FormFlowClaimPayloadNormalizer::class)->normalize([
+        [
+            'mobile' => '+639171234567',
+            'full_name' => 'Juan Dela Cruz',
+        ],
+    ]);
+
+    expect($payload['inputs']['full_name'])->toBe('Juan Dela Cruz')
+        ->and($payload['inputs']['name'])->toBe('Juan Dela Cruz');
+});
+
+it('aliases date of birth to birth date for voucher input validation', function (): void {
+    $payload = app(FormFlowClaimPayloadNormalizer::class)->normalize([
+        [
+            'mobile' => '+639171234567',
+            'date_of_birth' => '1990-01-01',
+        ],
+    ]);
+
+    expect($payload['inputs']['date_of_birth'])->toBe('1990-01-01')
+        ->and($payload['inputs']['birth_date'])->toBe('1990-01-01');
+});

@@ -8,7 +8,10 @@ class FormFlowClaimPayloadNormalizer
 {
     public function normalize(array $collectedData): array
     {
-        $flatData = $this->flattenCollectedData($collectedData);
+        $flatData = $this->normalizeFieldAliases(
+            $this->flattenCollectedData($collectedData)
+        );
+
         $inputs = $this->buildInputs($flatData, $collectedData);
 
         $mobile = $flatData['mobile'] ?? null;
@@ -146,5 +149,28 @@ class FormFlowClaimPayloadNormalizer
             'id_card_cropped',
             'selfie',
         ];
+    }
+
+    protected function normalizeFieldAliases(array $flatData): array
+    {
+        $aliases = [
+            'name' => ['full_name'],
+            'birth_date' => ['date_of_birth'],
+        ];
+
+        foreach ($aliases as $canonical => $candidates) {
+            if (array_key_exists($canonical, $flatData)) {
+                continue;
+            }
+
+            foreach ($candidates as $candidate) {
+                if (array_key_exists($candidate, $flatData)) {
+                    $flatData[$canonical] = $flatData[$candidate];
+                    break;
+                }
+            }
+        }
+
+        return $flatData;
     }
 }
