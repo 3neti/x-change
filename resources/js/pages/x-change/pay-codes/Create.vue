@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import XChangeLayout from '@/layouts/x-change/XChangeLayout.vue';
 import { Button } from '@/components/ui/button';
@@ -73,6 +73,11 @@ const routes = useXChangeRoutes();
 const activeTab = ref<'basic' | 'advanced'>('basic');
 const submitting = ref(false);
 const errorMessage = ref<string | null>(null);
+
+const estimate = ref<Record<string, any> | null>(null);
+const estimating = ref(false);
+const estimateError = ref<string | null>(null);
+let estimateTimer: ReturnType<typeof setTimeout> | null = null;
 
 const form = ref<PayCodeGenerationForm>({
     amount: '',
@@ -247,6 +252,86 @@ const requestPayload = computed(() => {
     };
 });
 
+const canEstimate = computed(() => {
+    return normalizedAmount.value > 0 && normalizedQuantity.value > 0;
+});
+
+function scheduleEstimate(): void {
+    if (estimateTimer) {
+        clearTimeout(estimateTimer);
+    }
+
+    if (!canEstimate.value) {
+        estimate.value = null;
+        estimateError.value = null;
+        estimating.value = false;
+
+        return;
+    }
+
+    estimateTimer = setTimeout(() => {
+        void fetchEstimate();
+    }, 500);
+}
+
+async function fetchEstimate(): Promise<void> {
+    estimating.value = true;
+    estimateError.value = null;
+
+    try {
+        const response = await fetch(routes.api.estimatePayCode, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify(requestPayload.value),
+        });
+
+        const payload = await response.json().catch(() => ({}));
+
+        if (!response.ok || payload?.success === false) {
+            const firstValidationError = payload?.errors
+                ? Object.values(payload.errors).flat().join(' ')
+                : null;
+
+            throw new Error(
+                firstValidationError ||
+                payload?.message ||
+                payload?.error ||
+                `Unable to estimate Pay Code cost: ${response.status}`,
+            );
+        }
+
+        estimate.value = payload?.data ?? payload;
+    } catch (error) {
+        estimate.value = null;
+        estimateError.value = error instanceof Error
+            ? error.message
+            : 'Unable to estimate Pay Code cost.';
+    } finally {
+        estimating.value = false;
+    }
+}
+
+watch(
+    requestPayload,
+    () => {
+        scheduleEstimate();
+    },
+    {
+        deep: true,
+        immediate: true,
+    },
+);
+
+onUnmounted(() => {
+    if (estimateTimer) {
+        clearTimeout(estimateTimer);
+    }
+});
+
 function goBack(): void {
     router.visit(routes.payCodes.index());
 }
@@ -374,7 +459,12 @@ async function submit(): Promise<void> {
             </div>
 
             <div class="space-y-6">
-                <PayCodeCostEstimateCard :form="form" />
+                <PayCodeCostEstimateCard
+                    :form="form"
+                    :estimate="estimate"
+                    :loading="estimating"
+                    :error="estimateError"
+                />
 
                 <PayCodeInstructionPreview
                     :form="form"
