@@ -10,7 +10,6 @@ interface PricingEstimate {
     total?: number;
     charges?: Array<Record<string, any>>;
 
-    // Backward/local fallback shape
     amount?: number;
     quantity?: number;
     subtotal?: number;
@@ -44,20 +43,38 @@ const subtotal = computed(() => {
     return amount.value * quantity.value;
 });
 
-const components = computed(() => props.estimate?.components ?? {});
-const charges = computed(() => props.estimate?.charges ?? []);
-
-const componentTotal = computed(() => {
-    return Object.values(components.value).reduce((sum, value) => {
-        return sum + Number(value || 0);
-    }, 0);
-});
+const components = computed<Record<string, number>>(() => props.estimate?.components ?? {});
+const charges = computed<Array<Record<string, any>>>(() => props.estimate?.charges ?? []);
 
 const legacyFees = computed(() => Number(props.estimate?.fees ?? 0));
 const baseFee = computed(() => Number(props.estimate?.base_fee ?? 0));
 
-const fees = computed(() => {
-    return componentTotal.value || legacyFees.value || baseFee.value;
+const visibleComponents = computed(() => {
+    return Object.entries(components.value)
+        .map(([key, value]) => ({
+            key,
+            label: componentLabel(key),
+            amount: Number(value || 0),
+        }))
+        .filter((item) => item.amount > 0);
+});
+
+const visibleCharges = computed(() => {
+    return charges.value
+        .map((charge, index) => ({
+            key: `${chargeLabel(charge, index)}-${index}`,
+            label: chargeLabel(charge, index),
+            amount: chargeAmount(charge),
+        }))
+        .filter((item) => item.amount > 0);
+});
+
+const totalFees = computed(() => {
+    const itemizedTotal = visibleComponents.value.length
+        ? visibleComponents.value.reduce((sum, item) => sum + item.amount, 0)
+        : visibleCharges.value.reduce((sum, item) => sum + item.amount, 0);
+
+    return itemizedTotal || legacyFees.value || baseFee.value;
 });
 
 const total = computed(() => {
@@ -65,15 +82,37 @@ const total = computed(() => {
         return Number(props.estimate.total);
     }
 
-    return subtotal.value + fees.value;
+    return subtotal.value + totalFees.value;
 });
 
-const hasServerEstimate = computed(() => props.estimate !== null);
+const hasEstimate = computed(() => props.estimate !== null);
+const showInitialLoading = computed(() => props.loading && !hasEstimate.value);
+const showInitialError = computed(() => props.error && !hasEstimate.value);
 
 function labelize(key: string): string {
     return key
         .replace(/_/g, ' ')
         .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function componentLabel(key: string): string {
+    const labels: Record<string, string> = {
+        cash: 'Cash-out / Disbursement Fee',
+        kyc: 'KYC',
+        otp: 'OTP',
+        selfie: 'Selfie',
+        signature: 'Signature',
+        location: 'Location',
+        webhook: 'Webhook',
+        email_feedback: 'Email Feedback',
+        sms_feedback: 'SMS Feedback',
+        rider: 'Rider',
+        validation: 'Validation',
+        input_fields: 'Input Fields',
+        base: 'Base Fee',
+    };
+
+    return labels[key] ?? labelize(key);
 }
 
 function chargeLabel(charge: Record<string, any>, index: number): string {
@@ -106,16 +145,31 @@ function money(value: number): string {
 
 <template>
     <Card>
-        <CardHeader>
+        <CardHeader class="space-y-1">
             <CardTitle class="text-base">Cost Estimate</CardTitle>
+
+            <p class="min-h-4 text-xs text-muted-foreground">
+                <template v-if="loading && estimate">
+                    Updating estimate…
+                </template>
+                <template v-else-if="error && estimate">
+                    Showing last estimate. Refresh failed.
+                </template>
+                <template v-else-if="estimate">
+                    Based on active x-change pricing rules.
+                </template>
+                <template v-else>
+                    &nbsp;
+                </template>
+            </p>
         </CardHeader>
 
         <CardContent class="space-y-4">
-            <div v-if="loading" class="rounded-lg border border-dashed p-6 text-center">
+            <div v-if="showInitialLoading" class="rounded-lg border border-dashed p-6 text-center">
                 <p class="text-sm text-muted-foreground">Estimating…</p>
             </div>
 
-            <div v-else-if="error" class="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+            <div v-else-if="showInitialError" class="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
                 <p class="text-sm font-medium text-destructive">
                     Unable to estimate cost
                 </p>
@@ -124,69 +178,74 @@ function money(value: number): string {
                 </p>
             </div>
 
-            <template v-else>
-                <div class="space-y-3">
-                    <div class="flex items-center justify-between text-sm">
-                        <span class="text-muted-foreground">Amount</span>
-                        <span class="font-medium">{{ money(amount) }}</span>
-                    </div>
+            <div v-else class="space-y-3">
+                <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Cash to Disburse
+                </p>
 
-                    <div class="flex items-center justify-between text-sm">
-                        <span class="text-muted-foreground">Quantity</span>
-                        <span class="font-medium">{{ quantity || 1 }}</span>
-                    </div>
-
-                    <Separator />
-
-                    <div class="flex items-center justify-between text-sm">
-                        <span class="text-muted-foreground">Subtotal</span>
-                        <span class="font-medium">{{ money(subtotal) }}</span>
-                    </div>
-
-                    <template v-if="Object.keys(components).length">
-                        <div
-                            v-for="(value, key) in components"
-                            :key="key"
-                            class="flex items-center justify-between text-sm"
-                        >
-                            <span class="text-muted-foreground">{{ labelize(String(key)) }}</span>
-                            <span class="font-medium">{{ money(Number(value || 0)) }}</span>
-                        </div>
-                    </template>
-
-                    <template v-else-if="charges.length">
-                        <div
-                            v-for="(charge, index) in charges"
-                            :key="`${chargeLabel(charge, index)}-${index}`"
-                            class="flex items-center justify-between text-sm"
-                        >
-                            <span class="text-muted-foreground">{{ chargeLabel(charge, index) }}</span>
-                            <span class="font-medium">{{ money(chargeAmount(charge)) }}</span>
-                        </div>
-                    </template>
-
-                    <div v-else class="flex items-center justify-between text-sm">
-                        <span class="text-muted-foreground">Fees</span>
-                        <span class="font-medium">{{ money(fees) }}</span>
-                    </div>
-
-                    <Separator />
-
-                    <div class="flex items-center justify-between">
-                        <span class="font-medium">Estimated Total</span>
-                        <span class="text-xl font-bold">{{ money(total) }}</span>
-                    </div>
+                <div class="flex items-center justify-between text-sm">
+                    <span class="text-muted-foreground">Amount</span>
+                    <span class="font-medium">{{ money(amount) }}</span>
                 </div>
 
-                <p class="text-xs text-muted-foreground">
-                    <template v-if="hasServerEstimate">
-                        Estimate is based on the active x-change pricing rules.
-                    </template>
-                    <template v-else>
-                        Enter an amount to estimate pricing.
-                    </template>
+                <div class="flex items-center justify-between text-sm">
+                    <span class="text-muted-foreground">Quantity</span>
+                    <span class="font-medium">{{ quantity || 1 }}</span>
+                </div>
+
+                <div class="flex items-center justify-between text-sm">
+                    <span class="text-muted-foreground">Cash Subtotal</span>
+                    <span class="font-medium">{{ money(subtotal) }}</span>
+                </div>
+
+                <Separator />
+
+                <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Service & Instruction Fees
                 </p>
-            </template>
+
+                <template v-if="visibleComponents.length">
+                    <div
+                        v-for="item in visibleComponents"
+                        :key="item.key"
+                        class="flex items-center justify-between text-sm"
+                    >
+                        <span class="text-muted-foreground">{{ item.label }}</span>
+                        <span class="font-medium">{{ money(item.amount) }}</span>
+                    </div>
+                </template>
+
+                <template v-else-if="visibleCharges.length">
+                    <div
+                        v-for="item in visibleCharges"
+                        :key="item.key"
+                        class="flex items-center justify-between text-sm"
+                    >
+                        <span class="text-muted-foreground">{{ item.label }}</span>
+                        <span class="font-medium">{{ money(item.amount) }}</span>
+                    </div>
+                </template>
+
+                <div v-else class="text-sm text-muted-foreground">
+                    No additional fees.
+                </div>
+
+                <Separator />
+
+                <div class="flex items-center justify-between text-sm">
+                    <span class="font-medium">Total Fees</span>
+                    <span class="font-medium">{{ money(totalFees) }}</span>
+                </div>
+
+                <div class="flex items-center justify-between gap-4">
+                    <span class="font-medium">Total Wallet Debit</span>
+                    <span class="text-xl font-bold">{{ money(total) }}</span>
+                </div>
+
+                <p class="min-h-4 text-xs text-muted-foreground">
+                    Total Wallet Debit includes the cash amount plus service and instruction fees.
+                </p>
+            </div>
         </CardContent>
     </Card>
 </template>

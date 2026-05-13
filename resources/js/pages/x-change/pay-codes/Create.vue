@@ -78,6 +78,8 @@ const estimate = ref<Record<string, any> | null>(null);
 const estimating = ref(false);
 const estimateError = ref<string | null>(null);
 let estimateTimer: ReturnType<typeof setTimeout> | null = null;
+let estimateRequestId = 0;
+let estimateAbortController: AbortController | null = null;
 
 const form = ref<PayCodeGenerationForm>({
     amount: '',
@@ -275,6 +277,11 @@ function scheduleEstimate(): void {
 }
 
 async function fetchEstimate(): Promise<void> {
+    const requestId = ++estimateRequestId;
+
+    estimateAbortController?.abort();
+    estimateAbortController = new AbortController();
+
     estimating.value = true;
     estimateError.value = null;
 
@@ -287,9 +294,14 @@ async function fetchEstimate(): Promise<void> {
                 'X-Requested-With': 'XMLHttpRequest',
             },
             body: JSON.stringify(requestPayload.value),
+            signal: estimateAbortController.signal,
         });
 
         const payload = await response.json().catch(() => ({}));
+
+        if (requestId !== estimateRequestId) {
+            return;
+        }
 
         if (!response.ok || payload?.success === false) {
             const firstValidationError = payload?.errors
@@ -306,12 +318,22 @@ async function fetchEstimate(): Promise<void> {
 
         estimate.value = payload?.data ?? payload;
     } catch (error) {
-        estimate.value = null;
+        if ((error as any)?.name === 'AbortError') {
+            return;
+        }
+
+        if (requestId !== estimateRequestId) {
+            return;
+        }
+
+        // Keep the last good estimate to avoid flicker.
         estimateError.value = error instanceof Error
             ? error.message
             : 'Unable to estimate Pay Code cost.';
     } finally {
-        estimating.value = false;
+        if (requestId === estimateRequestId) {
+            estimating.value = false;
+        }
     }
 }
 
@@ -330,6 +352,8 @@ onUnmounted(() => {
     if (estimateTimer) {
         clearTimeout(estimateTimer);
     }
+
+    estimateAbortController?.abort();
 });
 
 function goBack(): void {
