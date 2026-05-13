@@ -30,6 +30,12 @@ class ClaimStartController extends Controller
             ]);
         }
 
+        if ($request->boolean('failed')) {
+            return Inertia::render('x-change/claim/Entry', [
+                'initial_code' => $code,
+            ]);
+        }
+
         $voucher = Voucher::query()->where('code', $code)->first();
 
         if (! $voucher) {

@@ -63,6 +63,7 @@ interface PayCodeGenerationForm {
     feedback_email?: boolean;
 
     validation_secret?: string | null;
+    validation_mobile?: string | null;
 
     metadata?: string | null;
 }
@@ -113,12 +114,18 @@ const form = ref<PayCodeGenerationForm>({
     feedback_email: false,
 
     validation_secret: '',
+    validation_mobile: '',
 
     metadata: '',
 });
 
 const normalizedAmount = computed(() => Number(form.value.amount || 0));
 const normalizedQuantity = computed(() => Number(form.value.quantity || 1));
+const normalizedValidationMobile = computed(() => {
+    const value = String(form.value.validation_mobile || '').trim();
+
+    return value === '' ? null : value;
+});
 
 const canSubmit = computed(() => {
     return normalizedAmount.value > 0 && normalizedQuantity.value > 0 && !submitting.value;
@@ -138,7 +145,7 @@ const voucherInputFields = computed<string[]>(() => {
 
     if (form.value.require_kyc) fields.push('kyc');
     if (form.value.require_location) fields.push('location');
-    if (form.value.require_otp) fields.push('otp');
+    if (form.value.require_otp || normalizedValidationMobile.value) fields.push('otp');
     if (form.value.require_selfie) fields.push('selfie');
     if (form.value.require_signature) fields.push('signature');
 
@@ -153,6 +160,7 @@ const generatedInstructions = computed(() => {
         cash: {
             validation: {
                 secret: form.value.validation_secret ? 'configured' : null,
+                mobile: normalizedValidationMobile.value,
             },
         },
 
@@ -207,7 +215,7 @@ const requestPayload = computed(() => {
             currency: 'PHP',
             validation: {
                 secret: form.value.validation_secret || null,
-                mobile: null,
+                mobile: normalizedValidationMobile.value,
                 payable: null,
                 country: null,
                 location: null,

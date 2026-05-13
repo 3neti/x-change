@@ -213,6 +213,9 @@ function updateBoolean(key: keyof PayCodeGenerationForm, value: boolean | 'indet
                             :checked="form.require_otp === true"
                             @update:model-value="updateBoolean('require_otp', $event)"
                         />
+                        <p v-if="form.validation_mobile" class="text-xs text-muted-foreground">
+                            OTP is required because an allowed mobile number is configured.
+                        </p>
                     </label>
 
                     <label class="flex items-center justify-between rounded-lg border p-3">

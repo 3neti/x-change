@@ -127,6 +127,19 @@ function updateBoolean(key: keyof PayCodeGenerationForm, value: boolean | 'indet
                 </p>
             </div>
 
+            <div class="space-y-2">
+                <Label for="validation_mobile">Allowed Mobile Number</Label>
+                <Input
+                    id="validation_mobile"
+                    v-model="form.validation_mobile"
+                    type="tel"
+                    placeholder="+639171234567"
+                />
+                <p class="text-xs text-muted-foreground">
+                    Only this mobile number can redeem the Pay Code. OTP will be required automatically.
+                </p>
+            </div>
+
             <Separator />
 
             <!-- Timing -->

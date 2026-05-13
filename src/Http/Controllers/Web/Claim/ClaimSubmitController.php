@@ -82,8 +82,12 @@ class ClaimSubmitController extends Controller
                 'error' => $e->getMessage(),
             ]);
 
-            return redirect()->route('x-change.claim.start', ['code' => $code])
-                ->withErrors(['error' => $e->getMessage()]);
+            return redirect()
+                ->route('x-change.claim.start', [
+                    'code' => $code,
+                    'failed' => 1,
+                ])
+                ->withErrors(['code' => $e->getMessage()]);
         }
     }
 }
