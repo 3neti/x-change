@@ -22,6 +22,11 @@ class InstallXChangeCommand extends Command
 
         $force = (bool) $this->option('force');
 
+        $this->call('vendor:publish', [
+            '--tag' => 'x-change-form-flow-drivers',
+            '--force' => $this->option('force'),
+        ]);
+
         // Publish UI (pages, components, layouts, composables)
         $this->components->task('Publishing UI files', function () use ($force): void {
             $this->callSilently('vendor:publish', [

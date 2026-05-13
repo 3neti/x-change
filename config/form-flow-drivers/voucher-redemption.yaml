@@ -1,0 +1,316 @@
+# Voucher Redemption Driver
+# =========================
+# Transforms VoucherInstructionsData → FormFlowInstructionsData
+# This driver defines the complete voucher redemption flow with conditional steps
+# based on enabled input fields in voucher instructions.
+#
+# Documentation: docs/guides/features/form-flow/
+# Package: 3neti/form-flow v1.7+
+
+driver:
+  name: "voucher-redemption"                                      # Unique driver identifier
+  version: "1.0"                                                   # Semantic version
+  source: "LBHurtado\\Voucher\\Data\\VoucherInstructionsData"   # Source DTO class
+  target: "LBHurtado\\FormFlowManager\\Data\\FormFlowInstructionsData" # Target DTO class
+
+# Mappings (required field, currently empty - no complex transformations needed)
+mappings: {}
+
+# Reference ID Template
+# ---------------------
+# Unique identifier for this flow instance
+# Template variables: {{ code }}, {{ timestamp }}, {{ owner_name }}, etc.
+# Used for callback lookup via: session('form_flow_ref.{reference_id}')
+reference_id: "claim-{{ code }}-{{ timestamp }}"
+
+# Callback URLs
+# -------------
+# Webhooks triggered at different flow stages
+# on_complete: Called when user finishes all steps (before final confirmation)
+# on_cancel: Called when user cancels the flow
+callbacks:
+  on_complete: "{{ base_url }}/x/claim/{{ code }}/complete"  # POST with collected_data
+  on_cancel: "{{ base_url }}/x/claim"                        # Redirect on cancellation
+
+# Step Definitions
+# ================
+# Steps are conditionally included based on voucher instructions
+# Each step's 'condition' field determines if it's rendered
+#
+# IMPORTANT: Step ordering matters!
+#   - wallet: Always first (no condition)
+#   - kyc: MUST come BEFORE bio (for auto-population)
+#   - Other steps: Can be in any order
+#
+# Available context variables:
+#   - {{ code }}, {{ amount }}, {{ currency }}, {{ owner_name }}
+#   - {{ has_name }}, {{ has_email }}, {{ has_kyc }}, {{ has_signature }}, etc.
+#   - {{ rider.splash }}, {{ rider.splash_timeout }}, etc.
+#   - {{ base_url }}, {{ timestamp }}
+#
+# See docs/guides/features/form-flow/INTEGRATION.md#context-variables for full list
+
+steps:
+  # Step 0: Splash Page
+  # ===================
+  # Welcome/intro screen with auto-advance (optional)
+  # Condition: splash_enabled flag (from rider data or SPLASH_ENABLED env)
+  # Config:
+  #   - content: HTML/Markdown content (supports template variables)
+  #   - timeout: Auto-advance seconds (null = manual advance)
+  #   - voucher_code: Display voucher code on splash
+  splash:
+    handler: "splash"                                    # Built-in handler
+    step_name: "splash_page"                             # Internal identifier
+    condition: "{{ splash_enabled | default('true') }}"  # Show if enabled (default: true)
+    config:
+      content: "{{ rider.splash }}"                      # Custom splash content from rider
+      timeout: "{{ rider.splash_timeout | default(null) }}"  # Seconds or null (manual)
+      voucher_code: "{{ code }}"                         # Display voucher code
+
+  # Step 1: Wallet Information
+  # ==========================
+  # ALWAYS SHOWN (no condition) - Collects payment details
+  # This is the primary step where users provide their disbursement info
+  #
+  # Auto-sync feature:
+  #   When settlement_rail = INSTAPAY, mobile number auto-copies to account_number
+  #   Debounce: 1500ms (waits 1.5s after typing stops before syncing)
+  #
+  # Field variants:
+  #   - amount: readonly-badge (display as summary badge)
+  #   - mobile: grouped as "redeemer"
+  #   - bank_code + account_number: grouped as "endorsement"
+  wallet:
+    handler: "form"                                      # Generic form handler
+    step_name: "wallet_info"                             # Collected data key
+    title: "Disbursement Details"                         # Page title
+    description: "Redeeming voucher {{ code }} from {{ owner_name }}"  # Subtitle
+    config:
+      auto_sync:                                         # Auto-copy mobile → account_number
+        enabled: true
+        source_field: "mobile"                           # Source: mobile number
+        target_field: "account_number"                   # Target: account number
+        condition_field: "settlement_rail"               # Only if INSTAPAY
+        condition_values:
+          - "INSTAPAY"                                   # INSTAPAY uses mobile as account
+        debounce_ms: 1500                                # Wait 1.5s after typing stops
+    fields:
+      # Summary Fields (readonly, display context)
+      # -------------------------------------------
+      # For divisible vouchers (open mode), GenericForm overrides readonly
+      # and renders an editable input with min/max constraints.
+      - name: "amount"
+        type: "number"
+        label: "Amount"
+        default: "{{ amount }}"                          # From voucher context
+        readonly: true                                   # User cannot edit (overridden for open-mode)
+        required: true
+        variant: "readonly-badge"                        # Styled as badge/pill
+        slice_mode: "{{ slice_mode }}"                   # null, 'fixed', or 'open'
+        min_withdrawal: "{{ min_withdrawal }}"           # Minimum per withdrawal (open mode)
+        available_balance: "{{ available_balance }}"     # Remaining balance for withdrawals
+        max_slices: "{{ max_slices }}"                   # Total allowed slices
+
+      # Settlement Rail (hidden field)
+      # ------------------------------
+      # TODO/KNOWN ISSUE: Currently hardcoded to INSTAPAY
+      # Future: Add {{ settlement_rail }} variable to driver context from voucher.instructions.cash.settlement_rail
+      # Workaround: Hidden field with default value (ensures auto-sync condition works)
+      # See: docs/guides/features/form-flow/INTEGRATION.md#known-limitations
+      - name: "settlement_rail"
+        type: "hidden"
+        default: "INSTAPAY"                              # HARDCODED - needs fixing
+        required: false
+
+      # Primary Action Field (redeemer group)
+      # --------------------------------------
+      - name: "mobile"
+        type: "tel"                                        # Phone number input
+        label: "Mobile Number"
+        default: "{{ allowed_mobile }}"
+        required: true
+        group: "redeemer"                                  # Grouped fieldset display
+        readonly: "{{ has_allowed_mobile }}"               # if has_allowed_mobile then readonly
+        persist: "{{ should_persist_mobile }}"             # Remember last value
+
+      # Endorsement Fields (grouped together)
+      # --------------------------------------
+      # Bank/Wallet selection + Account number
+      # Grouped fields render side-by-side or in a card
+      - name: "bank_code"
+        type: "bank_account"                               # Custom type: bank dropdown
+        label: "Bank/Wallet"
+        default: "GXCHPHM2XXX"                            # GCash BIC code
+        required: true
+        group: "endorsement"                               # Groups with account_number
+        persist: true                                      # Remember last value
+        help_text: "INSTAPAY"                             # Payment rail indicator
+      - name: "account_number"
+        type: "text"
+        label: "Account Number"
+        required: true
+        group: "endorsement"                               # Groups with bank_code
+        persist: true                                      # Remember last value
+
+  # Step 2: KYC Verification
+  # ========================
+  # Identity verification via HyperVerge
+  # IMPORTANT: Must come BEFORE bio step for auto-population to work
+  #
+  # Condition: {{ has_kyc }} (true if 'kyc' input enabled in voucher)
+  # Handler: Redirects to HyperVerge onboarding → Callback → Poll for results
+  # Collected data: status, transaction_id, name, date_of_birth, address, id_type, id_number
+  #
+  # See: packages/form-handler-kyc for implementation details
+  kyc:
+    handler: "kyc"                                       # Plugin: 3neti/form-handler-kyc
+    step_name: "kyc_verification"                        # Collected data key
+    title: "Identity Verification"
+    description: "Complete identity verification to proceed"
+    condition: "{{ has_kyc }}"                          # Only if kyc input enabled
+
+  # Step 3: Personal Information (Bio Fields)
+  # ==========================================
+  # Collects name, email, birth_date, address if enabled
+  # AUTO-POPULATES from KYC data if KYC was completed
+  #
+  # Condition: At least one bio field enabled (OR logic)
+  # Variables: Named references to KYC step data
+  #   $kyc_verification.name → $kyc_name (can be used in field defaults)
+  #
+  # How auto-population works:
+  #   1. User completes KYC step → Data stored in collected_data['kyc_verification']
+  #   2. Form flow renders bio step → Resolves $kyc_name from collected data
+  #   3. Vue component receives pre-filled default values
+  #   4. User can edit or accept auto-populated data
+  bio:
+    handler: "form"                                      # Generic form handler
+    step_name: "bio_fields"                              # Collected data key
+    title: "Personal Information"
+    description: "Please provide your details"
+    condition: "{{ has_name or has_email or has_birth_date or has_address or has_reference_code or has_gross_monthly_income }}"  # Show if ANY bio field enabled
+    config:
+      # Named references to previous step data (order-independent)
+      # Syntax: $step_name.field_name
+      # KYC handler flattens HyperVerge data to: {name, email, date_of_birth, address, ...}
+      # See: packages/form-handler-kyc/src/KYCHandler::flattenKYCData()
+      variables:
+        $kyc_name: "$kyc_verification.name"              # Reference KYC name
+        $kyc_email: "$kyc_verification.email"            # Reference KYC email
+        $kyc_birth: "$kyc_verification.date_of_birth"    # Reference KYC birth date
+        $kyc_addr: "$kyc_verification.address"           # Reference KYC address
+    fields:
+      # Each field is conditionally shown based on voucher inputs
+      # Defaults reference KYC variables (auto-populated if KYC completed)
+      - name: "full_name"
+        type: "text"
+        label: "Full Name"
+        default: "$kyc_name"                               # Auto-fills from KYC if available
+        required: true
+        condition: "{{ has_name }}"                        # Show if 'name' input enabled
+      - name: "email"
+        type: "email"
+        label: "Email Address"
+        default: "$kyc_email"                              # Auto-fills from KYC if available
+        required: true
+        condition: "{{ has_email }}"                       # Show if 'email' input enabled
+      - name: "birth_date"
+        type: "date"
+        label: "Birth Date"
+        default: "$kyc_birth"                              # Auto-fills from KYC if available
+        required: true
+        condition: "{{ has_birth_date }}"                  # Show if 'birth_date' input enabled
+      - name: "address"
+        type: "textarea"
+        label: "Address"
+        default: "$kyc_addr"                               # Auto-fills from KYC if available
+        required: false
+        condition: "{{ has_address }}"                     # Show if 'address' input enabled
+      - name: "reference_code"
+        type: "text"
+        label: "Reference Code"
+        required: true
+        condition: "{{ has_reference_code }}"              # Show if 'reference_code' input enabled
+      - name: "gross_monthly_income"
+        type: "number"
+        label: "Gross Monthly Income"
+        placeholder: "0.00"
+        required: true
+        condition: "{{ has_gross_monthly_income }}"        # Show if 'gross_monthly_income' input enabled
+
+  # Step 4: OTP Verification
+  # ========================
+  # Phone number verification via SMS OTP
+  # Condition: {{ has_otp }} (true if 'otp' input enabled)
+  # Handler: Sends SMS → User enters code → Validates
+  # Collected data: otp_verified (boolean), verified_at (timestamp)
+  #
+  # See: packages/form-handler-otp for implementation
+  otp:
+    handler: "otp"                                       # Plugin: 3neti/form-handler-otp
+    step_name: "otp_verification"                        # Collected data key
+    title: "Verify Phone Number"
+    description: "Enter the verification code sent to your phone"
+    condition: "{{ has_otp }}"                          # Only if otp input enabled
+    config:
+      code_length: 6                                     # 6-digit OTP
+      expiry_minutes: 5                                  # Code expires after 5 minutes
+
+  # Step 5: Location Capture
+  # ========================
+  # GPS coordinates + reverse geocoding + map snapshot
+  # Condition: {{ has_location }} (true if 'location' or 'map' input enabled)
+  # Handler: Browser geolocation API → OpenCage geocoding → Mapbox snapshot
+  # Collected data: latitude, longitude, accuracy, timestamp, address{formatted, components}, map (base64 PNG)
+  #
+  # Note: Old vouchers use 'location' field, new vouchers use 'map' field
+  # See: packages/form-handler-location for implementation
+  location:
+    handler: "location"                                  # Plugin: 3neti/form-handler-location
+    step_name: "location_capture"                        # Collected data key
+    title: "Share Your Location"
+    description: "We need your current location for verification"
+    condition: "{{ has_location }}"                     # Show if 'location' or 'map' enabled
+    config:
+      require_address: true                              # Reverse geocode lat/lng → address
+      capture_snapshot: true                             # Generate map image via Mapbox
+
+  # Step 6: Selfie Capture
+  # ======================
+  # Front camera capture for identity verification
+  # Condition: {{ has_selfie }} (true if 'selfie' input enabled)
+  # Handler: Browser getUserMedia API → Canvas capture
+  # Collected data: selfie (base64 JPEG/PNG)
+  #
+  # See: packages/form-handler-selfie for implementation
+  selfie:
+    handler: "selfie"                                    # Plugin: 3neti/form-handler-selfie
+    step_name: "selfie_capture"                          # Collected data key
+    title: "Take a Selfie"
+    description: "Please take a clear selfie for verification"
+    condition: "{{ has_selfie }}"                       # Only if selfie input enabled
+    config:
+      width: 640                                         # Image width (pixels)
+      height: 480                                        # Image height (pixels)
+      quality: 0.9                                       # JPEG quality (0-1)
+
+  # Step 7: Signature Capture
+  # =========================
+  # Digital signature via drawing pad
+  # Condition: {{ has_signature }} (true if 'signature' input enabled)
+  # Handler: Canvas-based signature pad → PNG export
+  # Collected data: signature (base64 PNG)
+  #
+  # See: packages/form-handler-signature for implementation
+  signature:
+    handler: "signature"                                 # Plugin: 3neti/form-handler-signature
+    step_name: "signature_capture"                       # Collected data key
+    title: "Digital Signature"
+    description: "Please provide your digital signature"
+    condition: "{{ has_signature }}"                    # Only if signature input enabled
+    config:
+      width: 600                                         # Canvas width (pixels)
+      height: 256                                        # Canvas height (pixels)
+      quality: 0.85                                      # PNG quality (0-1)
+      line_width: 2                                      # Stroke width (pixels)

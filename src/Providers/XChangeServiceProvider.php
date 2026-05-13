@@ -604,6 +604,11 @@ class XChangeServiceProvider extends ServiceProvider
         ], 'x-change-config');
 
         $this->publishes([
+            $this->packagePath('config/form-flow-drivers/voucher-redemption.yaml')
+            => config_path('form-flow-drivers/voucher-redemption.yaml'),
+        ], 'x-change-form-flow-drivers');
+
+        $this->publishes([
             $this->packagePath('stubs/scripts/test-netbank-lifecycle.sh.stub') => base_path('scripts/test-netbank-lifecycle.sh'),
             $this->packagePath('stubs/scripts/.xchange-lifecycle.env.example') => base_path('scripts/.xchange-lifecycle.env.example'),
         ], 'x-change-scripts');
