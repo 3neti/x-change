@@ -22,17 +22,73 @@
             "options": {
                 "symlink": true
             }
+        },
+        {
+            "type": "path",
+            "url": "/Users/rli/PhpstormProjects/packages/form-flow-manager",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "url": "/Users/rli/PhpstormProjects/packages/form-handler-kyc",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "url": "/Users/rli/PhpstormProjects/packages/form-handler-location",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "url": "/Users/rli/PhpstormProjects/packages/form-handler-otp",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "url": "/Users/rli/PhpstormProjects/packages/form-handler-selfie",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "url": "/Users/rli/PhpstormProjects/packages/form-handler-signature",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "url": "/Users/rli/PhpstormProjects/packages/x-rider",
+            "options": {
+                "symlink": true
+            }
         }
     ],
     "require": {
         "php": "^8.2",
         "3neti/cash": "dev-main",
         "3neti/contact": "^1.1",
+        "3neti/form-flow": "dev-main",
+        "3neti/form-handler-kyc": "dev-main",
+        "3neti/form-handler-location": "dev-main",
+        "3neti/form-handler-otp": "dev-main",
+        "3neti/form-handler-selfie": "dev-main",
+        "3neti/form-handler-signature": "dev-main",
         "3neti/instruction": "^0.2",
         "3neti/laravel-model-channel": "^1.1",
         "3neti/money-issuer": "^1.0",
         "3neti/report-registry": "^1.1",
         "3neti/voucher": "dev-main",
+        "3neti/x-rider": "dev-main",
         "brick/money": "^0.10.3",
         "endroid/qr-code": "^6.1",
         "illuminate/contracts": "^13.0",
