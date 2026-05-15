@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, CheckCircle2 } from 'lucide-vue-next';
+import { CheckCircle2 } from 'lucide-vue-next';
 import { useXChangeRoutes } from '@/composables/useXChangeRoutes';
-import { marked } from 'marked';
+import RiderRenderer from '@/components/x-rider/RiderRenderer.vue';
+import RiderCountdown from '@/components/x-rider/RiderCountdown.vue';
 
 defineOptions({ layout: null });
 
@@ -48,19 +49,9 @@ interface Props {
     claimOutcome?: string;
     rider?: RiderExperience | null;
     redirectEndpoint?: string | null;
-
-    /**
-     * Backward compatibility while older controller props are still around.
-     */
-    redirect_timeout?: number;
 }
 
 const props = defineProps<Props>();
-
-const countdown = ref(0);
-const isRedirecting = ref(false);
-let countdownInterval: ReturnType<typeof setInterval> | null = null;
-let redirectTimer: ReturnType<typeof setTimeout> | null = null;
 
 const riderContent = computed(() => props.rider?.success ?? null);
 const riderRedirect = computed(() => props.rider?.redirect ?? null);
@@ -72,12 +63,6 @@ const hasRiderMessage = computed(() =>
 const hasRedirect = computed(() =>
     Boolean(riderRedirect.value?.enabled && props.redirectEndpoint)
 );
-
-const redirectTimeoutSeconds = computed(() => {
-    const timeout = riderRedirect.value?.timeout ?? props.redirect_timeout ?? 10;
-
-    return Math.max(0, Number(timeout) || 0);
-});
 
 const numericAmount = computed(() => Number(props.voucher.amount ?? 0));
 
@@ -103,76 +88,6 @@ const fallbackTitle = computed(() => {
 
     return hasNonZeroAmount.value ? 'Disbursed to your account' : 'Pay Code claimed';
 });
-
-const renderedMessage = computed(() => {
-    const content = riderContent.value?.content;
-
-    if (!hasRiderMessage.value || !content) {
-        return null;
-    }
-
-    if (riderContent.value?.type === 'text') {
-        return content.replace(/\n/g, '<br>');
-    }
-
-    try {
-        return marked.parse(content) as string;
-    } catch {
-        return content.replace(/\n/g, '<br>');
-    }
-});
-
-const handleRedirect = () => {
-    if (!hasRedirect.value || !props.redirectEndpoint) {
-        return;
-    }
-
-    isRedirecting.value = true;
-
-    /**
-     * Important:
-     * Never redirect directly to rider.redirect.url.
-     * Always go through the x-change/x-rider server-side redirect endpoint.
-     */
-    window.location.href = props.redirectEndpoint;
-};
-
-onMounted(() => {
-    if (!hasRedirect.value) {
-        return;
-    }
-
-    countdown.value = redirectTimeoutSeconds.value;
-
-    if (redirectTimeoutSeconds.value <= 0) {
-        handleRedirect();
-
-        return;
-    }
-
-    countdownInterval = setInterval(() => {
-        countdown.value = Math.max(0, countdown.value - 1);
-
-        if (countdown.value <= 0 && countdownInterval) {
-            clearInterval(countdownInterval);
-            countdownInterval = null;
-        }
-    }, 1000);
-
-    redirectTimer = setTimeout(() => {
-        handleRedirect();
-    }, redirectTimeoutSeconds.value * 1000);
-});
-
-onBeforeUnmount(() => {
-    if (countdownInterval) {
-        clearInterval(countdownInterval);
-    }
-
-    if (redirectTimer) {
-        clearTimeout(redirectTimer);
-    }
-});
 </script>
 
 <template>
@@ -188,19 +103,18 @@ onBeforeUnmount(() => {
                         :class="isPending ? 'text-amber-500' : 'text-green-500'"
                     />
 
-                    <!-- Rider message -->
-                    <div v-if="hasRiderMessage" class="overflow-visible">
-                        <div
-                            v-html="renderedMessage"
-                            class="prose prose-lg max-w-none text-center font-semibold dark:prose-invert"
-                        />
-                    </div>
+                    <!-- Rider message owned by x-rider -->
+                    <RiderRenderer
+                        v-if="hasRiderMessage"
+                        :content="riderContent"
+                    />
 
                     <!-- No rider: amount is the hero -->
                     <template v-else>
                         <p v-if="hasNonZeroAmount" class="text-2xl font-bold tracking-tight text-foreground">
                             {{ formattedAmount }}
                         </p>
+
                         <p class="text-center text-lg font-medium text-foreground">
                             {{ fallbackTitle }}
                         </p>
@@ -215,27 +129,19 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <!-- Redirect with countdown -->
-                <div v-if="hasRedirect && !isRedirecting" class="space-y-3">
-                    <Button class="w-full rounded-full" @click="handleRedirect">
-                        Continue Now
-                        <ExternalLink :size="14" class="ml-1.5" />
-                    </Button>
-                    <p v-if="redirectTimeoutSeconds > 0" class="text-center text-[11px] text-gray-400 dark:text-gray-600">
-                        Redirecting in {{ countdown }}s
-                    </p>
-                </div>
-
-                <!-- Redirecting -->
-                <p v-else-if="hasRedirect && isRedirecting" class="text-center text-sm text-muted-foreground">
-                    Redirecting…
-                </p>
+                <!-- Redirect owned by x-rider -->
+                <RiderCountdown
+                    v-if="hasRedirect"
+                    :redirect="riderRedirect"
+                    :redirect-endpoint="redirectEndpoint"
+                />
 
                 <!-- Default actions -->
                 <div v-else class="flex flex-col gap-3">
                     <Button class="w-full rounded-full" @click="router.visit('/x/claim')">
                         Claim Another
                     </Button>
+
                     <Button
                         variant="ghost"
                         size="lg"

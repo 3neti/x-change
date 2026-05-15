@@ -12,6 +12,7 @@ class InstallXChangeCommand extends Command
         {--force : Overwrite existing published files}
         {--no-assets : Skip branding asset publishing}
         {--no-handlers : Skip form-flow and handler asset publishing}
+        {--no-rider : Skip x-rider asset publishing}
         {--no-migrate : Skip database migrations}';
 
     protected $description = 'Install the X-Change package UI, assets, and run migrations';
@@ -66,6 +67,27 @@ class InstallXChangeCommand extends Command
                         ]);
                     });
                 }
+            }
+        }
+
+        // Publish x-rider UI/components if installed
+        if (! $this->option('no-rider')) {
+            $provider = 'LBHurtado\\XRider\\XRiderServiceProvider';
+
+            if (class_exists($provider)) {
+                $this->components->task('Publishing x-rider UI files', function () use ($force): void {
+                    $this->callSilently('vendor:publish', [
+                        '--tag' => 'x-rider-ui',
+                        '--force' => $force,
+                    ]);
+                });
+
+                $this->components->task('Publishing x-rider drivers', function () use ($force): void {
+                    $this->callSilently('vendor:publish', [
+                        '--tag' => 'x-rider-drivers',
+                        '--force' => $force,
+                    ]);
+                });
             }
         }
 
