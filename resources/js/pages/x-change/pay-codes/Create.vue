@@ -141,8 +141,6 @@ const canSubmit = computed(() => {
 const voucherInputFields = computed<string[]>(() => {
     const fields: string[] = [];
 
-    if (form.value.require_mobile !== false) fields.push('mobile');
-
     if (form.value.require_name) fields.push('name');
     if (form.value.require_email) fields.push('email');
     if (form.value.require_birth_date) fields.push('birth_date');
