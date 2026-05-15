@@ -1,27 +1,57 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import { Card, CardContent } from '@/components/ui/card';
-
-defineOptions({ layout: null });
 import { Button } from '@/components/ui/button';
 import { ExternalLink, CheckCircle2 } from 'lucide-vue-next';
 import { useXChangeRoutes } from '@/composables/useXChangeRoutes';
 import { marked } from 'marked';
 
+defineOptions({ layout: null });
+
 const routes = useXChangeRoutes();
 
+interface VoucherProps {
+    code: string;
+    amount?: number | string | null;
+    formatted_amount?: string | null;
+    formattedAmount?: string | null;
+    currency?: string | null;
+}
+
+interface RiderContent {
+    enabled: boolean;
+    type: string;
+    content?: string | null;
+    meta?: Record<string, unknown>;
+}
+
+interface RiderRedirect {
+    enabled: boolean;
+    url?: string | null;
+    timeout: number;
+    fallbackUrl?: string | null;
+    meta?: Record<string, unknown>;
+}
+
+interface RiderExperience {
+    state: string;
+    success?: RiderContent | null;
+    redirect?: RiderRedirect | null;
+    ads?: unknown[];
+    analytics?: Record<string, unknown>;
+    meta?: Record<string, unknown>;
+}
+
 interface Props {
-    voucher: {
-        code: string;
-        amount: number;
-        formatted_amount: string;
-        currency: string;
-    };
-    rider?: {
-        message?: string | null;
-        url?: string | null;
-    };
+    voucher: VoucherProps;
+    claimOutcome?: string;
+    rider?: RiderExperience | null;
+    redirectEndpoint?: string | null;
+
+    /**
+     * Backward compatibility while older controller props are still around.
+     */
     redirect_timeout?: number;
 }
 
@@ -29,40 +59,118 @@ const props = defineProps<Props>();
 
 const countdown = ref(0);
 const isRedirecting = ref(false);
+let countdownInterval: ReturnType<typeof setInterval> | null = null;
+let redirectTimer: ReturnType<typeof setTimeout> | null = null;
 
-const hasRiderUrl = computed(() => !!props.rider?.url);
-const hasRiderMessage = computed(() => !!props.rider?.message);
-const hasNonZeroAmount = computed(() => (props.voucher.amount ?? 0) > 0);
+const riderContent = computed(() => props.rider?.success ?? null);
+const riderRedirect = computed(() => props.rider?.redirect ?? null);
+
+const hasRiderMessage = computed(() =>
+    Boolean(riderContent.value?.enabled && riderContent.value?.content)
+);
+
+const hasRedirect = computed(() =>
+    Boolean(riderRedirect.value?.enabled && props.redirectEndpoint)
+);
+
+const redirectTimeoutSeconds = computed(() => {
+    const timeout = riderRedirect.value?.timeout ?? props.redirect_timeout ?? 10;
+
+    return Math.max(0, Number(timeout) || 0);
+});
+
+const numericAmount = computed(() => Number(props.voucher.amount ?? 0));
+
+const hasNonZeroAmount = computed(() => numericAmount.value > 0);
+
+const formattedAmount = computed(() =>
+    props.voucher.formatted_amount
+    ?? props.voucher.formattedAmount
+    ?? (hasNonZeroAmount.value
+        ? `${props.voucher.currency ?? ''} ${numericAmount.value.toLocaleString()}`
+        : '')
+);
+
+const isPending = computed(() =>
+    props.claimOutcome === 'accepted_pending'
+    || props.rider?.state === 'accepted_pending'
+);
+
+const fallbackTitle = computed(() => {
+    if (isPending.value) {
+        return 'Your claim is being processed';
+    }
+
+    return hasNonZeroAmount.value ? 'Disbursed to your account' : 'Pay Code claimed';
+});
 
 const renderedMessage = computed(() => {
-    if (!hasRiderMessage.value || !props.rider?.message) return null;
+    const content = riderContent.value?.content;
+
+    if (!hasRiderMessage.value || !content) {
+        return null;
+    }
+
+    if (riderContent.value?.type === 'text') {
+        return content.replace(/\n/g, '<br>');
+    }
+
     try {
-        return marked.parse(props.rider.message) as string;
+        return marked.parse(content) as string;
     } catch {
-        return props.rider.message.replace(/\n/g, '<br>');
+        return content.replace(/\n/g, '<br>');
     }
 });
 
 const handleRedirect = () => {
-    if (!hasRiderUrl.value) return;
+    if (!hasRedirect.value || !props.redirectEndpoint) {
+        return;
+    }
+
     isRedirecting.value = true;
-    // Use server-side redirect for tracking
-    window.location.href = routes.claim.redirect(props.voucher.code);
+
+    /**
+     * Important:
+     * Never redirect directly to rider.redirect.url.
+     * Always go through the x-change/x-rider server-side redirect endpoint.
+     */
+    window.location.href = props.redirectEndpoint;
 };
 
 onMounted(() => {
-    if (hasRiderUrl.value) {
-        const timeout = (props.redirect_timeout ?? 10) * 1000;
-        countdown.value = Math.ceil(timeout / 1000);
+    if (!hasRedirect.value) {
+        return;
+    }
 
-        const interval = setInterval(() => {
-            countdown.value--;
-            if (countdown.value <= 0) clearInterval(interval);
-        }, 1000);
+    countdown.value = redirectTimeoutSeconds.value;
 
-        setTimeout(() => {
-            handleRedirect();
-        }, timeout);
+    if (redirectTimeoutSeconds.value <= 0) {
+        handleRedirect();
+
+        return;
+    }
+
+    countdownInterval = setInterval(() => {
+        countdown.value = Math.max(0, countdown.value - 1);
+
+        if (countdown.value <= 0 && countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+        }
+    }, 1000);
+
+    redirectTimer = setTimeout(() => {
+        handleRedirect();
+    }, redirectTimeoutSeconds.value * 1000);
+});
+
+onBeforeUnmount(() => {
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+    }
+
+    if (redirectTimer) {
+        clearTimeout(redirectTimer);
     }
 });
 </script>
@@ -75,22 +183,26 @@ onMounted(() => {
             <CardContent class="space-y-8 px-6 py-8">
                 <!-- Hero -->
                 <div class="space-y-4 pt-4 text-center">
-                    <CheckCircle2 class="mx-auto h-16 w-16 text-green-500" />
+                    <CheckCircle2
+                        class="mx-auto h-16 w-16"
+                        :class="isPending ? 'text-amber-500' : 'text-green-500'"
+                    />
 
-                    <!-- Rider message (prominent) -->
+                    <!-- Rider message -->
                     <div v-if="hasRiderMessage" class="overflow-visible">
                         <div
                             v-html="renderedMessage"
                             class="prose prose-lg max-w-none text-center font-semibold dark:prose-invert"
                         />
                     </div>
+
                     <!-- No rider: amount is the hero -->
                     <template v-else>
                         <p v-if="hasNonZeroAmount" class="text-2xl font-bold tracking-tight text-foreground">
-                            {{ voucher.formatted_amount }}
+                            {{ formattedAmount }}
                         </p>
                         <p class="text-center text-lg font-medium text-foreground">
-                            {{ hasNonZeroAmount ? 'Disbursed to your account' : 'Pay Code claimed' }}
+                            {{ fallbackTitle }}
                         </p>
                     </template>
 
@@ -104,25 +216,25 @@ onMounted(() => {
                 </div>
 
                 <!-- Redirect with countdown -->
-                <div v-if="hasRiderUrl && !isRedirecting" class="space-y-3">
+                <div v-if="hasRedirect && !isRedirecting" class="space-y-3">
                     <Button class="w-full rounded-full" @click="handleRedirect">
                         Continue Now
                         <ExternalLink :size="14" class="ml-1.5" />
                     </Button>
-                    <p class="text-center text-[11px] text-gray-400 dark:text-gray-600">
+                    <p v-if="redirectTimeoutSeconds > 0" class="text-center text-[11px] text-gray-400 dark:text-gray-600">
                         Redirecting in {{ countdown }}s
                     </p>
                 </div>
 
                 <!-- Redirecting -->
-                <p v-else-if="hasRiderUrl && isRedirecting" class="text-center text-sm text-muted-foreground">
+                <p v-else-if="hasRedirect && isRedirecting" class="text-center text-sm text-muted-foreground">
                     Redirecting…
                 </p>
 
-                <!-- Default actions (no rider URL) -->
-                <div v-else class="space-y-3">
+                <!-- Default actions -->
+                <div v-else class="flex flex-col gap-3">
                     <Button class="w-full rounded-full" @click="router.visit('/x/claim')">
-                        Redeem Another
+                        Claim Another
                     </Button>
                     <Button
                         variant="ghost"

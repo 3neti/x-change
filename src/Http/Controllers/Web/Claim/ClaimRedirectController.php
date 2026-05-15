@@ -1,33 +1,54 @@
 <?php
 
-declare(strict_types=1);
-
 namespace LBHurtado\XChange\Http\Controllers\Web\Claim;
 
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Routing\Controller;
 use LBHurtado\Voucher\Models\Voucher;
-use LBHurtado\XChange\Contracts\AuditLoggerContract;
+use LBHurtado\XChange\Support\Rider\XChangeRiderOutcomeResolver;
+use LBHurtado\XChange\Support\Rider\XChangeRiderSubjectFactory;
+use LBHurtado\XRider\Contracts\RiderAnalyticsRecorderContract;
+use LBHurtado\XRider\Contracts\RiderExperienceResolverContract;
+use LBHurtado\XRider\Contracts\SuccessRedirectResolverContract;
+use LBHurtado\XRider\Data\RiderAnalyticsEventData;
 
-class ClaimRedirectController extends Controller
+class ClaimRedirectController
 {
-    public function __invoke(string $code, AuditLoggerContract $audit): RedirectResponse
-    {
-        $code = strtoupper(trim($code));
+    public function __invoke(
+        string $code,
+        RiderExperienceResolverContract $riders,
+        SuccessRedirectResolverContract $redirects,
+        RiderAnalyticsRecorderContract $analytics,
+        XChangeRiderSubjectFactory $subjects,
+        XChangeRiderOutcomeResolver $outcomes,
+    ): RedirectResponse {
+        $voucher = Voucher::query()
+            ->where('code', $code)
+            ->firstOrFail();
 
-        $voucher = Voucher::query()->where('code', $code)->firstOrFail();
+        $subject = $subjects->fromVoucher($voucher);
+        $state = $outcomes->forVoucher($voucher);
 
-        $riderUrl = $voucher->instructions->rider->url ?? null;
-
-        $audit->log('pay_code.claim.redirect', [
-            'voucher_code' => $code,
-            'rider_url' => $riderUrl,
+        $experience = $riders->resolve($subject, [
+            'state' => $state->value,
+            'rider' => data_get($voucher->instructions?->toArray() ?? [], 'rider', []),
+            'meta' => [
+                'source' => 'x-change',
+                'route' => 'claim.redirect',
+            ],
         ]);
 
-        if ($riderUrl && filter_var($riderUrl, FILTER_VALIDATE_URL)) {
-            return redirect()->away($riderUrl);
-        }
+        $url = $redirects->resolve($experience);
 
-        return redirect()->route('x-change.claim.success', ['code' => $code]);
+        $analytics->record(new RiderAnalyticsEventData(
+            event: 'rider.redirect.started',
+            reference: $subject,
+            meta: [
+                'voucher_code' => (string) $voucher->code,
+                'claim_outcome' => $state->value,
+                'redirect_url' => $url,
+            ],
+        ));
+
+        return redirect()->away($url);
     }
 }

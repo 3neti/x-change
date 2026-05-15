@@ -189,6 +189,7 @@ it('validates required claim submit payload fields through the lifecycle route s
 it('blocks collectible vouchers from lifecycle claim submission', function () {
     $voucher = issueVoucher(validVoucherInstructions(100.00, 'INSTAPAY', [
         'voucher_type' => 'payable',
+        'target_amount' => 100,
     ]));
 
     $response = $this->postJson(route('api.x.v1.vouchers.claim.submit', [

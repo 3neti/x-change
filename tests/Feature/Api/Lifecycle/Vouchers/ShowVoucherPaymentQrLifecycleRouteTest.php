@@ -7,6 +7,7 @@ it('shows rendered payment qr for collectible voucher through lifecycle route su
 
     $voucher = issueVoucher(validVoucherInstructions(100.00, 'INSTAPAY', [
         'voucher_type' => 'payable',
+        'target_amount' => 100,
     ]));
 
     $response = $this->getJson(route('api.x.v1.vouchers.payment-qr.show', [

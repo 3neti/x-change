@@ -15,6 +15,7 @@ it('maps missing voucher to voucher not found response', function () {
 it('maps collectible claim submission block to cannot disburse response', function () {
     $voucher = issueVoucher(validVoucherInstructions(100.00, 'INSTAPAY', [
         'voucher_type' => 'payable',
+        'target_amount' => 100,
     ]));
 
     $response = $this->postJson(route('api.x.v1.vouchers.claim.submit', [

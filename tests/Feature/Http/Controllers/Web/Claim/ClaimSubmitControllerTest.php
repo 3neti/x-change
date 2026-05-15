@@ -322,9 +322,16 @@ it('redirects back to claim start when claim submission fails', function (): voi
         'flow_id' => 'flow-test',
     ]);
 
-    $response
-        ->assertRedirect(route('x-change.claim.start', ['code' => $voucher->code]))
-        ->assertSessionHasErrors(['error']);
+    $response->assertRedirect(
+        route('x-change.claim.start', [
+            'code' => $voucher->code,
+            'failed' => 1,
+        ])
+    );
+
+    $errors = session('errors')?->getBag('default')->all() ?? [];
+
+    expect($errors)->toContain('Claim failed for test');
 
     Log::shouldHaveReceived('error')
         ->withArgs(fn (string $message, array $context): bool => $message === '[ClaimSubmitController] Claim failed'

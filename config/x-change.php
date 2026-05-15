@@ -815,4 +815,13 @@ return [
         'default_gate' => env('XCHANGE_SETTLEMENT_GATE', 'settleable'),
         'drivers_path' => config_path('envelope-drivers'),
     ],
+
+    'rider' => [
+        'outcomes' => [
+            'treat_pending_with_local_disbursement_as_success' => env(
+                'X_CHANGE_RIDER_PENDING_WITH_LOCAL_DISBURSEMENT_IS_SUCCESS',
+                true
+            ),
+        ],
+    ],
 ];
