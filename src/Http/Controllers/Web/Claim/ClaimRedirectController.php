@@ -41,10 +41,14 @@ class ClaimRedirectController
 
         $analytics->record(new RiderAnalyticsEventData(
             event: 'rider.redirect.started',
-            reference: $subject,
+            reference: $subject->reference(),
+            sourceType: $subject->type,
+            sourceId: $subject->id,
+            context: [
+                'claim_outcome' => $state->value,
+            ],
             meta: [
                 'voucher_code' => (string) $voucher->code,
-                'claim_outcome' => $state->value,
                 'redirect_url' => $url,
             ],
         ));
