@@ -47,14 +47,17 @@ export function useVoucherPreview(options: UseVoucherPreviewOptions = {}) {
 
             if (response.ok && data.success !== false) {
                 // Normalize x-change lifecycle API response to match preview shape
-                const d = data.data ?? data;
+                const d = data.data?.voucher ?? data.data ?? data;
+
                 voucherData.value = {
                     success: true,
                     code: d.code ?? voucherCode,
                     status: d.status ?? 'active',
                     metadata: d.metadata ?? {},
                     info: d,
+                    preview: d.preview ?? undefined,
                     instructions: d.instructions ?? null,
+                    rider: d.rider ?? null,
                     redeemed_at: d.redeemed_at ?? null,
                     expired_at: d.expires_at ?? null,
                 };
@@ -107,7 +110,7 @@ export function useVoucherPreview(options: UseVoucherPreviewOptions = {}) {
             code.value = uppercased;
             return; // The watch will trigger again with uppercase value
         }
-        
+
         debouncedFetch(newCode);
     });
 

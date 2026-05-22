@@ -18,11 +18,32 @@ import { useVoucherPreview } from '@/composables/useVoucherPreview';
 import { initializeTheme } from '@/composables/useTheme';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
+import RiderRenderer from '@/components/x-rider/RiderRenderer.vue';
 
 initializeTheme();
 
 interface Props {
     initialCode?: string | null;
+}
+
+interface RiderContent {
+    enabled: boolean;
+    type: string;
+    content?: string | null;
+    meta?: Record<string, unknown>;
+}
+
+interface RiderStage {
+    type: string;
+    enabled?: boolean;
+    key?: string | null;
+    payload?: Record<string, unknown>;
+    meta?: Record<string, unknown>;
+
+    // raw stage config shape from voucher preview
+    content?: string | null;
+    content_type?: string | null;
+    timeout?: number | string | null;
 }
 
 const props = defineProps<Props>();
@@ -95,6 +116,55 @@ const renderedSplash = computed(() => {
     }
     return DOMPurify.sanitize(marked.parse(splash) as string);
 });
+
+const riderStages = computed<RiderStage[]>(() => {
+    const stages = voucherData.value?.instructions?.rider?.stages;
+
+    return Array.isArray(stages) ? stages : [];
+});
+
+const preClaimSplashStage = computed<RiderStage | null>(() => {
+    const stages = riderStages.value.filter((stage) =>
+        stage.type === 'splash' && stage.enabled !== false
+    );
+
+    return stages.length > 0 ? stages[stages.length - 1] : null;
+});
+
+const preClaimContent = computed<RiderContent | null>(() => {
+    const resolved = voucherData.value?.rider?.preClaim;
+
+    if (resolved?.enabled && resolved.content) {
+        return resolved;
+    }
+
+    const stage = preClaimSplashStage.value;
+
+    if (!stage) {
+        return null;
+    }
+
+    const content = (stage.payload?.content ?? stage.content) as string | null | undefined;
+
+    if (!content) {
+        return null;
+    }
+
+    return {
+        enabled: true,
+        type: ((stage.payload?.content_type ?? stage.content_type) as string | undefined) ?? 'markdown',
+        content,
+        meta: {
+            source: 'stage',
+            stage_key: stage.key,
+            timeout: stage.payload?.timeout ?? stage.timeout,
+        },
+    };
+});
+
+const hasPreClaimContent = computed(() =>
+    Boolean(preClaimContent.value?.enabled && preClaimContent.value?.content)
+);
 
 function submit() {
     const entered = code.value || form.code;
@@ -206,22 +276,29 @@ function submit() {
 
             <!-- Active State: Tabbed preview -->
             <div v-else-if="voucherData">
+                <!-- Rider pre-claim content from splash stage -->
+                <Card v-if="hasPreClaimContent" class="mb-4 border-primary/10 bg-primary/5">
+                    <CardContent class="pt-4 pb-4">
+                        <RiderRenderer :content="preClaimContent" />
+                    </CardContent>
+                </Card>
+
                 <!-- Preview Message (if provided by issuer) -->
                 <Alert v-if="voucherData.preview && voucherData.preview.message" class="mb-4" variant="default">
                     <AlertDescription>
                         <strong class="font-semibold">Note from issuer:</strong> {{ voucherData.preview.message }}
                     </AlertDescription>
                 </Alert>
-                
+
                 <Tabs default-value="instructions">
                     <TabsList class="grid w-full grid-cols-2">
                         <TabsTrigger value="instructions">Instructions</TabsTrigger>
                         <TabsTrigger value="system-info">System Info</TabsTrigger>
                     </TabsList>
-                    
+
                     <TabsContent value="instructions" class="mt-4">
                         <VoucherInstructionsDisplay
-                            v-if="voucherData.instructions"
+                            v-if="voucherData.instructions && typeof voucherData.instructions === 'object'"
                             :instructions="voucherData.instructions"
                             :voucher-status="voucherData.status"
                         />
@@ -232,9 +309,9 @@ function submit() {
                             </AlertDescription>
                         </Alert>
                     </TabsContent>
-                    
+
                     <TabsContent value="system-info" class="mt-4 space-y-4">
-                        <VoucherMetadataDisplay 
+                        <VoucherMetadataDisplay
                             :metadata="voucherData.metadata"
                             :show-all-fields="true"
                         />

@@ -3,15 +3,15 @@ import { computed } from 'vue';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-    Coins, 
-    Mail, 
-    Phone, 
-    Camera, 
-    MapPin, 
-    FileSignature, 
-    Shield, 
-    User, 
+import {
+    Coins,
+    Mail,
+    Phone,
+    Camera,
+    MapPin,
+    FileSignature,
+    Shield,
+    User,
     Calendar,
     Home,
     Wallet,
@@ -72,7 +72,7 @@ const amountLabel = computed(() => {
 
 const formattedExpiresAt = computed(() => {
     if (!props.instructions.expires_at) return null;
-    
+
     const date = new Date(props.instructions.expires_at);
     return date.toLocaleString('en-PH', {
         year: 'numeric',
@@ -85,7 +85,7 @@ const formattedExpiresAt = computed(() => {
 
 const formattedStartsAt = computed(() => {
     if (!props.instructions.starts_at) return null;
-    
+
     const date = new Date(props.instructions.starts_at);
     return date.toLocaleString('en-PH', {
         year: 'numeric',
@@ -98,20 +98,20 @@ const formattedStartsAt = computed(() => {
 
 const timeUntilExpiry = computed(() => {
     if (!props.instructions.expires_at || props.voucherStatus !== 'active') return null;
-    
+
     const now = new Date();
     const expiry = new Date(props.instructions.expires_at);
     const diff = expiry.getTime() - now.getTime();
-    
+
     if (diff < 0) return null;
-    
+
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    
+
     if (days > 0) {
         return `${days} day${days > 1 ? 's' : ''} ${hours} hour${hours !== 1 ? 's' : ''}`;
     }
-    
+
     return `${hours} hour${hours !== 1 ? 's' : ''}`;
 });
 
@@ -142,16 +142,26 @@ const getInputIcon = (value: string) => {
     }
 };
 
+const validation = computed(() => props.instructions?.validation ?? {});
+
 const hasAssignmentOrSecurity = computed(() => {
-    return props.instructions.validation.has_secret || props.instructions.validation.is_assigned;
+    return Boolean(
+        validation.value.has_secret
+        || validation.value.is_assigned
+    );
 });
 
 const hasValidationRules = computed(() => {
-    return props.instructions.location_validation || props.instructions.time_validation || props.instructions.payable_validation;
+    return Boolean(
+        props.instructions?.location_validation
+        || props.instructions?.time_validation
+        || props.instructions?.payable_validation
+    );
 });
 
 const hasRequirements = computed(() => {
-    return props.instructions.required_inputs && props.instructions.required_inputs.length > 0;
+    return Array.isArray(props.instructions?.required_inputs)
+        && props.instructions.required_inputs.length > 0;
 });
 
 const riderFaviconUrl = computed(() => {
@@ -219,14 +229,14 @@ const riderHostname = computed(() => {
             <CardContent class="pt-6">
                 <p class="text-base font-medium text-gray-900 dark:text-gray-100">{{ instructions.rider.message }}</p>
                 <div v-if="instructions.rider.url && riderFaviconUrl" class="mt-4 flex justify-end">
-                    <a 
+                    <a
                         :href="instructions.rider.url"
                         target="_blank"
                         rel="noopener noreferrer"
                         class="opacity-50 hover:opacity-100 transition-opacity"
                         :title="instructions.rider.url"
                     >
-                        <img 
+                        <img
                             :src="riderFaviconUrl"
                             :alt="riderHostname"
                             class="h-4 w-4 animate-pulse"
@@ -285,13 +295,13 @@ const riderHostname = computed(() => {
             </CardHeader>
             <CardContent>
                 <div class="space-y-3">
-                    <div 
-                        v-for="input in instructions.required_inputs" 
+                    <div
+                        v-for="input in instructions.required_inputs"
                         :key="input.value"
                         class="flex items-center gap-3 rounded-lg border p-3"
                     >
-                        <component 
-                            :is="getInputIcon(input.value)" 
+                        <component
+                            :is="getInputIcon(input.value)"
                             class="h-5 w-5 text-muted-foreground flex-shrink-0"
                         />
                         <span class="text-sm font-medium">{{ input.label }}</span>
@@ -315,12 +325,12 @@ const riderHostname = computed(() => {
             </CardHeader>
             <CardContent class="space-y-3">
                 <!-- Assignment -->
-                <div v-if="instructions.validation.is_assigned" class="flex items-start gap-3">
+                <div v-if="validation.is_assigned" class="flex items-start gap-3">
                     <Phone class="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
                     <div>
                         <p class="text-sm font-medium">Assigned to mobile number</p>
                         <p class="text-sm text-muted-foreground font-mono">
-                            {{ instructions.validation.assigned_mobile_masked || 'Protected' }}
+                            {{ validation.assigned_mobile_masked || 'Protected' }}
                         </p>
                         <p class="text-xs text-muted-foreground mt-1">
                             Only this number can redeem this voucher
@@ -340,7 +350,7 @@ const riderHostname = computed(() => {
                 </div>
 
                 <!-- Secret required -->
-                <div v-if="instructions.validation.has_secret" class="flex items-start gap-3">
+                <div v-if="validation.has_secret" class="flex items-start gap-3">
                     <Lock class="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
                     <div>
                         <p class="text-sm font-medium">Secret code required</p>
@@ -370,7 +380,7 @@ const riderHostname = computed(() => {
                             <p class="text-sm text-muted-foreground">
                                 {{ instructions.location_validation.description }}
                             </p>
-                            <Badge 
+                            <Badge
                                 :variant="instructions.location_validation.on_failure === 'block' ? 'destructive' : 'secondary'"
                                 class="mt-2"
                             >

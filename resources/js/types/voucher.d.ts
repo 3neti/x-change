@@ -49,6 +49,32 @@ export interface PreviewPolicy {
     message?: string;
 }
 
+export interface RiderContent {
+    enabled: boolean;
+    type: string;
+    content?: string | null;
+    meta?: Record<string, any>;
+}
+
+export interface RiderStage {
+    type: string;
+    enabled: boolean;
+    key?: string | null;
+    payload?: Record<string, any>;
+    meta?: Record<string, any>;
+}
+
+export interface RiderStageCollection {
+    stages?: RiderStage[];
+    meta?: Record<string, any>;
+}
+
+export interface RiderPreviewPayload {
+    state?: string;
+    preClaim?: RiderContent | null;
+    stages?: RiderStageCollection | null;
+    meta?: Record<string, any>;
+}
 export interface InspectResponse {
     success: boolean;
     code: string;
@@ -59,4 +85,5 @@ export interface InspectResponse {
     instructions?: InspectInstructions;
     redeemed_at?: string | null;
     expired_at?: string | null;
+    rider?: RiderPreviewPayload | null;
 }
