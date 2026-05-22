@@ -19,31 +19,12 @@ import { initializeTheme } from '@/composables/useTheme';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import RiderRenderer from '@/components/x-rider/RiderRenderer.vue';
+import type { RiderContent, RawRiderStage } from '@/components/x-rider/types';
 
 initializeTheme();
 
 interface Props {
     initialCode?: string | null;
-}
-
-interface RiderContent {
-    enabled: boolean;
-    type: string;
-    content?: string | null;
-    meta?: Record<string, unknown>;
-}
-
-interface RiderStage {
-    type: string;
-    enabled?: boolean;
-    key?: string | null;
-    payload?: Record<string, unknown>;
-    meta?: Record<string, unknown>;
-
-    // raw stage config shape from voucher preview
-    content?: string | null;
-    content_type?: string | null;
-    timeout?: number | string | null;
 }
 
 const props = defineProps<Props>();
@@ -117,13 +98,13 @@ const renderedSplash = computed(() => {
     return DOMPurify.sanitize(marked.parse(splash) as string);
 });
 
-const riderStages = computed<RiderStage[]>(() => {
+const riderStages = computed<RawRiderStage[]>(() => {
     const stages = voucherData.value?.instructions?.rider?.stages;
 
     return Array.isArray(stages) ? stages : [];
 });
 
-const preClaimSplashStage = computed<RiderStage | null>(() => {
+const preClaimSplashStage = computed<RawRiderStage | null>(() => {
     const stages = riderStages.value.filter((stage) =>
         stage.type === 'splash' && stage.enabled !== false
     );

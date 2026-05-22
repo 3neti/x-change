@@ -8,6 +8,13 @@ import { useXChangeRoutes } from '@/composables/useXChangeRoutes';
 import RiderRenderer from '@/components/x-rider/RiderRenderer.vue';
 import RiderCountdown from '@/components/x-rider/RiderCountdown.vue';
 import RiderStageRenderer from '@/components/x-rider/RiderStageRenderer.vue';
+import type {
+    RiderContent,
+    RiderRedirect,
+    RiderStage,
+    RiderStageCollection,
+    RiderExperience,
+} from '@/components/x-rider/types';
 
 defineOptions({ layout: null });
 
@@ -19,44 +26,6 @@ interface VoucherProps {
     formatted_amount?: string | null;
     formattedAmount?: string | null;
     currency?: string | null;
-}
-
-interface RiderContent {
-    enabled: boolean;
-    type: string;
-    content?: string | null;
-    meta?: Record<string, unknown>;
-}
-
-interface RiderRedirect {
-    enabled: boolean;
-    url?: string | null;
-    timeout: number;
-    fallbackUrl?: string | null;
-    meta?: Record<string, unknown>;
-}
-
-interface RiderStage {
-    type: string;
-    enabled: boolean;
-    key?: string | null;
-    payload?: Record<string, unknown>;
-    meta?: Record<string, unknown>;
-}
-
-interface RiderStageCollection {
-    stages?: RiderStage[];
-    meta?: Record<string, unknown>;
-}
-
-interface RiderExperience {
-    state: string;
-    success?: RiderContent | null;
-    redirect?: RiderRedirect | null;
-    stages?: RiderStageCollection | null;
-    ads?: unknown[];
-    analytics?: Record<string, unknown>;
-    meta?: Record<string, unknown>;
 }
 
 interface Props {
