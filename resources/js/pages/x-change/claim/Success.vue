@@ -7,6 +7,7 @@ import { CheckCircle2 } from 'lucide-vue-next';
 import { useXChangeRoutes } from '@/composables/useXChangeRoutes';
 import RiderRenderer from '@/components/x-rider/RiderRenderer.vue';
 import RiderCountdown from '@/components/x-rider/RiderCountdown.vue';
+import RiderStageRenderer from '@/components/x-rider/RiderStageRenderer.vue';
 
 defineOptions({ layout: null });
 
@@ -35,10 +36,24 @@ interface RiderRedirect {
     meta?: Record<string, unknown>;
 }
 
+interface RiderStage {
+    type: string;
+    enabled: boolean;
+    key?: string | null;
+    payload?: Record<string, unknown>;
+    meta?: Record<string, unknown>;
+}
+
+interface RiderStageCollection {
+    stages?: RiderStage[];
+    meta?: Record<string, unknown>;
+}
+
 interface RiderExperience {
     state: string;
     success?: RiderContent | null;
     redirect?: RiderRedirect | null;
+    stages?: RiderStageCollection | null;
     ads?: unknown[];
     analytics?: Record<string, unknown>;
     meta?: Record<string, unknown>;
@@ -56,8 +71,22 @@ const props = defineProps<Props>();
 const riderContent = computed(() => props.rider?.success ?? null);
 const riderRedirect = computed(() => props.rider?.redirect ?? null);
 
+const riderStages = computed(() =>
+    props.rider?.stages?.stages ?? []
+);
+
+const hasRenderableStages = computed(() =>
+    riderStages.value.some((stage) =>
+        stage.enabled && ['message', 'splash', 'link'].includes(stage.type)
+    )
+);
+
 const hasRiderMessage = computed(() =>
     Boolean(riderContent.value?.enabled && riderContent.value?.content)
+);
+
+const hasAnyRiderContent = computed(() =>
+    hasRenderableStages.value || hasRiderMessage.value
 );
 
 const hasRedirect = computed(() =>
@@ -96,20 +125,22 @@ const fallbackTitle = computed(() => {
     <div class="min-h-screen bg-gradient-to-b from-primary/5 via-background to-background px-5 py-8">
         <Card class="mx-auto max-w-md border-0 bg-card/80 shadow-sm">
             <CardContent class="space-y-8 px-6 py-8">
-                <!-- Hero -->
                 <div class="space-y-4 pt-4 text-center">
                     <CheckCircle2
                         class="mx-auto h-16 w-16"
                         :class="isPending ? 'text-amber-500' : 'text-green-500'"
                     />
 
-                    <!-- Rider message owned by x-rider -->
+                    <RiderStageRenderer
+                        v-if="hasRenderableStages"
+                        :stages="riderStages"
+                    />
+
                     <RiderRenderer
-                        v-if="hasRiderMessage"
+                        v-else-if="hasRiderMessage"
                         :content="riderContent"
                     />
 
-                    <!-- No rider: amount is the hero -->
                     <template v-else>
                         <p v-if="hasNonZeroAmount" class="text-2xl font-bold tracking-tight text-foreground">
                             {{ formattedAmount }}
@@ -120,23 +151,20 @@ const fallbackTitle = computed(() => {
                         </p>
                     </template>
 
-                    <!-- Voucher code badge -->
                     <div
-                        v-if="!hasRiderMessage"
+                        v-if="!hasAnyRiderContent"
                         class="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-4 py-1 font-mono text-sm font-semibold tracking-widest text-primary"
                     >
                         {{ voucher.code }}
                     </div>
                 </div>
 
-                <!-- Redirect owned by x-rider -->
                 <RiderCountdown
                     v-if="hasRedirect"
                     :redirect="riderRedirect"
                     :redirect-endpoint="redirectEndpoint"
                 />
 
-                <!-- Default actions -->
                 <div v-else class="flex flex-col gap-3">
                     <Button class="w-full rounded-full" @click="router.visit('/x/claim')">
                         Claim Another
