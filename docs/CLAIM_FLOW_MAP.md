@@ -242,6 +242,35 @@ Pipeline stages (from `config/voucher-pipeline.php`):
 | 2 | ValidateRedemptionContract | Validates redemption rules (secret, mobile, etc.) |
 | 3 | DisburseCash | Calls payout gateway. On success: withdraws from wallet, stores metadata. On failure: records pending status, pipeline continues |
 
+### Payout OTP Authorization Gate
+
+Some payout providers require issuer-side authorization before money movement. This is not a form-flow OTP and is not collected from the claimant.
+
+Public term: **Payout OTP**
+
+Internal meaning:
+- claimant OTP = redemption evidence
+- payout OTP = issuer/provider authorization for cash-out
+
+When the selected payout provider requires a Payout OTP, claim execution pauses after claim confirmation and before final provider cash-out submission.
+
+Flow:
+
+1. Claimant completes form-flow.
+2. Claimant clicks "Confirm Redemption".
+3. x-change builds the claim payload.
+4. x-change reaches payout authorization.
+5. Provider or x-change requests Payout OTP.
+6. Claim is stored as pending approval.
+7. Issuer is notified to enter the OTP in the authenticated x-change issuer UI.
+8. Issuer submits OTP.
+9. x-change verifies/resolves OTP.
+10. x-change resumes claim execution.
+11. Payout is submitted to provider.
+12. Claim continues to success / rider redirect.
+
+The Payout OTP UI belongs to x-change, not form-flow, emi-core, or emi-paynamics.
+
 ### Disbursement Behavior
 
 **Design principle**: "Redemption is sacred" — bank/gateway failures do NOT revert the user's redemption.
@@ -250,6 +279,7 @@ Pipeline stages (from `config/voucher-pipeline.php`):
 |---------|-------------|---------------|
 | Gateway timeout/error | Caught by DisburseCash. Recorded as `pending`. Pipeline continues. | **Redeemed** (stands) |
 | EMI + PESONET mismatch | Exception thrown. Transaction rolls back. | **Unredeemed** (reverted) |
+| Payout OTP required | Claim pauses as `pending_approval` / `awaiting_payout_otp`; issuer must authorize in x-change UI | Pending until OTP is completed |
 | Missing contact/cash | Pipeline stops. No disbursement attempted. | **Redeemed** (stands) |
 
 Pending disbursements are resolved later via the reconciliation system (`x-change:reconcile-pending`).
