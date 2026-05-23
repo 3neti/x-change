@@ -128,9 +128,27 @@ const preClaimStagePresentation = computed(() => {
 
     return String(value).trim().toLowerCase();
 });
+//
+// const hasPreClaimContent = computed(() =>
+//     Boolean(preClaimStage.value && preClaimStagePresentation.value === 'inline')
+// );
+
+const preClaimVisualStages = computed<RawRiderStage[]>(() =>
+    riderStages.value.filter((stage) => {
+        const presentation = String(
+            stage.payload?.presentation
+            ?? stage.presentation
+            ?? 'inline'
+        ).trim().toLowerCase();
+
+        return stage.enabled !== false
+            && presentation === 'inline'
+            && ['splash', 'link'].includes(stage.type);
+    })
+);
 
 const hasPreClaimContent = computed(() =>
-    Boolean(preClaimStage.value && preClaimStagePresentation.value === 'inline')
+    preClaimVisualStages.value.length > 0
 );
 
 function submit() {
@@ -246,7 +264,13 @@ function submit() {
                 <!-- Rider pre-claim content from splash stage -->
                 <Card v-if="hasPreClaimContent" class="mb-4 border-primary/10 bg-primary/5">
                     <CardContent class="pt-4 pb-4">
-                        <RiderStagePresenter :stage="preClaimStage" />
+                        <div class="space-y-3">
+                            <RiderStagePresenter
+                                v-for="stage in preClaimVisualStages"
+                                :key="stage.key ?? `${stage.type}-${preClaimVisualStages.indexOf(stage)}`"
+                                :stage="stage"
+                            />
+                        </div>
                     </CardContent>
                 </Card>
 
