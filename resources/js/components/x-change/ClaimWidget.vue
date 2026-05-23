@@ -18,8 +18,8 @@ import { useVoucherPreview } from '@/composables/useVoucherPreview';
 import { initializeTheme } from '@/composables/useTheme';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import RiderRenderer from '@/components/x-rider/RiderRenderer.vue';
-import type { RiderContent, RawRiderStage } from '@/components/x-rider/types';
+import RiderStagePresenter from '@/components/x-rider/RiderStagePresenter.vue';
+import type { RawRiderStage } from '@/components/x-rider/types';
 
 initializeTheme();
 
@@ -99,52 +99,30 @@ const renderedSplash = computed(() => {
 });
 
 const riderStages = computed<RawRiderStage[]>(() => {
-    const stages = voucherData.value?.instructions?.rider?.stages;
+    const resolvedStages = voucherData.value?.rider?.stages?.stages;
 
-    return Array.isArray(stages) ? stages : [];
+    if (Array.isArray(resolvedStages)) {
+        return resolvedStages as RawRiderStage[];
+    }
+
+    const rawStages = voucherData.value?.instructions?.rider?.stages;
+
+    return Array.isArray(rawStages) ? rawStages : [];
 });
 
-const preClaimSplashStage = computed<RawRiderStage | null>(() => {
+const preClaimStage = computed<RawRiderStage | null>(() => {
     const stages = riderStages.value.filter((stage) =>
-        stage.type === 'splash' && stage.enabled !== false
+        stage.type === 'splash'
+        && stage.enabled !== false
     );
 
-    return stages.length > 0 ? stages[stages.length - 1] : null;
-});
-
-const preClaimContent = computed<RiderContent | null>(() => {
-    const resolved = voucherData.value?.rider?.preClaim;
-
-    if (resolved?.enabled && resolved.content) {
-        return resolved;
-    }
-
-    const stage = preClaimSplashStage.value;
-
-    if (!stage) {
-        return null;
-    }
-
-    const content = (stage.payload?.content ?? stage.content) as string | null | undefined;
-
-    if (!content) {
-        return null;
-    }
-
-    return {
-        enabled: true,
-        type: ((stage.payload?.content_type ?? stage.content_type) as string | undefined) ?? 'markdown',
-        content,
-        meta: {
-            source: 'stage',
-            stage_key: stage.key,
-            timeout: stage.payload?.timeout ?? stage.timeout,
-        },
-    };
+    return stages.length > 0
+        ? stages[stages.length - 1]
+        : null;
 });
 
 const hasPreClaimContent = computed(() =>
-    Boolean(preClaimContent.value?.enabled && preClaimContent.value?.content)
+    Boolean(preClaimStage.value)
 );
 
 function submit() {
@@ -260,7 +238,7 @@ function submit() {
                 <!-- Rider pre-claim content from splash stage -->
                 <Card v-if="hasPreClaimContent" class="mb-4 border-primary/10 bg-primary/5">
                     <CardContent class="pt-4 pb-4">
-                        <RiderRenderer :content="preClaimContent" />
+                        <RiderStagePresenter :stage="preClaimStage" />
                     </CardContent>
                 </Card>
 
