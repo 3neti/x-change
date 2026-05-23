@@ -128,10 +128,6 @@ const preClaimStagePresentation = computed(() => {
 
     return String(value).trim().toLowerCase();
 });
-//
-// const hasPreClaimContent = computed(() =>
-//     Boolean(preClaimStage.value && preClaimStagePresentation.value === 'inline')
-// );
 
 const preClaimVisualStages = computed<RawRiderStage[]>(() =>
     riderStages.value.filter((stage) => {
@@ -143,7 +139,7 @@ const preClaimVisualStages = computed<RawRiderStage[]>(() =>
 
         return stage.enabled !== false
             && presentation === 'inline'
-            && ['splash', 'link'].includes(stage.type);
+            && ['splash', 'image', 'link'].includes(stage.type);
     })
 );
 
