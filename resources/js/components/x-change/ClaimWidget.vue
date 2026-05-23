@@ -121,8 +121,16 @@ const preClaimStage = computed<RawRiderStage | null>(() => {
         : null;
 });
 
+const preClaimStagePresentation = computed(() => {
+    const value = preClaimStage.value?.payload?.presentation
+        ?? preClaimStage.value?.presentation
+        ?? 'inline';
+
+    return String(value).trim().toLowerCase();
+});
+
 const hasPreClaimContent = computed(() =>
-    Boolean(preClaimStage.value)
+    Boolean(preClaimStage.value && preClaimStagePresentation.value === 'inline')
 );
 
 function submit() {
