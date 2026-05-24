@@ -21,6 +21,7 @@ import DOMPurify from 'dompurify';
 import RiderStagePresenter from '@/components/x-rider/RiderStagePresenter.vue';
 import type { RawRiderStage } from '@/components/x-rider/types';
 import RiderModalRuntime from '@/components/x-rider/RiderModalRuntime.vue';
+import RiderFullscreenRuntime from '@/components/x-rider/RiderFullscreenRuntime.vue';
 
 initializeTheme();
 
@@ -170,6 +171,20 @@ const modalStages = computed<RawRiderStage[]>(() =>
 
         return stage.enabled !== false
             && presentation === 'modal'
+            && ['splash', 'message', 'image', 'link'].includes(stage.type);
+    })
+);
+
+const fullscreenStages = computed<RawRiderStage[]>(() =>
+    riderStages.value.filter((stage) => {
+        const presentation = String(
+            stage.payload?.presentation
+            ?? stage.presentation
+            ?? 'inline'
+        ).trim().toLowerCase();
+
+        return stage.enabled !== false
+            && presentation === 'fullscreen'
             && ['splash', 'message', 'image', 'link'].includes(stage.type);
     })
 );
@@ -326,6 +341,12 @@ const modalStages = computed<RawRiderStage[]>(() =>
         <RiderModalRuntime
             v-if="modalStages.length > 0"
             :stages="modalStages"
+        />
+
+        <!-- Full Screen -->
+        <RiderFullscreenRuntime
+            v-if="fullscreenStages.length > 0"
+            :stages="fullscreenStages"
         />
     </div>
 </template>
