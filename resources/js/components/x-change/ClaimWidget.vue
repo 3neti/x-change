@@ -20,6 +20,7 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import RiderStagePresenter from '@/components/x-rider/RiderStagePresenter.vue';
 import type { RawRiderStage } from '@/components/x-rider/types';
+import RiderModalRuntime from '@/components/x-rider/RiderModalRuntime.vue';
 
 initializeTheme();
 
@@ -158,6 +159,20 @@ function submit() {
         preserveScroll: true,
     });
 }
+
+const modalStages = computed<RawRiderStage[]>(() =>
+    riderStages.value.filter((stage) => {
+        const presentation = String(
+            stage.payload?.presentation
+            ?? stage.presentation
+            ?? 'inline'
+        ).trim().toLowerCase();
+
+        return stage.enabled !== false
+            && presentation === 'modal'
+            && ['splash', 'message', 'image', 'link'].includes(stage.type);
+    })
+);
 </script>
 
 <template>
@@ -306,5 +321,11 @@ function submit() {
                 </Tabs>
             </div>
         </div>
+
+        <!-- Modal -->
+        <RiderModalRuntime
+            v-if="modalStages.length > 0"
+            :stages="modalStages"
+        />
     </div>
 </template>
