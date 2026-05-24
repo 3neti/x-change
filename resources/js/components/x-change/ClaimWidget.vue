@@ -20,8 +20,7 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import RiderStagePresenter from '@/components/x-rider/RiderStagePresenter.vue';
 import type { RawRiderStage } from '@/components/x-rider/types';
-import RiderModalRuntime from '@/components/x-rider/RiderModalRuntime.vue';
-import RiderFullscreenRuntime from '@/components/x-rider/RiderFullscreenRuntime.vue';
+import RiderRuntimeSequencer from '@/components/x-rider/RiderRuntimeSequencer.vue';
 
 initializeTheme();
 
@@ -161,7 +160,7 @@ function submit() {
     });
 }
 
-const modalStages = computed<RawRiderStage[]>(() =>
+const runtimeStages = computed<RawRiderStage[]>(() =>
     riderStages.value.filter((stage) => {
         const presentation = String(
             stage.payload?.presentation
@@ -170,21 +169,7 @@ const modalStages = computed<RawRiderStage[]>(() =>
         ).trim().toLowerCase();
 
         return stage.enabled !== false
-            && presentation === 'modal'
-            && ['splash', 'message', 'image', 'link'].includes(stage.type);
-    })
-);
-
-const fullscreenStages = computed<RawRiderStage[]>(() =>
-    riderStages.value.filter((stage) => {
-        const presentation = String(
-            stage.payload?.presentation
-            ?? stage.presentation
-            ?? 'inline'
-        ).trim().toLowerCase();
-
-        return stage.enabled !== false
-            && presentation === 'fullscreen'
+            && ['modal', 'fullscreen'].includes(presentation)
             && ['splash', 'message', 'image', 'link'].includes(stage.type);
     })
 );
@@ -337,16 +322,10 @@ const fullscreenStages = computed<RawRiderStage[]>(() =>
             </div>
         </div>
 
-        <!-- Modal -->
-        <RiderModalRuntime
-            v-if="modalStages.length > 0"
-            :stages="modalStages"
-        />
-
-        <!-- Full Screen -->
-        <RiderFullscreenRuntime
-            v-if="fullscreenStages.length > 0"
-            :stages="fullscreenStages"
+        <!-- Runtime Sequencer -->
+        <RiderRuntimeSequencer
+            v-if="runtimeStages.length > 0"
+            :stages="runtimeStages"
         />
     </div>
 </template>
