@@ -19,8 +19,8 @@ import { initializeTheme } from '@/composables/useTheme';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import RiderStagePresenter from '@/components/x-rider/RiderStagePresenter.vue';
-import type { RawRiderStage } from '@/components/x-rider/types';
 import RiderRuntimeSequencer from '@/components/x-rider/RiderRuntimeSequencer.vue';
+import type { RawRiderStage } from '@/components/x-rider/types';
 
 initializeTheme();
 
@@ -102,32 +102,13 @@ const renderedSplash = computed(() => {
 const riderStages = computed<RawRiderStage[]>(() => {
     const resolvedStages = voucherData.value?.rider?.stages?.stages;
 
-    if (Array.isArray(resolvedStages)) {
+    if (Array.isArray(resolvedStages) && resolvedStages.length > 0) {
         return resolvedStages as RawRiderStage[];
     }
 
     const rawStages = voucherData.value?.instructions?.rider?.stages;
 
     return Array.isArray(rawStages) ? rawStages : [];
-});
-
-const preClaimStage = computed<RawRiderStage | null>(() => {
-    const stages = riderStages.value.filter((stage) =>
-        stage.type === 'splash'
-        && stage.enabled !== false
-    );
-
-    return stages.length > 0
-        ? stages[stages.length - 1]
-        : null;
-});
-
-const preClaimStagePresentation = computed(() => {
-    const value = preClaimStage.value?.payload?.presentation
-        ?? preClaimStage.value?.presentation
-        ?? 'inline';
-
-    return String(value).trim().toLowerCase();
 });
 
 const preClaimVisualStages = computed<RawRiderStage[]>(() =>
@@ -140,7 +121,7 @@ const preClaimVisualStages = computed<RawRiderStage[]>(() =>
 
         return stage.enabled !== false
             && presentation === 'inline'
-            && ['splash', 'image', 'link'].includes(stage.type);
+            && ['splash', 'image', 'link', 'cta'].includes(stage.type);
     })
 );
 
@@ -170,7 +151,7 @@ const runtimeStages = computed<RawRiderStage[]>(() =>
 
         return stage.enabled !== false
             && ['modal', 'fullscreen'].includes(presentation)
-            && ['splash', 'message', 'image', 'link'].includes(stage.type);
+            && ['splash', 'message', 'image', 'link', 'cta'].includes(stage.type);
     })
 );
 </script>
