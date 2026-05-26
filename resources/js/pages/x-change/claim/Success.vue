@@ -7,12 +7,12 @@ import { CheckCircle2 } from 'lucide-vue-next';
 import { useXChangeRoutes } from '@/composables/useXChangeRoutes';
 import RiderRenderer from '@/components/x-rider/RiderRenderer.vue';
 import RiderCountdown from '@/components/x-rider/RiderCountdown.vue';
-import RiderStageRenderer from '@/components/x-rider/RiderStageRenderer.vue';
+import RiderStagePresenter from '@/components/x-rider/RiderStagePresenter.vue';
+import RiderRuntimeSequencer from '@/components/x-rider/RiderRuntimeSequencer.vue';
+import type { RawRiderStage } from '@/components/x-rider/types';
+import { stageIsInPhase } from '@/components/x-rider/useRiderStagePhase';
+
 import type {
-    RiderContent,
-    RiderRedirect,
-    RiderStage,
-    RiderStageCollection,
     RiderExperience,
 } from '@/components/x-rider/types';
 
@@ -40,14 +40,37 @@ const props = defineProps<Props>();
 const riderContent = computed(() => props.rider?.success ?? null);
 const riderRedirect = computed(() => props.rider?.redirect ?? null);
 
-const riderStages = computed(() =>
-    props.rider?.stages?.stages ?? []
+const riderStages = computed<RawRiderStage[]>(() => {
+    const stages = props.rider?.stages?.stages;
+
+    return Array.isArray(stages)
+        ? stages as RawRiderStage[]
+        : [];
+});
+
+const successVisualStages = computed<RawRiderStage[]>(() =>
+    riderStages.value.filter((stage) =>
+            stage.enabled !== false
+            && (
+                stageIsInPhase(stage, 'success')
+                || stageIsInPhase(stage, 'post_claim')
+            )
+    )
 );
 
-const hasRenderableStages = computed(() =>
-    riderStages.value.some((stage) =>
-        stage.enabled && ['message', 'splash', 'link'].includes(stage.type)
+const redirectRuntimeStages = computed<RawRiderStage[]>(() =>
+    riderStages.value.filter((stage) =>
+        stage.enabled !== false
+        && stageIsInPhase(stage, 'redirect')
     )
+);
+
+const hasSuccessVisualStages = computed(() =>
+    successVisualStages.value.length > 0
+);
+
+const hasRedirectRuntimeStages = computed(() =>
+    redirectRuntimeStages.value.length > 0
 );
 
 const hasRiderMessage = computed(() =>
@@ -55,7 +78,7 @@ const hasRiderMessage = computed(() =>
 );
 
 const hasAnyRiderContent = computed(() =>
-    hasRenderableStages.value || hasRiderMessage.value
+    hasSuccessVisualStages.value || hasRiderMessage.value
 );
 
 const hasRedirect = computed(() =>
@@ -100,10 +123,16 @@ const fallbackTitle = computed(() => {
                         :class="isPending ? 'text-amber-500' : 'text-green-500'"
                     />
 
-                    <RiderStageRenderer
-                        v-if="hasRenderableStages"
-                        :stages="riderStages"
-                    />
+                    <div
+                        v-if="hasSuccessVisualStages"
+                        class="space-y-3"
+                    >
+                        <RiderStagePresenter
+                            v-for="stage in successVisualStages"
+                            :key="stage.key ?? `${stage.type}-${successVisualStages.indexOf(stage)}`"
+                            :stage="stage"
+                        />
+                    </div>
 
                     <RiderRenderer
                         v-else-if="hasRiderMessage"
@@ -128,8 +157,13 @@ const fallbackTitle = computed(() => {
                     </div>
                 </div>
 
+                <RiderRuntimeSequencer
+                    v-if="hasRedirectRuntimeStages"
+                    :stages="redirectRuntimeStages"
+                />
+
                 <RiderCountdown
-                    v-if="hasRedirect"
+                    v-else-if="hasRedirect"
                     :redirect="riderRedirect"
                     :redirect-endpoint="redirectEndpoint"
                 />

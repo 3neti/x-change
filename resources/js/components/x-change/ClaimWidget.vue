@@ -16,8 +16,6 @@ import VoucherStatusStamp from '@/components/x-change/VoucherStatusStamp.vue';
 import { AlertCircle } from 'lucide-vue-next';
 import { useVoucherPreview } from '@/composables/useVoucherPreview';
 import { initializeTheme } from '@/composables/useTheme';
-import { marked } from 'marked';
-import DOMPurify from 'dompurify';
 import RiderStagePresenter from '@/components/x-rider/RiderStagePresenter.vue';
 import RiderRuntimeSequencer from '@/components/x-rider/RiderRuntimeSequencer.vue';
 import type { RawRiderStage } from '@/components/x-rider/types';
@@ -83,18 +81,6 @@ const isReturningRedeemer = computed(() => {
     } catch {
         return false;
     }
-});
-
-const renderedSplash = computed(() => {
-    const splash = voucherData.value?.instructions?.rider?.splash;
-    if (!splash) return null;
-    if (splash.trim().startsWith('<svg') || splash.trim().startsWith('<SVG')) {
-        return DOMPurify.sanitize(splash);
-    }
-    if (splash.trim().startsWith('<')) {
-        return DOMPurify.sanitize(splash);
-    }
-    return DOMPurify.sanitize(marked.parse(splash) as string);
 });
 
 const riderStages = computed<RawRiderStage[]>(() => {
@@ -223,17 +209,6 @@ const runtimeStages = computed<RawRiderStage[]>(() =>
                             </p>
                         </CardContent>
                     </Card>
-
-                    <!-- Rider Splash -->
-                    <Card v-if="renderedSplash">
-                        <CardContent class="pt-3 pb-3">
-                            <div
-                                v-html="renderedSplash"
-                                class="prose prose-sm max-w-none dark:prose-invert"
-                            />
-                        </CardContent>
-                    </Card>
-
                 </template>
             </div>
 
