@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { useForm, usePage, router } from '@inertiajs/vue3';
+import { useForm, usePage } from '@inertiajs/vue3';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Spinner } from '@/components/ui/spinner';
 import InputError from '@/components/InputError.vue';
@@ -21,6 +21,7 @@ import DOMPurify from 'dompurify';
 import RiderStagePresenter from '@/components/x-rider/RiderStagePresenter.vue';
 import RiderRuntimeSequencer from '@/components/x-rider/RiderRuntimeSequencer.vue';
 import type { RawRiderStage } from '@/components/x-rider/types';
+import { stageIsInPhase } from '@/components/x-rider/useRiderStagePhase';
 
 initializeTheme();
 
@@ -31,7 +32,6 @@ interface Props {
 const props = defineProps<Props>();
 
 const page = usePage();
-const appName = (page.props as any).xchange?.branding?.name || (page.props.name as string) || 'X-Change';
 const errors = computed(() => page.props.errors as Record<string, string>);
 
 const form = useForm({
@@ -43,9 +43,7 @@ const {
     loading,
     error,
     voucherData,
-    showPreview,
-    reset: resetPreview,
-    hidePreview,
+    showPreview
 } = useVoucherPreview({ debounceMs: 500, minCodeLength: 4 });
 
 if (props.initialCode) {
@@ -112,17 +110,11 @@ const riderStages = computed<RawRiderStage[]>(() => {
 });
 
 const preClaimVisualStages = computed<RawRiderStage[]>(() =>
-    riderStages.value.filter((stage) => {
-        const presentation = String(
-            stage.payload?.presentation
-            ?? stage.presentation
-            ?? 'inline'
-        ).trim().toLowerCase();
-
-        return stage.enabled !== false
-            && presentation === 'inline'
-            && ['splash', 'image', 'link', 'cta'].includes(stage.type);
-    })
+    riderStages.value.filter((stage) =>
+        stage.enabled !== false
+        && stageIsInPhase(stage, 'pre_claim')
+        && ['splash', 'image', 'link', 'cta'].includes(stage.type)
+    )
 );
 
 const hasPreClaimContent = computed(() =>
@@ -142,17 +134,11 @@ function submit() {
 }
 
 const runtimeStages = computed<RawRiderStage[]>(() =>
-    riderStages.value.filter((stage) => {
-        const presentation = String(
-            stage.payload?.presentation
-            ?? stage.presentation
-            ?? 'inline'
-        ).trim().toLowerCase();
-
-        return stage.enabled !== false
-            && ['modal', 'fullscreen'].includes(presentation)
-            && ['splash', 'message', 'image', 'link', 'cta', 'redirect'].includes(stage.type);
-    })
+    riderStages.value.filter((stage) =>
+        stage.enabled !== false
+        && stageIsInPhase(stage, 'runtime')
+        && ['splash', 'message', 'image', 'link', 'cta'].includes(stage.type)
+    )
 );
 </script>
 

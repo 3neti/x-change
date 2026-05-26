@@ -347,6 +347,16 @@ Contains:
 
 ---
 
+## Stage Phase Filtering
+
+The claim preview renders only `pre_claim` stages.
+
+Runtime sequencing receives only `runtime` and `redirect` stages.
+
+Success pages should not render pre-claim stages.
+
+---
+
 # Why RiderExperienceData Exists
 
 A major architectural principle is:
