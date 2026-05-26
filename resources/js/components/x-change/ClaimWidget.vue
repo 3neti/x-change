@@ -151,11 +151,24 @@ const riderStages = computed<RawRiderStage[]>(() => {
     const resolved = extractStages(data.rider?.stages);
     const raw = extractStages(data.instructions?.rider?.stages);
 
-    const stages = resolved.length > 0
-        ? resolved.map((stage) => mergeStageWithRaw(stage, raw))
-        : raw;
+    const mergedResolved = resolved.map((stage) =>
+        mergeStageWithRaw(stage, raw)
+    );
 
-    return uniqueStages(stages);
+    const missingRaw = raw.filter((rawStage, index) => {
+        const rawKey = rawStage.key ?? `${rawStage.type}-${index}`;
+
+        return !mergedResolved.some((stage, stageIndex) => {
+            const key = stage.key ?? `${stage.type}-${stageIndex}`;
+
+            return key === rawKey;
+        });
+    });
+
+    return uniqueStages([
+        ...mergedResolved,
+        ...missingRaw,
+    ]);
 });
 
 function isVisualPreviewStage(stage: RawRiderStage): boolean {
