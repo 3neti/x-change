@@ -16,7 +16,6 @@ import VoucherStatusStamp from '@/components/x-change/VoucherStatusStamp.vue';
 import { AlertCircle } from 'lucide-vue-next';
 import { useVoucherPreview } from '@/composables/useVoucherPreview';
 import { initializeTheme } from '@/composables/useTheme';
-import RiderStagePresenter from '@/components/x-rider/RiderStagePresenter.vue';
 import RiderRuntimeSequencer from '@/components/x-rider/RiderRuntimeSequencer.vue';
 import type { RawRiderStage } from '@/components/x-rider/types';
 import { stageIsInPhase } from '@/components/x-rider/useRiderStagePhase';
@@ -83,23 +82,95 @@ const isReturningRedeemer = computed(() => {
     }
 });
 
-const riderStages = computed<RawRiderStage[]>(() => {
-    const resolvedStages = voucherData.value?.rider?.stages?.stages;
-
-    if (Array.isArray(resolvedStages) && resolvedStages.length > 0) {
-        return resolvedStages as RawRiderStage[];
+function extractStages(value: unknown): RawRiderStage[] {
+    if (Array.isArray(value)) {
+        return value as RawRiderStage[];
     }
 
-    const rawStages = voucherData.value?.instructions?.rider?.stages;
+    if (
+        value
+        && typeof value === 'object'
+        && Array.isArray((value as { stages?: unknown }).stages)
+    ) {
+        return (value as { stages: RawRiderStage[] }).stages;
+    }
 
-    return Array.isArray(rawStages) ? rawStages : [];
+    return [];
+}
+
+function mergeStageWithRaw(
+    stage: RawRiderStage,
+    rawStages: RawRiderStage[]
+): RawRiderStage {
+    if (!stage.key) {
+        return stage;
+    }
+
+    const raw = rawStages.find((candidate) => candidate.key === stage.key);
+
+    if (!raw) {
+        return stage;
+    }
+
+    return {
+        ...raw,
+        ...stage,
+        payload: {
+            ...(raw.payload ?? {}),
+            ...(stage.payload ?? {}),
+        },
+        phase: stage.phase ?? raw.phase,
+        presentation: stage.presentation ?? raw.presentation,
+        content: stage.content ?? raw.content,
+        content_type: stage.content_type ?? raw.content_type,
+    };
+}
+
+function uniqueStages(stages: RawRiderStage[]): RawRiderStage[] {
+    const seen = new Set<string>();
+
+    return stages.filter((stage, index) => {
+        const key = stage.key ?? `${stage.type}-${index}`;
+
+        if (seen.has(key)) {
+            return false;
+        }
+
+        seen.add(key);
+        return true;
+    });
+}
+
+const riderStages = computed<RawRiderStage[]>(() => {
+    const data = voucherData.value as Record<string, any> | null | undefined;
+
+    if (!data) {
+        return [];
+    }
+
+    const resolved = extractStages(data.rider?.stages);
+    const raw = extractStages(data.instructions?.rider?.stages);
+
+    const stages = resolved.length > 0
+        ? resolved.map((stage) => mergeStageWithRaw(stage, raw))
+        : raw;
+
+    return uniqueStages(stages);
 });
+
+function isVisualPreviewStage(stage: RawRiderStage): boolean {
+    return ['splash', 'message', 'image', 'link', 'cta'].indexOf(stage.type) >= 0;
+}
+
+function isPreClaimStage(stage: RawRiderStage): boolean {
+    return stageIsInPhase(stage, 'pre_claim');
+}
 
 const preClaimVisualStages = computed<RawRiderStage[]>(() =>
     riderStages.value.filter((stage) =>
         stage.enabled !== false
-        && stageIsInPhase(stage, 'pre_claim')
-        && ['splash', 'image', 'link', 'cta'].includes(stage.type)
+        && isPreClaimStage(stage)
+        && isVisualPreviewStage(stage)
     )
 );
 
@@ -123,7 +194,7 @@ const runtimeStages = computed<RawRiderStage[]>(() =>
     riderStages.value.filter((stage) =>
         stage.enabled !== false
         && stageIsInPhase(stage, 'runtime')
-        && ['splash', 'message', 'image', 'link', 'cta'].includes(stage.type)
+        && isVisualPreviewStage(stage)
     )
 );
 </script>
@@ -217,13 +288,7 @@ const runtimeStages = computed<RawRiderStage[]>(() =>
                 <!-- Rider pre-claim content from splash stage -->
                 <Card v-if="hasPreClaimContent" class="mb-4 border-primary/10 bg-primary/5">
                     <CardContent class="pt-4 pb-4">
-                        <div class="space-y-3">
-                            <RiderStagePresenter
-                                v-for="stage in preClaimVisualStages"
-                                :key="stage.key ?? `${stage.type}-${preClaimVisualStages.indexOf(stage)}`"
-                                :stage="stage"
-                            />
-                        </div>
+                        <RiderRuntimeSequencer :stages="preClaimVisualStages" />
                     </CardContent>
                 </Card>
 

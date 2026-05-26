@@ -160,6 +160,7 @@ const fallbackTitle = computed(() => {
                 <RiderRuntimeSequencer
                     v-if="hasRedirectRuntimeStages"
                     :stages="redirectRuntimeStages"
+                    :redirect-endpoint="redirectEndpoint"
                 />
 
                 <RiderCountdown
