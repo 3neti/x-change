@@ -1,4 +1,4 @@
-# Preview Runtime
+# Rider Runtime Protocol
 ## Voucher Preview Projection Architecture
 
 ---
@@ -19,7 +19,7 @@ It explains:
 This document should be treated as the authoritative reference for:
 
 ```text id="fw5khn"
-voucher preview runtime behavior
+Rider runtime protocol behavior
 ```
 
 throughout the ecosystem.
@@ -176,6 +176,8 @@ Responsible for:
 - layout
 - interaction
 - presentation mode handling
+- runtime sequencing
+- runtime action execution
 
 ---
 
@@ -209,6 +211,8 @@ Example:
 
 ```php id="v5isf9"
 new RiderExperienceData(
+    state: ...,
+    subject: ...,
     preClaim: ...,
     success: ...,
     redirect: ...,
@@ -349,11 +353,82 @@ Contains:
 
 ## Stage Phase Filtering
 
-The claim preview renders only `pre_claim` stages.
+The runtime lifecycle is now formally isolated.
 
-Runtime sequencing receives only `runtime` and `redirect` stages.
+Canonical runtime flow:
 
-Success pages should not render pre-claim stages.
+```text
+pre_claim
+    ↓
+runtime
+    ↓
+form-flow
+    ↓
+success
+    ↓
+post_claim
+    ↓
+redirect
+```
+
+---
+
+## Claim Preview Runtime
+
+Claim preview surfaces (for example `ClaimWidget.vue`) render only:
+
+| Allowed phases |
+|---|
+| `pre_claim` |
+| `runtime` |
+
+Claim preview MUST NOT:
+
+- execute redirect runtime
+- render success stages
+- render post-claim stages
+
+This prevents redirect leakage before redemption.
+
+---
+
+## Success Runtime
+
+Success surfaces (for example `Success.vue`) render only:
+
+| Allowed phases |
+|---|
+| `success` |
+| `post_claim` |
+| `redirect` |
+
+Success surfaces MUST NOT:
+
+- render pre-claim stages
+- replay onboarding runtime
+- replay pre-redemption splash content
+
+This preserves lifecycle separation.
+
+---
+
+## Runtime Ownership
+
+x-change owns:
+
+- lifecycle orchestration
+- phase projection
+- payload transport
+
+x-rider owns:
+
+- runtime semantics
+- stage meaning
+- runtime action execution
+- modal/fullscreen sequencing
+- redirect runtime behavior
+
+This separation is intentional.
 
 ---
 
@@ -495,40 +570,57 @@ which currently renders:
 
 # Current Rendering Strategy
 
-Currently:
-
-| Surface | Rendering |
-|---|---|
-| preClaim | inline card |
-| link stages | inline CTA |
-| image stages | inline media |
-| message stages | informational content |
+Current runtime rendering is phase-aware and presentation-aware.
 
 ---
 
-# Presentation Modes
+## Inline Rendering
+
+| Stage Type | Rendering |
+|---|---|
+| splash | inline content |
+| message | informational content |
+| image | inline media |
+| link | inline CTA |
+| cta | runtime-aware CTA |
+
+---
+
+## Presentation Modes
 
 Stages may declare:
 
-```yaml id="c8x95m"
+```yaml
 presentation:
 ```
 
 Examples:
 
-```yaml id="5y36g8"
+```yaml
 presentation: inline
 presentation: modal
 presentation: fullscreen
 ```
 
-Currently:
+---
 
-| Mode | Current State |
+## Current Runtime Support
+
+| Mode | State |
 |---|---|
 | inline | fully implemented |
-| modal | planned |
-| fullscreen | partially simulated |
+| modal | implemented |
+| fullscreen | implemented |
+
+Blocking presentations are sequenced one at a time.
+
+Example:
+
+```text
+modal → dismiss → fullscreen → dismiss
+```
+
+This sequencing is owned by the x-rider runtime sequencer.
 
 ---
 
@@ -548,18 +640,86 @@ where:
 
 ---
 
+# Runtime Actions
+
+As of Phase 7, stages may declare runtime actions.
+
+Examples:
+
+- `redirect`
+- `open_url`
+- `copy_to_clipboard`
+- `track_event`
+- `delay`
+- `show_stage`
+- `close`
+
+---
+
+## Runtime Action Principle
+
+Stages describe:
+
+```text
+what the user sees
+```
+
+Runtime actions describe:
+
+```text
+what the runtime does
+```
+
+This distinction is important.
+
+---
+
+## Example CTA Runtime
+
+```yaml
+- type: cta
+  key: reward-cta
+  phase: pre_claim
+  presentation: inline
+  payload:
+    label: Open Reward
+    url: https://example.com/reward
+
+  actions:
+    - type: open_url
+      timing: on_click
+      requires_user_gesture: true
+      payload:
+        url: https://example.com/reward
+        target: _blank
+```
+
+---
+
+## Redirect Runtime
+
+Legacy redirect stages remain compatible.
+
+Redirect execution is now runtime-driven where possible.
+
+Redirect countdown behavior belongs to the runtime sequencer.
+
+Claim preview must never execute redirect runtime.
+
+---
+
 # Planned Future Runtime Features
 
 Examples:
 
-- modal runtime
-- fullscreen runtime
-- stage sequencing
-- transition orchestration
-- sponsor campaigns
-- kiosk rendering
-- mobile-native rendering
-- immersive Rider experiences
+- runtime analytics transport
+- sponsor runtime campaigns
+- kiosk runtime rendering
+- mobile-native runtime
+- immersive Rider runtime experiences
+- runtime persistence
+- multi-client runtime orchestration
+- runtime replay
 
 without changing backend contracts.
 
@@ -575,6 +735,28 @@ Frontend runtimes SHOULD:
 - support accessibility
 - gracefully handle unknown stages
 - gracefully handle missing payloads
+- prevent unsafe runtime execution
+- isolate runtime failures from redemption flow
+
+---
+
+## Runtime Safety
+
+Runtime actions must never affect:
+
+- claim correctness
+- voucher redemption
+- payout execution
+- settlement
+- ledger state
+
+Runtime failures should degrade gracefully into:
+
+```text
+presentation failure
+```
+
+—not redemption failure.
 
 ---
 
@@ -622,6 +804,27 @@ Frontend runtimes SHOULD:
 | rendering semantics | x-rider |
 | visual rendering | frontend runtime |
 | future inspection runtime | x-ray |
+
+---
+
+# Lifecycle Isolation Tests
+
+Phase 7 introduced formal lifecycle isolation tests.
+
+These tests verify:
+
+| Surface | Allowed Phases |
+|---|---|
+| Claim Preview | `pre_claim`, `runtime` |
+| Success Runtime | `success`, `post_claim`, `redirect` |
+
+The tests intentionally prove:
+
+- redirect stages cannot leak into preview runtime
+- pre-claim stages cannot leak into success runtime
+- runtime semantics remain lifecycle-isolated
+
+This converts lifecycle semantics from convention into executable protocol behavior.
 
 ---
 

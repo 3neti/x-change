@@ -23,22 +23,21 @@ class RiderLifecyclePhasePolicy
     }
 
     /**
-     * @param array<int, RiderStageData> $stages
-     * @param array<int, string> $allowedPhases
+     * @param  array<int, RiderStageData>  $stages
+     * @param  array<int, string>  $allowedPhases
      * @return array<int, RiderStageData>
      */
     public static function stagesInPhases(array $stages, array $allowedPhases): array
     {
         return collect($stages)
-            ->filter(fn (RiderStageData $stage): bool =>
-            in_array(self::phaseOf($stage), $allowedPhases, true)
+            ->filter(fn (RiderStageData $stage): bool => in_array(self::phaseOf($stage), $allowedPhases, true)
             )
             ->values()
             ->all();
     }
 
     /**
-     * @param array<int, RiderStageData> $stages
+     * @param  array<int, RiderStageData>  $stages
      * @return array<int, RiderStageData>
      */
     public static function claimPreviewStages(array $stages): array
@@ -47,7 +46,7 @@ class RiderLifecyclePhasePolicy
     }
 
     /**
-     * @param array<int, RiderStageData> $stages
+     * @param  array<int, RiderStageData>  $stages
      * @return array<int, RiderStageData>
      */
     public static function successStages(array $stages): array
@@ -56,7 +55,7 @@ class RiderLifecyclePhasePolicy
     }
 
     /**
-     * @param array<int, RiderStageData> $stages
+     * @param  array<int, RiderStageData>  $stages
      * @return array<int, string|null>
      */
     public static function keys(array $stages): array
