@@ -300,3 +300,48 @@ it('returns voucher preview even without rider instructions', function (): void 
         ->assertJsonPath('data.voucher.code', 'TEST-NO-RIDER')
         ->assertJsonPath('data.voucher.instructions.cash.amount', 100);
 });
+
+it('preserves sanitized rider splash metadata in voucher preview instructions', function (): void {
+    $result = (object) [
+        'id' => 1,
+        'voucher_id' => 99,
+        'code' => 'TEST-SANITIZED-SPLASH',
+        'amount' => 100.00,
+        'currency' => 'PHP',
+        'status' => 'issued',
+        'issuer_id' => 1,
+        'claimed' => false,
+        'fully_claimed' => false,
+        'instructions' => [
+            'cash' => [
+                'amount' => 100,
+                'currency' => 'PHP',
+            ],
+            'rider' => [
+                'splash' => '<div class="text-center"><strong>Hello</strong></div>',
+                'splash_timeout' => 3,
+                'splash_meta' => [
+                    'sanitized' => true,
+                    'html_profile' => 'rider_splash',
+                ],
+            ],
+        ],
+    ];
+
+    $service = Mockery::mock(VoucherLifecycleServiceContract::class);
+    $service->shouldReceive('showByCode')
+        ->once()
+        ->with('TEST-SANITIZED-SPLASH')
+        ->andReturn($result);
+
+    $this->app->instance(VoucherLifecycleServiceContract::class, $service);
+
+    $response = $this->getJson(xchangeApi('vouchers/code/TEST-SANITIZED-SPLASH'));
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('data.voucher.instructions.rider.splash', '<div class="text-center"><strong>Hello</strong></div>')
+        ->assertJsonPath('data.voucher.instructions.rider.splash_timeout', 3)
+        ->assertJsonPath('data.voucher.instructions.rider.splash_meta.sanitized', true)
+        ->assertJsonPath('data.voucher.instructions.rider.splash_meta.html_profile', 'rider_splash');
+});
