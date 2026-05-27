@@ -1,23 +1,9 @@
 <?php
 
+use LBHurtado\XChange\Tests\Support\Rider\RiderLifecyclePhasePolicy;
 use LBHurtado\XRider\Data\RiderExperienceData;
 use LBHurtado\XRider\Data\RiderStageCollectionData;
-use LBHurtado\XRider\Data\RiderStageData;
 use LBHurtado\XRider\Data\RiderSubjectData;
-
-function stagePhase(RiderStageData $stage): ?string
-{
-    return $stage->phase ?? $stage->payload['phase'] ?? null;
-}
-
-function stageKeysForPhases(RiderExperienceData $experience, array $allowedPhases): array
-{
-    return collect($experience->stages?->stages ?? [])
-        ->filter(fn (RiderStageData $stage) => in_array(stagePhase($stage), $allowedPhases, true))
-        ->map(fn (RiderStageData $stage) => $stage->key)
-        ->values()
-        ->all();
-}
 
 function riderExperienceWithStages(array $stages): RiderExperienceData
 {
@@ -28,6 +14,20 @@ function riderExperienceWithStages(array $stages): RiderExperienceData
             id: 'TEST123',
         ),
         stages: RiderStageCollectionData::fromArray($stages),
+    );
+}
+
+function riderStageKeysForClaimPreview(RiderExperienceData $experience): array
+{
+    return RiderLifecyclePhasePolicy::keys(
+        RiderLifecyclePhasePolicy::claimPreviewStages($experience->stages?->stages ?? [])
+    );
+}
+
+function riderStageKeysForSuccess(RiderExperienceData $experience): array
+{
+    return RiderLifecyclePhasePolicy::keys(
+        RiderLifecyclePhasePolicy::successStages($experience->stages?->stages ?? [])
     );
 }
 
@@ -62,7 +62,7 @@ it('allows claim preview to project pre claim and runtime stages only', function
         ],
     ]);
 
-    expect(stageKeysForPhases($experience, ['pre_claim', 'runtime']))
+    expect(riderStageKeysForClaimPreview($experience))
         ->toBe([
             'pre-claim-message',
             'runtime-message',
@@ -98,10 +98,9 @@ it('allows success page to project success post claim and redirect stages only',
                 'timeout' => 8,
             ],
         ],
-    ]
-    );
+    ]);
 
-    expect(stageKeysForPhases($experience, ['success', 'post_claim', 'redirect']))
+    expect(riderStageKeysForSuccess($experience))
         ->toBe([
             'success-message',
             'post-claim-message',
@@ -119,10 +118,9 @@ it('does not leak redirect stages into claim preview projection', function () {
                 'url' => 'https://example.com/success',
             ],
         ],
-    ],
-    );
+    ]);
 
-    expect(stageKeysForPhases($experience, ['pre_claim', 'runtime']))
+    expect(riderStageKeysForClaimPreview($experience))
         ->toBe([]);
 });
 
@@ -134,9 +132,8 @@ it('does not leak pre claim stages into success projection', function () {
             'phase' => 'pre_claim',
             'content' => 'Pre claim message',
         ],
-    ],
-    );
+    ]);
 
-    expect(stageKeysForPhases($experience, ['success', 'post_claim', 'redirect']))
+    expect(riderStageKeysForSuccess($experience))
         ->toBe([]);
 });
