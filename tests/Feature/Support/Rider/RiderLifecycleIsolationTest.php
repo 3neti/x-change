@@ -1,101 +1,142 @@
 <?php
 
-use LBHurtado\XRider\Contracts\RiderExperienceResolverContract;
 use LBHurtado\XRider\Data\RiderExperienceData;
 use LBHurtado\XRider\Data\RiderStageCollectionData;
+use LBHurtado\XRider\Data\RiderStageData;
+use LBHurtado\XRider\Data\RiderSubjectData;
 
-it('projects claim preview stages without redirect leakage', function () {
-    $experience = new RiderExperienceData(
-        stages: RiderStageCollectionData::fromArray([
-            [
-                'type' => 'message',
-                'key' => 'pre-claim-message',
-                'phase' => 'pre_claim',
-                'content' => 'Pre claim message',
-            ],
-            [
-                'type' => 'message',
-                'key' => 'runtime-message',
-                'phase' => 'runtime',
-                'content' => 'Runtime message',
-            ],
-            [
-                'type' => 'redirect',
-                'key' => 'redirect-stage',
-                'phase' => 'redirect',
-                'payload' => [
-                    'url' => 'https://example.com/success',
-                    'timeout' => 8,
-                ],
-            ],
-        ]),
+function stagePhase(RiderStageData $stage): ?string
+{
+    return $stage->phase ?? $stage->payload['phase'] ?? null;
+}
+
+function stageKeysForPhases(RiderExperienceData $experience, array $allowedPhases): array
+{
+    return collect($experience->stages?->stages ?? [])
+        ->filter(fn (RiderStageData $stage) => in_array(stagePhase($stage), $allowedPhases, true))
+        ->map(fn (RiderStageData $stage) => $stage->key)
+        ->values()
+        ->all();
+}
+
+function riderExperienceWithStages(array $stages): RiderExperienceData
+{
+    return new RiderExperienceData(
+        state: 'accepted',
+        subject: new RiderSubjectData(
+            type: 'voucher',
+            id: 'TEST123',
+        ),
+        stages: RiderStageCollectionData::fromArray($stages),
     );
+}
 
-    app()->instance(
-        RiderExperienceResolverContract::class,
-        new class($experience) implements RiderExperienceResolverContract
-        {
-            public function __construct(private RiderExperienceData $experience) {}
+it('allows claim preview to project pre claim and runtime stages only', function () {
+    $experience = riderExperienceWithStages([
+        [
+            'type' => 'message',
+            'key' => 'pre-claim-message',
+            'phase' => 'pre_claim',
+            'content' => 'Pre claim message',
+        ],
+        [
+            'type' => 'message',
+            'key' => 'runtime-message',
+            'phase' => 'runtime',
+            'content' => 'Runtime message',
+        ],
+        [
+            'type' => 'message',
+            'key' => 'success-message',
+            'phase' => 'success',
+            'content' => 'Success message',
+        ],
+        [
+            'type' => 'redirect',
+            'key' => 'redirect-stage',
+            'phase' => 'redirect',
+            'payload' => [
+                'url' => 'https://example.com/success',
+                'timeout' => 8,
+            ],
+        ],
+    ]);
 
-            public function resolve(mixed $subject): RiderExperienceData
-            {
-                return $this->experience;
-            }
-        }
-    );
-
-    // TODO: Replace this with the actual package preview endpoint test helper.
-    // Example shape:
-    //
-    // $response = $this->getJson('/x/claim/preview?code=TEST123');
-    //
-    // $response->assertOk()
-    //     ->assertJsonPath('rider.stages.stages.0.key', 'pre-claim-message');
-
-    expect($experience->stages->stages)
-        ->toHaveCount(3)
-        ->and($experience->stages->stages[0]->phase)->toBe('pre_claim')
-        ->and($experience->stages->stages[1]->phase)->toBe('runtime')
-        ->and($experience->stages->stages[2]->phase)->toBe('redirect');
+    expect(stageKeysForPhases($experience, ['pre_claim', 'runtime']))
+        ->toBe([
+            'pre-claim-message',
+            'runtime-message',
+        ]);
 });
 
-it('keeps success stages separate from pre claim stages', function () {
-    $experience = new RiderExperienceData(
-        stages: RiderStageCollectionData::fromArray([
-            [
-                'type' => 'message',
-                'key' => 'pre-claim-message',
-                'phase' => 'pre_claim',
-                'content' => 'Pre claim message',
+it('allows success page to project success post claim and redirect stages only', function () {
+    $experience = riderExperienceWithStages([
+        [
+            'type' => 'message',
+            'key' => 'pre-claim-message',
+            'phase' => 'pre_claim',
+            'content' => 'Pre claim message',
+        ],
+        [
+            'type' => 'message',
+            'key' => 'success-message',
+            'phase' => 'success',
+            'content' => 'Success message',
+        ],
+        [
+            'type' => 'message',
+            'key' => 'post-claim-message',
+            'phase' => 'post_claim',
+            'content' => 'Post claim message',
+        ],
+        [
+            'type' => 'redirect',
+            'key' => 'redirect-stage',
+            'phase' => 'redirect',
+            'payload' => [
+                'url' => 'https://example.com/success',
+                'timeout' => 8,
             ],
-            [
-                'type' => 'message',
-                'key' => 'success-message',
-                'phase' => 'success',
-                'content' => 'Success message',
-            ],
-            [
-                'type' => 'message',
-                'key' => 'post-claim-message',
-                'phase' => 'post_claim',
-                'content' => 'Post claim message',
-            ],
-            [
-                'type' => 'redirect',
-                'key' => 'redirect-stage',
-                'phase' => 'redirect',
-                'payload' => [
-                    'url' => 'https://example.com/success',
-                    'timeout' => 8,
-                ],
-            ],
-        ]),
+        ],
+    ]
     );
 
-    expect($experience->stages->stages)
-        ->toHaveCount(4)
-        ->and($experience->stages->stages[0]->phase)->toBe('pre_claim')
-        ->and($experience->stages->stages[1]->phase)->toBe('success')
-        ->and($experience->stages->stages[2]->phase)->toBe('post_claim')
-        ->and($experience->stages->stages[3]->phase)->toBe('redirect');
+    expect(stageKeysForPhases($experience, ['success', 'post_claim', 'redirect']))
+        ->toBe([
+            'success-message',
+            'post-claim-message',
+            'redirect-stage',
+        ]);
+});
+
+it('does not leak redirect stages into claim preview projection', function () {
+    $experience = riderExperienceWithStages([
+        [
+            'type' => 'redirect',
+            'key' => 'redirect-stage',
+            'phase' => 'redirect',
+            'payload' => [
+                'url' => 'https://example.com/success',
+            ],
+        ],
+    ],
+    );
+
+    expect(stageKeysForPhases($experience, ['pre_claim', 'runtime']))
+        ->toBe([]);
+});
+
+it('does not leak pre claim stages into success projection', function () {
+    $experience = riderExperienceWithStages([
+        [
+            'type' => 'message',
+            'key' => 'pre-claim-message',
+            'phase' => 'pre_claim',
+            'content' => 'Pre claim message',
+        ],
+    ],
+    );
+
+    expect(stageKeysForPhases($experience, ['success', 'post_claim', 'redirect']))
+        ->toBe([]);
 });
