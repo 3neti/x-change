@@ -9,12 +9,8 @@ import RiderRenderer from '@/components/x-rider/RiderRenderer.vue';
 import RiderCountdown from '@/components/x-rider/RiderCountdown.vue';
 import RiderStagePresenter from '@/components/x-rider/RiderStagePresenter.vue';
 import RiderRuntimeSequencer from '@/components/x-rider/RiderRuntimeSequencer.vue';
-import type { RawRiderStage } from '@/components/x-rider/types';
+import type { RawRiderStage, RiderExperience } from '@/components/x-rider/types';
 import { stageIsInPhase } from '@/components/x-rider/useRiderStagePhase';
-
-import type {
-    RiderExperience,
-} from '@/components/x-rider/types';
 
 defineOptions({ layout: null });
 
@@ -48,22 +44,44 @@ const riderStages = computed<RawRiderStage[]>(() => {
         : [];
 });
 
-const successVisualStages = computed<RawRiderStage[]>(() =>
-    riderStages.value.filter((stage) =>
+function isRedirectStage(stage: RawRiderStage): boolean {
+    return stage.type === 'redirect'
+        || stageIsInPhase(stage, 'redirect');
+}
+
+const successVisualStages = computed<RawRiderStage[]>(() => {
+    const stages = riderStages.value.filter((stage) =>
             stage.enabled !== false
+            && !isRedirectStage(stage)
             && (
                 stageIsInPhase(stage, 'success')
                 || stageIsInPhase(stage, 'post_claim')
             )
-    )
-);
+    );
 
-const redirectRuntimeStages = computed<RawRiderStage[]>(() =>
-    riderStages.value.filter((stage) =>
+    const explicit = stages.filter((stage) =>
+        stage.key !== 'legacy-message'
+    );
+
+    return explicit.length > 0
+        ? explicit
+        : stages.slice(0, 1);
+});
+
+const redirectRuntimeStages = computed<RawRiderStage[]>(() => {
+    const stages = riderStages.value.filter((stage) =>
         stage.enabled !== false
         && stageIsInPhase(stage, 'redirect')
-    )
-);
+    );
+
+    const explicit = stages.filter((stage) =>
+        stage.key !== 'legacy-redirect'
+    );
+
+    return explicit.length > 0
+        ? explicit
+        : stages.slice(0, 1);
+});
 
 const hasSuccessVisualStages = computed(() =>
     successVisualStages.value.length > 0
@@ -140,7 +158,10 @@ const fallbackTitle = computed(() => {
                     />
 
                     <template v-else>
-                        <p v-if="hasNonZeroAmount" class="text-2xl font-bold tracking-tight text-foreground">
+                        <p
+                            v-if="hasNonZeroAmount"
+                            class="text-2xl font-bold tracking-tight text-foreground"
+                        >
                             {{ formattedAmount }}
                         </p>
 
@@ -169,8 +190,14 @@ const fallbackTitle = computed(() => {
                     :redirect-endpoint="redirectEndpoint"
                 />
 
-                <div v-else class="flex flex-col gap-3">
-                    <Button class="w-full rounded-full" @click="router.visit('/x/claim')">
+                <div
+                    v-else
+                    class="flex flex-col gap-3"
+                >
+                    <Button
+                        class="w-full rounded-full"
+                        @click="router.visit('/x/claim')"
+                    >
                         Claim Another
                     </Button>
 

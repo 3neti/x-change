@@ -1187,7 +1187,7 @@
             "dist": {
                 "type": "path",
                 "url": "/Users/rli/PhpstormProjects/packages/x-rider",
-                "reference": "274db29f90a5648e140e2299498898bcc4853cc3"
+                "reference": "bf1896a6fb0fa528ff383d8d732adfe2e1581cbe"
             },
             "require": {
                 "illuminate/http": "^12.0 || ^13.0",
