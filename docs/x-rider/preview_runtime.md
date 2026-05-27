@@ -276,6 +276,88 @@ Contains:
 - rider stages
 - legacy Rider configuration
 
+## Rider Splash HTML Security
+
+Depositor-authored Rider splash content may contain HTML.
+
+Example:
+
+```yaml
+rider:
+  splash: "<div class='text-center'><strong>Hello</strong></div>"
+```
+
+Raw depositor HTML is NEVER trusted directly.
+
+The canonical processing pipeline is:
+
+```text
+request input
+    ↓
+RiderHtmlSanitizer
+    ↓
+sanitized rider.splash
+    ↓
+rider.splash_meta.sanitized=true
+    ↓
+API projection
+    ↓
+runtime rendering
+```
+
+The backend sanitizes splash HTML before persistence and before runtime projection.
+
+---
+
+## Sanitization Metadata
+
+Sanitized splash content is marked with:
+
+```json
+{
+  "sanitized": true,
+  "html_profile": "rider_splash"
+}
+```
+
+Example:
+
+```json
+{
+  "rider": {
+    "splash": "<div><strong>Hello</strong></div>",
+    "splash_meta": {
+      "sanitized": true,
+      "html_profile": "rider_splash"
+    }
+  }
+}
+```
+
+This metadata allows frontend runtimes to distinguish:
+
+| Content Type | Runtime Behavior |
+|---|---|
+| unsanitized html | escaped as text |
+| sanitized html | rendered as HTML |
+| trusted_html | rendered without sanitizer gating |
+
+---
+
+## Frontend Runtime Rule
+
+Frontend runtimes MUST NOT render depositor HTML unless one of the following is true:
+
+| Condition |
+|---|
+| `meta.sanitized === true` |
+| `meta.trusted_html === true` |
+
+Otherwise HTML must be escaped and rendered as plain text.
+
+This creates a fail-closed runtime model.
+```
+
 ---
 
 # voucher.rider.preClaim
@@ -730,7 +812,8 @@ without changing backend contracts.
 Frontend runtimes SHOULD:
 
 - render safely
-- sanitize HTML
+- refuse unsanitized Rider HTML
+- sanitize HTML when required
 - validate URLs
 - support accessibility
 - gracefully handle unknown stages
@@ -791,6 +874,87 @@ Frontend runtimes SHOULD:
 - validate URLs
 - prevent XSS
 - avoid arbitrary script execution
+
+---
+
+## Rider Splash Security Model
+
+Depositor-authored Rider splash HTML is considered:
+
+```text
+untrusted user input
+```
+
+The runtime therefore uses:
+
+```text
+sanitize → mark → render
+```
+
+instead of:
+
+```text
+trust → render
+```
+
+---
+
+## Backend Security Responsibilities
+
+The backend is responsible for:
+
+| Responsibility |
+|---|
+| sanitizing Rider splash HTML |
+| stripping scripts |
+| stripping javascript: URLs |
+| stripping inline event handlers |
+| attaching sanitization metadata |
+
+Example blocked payloads:
+
+```html
+<script>alert(1)</script>
+<a href="javascript:alert(1)">Click</a>
+<img onerror="alert(1)">
+```
+
+---
+
+## Frontend Security Responsibilities
+
+Frontend runtimes are responsible for:
+
+| Responsibility |
+|---|
+| refusing unsanitized HTML |
+| escaping unsafe HTML |
+| rendering only sanitized/trusted content |
+| validating runtime URLs |
+| preventing unsafe runtime execution |
+
+---
+
+## Runtime Failure Principle
+
+Runtime failures MUST degrade into:
+
+```text
+presentation failure
+```
+
+—not:
+
+```text
+redemption failure
+```
+
+The Rider runtime must never compromise:
+
+- voucher redemption
+- payout execution
+- settlement correctness
+- ledger integrity
 
 ---
 
