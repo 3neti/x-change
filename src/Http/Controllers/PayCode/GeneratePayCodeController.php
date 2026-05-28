@@ -29,6 +29,14 @@ class GeneratePayCodeController extends Controller
         ]);
 
         $payload = $request->validated();
+
+        logger()->info('[GeneratePayCodeController] rider splash sanitize debug', [
+            'request_rider_splash_exists' => filled($request->input('rider.splash')),
+            'request_rider_splash_meta' => $request->input('rider.splash_meta'),
+            'validated_rider_splash_exists' => filled(data_get($payload, 'rider.splash')),
+            'validated_rider_splash_meta' => data_get($payload, 'rider.splash_meta'),
+        ]);
+
         $key = $idempotency->extractKey($request);
         $correlationId = $request->header((string) config('x-change.api.correlation.header', 'X-Correlation-ID'));
 

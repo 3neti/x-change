@@ -98,6 +98,73 @@ function extractStages(value: unknown): RawRiderStage[] {
     return [];
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function instructionSplashStage(data: Record<string, any>): RawRiderStage | null {
+    const rider = data.instructions?.rider;
+
+    if (!isRecord(rider) || typeof rider.splash !== 'string' || rider.splash.trim() === '') {
+        return null;
+    }
+
+    const splashMeta = isRecord(rider.splash_meta)
+        ? rider.splash_meta
+        : {};
+
+    return {
+        type: 'splash',
+        key: 'legacy-splash',
+        enabled: true,
+        phase: 'pre_claim',
+        presentation: 'fullscreen',
+        content: rider.splash,
+        content_type: 'html',
+        payload: {
+            content: rider.splash,
+            content_type: 'html',
+            timeout: rider.splash_timeout ?? null,
+            presentation: 'fullscreen',
+            meta: splashMeta,
+        },
+        meta: splashMeta,
+    };
+}
+
+function hydrateInstructionSplashMeta(
+    stage: RawRiderStage,
+    data: Record<string, any>
+): RawRiderStage {
+    if (stage.key !== 'legacy-splash') {
+        return stage;
+    }
+
+    const rider = data.instructions?.rider;
+    const splashMeta = isRecord(rider?.splash_meta)
+        ? rider.splash_meta
+        : {};
+
+    return {
+        ...stage,
+        presentation: stage.presentation ?? 'fullscreen',
+        content_type: stage.content_type ?? stage.payload?.content_type ?? 'html',
+        payload: {
+            ...(stage.payload ?? {}),
+            content_type: stage.payload?.content_type ?? stage.content_type ?? 'html',
+            presentation: stage.payload?.presentation ?? stage.presentation ?? 'fullscreen',
+            meta: {
+                ...(stage.payload?.meta ?? {}),
+                ...splashMeta,
+            },
+        },
+        meta: {
+            ...(stage.meta ?? {}),
+            ...splashMeta,
+        },
+    };
+}
+
 function mergeStageWithRaw(
     stage: RawRiderStage,
     rawStages: RawRiderStage[]
@@ -118,6 +185,14 @@ function mergeStageWithRaw(
         payload: {
             ...(raw.payload ?? {}),
             ...(stage.payload ?? {}),
+            meta: {
+                ...(raw.payload?.meta ?? {}),
+                ...(stage.payload?.meta ?? {}),
+            },
+        },
+        meta: {
+            ...(raw.meta ?? {}),
+            ...(stage.meta ?? {}),
         },
         phase: stage.phase ?? raw.phase,
         presentation: stage.presentation ?? raw.presentation,
@@ -150,9 +225,13 @@ const riderStages = computed<RawRiderStage[]>(() => {
 
     const resolved = extractStages(data.rider?.stages);
     const raw = extractStages(data.instructions?.rider?.stages);
+    const instructionSplash = instructionSplashStage(data);
 
     const mergedResolved = resolved.map((stage) =>
-        mergeStageWithRaw(stage, raw)
+        hydrateInstructionSplashMeta(
+            mergeStageWithRaw(stage, raw),
+            data
+        )
     );
 
     const missingRaw = raw.filter((rawStage, index) => {
@@ -165,10 +244,15 @@ const riderStages = computed<RawRiderStage[]>(() => {
         });
     });
 
-    return uniqueStages([
+    const stages = uniqueStages([
         ...mergedResolved,
-        ...missingRaw,
+        ...missingRaw.map((stage) => hydrateInstructionSplashMeta(stage, data)),
+        ...(instructionSplash ? [instructionSplash] : []),
     ]);
+
+    return stages.map((stage) =>
+        hydrateInstructionSplashMeta(stage, data)
+    );
 });
 
 function isVisualPreviewStage(stage: RawRiderStage): boolean {
@@ -179,13 +263,35 @@ function isPreClaimStage(stage: RawRiderStage): boolean {
     return stageIsInPhase(stage, 'pre_claim');
 }
 
-const preClaimVisualStages = computed<RawRiderStage[]>(() =>
-    riderStages.value.filter((stage) =>
+function isLegacyInstructionSplash(stage: RawRiderStage): boolean {
+    return stage.key === 'legacy-splash';
+}
+
+function preferVoucherInstructionSplash(stages: RawRiderStage[]): RawRiderStage[] {
+    const instructionSplash = stages.find(isLegacyInstructionSplash);
+
+    if (!instructionSplash) {
+        return stages;
+    }
+
+    return [
+        instructionSplash,
+        ...stages.filter((stage) =>
+            stage.key !== instructionSplash.key
+            && stage.type !== 'splash'
+        ),
+    ];
+}
+
+const preClaimVisualStages = computed<RawRiderStage[]>(() => {
+    const stages = riderStages.value.filter((stage) =>
         stage.enabled !== false
         && isPreClaimStage(stage)
         && isVisualPreviewStage(stage)
-    )
-);
+    );
+
+    return preferVoucherInstructionSplash(stages);
+});
 
 const hasPreClaimContent = computed(() =>
     preClaimVisualStages.value.length > 0

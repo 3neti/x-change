@@ -49,6 +49,9 @@ class EstimatePayCodeRequest extends FormRequest
             'rider.redirect_timeout' => ['nullable'],
             'rider.splash' => ['nullable'],
             'rider.splash_timeout' => ['nullable'],
+            'rider.splash_meta' => ['nullable', 'array'],
+            'rider.splash_meta.sanitized' => ['nullable', 'boolean'],
+            'rider.splash_meta.html_profile' => ['nullable', 'string'],
             'rider.og_source' => ['nullable'],
 
             'count' => ['nullable', 'integer', 'min:1'],
