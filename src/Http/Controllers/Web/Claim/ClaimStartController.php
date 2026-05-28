@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
+use LBHurtado\FormFlowManager\Data\FormFlowInstructionsData;
 use LBHurtado\FormFlowManager\Services\DriverService;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Models\Voucher;
@@ -64,13 +65,14 @@ class ClaimStartController extends Controller
 
         $claimExperience = ResolveClaimExperience::run($voucher)->toArray();
 
-        // Transform voucher to form-flow instructions via YAML driver
         $instructions = $this->driverService->transform($voucher);
 
-        // Shadow-only payload: do not change form-flow behavior yet.
-        data_set($instructions, 'meta.claim_experience', $claimExperience);
+        $instructionPayload = $instructions->toArray();
 
-        // Start form-flow session
+        data_set($instructionPayload, 'metadata.claim_experience', $claimExperience);
+
+        $instructions = FormFlowInstructionsData::from($instructionPayload);
+
         $state = $this->formFlowService->startFlow($instructions);
 
         return redirect("/form-flow/{$state['flow_id']}");
