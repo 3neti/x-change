@@ -317,6 +317,24 @@ const runtimeStages = computed<RawRiderStage[]>(() =>
         && isVisualPreviewStage(stage)
     )
 );
+
+const claimExperienceDebug = computed(() => {
+    if (!props.claimExperience) {
+        return null;
+    }
+
+    return {
+        mode: props.claimExperience?.entry?.mode,
+        initial_phase: props.claimExperience?.entry?.initial_phase,
+        skip_consumed_splash: props.claimExperience?.options?.skip_consumed_splash,
+        splash_owner: props.claimExperience?.diagnostics?.splash_owner,
+        form_flow_splash_policy: props.claimExperience?.diagnostics?.form_flow_splash_policy,
+    };
+});
+
+if (import.meta.env.DEV && claimExperienceDebug.value) {
+    console.debug('[x-change] claim experience', claimExperienceDebug.value);
+}
 </script>
 
 <template>
