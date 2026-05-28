@@ -27,12 +27,14 @@ class ClaimStartController extends Controller
         if ($code === '') {
             return Inertia::render('x-change/claim/Entry', [
                 'initial_code' => null,
+                'claim_experience' => null,
             ]);
         }
 
         if ($request->boolean('failed')) {
             return Inertia::render('x-change/claim/Entry', [
                 'initial_code' => $code,
+                'claim_experience' => null,
             ]);
         }
 

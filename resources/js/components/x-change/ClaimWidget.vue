@@ -24,6 +24,7 @@ initializeTheme();
 
 interface Props {
     initialCode?: string | null;
+    claimExperience?: Record<string, unknown> | null;
 }
 
 const props = defineProps<Props>();
