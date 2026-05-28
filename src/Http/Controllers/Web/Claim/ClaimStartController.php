@@ -12,6 +12,7 @@ use Inertia\Response;
 use LBHurtado\FormFlowManager\Services\DriverService;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
 
 class ClaimStartController extends Controller
 {
@@ -61,8 +62,13 @@ class ClaimStartController extends Controller
             ]);
         }
 
+        $claimExperience = ResolveClaimExperience::run($voucher)->toArray();
+
         // Transform voucher to form-flow instructions via YAML driver
         $instructions = $this->driverService->transform($voucher);
+
+        // Shadow-only payload: do not change form-flow behavior yet.
+        data_set($instructions, 'meta.claim_experience', $claimExperience);
 
         // Start form-flow session
         $state = $this->formFlowService->startFlow($instructions);
