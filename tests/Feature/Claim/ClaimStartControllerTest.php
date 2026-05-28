@@ -7,7 +7,46 @@ use LBHurtado\FormFlowManager\Services\DriverService;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Models\Voucher;
 
-function mockDriverForClaimVoucher($test, $voucher, array $steps = []): void
+function claimVoucherWithRiderSplash(): Voucher
+{
+    return issueVoucher(validVoucherInstructions(
+        overrides: [
+            'rider' => [
+                'splash' => '<h1>Welcome</h1>',
+                'message' => 'SUCCESS DEMO: Thank you for claiming.',
+                'url' => 'https://example.com/after-claim',
+            ],
+        ],
+    ));
+}
+
+function claimVoucherWithoutRiderSplash(): Voucher
+{
+    return issueVoucher(validVoucherInstructions(
+        overrides: [
+            'rider' => [
+                'message' => 'SUCCESS DEMO: Thank you for claiming.',
+                'url' => 'https://example.com/after-claim',
+            ],
+        ],
+    ));
+}
+
+function splashStep(): array
+{
+    return [
+        [
+            'handler' => 'splash',
+            'config' => [
+                'title' => 'Welcome',
+                'content' => '<h1>Welcome</h1>',
+                'timeout' => 0,
+            ],
+        ],
+    ];
+}
+
+function mockDriverForClaimVoucher($test, Voucher $voucher, array $steps = []): void
 {
     $driver = Mockery::mock(DriverService::class);
 
@@ -25,7 +64,7 @@ function mockDriverForClaimVoucher($test, $voucher, array $steps = []): void
             ],
         ]));
 
-    $test->app->instance(DriverService::class, $driver);
+    app()->instance(DriverService::class, $driver);
 }
 
 function assertClaimExperienceStartFlow($test, callable $assertions, string $flowId = 'flow-claim-test'): void
@@ -48,64 +87,24 @@ function assertClaimExperienceStartFlow($test, callable $assertions, string $flo
             'flow_id' => $flowId,
         ]);
 
-    $test->app->instance(FormFlowService::class, $formFlow);
+    app()->instance(FormFlowService::class, $formFlow);
 }
 
 it('attaches claim experience shadow payload before starting form flow', function () {
     $this->withoutMiddleware();
 
-    $voucher = issueVoucher(validVoucherInstructions(
-        overrides: [
-            'rider' => [
-                'splash' => '<h1>Welcome</h1>',
-                'message' => 'SUCCESS DEMO: Thank you for claiming.',
-                'url' => 'https://example.com/after-claim',
-            ],
-        ],
-    ));
+    $voucher = claimVoucherWithRiderSplash();
 
-    $driver = Mockery::mock(DriverService::class);
+    mockDriverForClaimVoucher($this, $voucher);
 
-    $driver->shouldReceive('transform')
-        ->once()
-        ->with(Mockery::on(fn ($actual) => $actual instanceof Voucher && $actual->is($voucher)))
-        ->andReturn(FormFlowInstructionsData::from([
-            'reference_id' => 'claim-'.$voucher->code.'-test',
-            'steps' => [],
-            'callbacks' => [
-                'on_complete' => '/x/claim/'.$voucher->code.'/complete',
-            ],
-            'metadata' => [
-                'voucher_code' => $voucher->code,
-            ],
-        ]));
-
-    $this->app->instance(DriverService::class, $driver);
-
-    $formFlow = Mockery::mock(FormFlowService::class);
-
-    $formFlow->shouldReceive('startFlow')
-        ->once()
-        ->with(Mockery::on(function (FormFlowInstructionsData $instructions) {
-            $payload = $instructions->toArray();
-
-            $experience = data_get($payload, 'metadata.claim_experience');
-
-            expect($experience)->toBeArray()
-                ->and(data_get($experience, 'version'))->toBe(1)
-                ->and(data_get($experience, 'entry.mode'))->toBe('rider_first')
-                ->and(data_get($experience, 'consumed.splash'))->toBeTrue()
-                ->and(data_get($experience, 'diagnostics.duplicate_splash_prevented'))->toBeTrue()
-                ->and(collect(data_get($experience, 'phases'))->pluck('key')->all())
-                ->toContain('rider_intro', 'form_flow', 'success_rider', 'redirect');
-
-            return true;
-        }))
-        ->andReturn([
-            'flow_id' => 'flow-shadow-test',
-        ]);
-
-    $this->app->instance(FormFlowService::class, $formFlow);
+    assertClaimExperienceStartFlow($this, function (array $experience) {
+        expect(data_get($experience, 'version'))->toBe(1)
+            ->and(data_get($experience, 'entry.mode'))->toBe('rider_first')
+            ->and(data_get($experience, 'consumed.splash'))->toBeTrue()
+            ->and(data_get($experience, 'diagnostics.duplicate_splash_prevented'))->toBeTrue()
+            ->and(collect(data_get($experience, 'phases'))->pluck('key')->all())
+            ->toContain('rider_intro', 'form_flow', 'success_rider', 'redirect');
+    }, 'flow-shadow-test');
 
     $this->get('/x/claim?code='.$voucher->code)
         ->assertRedirect('/form-flow/flow-shadow-test');
@@ -114,33 +113,9 @@ it('attaches claim experience shadow payload before starting form flow', functio
 it('persists claim experience inside started form flow state', function () {
     $this->withoutMiddleware();
 
-    $voucher = issueVoucher(validVoucherInstructions(
-        overrides: [
-            'rider' => [
-                'splash' => '<h1>Welcome</h1>',
-                'message' => 'SUCCESS DEMO: Thank you for claiming.',
-                'url' => 'https://example.com/after-claim',
-            ],
-        ],
-    ));
+    $voucher = claimVoucherWithRiderSplash();
 
-    $driver = Mockery::mock(DriverService::class);
-
-    $driver->shouldReceive('transform')
-        ->once()
-        ->with(Mockery::on(fn ($actual) => $actual instanceof Voucher && $actual->is($voucher)))
-        ->andReturn(FormFlowInstructionsData::from([
-            'reference_id' => 'claim-'.$voucher->code.'-test',
-            'steps' => [],
-            'callbacks' => [
-                'on_complete' => '/x/claim/'.$voucher->code.'/complete',
-            ],
-            'metadata' => [
-                'voucher_code' => $voucher->code,
-            ],
-        ]));
-
-    $this->app->instance(DriverService::class, $driver);
+    mockDriverForClaimVoucher($this, $voucher);
 
     $response = $this->get('/x/claim?code='.$voucher->code);
 
@@ -173,60 +148,16 @@ it('persists claim experience inside started form flow state', function () {
 it('emits claim experience option to skip consumed splash for rider splash vouchers', function () {
     $this->withoutMiddleware();
 
-    $voucher = issueVoucher(validVoucherInstructions(
-        overrides: [
-            'rider' => [
-                'splash' => '<h1>Welcome</h1>',
-                'message' => 'SUCCESS DEMO: Thank you for claiming.',
-                'url' => 'https://example.com/after-claim',
-            ],
-        ],
-    ));
+    $voucher = claimVoucherWithRiderSplash();
 
-    $driver = Mockery::mock(DriverService::class);
+    mockDriverForClaimVoucher($this, $voucher, splashStep());
 
-    $driver->shouldReceive('transform')
-        ->once()
-        ->with(Mockery::on(fn ($actual) => $actual instanceof Voucher && $actual->is($voucher)))
-        ->andReturn(FormFlowInstructionsData::from([
-            'reference_id' => 'claim-'.$voucher->code.'-test',
-            'steps' => [
-                [
-                    'handler' => 'splash',
-                    'config' => [
-                        'title' => 'Welcome',
-                        'content' => '<h1>Welcome</h1>',
-                        'timeout' => 0,
-                    ],
-                ],
-            ],
-            'callbacks' => [
-                'on_complete' => '/x/claim/'.$voucher->code.'/complete',
-            ],
-            'metadata' => [
-                'voucher_code' => $voucher->code,
-            ],
-        ]));
-
-    $this->app->instance(DriverService::class, $driver);
-
-    $formFlow = Mockery::mock(FormFlowService::class);
-
-    $formFlow->shouldReceive('startFlow')
-        ->once()
-        ->with(Mockery::on(function (FormFlowInstructionsData $instructions) {
-            $payload = $instructions->toArray();
-
-            expect(data_get($payload, 'metadata.claim_experience.options.skip_consumed_splash'))->toBeTrue()
-                ->and(data_get($payload, 'metadata.claim_experience.consumed.splash'))->toBeTrue();
-
-            return true;
-        }))
-        ->andReturn([
-            'flow_id' => 'flow-skip-option-test',
-        ]);
-
-    $this->app->instance(FormFlowService::class, $formFlow);
+    assertClaimExperienceStartFlow($this, function (array $experience) {
+        expect(data_get($experience, 'options.skip_consumed_splash'))->toBeTrue()
+            ->and(data_get($experience, 'consumed.splash'))->toBeTrue()
+            ->and(data_get($experience, 'diagnostics.splash_owner'))->toBe('x-rider')
+            ->and(data_get($experience, 'diagnostics.form_flow_splash_policy'))->toBe('skip_consumed');
+    }, 'flow-skip-option-test');
 
     $this->get('/x/claim?code='.$voucher->code)
         ->assertRedirect('/form-flow/flow-skip-option-test');
@@ -235,60 +166,17 @@ it('emits claim experience option to skip consumed splash for rider splash vouch
 it('does not emit consumed splash skip option when voucher has no rider splash', function () {
     $this->withoutMiddleware();
 
-    $voucher = issueVoucher(validVoucherInstructions(
-        overrides: [
-            'rider' => [
-                'message' => 'SUCCESS DEMO: Thank you for claiming.',
-                'url' => 'https://example.com/after-claim',
-            ],
-        ],
-    ));
+    $voucher = claimVoucherWithoutRiderSplash();
 
-    $driver = Mockery::mock(DriverService::class);
+    mockDriverForClaimVoucher($this, $voucher, splashStep());
 
-    $driver->shouldReceive('transform')
-        ->once()
-        ->with(Mockery::on(fn ($actual) => $actual instanceof Voucher && $actual->is($voucher)))
-        ->andReturn(FormFlowInstructionsData::from([
-            'reference_id' => 'claim-'.$voucher->code.'-test',
-            'steps' => [
-                [
-                    'handler' => 'splash',
-                    'config' => [
-                        'title' => 'Welcome',
-                        'content' => '<h1>Welcome</h1>',
-                        'timeout' => 0,
-                    ],
-                ],
-            ],
-            'callbacks' => [
-                'on_complete' => '/x/claim/'.$voucher->code.'/complete',
-            ],
-            'metadata' => [
-                'voucher_code' => $voucher->code,
-            ],
-        ]));
-
-    $this->app->instance(DriverService::class, $driver);
-
-    $formFlow = Mockery::mock(FormFlowService::class);
-
-    $formFlow->shouldReceive('startFlow')
-        ->once()
-        ->with(Mockery::on(function (FormFlowInstructionsData $instructions) {
-            $payload = $instructions->toArray();
-
-            expect(data_get($payload, 'metadata.claim_experience.options.skip_consumed_splash'))->toBeFalse()
-                ->and(data_get($payload, 'metadata.claim_experience.consumed.splash'))->toBeFalse()
-                ->and(data_get($payload, 'metadata.claim_experience.entry.mode'))->toBe('form_first');
-
-            return true;
-        }))
-        ->andReturn([
-            'flow_id' => 'flow-no-skip-option-test',
-        ]);
-
-    $this->app->instance(FormFlowService::class, $formFlow);
+    assertClaimExperienceStartFlow($this, function (array $experience) {
+        expect(data_get($experience, 'options.skip_consumed_splash'))->toBeFalse()
+            ->and(data_get($experience, 'consumed.splash'))->toBeFalse()
+            ->and(data_get($experience, 'entry.mode'))->toBe('form_first')
+            ->and(data_get($experience, 'diagnostics.splash_owner'))->toBe('form-flow')
+            ->and(data_get($experience, 'diagnostics.form_flow_splash_policy'))->toBe('allow');
+    }, 'flow-no-skip-option-test');
 
     $this->get('/x/claim?code='.$voucher->code)
         ->assertRedirect('/form-flow/flow-no-skip-option-test');

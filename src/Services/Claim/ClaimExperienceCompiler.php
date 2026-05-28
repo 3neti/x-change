@@ -115,6 +115,8 @@ class ClaimExperienceCompiler
             diagnostics: new ClaimExperienceDiagnosticsData(
                 duplicate_splash_prevented: $hasRiderSplash,
                 redirect_owner: filled($redirectUrl) ? 'claim-widget' : null,
+                splash_owner: $hasRiderSplash ? 'x-rider' : 'form-flow',
+                form_flow_splash_policy: $hasRiderSplash ? 'skip_consumed' : 'allow',
                 consumed: [
                     'splash' => $hasRiderSplash,
                 ],

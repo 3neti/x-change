@@ -52,6 +52,8 @@ it('compiles a rider-first claim experience when rider splash exists', function 
         ->and($experience['options']['skip_consumed_splash'])->toBeTrue()
         ->and($experience['diagnostics']['duplicate_splash_prevented'])->toBeTrue()
         ->and($experience['diagnostics']['redirect_owner'])->toBe('claim-widget')
+        ->and($experience['diagnostics']['splash_owner'])->toBe('x-rider')
+        ->and($experience['diagnostics']['form_flow_splash_policy'])->toBe('skip_consumed')
         ->and($phases->pluck('key')->all())->toContain(
             'rider_intro',
             'pre_claim',
@@ -87,6 +89,8 @@ it('keeps form-flow splash available when rider intro splash does not exist', fu
         ->and($experience['consumed']['splash'])->toBeFalse()
         ->and($experience['options']['skip_consumed_splash'])->toBeFalse()
         ->and($experience['diagnostics']['duplicate_splash_prevented'])->toBeFalse()
+        ->and($experience['diagnostics']['splash_owner'])->toBe('form-flow')
+        ->and($experience['diagnostics']['form_flow_splash_policy'])->toBe('allow')
         ->and($phases->pluck('key')->all())->not->toContain('rider_intro')
         ->and($formFlow['skip_stages'])->toBe([]);
 });
