@@ -14,7 +14,7 @@ class ClaimExperienceCompiler
 {
     public function compile(Voucher $voucher): ClaimExperienceData
     {
-        $instructions = $voucher->instructions;
+        $instructions = $this->instructions($voucher);
         $rider = data_get($instructions, 'rider', []);
 
         $hasRiderSplash = filled(data_get($rider, 'splash'));
@@ -117,5 +117,12 @@ class ClaimExperienceCompiler
                 ],
             ),
         );
+    }
+
+    private function instructions(Voucher $voucher): array
+    {
+        $metadata = $voucher->metadata ?? [];
+
+        return (array) data_get($metadata, 'instructions', []);
     }
 }
