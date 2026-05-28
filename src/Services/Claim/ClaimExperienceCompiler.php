@@ -105,6 +105,9 @@ class ClaimExperienceCompiler
                 'mode' => $hasRiderSplash ? 'rider_first' : 'form_first',
                 'initial_phase' => $hasRiderSplash ? 'rider_intro' : 'pre_claim',
             ],
+            options: [
+                'skip_consumed_splash' => $hasRiderSplash,
+            ],
             phases: new DataCollection(ClaimPhaseData::class, $phases),
             consumed: [
                 'splash' => $hasRiderSplash,

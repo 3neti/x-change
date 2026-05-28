@@ -13,6 +13,7 @@ class ClaimExperienceData extends Data
     public function __construct(
         public int $version,
         public array $entry,
+        public array $options,
 
         #[DataCollectionOf(ClaimPhaseData::class)]
         public DataCollection $phases,

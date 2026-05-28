@@ -184,7 +184,7 @@
             "dist": {
                 "type": "path",
                 "url": "/Users/rli/PhpstormProjects/packages/form-flow-manager",
-                "reference": "d9be9f1a53dc21b3cc6d5d67cc31344eb2319e4f"
+                "reference": "87e9ba43eea2e8252739610fcef6714a00a082b0"
             },
             "require": {
                 "illuminate/support": "^11.0 || ^12.0 || ^13.0",
@@ -1042,7 +1042,7 @@
             "dist": {
                 "type": "path",
                 "url": "/Users/rli/PhpstormProjects/packages/voucher",
-                "reference": "df61a3f109c281dee067d422c495fcee447afc57"
+                "reference": "12f50bfe1edaf77e0f794792a43241ab3f8c6ddc"
             },
             "require": {
                 "3neti/cash": "dev-main",
@@ -1187,7 +1187,7 @@
             "dist": {
                 "type": "path",
                 "url": "/Users/rli/PhpstormProjects/packages/x-rider",
-                "reference": "26ae396bc56e704d5b1b64f6a2e0c2afa3ebc23c"
+                "reference": "e3716394b461f17a9f0b6127faf7ac0525096ac3"
             },
             "require": {
                 "illuminate/http": "^12.0 || ^13.0",

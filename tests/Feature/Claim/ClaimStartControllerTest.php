@@ -120,6 +120,7 @@ it('persists claim experience inside started form flow state', function () {
         ->and(data_get($experience, 'version'))->toBe(1)
         ->and(data_get($experience, 'entry.mode'))->toBe('rider_first')
         ->and(data_get($experience, 'consumed.splash'))->toBeTrue()
+        ->and(data_get($experience, 'options.skip_consumed_splash'))->toBeTrue()
         ->and(data_get($experience, 'diagnostics.duplicate_splash_prevented'))->toBeTrue()
         ->and(collect(data_get($experience, 'phases'))->pluck('key')->all())
         ->toContain('rider_intro', 'form_flow', 'success_rider', 'redirect');
