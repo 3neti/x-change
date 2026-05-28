@@ -7,6 +7,50 @@ use LBHurtado\FormFlowManager\Services\DriverService;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Models\Voucher;
 
+function mockDriverForClaimVoucher($test, $voucher, array $steps = []): void
+{
+    $driver = Mockery::mock(DriverService::class);
+
+    $driver->shouldReceive('transform')
+        ->once()
+        ->with(Mockery::on(fn ($actual) => $actual instanceof Voucher && $actual->is($voucher)))
+        ->andReturn(FormFlowInstructionsData::from([
+            'reference_id' => 'claim-'.$voucher->code.'-test',
+            'steps' => $steps,
+            'callbacks' => [
+                'on_complete' => '/x/claim/'.$voucher->code.'/complete',
+            ],
+            'metadata' => [
+                'voucher_code' => $voucher->code,
+            ],
+        ]));
+
+    $test->app->instance(DriverService::class, $driver);
+}
+
+function assertClaimExperienceStartFlow($test, callable $assertions, string $flowId = 'flow-claim-test'): void
+{
+    $formFlow = Mockery::mock(FormFlowService::class);
+
+    $formFlow->shouldReceive('startFlow')
+        ->once()
+        ->with(Mockery::on(function (FormFlowInstructionsData $instructions) use ($assertions) {
+            $payload = $instructions->toArray();
+            $experience = data_get($payload, 'metadata.claim_experience');
+
+            expect($experience)->toBeArray();
+
+            $assertions($experience, $payload);
+
+            return true;
+        }))
+        ->andReturn([
+            'flow_id' => $flowId,
+        ]);
+
+    $test->app->instance(FormFlowService::class, $formFlow);
+}
+
 it('attaches claim experience shadow payload before starting form flow', function () {
     $this->withoutMiddleware();
 
