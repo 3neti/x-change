@@ -1,297 +1,282 @@
 # Compiler-Driven Redirects
 
-## Purpose
+## Overview
 
-This document defines the redirect ownership model for the x-change claim experience.
+The claim experience now uses a compiler-driven redirect model.
 
-The objective is to ensure that:
+Instead of allowing frontend pages or rider definitions to directly control post-claim navigation, redirect behavior is compiled into a structured Claim Experience and executed through a dedicated redirect gate.
 
-- Exactly one component owns redirect behavior.
-- Countdown rendering is compiler-driven.
-- Rider-first and form-flow-first experiences behave consistently.
-- The frontend never redirects directly to a voucher-provided URL.
-- Redirect behavior can be tested independently of UI rendering.
+This provides:
 
----
-
-# Background
-
-Historically, redirect behavior could originate from multiple places:
-
-- Rider splash stages
-- Form-flow splash stages
-- Success page widgets
-- Voucher rider URLs
-
-This created ambiguity regarding:
-
-- Who should render the countdown?
-- Who should perform the redirect?
-- Whether duplicate countdowns could appear.
-
-The compiler-driven model centralizes these decisions.
+- A single source of truth for redirect behavior.
+- Consistent redirect ownership rules.
+- Protection against duplicate countdowns.
+- Future support for policy-based redirects.
+- Testable separation between experience compilation and navigation execution.
 
 ---
 
-# Architectural Principle
+# Architecture
 
-## Redirect Ownership
-
-At any point in the claim journey:
-
-> Exactly one component may own redirect behavior.
-
-Ownership is determined by the Claim Experience Compiler.
-
-The compiler emits metadata describing:
-
-```json
-{
-  "options": {
-    "show_redirect_countdown": true
-  },
-  "diagnostics": {
-    "redirect_owner": "claim-widget"
-  }
-}
+```text
+Voucher Instructions
+        │
+        ▼
+ClaimExperienceCompiler
+        │
+        ▼
+ClaimExperience
+        │
+        ├── phases
+        ├── options
+        └── diagnostics
+                │
+                ▼
+ClaimSuccessPageController
+                │
+                ▼
+Success.vue
+                │
+                ▼
+RiderCountdown
+                │
+                ▼
+ClaimRedirectController
+                │
+                ▼
+SuccessRedirectResolver
+                │
+                ▼
+External URL
 ```
 
-Possible owners:
-
-| Owner | Meaning |
-|---------|----------|
-| claim-widget | Success page owns countdown rendering |
-| rider | Rider experience owns redirect |
-| null | No redirect configured |
-
-Only one owner may be emitted.
-
 ---
 
-# Claim Experience Compiler
+# Redirect Ownership
 
-## Responsibility
+Only one component may own the redirect experience.
 
-The compiler inspects voucher instructions and determines:
+The compiler determines ownership and exposes it through:
 
-- UX phases
-- Redirect destination
-- Redirect delay
-- Redirect ownership
-- Splash suppression rules
-
-The compiler produces a normalized experience payload.
+```php
+claim_experience.options.show_redirect_countdown
+claim_experience.diagnostics.redirect_owner
+```
 
 Example:
 
-```json
-{
-  "phases": [
-    {
-      "key": "redirect",
-      "redirect_url": "https://example.com",
-      "delay_seconds": 5
-    }
-  ],
-  "options": {
-    "show_redirect_countdown": true
-  },
-  "diagnostics": {
-    "redirect_owner": "claim-widget"
-  }
-}
+```php
+[
+    'options' => [
+        'show_redirect_countdown' => true,
+    ],
+
+    'diagnostics' => [
+        'redirect_owner' => 'claim-widget',
+    ],
+]
 ```
+
+Current ownership values:
+
+| Owner | Meaning |
+|---------|---------|
+| claim-widget | Success page owns redirect countdown |
+| null | No redirect configured |
+
+Future ownership values may include:
+
+| Owner | Meaning |
+|---------|---------|
+| rider-runtime | XRider runtime owns redirect |
+| workflow | Workflow engine owns redirect |
+| policy | Redirect determined by policy engine |
 
 ---
 
 # Redirect Phase
 
-The redirect phase is informational.
+The compiler emits a dedicated redirect phase when a rider URL exists.
 
-It communicates:
+Example:
 
-```json
-{
-  "key": "redirect",
-  "redirect_url": "https://example.com",
-  "delay_seconds": 5
-}
+```php
+[
+    'key' => 'redirect',
+    'owner' => 'claim-widget',
+    'delay_seconds' => 5,
+]
 ```
 
-The frontend should not navigate directly to this URL.
+This phase is informational.
 
-Instead it uses the redirect endpoint.
+The phase does not perform navigation.
+
+Navigation is performed exclusively through the redirect gate.
 
 ---
 
-# Security Boundary
+# Redirect Gate
 
-## Never Redirect Directly
+## Purpose
 
-The success page must never perform:
+The redirect gate is implemented by:
 
-```javascript
-window.location = rider.redirect_url
+```php
+ClaimRedirectController
 ```
 
-or
-
-```javascript
-window.location = voucher.instructions.rider.url
-```
-
-The only allowed destination is:
+Route:
 
 ```text
 /x/claim/{code}/redirect
 ```
 
-represented by:
+The gate prevents frontend components from redirecting directly to arbitrary rider URLs.
 
-```javascript
-redirectEndpoint
-```
-
-This creates a single redirect gate.
-
-Benefits:
-
-- Future auditing
-- Analytics
-- Redirect validation
-- Access control
-- Expiration checks
-- Safety controls
-
----
-
-# Claim Redirect Controller
-
-## Responsibility
-
-The redirect controller is the final redirect authority.
-
-Flow:
+Instead:
 
 ```text
 Success Page
-    ↓
-redirectEndpoint
-    ↓
-ClaimRedirectController
-    ↓
-External URL
+        │
+        ▼
+Redirect Gate
+        │
+        ▼
+Resolved Destination
 ```
-
-All external redirects must pass through this controller.
 
 ---
 
-# Rider-First Flow
+# Why A Redirect Gate Exists
 
-Example:
+Without a redirect gate:
 
 ```text
-Claim Start
-    ↓
-Rider Splash
-    ↓
-Form Flow
-    ↓
 Success Page
-    ↓
-Redirect Countdown
-    ↓
-ClaimRedirectController
+        │
+        ▼
+https://example.com
 ```
 
-The rider splash is considered consumed.
+The frontend would become responsible for:
 
-The form-flow splash should not re-display the same introduction.
+- URL selection
+- Redirect policies
+- Validation
+- Auditing
+- Future authorization rules
+
+With a redirect gate:
+
+```text
+Success Page
+        │
+        ▼
+/x/claim/{code}/redirect
+        │
+        ▼
+Resolver
+        │
+        ▼
+Destination
+```
+
+The frontend only knows about the gate.
+
+The backend owns the redirect decision.
 
 ---
 
-# Splash Consumption
+# Success Redirect Resolution
 
-The compiler emits:
+Redirect destinations are resolved through:
 
-```json
-{
-  "options": {
-    "skip_consumed_splash": true
-  }
-}
+```php
+SuccessRedirectResolverContract
 ```
 
-When enabled:
+Current behavior:
 
-- Rider splash displays once.
-- Form-flow splash is skipped.
-- Duplicate introductions are avoided.
+```text
+Voucher Rider URL
+        │
+        ▼
+Resolved Destination
+```
 
-This behavior is covered by feature tests.
+Future implementations may support:
+
+```text
+Voucher Rider URL
+Campaign Redirect
+Affiliate Redirect
+Geo Redirect
+A/B Redirect
+Policy Redirect
+```
+
+without requiring controller changes.
 
 ---
 
-# Success Page Responsibilities
+# Success Page Integration
 
 The success page receives:
 
-```json
-{
-  "claim_experience": {},
-  "redirect": {
-    "show_countdown": true,
-    "owner": "claim-widget",
-    "delay_seconds": 5
-  }
-}
+```php
+[
+    'claim_experience' => [...],
+
+    'redirect' => [
+        'show_countdown' => true,
+        'owner' => 'claim-widget',
+        'delay_seconds' => 5,
+    ],
+
+    'redirectEndpoint' => '/x/claim/{code}/redirect',
+]
 ```
 
-Responsibilities:
+The page never receives responsibility for destination selection.
 
-- Render claim outcome
-- Render rider success content
-- Render countdown when enabled
-- Navigate only through redirectEndpoint
+Instead:
 
-The page does not decide ownership.
-
-Ownership comes from the compiler.
-
----
-
-# Frontend Countdown Rendering
-
-Rendering rule:
-
-```javascript
-redirect.show_countdown === true
-```
-
-When true:
-
-```vue
-<RiderCountdown />
-```
-
-is rendered.
-
-When false:
-
-No countdown UI appears.
-
-The component performs navigation using:
-
-```javascript
+```text
+Success.vue
+        │
+        ▼
+RiderCountdown
+        │
+        ▼
 redirectEndpoint
 ```
 
-never the raw rider URL.
+---
+
+# Duplicate Splash Prevention
+
+When the rider experience already consumed an introduction splash:
+
+```php
+claim_experience.options.skip_consumed_splash = true
+```
+
+Form Flow splash pages are skipped.
+
+This prevents:
+
+```text
+XRider Splash
+        ▼
+Form Flow Splash
+```
+
+from appearing twice.
 
 ---
 
-# Testing Coverage
+# Test Coverage
 
 ## Backend
 
@@ -299,8 +284,8 @@ never the raw rider URL.
 
 Validates:
 
+- Redirect phase emission
 - Redirect ownership
-- Redirect phase generation
 - Countdown visibility
 - No anonymous phases
 
@@ -308,25 +293,38 @@ Validates:
 
 Validates:
 
-- Experience persistence
-- Splash suppression options
-- Compiler output propagation
+- Claim experience persistence
+- Countdown metadata exposure
+- Splash skip flags
 
 ### ClaimFlowSkipsDuplicateSplashTest
 
 Validates:
 
-- Rider splash consumption
-- Form-flow splash suppression
 - Duplicate splash prevention
+- Form Flow splash fallback behavior
 
 ### ClaimSuccessPageControllerTest
 
 Validates:
 
 - Redirect metadata exposure
-- Countdown configuration
-- Ownership propagation
+- Countdown settings
+- Redirect ownership propagation
+
+### ClaimExperienceContractTest
+
+Validates:
+
+- Claim experience payload contract
+
+### ClaimRedirectControllerTest
+
+Validates:
+
+- Successful redirect through gate
+- Missing voucher returns 404
+- Missing destination returns 404
 
 ---
 
@@ -336,50 +334,28 @@ Validates:
 
 Validates:
 
-- Redirect timing
-- Countdown state
-- Redirect triggering
+- Redirect countdown logic
+- Redirect ownership handling
+- Redirect configuration behavior
 
 ### Success.redirect-countdown.test.ts
 
 Validates:
 
-- Countdown rendering when enabled
-- Countdown suppression when disabled
-- Redirect metadata consumption
+- Countdown rendering
+- Countdown suppression
+- Redirect metadata propagation
+- Redirect gate endpoint usage
+- Success page redirect wiring
 
 ---
 
-# Invariants
+# Design Principle
 
-The following rules must always remain true:
+The compiler decides.
 
-1. Exactly one redirect owner exists.
+The success page presents.
 
-2. Success.vue never redirects directly to an external URL.
+The redirect gate executes.
 
-3. ClaimRedirectController remains the sole redirect gate.
-
-4. Countdown visibility is compiler-driven.
-
-5. Rider splash consumption prevents duplicate splash rendering.
-
-6. Redirect ownership is determined by the compiler, not the UI.
-
-7. Frontend components consume redirect metadata but never compute redirect policy.
-
----
-
-# Future Enhancements
-
-Potential future work:
-
-- Analytics before redirect
-- Redirect audit logs
-- User-cancelable countdowns
-- Redirect confirmation dialogs
-- Conditional redirects
-- Multi-destination redirect strategies
-- A/B tested claim experiences
-
-These enhancements should be implemented inside the compiler or redirect controller without changing frontend ownership rules.
+No frontend component should directly own redirect destination selection.
