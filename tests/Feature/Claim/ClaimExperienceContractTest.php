@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
+use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 
 it('emits a coherent claim experience contract for rider splash and redirect vouchers', function () {
     $voucher = issueVoucher(validVoucherInstructions(
@@ -21,13 +22,16 @@ it('emits a coherent claim experience contract for rider splash and redirect vou
 
     expect(data_get($experience, 'version'))->toBe(1)
         ->and(data_get($experience, 'entry.mode'))->toBe('rider_first')
-        ->and(data_get($experience, 'consumed.splash'))->toBeTrue()
-        ->and(data_get($experience, 'options.skip_consumed_splash'))->toBeTrue()
+        ->and(ClaimExperiencePayload::isXRiderSplash($experience))->toBeTrue()
+        ->and(ClaimExperiencePayload::shouldSkipConsumedSplash($experience))->toBeTrue()
+        ->and(ClaimExperiencePayload::isClaimWidgetRedirect($experience))->toBeTrue()
         ->and(data_get($experience, 'options.show_redirect_countdown'))->toBeTrue()
-        ->and(data_get($experience, 'diagnostics.splash_owner'))->toBe('x-rider')
-        ->and(data_get($experience, 'diagnostics.redirect_owner'))->toBe('claim-widget')
         ->and(data_get($experience, 'diagnostics.duplicate_splash_prevented'))->toBeTrue()
         ->and($phases->pluck('key')->all())->toContain('rider_intro', 'form_flow', 'success_rider', 'redirect')
         ->and($phases->where('key', 'redirect'))->toHaveCount(1)
-        ->and($phases->where('key', 'rider_intro'))->toHaveCount(1);
+        ->and($phases->where('key', 'rider_intro'))->toHaveCount(1)
+        ->and($experience)
+        ->toHaveKey('diagnostics.splash_owner')
+        ->toHaveKey('diagnostics.redirect_owner');
+
 });
