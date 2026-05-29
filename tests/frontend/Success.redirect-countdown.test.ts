@@ -332,5 +332,63 @@ describe('claim Success redirect countdown rendering', () => {
 
         expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(false);
     });
+
+    it('renders success rider stages inside a dedicated success stage region', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                rider: {
+                    ...baseProps.rider,
+                    stages: {
+                        stages: [
+                            {
+                                key: 'success-message',
+                                type: 'message',
+                                phase: 'success',
+                                payload: {
+                                    title: 'Claim complete',
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="success-stage-region"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="success-stage-region"] [data-testid="rider-stage"]').exists()).toBe(true);
+    });
+
+    it('renders redirect countdown inside a dedicated countdown region', () => {
+        const wrapper = mount(Success, {
+            props: baseProps,
+        });
+
+        expect(wrapper.find('[data-testid="redirect-countdown-region"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="redirect-countdown-region"] [data-testid="rider-countdown"]').exists()).toBe(true);
+    });
+
+    it('renders fallback success region only when there are no success stages and no countdown', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                redirect: {
+                    show_countdown: false,
+                    owner: null,
+                    delay_seconds: null,
+                },
+                claim_experience: {
+                    ...baseProps.claim_experience,
+                    options: {
+                        show_redirect_countdown: false,
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="fallback-success-region"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="success-stage-region"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="redirect-countdown-region"]').exists()).toBe(false);
+    });
 });
 

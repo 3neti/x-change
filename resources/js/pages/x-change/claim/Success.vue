@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { computed, toRef } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { CheckCircle2 } from 'lucide-vue-next';
-import { useXChangeRoutes } from '@/composables/useXChangeRoutes';
 import RiderRenderer from '@/components/x-rider/RiderRenderer.vue';
 import RiderCountdown from '@/components/x-rider/RiderCountdown.vue';
 import RiderStagePresenter from '@/components/x-rider/RiderStagePresenter.vue';
@@ -14,8 +12,6 @@ import { stageIsInPhase } from '@/components/x-rider/useRiderStagePhase';
 import { useClaimSuccessRedirect } from './useClaimSuccessRedirect';
 
 defineOptions({ layout: null });
-
-const routes = useXChangeRoutes();
 
 interface VoucherProps {
     code: string;
@@ -106,29 +102,6 @@ const hasAnyRiderContent = computed(() =>
     hasSuccessVisualStages.value || hasRiderMessage.value
 );
 
-const compiledRedirect = computed(() => {
-    if (!props.redirect?.show_countdown || !props.redirectEndpoint) {
-        return null;
-    }
-
-    return {
-        enabled: true,
-        url: props.redirectEndpoint,
-        delay_seconds: props.redirect.delay_seconds ?? 5,
-        content: 'Redirecting shortly...',
-    };
-});
-
-// const countdownRedirect = computed(() =>
-//     riderRedirect.value?.enabled
-//         ? riderRedirect.value
-//         : compiledRedirect.value
-// );
-//
-// const hasRedirect = computed(() =>
-//     Boolean(countdownRedirect.value?.enabled && props.redirectEndpoint)
-// );
-
 const {
     countdownRedirect,
     hasRedirect,
@@ -160,8 +133,16 @@ const fallbackTitle = computed(() => {
         return 'Your claim is being processed';
     }
 
-    return hasNonZeroAmount.value ? 'Disbursed to your account' : 'Pay Code claimed';
+    return hasNonZeroAmount.value
+        ? 'Disbursed to your account'
+        : 'Pay Code claimed';
 });
+
+const shouldRenderFallback = computed(() =>
+    !hasSuccessVisualStages.value
+    && !hasRiderMessage.value
+    && !hasRedirect.value
+);
 </script>
 
 <template>
@@ -178,7 +159,8 @@ const fallbackTitle = computed(() => {
 
                     <div
                         v-if="hasSuccessVisualStages"
-                        class="space-y-3"
+                        data-testid="success-stage-region"
+                        class="space-y-4"
                     >
                         <RiderStagePresenter
                             v-for="stage in successVisualStages"
@@ -192,7 +174,11 @@ const fallbackTitle = computed(() => {
                         :content="riderContent"
                     />
 
-                    <template v-else>
+                    <div
+                        v-else-if="shouldRenderFallback"
+                        data-testid="fallback-success-region"
+                        class="space-y-3"
+                    >
                         <p
                             v-if="hasNonZeroAmount"
                             class="text-2xl font-bold tracking-tight text-foreground"
@@ -203,7 +189,7 @@ const fallbackTitle = computed(() => {
                         <p class="text-center text-lg font-medium text-foreground">
                             {{ fallbackTitle }}
                         </p>
-                    </template>
+                    </div>
 
                     <div
                         v-if="!hasAnyRiderContent"
@@ -219,31 +205,15 @@ const fallbackTitle = computed(() => {
                     :redirect-endpoint="redirectEndpoint"
                 />
 
-                <RiderCountdown
-                    v-else-if="hasRedirect"
-                    :redirect="countdownRedirect"
-                    :redirect-endpoint="redirectEndpoint"
-                />
-
                 <div
-                    v-else
-                    class="flex flex-col gap-3"
+                    v-if="hasRedirect"
+                    data-testid="redirect-countdown-region"
+                    class="mt-6"
                 >
-                    <Button
-                        class="w-full rounded-full"
-                        @click="router.visit('/x/claim')"
-                    >
-                        Claim Another
-                    </Button>
-
-                    <Button
-                        variant="ghost"
-                        size="lg"
-                        class="w-full rounded-full"
-                        @click="router.visit(routes.dashboard)"
-                    >
-                        Go to Dashboard
-                    </Button>
+                    <RiderCountdown
+                        :redirect="countdownRedirect"
+                        :redirect-endpoint="redirectEndpoint"
+                    />
                 </div>
             </CardContent>
         </Card>
