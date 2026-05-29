@@ -6,7 +6,11 @@ export function useClaimSuccessRedirect(
     redirectEndpoint: Ref<string | null | undefined>,
 ) {
     const compiledRedirect = computed(() => {
-        if (!redirect.value?.show_countdown || !redirectEndpoint.value) {
+        if (
+            !redirect.value?.show_countdown ||
+            redirect.value?.owner !== 'claim-widget' ||
+            !redirectEndpoint.value
+        ) {
             return null;
         }
 

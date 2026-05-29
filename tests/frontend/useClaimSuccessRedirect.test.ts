@@ -59,4 +59,19 @@ describe('useClaimSuccessRedirect', () => {
             url: 'https://rider.example.com',
         });
     });
+
+    it('does not build compiled countdown when redirect owner is not claim-widget', () => {
+        const { hasRedirect, countdownRedirect } = useClaimSuccessRedirect(
+            ref(null),
+            ref({
+                show_countdown: true,
+                owner: 'rider-runtime',
+                delay_seconds: 5,
+            }),
+            ref('/x/claim/TEST123/redirect'),
+        );
+
+        expect(hasRedirect.value).toBe(false);
+        expect(countdownRedirect.value).toBeNull();
+    });
 });

@@ -317,5 +317,20 @@ describe('claim Success redirect countdown rendering', () => {
         expect(wrapper.find('[data-testid="rider-stage"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(true);
     });
+
+    it('does not render compiled countdown when redirect owner is not claim-widget', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                redirect: {
+                    show_countdown: true,
+                    owner: 'rider-runtime',
+                    delay_seconds: 5,
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(false);
+    });
 });
 
