@@ -6,6 +6,7 @@ use LBHurtado\FormFlowManager\Data\FormFlowInstructionsData;
 use LBHurtado\FormFlowManager\Services\DriverService;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 
 function claimVoucherWithRiderSplash(): Voucher
 {
@@ -131,9 +132,7 @@ it('persists claim experience inside started form flow state', function () {
 
     expect($state)->toBeArray();
 
-    $experience = data_get($state, 'instructions.metadata.claim_experience')
-        ?? data_get($state, 'metadata.claim_experience')
-        ?? data_get($state, 'claim_experience');
+    $experience = ClaimExperiencePayload::fromState($state);
 
     expect($experience)->toBeArray()
         ->and(data_get($experience, 'version'))->toBe(1)
