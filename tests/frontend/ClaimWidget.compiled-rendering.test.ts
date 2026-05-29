@@ -278,4 +278,36 @@ describe('ClaimWidget compiled rendering', () => {
         expect(wrapper.text()).not.toContain('legacy-splash');
         expect(wrapper.text()).not.toContain('legacy-rider-intro');
     });
+
+    it('ignores inactive compiled rider intro and falls back to legacy splash', () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'rider_intro',
+                            owner: 'x-rider',
+                            source: 'claim_experience',
+                            status: 'skipped',
+                            stages: [
+                                {
+                                    key: 'compiled-rider-intro',
+                                    type: 'splash',
+                                    phase: 'pre_claim',
+                                    content: 'Compiled rider intro',
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="rider-runtime"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="runtime-stage"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="runtime-stage"]').text()).toBe('legacy-splash');
+
+        expect(wrapper.text()).not.toContain('compiled-rider-intro');
+    });
 });

@@ -104,7 +104,10 @@ function compiledPhase(key: string): Record<string, any> | null {
         ? props.claimExperience.phases as Record<string, any>[]
         : [];
 
-    return phases.find((phase) => phase.key === key) ?? null;
+    return phases.find((phase) =>
+        phase.key === key
+        && (phase.status ?? 'active') === 'active'
+    ) ?? null;
 }
 
 function compiledPhaseStages(key: string): RawRiderStage[] {
