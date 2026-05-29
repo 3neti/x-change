@@ -107,6 +107,7 @@ class ClaimExperienceCompiler
             ],
             options: [
                 'skip_consumed_splash' => $hasRiderSplash,
+                'show_redirect_countdown' => filled($redirectUrl),
             ],
             phases: new DataCollection(ClaimPhaseData::class, $phases),
             consumed: [

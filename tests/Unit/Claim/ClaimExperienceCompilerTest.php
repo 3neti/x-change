@@ -89,6 +89,7 @@ it('keeps form-flow splash available when rider intro splash does not exist', fu
         ->and($experience['consumed']['splash'])->toBeFalse()
         ->and($experience['options']['skip_consumed_splash'])->toBeFalse()
         ->and($experience['diagnostics']['duplicate_splash_prevented'])->toBeFalse()
+        ->and($experience['diagnostics']['redirect_owner'])->toBeNull()
         ->and($experience['diagnostics']['splash_owner'])->toBe('form-flow')
         ->and($experience['diagnostics']['form_flow_splash_policy'])->toBe('allow')
         ->and($phases->pluck('key')->all())->not->toContain('rider_intro')
@@ -115,6 +116,7 @@ it('assigns exactly one redirect owner when rider url exists', function () {
         ->and($redirectPhases[0]['url'])->toBe('https://example.com/after-claim')
         ->and($redirectPhases[0]['delay_seconds'])->toBe(5)
         ->and($redirectPhases[0]['show_countdown'])->toBeTrue()
+        ->and($experience['options']['show_redirect_countdown'])->toBeTrue()
         ->and($experience['diagnostics']['redirect_owner'])->toBe('claim-widget');
 });
 
