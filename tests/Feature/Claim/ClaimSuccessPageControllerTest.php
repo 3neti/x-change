@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
-use Inertia\Testing\AssertableInertia as Assert;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSuccessPageController;
+use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XRider\Contracts\RiderExperienceResolverContract;
 use LBHurtado\XRider\Data\RiderExperienceData;
 use LBHurtado\XRider\Data\RiderStageCollectionData;
@@ -28,7 +28,8 @@ BLADE);
 
     app()->instance(
         RiderExperienceResolverContract::class,
-        new class implements RiderExperienceResolverContract {
+        new class implements RiderExperienceResolverContract
+        {
             public function resolve(RiderSubjectData $subject, array $context = []): RiderExperienceData
             {
                 return new RiderExperienceData(
@@ -58,22 +59,26 @@ it('exposes claim experience redirect countdown metadata to the success page', f
         ],
     ));
 
-    $this->getJson(route('x-change.claim.success', [
+    $response = $this->getJson(route('x-change.claim.success', [
+        'code' => $voucher->code,
+    ], false).'?'.http_build_query([
+        'state' => [
+            'status' => 'completed',
+        ],
+        'subject' => [
+            'type' => 'voucher',
+            'id' => $voucher->getKey(),
             'code' => $voucher->code,
-        ], false).'?'.http_build_query([
-            'state' => [
-                'status' => 'completed',
-            ],
-            'subject' => [
-                'type' => 'voucher',
-                'id' => $voucher->getKey(),
-                'code' => $voucher->code,
-            ],
-        ]))
+        ],
+    ]))
         ->assertOk()
         ->assertJsonPath('claim_experience.options.show_redirect_countdown', true)
         ->assertJsonPath('claim_experience.diagnostics.redirect_owner', 'claim-widget')
         ->assertJsonPath('redirect.show_countdown', true)
         ->assertJsonPath('redirect.owner', 'claim-widget')
         ->assertJsonPath('redirect.delay_seconds', 5);
+
+    $claimExperience = $response->json('claim_experience');
+
+    expect(ClaimExperiencePayload::isClaimWidgetRedirect($claimExperience))->toBeTrue();
 });
