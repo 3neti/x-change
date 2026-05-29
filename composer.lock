@@ -184,7 +184,7 @@
             "dist": {
                 "type": "path",
                 "url": "/Users/rli/PhpstormProjects/packages/form-flow-manager",
-                "reference": "87e9ba43eea2e8252739610fcef6714a00a082b0"
+                "reference": "539ff6e343d5dacb9b5de9be8ea770292fc39769"
             },
             "require": {
                 "illuminate/support": "^11.0 || ^12.0 || ^13.0",
