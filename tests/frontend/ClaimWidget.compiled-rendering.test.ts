@@ -15,6 +15,8 @@ vi.mock('@inertiajs/vue3', () => ({
     }),
 }));
 
+let voucherPreviewFixture: any;
+
 vi.mock('@/composables/useVoucherPreview', async () => {
     const { ref } = await vi.importActual<typeof import('vue')>('vue');
 
@@ -23,27 +25,7 @@ vi.mock('@/composables/useVoucherPreview', async () => {
             code: ref('TEST123'),
             loading: ref(false),
             error: ref(null),
-            voucherData: ref({
-                code: 'TEST123',
-                status: 'active',
-                instructions: {
-                    rider: {
-                        splash: '<h1>Legacy splash</h1>',
-                    },
-                },
-                rider: {
-                    stages: {
-                        stages: [
-                            {
-                                key: 'legacy-rider-intro',
-                                type: 'splash',
-                                phase: 'pre_claim',
-                                content: 'Legacy rider intro',
-                            },
-                        ],
-                    },
-                },
-            }),
+            voucherData: ref(voucherPreviewFixture),
             showPreview: ref(true),
         }),
     };
@@ -169,6 +151,30 @@ vi.mock('lucide-vue-next', () => ({
 }));
 
 describe('ClaimWidget compiled rendering', () => {
+    beforeEach(() => {
+        voucherPreviewFixture = {
+            code: 'TEST123',
+            status: 'active',
+            instructions: {
+                rider: {
+                    splash: '<h1>Legacy splash</h1>',
+                },
+            },
+            rider: {
+                stages: {
+                    stages: [
+                        {
+                            key: 'legacy-rider-intro',
+                            type: 'splash',
+                            phase: 'pre_claim',
+                            content: 'Legacy rider intro',
+                        },
+                    ],
+                },
+            },
+        };
+    });
+
     it('prefers compiled rider intro stages over legacy rider splash stages', () => {
         const wrapper = mount(ClaimWidget, {
             props: {
@@ -224,5 +230,52 @@ describe('ClaimWidget compiled rendering', () => {
         expect(wrapper.find('[data-testid="runtime-stage"]').text()).toBe('legacy-splash');
 
         expect(wrapper.text()).not.toContain('compiled-rider-intro');
+    });
+
+    it('renders compiled rider intro even when voucher preview has no legacy rider stages', () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'rider_intro',
+                            owner: 'x-rider',
+                            source: 'claim_experience',
+                            status: 'active',
+                            stages: [
+                                {
+                                    key: 'compiled-rider-intro',
+                                    type: 'splash',
+                                    phase: 'pre_claim',
+                                    content: 'Compiled rider intro',
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+            global: {
+                provide: {
+                    voucherPreviewOverride: {
+                        code: 'TEST123',
+                        status: 'active',
+                        instructions: {},
+                        rider: {
+                            stages: {
+                                stages: [],
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="rider-runtime"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="runtime-stage"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="runtime-stage"]').text()).toBe('compiled-rider-intro');
+
+        expect(wrapper.text()).not.toContain('legacy-splash');
+        expect(wrapper.text()).not.toContain('legacy-rider-intro');
     });
 });
