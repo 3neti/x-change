@@ -22,6 +22,7 @@ use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Providers\XChangeServiceProvider;
 use LBHurtado\XChange\Tests\Fakes\FakeAuditLogger;
 use LBHurtado\XChange\Tests\Fakes\FakePayoutProvider;
+use LBHurtado\XRider\XRiderServiceProvider;
 use Mews\Purifier\PurifierServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 use ReflectionClass;
@@ -72,7 +73,8 @@ abstract class TestCase extends Orchestra
             InstructionServiceProvider::class,
             EmiCoreServiceProvider::class,
             XChangeServiceProvider::class,
-            PurifierServiceProvider::class
+            PurifierServiceProvider::class,
+            XRiderServiceProvider::class,
         ];
     }
 

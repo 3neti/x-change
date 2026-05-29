@@ -39,6 +39,8 @@ class ClaimRedirectController
 
         $url = $redirects->resolve($experience);
 
+        abort_if(blank($url), 404);
+
         $analytics->record(new RiderAnalyticsEventData(
             event: 'rider.redirect.started',
             reference: $subject->reference(),
