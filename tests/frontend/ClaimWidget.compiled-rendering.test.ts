@@ -201,4 +201,28 @@ describe('ClaimWidget compiled rendering', () => {
         expect(wrapper.text()).not.toContain('legacy-rider-intro');
         expect(wrapper.text()).not.toContain('legacy-splash');
     });
+
+    it('falls back to legacy voucher instruction splash when compiled rider intro is absent', () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'form_flow',
+                            owner: 'form-flow',
+                            source: 'voucher-redemption.yaml',
+                            status: 'active',
+                        },
+                    ],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="rider-runtime"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="runtime-stage"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="runtime-stage"]').text()).toBe('legacy-splash');
+
+        expect(wrapper.text()).not.toContain('compiled-rider-intro');
+    });
 });
