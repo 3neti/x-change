@@ -197,5 +197,63 @@ describe('claim Success redirect countdown rendering', () => {
         expect(wrapper.find('[data-testid="countdown-endpoint"]').text()).toBe('/x/claim/TEST123/redirect');
         expect(wrapper.find('[data-testid="countdown-endpoint"]').text()).not.toBe('https://example.com/raw-rider-url');
     });
+
+    it('renders success visual stages together with redirect countdown when both exist', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                rider: {
+                    ...baseProps.rider,
+                    stages: {
+                        stages: [
+                            {
+                                key: 'success-message',
+                                type: 'message',
+                                phase: 'success',
+                                payload: {
+                                    title: 'Claim complete',
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="rider-stage"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(true);
+    });
+
+    it('renders countdown when there are no success visual stages', () => {
+        const wrapper = mount(Success, {
+            props: baseProps,
+        });
+
+        expect(wrapper.find('[data-testid="rider-stage"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(true);
+    });
+
+    it('renders fallback success message when no stages and no countdown exist', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                redirect: {
+                    show_countdown: false,
+                    owner: null,
+                    delay_seconds: null,
+                },
+                claim_experience: {
+                    ...baseProps.claim_experience,
+                    options: {
+                        show_redirect_countdown: false,
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="rider-stage"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(false);
+        expect(wrapper.text()).toContain('Disbursed to your account');
+    });
 });
 
