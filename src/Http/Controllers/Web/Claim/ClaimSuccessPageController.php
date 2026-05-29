@@ -9,6 +9,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
+use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Rider\XChangeRiderOutcomeResolver;
 use LBHurtado\XChange\Support\Rider\XChangeRiderSubjectFactory;
 use LBHurtado\XRider\Contracts\RiderExperienceResolverContract;
@@ -38,13 +39,6 @@ class ClaimSuccessPageController
             ],
         ]);
 
-        $redirect = [
-            'show_countdown' => data_get($claimExperience, 'options.show_redirect_countdown', false),
-            'owner' => data_get($claimExperience, 'diagnostics.redirect_owner'),
-            'delay_seconds' => collect(data_get($claimExperience, 'phases', []))
-                ->firstWhere('key', 'redirect')['delay_seconds'] ?? null,
-        ];
-
         $props = [
             'voucher' => [
                 'code' => (string) $voucher->code,
@@ -57,7 +51,7 @@ class ClaimSuccessPageController
                 'code' => $voucher->code,
             ]),
             'claim_experience' => $claimExperience,
-            'redirect' => $redirect,
+            'redirect' => ClaimExperiencePayload::redirect($claimExperience),
         ];
 
         if (request()->wantsJson()) {

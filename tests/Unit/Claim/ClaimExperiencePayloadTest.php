@@ -37,3 +37,44 @@ it('writes claim experience into form flow instruction metadata', function () {
     expect(data_get($instructions, 'metadata.voucher_code'))->toBe('TEST123')
         ->and(data_get($instructions, 'metadata.claim_experience.version'))->toBe(1);
 });
+
+it('derives redirect props from claim experience contract', function () {
+    $redirect = ClaimExperiencePayload::redirect([
+        'options' => [
+            'show_redirect_countdown' => true,
+        ],
+        'diagnostics' => [
+            'redirect_owner' => 'claim-widget',
+        ],
+        'phases' => [
+            [
+                'key' => 'redirect',
+                'delay_seconds' => 5,
+            ],
+        ],
+    ]);
+
+    expect($redirect)->toBe([
+        'show_countdown' => true,
+        'owner' => 'claim-widget',
+        'delay_seconds' => 5,
+    ]);
+});
+
+it('derives disabled redirect props when countdown is not enabled', function () {
+    $redirect = ClaimExperiencePayload::redirect([
+        'options' => [
+            'show_redirect_countdown' => false,
+        ],
+        'diagnostics' => [
+            'redirect_owner' => null,
+        ],
+        'phases' => [],
+    ]);
+
+    expect($redirect)->toBe([
+        'show_countdown' => false,
+        'owner' => null,
+        'delay_seconds' => null,
+    ]);
+});
