@@ -255,5 +255,67 @@ describe('claim Success redirect countdown rendering', () => {
         expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(false);
         expect(wrapper.text()).toContain('Disbursed to your account');
     });
+
+    // Product decision:
+// Success rider stages and redirect countdown render together.
+// Success stages communicate outcome; countdown communicates upcoming navigation.
+    it('renders success visual stages together with redirect countdown when both exist', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                rider: {
+                    ...baseProps.rider,
+                    stages: {
+                        stages: [
+                            {
+                                key: 'success-message',
+                                type: 'message',
+                                phase: 'success',
+                                payload: {
+                                    title: 'Claim complete',
+                                },
+                            },
+                        ],
+                    },
+                },
+                redirect: {
+                    show_countdown: true,
+                    owner: 'claim-widget',
+                    delay_seconds: 5,
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="rider-stage"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="countdown-delay"]').text()).toBe('5');
+        expect(wrapper.find('[data-testid="countdown-endpoint"]').text()).toBe('/x/claim/TEST123/redirect');
+    });
+
+    it('does not let success visual stages suppress redirect countdown', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                rider: {
+                    ...baseProps.rider,
+                    stages: {
+                        stages: [
+                            {
+                                key: 'success-message',
+                                type: 'message',
+                                phase: 'success',
+                                payload: {
+                                    title: 'Claim complete',
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="rider-stage"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(true);
+    });
 });
 
