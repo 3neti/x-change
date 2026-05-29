@@ -1,5 +1,5 @@
-import { ref, watch } from 'vue';
 import type { InspectResponse } from '@/types/voucher';
+import { ref, watch } from 'vue';
 
 interface UseVoucherPreviewOptions {
     debounceMs?: number;

@@ -1,0 +1,23 @@
+{
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "baseUrl": ".",
+        "paths": {
+            "@/*": ["resources/js/*"]
+        },
+        "lib": ["ESNext", "DOM", "DOM.Iterable"],
+        "strict": true,
+        "isolatedModules": true,
+        "skipLibCheck": true,
+        "types": ["vitest/globals", "node"]
+    },
+    "include": [
+        "vitest.config.ts",
+        "resources/js/**/*.ts",
+        "resources/js/**/*.d.ts",
+        "resources/js/**/*.vue",
+        "tests/frontend/**/*.ts"
+    ]
+}

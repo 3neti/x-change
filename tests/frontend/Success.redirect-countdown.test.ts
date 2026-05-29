@@ -119,4 +119,61 @@ describe('claim Success redirect countdown rendering', () => {
 
         expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(false);
     });
+
+    it('does not render RiderCountdown when redirect endpoint is missing', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                redirectEndpoint: null,
+            },
+        });
+
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(false);
+    });
+
+    it('lets rider redirect take precedence over compiled redirect', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                rider: {
+                    ...baseProps.rider,
+                    redirect: {
+                        enabled: true,
+                        url: 'https://rider.example.com/raw-target',
+                        delay_seconds: 9,
+                        content: 'Rider redirect wins',
+                    },
+                },
+                redirect: {
+                    show_countdown: true,
+                    owner: 'claim-widget',
+                    delay_seconds: 5,
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="countdown-delay"]').text()).toBe('9');
+    });
+
+    it('passes redirectEndpoint to RiderCountdown instead of raw rider url', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                rider: {
+                    ...baseProps.rider,
+                    redirect: {
+                        enabled: true,
+                        url: 'https://rider.example.com/raw-target',
+                        delay_seconds: 9,
+                        content: 'Rider redirect wins',
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="countdown-endpoint"]').text()).toBe('/x/claim/TEST123/redirect');
+        expect(wrapper.find('[data-testid="countdown-endpoint"]').text()).not.toBe('https://rider.example.com/raw-target');
+    });
 });
