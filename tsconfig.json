@@ -8,16 +8,15 @@
             "@/*": ["resources/js/*"]
         },
         "lib": ["ESNext", "DOM", "DOM.Iterable"],
+        "types": ["node"],
         "strict": true,
-        "isolatedModules": true,
-        "skipLibCheck": true,
-        "types": ["vitest/globals", "node"]
+        "skipLibCheck": true
     },
     "include": [
+        "vite.config.ts",
         "vitest.config.ts",
         "resources/js/**/*.ts",
-        "resources/js/**/*.d.ts",
         "resources/js/**/*.vue",
-        "tests/frontend/**/*.ts"
+        "resources/js/**/*.d.ts"
     ]
 }

@@ -3,11 +3,11 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
-use Inertia\Testing\AssertableInertia as Assert;
 use LBHurtado\FormFlowManager\Data\FormFlowInstructionsData;
 use LBHurtado\FormFlowManager\Http\Controllers\FormFlowController;
 use LBHurtado\FormFlowManager\Services\DriverService;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 
 beforeEach(function () {
     $viewsPath = __DIR__.'/../../Fixtures/views';
@@ -100,11 +100,15 @@ it('skips the form-flow splash when claim experience marks rider splash consumed
     expect($state)->toBeArray()
         ->and(data_get($state, 'current_step'))->toBe(1)
         ->and(data_get($state, 'collected_data.0._skipped'))->toBeTrue()
-        ->and(data_get($state, 'collected_data.0._skip_reason'))->toBe('duplicate_splash_candidate')
-        ->and(data_get($state, 'instructions.metadata.claim_experience.options.skip_consumed_splash'))->toBeTrue()
-        ->and(data_get($state, 'instructions.metadata.claim_experience.consumed.splash'))->toBeTrue()
-        ->and(data_get($state, 'instructions.metadata.claim_experience.diagnostics.splash_owner'))->toBe('x-rider')
-        ->and(data_get($state, 'instructions.metadata.claim_experience.diagnostics.form_flow_splash_policy'))->toBe('skip_consumed');
+        ->and(data_get($state, 'collected_data.0._skip_reason'))->toBe('duplicate_splash_candidate');
+
+    $experience = ClaimExperiencePayload::fromState($state);
+
+    expect($experience)->toBeArray()
+        ->and(data_get($experience, 'options.skip_consumed_splash'))->toBeTrue()
+        ->and(data_get($experience, 'consumed.splash'))->toBeTrue()
+        ->and(data_get($experience, 'diagnostics.splash_owner'))->toBe('x-rider')
+        ->and(data_get($experience, 'diagnostics.form_flow_splash_policy'))->toBe('skip_consumed');
 });
 
 it('does not skip the form-flow splash when rider splash was not consumed', function () {
@@ -174,9 +178,13 @@ it('does not skip the form-flow splash when rider splash was not consumed', func
 
     expect($state)->toBeArray()
         ->and(data_get($state, 'current_step'))->toBe(0)
-        ->and(data_get($state, 'collected_data.0._skipped'))->toBeNull()
-        ->and(data_get($state, 'instructions.metadata.claim_experience.options.skip_consumed_splash'))->toBeFalse()
-        ->and(data_get($state, 'instructions.metadata.claim_experience.consumed.splash'))->toBeFalse()
-        ->and(data_get($state, 'instructions.metadata.claim_experience.diagnostics.splash_owner'))->toBe('form-flow')
-        ->and(data_get($state, 'instructions.metadata.claim_experience.diagnostics.form_flow_splash_policy'))->toBe('allow');
+        ->and(data_get($state, 'collected_data.0._skipped'))->toBeNull();
+
+    $experience = ClaimExperiencePayload::fromState($state);
+
+    expect($experience)->toBeArray()
+        ->and(data_get($experience, 'options.skip_consumed_splash'))->toBeFalse()
+        ->and(data_get($experience, 'consumed.splash'))->toBeFalse()
+        ->and(data_get($experience, 'diagnostics.splash_owner'))->toBe('form-flow')
+        ->and(data_get($experience, 'diagnostics.form_flow_splash_policy'))->toBe('allow');
 });
