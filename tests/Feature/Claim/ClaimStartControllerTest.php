@@ -152,9 +152,8 @@ it('emits claim experience option to skip consumed splash for rider splash vouch
     mockDriverForClaimVoucher($this, $voucher, splashStep());
 
     assertClaimExperienceStartFlow($this, function (array $experience) {
-        expect(data_get($experience, 'options.skip_consumed_splash'))->toBeTrue()
-            ->and(data_get($experience, 'consumed.splash'))->toBeTrue()
-            ->and(data_get($experience, 'diagnostics.splash_owner'))->toBe('x-rider')
+        expect(ClaimExperiencePayload::isXRiderSplash($experience))->toBeTrue()
+            ->and(ClaimExperiencePayload::shouldSkipConsumedSplash($experience))->toBeTrue()
             ->and(data_get($experience, 'diagnostics.form_flow_splash_policy'))->toBe('skip_consumed');
     }, 'flow-skip-option-test');
 
@@ -170,10 +169,9 @@ it('does not emit consumed splash skip option when voucher has no rider splash',
     mockDriverForClaimVoucher($this, $voucher, splashStep());
 
     assertClaimExperienceStartFlow($this, function (array $experience) {
-        expect(data_get($experience, 'options.skip_consumed_splash'))->toBeFalse()
-            ->and(data_get($experience, 'consumed.splash'))->toBeFalse()
+        expect(ClaimExperiencePayload::shouldSkipConsumedSplash($experience))->toBeFalse()
+            ->and(ClaimExperiencePayload::isFormFlowSplash($experience))->toBeTrue()
             ->and(data_get($experience, 'entry.mode'))->toBe('form_first')
-            ->and(data_get($experience, 'diagnostics.splash_owner'))->toBe('form-flow')
             ->and(data_get($experience, 'diagnostics.form_flow_splash_policy'))->toBe('allow');
     }, 'flow-no-skip-option-test');
 
