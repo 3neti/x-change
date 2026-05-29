@@ -78,3 +78,26 @@ it('derives disabled redirect props when countdown is not enabled', function () 
         'delay_seconds' => null,
     ]);
 });
+
+it('only enables success countdown when claim widget owns redirect', function () {
+    $redirect = ClaimExperiencePayload::redirect([
+        'options' => [
+            'show_redirect_countdown' => true,
+        ],
+        'diagnostics' => [
+            'redirect_owner' => 'rider-runtime',
+        ],
+        'phases' => [
+            [
+                'key' => 'redirect',
+                'delay_seconds' => 5,
+            ],
+        ],
+    ]);
+
+    expect($redirect)->toBe([
+        'show_countdown' => false,
+        'owner' => 'rider-runtime',
+        'delay_seconds' => 5,
+    ]);
+});
