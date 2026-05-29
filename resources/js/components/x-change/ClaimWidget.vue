@@ -455,8 +455,12 @@ if (import.meta.env.DEV && claimExperienceDebug.value) {
 
             <!-- Active State: Tabbed preview -->
             <div v-else-if="voucherData">
-                <!-- Rider pre-claim content from splash stage -->
-                <Card v-if="hasPreClaimContent" class="mb-4 border-primary/10 bg-primary/5">
+                <!-- Rider pre-claim content from compiled/legacy rider intro -->
+                <Card
+                    v-if="hasPreClaimContent"
+                    data-testid="pre-claim-rider-region"
+                    class="mb-4 border-primary/10 bg-primary/5"
+                >
                     <CardContent class="pt-4 pb-4">
                         <RiderRuntimeSequencer :stages="preClaimVisualStages" />
                     </CardContent>
