@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Services\Claim\ClaimExperienceCompiler;
+use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 
 function fakeClaimVoucher(array $instructionOverrides = []): Voucher
 {
@@ -48,11 +49,10 @@ it('compiles a rider-first claim experience when rider splash exists', function 
     expect($experience['version'])->toBe(1)
         ->and($experience['entry']['mode'])->toBe('rider_first')
         ->and($experience['entry']['initial_phase'])->toBe('rider_intro')
-        ->and($experience['consumed']['splash'])->toBeTrue()
-        ->and($experience['options']['skip_consumed_splash'])->toBeTrue()
+        ->and(ClaimExperiencePayload::isXRiderSplash($experience))->toBeTrue()
+        ->and(ClaimExperiencePayload::shouldSkipConsumedSplash($experience))->toBeTrue()
+        ->and(ClaimExperiencePayload::isClaimWidgetRedirect($experience))->toBeTrue()
         ->and($experience['diagnostics']['duplicate_splash_prevented'])->toBeTrue()
-        ->and($experience['diagnostics']['redirect_owner'])->toBe('claim-widget')
-        ->and($experience['diagnostics']['splash_owner'])->toBe('x-rider')
         ->and($experience['diagnostics']['form_flow_splash_policy'])->toBe('skip_consumed')
         ->and($phases->pluck('key')->all())->toContain(
             'rider_intro',
@@ -86,11 +86,10 @@ it('keeps form-flow splash available when rider intro splash does not exist', fu
 
     expect($experience['entry']['mode'])->toBe('form_first')
         ->and($experience['entry']['initial_phase'])->toBe('pre_claim')
-        ->and($experience['consumed']['splash'])->toBeFalse()
-        ->and($experience['options']['skip_consumed_splash'])->toBeFalse()
+        ->and(ClaimExperiencePayload::shouldSkipConsumedSplash($experience))->toBeFalse()
+        ->and(ClaimExperiencePayload::isClaimWidgetRedirect($experience))->toBeFalse()
+        ->and(ClaimExperiencePayload::isFormFlowSplash($experience))->toBeTrue()
         ->and($experience['diagnostics']['duplicate_splash_prevented'])->toBeFalse()
-        ->and($experience['diagnostics']['redirect_owner'])->toBeNull()
-        ->and($experience['diagnostics']['splash_owner'])->toBe('form-flow')
         ->and($experience['diagnostics']['form_flow_splash_policy'])->toBe('allow')
         ->and($phases->pluck('key')->all())->not->toContain('rider_intro')
         ->and($formFlow['skip_stages'])->toBe([]);
@@ -117,7 +116,7 @@ it('assigns exactly one redirect owner when rider url exists', function () {
         ->and($redirectPhases[0]['delay_seconds'])->toBe(5)
         ->and($redirectPhases[0]['show_countdown'])->toBeTrue()
         ->and($experience['options']['show_redirect_countdown'])->toBeTrue()
-        ->and($experience['diagnostics']['redirect_owner'])->toBe('claim-widget');
+        ->and(ClaimExperiencePayload::isClaimWidgetRedirect($experience))->toBeTrue();
 });
 
 it('emits no anonymous phases', function () {
