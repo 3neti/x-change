@@ -29,6 +29,12 @@ interface Props {
     claimOutcome?: string;
     rider?: RiderExperience | null;
     redirectEndpoint?: string | null;
+    claim_experience?: Record<string, any> | null;
+    redirect?: {
+        show_countdown?: boolean;
+        owner?: string | null;
+        delay_seconds?: number | null;
+    } | null;
 }
 
 const props = defineProps<Props>();
