@@ -105,9 +105,8 @@ it('skips the form-flow splash when claim experience marks rider splash consumed
     $experience = ClaimExperiencePayload::fromState($state);
 
     expect($experience)->toBeArray()
-        ->and(data_get($experience, 'options.skip_consumed_splash'))->toBeTrue()
-        ->and(data_get($experience, 'consumed.splash'))->toBeTrue()
-        ->and(data_get($experience, 'diagnostics.splash_owner'))->toBe('x-rider')
+        ->and(ClaimExperiencePayload::shouldSkipConsumedSplash($experience))->toBeTrue()
+        ->and(ClaimExperiencePayload::isXRiderSplash($experience))->toBeTrue()
         ->and(data_get($experience, 'diagnostics.form_flow_splash_policy'))->toBe('skip_consumed');
 });
 
@@ -183,8 +182,9 @@ it('does not skip the form-flow splash when rider splash was not consumed', func
     $experience = ClaimExperiencePayload::fromState($state);
 
     expect($experience)->toBeArray()
-        ->and(data_get($experience, 'options.skip_consumed_splash'))->toBeFalse()
-        ->and(data_get($experience, 'consumed.splash'))->toBeFalse()
-        ->and(data_get($experience, 'diagnostics.splash_owner'))->toBe('form-flow')
+        ->and(ClaimExperiencePayload::shouldSkipConsumedSplash($experience))->toBeFalse()
+        ->and(ClaimExperiencePayload::isFormFlowSplash($experience))->toBeTrue()
         ->and(data_get($experience, 'diagnostics.form_flow_splash_policy'))->toBe('allow');
 });
+
+
