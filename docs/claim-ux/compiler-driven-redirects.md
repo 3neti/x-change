@@ -52,6 +52,111 @@ External URL
 
 ---
 
+# Claim Experience Contract
+
+The claim experience is represented by two distinct layers:
+
+## ClaimExperienceData
+
+```php
+ClaimExperienceData
+```
+
+This is the normalized domain contract produced by:
+
+```php
+ClaimExperienceCompiler
+```
+
+The compiler is responsible for determining:
+
+- Entry mode
+- Splash ownership
+- Redirect ownership
+- Countdown behavior
+- Duplicate splash prevention
+- Experience phases
+- Diagnostics
+
+Controllers and frontend components should not reimplement these decisions.
+
+The compiler is the single source of truth.
+
+---
+
+## ClaimExperiencePayload
+
+```php
+ClaimExperiencePayload
+```
+
+This is the adapter layer that provides a stable API for reading, writing, and deriving behavior from the contract.
+
+Examples:
+
+```php
+ClaimExperiencePayload::fromState($state);
+
+ClaimExperiencePayload::putIntoInstructions(
+    $instructions,
+    $experience,
+);
+
+ClaimExperiencePayload::redirect($experience);
+
+ClaimExperiencePayload::isClaimWidgetRedirect($experience);
+
+ClaimExperiencePayload::isXRiderSplash($experience);
+
+ClaimExperiencePayload::shouldSkipConsumedSplash($experience);
+```
+
+The payload helper exists so that controllers, tests, and future integrations do not need to understand the internal storage shape of the contract.
+
+---
+
+## Storage Location vs Contract
+
+The claim experience is currently persisted inside Form Flow instructions:
+
+```php
+instructions.metadata.claim_experience
+```
+
+This location is an implementation detail.
+
+Consumers should not depend on the storage path directly.
+
+Instead:
+
+```php
+ClaimExperiencePayload::fromState($state)
+```
+
+should be used to retrieve the contract.
+
+This allows the storage strategy to evolve without requiring controller or frontend changes.
+
+The conceptual contract is:
+
+```text
+ClaimExperienceData
+        ↓
+ClaimExperiencePayload
+        ↓
+Controllers / Tests / Frontend
+```
+
+and not:
+
+```text
+instructions.metadata.claim_experience
+```
+
+The metadata path is merely where the contract is currently stored.
+
+---
+
 # Redirect Ownership
 
 Only one component may own the redirect experience.

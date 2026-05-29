@@ -489,6 +489,82 @@ it('does not emit anonymous phases')
 
 ---
 
+}
+## Phase 2.5 — Promote Claim Experience To A First-Class Contract
+
+The initial compiler work introduces a normalized claim experience payload.
+
+The next step is to prevent controllers, tests, and frontend components from depending on storage details.
+
+### ClaimExperienceData
+
+```php
+ClaimExperienceData
+```
+
+Represents the normalized output of the compiler.
+
+This is the domain contract.
+
+---
+
+### ClaimExperiencePayload
+
+```php
+ClaimExperiencePayload
+```
+
+Provides a stable adapter for:
+
+```php
+ClaimExperiencePayload::fromState(...)
+ClaimExperiencePayload::putIntoInstructions(...)
+ClaimExperiencePayload::redirect(...)
+ClaimExperiencePayload::isClaimWidgetRedirect(...)
+ClaimExperiencePayload::isXRiderSplash(...)
+ClaimExperiencePayload::shouldSkipConsumedSplash(...)
+```
+
+Controllers and tests should use the adapter rather than reading nested state paths directly.
+
+---
+
+### Storage Independence
+
+The claim experience is currently persisted under:
+
+```php
+instructions.metadata.claim_experience
+```
+
+This location is not the contract.
+
+It is only the current storage mechanism.
+
+Consumers should access claim experience through:
+
+```php
+ClaimExperiencePayload::fromState(...)
+```
+
+instead of depending on specific nested array paths.
+
+---
+
+### Success Criteria
+
+The promotion is complete when:
+
+```text
+Controllers use ClaimExperiencePayload.
+Feature tests use ClaimExperiencePayload.
+Frontend receives derived redirect metadata from ClaimExperiencePayload.
+No feature tests depend on nested storage paths.
+Claim experience storage may change without controller changes.
+```
+
+---
+
 ## Phase 3 — Add ClaimWidget Fallback Consumption
 
 Update `ClaimWidget.vue` to prefer compiler output but retain legacy fallback.
