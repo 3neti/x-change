@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, toRef } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import RiderStagePresenter from '@/components/x-rider/RiderStagePresenter.vue';
 import RiderRuntimeSequencer from '@/components/x-rider/RiderRuntimeSequencer.vue';
 import type { RawRiderStage, RiderExperience } from '@/components/x-rider/types';
 import { stageIsInPhase } from '@/components/x-rider/useRiderStagePhase';
+import { useClaimSuccessRedirect } from './useClaimSuccessRedirect';
 
 defineOptions({ layout: null });
 
@@ -118,14 +119,23 @@ const compiledRedirect = computed(() => {
     };
 });
 
-const countdownRedirect = computed(() =>
-    riderRedirect.value?.enabled
-        ? riderRedirect.value
-        : compiledRedirect.value
-);
+// const countdownRedirect = computed(() =>
+//     riderRedirect.value?.enabled
+//         ? riderRedirect.value
+//         : compiledRedirect.value
+// );
+//
+// const hasRedirect = computed(() =>
+//     Boolean(countdownRedirect.value?.enabled && props.redirectEndpoint)
+// );
 
-const hasRedirect = computed(() =>
-    Boolean(countdownRedirect.value?.enabled && props.redirectEndpoint)
+const {
+    countdownRedirect,
+    hasRedirect,
+} = useClaimSuccessRedirect(
+    riderRedirect,
+    toRef(props, 'redirect'),
+    toRef(props, 'redirectEndpoint'),
 );
 
 const numericAmount = computed(() => Number(props.voucher.amount ?? 0));
