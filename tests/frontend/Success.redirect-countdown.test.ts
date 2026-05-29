@@ -176,4 +176,26 @@ describe('claim Success redirect countdown rendering', () => {
         expect(wrapper.find('[data-testid="countdown-endpoint"]').text()).toBe('/x/claim/TEST123/redirect');
         expect(wrapper.find('[data-testid="countdown-endpoint"]').text()).not.toBe('https://rider.example.com/raw-target');
     });
+
+    it('passes the redirect gate endpoint to RiderCountdown for final navigation', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                rider: {
+                    ...baseProps.rider,
+                    redirect: {
+                        enabled: true,
+                        url: 'https://example.com/raw-rider-url',
+                        timeout: 5,
+                    },
+                },
+                redirectEndpoint: '/x/claim/TEST123/redirect',
+            },
+        });
+
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="countdown-endpoint"]').text()).toBe('/x/claim/TEST123/redirect');
+        expect(wrapper.find('[data-testid="countdown-endpoint"]').text()).not.toBe('https://example.com/raw-rider-url');
+    });
 });
+
