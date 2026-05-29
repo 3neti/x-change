@@ -105,8 +105,27 @@ const hasAnyRiderContent = computed(() =>
     hasSuccessVisualStages.value || hasRiderMessage.value
 );
 
+const compiledRedirect = computed(() => {
+    if (!props.redirect?.show_countdown || !props.redirectEndpoint) {
+        return null;
+    }
+
+    return {
+        enabled: true,
+        url: props.redirectEndpoint,
+        delay_seconds: props.redirect.delay_seconds ?? 5,
+        content: 'Redirecting shortly...',
+    };
+});
+
+const countdownRedirect = computed(() =>
+    riderRedirect.value?.enabled
+        ? riderRedirect.value
+        : compiledRedirect.value
+);
+
 const hasRedirect = computed(() =>
-    Boolean(riderRedirect.value?.enabled && props.redirectEndpoint)
+    Boolean(countdownRedirect.value?.enabled && props.redirectEndpoint)
 );
 
 const numericAmount = computed(() => Number(props.voucher.amount ?? 0));
@@ -192,7 +211,7 @@ const fallbackTitle = computed(() => {
 
                 <RiderCountdown
                     v-else-if="hasRedirect"
-                    :redirect="riderRedirect"
+                    :redirect="countdownRedirect"
                     :redirect-endpoint="redirectEndpoint"
                 />
 
