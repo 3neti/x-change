@@ -6,8 +6,15 @@ export default defineConfig({
     plugins: [vue()],
     resolve: {
         alias: {
+            '@/components/AppLogoIcon.vue': path.resolve(__dirname, 'tests/frontend/stubs/AppLogoIcon.ts'),
+
             '@/components/ui/card': path.resolve(__dirname, 'tests/frontend/stubs/ui-card.ts'),
             '@/components/ui/button': path.resolve(__dirname, 'tests/frontend/stubs/ui-button.ts'),
+            '@/components/ui/input': path.resolve(__dirname, 'tests/frontend/stubs/ui-input.ts'),
+            '@/components/ui/label': path.resolve(__dirname, 'tests/frontend/stubs/ui-label.ts'),
+            '@/components/ui/alert': path.resolve(__dirname, 'tests/frontend/stubs/ui-alert.ts'),
+            '@/components/ui/tabs': path.resolve(__dirname, 'tests/frontend/stubs/ui-tabs.ts'),
+            '@/components/ui/spinner': path.resolve(__dirname, 'tests/frontend/stubs/ui-spinner.ts'),
 
             '@/components/x-rider/RiderCountdown.vue': path.resolve(__dirname, 'tests/frontend/stubs/RiderCountdown.ts'),
             '@/components/x-rider/RiderStagePresenter.vue': path.resolve(__dirname, 'tests/frontend/stubs/RiderStagePresenter.ts'),

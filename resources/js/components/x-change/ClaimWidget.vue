@@ -99,6 +99,20 @@ function extractStages(value: unknown): RawRiderStage[] {
     return [];
 }
 
+function compiledPhase(key: string): Record<string, any> | null {
+    const phases = Array.isArray(props.claimExperience?.phases)
+        ? props.claimExperience.phases as Record<string, any>[]
+        : [];
+
+    return phases.find((phase) => phase.key === key) ?? null;
+}
+
+function compiledPhaseStages(key: string): RawRiderStage[] {
+    const phase = compiledPhase(key);
+
+    return extractStages(phase?.stages);
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
     return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
@@ -284,7 +298,15 @@ function preferVoucherInstructionSplash(stages: RawRiderStage[]): RawRiderStage[
     ];
 }
 
-const preClaimVisualStages = computed<RawRiderStage[]>(() => {
+const compiledPreClaimVisualStages = computed<RawRiderStage[]>(() =>
+    compiledPhaseStages('rider_intro')
+        .filter((stage) =>
+            stage.enabled !== false
+            && isVisualPreviewStage(stage)
+        )
+);
+
+const legacyPreClaimVisualStages = computed<RawRiderStage[]>(() => {
     const stages = riderStages.value.filter((stage) =>
         stage.enabled !== false
         && isPreClaimStage(stage)
@@ -293,6 +315,12 @@ const preClaimVisualStages = computed<RawRiderStage[]>(() => {
 
     return preferVoucherInstructionSplash(stages);
 });
+
+const preClaimVisualStages = computed<RawRiderStage[]>(() =>
+    compiledPreClaimVisualStages.value.length > 0
+        ? compiledPreClaimVisualStages.value
+        : legacyPreClaimVisualStages.value
+);
 
 const hasPreClaimContent = computed(() =>
     preClaimVisualStages.value.length > 0
@@ -329,6 +357,7 @@ const claimExperienceDebug = computed(() => {
         skip_consumed_splash: props.claimExperience?.options?.skip_consumed_splash,
         splash_owner: props.claimExperience?.diagnostics?.splash_owner,
         form_flow_splash_policy: props.claimExperience?.diagnostics?.form_flow_splash_policy,
+        uses_compiled_rider_intro: compiledPreClaimVisualStages.value.length > 0,
     };
 });
 
