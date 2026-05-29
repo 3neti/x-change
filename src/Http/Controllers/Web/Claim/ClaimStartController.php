@@ -14,6 +14,7 @@ use LBHurtado\FormFlowManager\Services\DriverService;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
+use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 
 class ClaimStartController extends Controller
 {
@@ -67,9 +68,10 @@ class ClaimStartController extends Controller
 
         $instructions = $this->driverService->transform($voucher);
 
-        $instructionPayload = $instructions->toArray();
-
-        data_set($instructionPayload, 'metadata.claim_experience', $claimExperience);
+        $instructionPayload = ClaimExperiencePayload::putIntoInstructions(
+            $instructions->toArray(),
+            $claimExperience,
+        );
 
         $instructions = FormFlowInstructionsData::from($instructionPayload);
 

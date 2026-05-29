@@ -9,21 +9,20 @@ it('reads claim experience from supported state locations', function () {
 
     expect(ClaimExperiencePayload::fromState([
         'claim_experience' => $experience,
-    ]))->toBe($experience);
-
-    expect(ClaimExperiencePayload::fromState([
-        'metadata' => [
-            'claim_experience' => $experience,
-        ],
-    ]))->toBe($experience);
-
-    expect(ClaimExperiencePayload::fromState([
-        'instructions' => [
+    ]))->toBe($experience)
+        ->and(ClaimExperiencePayload::fromState([
             'metadata' => [
                 'claim_experience' => $experience,
             ],
-        ],
-    ]))->toBe($experience);
+        ]))->toBe($experience)
+        ->and(ClaimExperiencePayload::fromState([
+            'instructions' => [
+                'metadata' => [
+                    'claim_experience' => $experience,
+                ],
+            ],
+        ]))->toBe($experience);
+
 });
 
 it('writes claim experience into form flow instruction metadata', function () {
