@@ -48,4 +48,26 @@ final class ClaimExperiencePayload
                 ->firstWhere('key', 'redirect')['delay_seconds'] ?? null,
         ];
     }
+
+    public static function splashOwner(array $claimExperience): ?string
+    {
+        return data_get($claimExperience, 'diagnostics.splash_owner');
+    }
+
+    public static function isXRiderSplash(array $claimExperience): bool
+    {
+        return self::splashOwner($claimExperience) === self::SPLASH_OWNER_X_RIDER;
+    }
+
+    public static function isFormFlowSplash(array $claimExperience): bool
+    {
+        return self::splashOwner($claimExperience) === self::SPLASH_OWNER_FORM_FLOW;
+    }
+
+    public static function shouldSkipConsumedSplash(array $claimExperience): bool
+    {
+        return self::isXRiderSplash($claimExperience)
+            && (bool) data_get($claimExperience, 'options.skip_consumed_splash', false)
+            && (bool) data_get($claimExperience, 'consumed.splash', false);
+    }
 }

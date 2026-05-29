@@ -120,3 +120,59 @@ it('identifies claim widget owned redirects', function () {
         ]))->toBeFalse();
 
 });
+
+it('identifies splash ownership', function () {
+    expect(ClaimExperiencePayload::isXRiderSplash([
+        'diagnostics' => [
+            'splash_owner' => 'x-rider',
+        ],
+    ]))->toBeTrue()
+        ->and(ClaimExperiencePayload::isFormFlowSplash([
+            'diagnostics' => [
+                'splash_owner' => 'form-flow',
+            ],
+        ]))->toBeTrue()
+        ->and(ClaimExperiencePayload::isXRiderSplash([
+            'diagnostics' => [
+                'splash_owner' => 'form-flow',
+            ],
+        ]))->toBeFalse();
+
+});
+
+it('knows when consumed splash should be skipped', function () {
+    expect(ClaimExperiencePayload::shouldSkipConsumedSplash([
+        'diagnostics' => [
+            'splash_owner' => 'x-rider',
+        ],
+        'options' => [
+            'skip_consumed_splash' => true,
+        ],
+        'consumed' => [
+            'splash' => true,
+        ],
+    ]))->toBeTrue()
+        ->and(ClaimExperiencePayload::shouldSkipConsumedSplash([
+            'diagnostics' => [
+                'splash_owner' => 'form-flow',
+            ],
+            'options' => [
+                'skip_consumed_splash' => true,
+            ],
+            'consumed' => [
+                'splash' => true,
+            ],
+        ]))->toBeFalse()
+        ->and(ClaimExperiencePayload::shouldSkipConsumedSplash([
+            'diagnostics' => [
+                'splash_owner' => 'x-rider',
+            ],
+            'options' => [
+                'skip_consumed_splash' => false,
+            ],
+            'consumed' => [
+                'splash' => true,
+            ],
+        ]))->toBeFalse();
+
+});
