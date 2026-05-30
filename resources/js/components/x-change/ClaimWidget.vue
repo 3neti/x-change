@@ -341,12 +341,26 @@ function submit() {
     });
 }
 
-const runtimeStages = computed<RawRiderStage[]>(() =>
+const compiledRuntimeStages = computed<RawRiderStage[]>(() =>
+    compiledPhaseStages('runtime')
+        .filter((stage) =>
+            stage.enabled !== false
+            && isVisualPreviewStage(stage)
+        )
+);
+
+const legacyRuntimeStages = computed<RawRiderStage[]>(() =>
     riderStages.value.filter((stage) =>
         stage.enabled !== false
         && stageIsInPhase(stage, 'runtime')
         && isVisualPreviewStage(stage)
     )
+);
+
+const runtimeStages = computed<RawRiderStage[]>(() =>
+    compiledRuntimeStages.value.length > 0
+        ? compiledRuntimeStages.value
+        : legacyRuntimeStages.value
 );
 
 const claimExperienceDebug = computed(() => {
@@ -361,6 +375,7 @@ const claimExperienceDebug = computed(() => {
         splash_owner: props.claimExperience?.diagnostics?.splash_owner,
         form_flow_splash_policy: props.claimExperience?.diagnostics?.form_flow_splash_policy,
         uses_compiled_rider_intro: compiledPreClaimVisualStages.value.length > 0,
+        uses_compiled_runtime: compiledRuntimeStages.value.length > 0,
     };
 });
 

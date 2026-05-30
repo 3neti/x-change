@@ -416,4 +416,161 @@ describe('ClaimWidget compiled rendering', () => {
         expect(wrapper.find('[data-testid="pre-claim-rider-region"] [data-testid="runtime-stage"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="pre-claim-rider-region"] [data-testid="runtime-stage"]').text()).toBe('compiled-rider-intro');
     });
+
+    it('prefers compiled runtime stages over legacy runtime stages', () => {
+        voucherPreviewFixture = {
+            code: 'TEST123',
+            status: 'active',
+            instructions: {
+                rider: {
+                    stages: [
+                        {
+                            key: 'legacy-runtime-stage',
+                            type: 'message',
+                            phase: 'runtime',
+                            content: 'Legacy runtime stage',
+                        },
+                    ],
+                },
+            },
+            rider: {
+                stages: {
+                    stages: [],
+                },
+            },
+        };
+
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'runtime',
+                            owner: 'x-rider',
+                            source: 'claim_experience',
+                            status: 'active',
+                            stages: [
+                                {
+                                    key: 'compiled-runtime-stage',
+                                    type: 'message',
+                                    phase: 'runtime',
+                                    content: 'Compiled runtime stage',
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+        });
+
+        const stages = wrapper
+            .findAll('[data-testid="runtime-stage"]')
+            .map((stage) => stage.text());
+
+        expect(stages).toContain('compiled-runtime-stage');
+        expect(stages).not.toContain('legacy-runtime-stage');
+    });
+
+    it('falls back to legacy runtime stages when compiled runtime phase is absent', () => {
+        voucherPreviewFixture = {
+            code: 'TEST123',
+            status: 'active',
+            instructions: {
+                rider: {
+                    stages: [
+                        {
+                            key: 'legacy-runtime-stage',
+                            type: 'message',
+                            phase: 'runtime',
+                            content: 'Legacy runtime stage',
+                        },
+                    ],
+                },
+            },
+            rider: {
+                stages: {
+                    stages: [],
+                },
+            },
+        };
+
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'form_flow',
+                            owner: 'form-flow',
+                            source: 'voucher-redemption.yaml',
+                            status: 'active',
+                        },
+                    ],
+                },
+            },
+        });
+
+        const stages = wrapper
+            .findAll('[data-testid="runtime-stage"]')
+            .map((stage) => stage.text());
+
+        expect(stages).toContain('legacy-runtime-stage');
+        expect(stages).not.toContain('compiled-runtime-stage');
+    });
+
+    it('ignores inactive compiled runtime phase and falls back to legacy runtime stages', () => {
+        voucherPreviewFixture = {
+            code: 'TEST123',
+            status: 'active',
+            instructions: {
+                rider: {
+                    stages: [
+                        {
+                            key: 'legacy-runtime-stage',
+                            type: 'message',
+                            phase: 'runtime',
+                            content: 'Legacy runtime stage',
+                        },
+                    ],
+                },
+            },
+            rider: {
+                stages: {
+                    stages: [],
+                },
+            },
+        };
+
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'runtime',
+                            owner: 'x-rider',
+                            source: 'claim_experience',
+                            status: 'skipped',
+                            stages: [
+                                {
+                                    key: 'compiled-runtime-stage',
+                                    type: 'message',
+                                    phase: 'runtime',
+                                    content: 'Compiled runtime stage',
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+        });
+
+        const stages = wrapper
+            .findAll('[data-testid="runtime-stage"]')
+            .map((stage) => stage.text());
+
+        expect(stages).toContain('legacy-runtime-stage');
+        expect(stages).not.toContain('compiled-runtime-stage');
+    });
 });
