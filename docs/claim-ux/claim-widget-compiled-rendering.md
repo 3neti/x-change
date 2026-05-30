@@ -1988,6 +1988,217 @@ FormFlowRenderer = form rendering boundary
 form-flow package = form behavior owner
 ```
 
+# FormFlowRenderer Field Type Support Matrix
+
+FormFlowRenderer now has an explicit field type support matrix.
+
+This defines which normalized field types are currently recognized before real input controls are introduced.
+
+Supported first-pass field types:
+
+```text
+text
+email
+date
+number
+select
+textarea
+```
+
+The goal is not yet to render real controls.
+
+The goal is to make field type support explicit and testable.
+
+---
+
+## Supported Field Types
+
+Supported types are declared in:
+
+```text
+resources/js/components/x-change/formFlow.ts
+```
+
+Current shape:
+
+```ts
+export const SUPPORTED_FORM_FLOW_FIELD_TYPES = [
+    'text',
+    'email',
+    'date',
+    'number',
+    'select',
+    'textarea',
+] as const;
+```
+
+These values define the current renderer contract.
+
+---
+
+## Type Guard
+
+The helper:
+
+```ts
+isSupportedFormFlowFieldType(type)
+```
+
+returns whether a field type belongs to the supported matrix.
+
+Examples:
+
+```text
+text      → supported
+email     → supported
+date      → supported
+camera    → unsupported
+signature → unsupported
+```
+
+---
+
+## Field Type Normalization
+
+The helper:
+
+```ts
+normalizeFormFlowFieldType(type)
+```
+
+returns either:
+
+```text
+a supported field type
+```
+
+or:
+
+```text
+unsupported
+```
+
+Examples:
+
+```text
+email  → email
+camera → unsupported
+null   → unsupported
+```
+
+Unsupported field types are intentionally not hidden.
+
+They are rendered explicitly as:
+
+```text
+unsupported
+```
+
+so future compiler or configuration mistakes remain visible.
+
+---
+
+## Renderer Behavior
+
+FormFlowRenderer uses the normalized field type in both:
+
+```text
+form-flow-field-type
+form-flow-field-preview-meta
+```
+
+This ensures diagnostic rows and readonly preview rows agree.
+
+Example:
+
+```text
+photo
+camera
+Photo
+optional
+```
+
+becomes:
+
+```text
+photo
+unsupported
+Photo
+optional
+```
+
+---
+
+## Why Unsupported Is Explicit
+
+Unsupported field types should not silently downgrade to:
+
+```text
+text
+```
+
+because that would hide configuration or compiler mistakes.
+
+Explicit unsupported rendering gives us a safe migration path:
+
+```text
+unknown type
+        ↓
+visible unsupported marker
+        ↓
+future renderer support can be added intentionally
+```
+
+---
+
+## Test Coverage
+
+Covered by:
+
+```text
+tests/frontend/formFlow.test.ts
+tests/frontend/FormFlowRenderer.normalization.test.ts
+```
+
+Key assertions include:
+
+```text
+defines supported form flow field types
+
+normalizes unsupported field types explicitly
+
+marks unsupported form flow field types explicitly
+```
+
+---
+
+## Future Direction
+
+The next renderer slice can start mapping supported field types to preview behavior.
+
+Possible next step:
+
+```text
+field type support matrix
+        ↓
+readonly field preview by type
+        ↓
+eventual field renderer registry
+```
+
+The long-term direction is:
+
+```text
+text      → TextFieldRenderer
+email     → EmailFieldRenderer
+date      → DateFieldRenderer
+number    → NumberFieldRenderer
+select    → SelectFieldRenderer
+textarea  → TextareaFieldRenderer
+```
+
+but we are not introducing those real renderers yet.
+
 # Success Rider Ownership Boundary
 
 ClaimWidget intentionally does **not** render compiled `success_rider` phases.
