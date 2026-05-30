@@ -109,4 +109,34 @@ describe('FormFlowRenderer renderer delegation', () => {
         expect(wrapper.find('[data-testid="text-field-renderer"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="email-field-renderer"]').exists()).toBe(false);
     });
+
+    it('delegates number fields to NumberFieldRenderer', () => {
+        const wrapper = mount(FormFlowRenderer, {
+            props: {
+                formFlow: {
+                    key: 'form_flow',
+                    owner: 'form-flow',
+                    source: 'claim_experience',
+                    fields: [
+                        {
+                            key: 'gross_monthly_income',
+                            type: 'number',
+                            label: 'Gross Monthly Income',
+                            required: true,
+                        },
+                    ],
+                    stages: [],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="number-field-renderer"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="number-field-renderer-label"]').text()).toBe('Gross Monthly Income');
+        expect(wrapper.find('[data-testid="number-field-renderer-kind"]').text()).toBe('number field');
+        expect(wrapper.find('[data-testid="number-field-renderer-required"]').text()).toBe('required');
+
+        expect(wrapper.find('[data-testid="text-field-renderer"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="email-field-renderer"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="date-field-renderer"]').exists()).toBe(false);
+    });
 });
