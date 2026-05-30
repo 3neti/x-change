@@ -539,7 +539,7 @@ The component does not reorder compiled visual stages.
 
 ClaimWidget now supports compiler-first rendering for runtime stages, following the same migration pattern used for `rider_intro`.
 
-Runtime stages are conceptually separate from the pre-claim rider intro region.
+Runtime stages are conceptually separate from both the pre-claim rider intro region and redirect stages.
 
 ```text
 ClaimWidget
@@ -547,12 +547,16 @@ ClaimWidget
     │       ↓
     │   rider_intro
     │
-    └── claim-widget-runtime-region
+    ├── claim-widget-runtime-region
+    │       ↓
+    │   runtime
+    │
+    └── claim-widget-redirect-region
             ↓
-         runtime
+         redirect
 ```
 
-The two regions serve different purposes:
+The three regions serve different purposes:
 
 ```text
 pre-claim-rider-region
@@ -560,6 +564,9 @@ pre-claim-rider-region
 
 claim-widget-runtime-region
     → content shown during claim widget runtime
+
+claim-widget-redirect-region
+    → redirect-adjacent experience content
 ```
 
 ---
@@ -592,7 +599,7 @@ Only then is it eligible for runtime rendering.
 
 # Legacy Runtime Stages
 
-Legacy runtime stages are still available as a compatibility fallback.
+Legacy runtime stages remain available as a compatibility fallback.
 
 They are derived from legacy rider stages:
 
@@ -606,13 +613,9 @@ const legacyRuntimeStages = computed<RawRiderStage[]>(() =>
 );
 ```
 
-This preserves compatibility with existing vouchers that have not yet been compiled into claim experience phases.
-
 ---
 
 # Runtime Rendering Priority
-
-Runtime rendering now follows the same compiler-first strategy used by rider intro rendering.
 
 ```ts
 const runtimeStages = computed<RawRiderStage[]>(() =>
@@ -629,19 +632,15 @@ compiled runtime wins
 else legacy runtime fallback
 ```
 
-This is now the authoritative runtime rendering rule.
-
 ---
 
 # Runtime Visual Region
 
-Runtime stages are rendered inside a dedicated visual region:
+Runtime stages render inside:
 
 ```text
 data-testid="claim-widget-runtime-region"
 ```
-
-Current template shape:
 
 ```vue
 <div
@@ -652,80 +651,44 @@ Current template shape:
 </div>
 ```
 
-This region may contain either:
-
-```text
-compiled runtime stages
-```
-
-or:
-
-```text
-legacy runtime stages
-```
-
-The region name describes the visual slot, not the origin of the stages.
-
 ---
 
 # Runtime Rules
 
 ## Compiled Runtime Wins
 
-If a usable compiled runtime phase exists:
-
 ```text
 render compiled runtime stages
 do not render legacy runtime stages
-```
-
-A usable runtime phase means:
-
-```text
-active runtime phase
-+
-at least one enabled visual stage
 ```
 
 ---
 
 ## Legacy Runtime Still Works
 
-If no usable compiled runtime phase exists:
-
 ```text
 render legacy runtime stages
 ```
 
-This preserves backward compatibility during migration.
+when no usable compiled runtime phase exists.
 
 ---
 
 ## Inactive Runtime Phases Are Ignored
 
-If a runtime phase exists but is not active:
-
 ```text
 status != active
 ```
 
-ClaimWidget ignores it and falls back to legacy runtime stages.
-
-Examples:
-
-```text
-skipped
-inactive
-disabled
-```
+causes the runtime phase to be ignored.
 
 ---
 
 ## Non-Visual Runtime Stages Are Ignored
 
-Runtime phases may eventually contain action-oriented stages.
+Only visual stages participate in runtime rendering.
 
-Examples:
+Examples ignored in this region:
 
 ```text
 redirect
@@ -733,33 +696,168 @@ action
 submit
 ```
 
-These are not rendered in the runtime visual region.
-
-Only visual stages participate in:
-
-```text
-claim-widget-runtime-region
-```
-
 ---
 
 # Runtime Debug Signal
 
-ClaimWidget now exposes a runtime migration signal:
+ClaimWidget exposes:
 
 ```ts
 uses_compiled_runtime: compiledRuntimeStages.value.length > 0
 ```
 
-Example:
+for migration diagnostics.
+
+---
+
+# Redirect Stage Compiled Rendering
+
+ClaimWidget now supports compiler-first rendering for redirect stages.
+
+Redirect stages are treated as a separate ownership concern from runtime stages.
 
 ```text
-[x-change] claim experience {
-    uses_compiled_runtime: true
-}
+ClaimWidget
+    ├── pre-claim-rider-region
+    │       ↓
+    │   rider_intro
+    │
+    ├── claim-widget-runtime-region
+    │       ↓
+    │   runtime
+    │
+    └── claim-widget-redirect-region
+            ↓
+         redirect
 ```
 
-This is temporary migration instrumentation and should eventually be removed once the legacy path is retired.
+---
+
+# Compiled Redirect Stages
+
+Compiled redirect stages are derived from:
+
+```ts
+compiledPhaseStages('redirect')
+```
+
+and filtered through:
+
+```ts
+stage.enabled !== false
+isVisualPreviewStage(stage)
+```
+
+Only active visual redirect stages participate in rendering.
+
+---
+
+# Legacy Redirect Stages
+
+Legacy redirect stages are reconstructed from legacy rider stages:
+
+```ts
+const legacyRedirectStages = computed(() =>
+    riderStages.value.filter((stage) =>
+        stage.enabled !== false
+        && stageIsInPhase(stage, 'redirect')
+        && isVisualPreviewStage(stage)
+    )
+);
+```
+
+This preserves compatibility with existing vouchers.
+
+---
+
+# Redirect Rendering Priority
+
+```ts
+const redirectStages = computed(() =>
+    compiledRedirectStages.value.length > 0
+        ? compiledRedirectStages.value
+        : legacyRedirectStages.value
+);
+```
+
+Contract:
+
+```text
+compiled redirect wins
+else legacy redirect fallback
+```
+
+---
+
+# Redirect Visual Region
+
+Redirect stages render inside:
+
+```text
+data-testid="claim-widget-redirect-region"
+```
+
+```vue
+<div
+    v-if="redirectStages.length > 0"
+    data-testid="claim-widget-redirect-region"
+>
+    <RiderRuntimeSequencer :stages="redirectStages" />
+</div>
+```
+
+This region is intentionally separate from runtime rendering.
+
+---
+
+# Redirect Rules
+
+## Compiled Redirect Wins
+
+```text
+render compiled redirect stages
+do not render legacy redirect stages
+```
+
+---
+
+## Legacy Redirect Still Works
+
+```text
+render legacy redirect stages
+```
+
+when no usable compiled redirect phase exists.
+
+---
+
+## Inactive Redirect Phases Are Ignored
+
+```text
+status != active
+```
+
+causes the redirect phase to be ignored.
+
+---
+
+## Redirect Does Not Mean Navigation
+
+This rendering slice only governs visual redirect-stage presentation.
+
+Actual redirect execution remains governed by the redirect gate and success-page redirect contract.
+
+---
+
+# Redirect Debug Signal
+
+ClaimWidget exposes:
+
+```ts
+uses_compiled_redirect: compiledRedirectStages.value.length > 0
+```
+
+for migration diagnostics.
 
 ---
 
@@ -771,16 +869,25 @@ Covered by:
 tests/frontend/ClaimWidget.compiled-rendering.test.ts
 ```
 
-Assertions include:
+Current coverage includes:
 
 ```text
-prefers compiled runtime stages over legacy runtime stages
+compiled rider_intro precedence
+legacy rider fallback
+inactive rider phase handling
+non-visual rider stage handling
+multi-stage rider ordering
+pre-claim rider region rendering
 
-falls back to legacy runtime stages when compiled runtime phase is absent
+compiled runtime precedence
+legacy runtime fallback
+inactive runtime handling
+runtime region rendering
 
-ignores inactive compiled runtime phase and falls back to legacy runtime stages
-
-renders runtime stages inside a dedicated claim widget runtime region
+compiled redirect precedence
+legacy redirect fallback
+inactive redirect handling
+redirect region rendering
 ```
 
 ---
@@ -792,20 +899,35 @@ Completed:
 ```text
 pre-claim rider_intro compiled rendering
 runtime compiled rendering
+redirect compiled rendering
+
 compiler-first stage selection
+
+legacy rider fallback
 legacy runtime fallback
-inactive runtime phase guard
-dedicated runtime region marker
+legacy redirect fallback
+
+inactive phase guards
+
+dedicated pre-claim rider region
+dedicated runtime region
+dedicated redirect region
+
+runtime debug instrumentation
+redirect debug instrumentation
 ```
 
 Still pending:
 
 ```text
 form_flow phase rendering
+
 success rider phase rendering
-redirect phase rendering
-runtime ownership cleanup
+
+redirect execution ownership cleanup
+
 legacy stage reconstruction removal
+
 debug instrumentation cleanup
 ```
 
