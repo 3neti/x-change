@@ -390,5 +390,141 @@ describe('claim Success redirect countdown rendering', () => {
         expect(wrapper.find('[data-testid="success-stage-region"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="redirect-countdown-region"]').exists()).toBe(false);
     });
+
+    it('prefers compiled success_rider stages over rider success fallback stages', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                claim_experience: {
+                    ...baseProps.claim_experience,
+                    phases: [
+                        {
+                            key: 'success_rider',
+                            owner: 'x-rider',
+                            source: 'claim_experience',
+                            status: 'active',
+                            stages: [
+                                {
+                                    key: 'compiled-success-rider-stage',
+                                    type: 'message',
+                                    phase: 'success',
+                                    payload: {
+                                        title: 'Compiled success rider',
+                                    },
+                                },
+                            ],
+                        },
+                    ],
+                },
+                rider: {
+                    ...baseProps.rider,
+                    stages: {
+                        stages: [
+                            {
+                                key: 'legacy-success-rider-stage',
+                                type: 'message',
+                                phase: 'success',
+                                payload: {
+                                    title: 'Legacy success rider',
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
+        });
+
+        const stages = wrapper
+            .findAll('[data-testid="rider-stage"]')
+            .map((stage) => stage.text());
+
+        expect(stages).toContain('compiled-success-rider-stage');
+        expect(stages).not.toContain('legacy-success-rider-stage');
+    });
+
+    it('falls back to rider success stages when compiled success_rider phase is absent', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                claim_experience: {
+                    ...baseProps.claim_experience,
+                    phases: [],
+                },
+                rider: {
+                    ...baseProps.rider,
+                    stages: {
+                        stages: [
+                            {
+                                key: 'legacy-success-rider-stage',
+                                type: 'message',
+                                phase: 'success',
+                                payload: {
+                                    title: 'Legacy success rider',
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
+        });
+
+        const stages = wrapper
+            .findAll('[data-testid="rider-stage"]')
+            .map((stage) => stage.text());
+
+        expect(stages).toContain('legacy-success-rider-stage');
+        expect(stages).not.toContain('compiled-success-rider-stage');
+    });
+
+    it('ignores inactive compiled success_rider phase and falls back to rider success stages', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                claim_experience: {
+                    ...baseProps.claim_experience,
+                    phases: [
+                        {
+                            key: 'success_rider',
+                            owner: 'x-rider',
+                            source: 'claim_experience',
+                            status: 'skipped',
+                            stages: [
+                                {
+                                    key: 'compiled-success-rider-stage',
+                                    type: 'message',
+                                    phase: 'success',
+                                    payload: {
+                                        title: 'Compiled success rider',
+                                    },
+                                },
+                            ],
+                        },
+                    ],
+                },
+                rider: {
+                    ...baseProps.rider,
+                    stages: {
+                        stages: [
+                            {
+                                key: 'legacy-success-rider-stage',
+                                type: 'message',
+                                phase: 'success',
+                                payload: {
+                                    title: 'Legacy success rider',
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
+        });
+
+        const stages = wrapper
+            .findAll('[data-testid="rider-stage"]')
+            .map((stage) => stage.text());
+
+        expect(stages).toContain('legacy-success-rider-stage');
+        expect(stages).not.toContain('compiled-success-rider-stage');
+    });
 });
 

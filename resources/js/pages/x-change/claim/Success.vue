@@ -52,7 +52,7 @@ function isRedirectStage(stage: RawRiderStage): boolean {
         || stageIsInPhase(stage, 'redirect');
 }
 
-const successVisualStages = computed<RawRiderStage[]>(() => {
+const legacySuccessVisualStages = computed<RawRiderStage[]>(() => {
     const stages = riderStages.value.filter((stage) =>
             stage.enabled !== false
             && !isRedirectStage(stage)
@@ -70,6 +70,50 @@ const successVisualStages = computed<RawRiderStage[]>(() => {
         ? explicit
         : stages.slice(0, 1);
 });
+
+function claimExperiencePhase(key: string): Record<string, any> | null {
+    const phases = Array.isArray(props.claim_experience?.phases)
+        ? props.claim_experience.phases as Record<string, any>[]
+        : [];
+
+    return phases.find((phase) =>
+        phase.key === key
+        && (phase.status ?? 'active') === 'active'
+    ) ?? null;
+}
+
+function claimExperiencePhaseStages(key: string): RawRiderStage[] {
+    const phase = claimExperiencePhase(key);
+    const stages = phase?.stages;
+
+    if (Array.isArray(stages)) {
+        return stages as RawRiderStage[];
+    }
+
+    if (Array.isArray(stages?.stages)) {
+        return stages.stages as RawRiderStage[];
+    }
+
+    return [];
+}
+
+const compiledSuccessVisualStages = computed<RawRiderStage[]>(() =>
+    claimExperiencePhaseStages('success_rider')
+        .filter((stage) =>
+                stage.enabled !== false
+                && !isRedirectStage(stage)
+                && (
+                    stageIsInPhase(stage, 'success')
+                    || stageIsInPhase(stage, 'post_claim')
+                )
+        )
+);
+
+const successVisualStages = computed<RawRiderStage[]>(() =>
+    compiledSuccessVisualStages.value.length > 0
+        ? compiledSuccessVisualStages.value
+        : legacySuccessVisualStages.value
+);
 
 const redirectRuntimeStages = computed<RawRiderStage[]>(() => {
     const stages = riderStages.value.filter((stage) =>
