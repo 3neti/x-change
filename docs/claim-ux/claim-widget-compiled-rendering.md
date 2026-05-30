@@ -1272,6 +1272,167 @@ FormFlowRenderer placeholder
 
 ---
 
+## Normalized Form Flow Metadata Rendering
+
+`FormFlowRenderer` now renders diagnostic metadata from the normalized form-flow payload.
+
+This is still not a real form UI.
+
+It is a contract-visibility slice.
+
+The renderer now proves that it receives a normalized payload with predictable keys:
+
+```text
+key
+owner
+source
+fields
+stages
+```
+
+---
+
+### Rendered Diagnostic Markers
+
+The renderer exposes the following test markers:
+
+```text
+data-testid="form-flow-key"
+
+data-testid="form-flow-owner"
+
+data-testid="form-flow-source"
+
+data-testid="form-flow-field-count"
+
+data-testid="form-flow-stage-count"
+```
+
+These markers make the normalized payload observable in tests.
+
+---
+
+### Current Rendering Shape
+
+Current renderer shape:
+
+```vue
+<div data-testid="form-flow-renderer">
+    <div data-testid="form-flow-key">
+        {{ formFlow.key }}
+    </div>
+
+    <div data-testid="form-flow-owner">
+        {{ formFlow.owner ?? '' }}
+    </div>
+
+    <div data-testid="form-flow-source">
+        {{ formFlow.source ?? '' }}
+    </div>
+
+    <div data-testid="form-flow-field-count">
+        {{ formFlow.fields.length }}
+    </div>
+
+    <div data-testid="form-flow-stage-count">
+        {{ formFlow.stages.length }}
+    </div>
+</div>
+```
+
+---
+
+### What This Proves
+
+This slice proves:
+
+```text
+claimExperience.phases.form_flow
+        ↓
+normalizeFormFlowPhase()
+        ↓
+NormalizedFormFlow
+        ↓
+FormFlowRenderer
+        ↓
+observable normalized metadata
+```
+
+The form-flow renderer is no longer just a placeholder message.
+
+It now confirms that the normalized payload is being handed across the renderer boundary.
+
+---
+
+### What This Does Not Yet Do
+
+This slice does not render:
+
+```text
+real fields
+real input controls
+validation
+submission
+form-flow package behavior
+claim pipeline continuation
+```
+
+Those remain future slices.
+
+---
+
+### Test Coverage
+
+Covered by:
+
+```text
+tests/frontend/FormFlowRenderer.normalization.test.ts
+```
+
+Key assertion:
+
+```text
+renders normalized form flow metadata
+```
+
+The test verifies:
+
+```text
+form-flow key
+owner
+source
+field count
+stage count
+```
+
+---
+
+### Future Direction
+
+The next renderer slice should make individual normalized fields observable.
+
+Target:
+
+```text
+fields[]
+        ↓
+field diagnostics
+        ↓
+FormFlowRenderer
+```
+
+For example:
+
+```text
+mobile
+email
+birth_date
+```
+
+should become visible through stable test markers before we attempt real field rendering.
+
+---
+
 ## Legacy Mode
 
 When the boundary selection object resolves to legacy mode:
