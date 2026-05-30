@@ -139,4 +139,35 @@ describe('FormFlowRenderer renderer delegation', () => {
         expect(wrapper.find('[data-testid="email-field-renderer"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="date-field-renderer"]').exists()).toBe(false);
     });
+
+    it('delegates select fields to SelectFieldRenderer', () => {
+        const wrapper = mount(FormFlowRenderer, {
+            props: {
+                formFlow: {
+                    key: 'form_flow',
+                    owner: 'form-flow',
+                    source: 'claim_experience',
+                    fields: [
+                        {
+                            key: 'bank_code',
+                            type: 'select',
+                            label: 'Bank',
+                            required: true,
+                        },
+                    ],
+                    stages: [],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="select-field-renderer"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="select-field-renderer-label"]').text()).toBe('Bank');
+        expect(wrapper.find('[data-testid="select-field-renderer-kind"]').text()).toBe('select field');
+        expect(wrapper.find('[data-testid="select-field-renderer-required"]').text()).toBe('required');
+
+        expect(wrapper.find('[data-testid="text-field-renderer"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="email-field-renderer"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="date-field-renderer"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="number-field-renderer"]').exists()).toBe(false);
+    });
 });

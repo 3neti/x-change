@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {
-    normalizeFormFlowFieldType,
     formFlowFieldPreviewKind,
+    normalizeFormFlowFieldType,
     type NormalizedFormFlow,
 } from './formFlow';
 
@@ -9,10 +9,11 @@ import {
     resolveFormFlowRenderer,
 } from './formFlowRendererRegistry';
 
-import TextFieldRenderer from './renderers/TextFieldRenderer.vue';
-import EmailFieldRenderer from './renderers/EmailFieldRenderer.vue';
 import DateFieldRenderer from './renderers/DateFieldRenderer.vue';
+import EmailFieldRenderer from './renderers/EmailFieldRenderer.vue';
 import NumberFieldRenderer from './renderers/NumberFieldRenderer.vue';
+import SelectFieldRenderer from './renderers/SelectFieldRenderer.vue';
+import TextFieldRenderer from './renderers/TextFieldRenderer.vue';
 
 defineProps<{
     formFlow: NormalizedFormFlow;
@@ -23,6 +24,7 @@ const rendererComponents = {
     EmailFieldRenderer,
     DateFieldRenderer,
     NumberFieldRenderer,
+    SelectFieldRenderer,
 } as const;
 
 function rendererComponentName(field: { type?: string }): keyof typeof rendererComponents | null {
