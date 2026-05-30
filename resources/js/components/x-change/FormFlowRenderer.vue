@@ -9,9 +9,25 @@ import {
     resolveFormFlowRenderer,
 } from './formFlowRendererRegistry';
 
+import TextFieldRenderer from './renderers/TextFieldRenderer.vue';
+
 defineProps<{
     formFlow: NormalizedFormFlow;
 }>();
+
+const rendererComponents = {
+    TextFieldRenderer,
+} as const;
+
+function rendererComponentName(field: { type?: string }): keyof typeof rendererComponents | null {
+    const rendererName = resolveFormFlowRenderer(
+        normalizeFormFlowFieldType(field.type ?? 'text')
+    );
+
+    return rendererName in rendererComponents
+        ? rendererName as keyof typeof rendererComponents
+        : null;
+}
 </script>
 
 <template>
@@ -87,6 +103,12 @@ defineProps<{
                         )
                     }}
                 </div>
+
+                <component
+                    v-if="rendererComponentName(field)"
+                    :is="rendererComponents[rendererComponentName(field)!]"
+                    :field="field"
+                />
             </div>
         </div>
     </div>
