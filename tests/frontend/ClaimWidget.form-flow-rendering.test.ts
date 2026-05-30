@@ -276,4 +276,42 @@ describe('ClaimWidget compiled form flow rendering', () => {
         expect(wrapper.find('[data-testid="compiled-form-flow-boundary"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="legacy-form-flow-boundary"]').exists()).toBe(false);
     });
+
+    it('hands active compiled form_flow phase to FormFlowRenderer placeholder', () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'form_flow',
+                            owner: 'form-flow',
+                            source: 'claim_experience',
+                            status: 'active',
+                            stages: [],
+                        },
+                    ],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="form-flow-renderer"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="compiled-form-flow-boundary"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="legacy-form-flow-boundary"]').exists()).toBe(false);
+    });
+
+    it('does not render FormFlowRenderer placeholder for legacy form flow mode', () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="form-flow-renderer"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="compiled-form-flow-boundary"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="legacy-form-flow-boundary"]').exists()).toBe(true);
+    });
 });

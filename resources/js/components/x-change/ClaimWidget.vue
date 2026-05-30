@@ -19,6 +19,7 @@ import { initializeTheme } from '@/composables/useTheme';
 import RiderRuntimeSequencer from '@/components/x-rider/RiderRuntimeSequencer.vue';
 import type { RawRiderStage } from '@/components/x-rider/types';
 import { stageIsInPhase } from '@/components/x-rider/useRiderStagePhase';
+import FormFlowRenderer from '@/components/x-change/FormFlowRenderer.vue';
 
 initializeTheme();
 
@@ -594,6 +595,11 @@ if (import.meta.env.DEV && claimExperienceDebug.value) {
             data-testid="claim-widget-form-flow-boundary-region"
             class="sr-only"
         >
+            <FormFlowRenderer
+                v-if="formFlowBoundary.mode === 'compiled' && formFlowBoundary.phase"
+                :phase="formFlowBoundary.phase"
+            />
+
             <div
                 v-if="usesCompiledFormFlow"
                 data-testid="compiled-form-flow-boundary"
