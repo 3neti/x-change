@@ -170,4 +170,36 @@ describe('FormFlowRenderer renderer delegation', () => {
         expect(wrapper.find('[data-testid="date-field-renderer"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="number-field-renderer"]').exists()).toBe(false);
     });
+
+    it('delegates textarea fields to TextareaFieldRenderer', () => {
+        const wrapper = mount(FormFlowRenderer, {
+            props: {
+                formFlow: {
+                    key: 'form_flow',
+                    owner: 'form-flow',
+                    source: 'claim_experience',
+                    fields: [
+                        {
+                            key: 'address',
+                            type: 'textarea',
+                            label: 'Address',
+                            required: false,
+                        },
+                    ],
+                    stages: [],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="textarea-field-renderer"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="textarea-field-renderer-label"]').text()).toBe('Address');
+        expect(wrapper.find('[data-testid="textarea-field-renderer-kind"]').text()).toBe('textarea field');
+        expect(wrapper.find('[data-testid="textarea-field-renderer-required"]').text()).toBe('optional');
+
+        expect(wrapper.find('[data-testid="text-field-renderer"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="email-field-renderer"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="date-field-renderer"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="number-field-renderer"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="select-field-renderer"]').exists()).toBe(false);
+    });
 });
