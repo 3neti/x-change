@@ -570,19 +570,22 @@ if (import.meta.env.DEV && claimExperienceDebug.value) {
         </div>
 
         <div
-            v-if="usesLegacyFormFlow"
-            data-testid="legacy-form-flow-boundary"
+            data-testid="claim-widget-form-flow-boundary-region"
             class="sr-only"
         >
-            legacy form flow boundary
-        </div>
+            <div
+                v-if="usesCompiledFormFlow"
+                data-testid="compiled-form-flow-boundary"
+            >
+                compiled form flow boundary
+            </div>
 
-        <div
-            v-if="usesCompiledFormFlow"
-            data-testid="compiled-form-flow-boundary"
-            class="sr-only"
-        >
-            compiled form flow boundary
+            <div
+                v-if="usesLegacyFormFlow"
+                data-testid="legacy-form-flow-boundary"
+            >
+                legacy form flow boundary
+            </div>
         </div>
     </div>
 </template>
