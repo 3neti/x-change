@@ -1178,6 +1178,200 @@ The ownership decision is now centralized.
 
 The renderer handoff remains a future slice.
 
+# FormFlowRenderer Placeholder Handoff
+
+ClaimWidget now hands active compiled `form_flow` phases to a placeholder renderer:
+
+```text
+resources/js/components/x-change/FormFlowRenderer.vue
+```
+
+This is the first renderer handoff slice for form flow.
+
+The purpose is not yet to render a real form.
+
+The purpose is to establish the handoff contract:
+
+```text
+formFlowBoundary.mode === compiled
+        ↓
+ClaimWidget passes formFlowBoundary.phase
+        ↓
+FormFlowRenderer
+```
+
+---
+
+## Placeholder Renderer
+
+The placeholder renderer currently accepts:
+
+```ts
+phase: Record<string, any>
+```
+
+and renders a diagnostic marker:
+
+```text
+data-testid="form-flow-renderer"
+```
+
+Current shape:
+
+```vue
+<script setup lang="ts">
+defineProps<{
+    phase: Record<string, any>;
+}>();
+</script>
+
+<template>
+    <div data-testid="form-flow-renderer">
+        compiled form flow renderer placeholder
+    </div>
+</template>
+```
+
+This placeholder exists only to prove the handoff.
+
+It is not yet a real form engine.
+
+---
+
+## Handoff Rule
+
+When the boundary selection object resolves to compiled mode:
+
+```ts
+formFlowBoundary.mode === 'compiled'
+```
+
+and a compiled phase exists:
+
+```ts
+formFlowBoundary.phase !== null
+```
+
+ClaimWidget renders:
+
+```vue
+<FormFlowRenderer
+    :phase="formFlowBoundary.phase"
+/>
+```
+
+This means:
+
+```text
+compiled form_flow phase
+        ↓
+ClaimWidget shell
+        ↓
+FormFlowRenderer placeholder
+```
+
+---
+
+## Legacy Mode
+
+When the boundary selection object resolves to legacy mode:
+
+```ts
+formFlowBoundary.mode === 'legacy'
+```
+
+ClaimWidget does not render the placeholder renderer.
+
+The legacy voucher-instruction form-flow path remains active.
+
+Contract:
+
+```text
+compiled mode
+        ↓
+FormFlowRenderer placeholder renders
+
+legacy mode
+        ↓
+FormFlowRenderer placeholder does not render
+```
+
+---
+
+## Why This Is Still a Placeholder
+
+Form flow still involves behavior that should not be casually reimplemented inside ClaimWidget:
+
+- field rendering
+- input validation
+- persistence
+- form submission
+- form-flow package ownership
+- claim pipeline continuation
+
+This slice only proves:
+
+```text
+ClaimWidget can pass the compiled form_flow phase to a renderer boundary
+```
+
+It does not yet define:
+
+```text
+how fields render
+how validation works
+how submission works
+how form-flow package integration happens
+```
+
+Those remain future slices.
+
+---
+
+## Test Coverage
+
+Covered by:
+
+```text
+tests/frontend/ClaimWidget.form-flow-rendering.test.ts
+```
+
+Assertions include:
+
+```text
+active compiled form_flow hands phase to FormFlowRenderer placeholder
+
+legacy form_flow mode does not render FormFlowRenderer placeholder
+
+compiled and legacy ownership markers remain intact
+```
+
+---
+
+## Future Direction
+
+The next step is to make the placeholder renderer accept a normalized form-flow payload shape.
+
+Likely target:
+
+```text
+phase
+    ↓
+normalized form_flow payload
+    ↓
+fields / schema / steps / submit behavior
+    ↓
+FormFlowRenderer
+```
+
+The eventual direction remains:
+
+```text
+ClaimWidget = shell and coordinator
+FormFlowRenderer = form rendering boundary
+form-flow package = form behavior owner
+```
+
 # Success Rider Ownership Boundary
 
 ClaimWidget intentionally does **not** render compiled `success_rider` phases.
