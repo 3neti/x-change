@@ -861,6 +861,228 @@ for migration diagnostics.
 
 ---
 
+# Success Rider Ownership Boundary
+
+ClaimWidget intentionally does **not** render compiled `success_rider` phases.
+
+This is a deliberate architectural boundary.
+
+```text
+ClaimWidget
+    owns:
+        rider_intro
+        runtime
+        redirect
+
+Success.vue
+    owns:
+        success_rider
+        redirect_countdown
+        redirect_execution
+```
+
+The existence of a compiled `success_rider` phase does not imply that ClaimWidget should render it.
+
+---
+
+# Why Success Rider Is Different
+
+The purpose of ClaimWidget is to support the claim journey before successful completion.
+
+Current ClaimWidget responsibilities are:
+
+```text
+voucher preview
+
+pre-claim rider content
+
+runtime rider content
+
+redirect-adjacent content
+
+claim interaction
+```
+
+Success experiences occur after claim completion.
+
+Those experiences belong to:
+
+```text
+resources/js/pages/Claim/Success.vue
+```
+
+rather than:
+
+```text
+resources/js/components/x-change/ClaimWidget.vue
+```
+
+---
+
+# Success Rider Rendering Ownership
+
+Compiled success rider phases are intended for:
+
+```text
+claimExperience.phases.success_rider
+```
+
+but the renderer is:
+
+```text
+Success.vue
+```
+
+not:
+
+```text
+ClaimWidget.vue
+```
+
+Rendering path:
+
+```text
+ClaimExperienceCompiler
+        ↓
+ClaimExperienceData
+        ↓
+success_rider phase
+        ↓
+Success.vue
+```
+
+ClaimWidget is intentionally excluded from this path.
+
+---
+
+# Current Rule
+
+Even when a valid compiled success rider phase exists:
+
+```text
+phase.key = success_rider
+status = active
+```
+
+ClaimWidget must not render it.
+
+Example:
+
+```text
+compiled-success-rider-stage
+```
+
+must not appear inside:
+
+```text
+pre-claim-rider-region
+claim-widget-runtime-region
+claim-widget-redirect-region
+```
+
+---
+
+# Why This Separation Exists
+
+Without this boundary, success content could appear:
+
+```text
+before claim completion
+```
+
+or:
+
+```text
+during claim interaction
+```
+
+which creates ambiguity around ownership.
+
+The separation keeps the journey explicit:
+
+```text
+ClaimWidget
+        ↓
+claim completes
+        ↓
+Success.vue
+```
+
+This matches the existing redirect ownership model.
+
+---
+
+# Future Direction
+
+Success rider rendering will eventually become compiler-driven.
+
+However, the target architecture is:
+
+```text
+ClaimExperienceCompiler
+        ↓
+ClaimExperienceData
+        ↓
+Success.vue
+```
+
+not:
+
+```text
+ClaimExperienceCompiler
+        ↓
+ClaimExperienceData
+        ↓
+ClaimWidget.vue
+```
+
+The migration work for success rider rendering therefore belongs to the Success page, not to ClaimWidget.
+
+---
+
+# Test Contract
+
+Tests may provide compiled success rider phases to ClaimWidget.
+
+The expected behavior is:
+
+```text
+ClaimWidget detects nothing
+ClaimWidget renders nothing
+ClaimWidget ignores success_rider
+```
+
+A passing test therefore looks like:
+
+```ts
+expect(wrapper.text())
+    .not.toContain('compiled-success-rider-stage');
+```
+
+The purpose of this assertion is to document ownership boundaries, not compiled-phase detection.
+
+---
+
+# Migration Status
+
+Current ownership map:
+
+```text
+ClaimWidget
+    ✅ rider_intro
+    ✅ runtime
+    ✅ redirect
+
+Success.vue
+    ⏳ success_rider
+    ⏳ redirect countdown
+    ⏳ redirect execution
+```
+
+This boundary is intentional and should remain until success rendering is migrated into Success.vue.
+
+---
+
 # Test Coverage
 
 Covered by:
