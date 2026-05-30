@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ClaimWidget from '../../resources/js/components/x-change/ClaimWidget.vue';
 
 vi.mock('@inertiajs/vue3', () => ({

@@ -385,6 +385,14 @@ const redirectStages = computed<RawRiderStage[]>(() =>
         : legacyRedirectStages.value
 );
 
+const compiledFormFlowPhase = computed<Record<string, any> | null>(() =>
+    compiledPhase('form_flow')
+);
+
+const usesCompiledFormFlow = computed(() =>
+    compiledFormFlowPhase.value !== null
+);
+
 const claimExperienceDebug = computed(() => {
     if (!props.claimExperience) {
         return null;
@@ -399,6 +407,7 @@ const claimExperienceDebug = computed(() => {
         uses_compiled_rider_intro: compiledPreClaimVisualStages.value.length > 0,
         uses_compiled_runtime: compiledRuntimeStages.value.length > 0,
         uses_compiled_redirect: compiledRedirectStages.value.length > 0,
+        uses_compiled_form_flow: usesCompiledFormFlow.value,
     };
 });
 
