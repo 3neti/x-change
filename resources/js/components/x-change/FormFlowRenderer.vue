@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import type { NormalizedFormFlow } from './formFlow';
+
 defineProps<{
-    phase: Record<string, any>;
+    formFlow: NormalizedFormFlow;
 }>();
 </script>
 
