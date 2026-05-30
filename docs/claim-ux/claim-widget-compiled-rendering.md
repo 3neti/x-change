@@ -1433,6 +1433,221 @@ should become visible through stable test markers before we attempt real field r
 
 ---
 
+# FormFlowRenderer Field Diagnostics
+
+FormFlowRenderer now exposes individual normalized form-flow fields through diagnostic rendering.
+
+This remains a compiler-contract slice.
+
+The renderer still does not render real inputs.
+
+Instead, it makes normalized field definitions observable and testable.
+
+Current flow:
+
+```text
+claimExperience.phases.form_flow
+        ↓
+normalizeFormFlowPhase()
+        ↓
+NormalizedFormFlow.fields[]
+        ↓
+FormFlowRenderer
+        ↓
+field diagnostics
+```
+
+---
+
+## Rendered Field Markers
+
+Each normalized field is rendered through:
+
+```text
+data-testid="form-flow-field"
+```
+
+and exposes:
+
+```text
+data-testid="form-flow-field-key"
+
+data-testid="form-flow-field-type"
+
+data-testid="form-flow-field-label"
+
+data-testid="form-flow-field-required"
+```
+
+These markers allow tests to verify field definitions without introducing actual form controls.
+
+---
+
+## Current Rendering Shape
+
+Current renderer shape:
+
+```vue
+<div data-testid="form-flow-fields">
+    <div
+        v-for="field in formFlow.fields"
+        :key="field.key"
+        data-testid="form-flow-field"
+    >
+        <span data-testid="form-flow-field-key">
+            {{ field.key }}
+        </span>
+
+        <span data-testid="form-flow-field-type">
+            {{ field.type ?? 'text' }}
+        </span>
+
+        <span data-testid="form-flow-field-label">
+            {{ field.label ?? field.key }}
+        </span>
+
+        <span data-testid="form-flow-field-required">
+            {{ field.required ? 'required' : 'optional' }}
+        </span>
+    </div>
+</div>
+```
+
+---
+
+## What This Proves
+
+This slice proves:
+
+```text
+normalized form-flow fields
+        ↓
+stable renderer contract
+        ↓
+observable field metadata
+```
+
+The renderer now verifies that field definitions survive the full compiler handoff.
+
+---
+
+## What This Does Not Yet Do
+
+This slice still does not introduce:
+
+```text
+input controls
+
+v-model binding
+
+validation
+
+submission
+
+form-flow package behavior
+
+claim continuation
+```
+
+The renderer remains diagnostic-only.
+
+---
+
+## Test Coverage
+
+Covered by:
+
+```text
+tests/frontend/FormFlowRenderer.normalization.test.ts
+```
+
+Key assertion:
+
+```text
+renders normalized form flow field diagnostics
+```
+
+The test verifies:
+
+```text
+field key
+
+field type
+
+field label
+
+required / optional state
+```
+
+for every normalized field.
+
+---
+
+## Current Example
+
+Given:
+
+```ts
+[
+    {
+        key: 'mobile',
+        type: 'text',
+        label: 'Mobile',
+        required: true,
+    },
+    {
+        key: 'email',
+        type: 'email',
+        label: 'Email',
+        required: false,
+    },
+]
+```
+
+the renderer exposes diagnostics equivalent to:
+
+```text
+mobile
+text
+Mobile
+required
+
+email
+email
+Email
+optional
+```
+
+---
+
+## Future Direction
+
+The next renderer slice should move from field diagnostics to field preview rendering.
+
+Target:
+
+```text
+NormalizedFormFlow.fields[]
+        ↓
+readonly field preview rows
+        ↓
+FormFlowRenderer
+```
+
+Examples:
+
+```text
+Mobile
+Email
+Birth Date
+```
+
+displayed as structured preview rows rather than raw diagnostic markers.
+
+Only after field preview rendering is stabilized should actual form controls be introduced.
+
+---
+
 ## Legacy Mode
 
 When the boundary selection object resolves to legacy mode:
