@@ -202,4 +202,37 @@ describe('FormFlowRenderer renderer delegation', () => {
         expect(wrapper.find('[data-testid="number-field-renderer"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="select-field-renderer"]').exists()).toBe(false);
     });
+
+    it('delegates unsupported fields to UnsupportedFieldRenderer', () => {
+        const wrapper = mount(FormFlowRenderer, {
+            props: {
+                formFlow: {
+                    key: 'form_flow',
+                    owner: 'form-flow',
+                    source: 'claim_experience',
+                    fields: [
+                        {
+                            key: 'photo',
+                            type: 'camera',
+                            label: 'Photo',
+                            required: false,
+                        },
+                    ],
+                    stages: [],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="unsupported-field-renderer"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="unsupported-field-renderer-label"]').text()).toBe('Photo');
+        expect(wrapper.find('[data-testid="unsupported-field-renderer-kind"]').text()).toBe('unsupported field');
+        expect(wrapper.find('[data-testid="unsupported-field-renderer-type"]').text()).toBe('camera');
+
+        expect(wrapper.find('[data-testid="text-field-renderer"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="email-field-renderer"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="date-field-renderer"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="number-field-renderer"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="select-field-renderer"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="textarea-field-renderer"]').exists()).toBe(false);
+    });
 });

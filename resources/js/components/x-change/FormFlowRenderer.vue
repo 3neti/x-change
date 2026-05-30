@@ -16,6 +16,7 @@ import NumberFieldRenderer from './renderers/NumberFieldRenderer.vue';
 import SelectFieldRenderer from './renderers/SelectFieldRenderer.vue';
 import TextareaFieldRenderer from './renderers/TextareaFieldRenderer.vue';
 import TextFieldRenderer from './renderers/TextFieldRenderer.vue';
+import UnsupportedFieldRenderer from './renderers/UnsupportedFieldRenderer.vue';
 
 defineProps<{
     formFlow: NormalizedFormFlow;
@@ -27,7 +28,8 @@ const rendererComponents = {
     NumberFieldRenderer,
     SelectFieldRenderer,
     TextareaFieldRenderer,
-    TextFieldRenderer
+    TextFieldRenderer,
+    UnsupportedFieldRenderer
 } as const;
 
 function rendererComponentName(field: { type?: string }): keyof typeof rendererComponents | null {
