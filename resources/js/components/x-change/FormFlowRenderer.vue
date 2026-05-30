@@ -5,6 +5,10 @@ import {
     type NormalizedFormFlow,
 } from './formFlow';
 
+import {
+    resolveFormFlowRenderer,
+} from './formFlowRendererRegistry';
+
 defineProps<{
     formFlow: NormalizedFormFlow;
 }>();
@@ -74,6 +78,14 @@ defineProps<{
 
                 <div data-testid="form-flow-field-preview-kind">
                     {{ formFlowFieldPreviewKind(field.type ?? 'text') }}
+                </div>
+
+                <div data-testid="form-flow-field-preview-renderer">
+                    {{
+                        resolveFormFlowRenderer(
+                            normalizeFormFlowFieldType(field.type ?? 'text')
+                        )
+                    }}
                 </div>
             </div>
         </div>

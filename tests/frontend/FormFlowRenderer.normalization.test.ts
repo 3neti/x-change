@@ -106,6 +106,12 @@ describe('FormFlowRenderer normalized payload rendering', () => {
 
         expect(rows[0].text()).toContain('text field');
         expect(rows[1].text()).toContain('date field');
+
+        expect(rows[0].text())
+            .toContain('TextFieldRenderer');
+
+        expect(rows[1].text())
+            .toContain('DateFieldRenderer');
     });
 
     it('marks unsupported form flow field types explicitly', () => {
@@ -144,5 +150,10 @@ describe('FormFlowRenderer normalized payload rendering', () => {
         expect(previews[1].text()).toContain('unsupported');
 
         expect(previews[1].text()).toContain('unsupported field');
+
+        expect(previews[1].text())
+            .toContain('UnsupportedFieldRenderer');
     });
+
+
 });
