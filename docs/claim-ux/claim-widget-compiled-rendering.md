@@ -1459,6 +1459,246 @@ field diagnostics
 
 ---
 
+# FormFlowRenderer Readonly Field Preview Rows
+
+FormFlowRenderer now renders normalized fields as structured readonly preview rows.
+
+This is the first step away from raw diagnostic rendering and toward eventual form presentation.
+
+The renderer still does not create real inputs.
+
+Instead, it exposes a user-facing preview shape derived from normalized field metadata.
+
+Current flow:
+
+```text
+claimExperience.phases.form_flow
+        ↓
+normalizeFormFlowPhase()
+        ↓
+NormalizedFormFlow.fields[]
+        ↓
+FormFlowRenderer
+        ↓
+readonly field preview rows
+```
+
+---
+
+## Purpose
+
+Field diagnostics proved that normalized field definitions survived the compiler handoff.
+
+Readonly preview rows prove that normalized field definitions can now be presented in a stable UI structure.
+
+The renderer remains presentation-only.
+
+No user interaction exists yet.
+
+---
+
+## Rendered Preview Region
+
+Preview rows render inside:
+
+```text
+data-testid="form-flow-field-preview-rows"
+```
+
+Each field produces:
+
+```text
+data-testid="form-flow-field-preview-row"
+```
+
+with child markers:
+
+```text
+data-testid="form-flow-field-preview-label"
+
+data-testid="form-flow-field-preview-meta"
+```
+
+These markers provide a stable contract for future renderer evolution.
+
+---
+
+## Current Rendering Shape
+
+Current renderer shape:
+
+```vue
+<div data-testid="form-flow-field-preview-rows">
+    <div
+        v-for="field in formFlow.fields"
+        :key="`preview-${field.key}`"
+        data-testid="form-flow-field-preview-row"
+    >
+        <div data-testid="form-flow-field-preview-label">
+            {{ field.label ?? field.key }}
+        </div>
+
+        <div data-testid="form-flow-field-preview-meta">
+            {{ field.type ?? 'text' }}
+            ·
+            {{ field.required ? 'required' : 'optional' }}
+        </div>
+    </div>
+</div>
+```
+
+---
+
+## What This Proves
+
+This slice proves:
+
+```text
+normalized field metadata
+        ↓
+stable preview presentation
+        ↓
+renderer-owned field visualization
+```
+
+The renderer is no longer limited to diagnostic markers.
+
+It can now generate a consistent preview structure from normalized field definitions.
+
+---
+
+## Current Example
+
+Given:
+
+```ts
+[
+    {
+        key: 'mobile',
+        type: 'text',
+        label: 'Mobile',
+        required: true,
+    },
+    {
+        key: 'birth_date',
+        type: 'date',
+        label: 'Birth Date',
+        required: false,
+    },
+]
+```
+
+the preview renderer produces the equivalent of:
+
+```text
+Mobile
+text · required
+
+Birth Date
+date · optional
+```
+
+This is presentation-only metadata.
+
+No values are collected.
+
+---
+
+## What This Does Not Yet Do
+
+This slice still does not introduce:
+
+```text
+input controls
+
+v-model binding
+
+field values
+
+validation
+
+submission
+
+form-flow package behavior
+
+claim continuation
+```
+
+The renderer remains readonly.
+
+---
+
+## Test Coverage
+
+Covered by:
+
+```text
+tests/frontend/FormFlowRenderer.normalization.test.ts
+```
+
+Key assertion:
+
+```text
+renders normalized fields as readonly preview rows
+```
+
+The test verifies:
+
+```text
+field label
+
+field type
+
+required / optional state
+```
+
+for every rendered preview row.
+
+---
+
+## Why Preview Rows Exist
+
+The migration path is intentionally incremental:
+
+```text
+normalized metadata
+        ↓
+field diagnostics
+        ↓
+readonly preview rows
+        ↓
+field type support matrix
+        ↓
+real input rendering
+```
+
+This keeps rendering concerns separate from form behavior concerns.
+
+The renderer can mature without introducing validation or submission complexity.
+
+---
+
+## Future Direction
+
+The next renderer slice should establish a field type support matrix.
+
+Target:
+
+```text
+text
+email
+date
+number
+select
+textarea
+```
+
+The renderer should explicitly recognize supported field types before introducing real input controls.
+
+Only after type support is stabilized should interactive form rendering begin.
+
+---
+
 ## Rendered Field Markers
 
 Each normalized field is rendered through:
