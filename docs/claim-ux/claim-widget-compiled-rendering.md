@@ -1025,6 +1025,84 @@ Success.vue
 
 The existence of a compiled `success_rider` phase does not imply that ClaimWidget should render it.
 
+## Form Flow Boundary Region
+
+Form-flow ownership markers are grouped inside:
+
+```text
+data-testid="claim-widget-form-flow-boundary-region"
+```
+
+This region currently renders only migration markers:
+
+```text
+compiled-form-flow-boundary
+legacy-form-flow-boundary
+```
+
+It does not render a form UI.
+
+Purpose:
+
+```text
+make form-flow ownership testable
+without introducing a form renderer inside ClaimWidget
+```
+
+Current shape:
+
+```vue
+<div
+    data-testid="claim-widget-form-flow-boundary-region"
+    class="sr-only"
+>
+    <div
+        v-if="usesCompiledFormFlow"
+        data-testid="compiled-form-flow-boundary"
+    >
+        compiled form flow boundary
+    </div>
+
+    <div
+        v-if="usesLegacyFormFlow"
+        data-testid="legacy-form-flow-boundary"
+    >
+        legacy form flow boundary
+    </div>
+</div>
+```
+
+This region is intentionally screen-reader-only because it is not a user-facing feature.
+
+It exists to stabilize the migration contract.
+
+---
+
+## Form Flow Debug Signals
+
+ClaimWidget exposes:
+
+```ts
+uses_compiled_form_flow
+uses_legacy_form_flow
+```
+
+These are migration diagnostics only.
+
+They allow tests and debugging sessions to verify ownership selection without introducing a compiled form renderer.
+
+Current contract:
+
+```text
+active compiled form_flow
+        ↓
+uses_compiled_form_flow = true
+
+inactive or absent compiled form_flow
+        ↓
+uses_legacy_form_flow = true
+```
+
 ---
 
 # Why Success Rider Is Different
