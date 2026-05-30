@@ -254,4 +254,26 @@ describe('ClaimWidget compiled form flow rendering', () => {
         expect(wrapper.find('[data-testid="claim-widget-form-flow-boundary-region"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="claim-widget-form-flow-boundary-region"] [data-testid="compiled-form-flow-boundary"]').exists()).toBe(true);
     });
+
+    it('selects compiled form flow mode when active compiled form_flow exists', () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'form_flow',
+                            owner: 'form-flow',
+                            source: 'claim_experience',
+                            status: 'active',
+                            stages: [],
+                        },
+                    ],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="compiled-form-flow-boundary"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="legacy-form-flow-boundary"]').exists()).toBe(false);
+    });
 });

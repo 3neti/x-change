@@ -389,12 +389,31 @@ const compiledFormFlowPhase = computed<Record<string, any> | null>(() =>
     compiledPhase('form_flow')
 );
 
+type FormFlowBoundaryMode = 'compiled' | 'legacy';
+
+const formFlowBoundary = computed<{
+    mode: FormFlowBoundaryMode;
+    phase: Record<string, any> | null;
+}>(() => {
+    if (compiledFormFlowPhase.value !== null) {
+        return {
+            mode: 'compiled',
+            phase: compiledFormFlowPhase.value,
+        };
+    }
+
+    return {
+        mode: 'legacy',
+        phase: null,
+    };
+});
+
 const usesCompiledFormFlow = computed(() =>
-    compiledFormFlowPhase.value !== null
+    formFlowBoundary.value.mode === 'compiled'
 );
 
 const usesLegacyFormFlow = computed(() =>
-    !usesCompiledFormFlow.value
+    formFlowBoundary.value.mode === 'legacy'
 );
 
 const claimExperienceDebug = computed(() => {
@@ -411,7 +430,9 @@ const claimExperienceDebug = computed(() => {
         uses_compiled_rider_intro: compiledPreClaimVisualStages.value.length > 0,
         uses_compiled_runtime: compiledRuntimeStages.value.length > 0,
         uses_compiled_redirect: compiledRedirectStages.value.length > 0,
+        form_flow_mode: formFlowBoundary.value.mode,
         uses_compiled_form_flow: usesCompiledFormFlow.value,
+        uses_legacy_form_flow: usesLegacyFormFlow.value,
     };
 });
 
