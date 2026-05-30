@@ -1003,6 +1003,181 @@ ClaimWidget shell
 
 ClaimWidget should remain a shell and coordinator, not become a form engine.
 
+---
+
+# Form Flow Boundary Selection Object
+
+The form-flow ownership decision is now centralized through:
+
+```ts
+const formFlowBoundary = computed(() => ...)
+```
+
+Rather than scattering ownership decisions across multiple boolean expressions.
+
+The goal is:
+
+```text
+single ownership decision
+        ↓
+multiple rendering decisions
+```
+
+Current shape:
+
+```ts
+type FormFlowBoundaryMode =
+    | 'compiled'
+    | 'legacy';
+
+{
+    mode: FormFlowBoundaryMode;
+    phase: Record<string, any> | null;
+}
+```
+
+---
+
+## Compiled Mode
+
+When an active compiled form-flow phase exists:
+
+```text
+phase.key = form_flow
+status = active
+```
+
+the selection object becomes:
+
+```ts
+{
+    mode: 'compiled',
+    phase: compiledFormFlowPhase
+}
+```
+
+This means:
+
+```text
+compiler owns form flow
+```
+
+ClaimWidget still does not render compiled form stages directly.
+
+Ownership and rendering remain separate concerns.
+
+---
+
+## Legacy Mode
+
+When no active compiled form-flow phase exists:
+
+```ts
+{
+    mode: 'legacy',
+    phase: null
+}
+```
+
+This means:
+
+```text
+legacy voucher form-flow path remains active
+```
+
+Inactive compiled phases are treated identically to absent phases.
+
+---
+
+## Selection Logic
+
+Current decision contract:
+
+```text
+active compiled form_flow
+        ↓
+mode = compiled
+
+inactive compiled form_flow
+        ↓
+mode = legacy
+
+absent compiled form_flow
+        ↓
+mode = legacy
+```
+
+This creates a single source of truth for ownership.
+
+---
+
+## Derived Signals
+
+The existing migration diagnostics are now derived from the selection object:
+
+```ts
+usesCompiledFormFlow
+usesLegacyFormFlow
+```
+
+Conceptually:
+
+```ts
+usesCompiledFormFlow =
+    formFlowBoundary.mode === 'compiled';
+
+usesLegacyFormFlow =
+    formFlowBoundary.mode === 'legacy';
+```
+
+The selection object is authoritative.
+
+The booleans are compatibility helpers.
+
+---
+
+## Why This Refactor Exists
+
+Previously ownership was expressed through independent computed flags:
+
+```ts
+usesCompiledFormFlow
+usesLegacyFormFlow
+```
+
+While simple, this approach becomes harder to evolve as additional ownership metadata is introduced.
+
+The selection object creates a stable foundation for future migration work.
+
+Future renderers can consume:
+
+```ts
+formFlowBoundary.mode
+formFlowBoundary.phase
+```
+
+without re-implementing ownership decisions.
+
+---
+
+## Future Direction
+
+The intended evolution is:
+
+```text
+claimExperience.phases.form_flow
+        ↓
+formFlowBoundary
+        ↓
+FormFlowRenderer
+        ↓
+ClaimWidget shell
+```
+
+The ownership decision is now centralized.
+
+The renderer handoff remains a future slice.
+
 # Success Rider Ownership Boundary
 
 ClaimWidget intentionally does **not** render compiled `success_rider` phases.
