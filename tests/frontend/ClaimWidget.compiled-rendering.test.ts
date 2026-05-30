@@ -821,4 +821,32 @@ describe('ClaimWidget compiled rendering', () => {
         expect(wrapper.find('[data-testid="claim-widget-redirect-region"] [data-testid="runtime-stage"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="claim-widget-redirect-region"] [data-testid="runtime-stage"]').text()).toBe('compiled-redirect-stage');
     });
+
+    it('does not render compiled success rider stages because success rendering belongs to Success.vue', () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'success_rider',
+                            owner: 'x-rider',
+                            source: 'claim_experience',
+                            status: 'active',
+                            stages: [
+                                {
+                                    key: 'compiled-success-rider-stage',
+                                    type: 'message',
+                                    phase: 'success',
+                                    content: 'Compiled success rider stage',
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+        });
+
+        expect(wrapper.text()).not.toContain('compiled-success-rider-stage');
+    });
 });
