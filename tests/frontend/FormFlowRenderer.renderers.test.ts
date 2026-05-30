@@ -80,4 +80,33 @@ describe('FormFlowRenderer renderer delegation', () => {
 
         expect(wrapper.find('[data-testid="text-field-renderer"]').exists()).toBe(false);
     });
+
+    it('delegates date fields to DateFieldRenderer', () => {
+        const wrapper = mount(FormFlowRenderer, {
+            props: {
+                formFlow: {
+                    key: 'form_flow',
+                    owner: 'form-flow',
+                    source: 'claim_experience',
+                    fields: [
+                        {
+                            key: 'birth_date',
+                            type: 'date',
+                            label: 'Birth Date',
+                            required: false,
+                        },
+                    ],
+                    stages: [],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="date-field-renderer"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="date-field-renderer-label"]').text()).toBe('Birth Date');
+        expect(wrapper.find('[data-testid="date-field-renderer-kind"]').text()).toBe('date field');
+        expect(wrapper.find('[data-testid="date-field-renderer-required"]').text()).toBe('optional');
+
+        expect(wrapper.find('[data-testid="text-field-renderer"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="email-field-renderer"]').exists()).toBe(false);
+    });
 });
