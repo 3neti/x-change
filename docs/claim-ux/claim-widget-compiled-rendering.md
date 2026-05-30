@@ -19,16 +19,16 @@ At present, these include:
 
 The goal is not yet to remove legacy behavior. The goal is to make compiled behavior win when available, while preserving legacy fallback during migration.
 
-The goal is not yet to remove legacy behavior. The goal is to make compiled behavior win when available, while preserving legacy fallback during migration.
-
 ---
 
 # Current Scope
 
-ClaimWidget now prefers compiled phases when available for:
+ClaimWidget now contains compiler-aware behavior for:
 
 - rider_intro
 - runtime
+- redirect
+- form_flow (ownership boundary only)
 
 ```text
 claimExperience.phases[]
@@ -861,6 +861,148 @@ for migration diagnostics.
 
 ---
 
+# Form Flow Ownership Boundary
+
+ClaimWidget now recognizes whether `form_flow` is compiler-owned, but it does not render compiled form stages directly yet.
+
+This is an intentional migration boundary.
+
+```text
+claimExperience.phases.form_flow
+        ↓
+ClaimWidget
+        ↓
+boundary detection only
+```
+
+---
+
+## Compiled Form Flow Boundary
+
+When an active compiled `form_flow` phase exists:
+
+```text
+phase.key = form_flow
+phase.status = active
+```
+
+ClaimWidget exposes:
+
+```text
+data-testid="compiled-form-flow-boundary"
+```
+
+This means:
+
+```text
+the compiler owns the form-flow contract
+```
+
+but it does not yet mean:
+
+```text
+ClaimWidget renders compiled form stages directly
+```
+
+Compiled form stage content must not appear directly in ClaimWidget yet.
+
+---
+
+## Legacy Form Flow Boundary
+
+When no active compiled `form_flow` phase exists, ClaimWidget exposes:
+
+```text
+data-testid="legacy-form-flow-boundary"
+```
+
+This means:
+
+```text
+legacy voucher-instruction form flow remains the active path
+```
+
+The legacy path remains available during migration.
+
+---
+
+## Current Rule
+
+```text
+active compiled form_flow
+        ↓
+compiled-form-flow-boundary
+
+no active compiled form_flow
+        ↓
+legacy-form-flow-boundary
+```
+
+Inactive compiled phases behave the same as absent phases:
+
+```text
+status != active
+        ↓
+legacy-form-flow-boundary
+```
+
+---
+
+## Why This Is Boundary-Only
+
+Form flow is more complex than rider visual stages because it involves:
+
+- input fields
+- validation
+- persistence
+- submission behavior
+- form-flow package ownership
+- redirect back into the claim pipeline
+
+So this slice intentionally avoids rendering compiled form stages directly.
+
+The current purpose is only to make ownership detectable and testable.
+
+---
+
+## Test Coverage
+
+Covered by:
+
+```text
+tests/frontend/ClaimWidget.form-flow-rendering.test.ts
+```
+
+Assertions include:
+
+```text
+active compiled form_flow exposes compiled-form-flow-boundary
+
+inactive compiled form_flow exposes legacy-form-flow-boundary
+
+absent compiled form_flow exposes legacy-form-flow-boundary
+
+compiled form stage content is not rendered directly
+```
+
+---
+
+## Future Direction
+
+The next migration step is not to render raw compiled form stages inside ClaimWidget.
+
+The likely target is:
+
+```text
+claimExperience.phases.form_flow
+        ↓
+FormFlowRenderer / form-flow package
+        ↓
+ClaimWidget shell
+```
+
+ClaimWidget should remain a shell and coordinator, not become a form engine.
+
 # Success Rider Ownership Boundary
 
 ClaimWidget intentionally does **not** render compiled `success_rider` phases.
@@ -1139,10 +1281,10 @@ runtime debug instrumentation
 redirect debug instrumentation
 ```
 
+```text
 Still pending:
 
-```text
-form_flow phase rendering
+form_flow renderer handoff
 
 success rider phase rendering
 
