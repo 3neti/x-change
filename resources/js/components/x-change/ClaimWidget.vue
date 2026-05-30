@@ -519,9 +519,11 @@ if (import.meta.env.DEV && claimExperienceDebug.value) {
         </div>
 
         <!-- Runtime Sequencer -->
-        <RiderRuntimeSequencer
+        <div
             v-if="runtimeStages.length > 0"
-            :stages="runtimeStages"
-        />
+            data-testid="claim-widget-runtime-region"
+        >
+            <RiderRuntimeSequencer :stages="runtimeStages" />
+        </div>
     </div>
 </template>
