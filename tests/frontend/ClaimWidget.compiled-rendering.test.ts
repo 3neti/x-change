@@ -618,4 +618,207 @@ describe('ClaimWidget compiled rendering', () => {
         expect(wrapper.find('[data-testid="claim-widget-runtime-region"] [data-testid="runtime-stage"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="claim-widget-runtime-region"] [data-testid="runtime-stage"]').text()).toBe('compiled-runtime-stage');
     });
+
+    it('prefers compiled redirect stages over legacy redirect stages', () => {
+        voucherPreviewFixture = {
+            code: 'TEST123',
+            status: 'active',
+            instructions: {
+                rider: {
+                    stages: [
+                        {
+                            key: 'legacy-redirect-stage',
+                            type: 'message',
+                            phase: 'redirect',
+                            content: 'Legacy redirect stage',
+                        },
+                    ],
+                },
+            },
+            rider: {
+                stages: {
+                    stages: [],
+                },
+            },
+        };
+
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'redirect',
+                            owner: 'claim-widget',
+                            source: 'claim_experience',
+                            status: 'active',
+                            stages: [
+                                {
+                                    key: 'compiled-redirect-stage',
+                                    type: 'message',
+                                    phase: 'redirect',
+                                    content: 'Compiled redirect stage',
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+        });
+
+        const stages = wrapper
+            .findAll('[data-testid="runtime-stage"]')
+            .map((stage) => stage.text());
+
+        expect(stages).toContain('compiled-redirect-stage');
+        expect(stages).not.toContain('legacy-redirect-stage');
+    });
+
+    it('falls back to legacy redirect stages when compiled redirect phase is absent', () => {
+        voucherPreviewFixture = {
+            code: 'TEST123',
+            status: 'active',
+            instructions: {
+                rider: {
+                    stages: [
+                        {
+                            key: 'legacy-redirect-stage',
+                            type: 'message',
+                            phase: 'redirect',
+                            content: 'Legacy redirect stage',
+                        },
+                    ],
+                },
+            },
+            rider: {
+                stages: {
+                    stages: [],
+                },
+            },
+        };
+
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'runtime',
+                            owner: 'x-rider',
+                            source: 'claim_experience',
+                            status: 'active',
+                            stages: [],
+                        },
+                    ],
+                },
+            },
+        });
+
+        const stages = wrapper
+            .findAll('[data-testid="runtime-stage"]')
+            .map((stage) => stage.text());
+
+        expect(stages).toContain('legacy-redirect-stage');
+        expect(stages).not.toContain('compiled-redirect-stage');
+    });
+
+    it('ignores inactive compiled redirect phase and falls back to legacy redirect stages', () => {
+        voucherPreviewFixture = {
+            code: 'TEST123',
+            status: 'active',
+            instructions: {
+                rider: {
+                    stages: [
+                        {
+                            key: 'legacy-redirect-stage',
+                            type: 'message',
+                            phase: 'redirect',
+                            content: 'Legacy redirect stage',
+                        },
+                    ],
+                },
+            },
+            rider: {
+                stages: {
+                    stages: [],
+                },
+            },
+        };
+
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'redirect',
+                            owner: 'claim-widget',
+                            source: 'claim_experience',
+                            status: 'skipped',
+                            stages: [
+                                {
+                                    key: 'compiled-redirect-stage',
+                                    type: 'message',
+                                    phase: 'redirect',
+                                    content: 'Compiled redirect stage',
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+        });
+
+        const stages = wrapper
+            .findAll('[data-testid="runtime-stage"]')
+            .map((stage) => stage.text());
+
+        expect(stages).toContain('legacy-redirect-stage');
+        expect(stages).not.toContain('compiled-redirect-stage');
+    });
+
+    it('renders redirect stages inside a dedicated claim widget redirect region', () => {
+        voucherPreviewFixture = {
+            code: 'TEST123',
+            status: 'active',
+            instructions: {
+                rider: {
+                    stages: [],
+                },
+            },
+            rider: {
+                stages: {
+                    stages: [],
+                },
+            },
+        };
+
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'redirect',
+                            owner: 'claim-widget',
+                            source: 'claim_experience',
+                            status: 'active',
+                            stages: [
+                                {
+                                    key: 'compiled-redirect-stage',
+                                    type: 'message',
+                                    phase: 'redirect',
+                                    content: 'Compiled redirect stage',
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="claim-widget-redirect-region"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="claim-widget-redirect-region"] [data-testid="runtime-stage"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="claim-widget-redirect-region"] [data-testid="runtime-stage"]').text()).toBe('compiled-redirect-stage');
+    });
 });

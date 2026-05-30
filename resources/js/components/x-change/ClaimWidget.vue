@@ -363,6 +363,28 @@ const runtimeStages = computed<RawRiderStage[]>(() =>
         : legacyRuntimeStages.value
 );
 
+const compiledRedirectStages = computed<RawRiderStage[]>(() =>
+    compiledPhaseStages('redirect')
+        .filter((stage) =>
+            stage.enabled !== false
+            && isVisualPreviewStage(stage)
+        )
+);
+
+const legacyRedirectStages = computed<RawRiderStage[]>(() =>
+    riderStages.value.filter((stage) =>
+        stage.enabled !== false
+        && stageIsInPhase(stage, 'redirect')
+        && isVisualPreviewStage(stage)
+    )
+);
+
+const redirectStages = computed<RawRiderStage[]>(() =>
+    compiledRedirectStages.value.length > 0
+        ? compiledRedirectStages.value
+        : legacyRedirectStages.value
+);
+
 const claimExperienceDebug = computed(() => {
     if (!props.claimExperience) {
         return null;
@@ -376,6 +398,7 @@ const claimExperienceDebug = computed(() => {
         form_flow_splash_policy: props.claimExperience?.diagnostics?.form_flow_splash_policy,
         uses_compiled_rider_intro: compiledPreClaimVisualStages.value.length > 0,
         uses_compiled_runtime: compiledRuntimeStages.value.length > 0,
+        uses_compiled_redirect: compiledRedirectStages.value.length > 0,
     };
 });
 
@@ -524,6 +547,13 @@ if (import.meta.env.DEV && claimExperienceDebug.value) {
             data-testid="claim-widget-runtime-region"
         >
             <RiderRuntimeSequencer :stages="runtimeStages" />
+        </div>
+
+        <div
+            v-if="redirectStages.length > 0"
+            data-testid="claim-widget-redirect-region"
+        >
+            <RiderRuntimeSequencer :stages="redirectStages" />
         </div>
     </div>
 </template>
