@@ -52,4 +52,32 @@ describe('FormFlowRenderer renderer delegation', () => {
         expect(wrapper.find('[data-testid="text-field-renderer"]').exists()).toBe(false);
         expect(wrapper.text()).toContain('UnsupportedFieldRenderer');
     });
+
+    it('delegates email fields to EmailFieldRenderer', () => {
+        const wrapper = mount(FormFlowRenderer, {
+            props: {
+                formFlow: {
+                    key: 'form_flow',
+                    owner: 'form-flow',
+                    source: 'claim_experience',
+                    fields: [
+                        {
+                            key: 'email',
+                            type: 'email',
+                            label: 'Email Address',
+                            required: true,
+                        },
+                    ],
+                    stages: [],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="email-field-renderer"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="email-field-renderer-label"]').text()).toBe('Email Address');
+        expect(wrapper.find('[data-testid="email-field-renderer-kind"]').text()).toBe('email field');
+        expect(wrapper.find('[data-testid="email-field-renderer-required"]').text()).toBe('required');
+
+        expect(wrapper.find('[data-testid="text-field-renderer"]').exists()).toBe(false);
+    });
 });

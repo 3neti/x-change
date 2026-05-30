@@ -10,6 +10,7 @@ import {
 } from './formFlowRendererRegistry';
 
 import TextFieldRenderer from './renderers/TextFieldRenderer.vue';
+import EmailFieldRenderer from './renderers/EmailFieldRenderer.vue';
 
 defineProps<{
     formFlow: NormalizedFormFlow;
@@ -17,6 +18,7 @@ defineProps<{
 
 const rendererComponents = {
     TextFieldRenderer,
+    EmailFieldRenderer,
 } as const;
 
 function rendererComponentName(field: { type?: string }): keyof typeof rendererComponents | null {
