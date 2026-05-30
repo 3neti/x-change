@@ -393,6 +393,10 @@ const usesCompiledFormFlow = computed(() =>
     compiledFormFlowPhase.value !== null
 );
 
+const usesLegacyFormFlow = computed(() =>
+    !usesCompiledFormFlow.value
+);
+
 const claimExperienceDebug = computed(() => {
     if (!props.claimExperience) {
         return null;
@@ -563,6 +567,14 @@ if (import.meta.env.DEV && claimExperienceDebug.value) {
             data-testid="claim-widget-redirect-region"
         >
             <RiderRuntimeSequencer :stages="redirectStages" />
+        </div>
+
+        <div
+            v-if="usesLegacyFormFlow"
+            data-testid="legacy-form-flow-boundary"
+            class="sr-only"
+        >
+            legacy form flow boundary
         </div>
 
         <div

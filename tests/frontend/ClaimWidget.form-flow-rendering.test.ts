@@ -176,8 +176,9 @@ describe('ClaimWidget compiled form flow rendering', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="compiled-form-flow-boundary"]').exists()).toBe(true);
         expect(wrapper.text()).not.toContain('compiled-form-flow-stage');
+        expect(wrapper.find('[data-testid="compiled-form-flow-boundary"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="legacy-form-flow-boundary"]').exists()).toBe(false);
     });
 
     it('ignores inactive compiled form_flow phase', () => {
@@ -205,7 +206,30 @@ describe('ClaimWidget compiled form flow rendering', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="compiled-form-flow-boundary"]').exists()).toBe(false);
         expect(wrapper.text()).not.toContain('compiled-form-flow-stage');
+        expect(wrapper.find('[data-testid="compiled-form-flow-boundary"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="legacy-form-flow-boundary"]').exists()).toBe(true);
+    });
+
+    it('uses legacy form flow boundary when compiled form_flow phase is absent', () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'runtime',
+                            owner: 'x-rider',
+                            source: 'claim_experience',
+                            status: 'active',
+                            stages: [],
+                        },
+                    ],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="compiled-form-flow-boundary"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="legacy-form-flow-boundary"]').exists()).toBe(true);
     });
 });
