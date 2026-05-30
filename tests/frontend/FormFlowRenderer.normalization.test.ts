@@ -65,4 +65,45 @@ describe('FormFlowRenderer normalized payload rendering', () => {
         expect(fields[1].text()).toContain('Email');
         expect(fields[1].text()).toContain('optional');
     });
+
+    it('renders normalized fields as readonly preview rows', () => {
+        const wrapper = mount(FormFlowRenderer, {
+            props: {
+                formFlow: {
+                    key: 'form_flow',
+                    owner: 'form-flow',
+                    source: 'claim_experience',
+                    fields: [
+                        {
+                            key: 'mobile',
+                            type: 'text',
+                            label: 'Mobile',
+                            required: true,
+                        },
+                        {
+                            key: 'birth_date',
+                            type: 'date',
+                            label: 'Birth Date',
+                            required: false,
+                        },
+                    ],
+                    stages: [],
+                },
+            },
+        });
+
+        const rows = wrapper.findAll('[data-testid="form-flow-field-preview-row"]');
+
+        expect(rows).toHaveLength(2);
+
+        expect(rows[0].text()).toContain('Mobile');
+        expect(rows[0].text()).toContain('text');
+        expect(rows[0].text()).toContain('required');
+
+        expect(rows[1].text()).toContain('Birth Date');
+        expect(rows[1].text()).toContain('date');
+        expect(rows[1].text()).toContain('optional');
+    });
+
+
 });

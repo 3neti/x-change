@@ -51,5 +51,23 @@ defineProps<{
         </span>
             </div>
         </div>
+
+        <div data-testid="form-flow-field-preview-rows">
+            <div
+                v-for="field in formFlow.fields"
+                :key="`preview-${field.key}`"
+                data-testid="form-flow-field-preview-row"
+            >
+                <div data-testid="form-flow-field-preview-label">
+                    {{ field.label ?? field.key }}
+                </div>
+
+                <div data-testid="form-flow-field-preview-meta">
+                    {{ field.type ?? 'text' }}
+                    ·
+                    {{ field.required ? 'required' : 'optional' }}
+                </div>
+            </div>
+        </div>
     </div>
 </template>
