@@ -105,5 +105,39 @@ describe('FormFlowRenderer normalized payload rendering', () => {
         expect(rows[1].text()).toContain('optional');
     });
 
+    it('marks unsupported form flow field types explicitly', () => {
+        const wrapper = mount(FormFlowRenderer, {
+            props: {
+                formFlow: {
+                    key: 'form_flow',
+                    owner: 'form-flow',
+                    source: 'claim_experience',
+                    fields: [
+                        {
+                            key: 'mobile',
+                            type: 'text',
+                            label: 'Mobile',
+                            required: true,
+                        },
+                        {
+                            key: 'photo',
+                            type: 'camera',
+                            label: 'Photo',
+                            required: false,
+                        },
+                    ],
+                    stages: [],
+                },
+            },
+        });
 
+        const diagnostics = wrapper.findAll('[data-testid="form-flow-field"]');
+        const previews = wrapper.findAll('[data-testid="form-flow-field-preview-row"]');
+
+        expect(diagnostics[0].text()).toContain('text');
+        expect(previews[0].text()).toContain('text');
+
+        expect(diagnostics[1].text()).toContain('unsupported');
+        expect(previews[1].text()).toContain('unsupported');
+    });
 });

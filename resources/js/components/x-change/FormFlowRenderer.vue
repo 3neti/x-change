@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import type { NormalizedFormFlow } from './formFlow';
+import {
+    normalizeFormFlowFieldType,
+    type NormalizedFormFlow,
+} from './formFlow';
 
 defineProps<{
     formFlow: NormalizedFormFlow;
@@ -39,7 +42,7 @@ defineProps<{
         </span>
 
                 <span data-testid="form-flow-field-type">
-            {{ field.type ?? 'text' }}
+ {{ normalizeFormFlowFieldType(field.type ?? 'text') }}
         </span>
 
                 <span data-testid="form-flow-field-label">
@@ -63,7 +66,7 @@ defineProps<{
                 </div>
 
                 <div data-testid="form-flow-field-preview-meta">
-                    {{ field.type ?? 'text' }}
+                    {{ normalizeFormFlowFieldType(field.type ?? 'text') }}
                     ·
                     {{ field.required ? 'required' : 'optional' }}
                 </div>

@@ -22,3 +22,28 @@ export function normalizeFormFlowPhase(phase: Record<string, any>): NormalizedFo
         stages: Array.isArray(phase.stages) ? phase.stages : [],
     };
 }
+
+export const SUPPORTED_FORM_FLOW_FIELD_TYPES = [
+    'text',
+    'email',
+    'date',
+    'number',
+    'select',
+    'textarea',
+] as const;
+
+export type SupportedFormFlowFieldType =
+    typeof SUPPORTED_FORM_FLOW_FIELD_TYPES[number];
+
+export function isSupportedFormFlowFieldType(
+    type: unknown
+): type is SupportedFormFlowFieldType {
+    return typeof type === 'string'
+        && (SUPPORTED_FORM_FLOW_FIELD_TYPES as readonly string[]).includes(type);
+}
+
+export function normalizeFormFlowFieldType(type: unknown): SupportedFormFlowFieldType | 'unsupported' {
+    return isSupportedFormFlowFieldType(type)
+        ? type
+        : 'unsupported';
+}
