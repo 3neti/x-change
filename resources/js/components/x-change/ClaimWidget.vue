@@ -564,5 +564,13 @@ if (import.meta.env.DEV && claimExperienceDebug.value) {
         >
             <RiderRuntimeSequencer :stages="redirectStages" />
         </div>
+
+        <div
+            v-if="usesCompiledFormFlow"
+            data-testid="compiled-form-flow-boundary"
+            class="sr-only"
+        >
+            compiled form flow boundary
+        </div>
     </div>
 </template>

@@ -176,6 +176,7 @@ describe('ClaimWidget compiled form flow rendering', () => {
             },
         });
 
+        expect(wrapper.find('[data-testid="compiled-form-flow-boundary"]').exists()).toBe(true);
         expect(wrapper.text()).not.toContain('compiled-form-flow-stage');
     });
 
@@ -204,6 +205,7 @@ describe('ClaimWidget compiled form flow rendering', () => {
             },
         });
 
+        expect(wrapper.find('[data-testid="compiled-form-flow-boundary"]').exists()).toBe(false);
         expect(wrapper.text()).not.toContain('compiled-form-flow-stage');
     });
 });
