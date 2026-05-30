@@ -86,6 +86,210 @@ The success stage region represents the primary success experience when rider st
 
 ---
 
+## Compiled Success Rider Rendering
+
+Success.vue now supports compiler-first rendering for success rider content.
+
+The success page no longer relies exclusively on legacy rider stages.
+
+Instead, it prefers compiled success rider phases when they are available.
+
+---
+
+### Compiled Success Rider Phase
+
+Compiled success rider stages originate from:
+
+```text
+claim_experience.phases.success_rider
+```
+
+Example:
+
+```text
+ClaimExperienceCompiler
+        ↓
+ClaimExperienceData
+        ↓
+success_rider
+        ↓
+Success.vue
+```
+
+A compiled success rider phase is eligible when:
+
+```text
+phase.key = success_rider
+
+phase.status = active
+```
+
+and contains visual stages.
+
+---
+
+### Compiled Success Stage Selection
+
+Success.vue derives compiled success stages from:
+
+```text
+success_rider
+```
+
+and filters them using:
+
+```text
+stage.enabled !== false
+```
+
+while excluding redirect-stage execution content.
+
+Only visual success stages participate in success rendering.
+
+---
+
+### Legacy Success Rider Fallback
+
+Backward compatibility remains supported.
+
+When no active compiled success rider phase exists:
+
+```text
+success_rider phase absent
+```
+
+or:
+
+```text
+success_rider phase inactive
+```
+
+Success.vue falls back to:
+
+```text
+rider.stages
+```
+
+using the existing success-stage selection rules.
+
+---
+
+### Rendering Priority
+
+The contract is:
+
+```text
+compiled success_rider wins
+
+otherwise
+
+legacy rider success fallback
+```
+
+In pseudocode:
+
+```text
+compiled success rider available?
+        ↓
+      yes
+        ↓
+render compiled success stages
+
+      no
+        ↓
+render legacy success stages
+```
+
+---
+
+### Inactive Success Rider Phases
+
+Inactive compiled phases are ignored.
+
+Example:
+
+```text
+status = skipped
+status = completed
+status = disabled
+```
+
+must not suppress legacy success rider rendering.
+
+The fallback path remains available.
+
+---
+
+### Success Rider Ownership
+
+Success rider ownership belongs to:
+
+```text
+Success.vue
+```
+
+not:
+
+```text
+ClaimWidget.vue
+```
+
+This follows the ownership boundary established elsewhere:
+
+```text
+ClaimWidget
+    → rider_intro
+    → runtime
+    → redirect
+
+Success.vue
+    → success_rider
+    → redirect countdown
+    → redirect completion experience
+```
+
+---
+
+### Product Decision
+
+Compiled success rider rendering is considered:
+
+```text
+compiler-first
+```
+
+rather than:
+
+```text
+legacy-first
+```
+
+The compiler becomes the authoritative source of post-claim rider experiences.
+
+Legacy rider stages remain a compatibility layer during migration.
+
+---
+
+### Test Coverage
+
+Covered by:
+
+```text
+tests/frontend/Success.redirect-countdown.test.ts
+```
+
+Key assertions include:
+
+```text
+prefers compiled success_rider stages over rider success fallback stages
+
+falls back to rider success stages when compiled success_rider phase is absent
+
+ignores inactive compiled success_rider phase and falls back to rider success stages
+```
+
+---
+
 ## Redirect Countdown Region
 
 ```text
@@ -322,6 +526,8 @@ The long-term goal is:
 Claim Experience Compiler
         ↓
 ClaimExperienceData
+        ↓
+compiled success_rider
         ↓
 Success.vue
 ```
