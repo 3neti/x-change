@@ -47,3 +47,13 @@ export function normalizeFormFlowFieldType(type: unknown): SupportedFormFlowFiel
         ? type
         : 'unsupported';
 }
+
+export function formFlowFieldPreviewKind(type: unknown): string {
+    const normalized = normalizeFormFlowFieldType(type);
+
+    if (normalized === 'unsupported') {
+        return 'unsupported field';
+    }
+
+    return `${normalized} field`;
+}

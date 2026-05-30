@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
     normalizeFormFlowFieldType,
+    formFlowFieldPreviewKind,
     type NormalizedFormFlow,
 } from './formFlow';
 
@@ -69,6 +70,10 @@ defineProps<{
                     {{ normalizeFormFlowFieldType(field.type ?? 'text') }}
                     ·
                     {{ field.required ? 'required' : 'optional' }}
+                </div>
+
+                <div data-testid="form-flow-field-preview-kind">
+                    {{ formFlowFieldPreviewKind(field.type ?? 'text') }}
                 </div>
             </div>
         </div>

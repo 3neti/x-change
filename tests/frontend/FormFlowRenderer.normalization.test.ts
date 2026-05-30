@@ -103,6 +103,9 @@ describe('FormFlowRenderer normalized payload rendering', () => {
         expect(rows[1].text()).toContain('Birth Date');
         expect(rows[1].text()).toContain('date');
         expect(rows[1].text()).toContain('optional');
+
+        expect(rows[0].text()).toContain('text field');
+        expect(rows[1].text()).toContain('date field');
     });
 
     it('marks unsupported form flow field types explicitly', () => {
@@ -139,5 +142,7 @@ describe('FormFlowRenderer normalized payload rendering', () => {
 
         expect(diagnostics[1].text()).toContain('unsupported');
         expect(previews[1].text()).toContain('unsupported');
+
+        expect(previews[1].text()).toContain('unsupported field');
     });
 });

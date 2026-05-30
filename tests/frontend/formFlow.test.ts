@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
     isSupportedFormFlowFieldType,
     normalizeFormFlowFieldType,
+    formFlowFieldPreviewKind,
     SUPPORTED_FORM_FLOW_FIELD_TYPES,
 } from '../../resources/js/components/x-change/formFlow';
 
@@ -24,5 +25,15 @@ describe('formFlow field type support', () => {
         expect(normalizeFormFlowFieldType('email')).toBe('email');
         expect(normalizeFormFlowFieldType('camera')).toBe('unsupported');
         expect(normalizeFormFlowFieldType(null)).toBe('unsupported');
+    });
+
+    it('returns readonly preview kind by field type', () => {
+        expect(formFlowFieldPreviewKind('text')).toBe('text field');
+        expect(formFlowFieldPreviewKind('email')).toBe('email field');
+        expect(formFlowFieldPreviewKind('date')).toBe('date field');
+        expect(formFlowFieldPreviewKind('number')).toBe('number field');
+        expect(formFlowFieldPreviewKind('select')).toBe('select field');
+        expect(formFlowFieldPreviewKind('textarea')).toBe('textarea field');
+        expect(formFlowFieldPreviewKind('camera')).toBe('unsupported field');
     });
 });
