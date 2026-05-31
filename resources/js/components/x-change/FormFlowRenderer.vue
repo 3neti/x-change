@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import {
-    formFlowFieldPreviewKind,
-    formFlowFieldTypeDiagnostic,
+    getFormFlowFieldPresentation,
     normalizeFormFlowFieldType,
 } from './formFlow';
 import type {NormalizedFormFlow} from './formFlow';
@@ -20,7 +19,9 @@ defineProps<{
     formFlow: NormalizedFormFlow;
 }>();
 
-
+function fieldPresentation(field: NormalizedFormFlow['fields'][number]) {
+    return getFormFlowFieldPresentation(field);
+}
 </script>
 
 <template>
@@ -56,7 +57,7 @@ defineProps<{
         </span>
 
                 <span data-testid="form-flow-field-type">
-{{ formFlowFieldTypeDiagnostic(field.type) }}
+{{ fieldPresentation(field).diagnosticType }}
         </span>
 
                 <span data-testid="form-flow-field-label">
@@ -80,13 +81,13 @@ defineProps<{
                 </div>
 
                 <div data-testid="form-flow-field-preview-meta">
-                    {{ normalizeFormFlowFieldType(field.type ?? 'text') }}
+                    {{ fieldPresentation(field).normalizedType }}
                     ·
                     {{ field.required ? 'required' : 'optional' }}
                 </div>
 
                 <div data-testid="form-flow-field-preview-kind">
-                    {{ formFlowFieldPreviewKind(field.type ?? 'text') }}
+                    {{ fieldPresentation(field).previewKind }}
                 </div>
 
                 <div data-testid="form-flow-field-preview-renderer">
