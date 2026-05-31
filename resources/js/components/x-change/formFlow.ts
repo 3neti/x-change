@@ -69,3 +69,22 @@ export function formFlowFieldTypeDiagnostic(type: unknown): string {
 export function formFlowFieldRendererKind(type: unknown): string {
     return formFlowFieldPreviewKind(type);
 }
+
+export type FormFlowFieldPresentation = {
+    diagnosticType: string;
+    normalizedType: SupportedFormFlowFieldType | 'unsupported';
+    previewKind: string;
+};
+
+export function getFormFlowFieldPresentation(
+    field: FormFlowField
+): FormFlowFieldPresentation {
+    const diagnosticType = formFlowFieldTypeDiagnostic(field.type);
+    const normalizedType = normalizeFormFlowFieldType(field.type ?? 'text');
+
+    return {
+        diagnosticType,
+        normalizedType,
+        previewKind: formFlowFieldPreviewKind(normalizedType),
+    };
+}
