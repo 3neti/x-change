@@ -2,14 +2,16 @@
 import type { FormFlowField } from '../formFlow';
 import UnsupportedFieldRendererShell from './UnsupportedFieldRendererShell.vue';
 
-defineProps<{
+const props = defineProps<{
     field: FormFlowField;
+    value?: unknown;
 }>();
 </script>
 
 <template>
     <UnsupportedFieldRendererShell
-        :field="field"
+        :field="props.field"
+        :value="props.value"
         test-id="unsupported-field-renderer"
     />
 </template>

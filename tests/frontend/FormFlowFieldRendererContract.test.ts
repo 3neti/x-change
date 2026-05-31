@@ -81,6 +81,7 @@ describe('form flow field renderer contract', () => {
                     label: 'Camera Field',
                     required: false,
                 },
+                value: 'Unsupported Value',
             },
         });
 
@@ -89,7 +90,22 @@ describe('form flow field renderer contract', () => {
         expect(wrapper.find('[data-testid="unsupported-field-renderer-kind"]').text()).toBe('unsupported field');
         expect(wrapper.find('[data-testid="unsupported-field-renderer-type"]').text()).toBe('camera');
         expect(wrapper.find('[data-testid="unsupported-field-renderer-diagnostic-type"]').text()).toBe('unsupported');
+        expect(wrapper.find('[data-testid="unsupported-field-renderer-value"]').text()).toBe('Unsupported Value');
     });
 
+    it('renders blank value when supported renderer value is null', () => {
+        const wrapper = mount(TextFieldRenderer, {
+            props: {
+                field: {
+                    key: 'empty_field',
+                    type: 'text',
+                    label: 'Empty Field',
+                    required: false,
+                },
+                value: null,
+            },
+        });
 
+        expect(wrapper.find('[data-testid="text-field-renderer-value"]').text()).toBe('');
+    });
 });

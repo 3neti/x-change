@@ -311,4 +311,30 @@ describe('FormFlowRenderer renderer delegation', () => {
 
         expect(wrapper.find('[data-testid="text-field-renderer-value"]').text()).toBe('From field value');
     });
+
+    it('passes readonly field values to unsupported renderer', () => {
+        const wrapper = mount(FormFlowRenderer, {
+            props: {
+                formFlow: {
+                    key: 'form_flow',
+                    owner: 'form-flow',
+                    source: 'claim_experience',
+                    values: {
+                        photo: 'raw-camera-value',
+                    },
+                    fields: [
+                        {
+                            key: 'photo',
+                            type: 'camera',
+                            label: 'Photo',
+                            required: false,
+                        },
+                    ],
+                    stages: [],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="unsupported-field-renderer-value"]').text()).toBe('raw-camera-value');
+    });
 });

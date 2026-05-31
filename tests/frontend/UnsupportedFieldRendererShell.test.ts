@@ -13,6 +13,7 @@ describe('UnsupportedFieldRendererShell', () => {
                     type: 'camera',
                     required: false,
                 },
+                value: 'Raw uploaded photo',
             },
         });
 
@@ -21,6 +22,7 @@ describe('UnsupportedFieldRendererShell', () => {
         expect(wrapper.find('[data-testid="demo-unsupported-renderer-kind"]').text()).toBe('unsupported field');
         expect(wrapper.find('[data-testid="demo-unsupported-renderer-type"]').text()).toBe('camera');
         expect(wrapper.find('[data-testid="demo-unsupported-renderer-diagnostic-type"]').text()).toBe('unsupported');
+        expect(wrapper.find('[data-testid="demo-unsupported-renderer-value"]').text()).toBe('Raw uploaded photo');
     });
 
     it('falls back to field key and unknown type', () => {
@@ -37,6 +39,7 @@ describe('UnsupportedFieldRendererShell', () => {
         expect(wrapper.find('[data-testid="demo-unsupported-renderer-label"]').text()).toBe('mystery');
         expect(wrapper.find('[data-testid="demo-unsupported-renderer-type"]').text()).toBe('unknown');
         expect(wrapper.find('[data-testid="demo-unsupported-renderer-diagnostic-type"]').text()).toBe('default:text');
+        expect(wrapper.find('[data-testid="demo-unsupported-renderer-value"]').text()).toBe('');
     });
 
 
