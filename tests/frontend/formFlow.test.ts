@@ -3,6 +3,7 @@ import {
     isSupportedFormFlowFieldType,
     normalizeFormFlowFieldType,
     formFlowFieldPreviewKind,
+    formFlowFieldTypeDiagnostic,
     SUPPORTED_FORM_FLOW_FIELD_TYPES,
 } from '../../resources/js/components/x-change/formFlow';
 
@@ -35,5 +36,13 @@ describe('formFlow field type support', () => {
         expect(formFlowFieldPreviewKind('select')).toBe('select field');
         expect(formFlowFieldPreviewKind('textarea')).toBe('textarea field');
         expect(formFlowFieldPreviewKind('camera')).toBe('unsupported field');
+    });
+
+    it('reports missing field type as default text diagnostic', () => {
+        expect(formFlowFieldTypeDiagnostic(undefined)).toBe('default:text');
+        expect(formFlowFieldTypeDiagnostic(null)).toBe('default:text');
+        expect(formFlowFieldTypeDiagnostic('')).toBe('default:text');
+        expect(formFlowFieldTypeDiagnostic('email')).toBe('email');
+        expect(formFlowFieldTypeDiagnostic('camera')).toBe('unsupported');
     });
 });

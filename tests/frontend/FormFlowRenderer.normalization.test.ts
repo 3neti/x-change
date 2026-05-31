@@ -155,5 +155,27 @@ describe('FormFlowRenderer normalized payload rendering', () => {
             .toContain('UnsupportedFieldRenderer');
     });
 
+    it('renders missing field type as default text diagnostic while previewing as text', () => {
+        const wrapper = mount(FormFlowRenderer, {
+            props: {
+                formFlow: {
+                    key: 'form_flow',
+                    owner: 'form-flow',
+                    source: 'claim_experience',
+                    fields: [
+                        {
+                            key: 'name',
+                            label: 'Name',
+                            required: true,
+                        },
+                    ],
+                    stages: [],
+                },
+            },
+        });
 
+        expect(wrapper.find('[data-testid="form-flow-field-type"]').text()).toBe('default:text');
+        expect(wrapper.find('[data-testid="form-flow-field-preview-meta"]').text()).toContain('text');
+        expect(wrapper.find('[data-testid="text-field-renderer"]').exists()).toBe(true);
+    });
 });

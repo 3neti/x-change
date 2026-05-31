@@ -57,3 +57,11 @@ export function formFlowFieldPreviewKind(type: unknown): string {
 
     return `${normalized} field`;
 }
+
+export function formFlowFieldTypeDiagnostic(type: unknown): string {
+    if (type === undefined || type === null || type === '') {
+        return 'default:text';
+    }
+
+    return normalizeFormFlowFieldType(type);
+}

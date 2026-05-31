@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import {
     formFlowFieldPreviewKind,
-    normalizeFormFlowFieldType
-
+    formFlowFieldTypeDiagnostic,
+    normalizeFormFlowFieldType,
 } from './formFlow';
 import type {NormalizedFormFlow} from './formFlow';
 
@@ -56,7 +56,7 @@ defineProps<{
         </span>
 
                 <span data-testid="form-flow-field-type">
- {{ normalizeFormFlowFieldType(field.type ?? 'text') }}
+{{ formFlowFieldTypeDiagnostic(field.type) }}
         </span>
 
                 <span data-testid="form-flow-field-label">
