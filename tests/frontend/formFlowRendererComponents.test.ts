@@ -40,4 +40,10 @@ describe('form flow renderer components', () => {
             type: 'camera',
         })).toBe('UnsupportedFieldRenderer');
     });
+
+    it('defaults missing field type to text renderer', () => {
+        expect(resolveFormFlowRendererComponentName({
+            key: 'name',
+        })).toBe('TextFieldRenderer');
+    });
 });
