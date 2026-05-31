@@ -6,39 +6,28 @@ import {
 } from './formFlow';
 import type {NormalizedFormFlow} from './formFlow';
 
+import type {FormFlowRendererComponentName} from './formFlow';
+import {
+    FORM_FLOW_RENDERER_COMPONENTS,
+    hasFormFlowRendererComponent
+} from './formFlowRendererComponents';
+
+
 import {
     resolveFormFlowRenderer,
 } from './formFlowRendererRegistry';
-
-import DateFieldRenderer from './renderers/DateFieldRenderer.vue';
-import EmailFieldRenderer from './renderers/EmailFieldRenderer.vue';
-import NumberFieldRenderer from './renderers/NumberFieldRenderer.vue';
-import SelectFieldRenderer from './renderers/SelectFieldRenderer.vue';
-import TextareaFieldRenderer from './renderers/TextareaFieldRenderer.vue';
-import TextFieldRenderer from './renderers/TextFieldRenderer.vue';
-import UnsupportedFieldRenderer from './renderers/UnsupportedFieldRenderer.vue';
 
 defineProps<{
     formFlow: NormalizedFormFlow;
 }>();
 
-const rendererComponents = {
-    DateFieldRenderer,
-    EmailFieldRenderer,
-    NumberFieldRenderer,
-    SelectFieldRenderer,
-    TextareaFieldRenderer,
-    TextFieldRenderer,
-    UnsupportedFieldRenderer
-} as const;
-
-function rendererComponentName(field: { type?: string }): keyof typeof rendererComponents | null {
+function rendererComponentName(field: { type?: string }): FormFlowRendererComponentName | null {
     const rendererName = resolveFormFlowRenderer(
         normalizeFormFlowFieldType(field.type ?? 'text')
     );
 
-    return rendererName in rendererComponents
-        ? rendererName as keyof typeof rendererComponents
+    return hasFormFlowRendererComponent(rendererName)
+        ? rendererName
         : null;
 }
 </script>
@@ -119,7 +108,7 @@ function rendererComponentName(field: { type?: string }): keyof typeof rendererC
 
                 <component
                     v-if="rendererComponentName(field)"
-                    :is="rendererComponents[rendererComponentName(field)!]"
+                    :is="FORM_FLOW_RENDERER_COMPONENTS[rendererComponentName(field)!]"
                     :field="field"
                 />
             </div>
