@@ -1,3 +1,6 @@
+import { normalizeFormFlowFieldType, type FormFlowField } from './formFlow';
+import { resolveFormFlowRenderer } from './formFlowRendererRegistry';
+
 import TextFieldRenderer from './renderers/TextFieldRenderer.vue';
 import EmailFieldRenderer from './renderers/EmailFieldRenderer.vue';
 import DateFieldRenderer from './renderers/DateFieldRenderer.vue';
@@ -23,4 +26,16 @@ export function hasFormFlowRendererComponent(
     name: string
 ): name is FormFlowRendererComponentName {
     return name in FORM_FLOW_RENDERER_COMPONENTS;
+}
+
+export function resolveFormFlowRendererComponentName(
+    field: FormFlowField
+): FormFlowRendererComponentName {
+    const rendererName = resolveFormFlowRenderer(
+        normalizeFormFlowFieldType(field.type ?? 'text')
+    );
+
+    return hasFormFlowRendererComponent(rendererName)
+        ? rendererName
+        : 'UnsupportedFieldRenderer';
 }

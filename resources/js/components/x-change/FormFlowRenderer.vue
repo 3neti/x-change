@@ -6,10 +6,9 @@ import {
 } from './formFlow';
 import type {NormalizedFormFlow} from './formFlow';
 
-import type {FormFlowRendererComponentName} from './formFlow';
 import {
     FORM_FLOW_RENDERER_COMPONENTS,
-    hasFormFlowRendererComponent
+    resolveFormFlowRendererComponentName
 } from './formFlowRendererComponents';
 
 
@@ -21,15 +20,7 @@ defineProps<{
     formFlow: NormalizedFormFlow;
 }>();
 
-function rendererComponentName(field: { type?: string }): FormFlowRendererComponentName | null {
-    const rendererName = resolveFormFlowRenderer(
-        normalizeFormFlowFieldType(field.type ?? 'text')
-    );
 
-    return hasFormFlowRendererComponent(rendererName)
-        ? rendererName
-        : null;
-}
 </script>
 
 <template>
@@ -107,8 +98,7 @@ function rendererComponentName(field: { type?: string }): FormFlowRendererCompon
                 </div>
 
                 <component
-                    v-if="rendererComponentName(field)"
-                    :is="FORM_FLOW_RENDERER_COMPONENTS[rendererComponentName(field)!]"
+                    :is="FORM_FLOW_RENDERER_COMPONENTS[resolveFormFlowRendererComponentName(field)]"
                     :field="field"
                 />
             </div>
