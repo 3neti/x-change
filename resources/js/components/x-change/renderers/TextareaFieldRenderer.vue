@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { FormFlowField } from '../formFlow';
+import { formFlowFieldRendererKind  } from '../formFlow';
+import type {FormFlowField} from '../formFlow';
 import ReadonlyFieldRendererShell from './ReadonlyFieldRendererShell.vue';
 
 defineProps<{
@@ -10,7 +11,7 @@ defineProps<{
 <template>
     <ReadonlyFieldRendererShell
         :field="field"
-        kind="textarea field"
+        :kind="formFlowFieldRendererKind(field.type ?? 'text')"
         test-id="textarea-field-renderer"
     />
 </template>

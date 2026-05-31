@@ -65,3 +65,7 @@ export function formFlowFieldTypeDiagnostic(type: unknown): string {
 
     return normalizeFormFlowFieldType(type);
 }
+
+export function formFlowFieldRendererKind(type: unknown): string {
+    return formFlowFieldPreviewKind(type);
+}
