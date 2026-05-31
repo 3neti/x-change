@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { FormFlowField } from '../formFlow';
+import UnsupportedFieldRendererShell from './UnsupportedFieldRendererShell.vue';
 
 defineProps<{
     field: FormFlowField;
@@ -7,17 +8,8 @@ defineProps<{
 </script>
 
 <template>
-    <div data-testid="unsupported-field-renderer">
-        <div data-testid="unsupported-field-renderer-label">
-            {{ field.label ?? field.key }}
-        </div>
-
-        <div data-testid="unsupported-field-renderer-kind">
-            unsupported field
-        </div>
-
-        <div data-testid="unsupported-field-renderer-type">
-            {{ field.type ?? 'unknown' }}
-        </div>
-    </div>
+    <UnsupportedFieldRendererShell
+        :field="field"
+        test-id="unsupported-field-renderer"
+    />
 </template>
