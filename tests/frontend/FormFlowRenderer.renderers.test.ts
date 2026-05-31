@@ -235,4 +235,28 @@ describe('FormFlowRenderer renderer delegation', () => {
         expect(wrapper.find('[data-testid="select-field-renderer"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="textarea-field-renderer"]').exists()).toBe(false);
     });
+
+    it('passes readonly field values to delegated renderers', () => {
+        const wrapper = mount(FormFlowRenderer, {
+            props: {
+                formFlow: {
+                    key: 'form_flow',
+                    owner: 'form-flow',
+                    source: 'claim_experience',
+                    fields: [
+                        {
+                            key: 'first_name',
+                            type: 'text',
+                            label: 'First Name',
+                            required: true,
+                            value: 'Lester',
+                        },
+                    ],
+                    stages: [],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="text-field-renderer-value"]').text()).toBe('Lester');
+    });
 });

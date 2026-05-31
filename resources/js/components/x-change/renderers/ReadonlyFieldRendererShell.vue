@@ -4,7 +4,8 @@ import type { FormFlowField } from '../formFlow';
 defineProps<{
     field: FormFlowField;
     kind: string;
-    testId: string;
+    testId: string
+    value?: unknown;
 }>();
 </script>
 
@@ -20,6 +21,10 @@ defineProps<{
 
         <div :data-testid="`${testId}-required`">
             {{ field.required ? 'required' : 'optional' }}
+        </div>
+
+        <div :data-testid="`${testId}-value`">
+            {{ value ?? '' }}
         </div>
     </div>
 </template>

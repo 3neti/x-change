@@ -60,6 +60,7 @@ describe('form flow field renderer contract', () => {
                         label: `${kind} label`,
                         required: true,
                     },
+                    value: 'Sample Value',
                 },
             });
 
@@ -67,6 +68,7 @@ describe('form flow field renderer contract', () => {
             expect(wrapper.find(`[data-testid="${testId}-label"]`).text()).toBe(`${kind} label`);
             expect(wrapper.find(`[data-testid="${testId}-kind"]`).text()).toBe(kind);
             expect(wrapper.find(`[data-testid="${testId}-required"]`).text()).toBe('required');
+            expect(wrapper.find(`[data-testid="${testId}-value"]`).text()).toBe('Sample Value');
         }
     );
 
@@ -88,4 +90,6 @@ describe('form flow field renderer contract', () => {
         expect(wrapper.find('[data-testid="unsupported-field-renderer-type"]').text()).toBe('camera');
         expect(wrapper.find('[data-testid="unsupported-field-renderer-diagnostic-type"]').text()).toBe('unsupported');
     });
+
+
 });
