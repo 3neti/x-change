@@ -1988,6 +1988,475 @@ FormFlowRenderer = form rendering boundary
 form-flow package = form behavior owner
 ```
 
+# FormFlowRenderer Field Renderer Registry
+
+FormFlowRenderer now delegates normalized fields to renderer components through an explicit renderer registry.
+
+This is the first slice where field presentation ownership moves from:
+
+```text
+field type inspection
+```
+
+to:
+
+```text
+field type
+        ↓
+renderer registry
+        ↓
+field renderer component
+```
+
+The renderer architecture is now compiler-driven.
+
+---
+
+## Current Architecture
+
+Current rendering flow:
+
+```text
+claimExperience.phases.form_flow
+        ↓
+normalizeFormFlowPhase()
+        ↓
+NormalizedFormFlow.fields[]
+        ↓
+normalizeFormFlowFieldType()
+        ↓
+resolveFormFlowRenderer()
+        ↓
+Field Renderer Component
+```
+
+FormFlowRenderer no longer decides presentation through template conditionals alone.
+
+Renderer selection is now centralized.
+
+---
+
+## Renderer Registry
+
+Renderer lookup is performed through:
+
+```ts
+resolveFormFlowRenderer(type)
+```
+
+Current registry:
+
+```text
+text
+        ↓
+TextFieldRenderer
+
+email
+        ↓
+EmailFieldRenderer
+
+date
+        ↓
+DateFieldRenderer
+
+number
+        ↓
+NumberFieldRenderer
+
+select
+        ↓
+SelectFieldRenderer
+
+textarea
+        ↓
+TextareaFieldRenderer
+
+unsupported
+        ↓
+UnsupportedFieldRenderer
+```
+
+The registry is the authoritative mapping between normalized field types and renderer implementations.
+
+---
+
+## Delegation Contract
+
+Each normalized field is processed as:
+
+```text
+field.type
+        ↓
+normalizeFormFlowFieldType()
+        ↓
+resolveFormFlowRenderer()
+        ↓
+renderer component
+```
+
+The renderer receives:
+
+```ts
+field: FormFlowField
+```
+
+and owns presentation for that field.
+
+FormFlowRenderer becomes a coordinator rather than a field-specific renderer.
+
+---
+
+# TextFieldRenderer
+
+Supported type:
+
+```text
+text
+```
+
+Current responsibility:
+
+```text
+readonly field preview
+```
+
+Current markers:
+
+```text
+text-field-renderer
+
+text-field-renderer-label
+
+text-field-renderer-kind
+
+text-field-renderer-required
+```
+
+---
+
+# EmailFieldRenderer
+
+Supported type:
+
+```text
+email
+```
+
+Current responsibility:
+
+```text
+readonly field preview
+```
+
+Current markers:
+
+```text
+email-field-renderer
+
+email-field-renderer-label
+
+email-field-renderer-kind
+
+email-field-renderer-required
+```
+
+---
+
+# DateFieldRenderer
+
+Supported type:
+
+```text
+date
+```
+
+Current responsibility:
+
+```text
+readonly field preview
+```
+
+Current markers:
+
+```text
+date-field-renderer
+
+date-field-renderer-label
+
+date-field-renderer-kind
+
+date-field-renderer-required
+```
+
+---
+
+# NumberFieldRenderer
+
+Supported type:
+
+```text
+number
+```
+
+Current responsibility:
+
+```text
+readonly field preview
+```
+
+Current markers:
+
+```text
+number-field-renderer
+
+number-field-renderer-label
+
+number-field-renderer-kind
+
+number-field-renderer-required
+```
+
+---
+
+# SelectFieldRenderer
+
+Supported type:
+
+```text
+select
+```
+
+Current responsibility:
+
+```text
+readonly field preview
+```
+
+Current markers:
+
+```text
+select-field-renderer
+
+select-field-renderer-label
+
+select-field-renderer-kind
+
+select-field-renderer-required
+```
+
+---
+
+# TextareaFieldRenderer
+
+Supported type:
+
+```text
+textarea
+```
+
+Current responsibility:
+
+```text
+readonly field preview
+```
+
+Current markers:
+
+```text
+textarea-field-renderer
+
+textarea-field-renderer-label
+
+textarea-field-renderer-kind
+
+textarea-field-renderer-required
+```
+
+---
+
+# UnsupportedFieldRenderer
+
+Unsupported field types are no longer represented only through metadata.
+
+They now receive their own renderer.
+
+Examples:
+
+```text
+camera
+signature
+file
+biometric
+```
+
+Current markers:
+
+```text
+unsupported-field-renderer
+
+unsupported-field-renderer-label
+
+unsupported-field-renderer-kind
+
+unsupported-field-renderer-type
+```
+
+Current responsibility:
+
+```text
+explicit unsupported visibility
+```
+
+This prevents unsupported field types from silently degrading into another renderer.
+
+---
+
+## Why Renderer Delegation Exists
+
+Previous slices proved:
+
+```text
+normalized payload
+
+field diagnostics
+
+readonly preview rows
+
+field type support matrix
+```
+
+This slice proves:
+
+```text
+field type
+        ↓
+renderer selection
+        ↓
+renderer ownership
+```
+
+The architecture now supports incremental renderer evolution without modifying FormFlowRenderer itself.
+
+---
+
+## Current Scope
+
+Renderers remain readonly.
+
+They do not yet provide:
+
+```text
+input controls
+
+v-model
+
+validation
+
+submission
+
+form-flow package behavior
+
+claim continuation
+```
+
+Current renderer responsibility is presentation only.
+
+---
+
+## Test Coverage
+
+Covered by:
+
+```text
+tests/frontend/FormFlowRenderer.renderers.test.ts
+
+tests/frontend/formFlowRendererRegistry.test.ts
+```
+
+Assertions verify:
+
+```text
+text renderer delegation
+
+email renderer delegation
+
+date renderer delegation
+
+number renderer delegation
+
+select renderer delegation
+
+textarea renderer delegation
+
+unsupported renderer delegation
+
+renderer registry resolution
+```
+
+---
+
+## Migration Status
+
+Completed:
+
+```text
+renderer registry
+
+renderer delegation
+
+supported field renderers
+
+unsupported field renderer
+
+readonly renderer ownership
+```
+
+Still pending:
+
+```text
+shared renderer shell
+
+interactive inputs
+
+field values
+
+validation
+
+submission
+
+form-flow package integration
+```
+
+---
+
+## Future Direction
+
+The next logical evolution is:
+
+```text
+FieldRenderer
+        ↓
+Readonly Renderer Shell
+        ↓
+Interactive Renderer
+```
+
+Target architecture:
+
+```text
+ClaimWidget
+        ↓
+FormFlowRenderer
+        ↓
+Renderer Registry
+        ↓
+Field Renderer
+        ↓
+Interactive Form Behavior
+```
+
+FormFlowRenderer now acts primarily as a rendering coordinator rather than a field implementation layer.
+
 # FormFlowRenderer Field Type Support Matrix
 
 FormFlowRenderer now has an explicit field type support matrix.
