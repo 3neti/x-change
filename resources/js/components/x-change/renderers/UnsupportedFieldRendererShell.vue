@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { FormFlowField } from '../formFlow';
+import { formFlowFieldTypeDiagnostic } from '../formFlow';
 
 defineProps<{
     field: FormFlowField;
@@ -19,6 +20,10 @@ defineProps<{
 
         <div :data-testid="`${testId}-type`">
             {{ field.type ?? 'unknown' }}
+        </div>
+
+        <div :data-testid="`${testId}-diagnostic-type`">
+            {{ formFlowFieldTypeDiagnostic(field.type) }}
         </div>
     </div>
 </template>

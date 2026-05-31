@@ -86,5 +86,6 @@ describe('form flow field renderer contract', () => {
         expect(wrapper.find('[data-testid="unsupported-field-renderer-label"]').text()).toBe('Camera Field');
         expect(wrapper.find('[data-testid="unsupported-field-renderer-kind"]').text()).toBe('unsupported field');
         expect(wrapper.find('[data-testid="unsupported-field-renderer-type"]').text()).toBe('camera');
+        expect(wrapper.find('[data-testid="unsupported-field-renderer-diagnostic-type"]').text()).toBe('unsupported');
     });
 });
