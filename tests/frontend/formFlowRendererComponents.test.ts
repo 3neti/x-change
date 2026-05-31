@@ -46,4 +46,20 @@ describe('form flow renderer components', () => {
             key: 'name',
         })).toBe('TextFieldRenderer');
     });
+
+    it('resolves renderer component names from field presentation metadata', () => {
+        expect(resolveFormFlowRendererComponentName({
+            key: 'name',
+        })).toBe('TextFieldRenderer');
+
+        expect(resolveFormFlowRendererComponentName({
+            key: 'email',
+            type: 'email',
+        })).toBe('EmailFieldRenderer');
+
+        expect(resolveFormFlowRendererComponentName({
+            key: 'photo',
+            type: 'camera',
+        })).toBe('UnsupportedFieldRenderer');
+    });
 });

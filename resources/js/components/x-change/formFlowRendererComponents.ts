@@ -1,4 +1,4 @@
-import { normalizeFormFlowFieldType, type FormFlowField } from './formFlow';
+import { getFormFlowFieldPresentation, type FormFlowField } from './formFlow';
 import { resolveFormFlowRenderer } from './formFlowRendererRegistry';
 
 import TextFieldRenderer from './renderers/TextFieldRenderer.vue';
@@ -31,8 +31,10 @@ export function hasFormFlowRendererComponent(
 export function resolveFormFlowRendererComponentName(
     field: FormFlowField
 ): FormFlowRendererComponentName {
+    const presentation = getFormFlowFieldPresentation(field);
+
     const rendererName = resolveFormFlowRenderer(
-        normalizeFormFlowFieldType(field.type ?? 'text')
+        presentation.normalizedType
     );
 
     return hasFormFlowRendererComponent(rendererName)
