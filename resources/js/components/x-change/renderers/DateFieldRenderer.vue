@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { FormFlowField } from '../formFlow';
+import ReadonlyFieldRendererShell from './ReadonlyFieldRendererShell.vue';
 
 defineProps<{
     field: FormFlowField;
@@ -7,17 +8,9 @@ defineProps<{
 </script>
 
 <template>
-    <div data-testid="date-field-renderer">
-        <div data-testid="date-field-renderer-label">
-            {{ field.label ?? field.key }}
-        </div>
-
-        <div data-testid="date-field-renderer-kind">
-            date field
-        </div>
-
-        <div data-testid="date-field-renderer-required">
-            {{ field.required ? 'required' : 'optional' }}
-        </div>
-    </div>
+    <ReadonlyFieldRendererShell
+        :field="field"
+        kind="date field"
+        test-id="date-field-renderer"
+    />
 </template>
