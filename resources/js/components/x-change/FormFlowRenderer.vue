@@ -22,7 +22,7 @@ const props = defineProps<{
 
 const fieldValues = computed<Record<string, unknown>>(() => {
     return props.formFlow.fields.reduce<Record<string, unknown>>((values, field) => {
-        values[field.key] = field.value ?? null;
+        values[field.key] = props.formFlow.values?.[field.key] ?? field.value ?? null;
 
         return values;
     }, {});

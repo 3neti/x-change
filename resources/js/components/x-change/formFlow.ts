@@ -11,7 +11,12 @@ export type NormalizedFormFlow = {
     source?: string;
     fields: FormFlowField[];
     stages: Record<string, any>[];
+    values?: Record<string, unknown>;
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
 
 export function normalizeFormFlowPhase(phase: Record<string, any>): NormalizedFormFlow {
     return {
@@ -20,6 +25,7 @@ export function normalizeFormFlowPhase(phase: Record<string, any>): NormalizedFo
         source: typeof phase.source === 'string' ? phase.source : undefined,
         fields: Array.isArray(phase.fields) ? phase.fields : [],
         stages: Array.isArray(phase.stages) ? phase.stages : [],
+        values: isRecord(phase.values) ? phase.values : undefined,
     };
 }
 

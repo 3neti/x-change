@@ -259,4 +259,56 @@ describe('FormFlowRenderer renderer delegation', () => {
 
         expect(wrapper.find('[data-testid="text-field-renderer-value"]').text()).toBe('Lester');
     });
+
+    it('uses formFlow values map before field value when passing readonly values to renderers', () => {
+        const wrapper = mount(FormFlowRenderer, {
+            props: {
+                formFlow: {
+                    key: 'form_flow',
+                    owner: 'form-flow',
+                    source: 'claim_experience',
+                    values: {
+                        first_name: 'From values map',
+                    },
+                    fields: [
+                        {
+                            key: 'first_name',
+                            type: 'text',
+                            label: 'First Name',
+                            required: true,
+                            value: 'From field value',
+                        },
+                    ],
+                    stages: [],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="text-field-renderer-value"]').text()).toBe('From values map');
+    });
+
+    it('falls back to field value when formFlow values map has no value for field', () => {
+        const wrapper = mount(FormFlowRenderer, {
+            props: {
+                formFlow: {
+                    key: 'form_flow',
+                    owner: 'form-flow',
+                    source: 'claim_experience',
+                    values: {},
+                    fields: [
+                        {
+                            key: 'first_name',
+                            type: 'text',
+                            label: 'First Name',
+                            required: true,
+                            value: 'From field value',
+                        },
+                    ],
+                    stages: [],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="text-field-renderer-value"]').text()).toBe('From field value');
+    });
 });

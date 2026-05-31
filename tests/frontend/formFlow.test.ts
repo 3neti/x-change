@@ -6,6 +6,7 @@ import {
     formFlowFieldRendererKind,
     formFlowFieldTypeDiagnostic,
     getFormFlowFieldPresentation,
+    normalizeFormFlowPhase,
     SUPPORTED_FORM_FLOW_FIELD_TYPES,
 } from '../../resources/js/components/x-change/formFlow';
 
@@ -84,5 +85,21 @@ describe('formFlow field type support', () => {
             normalizedType: 'text',
             previewKind: 'text field',
         });
+    });
+
+    it('normalizes form flow values map', () => {
+        expect(normalizeFormFlowPhase({
+            key: 'form_flow',
+            values: {
+                first_name: 'Lester',
+            },
+        }).values).toEqual({
+            first_name: 'Lester',
+        });
+
+        expect(normalizeFormFlowPhase({
+            key: 'form_flow',
+            values: [],
+        }).values).toBeUndefined();
     });
 });
