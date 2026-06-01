@@ -61,6 +61,7 @@ onMounted(() => {
 
 const voucherInput = ref<HTMLInputElement | null>(null);
 const submitButton = ref<HTMLButtonElement | null>(null);
+const currentFormValues = ref<Record<string, unknown>>({});
 
 const isNonActive = computed(() => {
     const s = voucherData.value?.status;
@@ -424,6 +425,10 @@ const normalizedCompiledFormFlow = computed(() =>
         : null
 );
 
+function updateCurrentFormValues(values: Record<string, unknown>): void {
+    currentFormValues.value = values;
+}
+
 const claimExperienceDebug = computed(() => {
     if (!props.claimExperience) {
         return null;
@@ -605,7 +610,13 @@ if (import.meta.env.DEV && claimExperienceDebug.value) {
             <FormFlowRenderer
                 v-if="normalizedCompiledFormFlow"
                 :form-flow="normalizedCompiledFormFlow"
+                @update:values="updateCurrentFormValues"
             />
+
+            <pre
+                v-if="normalizedCompiledFormFlow"
+                data-testid="claim-widget-current-form-values"
+            >{{ JSON.stringify(currentFormValues, null, 2) }}</pre>
 
             <div
                 v-if="usesCompiledFormFlow"

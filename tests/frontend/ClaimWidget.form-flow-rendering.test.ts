@@ -1,4 +1,5 @@
 import { mount } from '@vue/test-utils';
+import { nextTick } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ClaimWidget from '../../resources/js/components/x-change/ClaimWidget.vue';
 
@@ -342,5 +343,53 @@ describe('ClaimWidget compiled form flow rendering', () => {
         });
 
         expect(wrapper.find('[data-testid="form-flow-renderer"]').exists()).toBe(true);
+    });
+
+    it('captures current form values emitted by FormFlowRenderer', async () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'form_flow',
+                            owner: 'form-flow',
+                            source: 'claim_experience',
+                            status: 'active',
+                            fields: [
+                                {
+                                    key: 'first_name',
+                                    type: 'text',
+                                    label: 'First Name',
+                                    required: true,
+                                },
+                            ],
+                            values: {
+                                first_name: 'Initial Name',
+                            },
+                            stages: [],
+                        },
+                    ],
+                },
+            },
+        });
+
+        await nextTick();
+
+        expect(JSON.parse(
+            wrapper.find('[data-testid="claim-widget-current-form-values"]').text()
+        )).toEqual({
+            first_name: 'Initial Name',
+        });
+
+        await wrapper
+            .find('[data-testid="text-field-renderer-input"]')
+            .setValue('Updated Name');
+
+        expect(JSON.parse(
+            wrapper.find('[data-testid="claim-widget-current-form-values"]').text()
+        )).toEqual({
+            first_name: 'Updated Name',
+        });
     });
 });
