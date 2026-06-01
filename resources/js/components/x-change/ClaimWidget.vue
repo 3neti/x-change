@@ -434,6 +434,32 @@ const claimFormPayload = computed(() => ({
     values: currentFormValues.value,
 }));
 
+function hasFormValue(value: unknown): boolean {
+    if (value === null || value === undefined) {
+        return false;
+    }
+
+    if (typeof value === 'string') {
+        return value.trim().length > 0;
+    }
+
+    return true;
+}
+
+const requiredCompiledFormFields = computed(() => {
+    return normalizedCompiledFormFlow.value?.fields.filter((field) => field.required) ?? [];
+});
+
+const missingRequiredCompiledFormFields = computed(() => {
+    return requiredCompiledFormFields.value.filter((field) => {
+        return !hasFormValue(currentFormValues.value[field.key]);
+    });
+});
+
+const isCompiledFormValid = computed(() => {
+    return missingRequiredCompiledFormFields.value.length === 0;
+});
+
 const claimExperienceDebug = computed(() => {
     if (!props.claimExperience) {
         return null;
@@ -627,6 +653,18 @@ if (import.meta.env.DEV && claimExperienceDebug.value) {
                 v-if="normalizedCompiledFormFlow"
                 data-testid="claim-widget-form-payload"
             >{{ JSON.stringify(claimFormPayload, null, 2) }}</pre>
+
+            <pre
+                v-if="normalizedCompiledFormFlow"
+                data-testid="claim-widget-missing-required-fields"
+            >{{ JSON.stringify(missingRequiredCompiledFormFields.map((field) => field.key), null, 2) }}</pre>
+
+            <div
+                v-if="normalizedCompiledFormFlow"
+                data-testid="claim-widget-form-valid"
+            >
+                {{ isCompiledFormValid ? 'valid' : 'invalid' }}
+            </div>
 
             <div
                 v-if="usesCompiledFormFlow"

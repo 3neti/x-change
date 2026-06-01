@@ -446,4 +446,165 @@ describe('ClaimWidget compiled form flow rendering', () => {
             },
         });
     });
+
+    it('marks compiled form invalid when required field is empty', async () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'form_flow',
+                            owner: 'form-flow',
+                            source: 'claim_experience',
+                            status: 'active',
+                            fields: [
+                                {
+                                    key: 'first_name',
+                                    type: 'text',
+                                    label: 'First Name',
+                                    required: true,
+                                },
+                            ],
+                            values: {
+                                first_name: '',
+                            },
+                            stages: [],
+                        },
+                    ],
+                },
+            },
+        });
+
+        await nextTick();
+
+        expect(wrapper.find('[data-testid="claim-widget-form-valid"]').text()).toBe('invalid');
+        expect(JSON.parse(
+            wrapper.find('[data-testid="claim-widget-missing-required-fields"]').text()
+        )).toEqual(['first_name']);
+    });
+
+    it('marks compiled form valid when required field is filled', async () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'form_flow',
+                            owner: 'form-flow',
+                            source: 'claim_experience',
+                            status: 'active',
+                            fields: [
+                                {
+                                    key: 'first_name',
+                                    type: 'text',
+                                    label: 'First Name',
+                                    required: true,
+                                },
+                            ],
+                            values: {
+                                first_name: 'Lester',
+                            },
+                            stages: [],
+                        },
+                    ],
+                },
+            },
+        });
+
+        await nextTick();
+
+        expect(wrapper.find('[data-testid="claim-widget-form-valid"]').text()).toBe('valid');
+        expect(JSON.parse(
+            wrapper.find('[data-testid="claim-widget-missing-required-fields"]').text()
+        )).toEqual([]);
+    });
+
+    it('ignores empty optional compiled form fields during validation', async () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'form_flow',
+                            owner: 'form-flow',
+                            source: 'claim_experience',
+                            status: 'active',
+                            fields: [
+                                {
+                                    key: 'first_name',
+                                    type: 'text',
+                                    label: 'First Name',
+                                    required: true,
+                                },
+                                {
+                                    key: 'middle_name',
+                                    type: 'text',
+                                    label: 'Middle Name',
+                                    required: false,
+                                },
+                            ],
+                            values: {
+                                first_name: 'Lester',
+                                middle_name: '',
+                            },
+                            stages: [],
+                        },
+                    ],
+                },
+            },
+        });
+
+        await nextTick();
+
+        expect(wrapper.find('[data-testid="claim-widget-form-valid"]').text()).toBe('valid');
+        expect(JSON.parse(
+            wrapper.find('[data-testid="claim-widget-missing-required-fields"]').text()
+        )).toEqual([]);
+    });
+
+    it('updates compiled form validation when required field value changes', async () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'form_flow',
+                            owner: 'form-flow',
+                            source: 'claim_experience',
+                            status: 'active',
+                            fields: [
+                                {
+                                    key: 'first_name',
+                                    type: 'text',
+                                    label: 'First Name',
+                                    required: true,
+                                },
+                            ],
+                            values: {
+                                first_name: '',
+                            },
+                            stages: [],
+                        },
+                    ],
+                },
+            },
+        });
+
+        await nextTick();
+
+        expect(wrapper.find('[data-testid="claim-widget-form-valid"]').text()).toBe('invalid');
+
+        await wrapper
+            .find('[data-testid="text-field-renderer-input"]')
+            .setValue('Lester');
+
+        expect(wrapper.find('[data-testid="claim-widget-form-valid"]').text()).toBe('valid');
+        expect(JSON.parse(
+            wrapper.find('[data-testid="claim-widget-missing-required-fields"]').text()
+        )).toEqual([]);
+    });
 });
