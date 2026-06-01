@@ -148,4 +148,24 @@ describe('form flow field renderer contract', () => {
 
         expect(wrapper.emitted('update:value')?.[0]).toEqual(['new@example.com']);
     });
+
+    it('emits update value from date field input', async () => {
+        const wrapper = mount(DateFieldRenderer, {
+            props: {
+                field: {
+                    key: 'birth_date',
+                    type: 'date',
+                    label: 'Birth Date',
+                    required: true,
+                },
+                value: '1990-01-01',
+            },
+        });
+
+        await wrapper
+            .find('[data-testid="date-field-renderer-input"]')
+            .setValue('1991-02-03');
+
+        expect(wrapper.emitted('update:value')?.[0]).toEqual(['1991-02-03']);
+    });
 });

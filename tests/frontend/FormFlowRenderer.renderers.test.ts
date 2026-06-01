@@ -401,4 +401,36 @@ describe('FormFlowRenderer renderer delegation', () => {
 
         expect(wrapper.find('[data-testid="email-field-renderer-value"]').text()).toBe('new@example.com');
     });
+
+    it('updates local field value when delegated date input emits update', async () => {
+        const wrapper = mount(FormFlowRenderer, {
+            props: {
+                formFlow: {
+                    key: 'form_flow',
+                    owner: 'form-flow',
+                    source: 'claim_experience',
+                    values: {
+                        birth_date: '1990-01-01',
+                    },
+                    fields: [
+                        {
+                            key: 'birth_date',
+                            type: 'date',
+                            label: 'Birth Date',
+                            required: true,
+                        },
+                    ],
+                    stages: [],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="date-field-renderer-value"]').text()).toBe('1990-01-01');
+
+        await wrapper
+            .find('[data-testid="date-field-renderer-input"]')
+            .setValue('1991-02-03');
+
+        expect(wrapper.find('[data-testid="date-field-renderer-value"]').text()).toBe('1991-02-03');
+    });
 });
