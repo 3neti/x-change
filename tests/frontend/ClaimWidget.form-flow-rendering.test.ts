@@ -751,6 +751,8 @@ describe('ClaimWidget compiled form flow rendering', () => {
 
         await nextTick();
 
+        expect(wrapper.find('[data-testid="claim-widget-submit-state"]').text()).toBe('idle');
+
         await wrapper.find('form').trigger('submit');
 
         expect(wrapper.emitted('submit:compiled-form')?.[0]).toEqual([
@@ -761,6 +763,8 @@ describe('ClaimWidget compiled form flow rendering', () => {
                 },
             },
         ]);
+
+        expect(wrapper.find('[data-testid="claim-widget-submit-state"]').text()).toBe('submitting');
     });
 
     it('does not emit compiled form submit payload when compiled form is invalid', async () => {

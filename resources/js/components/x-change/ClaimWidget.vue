@@ -467,10 +467,14 @@ const emit = defineEmits<{
     }];
 }>();
 
+const isSubmittingCompiledForm = ref(false);
+
 function submitCompiledForm(): void {
     if (normalizedCompiledFormFlow.value && !isCompiledFormValid.value) {
         return;
     }
+
+    isSubmittingCompiledForm.value = true;
 
     emit('submit:compiled-form', claimFormPayload.value);
 }
@@ -703,6 +707,12 @@ if (import.meta.env.DEV && claimExperienceDebug.value) {
                 data-testid="legacy-form-flow-boundary"
             >
                 legacy form flow boundary
+            </div>
+
+            <div
+                data-testid="claim-widget-submit-state"
+            >
+                {{ isSubmittingCompiledForm ? 'submitting' : 'idle' }}
             </div>
         </div>
     </div>
