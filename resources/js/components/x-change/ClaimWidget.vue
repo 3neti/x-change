@@ -517,7 +517,8 @@ if (import.meta.env.DEV && claimExperienceDebug.value) {
                 ref="submitButton"
                 type="submit"
                 class="w-full rounded-full"
-                :disabled="form.processing || !hasValidCode"
+                data-testid="claim-widget-submit-button"
+                :disabled="normalizedCompiledFormFlow ? !isCompiledFormValid : false"
             >
                 {{ form.processing ? 'Checking...' : 'Start Claim' }}
             </Button>

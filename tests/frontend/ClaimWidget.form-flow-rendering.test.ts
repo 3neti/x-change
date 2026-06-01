@@ -607,4 +607,116 @@ describe('ClaimWidget compiled form flow rendering', () => {
             wrapper.find('[data-testid="claim-widget-missing-required-fields"]').text()
         )).toEqual([]);
     });
+
+    it('disables claim submit button when compiled form is invalid', async () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'form_flow',
+                            owner: 'form-flow',
+                            source: 'claim_experience',
+                            status: 'active',
+                            fields: [
+                                {
+                                    key: 'first_name',
+                                    type: 'text',
+                                    label: 'First Name',
+                                    required: true,
+                                },
+                            ],
+                            values: {
+                                first_name: '',
+                            },
+                            stages: [],
+                        },
+                    ],
+                },
+            },
+        });
+
+        await nextTick();
+
+        expect(wrapper.find('[data-testid="claim-widget-submit-button"]').attributes('disabled'))
+            .toBeDefined();
+    });
+
+    it('enables claim submit button when compiled form is valid', async () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'form_flow',
+                            owner: 'form-flow',
+                            source: 'claim_experience',
+                            status: 'active',
+                            fields: [
+                                {
+                                    key: 'first_name',
+                                    type: 'text',
+                                    label: 'First Name',
+                                    required: true,
+                                },
+                            ],
+                            values: {
+                                first_name: 'Lester',
+                            },
+                            stages: [],
+                        },
+                    ],
+                },
+            },
+        });
+
+        await nextTick();
+
+        expect(wrapper.find('[data-testid="claim-widget-submit-button"]').attributes('disabled'))
+            .toBeUndefined();
+    });
+
+    it('enables claim submit button after required compiled form field is filled', async () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'form_flow',
+                            owner: 'form-flow',
+                            source: 'claim_experience',
+                            status: 'active',
+                            fields: [
+                                {
+                                    key: 'first_name',
+                                    type: 'text',
+                                    label: 'First Name',
+                                    required: true,
+                                },
+                            ],
+                            values: {
+                                first_name: '',
+                            },
+                            stages: [],
+                        },
+                    ],
+                },
+            },
+        });
+
+        await nextTick();
+
+        expect(wrapper.find('[data-testid="claim-widget-submit-button"]').attributes('disabled'))
+            .toBeDefined();
+
+        await wrapper
+            .find('[data-testid="text-field-renderer-input"]')
+            .setValue('Lester');
+
+        expect(wrapper.find('[data-testid="claim-widget-submit-button"]').attributes('disabled'))
+            .toBeUndefined();
+    });
 });
