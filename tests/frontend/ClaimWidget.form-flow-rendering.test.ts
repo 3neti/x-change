@@ -392,4 +392,58 @@ describe('ClaimWidget compiled form flow rendering', () => {
             first_name: 'Updated Name',
         });
     });
+
+    it('builds claim form payload from current form values', async () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'form_flow',
+                            owner: 'form-flow',
+                            source: 'claim_experience',
+                            status: 'active',
+                            fields: [
+                                {
+                                    key: 'first_name',
+                                    type: 'text',
+                                    label: 'First Name',
+                                    required: true,
+                                },
+                            ],
+                            values: {
+                                first_name: 'Initial Name',
+                            },
+                            stages: [],
+                        },
+                    ],
+                },
+            },
+        });
+
+        await nextTick();
+
+        expect(JSON.parse(
+            wrapper.find('[data-testid="claim-widget-form-payload"]').text()
+        )).toEqual({
+            code: 'TEST123',
+            values: {
+                first_name: 'Initial Name',
+            },
+        });
+
+        await wrapper
+            .find('[data-testid="text-field-renderer-input"]')
+            .setValue('Updated Name');
+
+        expect(JSON.parse(
+            wrapper.find('[data-testid="claim-widget-form-payload"]').text()
+        )).toEqual({
+            code: 'TEST123',
+            values: {
+                first_name: 'Updated Name',
+            },
+        });
+    });
 });

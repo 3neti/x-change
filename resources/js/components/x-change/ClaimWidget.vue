@@ -429,6 +429,11 @@ function updateCurrentFormValues(values: Record<string, unknown>): void {
     currentFormValues.value = values;
 }
 
+const claimFormPayload = computed(() => ({
+    code: props.initialCode,
+    values: currentFormValues.value,
+}));
+
 const claimExperienceDebug = computed(() => {
     if (!props.claimExperience) {
         return null;
@@ -617,6 +622,11 @@ if (import.meta.env.DEV && claimExperienceDebug.value) {
                 v-if="normalizedCompiledFormFlow"
                 data-testid="claim-widget-current-form-values"
             >{{ JSON.stringify(currentFormValues, null, 2) }}</pre>
+
+            <pre
+                v-if="normalizedCompiledFormFlow"
+                data-testid="claim-widget-form-payload"
+            >{{ JSON.stringify(claimFormPayload, null, 2) }}</pre>
 
             <div
                 v-if="usesCompiledFormFlow"
