@@ -7,6 +7,45 @@ const props = defineProps<{
     field: FormFlowField;
     value?: unknown;
 }>();
+
+const emit = defineEmits<{
+    'update:value': [value: unknown];
+}>();
+
+type SelectOption = {
+    label: string;
+    value: string;
+};
+
+function normalizedOptions(): SelectOption[] {
+    const options = Array.isArray(props.field.options)
+        ? props.field.options
+        : [];
+
+    return options
+        .map((option): SelectOption | null => {
+            if (typeof option === 'string') {
+                return {
+                    label: option,
+                    value: option,
+                };
+            }
+
+            if (
+                option
+                && typeof option === 'object'
+                && 'value' in option
+            ) {
+                const value = String((option as Record<string, unknown>).value);
+                const label = String((option as Record<string, unknown>).label ?? value);
+
+                return { label, value };
+            }
+
+            return null;
+        })
+        .filter((option): option is SelectOption => option !== null);
+}
 </script>
 
 <template>
@@ -16,4 +55,21 @@ const props = defineProps<{
         :kind="formFlowFieldRendererKind(props.field.type ?? 'text')"
         test-id="select-field-renderer"
     />
+    <select
+        data-testid="select-field-renderer-input"
+        :value="props.value ?? ''"
+        @change="emit('update:value', ($event.target as HTMLSelectElement).value)"
+    >
+        <option value="">
+            Select an option
+        </option>
+
+        <option
+            v-for="option in normalizedOptions()"
+            :key="option.value"
+            :value="option.value"
+        >
+            {{ option.label }}
+        </option>
+    </select>
 </template>

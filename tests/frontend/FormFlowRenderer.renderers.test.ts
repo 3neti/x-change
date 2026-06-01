@@ -497,4 +497,40 @@ describe('FormFlowRenderer renderer delegation', () => {
 
         expect(wrapper.find('[data-testid="textarea-field-renderer-value"]').text()).toBe('New Address');
     });
+
+    it('updates local field value when delegated select emits update', async () => {
+        const wrapper = mount(FormFlowRenderer, {
+            props: {
+                formFlow: {
+                    key: 'form_flow',
+                    owner: 'form-flow',
+                    source: 'claim_experience',
+                    values: {
+                        bank_code: 'BANK_A',
+                    },
+                    fields: [
+                        {
+                            key: 'bank_code',
+                            type: 'select',
+                            label: 'Bank',
+                            required: true,
+                            options: [
+                                { label: 'Bank A', value: 'BANK_A' },
+                                { label: 'Bank B', value: 'BANK_B' },
+                            ],
+                        },
+                    ],
+                    stages: [],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="select-field-renderer-value"]').text()).toBe('BANK_A');
+
+        await wrapper
+            .find('[data-testid="select-field-renderer-input"]')
+            .setValue('BANK_B');
+
+        expect(wrapper.find('[data-testid="select-field-renderer-value"]').text()).toBe('BANK_B');
+    });
 });

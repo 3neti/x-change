@@ -208,4 +208,48 @@ describe('form flow field renderer contract', () => {
 
         expect(wrapper.emitted('update:value')?.[0]).toEqual(['New Address']);
     });
+
+    it('emits update value from select field input', async () => {
+        const wrapper = mount(SelectFieldRenderer, {
+            props: {
+                field: {
+                    key: 'bank_code',
+                    type: 'select',
+                    label: 'Bank',
+                    required: true,
+                    options: [
+                        { label: 'Bank A', value: 'BANK_A' },
+                        { label: 'Bank B', value: 'BANK_B' },
+                    ],
+                },
+                value: 'BANK_A',
+            },
+        });
+
+        await wrapper
+            .find('[data-testid="select-field-renderer-input"]')
+            .setValue('BANK_B');
+
+        expect(wrapper.emitted('update:value')?.[0]).toEqual(['BANK_B']);
+    });
+
+    it('renders string options in select field renderer', () => {
+        const wrapper = mount(SelectFieldRenderer, {
+            props: {
+                field: {
+                    key: 'bank_code',
+                    type: 'select',
+                    label: 'Bank',
+                    required: true,
+                    options: ['BANK_A', 'BANK_B'],
+                },
+                value: 'BANK_A',
+            },
+        });
+
+        const options = wrapper.findAll('option').map((option) => option.text());
+
+        expect(options).toContain('BANK_A');
+        expect(options).toContain('BANK_B');
+    });
 });
