@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, reactive } from 'vue';
 import {
     getFormFlowFieldPresentation,
     normalizeFormFlowFieldType,
@@ -20,16 +20,18 @@ const props = defineProps<{
     formFlow: NormalizedFormFlow;
 }>();
 
-const fieldValues = computed<Record<string, unknown>>(() => {
-    return props.formFlow.fields.reduce<Record<string, unknown>>((values, field) => {
-        values[field.key] = props.formFlow.values?.[field.key] ?? field.value ?? null;
+const fieldValues = reactive<Record<string, unknown>>({});
 
-        return values;
-    }, {});
+props.formFlow.fields.forEach((field) => {
+    fieldValues[field.key] = props.formFlow.values?.[field.key] ?? field.value ?? null;
 });
 
 function fieldValue(fieldKey: string): unknown {
-    return fieldValues.value[fieldKey] ?? null;
+    return fieldValues[fieldKey] ?? null;
+}
+
+function updateFieldValue(fieldKey: string, value: unknown): void {
+    fieldValues[fieldKey] = value;
 }
 
 function fieldPresentation(field: NormalizedFormFlow['fields'][number]) {
@@ -115,6 +117,7 @@ function fieldPresentation(field: NormalizedFormFlow['fields'][number]) {
                     :is="FORM_FLOW_RENDERER_COMPONENTS[resolveFormFlowRendererComponentName(field)]"
                     :field="field"
                     :value="fieldValue(field.key)"
+                    @update:value="updateFieldValue(field.key, $event)"
                 />
             </div>
         </div>

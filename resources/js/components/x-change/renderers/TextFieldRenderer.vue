@@ -7,6 +7,10 @@ const props = defineProps<{
     field: FormFlowField;
     value?: unknown;
 }>();
+
+const emit = defineEmits<{
+    'update:value': [value: unknown];
+}>();
 </script>
 
 <template>
@@ -16,4 +20,11 @@ const props = defineProps<{
         :kind="formFlowFieldRendererKind(props.field.type ?? 'text')"
         test-id="text-field-renderer"
     />
+    <button
+        type="button"
+        data-testid="text-field-renderer-update"
+        @click="emit('update:value', 'Updated Text Value')"
+    >
+        update text value
+    </button>
 </template>
