@@ -582,4 +582,44 @@ describe('FormFlowRenderer renderer delegation', () => {
             email: 'new@example.com',
         });
     });
+
+    it('emits current form values snapshot when field values change', async () => {
+        const wrapper = mount(FormFlowRenderer, {
+            props: {
+                formFlow: {
+                    key: 'form_flow',
+                    owner: 'form-flow',
+                    source: 'claim_experience',
+                    values: {
+                        first_name: 'Initial Name',
+                    },
+                    fields: [
+                        {
+                            key: 'first_name',
+                            type: 'text',
+                            label: 'First Name',
+                            required: true,
+                        },
+                    ],
+                    stages: [],
+                },
+            },
+        });
+
+        expect(wrapper.emitted('update:values')?.[0]).toEqual([
+            {
+                first_name: 'Initial Name',
+            },
+        ]);
+
+        await wrapper
+            .find('[data-testid="text-field-renderer-input"]')
+            .setValue('Updated Name');
+
+        expect(wrapper.emitted('update:values')?.at(-1)).toEqual([
+            {
+                first_name: 'Updated Name',
+            },
+        ]);
+    });
 });

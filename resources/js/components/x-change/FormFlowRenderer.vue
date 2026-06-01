@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive } from 'vue';
+import { computed, reactive, watch } from 'vue';
 import {
     getFormFlowFieldPresentation,
     normalizeFormFlowFieldType,
@@ -41,6 +41,21 @@ function fieldPresentation(field: NormalizedFormFlow['fields'][number]) {
 const currentValues = computed<Record<string, unknown>>(() => {
     return { ...fieldValues };
 });
+
+const emit = defineEmits<{
+    'update:values': [values: Record<string, unknown>];
+}>();
+
+watch(
+    currentValues,
+    (values) => {
+        emit('update:values', values);
+    },
+    {
+        immediate: true,
+        deep: true,
+    }
+);
 </script>
 
 <template>
