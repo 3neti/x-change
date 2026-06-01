@@ -751,9 +751,7 @@ describe('ClaimWidget compiled form flow rendering', () => {
 
         await nextTick();
 
-        await wrapper
-            .find('[data-testid="claim-widget-submit-button"]')
-            .trigger('click');
+        await wrapper.find('form').trigger('submit');
 
         expect(wrapper.emitted('submit:compiled-form')?.[0]).toEqual([
             {

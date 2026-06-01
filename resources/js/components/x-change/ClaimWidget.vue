@@ -475,6 +475,15 @@ function submitCompiledForm(): void {
     emit('submit:compiled-form', claimFormPayload.value);
 }
 
+function submitClaim(): void {
+    if (normalizedCompiledFormFlow.value) {
+        submitCompiledForm();
+        return;
+    }
+
+    submit();
+}
+
 const claimExperienceDebug = computed(() => {
     if (!props.claimExperience) {
         return null;
@@ -513,7 +522,7 @@ if (import.meta.env.DEV && claimExperienceDebug.value) {
         </div>
 
         <!-- Form -->
-        <form v-if="!isNonActive" @submit.prevent="submit" class="space-y-6">
+        <form v-if="!isNonActive" @submit.prevent="submitClaim" class="space-y-6">
             <div class="flex flex-col gap-2">
                 <Label for="code">Pay Code</Label>
                 <Input
@@ -534,7 +543,6 @@ if (import.meta.env.DEV && claimExperienceDebug.value) {
                 class="w-full rounded-full"
                 data-testid="claim-widget-submit-button"
                 :disabled="normalizedCompiledFormFlow ? !isCompiledFormValid : false"
-                @click.prevent="normalizedCompiledFormFlow ? submitCompiledForm() : undefined"
             >
                 {{ form.processing ? 'Checking...' : 'Start Claim' }}
             </Button>
