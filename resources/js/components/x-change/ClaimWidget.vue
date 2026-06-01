@@ -460,6 +460,21 @@ const isCompiledFormValid = computed(() => {
     return missingRequiredCompiledFormFields.value.length === 0;
 });
 
+const emit = defineEmits<{
+    'submit:compiled-form': [payload: {
+        code: string;
+        values: Record<string, unknown>;
+    }];
+}>();
+
+function submitCompiledForm(): void {
+    if (normalizedCompiledFormFlow.value && !isCompiledFormValid.value) {
+        return;
+    }
+
+    emit('submit:compiled-form', claimFormPayload.value);
+}
+
 const claimExperienceDebug = computed(() => {
     if (!props.claimExperience) {
         return null;
@@ -519,6 +534,7 @@ if (import.meta.env.DEV && claimExperienceDebug.value) {
                 class="w-full rounded-full"
                 data-testid="claim-widget-submit-button"
                 :disabled="normalizedCompiledFormFlow ? !isCompiledFormValid : false"
+                @click.prevent="normalizedCompiledFormFlow ? submitCompiledForm() : undefined"
             >
                 {{ form.processing ? 'Checking...' : 'Start Claim' }}
             </Button>

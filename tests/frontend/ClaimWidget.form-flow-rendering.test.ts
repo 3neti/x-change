@@ -719,4 +719,87 @@ describe('ClaimWidget compiled form flow rendering', () => {
         expect(wrapper.find('[data-testid="claim-widget-submit-button"]').attributes('disabled'))
             .toBeUndefined();
     });
+
+    it('emits compiled form submit payload when valid compiled form is submitted', async () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'form_flow',
+                            owner: 'form-flow',
+                            source: 'claim_experience',
+                            status: 'active',
+                            fields: [
+                                {
+                                    key: 'first_name',
+                                    type: 'text',
+                                    label: 'First Name',
+                                    required: true,
+                                },
+                            ],
+                            values: {
+                                first_name: 'Lester',
+                            },
+                            stages: [],
+                        },
+                    ],
+                },
+            },
+        });
+
+        await nextTick();
+
+        await wrapper
+            .find('[data-testid="claim-widget-submit-button"]')
+            .trigger('click');
+
+        expect(wrapper.emitted('submit:compiled-form')?.[0]).toEqual([
+            {
+                code: 'TEST123',
+                values: {
+                    first_name: 'Lester',
+                },
+            },
+        ]);
+    });
+
+    it('does not emit compiled form submit payload when compiled form is invalid', async () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'form_flow',
+                            owner: 'form-flow',
+                            source: 'claim_experience',
+                            status: 'active',
+                            fields: [
+                                {
+                                    key: 'first_name',
+                                    type: 'text',
+                                    label: 'First Name',
+                                    required: true,
+                                },
+                            ],
+                            values: {
+                                first_name: '',
+                            },
+                            stages: [],
+                        },
+                    ],
+                },
+            },
+        });
+
+        await nextTick();
+
+        await wrapper
+            .find('[data-testid="claim-widget-submit-button"]')
+            .trigger('click');
+
+        expect(wrapper.emitted('submit:compiled-form')).toBeUndefined();
+    });
 });
