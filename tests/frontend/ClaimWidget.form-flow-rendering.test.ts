@@ -849,4 +849,48 @@ describe('ClaimWidget compiled form flow rendering', () => {
 
         expect(wrapper.find('[data-testid="claim-widget-submit-state"]').text()).toBe('submitted');
     });
+
+    it('shows failed state when compiled form submission error is provided', async () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                compiledFormSubmitError: null,
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'form_flow',
+                            owner: 'form-flow',
+                            source: 'claim_experience',
+                            status: 'active',
+                            fields: [
+                                {
+                                    key: 'first_name',
+                                    type: 'text',
+                                    label: 'First Name',
+                                    required: true,
+                                },
+                            ],
+                            values: {
+                                first_name: 'Lester',
+                            },
+                            stages: [],
+                        },
+                    ],
+                },
+            },
+        });
+
+        await nextTick();
+
+        await wrapper.find('form').trigger('submit');
+
+        expect(wrapper.find('[data-testid="claim-widget-submit-state"]').text()).toBe('submitting');
+
+        await wrapper.setProps({
+            compiledFormSubmitError: 'Submission failed.',
+        });
+
+        expect(wrapper.find('[data-testid="claim-widget-submit-state"]').text()).toBe('failed');
+        expect(wrapper.find('[data-testid="claim-widget-submit-error"]').text()).toBe('Submission failed.');
+    });
 });

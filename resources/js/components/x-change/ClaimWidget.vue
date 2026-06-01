@@ -28,6 +28,7 @@ interface Props {
     initialCode?: string | null;
     claimExperience?: Record<string, unknown> | null;
     compiledFormSubmitted?: boolean;
+    compiledFormSubmitError?: string | null;
 }
 
 const props = defineProps<Props>();
@@ -490,6 +491,10 @@ function submitClaim(): void {
 }
 
 const compiledFormSubmitState = computed(() => {
+    if (props.compiledFormSubmitError) {
+        return 'failed';
+    }
+
     if (props.compiledFormSubmitted) {
         return 'submitted';
     }
@@ -721,11 +726,14 @@ if (import.meta.env.DEV && claimExperienceDebug.value) {
             <div
                 data-testid="claim-widget-submit-state"
             >
-                <div
-                    data-testid="claim-widget-submit-state"
-                >
-                    {{ compiledFormSubmitState }}
-                </div>
+                {{ compiledFormSubmitState }}
+            </div>
+
+            <div
+                v-if="compiledFormSubmitError"
+                data-testid="claim-widget-submit-error"
+            >
+                {{ compiledFormSubmitError }}
             </div>
         </div>
     </div>
