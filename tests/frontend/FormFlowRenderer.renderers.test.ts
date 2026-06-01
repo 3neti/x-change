@@ -369,4 +369,36 @@ describe('FormFlowRenderer renderer delegation', () => {
 
         expect(wrapper.find('[data-testid="text-field-renderer-value"]').text()).toBe('Updated Text Value');
     });
+
+    it('updates local field value when delegated email input emits update', async () => {
+        const wrapper = mount(FormFlowRenderer, {
+            props: {
+                formFlow: {
+                    key: 'form_flow',
+                    owner: 'form-flow',
+                    source: 'claim_experience',
+                    values: {
+                        email: 'old@example.com',
+                    },
+                    fields: [
+                        {
+                            key: 'email',
+                            type: 'email',
+                            label: 'Email Address',
+                            required: true,
+                        },
+                    ],
+                    stages: [],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="email-field-renderer-value"]').text()).toBe('old@example.com');
+
+        await wrapper
+            .find('[data-testid="email-field-renderer-input"]')
+            .setValue('new@example.com');
+
+        expect(wrapper.find('[data-testid="email-field-renderer-value"]').text()).toBe('new@example.com');
+    });
 });

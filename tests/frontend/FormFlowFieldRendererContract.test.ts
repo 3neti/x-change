@@ -128,4 +128,24 @@ describe('form flow field renderer contract', () => {
 
         expect(wrapper.emitted('update:value')?.[0]).toEqual(['Updated Text Value']);
     });
+
+    it('emits update value from email field input', async () => {
+        const wrapper = mount(EmailFieldRenderer, {
+            props: {
+                field: {
+                    key: 'email',
+                    type: 'email',
+                    label: 'Email Address',
+                    required: true,
+                },
+                value: 'old@example.com',
+            },
+        });
+
+        await wrapper
+            .find('[data-testid="email-field-renderer-input"]')
+            .setValue('new@example.com');
+
+        expect(wrapper.emitted('update:value')?.[0]).toEqual(['new@example.com']);
+    });
 });
