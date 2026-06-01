@@ -108,4 +108,24 @@ describe('form flow field renderer contract', () => {
 
         expect(wrapper.find('[data-testid="text-field-renderer-value"]').text()).toBe('');
     });
+
+    it('emits update value from text field input', async () => {
+        const wrapper = mount(TextFieldRenderer, {
+            props: {
+                field: {
+                    key: 'first_name',
+                    type: 'text',
+                    label: 'First Name',
+                    required: true,
+                },
+                value: 'Initial Value',
+            },
+        });
+
+        await wrapper
+            .find('[data-testid="text-field-renderer-input"]')
+            .setValue('Updated Text Value');
+
+        expect(wrapper.emitted('update:value')?.[0]).toEqual(['Updated Text Value']);
+    });
 });

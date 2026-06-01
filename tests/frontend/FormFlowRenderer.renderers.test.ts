@@ -338,7 +338,7 @@ describe('FormFlowRenderer renderer delegation', () => {
         expect(wrapper.find('[data-testid="unsupported-field-renderer-value"]').text()).toBe('raw-camera-value');
     });
 
-    it('updates local readonly value when delegated text renderer emits update', async () => {
+    it('updates local field value when delegated text input emits update', async () => {
         const wrapper = mount(FormFlowRenderer, {
             props: {
                 formFlow: {
@@ -363,7 +363,9 @@ describe('FormFlowRenderer renderer delegation', () => {
 
         expect(wrapper.find('[data-testid="text-field-renderer-value"]').text()).toBe('Initial Value');
 
-        await wrapper.find('[data-testid="text-field-renderer-update"]').trigger('click');
+        await wrapper
+            .find('[data-testid="text-field-renderer-input"]')
+            .setValue('Updated Text Value');
 
         expect(wrapper.find('[data-testid="text-field-renderer-value"]').text()).toBe('Updated Text Value');
     });

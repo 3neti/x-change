@@ -20,11 +20,10 @@ const emit = defineEmits<{
         :kind="formFlowFieldRendererKind(props.field.type ?? 'text')"
         test-id="text-field-renderer"
     />
-    <button
-        type="button"
-        data-testid="text-field-renderer-update"
-        @click="emit('update:value', 'Updated Text Value')"
-    >
-        update text value
-    </button>
+    <input
+        data-testid="text-field-renderer-input"
+        type="text"
+        :value="props.value ?? ''"
+        @input="emit('update:value', ($event.target as HTMLInputElement).value)"
+    />
 </template>
