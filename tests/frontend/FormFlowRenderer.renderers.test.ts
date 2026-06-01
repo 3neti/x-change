@@ -433,4 +433,36 @@ describe('FormFlowRenderer renderer delegation', () => {
 
         expect(wrapper.find('[data-testid="date-field-renderer-value"]').text()).toBe('1991-02-03');
     });
+
+    it('updates local field value when delegated number input emits update', async () => {
+        const wrapper = mount(FormFlowRenderer, {
+            props: {
+                formFlow: {
+                    key: 'form_flow',
+                    owner: 'form-flow',
+                    source: 'claim_experience',
+                    values: {
+                        gross_monthly_income: '10000',
+                    },
+                    fields: [
+                        {
+                            key: 'gross_monthly_income',
+                            type: 'number',
+                            label: 'Gross Monthly Income',
+                            required: true,
+                        },
+                    ],
+                    stages: [],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="number-field-renderer-value"]').text()).toBe('10000');
+
+        await wrapper
+            .find('[data-testid="number-field-renderer-input"]')
+            .setValue('25000');
+
+        expect(wrapper.find('[data-testid="number-field-renderer-value"]').text()).toBe('25000');
+    });
 });

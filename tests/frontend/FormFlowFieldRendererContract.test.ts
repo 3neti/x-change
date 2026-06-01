@@ -168,4 +168,24 @@ describe('form flow field renderer contract', () => {
 
         expect(wrapper.emitted('update:value')?.[0]).toEqual(['1991-02-03']);
     });
+
+    it('emits update value from number field input', async () => {
+        const wrapper = mount(NumberFieldRenderer, {
+            props: {
+                field: {
+                    key: 'gross_monthly_income',
+                    type: 'number',
+                    label: 'Gross Monthly Income',
+                    required: true,
+                },
+                value: '10000',
+            },
+        });
+
+        await wrapper
+            .find('[data-testid="number-field-renderer-input"]')
+            .setValue('25000');
+
+        expect(wrapper.emitted('update:value')?.[0]).toEqual(['25000']);
+    });
 });
