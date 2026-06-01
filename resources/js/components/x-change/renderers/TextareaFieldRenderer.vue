@@ -7,6 +7,10 @@ const props = defineProps<{
     field: FormFlowField;
     value?: unknown;
 }>();
+
+const emit = defineEmits<{
+    'update:value': [value: unknown];
+}>();
 </script>
 
 <template>
@@ -15,5 +19,10 @@ const props = defineProps<{
         :value="props.value"
         :kind="formFlowFieldRendererKind(props.field.type ?? 'text')"
         test-id="textarea-field-renderer"
+    />
+    <textarea
+        data-testid="textarea-field-renderer-input"
+        :value="props.value ?? ''"
+        @input="emit('update:value', ($event.target as HTMLTextAreaElement).value)"
     />
 </template>

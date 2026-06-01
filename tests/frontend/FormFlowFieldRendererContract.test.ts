@@ -188,4 +188,24 @@ describe('form flow field renderer contract', () => {
 
         expect(wrapper.emitted('update:value')?.[0]).toEqual(['25000']);
     });
+
+    it('emits update value from textarea field input', async () => {
+        const wrapper = mount(TextareaFieldRenderer, {
+            props: {
+                field: {
+                    key: 'address',
+                    type: 'textarea',
+                    label: 'Address',
+                    required: true,
+                },
+                value: 'Old Address',
+            },
+        });
+
+        await wrapper
+            .find('[data-testid="textarea-field-renderer-input"]')
+            .setValue('New Address');
+
+        expect(wrapper.emitted('update:value')?.[0]).toEqual(['New Address']);
+    });
 });

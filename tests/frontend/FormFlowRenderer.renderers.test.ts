@@ -465,4 +465,36 @@ describe('FormFlowRenderer renderer delegation', () => {
 
         expect(wrapper.find('[data-testid="number-field-renderer-value"]').text()).toBe('25000');
     });
+
+    it('updates local field value when delegated textarea emits update', async () => {
+        const wrapper = mount(FormFlowRenderer, {
+            props: {
+                formFlow: {
+                    key: 'form_flow',
+                    owner: 'form-flow',
+                    source: 'claim_experience',
+                    values: {
+                        address: 'Old Address',
+                    },
+                    fields: [
+                        {
+                            key: 'address',
+                            type: 'textarea',
+                            label: 'Address',
+                            required: true,
+                        },
+                    ],
+                    stages: [],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="textarea-field-renderer-value"]').text()).toBe('Old Address');
+
+        await wrapper
+            .find('[data-testid="textarea-field-renderer-input"]')
+            .setValue('New Address');
+
+        expect(wrapper.find('[data-testid="textarea-field-renderer-value"]').text()).toBe('New Address');
+    });
 });
