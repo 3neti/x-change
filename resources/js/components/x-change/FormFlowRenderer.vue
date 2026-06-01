@@ -37,6 +37,10 @@ function updateFieldValue(fieldKey: string, value: unknown): void {
 function fieldPresentation(field: NormalizedFormFlow['fields'][number]) {
     return getFormFlowFieldPresentation(field);
 }
+
+const currentValues = computed<Record<string, unknown>>(() => {
+    return { ...fieldValues };
+});
 </script>
 
 <template>
@@ -121,5 +125,9 @@ function fieldPresentation(field: NormalizedFormFlow['fields'][number]) {
                 />
             </div>
         </div>
+
+        <pre
+            data-testid="form-flow-current-values"
+        >{{ JSON.stringify(currentValues, null, 2) }}</pre>
     </div>
 </template>
