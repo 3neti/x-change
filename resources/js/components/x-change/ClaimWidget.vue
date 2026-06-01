@@ -27,6 +27,7 @@ initializeTheme();
 interface Props {
     initialCode?: string | null;
     claimExperience?: Record<string, unknown> | null;
+    compiledFormSubmitted?: boolean;
 }
 
 const props = defineProps<Props>();
@@ -488,6 +489,14 @@ function submitClaim(): void {
     submit();
 }
 
+const compiledFormSubmitState = computed(() => {
+    if (props.compiledFormSubmitted) {
+        return 'submitted';
+    }
+
+    return isSubmittingCompiledForm.value ? 'submitting' : 'idle';
+});
+
 const claimExperienceDebug = computed(() => {
     if (!props.claimExperience) {
         return null;
@@ -712,7 +721,11 @@ if (import.meta.env.DEV && claimExperienceDebug.value) {
             <div
                 data-testid="claim-widget-submit-state"
             >
-                {{ isSubmittingCompiledForm ? 'submitting' : 'idle' }}
+                <div
+                    data-testid="claim-widget-submit-state"
+                >
+                    {{ compiledFormSubmitState }}
+                </div>
             </div>
         </div>
     </div>

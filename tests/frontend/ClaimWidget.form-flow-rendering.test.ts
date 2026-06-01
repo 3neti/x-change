@@ -804,4 +804,49 @@ describe('ClaimWidget compiled form flow rendering', () => {
 
         expect(wrapper.emitted('submit:compiled-form')).toBeUndefined();
     });
+
+    it('shows submitted state when compiled form submission is acknowledged', async () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                compiledFormSubmitted: false,
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'form_flow',
+                            owner: 'form-flow',
+                            source: 'claim_experience',
+                            status: 'active',
+                            fields: [
+                                {
+                                    key: 'first_name',
+                                    type: 'text',
+                                    label: 'First Name',
+                                    required: true,
+                                },
+                            ],
+                            values: {
+                                first_name: 'Lester',
+                            },
+                            stages: [],
+                        },
+                    ],
+                },
+            },
+        });
+
+        await nextTick();
+
+        expect(wrapper.find('[data-testid="claim-widget-submit-state"]').text()).toBe('idle');
+
+        await wrapper.find('form').trigger('submit');
+
+        expect(wrapper.find('[data-testid="claim-widget-submit-state"]').text()).toBe('submitting');
+
+        await wrapper.setProps({
+            compiledFormSubmitted: true,
+        });
+
+        expect(wrapper.find('[data-testid="claim-widget-submit-state"]').text()).toBe('submitted');
+    });
 });
