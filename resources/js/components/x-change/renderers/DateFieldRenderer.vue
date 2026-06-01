@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { formFlowFieldRendererKind  } from '../formFlow';
-import { inputElementValue } from './fieldInputEvents';
 import type {FormFlowField} from '../formFlow';
+import { emitInputElementValue } from './fieldInputEvents';
 import ReadonlyFieldRendererShell from './ReadonlyFieldRendererShell.vue';
 
 const props = defineProps<{
@@ -25,6 +25,6 @@ const emit = defineEmits<{
         data-testid="date-field-renderer-input"
         type="date"
         :value="props.value ?? ''"
-        @input="emit('update:value', inputElementValue($event))"
+        @input="emitInputElementValue(emit, $event)"
     />
 </template>

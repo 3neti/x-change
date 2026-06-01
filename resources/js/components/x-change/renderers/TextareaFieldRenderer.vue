@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { formFlowFieldRendererKind  } from '../formFlow';
-import { textareaElementValue } from './fieldInputEvents';
 import type {FormFlowField} from '../formFlow';
+import { emitTextareaElementValue } from './fieldInputEvents';
 import ReadonlyFieldRendererShell from './ReadonlyFieldRendererShell.vue';
 
 const props = defineProps<{
@@ -24,6 +24,6 @@ const emit = defineEmits<{
     <textarea
         data-testid="textarea-field-renderer-input"
         :value="props.value ?? ''"
-        @input="emit('update:value', textareaElementValue($event))"
+        @input="emitTextareaElementValue(emit, $event)"
     />
 </template>

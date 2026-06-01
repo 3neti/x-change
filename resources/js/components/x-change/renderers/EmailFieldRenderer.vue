@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { formFlowFieldRendererKind  } from '../formFlow';
 import type {FormFlowField} from '../formFlow';
+import { emitInputElementValue } from './fieldInputEvents';
 import ReadonlyFieldRendererShell from './ReadonlyFieldRendererShell.vue';
 
 const props = defineProps<{
@@ -24,6 +25,6 @@ const emit = defineEmits<{
         data-testid="email-field-renderer-input"
         type="email"
         :value="props.value ?? ''"
-        @input="emit('update:value', ($event.target as HTMLInputElement).value)"
+        @input="emitInputElementValue(emit, $event)"
     />
 </template>

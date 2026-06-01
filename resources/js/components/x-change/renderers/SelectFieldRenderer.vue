@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { formFlowFieldRendererKind  } from '../formFlow';
-import { selectElementValue } from './fieldInputEvents';
 import type {FormFlowField} from '../formFlow';
+import { emitSelectElementValue } from './fieldInputEvents';
 import ReadonlyFieldRendererShell from './ReadonlyFieldRendererShell.vue';
 
 const props = defineProps<{
@@ -59,7 +59,7 @@ function normalizedOptions(): SelectOption[] {
     <select
         data-testid="select-field-renderer-input"
         :value="props.value ?? ''"
-        @change="emit('update:value', selectElementValue($event))"
+        @change="emitSelectElementValue(emit, $event)"
     >
         <option value="">
             Select an option
