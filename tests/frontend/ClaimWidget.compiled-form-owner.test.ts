@@ -1,6 +1,9 @@
 import { mount } from '@vue/test-utils';
 import { defineComponent, nextTick, ref } from 'vue';
 import { describe, expect, it, vi } from 'vitest';
+import {
+    toCompiledClaimFormSubmissionPayload,
+} from '../../resources/js/components/x-change/compiledClaimFormSubmission';
 
 vi.mock('../../resources/js/components/x-change/VoucherInstructionsDisplay.vue', () => ({
     default: { template: '<div />' },
@@ -36,12 +39,19 @@ describe('ClaimWidget compiled form owner boundary', () => {
             setup() {
                 const payload = ref<Record<string, unknown> | null>(null);
 
-                function capturePayload(value: Record<string, unknown>) {
+                const submissionPayload = ref<Record<string, unknown> | null>(null);
+
+                function capturePayload(value: {
+                    code: string;
+                    values: Record<string, unknown>;
+                }) {
                     payload.value = value;
+                    submissionPayload.value = toCompiledClaimFormSubmissionPayload(value);
                 }
 
                 return {
                     payload,
+                    submissionPayload,
                     capturePayload,
                 };
             },
@@ -74,6 +84,7 @@ describe('ClaimWidget compiled form owner boundary', () => {
                 />
 
                 <pre data-testid="owner-captured-payload">{{ JSON.stringify(payload, null, 2) }}</pre>
+                <pre data-testid="owner-submission-payload">{{ JSON.stringify(submissionPayload, null, 2) }}</pre>
             `,
         });
 
@@ -88,6 +99,15 @@ describe('ClaimWidget compiled form owner boundary', () => {
         )).toEqual({
             code: 'TEST123',
             values: {
+                first_name: 'Lester',
+            },
+        });
+
+        expect(JSON.parse(
+            wrapper.find('[data-testid="owner-submission-payload"]').text()
+        )).toEqual({
+            code: 'TEST123',
+            inputs: {
                 first_name: 'Lester',
             },
         });
