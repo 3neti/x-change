@@ -47,6 +47,7 @@ class ClaimStartController extends Controller
             return back()->with('compiled_claim_prepared', [
                 'code' => $prepared->submission?->code,
                 'voucher_id' => $prepared->voucher?->getKey(),
+                'inputs' => $prepared->submission?->inputs ?? [],
             ]);
         }
 

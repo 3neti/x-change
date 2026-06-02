@@ -202,6 +202,9 @@ it('prepares valid compiled form claim submissions', function () {
     $response->assertSessionHas('compiled_claim_prepared', [
         'code' => $voucher->code,
         'voucher_id' => $voucher->getKey(),
+        'inputs' => [
+            'first_name' => 'Lester',
+        ],
     ]);
 });
 

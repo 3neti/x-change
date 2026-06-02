@@ -65,3 +65,23 @@ it('can forget compiled claim submission handoff after preparation', function ()
     expect($result->isValid())->toBeTrue()
         ->and(session()->has('compiled_claim_submission'))->toBeFalse();
 });
+
+it('carries compiled claim submission inputs into preparation result', function () {
+    $voucher = issueVoucher();
+
+    session()->put('compiled_claim_submission', [
+        'code' => $voucher->code,
+        'inputs' => [
+            'first_name' => 'Lester',
+            'email' => 'lester@example.com',
+        ],
+    ]);
+
+    $result = app(\LBHurtado\XChange\Actions\Claim\PrepareCompiledClaim::class)->handle();
+
+    expect($result->isValid())->toBeTrue()
+        ->and($result->submission?->inputs)->toBe([
+            'first_name' => 'Lester',
+            'email' => 'lester@example.com',
+        ]);
+});
