@@ -9,6 +9,7 @@ export type CompiledClaimFormPayload = {
 export type CompiledClaimFormSubmissionPayload = {
     code: string;
     inputs: Record<string, FormDataConvertible>;
+    mode: 'compiled_form';
 };
 
 export type SubmitCompiledClaimFormOptions = {
@@ -23,6 +24,7 @@ export function toCompiledClaimFormSubmissionPayload(
     return {
         code: payload.code,
         inputs: payload.values,
+        mode: 'compiled_form',
     };
 }
 

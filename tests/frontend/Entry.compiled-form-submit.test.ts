@@ -41,9 +41,9 @@ vi.mock('../../resources/js/components/x-change/ClaimWidget.vue', () => ({
 
                 <button
                     data-testid="stub-update-compiled-form-values"
-                    @click="$emit('update:compiled-form-values', {
-        first_name: 'Updated Lester'
-    })"
+                    @click="$emit('update:compiled-form-values',
+                    { first_name: 'Updated Lester'}
+                    )"
                 >
                     update values
                 </button>
@@ -78,6 +78,7 @@ describe('claim entry compiled form submission', () => {
                 inputs: {
                     first_name: 'Lester',
                 },
+                mode: 'compiled_form',
             },
             expect.objectContaining({
                 preserveScroll: true,

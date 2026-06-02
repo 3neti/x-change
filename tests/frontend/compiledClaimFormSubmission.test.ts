@@ -34,6 +34,7 @@ describe('compiled claim form submission', () => {
                 first_name: 'Lester',
                 email: 'lester@example.com',
             },
+            mode: 'compiled_form',
         });
     });
 
@@ -63,6 +64,7 @@ describe('compiled claim form submission', () => {
                 inputs: {
                     first_name: 'Lester',
                 },
+                mode: 'compiled_form',
             },
             {
                 preserveScroll: true,

@@ -136,6 +136,7 @@ describe('ClaimWidget compiled form owner boundary', () => {
             inputs: {
                 first_name: 'Lester',
             },
+            mode: 'compiled_form',
         });
 
         expect(post).toHaveBeenCalledWith(
@@ -145,6 +146,7 @@ describe('ClaimWidget compiled form owner boundary', () => {
                 inputs: {
                     first_name: 'Lester',
                 },
+                mode: 'compiled_form',
             },
             expect.objectContaining({
                 preserveScroll: true,
@@ -254,6 +256,7 @@ describe('ClaimWidget compiled form owner boundary', () => {
             inputs: {
                 first_name: 'Lester',
             },
+            mode: 'compiled_form',
         });
 
         expect(post).toHaveBeenCalledWith(
@@ -263,6 +266,7 @@ describe('ClaimWidget compiled form owner boundary', () => {
                 inputs: {
                     first_name: 'Lester',
                 },
+                mode: 'compiled_form',
             },
             expect.objectContaining({
                 preserveScroll: true,
