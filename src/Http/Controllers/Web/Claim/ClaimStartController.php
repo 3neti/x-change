@@ -25,6 +25,19 @@ class ClaimStartController extends Controller
 
     public function __invoke(Request $request): RedirectResponse|Response
     {
+        if ($request->isMethod('post') && $request->input('mode') === 'compiled_form') {
+            $validated = $request->validate([
+                'mode' => ['required', 'in:compiled_form'],
+                'code' => ['required', 'string'],
+                'inputs' => ['array'],
+            ]);
+
+            return back()->with('compiled_form_submission', [
+                'code' => strtoupper(trim($validated['code'])),
+                'inputs' => $validated['inputs'] ?? [],
+            ]);
+        }
+
         $code = strtoupper(trim((string) $request->query('code', '')));
 
         if ($code === '') {

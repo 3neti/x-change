@@ -178,3 +178,22 @@ it('does not emit consumed splash skip option when voucher has no rider splash',
     $this->get('/x/claim?code='.$voucher->code)
         ->assertRedirect('/form-flow/flow-no-skip-option-test');
 });
+
+it('detects compiled form claim submissions', function () {
+    $this->withoutMiddleware();
+
+    $response = $this->post('/x/claim', [
+        'mode' => 'compiled_form',
+        'code' => 'TEST123',
+        'inputs' => [
+            'first_name' => 'Lester',
+        ],
+    ]);
+
+    $response->assertSessionHas('compiled_form_submission', [
+        'code' => 'TEST123',
+        'inputs' => [
+            'first_name' => 'Lester',
+        ],
+    ]);
+});

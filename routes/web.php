@@ -34,6 +34,7 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
 // Public claim routes (no auth required)
 Route::prefix('x')->middleware(['web', ShareXChangeBranding::class])->group(function (): void {
     Route::get('claim', ClaimStartController::class)->name('x-change.claim.start');
+    Route::post('claim', ClaimStartController::class)->name('x-change.claim.start.submit');
     Route::post('claim/{code}/complete', ClaimCompleteController::class)
         ->withoutMiddleware([VerifyCsrfToken::class])
         ->name('x-change.claim.complete');
