@@ -20,7 +20,7 @@ import RiderRuntimeSequencer from '@/components/x-rider/RiderRuntimeSequencer.vu
 import type { RawRiderStage } from '@/components/x-rider/types';
 import { stageIsInPhase } from '@/components/x-rider/useRiderStagePhase';
 import FormFlowRenderer from '@/components/x-change/FormFlowRenderer.vue';
-import { normalizeFormFlowPhase } from '@/components/x-change/formFlow';
+import { normalizeCompiledFormFlowPhase } from '@/components/x-change/compiledFormFlow';
 
 initializeTheme();
 
@@ -422,8 +422,8 @@ const usesLegacyFormFlow = computed(() =>
 );
 
 const normalizedCompiledFormFlow = computed(() =>
-    formFlowBoundary.value.mode === 'compiled' && formFlowBoundary.value.phase
-        ? normalizeFormFlowPhase(formFlowBoundary.value.phase)
+    formFlowBoundary.value.mode === 'compiled'
+        ? normalizeCompiledFormFlowPhase(formFlowBoundary.value.phase)
         : null
 );
 
