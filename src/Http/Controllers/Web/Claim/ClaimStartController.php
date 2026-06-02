@@ -12,6 +12,7 @@ use LBHurtado\FormFlowManager\Data\FormFlowInstructionsData;
 use LBHurtado\FormFlowManager\Services\DriverService;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Actions\Claim\PrepareCompiledClaim;
 use LBHurtado\XChange\Actions\Claim\PrepareCompiledClaimSubmission;
 use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
@@ -35,7 +36,18 @@ class ClaimStartController extends Controller
 
             app(PrepareCompiledClaimSubmission::class)->handle($validated);
 
-            return back();
+            $prepared = app(PrepareCompiledClaim::class)->handle();
+
+            if (! $prepared->isValid()) {
+                return back()->withErrors([
+                    'code' => $prepared->errorMessage ?? 'Unable to prepare compiled claim.',
+                ]);
+            }
+
+            return back()->with('compiled_claim_prepared', [
+                'code' => $prepared->submission?->code,
+                'voucher_id' => $prepared->voucher?->getKey(),
+            ]);
         }
 
         $code = strtoupper(trim((string) $request->query('code', '')));

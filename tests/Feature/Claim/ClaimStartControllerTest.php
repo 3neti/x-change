@@ -179,22 +179,29 @@ it('does not emit consumed splash skip option when voucher has no rider splash',
         ->assertRedirect('/form-flow/flow-no-skip-option-test');
 });
 
-it('detects compiled form claim submissions', function () {
+it('prepares valid compiled form claim submissions', function () {
     $this->withoutMiddleware();
+
+    $voucher = issueVoucher();
 
     $response = $this->post('/x/claim', [
         'mode' => 'compiled_form',
-        'code' => 'TEST123',
+        'code' => $voucher->code,
         'inputs' => [
             'first_name' => 'Lester',
         ],
     ]);
 
     $response->assertSessionHas('compiled_claim_submission', [
-        'code' => 'TEST123',
+        'code' => $voucher->code,
         'inputs' => [
             'first_name' => 'Lester',
         ],
+    ]);
+
+    $response->assertSessionHas('compiled_claim_prepared', [
+        'code' => $voucher->code,
+        'voucher_id' => $voucher->getKey(),
     ]);
 });
 
@@ -226,6 +233,20 @@ it('requires inputs for compiled form claim submissions', function () {
         'mode' => 'compiled_form',
         'code' => 'TEST123',
     ])->assertSessionHasErrors('inputs');
+});
+
+it('rejects compiled form claim submissions for missing voucher', function () {
+    $this->withoutMiddleware();
+
+    $this->post('/x/claim', [
+        'mode' => 'compiled_form',
+        'code' => 'MISSING123',
+        'inputs' => [
+            'first_name' => 'Lester',
+        ],
+    ])->assertSessionHasErrors([
+        'code' => 'Invalid Pay Code.',
+    ]);
 });
 
 it('keeps empty legacy claim entry rendering through get request', function () {
