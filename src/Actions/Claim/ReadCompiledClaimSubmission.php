@@ -8,7 +8,7 @@ use LBHurtado\XChange\Data\CompiledClaimSubmissionData;
 
 final class ReadCompiledClaimSubmission
 {
-    public function handle(): ?CompiledClaimSubmissionData
+    public function handle(bool $forget = false): ?CompiledClaimSubmissionData
     {
         $payload = session()->get('compiled_claim_submission');
 
@@ -20,6 +20,12 @@ final class ReadCompiledClaimSubmission
             return null;
         }
 
-        return CompiledClaimSubmissionData::fromValidated($payload);
+        $submission = CompiledClaimSubmissionData::fromValidated($payload);
+
+        if ($forget) {
+            session()->forget('compiled_claim_submission');
+        }
+
+        return $submission;
     }
 }

@@ -33,3 +33,18 @@ it('returns null when compiled claim submission handoff is malformed', function 
 
     expect(app(ReadCompiledClaimSubmission::class)->handle())->toBeNull();
 });
+
+it('can clear compiled claim submission handoff after reading', function () {
+    session()->put('compiled_claim_submission', [
+        'code' => 'TEST123',
+        'inputs' => [
+            'first_name' => 'Lester',
+        ],
+    ]);
+
+    $submission = app(ReadCompiledClaimSubmission::class)->handle(forget: true);
+
+    expect($submission)->not->toBeNull()
+        ->and($submission->code)->toBe('TEST123')
+        ->and(session()->has('compiled_claim_submission'))->toBeFalse();
+});
