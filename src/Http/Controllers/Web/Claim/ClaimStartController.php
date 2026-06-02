@@ -48,7 +48,7 @@ class ClaimStartController extends Controller
 
             app(StorePreparedCompiledClaim::class)->handle($prepared);
 
-            $completionPayload = app(SubmitCompiledClaimCompletion::class)->handle();
+            $completionPayload = app(SubmitCompiledClaimCompletion::class)->handle(forget: true);
 
             if ($completionPayload === null) {
                 return back()->withErrors([
