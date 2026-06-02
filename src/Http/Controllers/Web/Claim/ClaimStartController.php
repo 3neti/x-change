@@ -56,6 +56,8 @@ class ClaimStartController extends Controller
                 ]);
             }
 
+            session()->forget('compiled_claim_submission');
+
             return redirect()->route('x-change.claim.success', [
                 'code' => $prepared->submission?->code,
             ]);

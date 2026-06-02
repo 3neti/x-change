@@ -192,14 +192,9 @@ it('prepares valid compiled form claim submissions', function () {
         ],
     ]);
 
-    $response->assertSessionHas('compiled_claim_submission', [
-        'code' => $voucher->code,
-        'inputs' => [
-            'first_name' => 'Lester',
-        ],
-    ]);
-
     expect(session()->has('compiled_claim_prepared'))->toBeFalse();
+
+    expect(session()->has('compiled_claim_submission'))->toBeFalse();
 
     $response->assertRedirect(route('x-change.claim.success', [
         'code' => $voucher->code,
