@@ -26,6 +26,20 @@ export function toCompiledClaimFormSubmissionPayload(
     };
 }
 
+export type RawCompiledClaimFormPayload = {
+    code: string;
+    values: Record<string, unknown>;
+};
+
+export function toCompiledClaimFormPayload(
+    payload: RawCompiledClaimFormPayload
+): CompiledClaimFormPayload {
+    return {
+        code: payload.code,
+        values: payload.values as Record<string, FormDataConvertible>,
+    };
+}
+
 export function submitCompiledClaimForm(
     payload: CompiledClaimFormPayload,
     options: SubmitCompiledClaimFormOptions = {}
