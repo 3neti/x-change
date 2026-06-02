@@ -206,6 +206,22 @@ it('prepares valid compiled form claim submissions', function () {
             'first_name' => 'Lester',
         ],
     ]);
+
+    $response->assertSessionHas('compiled_claim_completion_payload', [
+        'source' => 'compiled_claim',
+        'code' => $voucher->code,
+        'voucher_id' => $voucher->getKey(),
+        'inputs' => [
+            'first_name' => 'Lester',
+        ],
+        'compiled_claim' => [
+            'code' => $voucher->code,
+            'voucher_id' => $voucher->getKey(),
+            'inputs' => [
+                'first_name' => 'Lester',
+            ],
+        ],
+    ]);
 });
 
 it('requires a code for compiled form claim submissions', function () {

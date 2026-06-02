@@ -16,6 +16,7 @@ use LBHurtado\XChange\Actions\Claim\PrepareCompiledClaim;
 use LBHurtado\XChange\Actions\Claim\PrepareCompiledClaimSubmission;
 use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
 use LBHurtado\XChange\Actions\Claim\StorePreparedCompiledClaim;
+use LBHurtado\XChange\Actions\Claim\SubmitCompiledClaimCompletion;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 
@@ -46,6 +47,8 @@ class ClaimStartController extends Controller
             }
 
             app(StorePreparedCompiledClaim::class)->handle($prepared);
+
+            app(SubmitCompiledClaimCompletion::class)->handle();
 
             return back();
         }
