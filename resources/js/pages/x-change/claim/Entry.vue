@@ -1,11 +1,11 @@
 <script setup lang="ts">
+import ClaimWidget from '@/components/x-change/ClaimWidget.vue';
 import { Head } from '@inertiajs/vue3';
 import { ref } from 'vue';
-import ClaimWidget from '@/components/x-change/ClaimWidget.vue';
 import {
+    compiledClaimFormErrorMessage,
     submitCompiledClaimForm,
-    toCompiledClaimFormPayload
-
+    toCompiledClaimFormPayload,
 } from '@/components/x-change/compiledClaimFormSubmission';
 import type {RawCompiledClaimFormPayload} from '@/components/x-change/compiledClaimFormSubmission';
 
@@ -27,8 +27,8 @@ function submitCompiledForm(payload: RawCompiledClaimFormPayload): void {
         onSuccess: () => {
             compiledFormSubmitted.value = true;
         },
-        onError: () => {
-            compiledFormSubmitError.value = 'Submission failed.';
+        onError: (errors) => {
+            compiledFormSubmitError.value = compiledClaimFormErrorMessage(errors);
         },
     });
 }

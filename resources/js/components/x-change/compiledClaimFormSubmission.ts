@@ -55,3 +55,19 @@ export function submitCompiledClaimForm(
         }
     );
 }
+
+export function compiledClaimFormErrorMessage(
+    errors: Record<string, unknown>
+): string {
+    const first = Object.values(errors)[0];
+
+    if (Array.isArray(first)) {
+        return String(first[0] ?? 'Submission failed.');
+    }
+
+    if (typeof first === 'string') {
+        return first;
+    }
+
+    return 'Submission failed.';
+}

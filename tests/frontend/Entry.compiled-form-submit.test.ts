@@ -111,10 +111,12 @@ describe('claim entry compiled form submission', () => {
 
         const options = post.mock.calls[0][2];
 
-        options.onError({});
+        options.onError({
+            first_name: 'First name is required.',
+        });
 
         await wrapper.vm.$nextTick();
 
-        expect(wrapper.find('[data-testid="stub-error"]').text()).toBe('Submission failed.');
+        expect(wrapper.find('[data-testid="stub-error"]').text()).toBe('First name is required.');
     });
 });

@@ -11,6 +11,7 @@ vi.mock('@inertiajs/vue3', () => ({
 }));
 
 import {
+    compiledClaimFormErrorMessage,
     submitCompiledClaimForm,
     toCompiledClaimFormSubmissionPayload,
 } from '../../resources/js/components/x-change/compiledClaimFormSubmission';
@@ -70,5 +71,21 @@ describe('compiled claim form submission', () => {
                 onFinish,
             }
         );
+    });
+
+    it('resolves first string error message from inertia errors', () => {
+        expect(compiledClaimFormErrorMessage({
+            first_name: 'First name is required.',
+        })).toBe('First name is required.');
+    });
+
+    it('resolves first array error message from inertia errors', () => {
+        expect(compiledClaimFormErrorMessage({
+            first_name: ['First name is required.'],
+        })).toBe('First name is required.');
+    });
+
+    it('falls back when inertia errors are empty', () => {
+        expect(compiledClaimFormErrorMessage({})).toBe('Submission failed.');
     });
 });
