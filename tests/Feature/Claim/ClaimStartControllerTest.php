@@ -198,6 +198,36 @@ it('detects compiled form claim submissions', function () {
     ]);
 });
 
+it('requires a code for compiled form claim submissions', function () {
+    $this->withoutMiddleware();
+
+    $this->post('/x/claim', [
+        'mode' => 'compiled_form',
+        'inputs' => [
+            'first_name' => 'Lester',
+        ],
+    ])->assertSessionHasErrors('code');
+});
+
+it('requires compiled form inputs to be an array', function () {
+    $this->withoutMiddleware();
+
+    $this->post('/x/claim', [
+        'mode' => 'compiled_form',
+        'code' => 'TEST123',
+        'inputs' => 'not-an-array',
+    ])->assertSessionHasErrors('inputs');
+});
+
+it('requires inputs for compiled form claim submissions', function () {
+    $this->withoutMiddleware();
+
+    $this->post('/x/claim', [
+        'mode' => 'compiled_form',
+        'code' => 'TEST123',
+    ])->assertSessionHasErrors('inputs');
+});
+
 it('keeps empty legacy claim entry rendering through get request', function () {
     $this->withoutMiddleware();
 

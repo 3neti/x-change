@@ -29,7 +29,7 @@ class ClaimStartController extends Controller
             $validated = $request->validate([
                 'mode' => ['required', 'in:compiled_form'],
                 'code' => ['required', 'string'],
-                'inputs' => ['array'],
+                'inputs' => ['required', 'array'],
             ]);
 
             return back()->with('compiled_form_submission', [
