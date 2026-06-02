@@ -7,13 +7,13 @@ namespace LBHurtado\XChange\Http\Controllers\Web\Claim;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\FormFlowManager\Data\FormFlowInstructionsData;
 use LBHurtado\FormFlowManager\Services\DriverService;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
+use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 
 class ClaimStartController extends Controller
@@ -41,14 +41,14 @@ class ClaimStartController extends Controller
         $code = strtoupper(trim((string) $request->query('code', '')));
 
         if ($code === '') {
-            return $this->renderEntry(
+            return $this->claimEntryResponse()->render(
                 initialCode: null,
                 claimExperience: null,
             );
         }
 
         if ($request->boolean('failed')) {
-            return $this->renderEntry(
+            return $this->claimEntryResponse()->render(
                 initialCode: $code,
                 claimExperience: null,
             );
@@ -57,24 +57,24 @@ class ClaimStartController extends Controller
         $voucher = Voucher::query()->where('code', $code)->first();
 
         if (! $voucher) {
-            return Inertia::render('x-change/claim/Error', [
-                'message' => 'Invalid Pay Code.',
-                'code' => $code,
-            ]);
+            return $this->claimEntryResponse()->error(
+                message: 'Invalid Pay Code.',
+                code: $code,
+            );
         }
 
         if ($voucher->redeemed_at !== null) {
-            return Inertia::render('x-change/claim/Error', [
-                'message' => 'This Pay Code has already been redeemed.',
-                'code' => $code,
-            ]);
+            return $this->claimEntryResponse()->error(
+                message: 'This Pay Code has already been redeemed.',
+                code: $code,
+            );
         }
 
         if ($voucher->isExpired()) {
-            return Inertia::render('x-change/claim/Error', [
-                'message' => 'This Pay Code has expired.',
-                'code' => $code,
-            ]);
+            return $this->claimEntryResponse()->error(
+                message: 'This Pay Code has expired.',
+                code: $code,
+            );
         }
 
         $claimExperience = ResolveClaimExperience::run($voucher)->toArray();
@@ -93,11 +93,8 @@ class ClaimStartController extends Controller
         return redirect("/form-flow/{$state['flow_id']}");
     }
 
-    private function renderEntry(?string $initialCode = null, ?array $claimExperience = null): Response
+    private function claimEntryResponse(): ClaimEntryResponseFactory
     {
-        return Inertia::render('x-change/claim/Entry', [
-            'initial_code' => $initialCode,
-            'claim_experience' => $claimExperience,
-        ]);
+        return app(ClaimEntryResponseFactory::class);
     }
 }
