@@ -893,4 +893,46 @@ describe('ClaimWidget compiled form flow rendering', () => {
         expect(wrapper.find('[data-testid="claim-widget-submit-state"]').text()).toBe('failed');
         expect(wrapper.find('[data-testid="claim-widget-submit-error"]').text()).toBe('Submission failed.');
     });
+
+    it('emits compiled form value updates to owner', async () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'form_flow',
+                            owner: 'form-flow',
+                            source: 'claim_experience',
+                            status: 'active',
+                            fields: [
+                                {
+                                    key: 'first_name',
+                                    type: 'text',
+                                    label: 'First Name',
+                                    required: true,
+                                },
+                            ],
+                            values: {
+                                first_name: 'Initial Name',
+                            },
+                            stages: [],
+                        },
+                    ],
+                },
+            },
+        });
+
+        await nextTick();
+
+        await wrapper
+            .find('[data-testid="text-field-renderer-input"]')
+            .setValue('Updated Name');
+
+        expect(wrapper.emitted('update:compiled-form-values')?.at(-1)).toEqual([
+            {
+                first_name: 'Updated Name',
+            },
+        ]);
+    });
 });

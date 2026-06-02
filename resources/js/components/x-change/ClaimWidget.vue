@@ -429,6 +429,7 @@ const normalizedCompiledFormFlow = computed(() =>
 
 function updateCurrentFormValues(values: Record<string, unknown>): void {
     currentFormValues.value = values;
+    emit('update:compiled-form-values', values);
 }
 
 const claimFormPayload = computed(() => ({
@@ -467,6 +468,7 @@ const emit = defineEmits<{
         code: string;
         values: Record<string, unknown>;
     }];
+    'update:compiled-form-values': [values: Record<string, unknown>];
 }>();
 
 const isSubmittingCompiledForm = ref(false);

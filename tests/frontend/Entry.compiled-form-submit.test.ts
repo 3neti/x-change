@@ -18,7 +18,7 @@ vi.mock('../../resources/js/components/x-change/ClaimWidget.vue', () => ({
             'compiledFormSubmitted',
             'compiledFormSubmitError',
         ],
-        emits: ['submit:compiled-form'],
+        emits: ['submit:compiled-form', 'update:compiled-form-values'],
         template: `
             <div>
                 <button
@@ -38,6 +38,15 @@ vi.mock('../../resources/js/components/x-change/ClaimWidget.vue', () => ({
                 <div data-testid="stub-error">
                     {{ compiledFormSubmitError ?? '' }}
                 </div>
+
+                <button
+                    data-testid="stub-update-compiled-form-values"
+                    @click="$emit('update:compiled-form-values', {
+        first_name: 'Updated Lester'
+    })"
+                >
+                    update values
+                </button>
             </div>
         `,
     },
@@ -118,5 +127,36 @@ describe('claim entry compiled form submission', () => {
         await wrapper.vm.$nextTick();
 
         expect(wrapper.find('[data-testid="stub-error"]').text()).toBe('First name is required.');
+    });
+
+    it('resets compiled form submit error when compiled form values change', async () => {
+        const wrapper = mount(Entry, {
+            props: {
+                initial_code: 'TEST123',
+                claim_experience: {
+                    phases: [],
+                },
+            },
+        });
+
+        await wrapper.find('[data-testid="stub-submit-compiled-form"]').trigger('click');
+
+        const options = post.mock.calls[0][2];
+
+        options.onError({
+            first_name: 'First name is required.',
+        });
+
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.find('[data-testid="stub-error"]').text()).toBe('First name is required.');
+
+        await wrapper
+            .find('[data-testid="stub-update-compiled-form-values"]')
+            .trigger('click');
+
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.find('[data-testid="stub-error"]').text()).toBe('');
     });
 });

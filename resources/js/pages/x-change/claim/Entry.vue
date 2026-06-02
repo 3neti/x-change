@@ -32,6 +32,11 @@ function submitCompiledForm(payload: RawCompiledClaimFormPayload): void {
         },
     });
 }
+
+function resetCompiledFormSubmitState(): void {
+    compiledFormSubmitted.value = false;
+    compiledFormSubmitError.value = null;
+}
 </script>
 
 <template>
@@ -43,6 +48,7 @@ function submitCompiledForm(payload: RawCompiledClaimFormPayload): void {
                 :claim-experience="claim_experience"
                 :compiled-form-submitted="compiledFormSubmitted"
                 :compiled-form-submit-error="compiledFormSubmitError"
+                @update:compiled-form-values="resetCompiledFormSubmitState"
                 @submit:compiled-form="submitCompiledForm"
             />
         </div>
