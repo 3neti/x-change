@@ -48,9 +48,17 @@ class ClaimStartController extends Controller
 
             app(StorePreparedCompiledClaim::class)->handle($prepared);
 
-            app(SubmitCompiledClaimCompletion::class)->handle();
+            $completionPayload = app(SubmitCompiledClaimCompletion::class)->handle();
 
-            return back();
+            if ($completionPayload === null) {
+                return back()->withErrors([
+                    'code' => 'Unable to submit compiled claim.',
+                ]);
+            }
+
+            return redirect()->route('x-change.claim.success', [
+                'code' => $prepared->submission?->code,
+            ]);
         }
 
         $code = strtoupper(trim((string) $request->query('code', '')));

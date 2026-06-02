@@ -18,8 +18,6 @@ final class SubmitCompiledClaimCompletion
             return null;
         }
 
-        session()->flash('compiled_claim_completion_payload', $payload);
-
         return $payload;
     }
 }

@@ -2,7 +2,7 @@
 
 use LBHurtado\XChange\Actions\Claim\SubmitCompiledClaimCompletion;
 
-it('stores compiled claim completion payload in session flash data', function () {
+it('builds compiled claim completion payload', function () {
     session()->put('compiled_claim_prepared', [
         'code' => 'TEST123',
         'voucher_id' => 123,
@@ -27,7 +27,7 @@ it('stores compiled claim completion payload in session flash data', function ()
                 'first_name' => 'Lester',
             ],
         ],
-    ])->and(session()->get('compiled_claim_completion_payload'))->toBe($payload);
+    ]);
 });
 
 it('returns null when prepared compiled claim is missing', function () {

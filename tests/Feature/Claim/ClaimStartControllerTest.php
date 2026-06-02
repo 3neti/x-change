@@ -207,21 +207,11 @@ it('prepares valid compiled form claim submissions', function () {
         ],
     ]);
 
-    $response->assertSessionHas('compiled_claim_completion_payload', [
-        'source' => 'compiled_claim',
+    $response->assertRedirect(route('x-change.claim.success', [
         'code' => $voucher->code,
-        'voucher_id' => $voucher->getKey(),
-        'inputs' => [
-            'first_name' => 'Lester',
-        ],
-        'compiled_claim' => [
-            'code' => $voucher->code,
-            'voucher_id' => $voucher->getKey(),
-            'inputs' => [
-                'first_name' => 'Lester',
-            ],
-        ],
-    ]);
+    ]));
+
+    expect(session()->has('compiled_claim_completion_payload'))->toBeFalse();
 });
 
 it('requires a code for compiled form claim submissions', function () {
