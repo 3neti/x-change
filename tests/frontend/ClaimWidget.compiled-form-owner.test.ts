@@ -1,8 +1,10 @@
 import { mount } from '@vue/test-utils';
 import { defineComponent, nextTick, ref } from 'vue';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+    submitCompiledClaimForm,
     toCompiledClaimFormSubmissionPayload,
+    type CompiledClaimFormPayload,
 } from '../../resources/js/components/x-change/compiledClaimFormSubmission';
 
 vi.mock('../../resources/js/components/x-change/VoucherInstructionsDisplay.vue', () => ({
@@ -17,6 +19,10 @@ vi.mock('../../resources/js/components/x-change/VoucherStatusStamp.vue', () => (
     default: { template: '<div />' },
 }));
 
+const { post } = vi.hoisted(() => ({
+    post: vi.fn(),
+}));
+
 vi.mock('@inertiajs/vue3', () => ({
     usePage: () => ({
         props: {
@@ -28,9 +34,16 @@ vi.mock('@inertiajs/vue3', () => ({
         processing: false,
         get: vi.fn(),
     }),
+    router: {
+        post,
+    },
 }));
 
 import ClaimWidget from '../../resources/js/components/x-change/ClaimWidget.vue';
+
+beforeEach(() => {
+    post.mockClear();
+});
 
 describe('ClaimWidget compiled form owner boundary', () => {
     it('allows an owner component to capture compiled form submit payload', async () => {
@@ -41,12 +54,10 @@ describe('ClaimWidget compiled form owner boundary', () => {
 
                 const submissionPayload = ref<Record<string, unknown> | null>(null);
 
-                function capturePayload(value: {
-                    code: string;
-                    values: Record<string, unknown>;
-                }) {
+                function capturePayload(value: CompiledClaimFormPayload) {
                     payload.value = value;
                     submissionPayload.value = toCompiledClaimFormSubmissionPayload(value);
+                    submitCompiledClaimForm(value);
                 }
 
                 return {
@@ -111,5 +122,18 @@ describe('ClaimWidget compiled form owner boundary', () => {
                 first_name: 'Lester',
             },
         });
+
+        expect(post).toHaveBeenCalledWith(
+            '/x/claim',
+            {
+                code: 'TEST123',
+                inputs: {
+                    first_name: 'Lester',
+                },
+            },
+            expect.objectContaining({
+                preserveScroll: true,
+            })
+        );
     });
 });
