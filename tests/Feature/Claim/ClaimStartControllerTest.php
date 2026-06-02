@@ -190,7 +190,7 @@ it('detects compiled form claim submissions', function () {
         ],
     ]);
 
-    $response->assertSessionHas('compiled_form_submission', [
+    $response->assertSessionHas('compiled_claim_submission', [
         'code' => 'TEST123',
         'inputs' => [
             'first_name' => 'Lester',

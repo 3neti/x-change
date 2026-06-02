@@ -12,6 +12,7 @@ use LBHurtado\FormFlowManager\Data\FormFlowInstructionsData;
 use LBHurtado\FormFlowManager\Services\DriverService;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Actions\Claim\PrepareCompiledClaimSubmission;
 use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
@@ -32,10 +33,9 @@ class ClaimStartController extends Controller
                 'inputs' => ['required', 'array'],
             ]);
 
-            return back()->with('compiled_form_submission', [
-                'code' => strtoupper(trim($validated['code'])),
-                'inputs' => $validated['inputs'] ?? [],
-            ]);
+            app(PrepareCompiledClaimSubmission::class)->handle($validated);
+
+            return back();
         }
 
         $code = strtoupper(trim((string) $request->query('code', '')));
