@@ -197,3 +197,15 @@ it('detects compiled form claim submissions', function () {
         ],
     ]);
 });
+
+it('keeps empty legacy claim entry rendering through get request', function () {
+    $this->withoutMiddleware();
+
+    $this->get('/x/claim')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('x-change/claim/Entry')
+            ->where('initial_code', null)
+            ->where('claim_experience', null)
+        );
+})->skip('Pending UI-agnostic ClaimStartController response boundary.');

@@ -41,17 +41,17 @@ class ClaimStartController extends Controller
         $code = strtoupper(trim((string) $request->query('code', '')));
 
         if ($code === '') {
-            return Inertia::render('x-change/claim/Entry', [
-                'initial_code' => null,
-                'claim_experience' => null,
-            ]);
+            return $this->renderEntry(
+                initialCode: null,
+                claimExperience: null,
+            );
         }
 
         if ($request->boolean('failed')) {
-            return Inertia::render('x-change/claim/Entry', [
-                'initial_code' => $code,
-                'claim_experience' => null,
-            ]);
+            return $this->renderEntry(
+                initialCode: $code,
+                claimExperience: null,
+            );
         }
 
         $voucher = Voucher::query()->where('code', $code)->first();
@@ -91,5 +91,13 @@ class ClaimStartController extends Controller
         $state = $this->formFlowService->startFlow($instructions);
 
         return redirect("/form-flow/{$state['flow_id']}");
+    }
+
+    private function renderEntry(?string $initialCode = null, ?array $claimExperience = null): Response
+    {
+        return Inertia::render('x-change/claim/Entry', [
+            'initial_code' => $initialCode,
+            'claim_experience' => $claimExperience,
+        ]);
     }
 }
