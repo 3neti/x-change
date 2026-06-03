@@ -40,6 +40,7 @@ import {
 } from '@/components/x-change/compiledFormValidation';
 import { resolveCompiledFormSubmitState } from '@/components/x-change/compiledFormSubmitState';
 import { buildCompiledFormPayload } from '@/components/x-change/compiledFormPayload';
+import { shouldSubmitCompiledForm } from '@/components/x-change/compiledFormSubmitGuard';
 
 initializeTheme();
 
@@ -422,7 +423,10 @@ const emit = defineEmits<{
 const isSubmittingCompiledForm = ref(false);
 
 function submitCompiledForm(): void {
-    if (normalizedCompiledFormFlow.value && !isCompiledFormValid.value) {
+    if (!shouldSubmitCompiledForm(
+        normalizedCompiledFormFlow.value !== null,
+        isCompiledFormValid.value,
+    )) {
         return;
     }
 
