@@ -34,6 +34,11 @@ import {
     resolveLegacyRuntimeStages,
     preferCompiledStages,
 } from '@/components/x-change/claimWidgetStages';
+import {
+    isCompiledFormValid as validateCompiledForm,
+    missingRequiredCompiledFormFields as resolveMissingRequiredCompiledFormFields,
+    requiredCompiledFormFields as resolveRequiredCompiledFormFields,
+} from '@/components/x-change/compiledFormValidation';
 
 initializeTheme();
 
@@ -389,31 +394,23 @@ const claimFormPayload = computed(() => ({
     values: currentFormValues.value,
 }));
 
-function hasFormValue(value: unknown): boolean {
-    if (value === null || value === undefined) {
-        return false;
-    }
+const requiredCompiledFormFields = computed(() =>
+    resolveRequiredCompiledFormFields(normalizedCompiledFormFlow.value?.fields)
+);
 
-    if (typeof value === 'string') {
-        return value.trim().length > 0;
-    }
+const missingRequiredCompiledFormFields = computed(() =>
+    resolveMissingRequiredCompiledFormFields(
+        normalizedCompiledFormFlow.value?.fields,
+        currentFormValues.value,
+    )
+);
 
-    return true;
-}
-
-const requiredCompiledFormFields = computed(() => {
-    return normalizedCompiledFormFlow.value?.fields.filter((field) => field.required) ?? [];
-});
-
-const missingRequiredCompiledFormFields = computed(() => {
-    return requiredCompiledFormFields.value.filter((field) => {
-        return !hasFormValue(currentFormValues.value[field.key]);
-    });
-});
-
-const isCompiledFormValid = computed(() => {
-    return missingRequiredCompiledFormFields.value.length === 0;
-});
+const isCompiledFormValid = computed(() =>
+    validateCompiledForm(
+        normalizedCompiledFormFlow.value?.fields,
+        currentFormValues.value,
+    )
+);
 
 const emit = defineEmits<{
     'submit:compiled-form': [payload: {
