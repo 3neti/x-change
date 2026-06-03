@@ -526,5 +526,75 @@ describe('claim Success redirect countdown rendering', () => {
         expect(stages).toContain('legacy-success-rider-stage');
         expect(stages).not.toContain('compiled-success-rider-stage');
     });
+
+    it('renders compiled success rider and compiled redirect countdown together', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                claim_experience: {
+                    ...baseProps.claim_experience,
+                    phases: [
+                        {
+                            key: 'success_rider',
+                            owner: 'x-rider',
+                            source: 'claim_experience',
+                            status: 'active',
+                            stages: [
+                                {
+                                    key: 'compiled-success-rider-stage',
+                                    type: 'message',
+                                    phase: 'success',
+                                    payload: {
+                                        title: 'Compiled success rider',
+                                    },
+                                },
+                            ],
+                        },
+                        {
+                            key: 'redirect',
+                            owner: 'claim-widget',
+                            source: 'voucher.instructions.rider.redirect_url',
+                            status: 'active',
+                            url: 'https://example.com/after-claim',
+                            delay_seconds: 5,
+                            show_countdown: true,
+                        },
+                    ],
+                },
+                rider: {
+                    ...baseProps.rider,
+                    stages: {
+                        stages: [
+                            {
+                                key: 'legacy-success-rider-stage',
+                                type: 'message',
+                                phase: 'success',
+                                payload: {
+                                    title: 'Legacy success rider',
+                                },
+                            },
+                        ],
+                    },
+                },
+                redirect: {
+                    show_countdown: true,
+                    owner: 'claim-widget',
+                    delay_seconds: 5,
+                },
+            },
+        });
+
+        const stages = wrapper
+            .findAll('[data-testid="rider-stage"]')
+            .map((stage) => stage.text());
+
+        expect(stages).toContain('compiled-success-rider-stage');
+        expect(stages).not.toContain('legacy-success-rider-stage');
+
+        expect(wrapper.find('[data-testid="success-stage-region"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="redirect-countdown-region"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="countdown-delay"]').text()).toBe('5');
+    });
 });
 
