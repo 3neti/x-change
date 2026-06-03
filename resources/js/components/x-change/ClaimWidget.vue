@@ -24,6 +24,7 @@ import {
     normalizeCompiledFormFlowPhase,
     resolveCompiledFormFlowPhase,
 } from '@/components/x-change/compiledFormFlow';
+import { activeClaimExperiencePhase } from '@/components/x-change/claimExperiencePhases';
 
 initializeTheme();
 
@@ -108,14 +109,7 @@ function extractStages(value: unknown): RawRiderStage[] {
 }
 
 function compiledPhase(key: string): Record<string, any> | null {
-    const phases = Array.isArray(props.claimExperience?.phases)
-        ? props.claimExperience.phases as Record<string, any>[]
-        : [];
-
-    return phases.find((phase) =>
-        phase.key === key
-        && (phase.status ?? 'active') === 'active'
-    ) ?? null;
+    return activeClaimExperiencePhase(props.claimExperience, key);
 }
 
 function compiledPhaseStages(key: string): RawRiderStage[] {
