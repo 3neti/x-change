@@ -33,3 +33,40 @@ it('returns null for malformed prepared compiled claim payload', function () {
         'inputs' => 'not-array',
     ]))->toBeNull();
 });
+
+it('rejects prepared compiled claim payload without code', function () {
+    expect(PreparedCompiledClaimData::fromSessionPayload([
+        'voucher_id' => 123,
+        'inputs' => [],
+    ]))->toBeNull();
+});
+
+it('rejects prepared compiled claim payload without voucher id', function () {
+    expect(PreparedCompiledClaimData::fromSessionPayload([
+        'code' => 'TEST123',
+        'inputs' => [],
+    ]))->toBeNull();
+});
+
+it('rejects prepared compiled claim payload without inputs', function () {
+    expect(PreparedCompiledClaimData::fromSessionPayload([
+        'code' => 'TEST123',
+        'voucher_id' => 123,
+    ]))->toBeNull();
+});
+
+it('rejects prepared compiled claim payload with non-string code', function () {
+    expect(PreparedCompiledClaimData::fromSessionPayload([
+        'code' => 123,
+        'voucher_id' => 123,
+        'inputs' => [],
+    ]))->toBeNull();
+});
+
+it('rejects prepared compiled claim payload with non-array inputs', function () {
+    expect(PreparedCompiledClaimData::fromSessionPayload([
+        'code' => 'TEST123',
+        'voucher_id' => 123,
+        'inputs' => 'not-array',
+    ]))->toBeNull();
+});
