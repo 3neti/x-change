@@ -13,6 +13,7 @@ import { shouldRenderSuccessRedirectCountdown } from '@/components/x-change/succ
 import {
     resolveRedirectRuntimeStages,
     resolveSuccessVisualStages,
+    shouldRenderFallbackSuccess,
 } from '@/components/x-change/successRider';
 
 defineOptions({ layout: null });
@@ -108,9 +109,11 @@ const fallbackTitle = computed(() => {
 });
 
 const shouldRenderFallback = computed(() =>
-    !hasSuccessVisualStages.value
-    && !hasRiderMessage.value
-    && !hasRedirect.value
+    shouldRenderFallbackSuccess(
+        hasSuccessVisualStages.value,
+        hasRiderMessage.value,
+        hasRedirect.value,
+    )
 );
 </script>
 

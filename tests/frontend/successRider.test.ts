@@ -4,6 +4,7 @@ import {
     resolveLegacySuccessVisualStages,
     resolveSuccessVisualStages,
     resolveRedirectRuntimeStages,
+    shouldRenderFallbackSuccess,
 } from '../../resources/js/components/x-change/successRider';
 
 describe('success rider stage resolution', () => {
@@ -140,5 +141,21 @@ describe('success rider stage resolution', () => {
 
         expect(stages).toHaveLength(1);
         expect(stages[0].key).toBe('legacy-redirect');
+    });
+
+    it('renders fallback success when there are no success stages, rider message, or redirect', () => {
+        expect(shouldRenderFallbackSuccess(false, false, false)).toBe(true);
+    });
+
+    it('does not render fallback success when success stages exist', () => {
+        expect(shouldRenderFallbackSuccess(true, false, false)).toBe(false);
+    });
+
+    it('does not render fallback success when rider message exists', () => {
+        expect(shouldRenderFallbackSuccess(false, true, false)).toBe(false);
+    });
+
+    it('does not render fallback success when redirect exists', () => {
+        expect(shouldRenderFallbackSuccess(false, false, true)).toBe(false);
     });
 });

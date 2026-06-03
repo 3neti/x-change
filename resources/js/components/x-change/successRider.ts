@@ -111,3 +111,13 @@ export function resolveRedirectRuntimeStages(
 
     return explicitOrFirstNonLegacy(stages, 'legacy-redirect');
 }
+
+export function shouldRenderFallbackSuccess(
+    hasSuccessStages: boolean,
+    hasRiderMessage: boolean,
+    hasRedirect: boolean,
+): boolean {
+    return !hasSuccessStages
+        && !hasRiderMessage
+        && !hasRedirect;
+}
