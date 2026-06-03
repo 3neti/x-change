@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveCompiledRiderIntroStages, resolveCompiledRuntimeStages, } from '../../resources/js/components/x-change/claimWidgetStages';
+import { resolveCompiledRiderIntroStages, resolveCompiledRuntimeStages, resolveCompiledRedirectStages,} from '../../resources/js/components/x-change/claimWidgetStages';
 
 describe('claim widget stage resolution', () => {
     it('resolves compiled rider intro visual stages', () => {
@@ -64,5 +64,29 @@ describe('claim widget stage resolution', () => {
         });
 
         expect(stages.map((stage) => stage.key)).toEqual(['enabled-runtime']);
+    });
+
+    it('resolves compiled redirect stages', () => {
+        const stages = resolveCompiledRedirectStages({
+            key: 'redirect',
+            stages: [
+                { key: 'redirect', type: 'message', phase: 'redirect' },
+                { key: 'runtime', type: 'message', phase: 'runtime' },
+            ],
+        });
+
+        expect(stages.map((stage) => stage.key)).toEqual(['redirect']);
+    });
+
+    it('filters disabled compiled redirect stages', () => {
+        const stages = resolveCompiledRedirectStages({
+            key: 'redirect',
+            stages: [
+                { key: 'disabled-redirect', type: 'message', phase: 'redirect', enabled: false },
+                { key: 'enabled-redirect', type: 'message', phase: 'redirect' },
+            ],
+        });
+
+        expect(stages.map((stage) => stage.key)).toEqual(['enabled-redirect']);
     });
 });

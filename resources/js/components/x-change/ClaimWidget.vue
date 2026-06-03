@@ -26,6 +26,7 @@ import {
 } from '@/components/x-change/compiledFormFlow';
 import { activeClaimExperiencePhase } from '@/components/x-change/claimExperiencePhases';
 import {
+    resolveCompiledRedirectStages,
     resolveCompiledRiderIntroStages,
     resolveCompiledRuntimeStages,
 } from '@/components/x-change/claimWidgetStages';
@@ -364,11 +365,8 @@ const runtimeStages = computed<RawRiderStage[]>(() =>
 );
 
 const compiledRedirectStages = computed<RawRiderStage[]>(() =>
-    compiledPhaseStages('redirect')
-        .filter((stage) =>
-            stage.enabled !== false
-            && isVisualPreviewStage(stage)
-        )
+    resolveCompiledRedirectStages(compiledPhase('redirect'))
+        .filter(isVisualPreviewStage)
 );
 
 const legacyRedirectStages = computed<RawRiderStage[]>(() =>

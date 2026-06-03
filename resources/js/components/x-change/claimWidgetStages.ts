@@ -30,3 +30,15 @@ export function resolveCompiledRuntimeStages(
     );
 }
 
+export function resolveCompiledRedirectStages(
+    phase: Record<string, any> | null | undefined,
+): RawRiderStage[] {
+    const stages = Array.isArray(phase?.stages)
+        ? phase.stages as RawRiderStage[]
+        : [];
+
+    return stages.filter((stage) =>
+        stage.enabled !== false
+        && stageIsInPhase(stage, 'redirect')
+    );
+}
