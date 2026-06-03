@@ -13,7 +13,6 @@ import { shouldRenderSuccessRedirectCountdown } from '@/components/x-change/succ
 import {
     resolveRedirectRuntimeStages,
     resolveSuccessVisualStages,
-    shouldRenderFallbackSuccess,
 } from '@/components/x-change/successRider';
 import {
     formatSuccessVoucherAmount,
@@ -21,9 +20,8 @@ import {
     isPendingClaimOutcome,
     resolveSuccessFallbackTitle,
     shouldRenderSuccessRiderMessage,
-    shouldRenderSuccessVoucherCodeBadge,
 } from '@/components/x-change/successFallback';
-
+import { resolveSuccessViewModel } from '@/components/x-change/successViewModel';
 
 defineOptions({ layout: null });
 
@@ -61,23 +59,29 @@ const redirectRuntimeStages = computed<RawRiderStage[]>(() =>
     resolveRedirectRuntimeStages(props.rider)
 );
 
-const hasSuccessVisualStages = computed(() =>
-    successVisualStages.value.length > 0
-);
-
-const hasRedirectRuntimeStages = computed(() =>
-    redirectRuntimeStages.value.length > 0
-);
-
 const hasRiderMessage = computed(() =>
     shouldRenderSuccessRiderMessage(riderContent.value)
 );
 
+const successViewModel = computed(() =>
+    resolveSuccessViewModel({
+        successVisualStageCount: successVisualStages.value.length,
+        redirectRuntimeStageCount: redirectRuntimeStages.value.length,
+        hasRiderMessage: hasRiderMessage.value,
+        hasRedirect: hasRedirect.value,
+    })
+);
+
+const hasSuccessVisualStages = computed(() =>
+    successViewModel.value.hasSuccessVisualStages
+);
+
+const hasRedirectRuntimeStages = computed(() =>
+    successViewModel.value.hasRedirectRuntimeStages
+);
+
 const shouldShowVoucherCodeBadge = computed(() =>
-    shouldRenderSuccessVoucherCodeBadge(
-        hasSuccessVisualStages.value,
-        hasRiderMessage.value,
-    )
+    successViewModel.value.shouldShowVoucherCodeBadge
 );
 
 const {
@@ -116,11 +120,7 @@ const fallbackTitle = computed(() =>
 );
 
 const shouldRenderFallback = computed(() =>
-    shouldRenderFallbackSuccess(
-        hasSuccessVisualStages.value,
-        hasRiderMessage.value,
-        hasRedirect.value,
-    )
+    successViewModel.value.shouldRenderFallback
 );
 </script>
 
