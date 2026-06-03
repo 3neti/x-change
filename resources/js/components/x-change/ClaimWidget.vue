@@ -39,6 +39,7 @@ import {
     missingRequiredCompiledFormFields as resolveMissingRequiredCompiledFormFields,
 } from '@/components/x-change/compiledFormValidation';
 import { resolveCompiledFormSubmitState } from '@/components/x-change/compiledFormSubmitState';
+import { buildCompiledFormPayload } from '@/components/x-change/compiledFormPayload';
 
 initializeTheme();
 
@@ -389,10 +390,12 @@ function updateCurrentFormValues(values: Record<string, unknown>): void {
     emit('update:compiled-form-values', values);
 }
 
-const claimFormPayload = computed(() => ({
-    code: props.initialCode,
-    values: currentFormValues.value,
-}));
+const claimFormPayload = computed(() =>
+    buildCompiledFormPayload(
+        props.initialCode,
+        currentFormValues.value,
+    )
+);
 
 const missingRequiredCompiledFormFields = computed(() =>
     resolveMissingRequiredCompiledFormFields(
