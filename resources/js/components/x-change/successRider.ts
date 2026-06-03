@@ -1,7 +1,10 @@
 import type { RawRiderStage, RiderExperience } from '@/components/x-rider/types';
 import { stageIsInPhase } from '@/components/x-rider/useRiderStagePhase';
+import {
+    claimExperiencePhaseStages
 
-export type ClaimExperiencePayload = Record<string, any> | null | undefined;
+} from '@/components/x-change/claimExperiencePhases';
+import type {ClaimExperiencePayload} from '@/components/x-change/claimExperiencePhases';
 
 function isRedirectStage(stage: RawRiderStage): boolean {
     return stage.type === 'redirect'
@@ -27,38 +30,6 @@ function explicitOrFirstNonLegacy(
     return explicit.length > 0
         ? explicit
         : stages.slice(0, 1);
-}
-
-function activeClaimExperiencePhase(
-    claimExperience: ClaimExperiencePayload,
-    key: string,
-): Record<string, any> | null {
-    const phases = Array.isArray(claimExperience?.phases)
-        ? claimExperience.phases as Record<string, any>[]
-        : [];
-
-    return phases.find((phase) =>
-        phase.key === key
-        && (phase.status ?? 'active') === 'active'
-    ) ?? null;
-}
-
-function claimExperiencePhaseStages(
-    claimExperience: ClaimExperiencePayload,
-    key: string,
-): RawRiderStage[] {
-    const phase = activeClaimExperiencePhase(claimExperience, key);
-    const stages = phase?.stages;
-
-    if (Array.isArray(stages)) {
-        return stages as RawRiderStage[];
-    }
-
-    if (Array.isArray(stages?.stages)) {
-        return stages.stages as RawRiderStage[];
-    }
-
-    return [];
 }
 
 export function resolveLegacySuccessVisualStages(

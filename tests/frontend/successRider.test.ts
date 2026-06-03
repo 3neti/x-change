@@ -158,4 +158,22 @@ describe('success rider stage resolution', () => {
     it('does not render fallback success when redirect exists', () => {
         expect(shouldRenderFallbackSuccess(false, false, true)).toBe(false);
     });
+
+    it('resolves compiled success stages from nested stage payload', () => {
+        const stages = resolveCompiledSuccessVisualStages({
+            phases: [
+                {
+                    key: 'success_rider',
+                    status: 'active',
+                    stages: {
+                        stages: [
+                            { key: 'nested-success', type: 'message', phase: 'success' },
+                        ],
+                    },
+                },
+            ],
+        });
+
+        expect(stages.map((stage) => stage.key)).toEqual(['nested-success']);
+    });
 });
