@@ -117,12 +117,6 @@ function compiledPhase(key: string): Record<string, any> | null {
     return activeClaimExperiencePhase(props.claimExperience, key);
 }
 
-function compiledPhaseStages(key: string): RawRiderStage[] {
-    const phase = compiledPhase(key);
-
-    return extractStages(phase?.stages);
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
     return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
