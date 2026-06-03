@@ -63,6 +63,15 @@ const hasRiderMessage = computed(() =>
     shouldRenderSuccessRiderMessage(riderContent.value)
 );
 
+const {
+    countdownRedirect,
+    hasRedirect,
+} = useClaimSuccessRedirect(
+    riderRedirect,
+    toRef(props, 'redirect'),
+    toRef(props, 'redirectEndpoint'),
+);
+
 const successViewModel = computed(() =>
     resolveSuccessViewModel({
         successVisualStageCount: successVisualStages.value.length,
@@ -82,15 +91,6 @@ const hasRedirectRuntimeStages = computed(() =>
 
 const shouldShowVoucherCodeBadge = computed(() =>
     successViewModel.value.shouldShowVoucherCodeBadge
-);
-
-const {
-    countdownRedirect,
-    hasRedirect,
-} = useClaimSuccessRedirect(
-    riderRedirect,
-    toRef(props, 'redirect'),
-    toRef(props, 'redirectEndpoint'),
 );
 
 const shouldShowRedirectCountdown = computed(() =>
