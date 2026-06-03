@@ -6,6 +6,7 @@ import { resolveCompiledRiderIntroStages,
     resolveLegacyPreClaimVisualStages,
     preferVoucherInstructionSplash,
     resolveLegacyRuntimeStages,
+    resolveLegacyRedirectStages,
 } from '../../resources/js/components/x-change/claimWidgetStages';
 
 describe('claim widget stage resolution', () => {
@@ -149,5 +150,23 @@ describe('claim widget stage resolution', () => {
         ] as any);
 
         expect(stages.map((stage) => stage.key)).toEqual(['enabled-runtime']);
+    });
+
+    it('resolves legacy redirect visual stages', () => {
+        const stages = resolveLegacyRedirectStages([
+            { key: 'redirect', type: 'message', phase: 'redirect' },
+            { key: 'runtime', type: 'message', phase: 'runtime' },
+        ] as any);
+
+        expect(stages.map((stage) => stage.key)).toEqual(['redirect']);
+    });
+
+    it('filters disabled legacy redirect stages', () => {
+        const stages = resolveLegacyRedirectStages([
+            { key: 'disabled-redirect', type: 'message', phase: 'redirect', enabled: false },
+            { key: 'enabled-redirect', type: 'message', phase: 'redirect' },
+        ] as any);
+
+        expect(stages.map((stage) => stage.key)).toEqual(['enabled-redirect']);
     });
 });

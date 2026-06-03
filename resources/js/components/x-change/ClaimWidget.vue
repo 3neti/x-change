@@ -18,7 +18,6 @@ import { useVoucherPreview } from '@/composables/useVoucherPreview';
 import { initializeTheme } from '@/composables/useTheme';
 import RiderRuntimeSequencer from '@/components/x-rider/RiderRuntimeSequencer.vue';
 import type { RawRiderStage } from '@/components/x-rider/types';
-import { stageIsInPhase } from '@/components/x-rider/useRiderStagePhase';
 import FormFlowRenderer from '@/components/x-change/FormFlowRenderer.vue';
 import {
     normalizeCompiledFormFlowPhase,
@@ -31,6 +30,7 @@ import {
     resolveCompiledRiderIntroStages,
     resolveCompiledRuntimeStages,
     resolveLegacyPreClaimVisualStages,
+    resolveLegacyRedirectStages,
     resolveLegacyRuntimeStages,
 } from '@/components/x-change/claimWidgetStages';
 
@@ -329,11 +329,7 @@ const compiledRedirectStages = computed<RawRiderStage[]>(() =>
 );
 
 const legacyRedirectStages = computed<RawRiderStage[]>(() =>
-    riderStages.value.filter((stage) =>
-        stage.enabled !== false
-        && stageIsInPhase(stage, 'redirect')
-        && isVisualPreviewStage(stage)
-    )
+    resolveLegacyRedirectStages(riderStages.value)
 );
 
 const redirectStages = computed<RawRiderStage[]>(() =>

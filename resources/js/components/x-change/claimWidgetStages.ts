@@ -93,3 +93,12 @@ export function resolveLegacyRuntimeStages(
     );
 }
 
+export function resolveLegacyRedirectStages(
+    stages: RawRiderStage[],
+): RawRiderStage[] {
+    return stages.filter((stage) =>
+        stage.enabled !== false
+        && stageIsInPhase(stage, 'redirect')
+        && isVisualPreviewStage(stage)
+    );
+}
