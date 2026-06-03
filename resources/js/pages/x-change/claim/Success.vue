@@ -8,12 +8,10 @@ import RiderCountdown from '@/components/x-rider/RiderCountdown.vue';
 import RiderStagePresenter from '@/components/x-rider/RiderStagePresenter.vue';
 import RiderRuntimeSequencer from '@/components/x-rider/RiderRuntimeSequencer.vue';
 import type { RawRiderStage, RiderExperience } from '@/components/x-rider/types';
-import { stageIsInPhase } from '@/components/x-rider/useRiderStagePhase';
 import { useClaimSuccessRedirect } from './useClaimSuccessRedirect';
 import { shouldRenderSuccessRedirectCountdown } from '@/components/x-change/successRedirect';
 import {
-    resolveCompiledSuccessVisualStages,
-    resolveLegacySuccessVisualStages,
+    resolveRedirectRuntimeStages,
     resolveSuccessVisualStages,
 } from '@/components/x-change/successRider';
 
@@ -45,32 +43,13 @@ const props = defineProps<Props>();
 const riderContent = computed(() => props.rider?.success ?? null);
 const riderRedirect = computed(() => props.rider?.redirect ?? null);
 
-const riderStages = computed<RawRiderStage[]>(() => {
-    const stages = props.rider?.stages?.stages;
-
-    return Array.isArray(stages)
-        ? stages as RawRiderStage[]
-        : [];
-});
-
 const successVisualStages = computed<RawRiderStage[]>(() =>
     resolveSuccessVisualStages(props.claim_experience, props.rider)
 );
 
-const redirectRuntimeStages = computed<RawRiderStage[]>(() => {
-    const stages = riderStages.value.filter((stage) =>
-        stage.enabled !== false
-        && stageIsInPhase(stage, 'redirect')
-    );
-
-    const explicit = stages.filter((stage) =>
-        stage.key !== 'legacy-redirect'
-    );
-
-    return explicit.length > 0
-        ? explicit
-        : stages.slice(0, 1);
-});
+const redirectRuntimeStages = computed<RawRiderStage[]>(() =>
+    resolveRedirectRuntimeStages(props.rider)
+);
 
 const hasSuccessVisualStages = computed(() =>
     successVisualStages.value.length > 0

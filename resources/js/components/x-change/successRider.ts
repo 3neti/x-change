@@ -100,3 +100,14 @@ export function resolveSuccessVisualStages(
         ? compiled
         : resolveLegacySuccessVisualStages(rider);
 }
+
+export function resolveRedirectRuntimeStages(
+    rider: RiderExperience | null | undefined,
+): RawRiderStage[] {
+    const stages = riderStages(rider).filter((stage) =>
+        stage.enabled !== false
+        && isRedirectStage(stage)
+    );
+
+    return explicitOrFirstNonLegacy(stages, 'legacy-redirect');
+}

@@ -3,6 +3,7 @@ import {
     resolveCompiledSuccessVisualStages,
     resolveLegacySuccessVisualStages,
     resolveSuccessVisualStages,
+    resolveRedirectRuntimeStages,
 } from '../../resources/js/components/x-change/successRider';
 
 describe('success rider stage resolution', () => {
@@ -99,5 +100,45 @@ describe('success rider stage resolution', () => {
         } as any);
 
         expect(stages.map((stage) => stage.key)).toEqual(['legacy-message-two']);
+    });
+
+    it('resolves enabled rider redirect runtime stages', () => {
+        const stages = resolveRedirectRuntimeStages({
+            stages: {
+                stages: [
+                    { key: 'message', type: 'message', phase: 'success' },
+                    { key: 'redirect', type: 'redirect', phase: 'redirect' },
+                ],
+            },
+        } as any);
+
+        expect(stages.map((stage) => stage.key)).toEqual(['redirect']);
+    });
+
+    it('filters disabled rider redirect runtime stages', () => {
+        const stages = resolveRedirectRuntimeStages({
+            stages: {
+                stages: [
+                    { key: 'disabled-redirect', type: 'redirect', phase: 'redirect', enabled: false },
+                    { key: 'enabled-redirect', type: 'redirect', phase: 'redirect' },
+                ],
+            },
+        } as any);
+
+        expect(stages.map((stage) => stage.key)).toEqual(['enabled-redirect']);
+    });
+
+    it('uses first legacy redirect only when no explicit redirect stage exists', () => {
+        const stages = resolveRedirectRuntimeStages({
+            stages: {
+                stages: [
+                    { key: 'legacy-redirect', type: 'redirect', phase: 'redirect' },
+                    { key: 'legacy-redirect', type: 'redirect', phase: 'redirect' },
+                ],
+            },
+        } as any);
+
+        expect(stages).toHaveLength(1);
+        expect(stages[0].key).toBe('legacy-redirect');
     });
 });
