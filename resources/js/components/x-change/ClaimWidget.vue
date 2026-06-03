@@ -680,14 +680,29 @@ if (import.meta.env.DEV && claimExperienceDebug.value) {
         </div>
 
         <div
+            v-if="normalizedCompiledFormFlow || usesLegacyFormFlow"
             data-testid="claim-widget-form-flow-boundary-region"
-            class="sr-only"
+            :class="normalizedCompiledFormFlow ? 'space-y-4' : 'sr-only'"
         >
-            <FormFlowRenderer
+            <Card
                 v-if="normalizedCompiledFormFlow"
-                :form-flow="normalizedCompiledFormFlow"
-                @update:values="updateCurrentFormValues"
-            />
+                data-testid="compiled-form-flow-visible-region"
+                class="border-primary/10 bg-background"
+            >
+                <CardContent class="pt-4 pb-4 space-y-4">
+                    <div class="space-y-1 text-center">
+                        <h2 class="text-base font-medium">Claim Information</h2>
+                        <p class="text-sm text-muted-foreground">
+                            Please complete the required details to continue.
+                        </p>
+                    </div>
+
+                    <FormFlowRenderer
+                        :form-flow="normalizedCompiledFormFlow"
+                        @update:values="updateCurrentFormValues"
+                    />
+                </CardContent>
+            </Card>
 
             <pre
                 v-if="normalizedCompiledFormFlow"

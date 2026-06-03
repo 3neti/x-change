@@ -935,4 +935,54 @@ describe('ClaimWidget compiled form flow rendering', () => {
             },
         ]);
     });
+
+    it('renders compiled form flow in a visible claim information region', () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'form_flow',
+                            owner: 'form-flow',
+                            source: 'claim_experience',
+                            status: 'active',
+                            fields: [
+                                {
+                                    key: 'first_name',
+                                    type: 'text',
+                                    label: 'First Name',
+                                    required: true,
+                                },
+                            ],
+                            values: {
+                                first_name: 'Lester',
+                            },
+                            stages: [],
+                        },
+                    ],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="compiled-form-flow-visible-region"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="claim-widget-form-flow-boundary-region"]').classes())
+            .not
+            .toContain('sr-only');
+    });
+
+    it('keeps legacy form flow boundary visually hidden', () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="compiled-form-flow-visible-region"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="claim-widget-form-flow-boundary-region"]').classes())
+            .toContain('sr-only');
+    });
 });
