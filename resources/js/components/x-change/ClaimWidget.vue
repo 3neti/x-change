@@ -41,6 +41,9 @@ import {
 import { resolveCompiledFormSubmitState } from '@/components/x-change/compiledFormSubmitState';
 import { buildCompiledFormPayload } from '@/components/x-change/compiledFormPayload';
 import { resolveCompiledFormSubmitEvent } from '@/components/x-change/compiledFormSubmit';
+import {
+    resolveFormFlowBoundary,
+} from '@/components/x-change/formFlowBoundary';
 
 initializeTheme();
 
@@ -353,24 +356,9 @@ const compiledFormFlowPhase = computed<Record<string, any> | null>(() =>
     resolveCompiledFormFlowPhase(props.claimExperience)
 );
 
-type FormFlowBoundaryMode = 'compiled' | 'legacy';
-
-const formFlowBoundary = computed<{
-    mode: FormFlowBoundaryMode;
-    phase: Record<string, any> | null;
-}>(() => {
-    if (compiledFormFlowPhase.value !== null) {
-        return {
-            mode: 'compiled',
-            phase: compiledFormFlowPhase.value,
-        };
-    }
-
-    return {
-        mode: 'legacy',
-        phase: null,
-    };
-});
+const formFlowBoundary = computed(() =>
+    resolveFormFlowBoundary(compiledFormFlowPhase.value)
+);
 
 const usesCompiledFormFlow = computed(() =>
     formFlowBoundary.value.mode === 'compiled'
