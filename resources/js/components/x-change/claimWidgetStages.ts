@@ -83,3 +83,13 @@ export function resolveLegacyPreClaimVisualStages(
     );
 }
 
+export function resolveLegacyRuntimeStages(
+    stages: RawRiderStage[],
+): RawRiderStage[] {
+    return stages.filter((stage) =>
+        stage.enabled !== false
+        && stageIsInPhase(stage, 'runtime')
+        && isVisualPreviewStage(stage)
+    );
+}
+

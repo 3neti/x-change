@@ -5,6 +5,7 @@ import { resolveCompiledRiderIntroStages,
     isVisualPreviewStage,
     resolveLegacyPreClaimVisualStages,
     preferVoucherInstructionSplash,
+    resolveLegacyRuntimeStages,
 } from '../../resources/js/components/x-change/claimWidgetStages';
 
 describe('claim widget stage resolution', () => {
@@ -130,5 +131,23 @@ describe('claim widget stage resolution', () => {
             'legacy-splash',
             'message',
         ]);
+    });
+
+    it('resolves legacy runtime visual stages', () => {
+        const stages = resolveLegacyRuntimeStages([
+            { key: 'runtime', type: 'message', phase: 'runtime' },
+            { key: 'pre', type: 'message', phase: 'pre_claim' },
+        ] as any);
+
+        expect(stages.map((stage) => stage.key)).toEqual(['runtime']);
+    });
+
+    it('filters disabled legacy runtime stages', () => {
+        const stages = resolveLegacyRuntimeStages([
+            { key: 'disabled-runtime', type: 'message', phase: 'runtime', enabled: false },
+            { key: 'enabled-runtime', type: 'message', phase: 'runtime' },
+        ] as any);
+
+        expect(stages.map((stage) => stage.key)).toEqual(['enabled-runtime']);
     });
 });

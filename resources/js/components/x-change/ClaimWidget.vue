@@ -31,6 +31,7 @@ import {
     resolveCompiledRiderIntroStages,
     resolveCompiledRuntimeStages,
     resolveLegacyPreClaimVisualStages,
+    resolveLegacyRuntimeStages,
 } from '@/components/x-change/claimWidgetStages';
 
 initializeTheme();
@@ -313,11 +314,7 @@ const compiledRuntimeStages = computed<RawRiderStage[]>(() =>
 );
 
 const legacyRuntimeStages = computed<RawRiderStage[]>(() =>
-    riderStages.value.filter((stage) =>
-        stage.enabled !== false
-        && stageIsInPhase(stage, 'runtime')
-        && isVisualPreviewStage(stage)
-    )
+    resolveLegacyRuntimeStages(riderStages.value)
 );
 
 const runtimeStages = computed<RawRiderStage[]>(() =>
