@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeCompiledFormFlowPhase } from '../../resources/js/components/x-change/compiledFormFlow';
+import {
+    normalizeCompiledFormFlowPhase,
+    resolveCompiledFormFlowPhase,
+} from '../../resources/js/components/x-change/compiledFormFlow';
 
 describe('compiled form flow', () => {
     it('returns null when compiled form flow phase is missing', () => {
@@ -28,5 +31,39 @@ describe('compiled form flow', () => {
                 },
             ],
         });
+    });
+
+    it('resolves active compiled form flow phase from claim experience', () => {
+        expect(resolveCompiledFormFlowPhase({
+            phases: [
+                {
+                    key: 'form_flow',
+                    status: 'active',
+                    fields: [
+                        { key: 'first_name', type: 'text', required: true },
+                    ],
+                },
+            ],
+        })).toEqual({
+            key: 'form_flow',
+            status: 'active',
+            fields: [
+                { key: 'first_name', type: 'text', required: true },
+            ],
+        });
+    });
+
+    it('ignores inactive compiled form flow phase', () => {
+        expect(resolveCompiledFormFlowPhase({
+            phases: [
+                {
+                    key: 'form_flow',
+                    status: 'skipped',
+                    fields: [
+                        { key: 'first_name', type: 'text', required: true },
+                    ],
+                },
+            ],
+        })).toBeNull();
     });
 });
