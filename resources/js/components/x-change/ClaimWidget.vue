@@ -25,6 +25,7 @@ import {
     resolveCompiledFormFlowPhase,
 } from '@/components/x-change/compiledFormFlow';
 import { activeClaimExperiencePhase } from '@/components/x-change/claimExperiencePhases';
+import { resolveCompiledRiderIntroStages } from '@/components/x-change/claimWidgetStages';
 
 initializeTheme();
 
@@ -304,11 +305,8 @@ function preferVoucherInstructionSplash(stages: RawRiderStage[]): RawRiderStage[
 }
 
 const compiledPreClaimVisualStages = computed<RawRiderStage[]>(() =>
-    compiledPhaseStages('rider_intro')
-        .filter((stage) =>
-            stage.enabled !== false
-            && isVisualPreviewStage(stage)
-        )
+    resolveCompiledRiderIntroStages(compiledPhase('rider_intro'))
+        .filter(isVisualPreviewStage)
 );
 
 const legacyPreClaimVisualStages = computed<RawRiderStage[]>(() => {
