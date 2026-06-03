@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { resolveCompiledRiderIntroStages, resolveCompiledRuntimeStages, resolveCompiledRedirectStages, isVisualPreviewStage,} from '../../resources/js/components/x-change/claimWidgetStages';
+import { resolveCompiledRiderIntroStages,
+    resolveCompiledRuntimeStages,
+    resolveCompiledRedirectStages,
+    isVisualPreviewStage,
+    resolveLegacyPreClaimVisualStages,
+    preferVoucherInstructionSplash,
+} from '../../resources/js/components/x-change/claimWidgetStages';
 
 describe('claim widget stage resolution', () => {
     it('resolves compiled rider intro visual stages', () => {
@@ -93,5 +99,36 @@ describe('claim widget stage resolution', () => {
     it('detects visual preview stages', () => {
         expect(isVisualPreviewStage({ key: 'message', type: 'message' } as any)).toBe(true);
         expect(isVisualPreviewStage({ key: 'redirect', type: 'redirect' } as any)).toBe(false);
+    });
+
+    it('resolves legacy pre-claim visual stages', () => {
+        const stages = resolveLegacyPreClaimVisualStages([
+            { key: 'pre', type: 'message', phase: 'pre_claim' },
+            { key: 'runtime', type: 'message', phase: 'runtime' },
+        ] as any);
+
+        expect(stages.map((stage) => stage.key)).toEqual(['pre']);
+    });
+
+    it('filters disabled legacy pre-claim visual stages', () => {
+        const stages = resolveLegacyPreClaimVisualStages([
+            { key: 'disabled', type: 'message', phase: 'pre_claim', enabled: false },
+            { key: 'enabled', type: 'message', phase: 'pre_claim' },
+        ] as any);
+
+        expect(stages.map((stage) => stage.key)).toEqual(['enabled']);
+    });
+
+    it('prefers legacy instruction splash over other splash stages', () => {
+        const stages = preferVoucherInstructionSplash([
+            { key: 'other-splash', type: 'splash', phase: 'pre_claim' },
+            { key: 'legacy-splash', type: 'splash', phase: 'pre_claim' },
+            { key: 'message', type: 'message', phase: 'pre_claim' },
+        ] as any);
+
+        expect(stages.map((stage) => stage.key)).toEqual([
+            'legacy-splash',
+            'message',
+        ]);
     });
 });

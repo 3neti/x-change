@@ -30,6 +30,7 @@ import {
     resolveCompiledRedirectStages,
     resolveCompiledRiderIntroStages,
     resolveCompiledRuntimeStages,
+    resolveLegacyPreClaimVisualStages,
 } from '@/components/x-change/claimWidgetStages';
 
 initializeTheme();
@@ -275,44 +276,14 @@ const riderStages = computed<RawRiderStage[]>(() => {
     );
 });
 
-function isPreClaimStage(stage: RawRiderStage): boolean {
-    return stageIsInPhase(stage, 'pre_claim');
-}
-
-function isLegacyInstructionSplash(stage: RawRiderStage): boolean {
-    return stage.key === 'legacy-splash';
-}
-
-function preferVoucherInstructionSplash(stages: RawRiderStage[]): RawRiderStage[] {
-    const instructionSplash = stages.find(isLegacyInstructionSplash);
-
-    if (!instructionSplash) {
-        return stages;
-    }
-
-    return [
-        instructionSplash,
-        ...stages.filter((stage) =>
-            stage.key !== instructionSplash.key
-            && stage.type !== 'splash'
-        ),
-    ];
-}
-
 const compiledPreClaimVisualStages = computed<RawRiderStage[]>(() =>
     resolveCompiledRiderIntroStages(compiledPhase('rider_intro'))
         .filter(isVisualPreviewStage)
 );
 
-const legacyPreClaimVisualStages = computed<RawRiderStage[]>(() => {
-    const stages = riderStages.value.filter((stage) =>
-        stage.enabled !== false
-        && isPreClaimStage(stage)
-        && isVisualPreviewStage(stage)
-    );
-
-    return preferVoucherInstructionSplash(stages);
-});
+const legacyPreClaimVisualStages = computed<RawRiderStage[]>(() =>
+    resolveLegacyPreClaimVisualStages(riderStages.value)
+);
 
 const preClaimVisualStages = computed<RawRiderStage[]>(() =>
     compiledPreClaimVisualStages.value.length > 0
