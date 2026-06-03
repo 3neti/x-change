@@ -7,6 +7,7 @@ import { resolveCompiledRiderIntroStages,
     preferVoucherInstructionSplash,
     resolveLegacyRuntimeStages,
     resolveLegacyRedirectStages,
+    preferCompiledStages,
 } from '../../resources/js/components/x-change/claimWidgetStages';
 
 describe('claim widget stage resolution', () => {
@@ -168,5 +169,19 @@ describe('claim widget stage resolution', () => {
         ] as any);
 
         expect(stages.map((stage) => stage.key)).toEqual(['enabled-redirect']);
+    });
+
+    it('prefers compiled stages when present', () => {
+        expect(preferCompiledStages(
+            [{ key: 'compiled', type: 'message' }] as any,
+            [{ key: 'legacy', type: 'message' }] as any,
+        ).map((stage) => stage.key)).toEqual(['compiled']);
+    });
+
+    it('falls back to legacy stages when compiled stages are empty', () => {
+        expect(preferCompiledStages(
+            [],
+            [{ key: 'legacy', type: 'message' }] as any,
+        ).map((stage) => stage.key)).toEqual(['legacy']);
     });
 });

@@ -102,3 +102,12 @@ export function resolveLegacyRedirectStages(
         && isVisualPreviewStage(stage)
     );
 }
+
+export function preferCompiledStages(
+    compiledStages: RawRiderStage[],
+    legacyStages: RawRiderStage[],
+): RawRiderStage[] {
+    return compiledStages.length > 0
+        ? compiledStages
+        : legacyStages;
+}

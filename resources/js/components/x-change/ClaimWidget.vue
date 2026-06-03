@@ -32,6 +32,7 @@ import {
     resolveLegacyPreClaimVisualStages,
     resolveLegacyRedirectStages,
     resolveLegacyRuntimeStages,
+    preferCompiledStages,
 } from '@/components/x-change/claimWidgetStages';
 
 initializeTheme();
@@ -287,9 +288,10 @@ const legacyPreClaimVisualStages = computed<RawRiderStage[]>(() =>
 );
 
 const preClaimVisualStages = computed<RawRiderStage[]>(() =>
-    compiledPreClaimVisualStages.value.length > 0
-        ? compiledPreClaimVisualStages.value
-        : legacyPreClaimVisualStages.value
+    preferCompiledStages(
+        compiledPreClaimVisualStages.value,
+        legacyPreClaimVisualStages.value,
+    )
 );
 
 const hasPreClaimContent = computed(() =>
