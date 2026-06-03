@@ -40,7 +40,7 @@ import {
 } from '@/components/x-change/compiledFormValidation';
 import { resolveCompiledFormSubmitState } from '@/components/x-change/compiledFormSubmitState';
 import { buildCompiledFormPayload } from '@/components/x-change/compiledFormPayload';
-import { shouldSubmitCompiledForm } from '@/components/x-change/compiledFormSubmitGuard';
+import { resolveCompiledFormSubmitIntent } from '@/components/x-change/compiledFormSubmit';
 
 initializeTheme();
 
@@ -423,10 +423,10 @@ const emit = defineEmits<{
 const isSubmittingCompiledForm = ref(false);
 
 function submitCompiledForm(): void {
-    if (!shouldSubmitCompiledForm(
+    if (resolveCompiledFormSubmitIntent(
         normalizedCompiledFormFlow.value !== null,
         isCompiledFormValid.value,
-    )) {
+    ) === 'blocked') {
         return;
     }
 
