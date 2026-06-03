@@ -1,39 +1,28 @@
 import { computed, type Ref } from 'vue';
+import {
+    resolveSuccessRedirect,
+    type RiderRedirectPayload,
+    type SuccessRedirectPayload,
+} from '@/components/x-change/successRedirect';
 
 export function useClaimSuccessRedirect(
-    riderRedirect: Ref<any>,
-    redirect: Ref<any>,
+    riderRedirect: Ref<RiderRedirectPayload | null | undefined>,
+    redirect: Ref<SuccessRedirectPayload | null | undefined>,
     redirectEndpoint: Ref<string | null | undefined>,
 ) {
-    const compiledRedirect = computed(() => {
-        if (
-            !redirect.value?.show_countdown ||
-            redirect.value?.owner !== 'claim-widget' ||
-            !redirectEndpoint.value
-        ) {
-            return null;
-        }
-
-        return {
-            enabled: true,
-            url: redirectEndpoint.value,
-            delay_seconds: redirect.value.delay_seconds ?? 5,
-            content: 'Redirecting shortly...',
-        };
-    });
-
     const countdownRedirect = computed(() =>
-        riderRedirect.value?.enabled
-            ? riderRedirect.value
-            : compiledRedirect.value,
+        resolveSuccessRedirect(
+            riderRedirect.value,
+            redirect.value,
+            redirectEndpoint.value,
+        )
     );
 
     const hasRedirect = computed(() =>
-        Boolean(countdownRedirect.value?.enabled && redirectEndpoint.value),
+        countdownRedirect.value !== null
     );
 
     return {
-        compiledRedirect,
         countdownRedirect,
         hasRedirect,
     };
