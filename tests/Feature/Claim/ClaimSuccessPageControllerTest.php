@@ -82,3 +82,25 @@ it('exposes claim experience redirect countdown metadata to the success page', f
 
     expect(ClaimExperiencePayload::isClaimWidgetRedirect($claimExperience))->toBeTrue();
 });
+
+it('passes claim experience to success page payload', function () {
+    $this->withoutMiddleware();
+
+    $voucher = issueVoucher();
+
+    $this->getJson(route('x-change.claim.success', [
+        'code' => $voucher->code,
+    ]))->assertOk()
+        ->assertJsonStructure([
+            'voucher' => [
+                'code',
+                'amount',
+                'currency',
+            ],
+            'claimOutcome',
+            'rider',
+            'redirectEndpoint',
+            'claim_experience',
+            'redirect',
+        ]);
+});
