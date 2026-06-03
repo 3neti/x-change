@@ -320,9 +320,10 @@ const legacyRuntimeStages = computed<RawRiderStage[]>(() =>
 );
 
 const runtimeStages = computed<RawRiderStage[]>(() =>
-    compiledRuntimeStages.value.length > 0
-        ? compiledRuntimeStages.value
-        : legacyRuntimeStages.value
+    preferCompiledStages(
+        compiledRuntimeStages.value,
+        legacyRuntimeStages.value,
+    )
 );
 
 const compiledRedirectStages = computed<RawRiderStage[]>(() =>
@@ -335,9 +336,10 @@ const legacyRedirectStages = computed<RawRiderStage[]>(() =>
 );
 
 const redirectStages = computed<RawRiderStage[]>(() =>
-    compiledRedirectStages.value.length > 0
-        ? compiledRedirectStages.value
-        : legacyRedirectStages.value
+    preferCompiledStages(
+        compiledRedirectStages.value,
+        legacyRedirectStages.value,
+    )
 );
 
 const compiledFormFlowPhase = computed<Record<string, any> | null>(() =>
