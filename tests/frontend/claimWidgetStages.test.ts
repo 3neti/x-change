@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveCompiledRiderIntroStages } from '../../resources/js/components/x-change/claimWidgetStages';
+import { resolveCompiledRiderIntroStages, resolveCompiledRuntimeStages, } from '../../resources/js/components/x-change/claimWidgetStages';
 
 describe('claim widget stage resolution', () => {
     it('resolves compiled rider intro visual stages', () => {
@@ -40,5 +40,29 @@ describe('claim widget stage resolution', () => {
     it('returns empty stages when phase is missing', () => {
         expect(resolveCompiledRiderIntroStages(null)).toEqual([]);
         expect(resolveCompiledRiderIntroStages(undefined)).toEqual([]);
+    });
+
+    it('resolves compiled runtime stages', () => {
+        const stages = resolveCompiledRuntimeStages({
+            key: 'runtime',
+            stages: [
+                { key: 'runtime', type: 'message', phase: 'runtime' },
+                { key: 'intro', type: 'message', phase: 'rider_intro' },
+            ],
+        });
+
+        expect(stages.map((stage) => stage.key)).toEqual(['runtime']);
+    });
+
+    it('filters disabled compiled runtime stages', () => {
+        const stages = resolveCompiledRuntimeStages({
+            key: 'runtime',
+            stages: [
+                { key: 'disabled-runtime', type: 'message', phase: 'runtime', enabled: false },
+                { key: 'enabled-runtime', type: 'message', phase: 'runtime' },
+            ],
+        });
+
+        expect(stages.map((stage) => stage.key)).toEqual(['enabled-runtime']);
     });
 });

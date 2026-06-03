@@ -16,3 +16,17 @@ export function resolveCompiledRiderIntroStages(
             )
     );
 }
+
+export function resolveCompiledRuntimeStages(
+    phase: Record<string, any> | null | undefined,
+): RawRiderStage[] {
+    const stages = Array.isArray(phase?.stages)
+        ? phase.stages as RawRiderStage[]
+        : [];
+
+    return stages.filter((stage) =>
+        stage.enabled !== false
+        && stageIsInPhase(stage, 'runtime')
+    );
+}
+

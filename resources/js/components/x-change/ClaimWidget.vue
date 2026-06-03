@@ -25,7 +25,10 @@ import {
     resolveCompiledFormFlowPhase,
 } from '@/components/x-change/compiledFormFlow';
 import { activeClaimExperiencePhase } from '@/components/x-change/claimExperiencePhases';
-import { resolveCompiledRiderIntroStages } from '@/components/x-change/claimWidgetStages';
+import {
+    resolveCompiledRiderIntroStages,
+    resolveCompiledRuntimeStages,
+} from '@/components/x-change/claimWidgetStages';
 
 initializeTheme();
 
@@ -342,11 +345,8 @@ function submit() {
 }
 
 const compiledRuntimeStages = computed<RawRiderStage[]>(() =>
-    compiledPhaseStages('runtime')
-        .filter((stage) =>
-            stage.enabled !== false
-            && isVisualPreviewStage(stage)
-        )
+    resolveCompiledRuntimeStages(compiledPhase('runtime'))
+        .filter(isVisualPreviewStage)
 );
 
 const legacyRuntimeStages = computed<RawRiderStage[]>(() =>
