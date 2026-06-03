@@ -20,6 +20,7 @@ import {
     hasNonZeroVoucherAmount,
     isPendingClaimOutcome,
     resolveSuccessFallbackTitle,
+    shouldRenderSuccessVoucherCodeBadge,
 } from '@/components/x-change/successFallback';
 
 
@@ -71,8 +72,11 @@ const hasRiderMessage = computed(() =>
     Boolean(riderContent.value?.enabled && riderContent.value?.content)
 );
 
-const hasAnyRiderContent = computed(() =>
-    hasSuccessVisualStages.value || hasRiderMessage.value
+const shouldShowVoucherCodeBadge = computed(() =>
+    shouldRenderSuccessVoucherCodeBadge(
+        hasSuccessVisualStages.value,
+        hasRiderMessage.value,
+    )
 );
 
 const {
@@ -166,7 +170,7 @@ const shouldRenderFallback = computed(() =>
                     </div>
 
                     <div
-                        v-if="!hasAnyRiderContent"
+                        v-if="shouldShowVoucherCodeBadge"
                         class="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-4 py-1 font-mono text-sm font-semibold tracking-widest text-primary"
                     >
                         {{ voucher.code }}

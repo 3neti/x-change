@@ -43,3 +43,11 @@ export function resolveSuccessFallbackTitle(
         ? 'Disbursed to your account'
         : 'Pay Code claimed';
 }
+
+export function shouldRenderSuccessVoucherCodeBadge(
+    hasSuccessStages: boolean,
+    hasRiderMessage: boolean,
+): boolean {
+    return !hasSuccessStages
+        && !hasRiderMessage;
+}

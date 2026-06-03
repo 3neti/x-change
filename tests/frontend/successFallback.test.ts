@@ -5,6 +5,7 @@ import {
     isPendingClaimOutcome,
     numericVoucherAmount,
     resolveSuccessFallbackTitle,
+    shouldRenderSuccessVoucherCodeBadge,
 } from '../../resources/js/components/x-change/successFallback';
 
 describe('success fallback', () => {
@@ -74,5 +75,17 @@ describe('success fallback', () => {
             { amount: 0 },
             {},
         )).toBe('Pay Code claimed');
+    });
+
+    it('renders voucher code badge when there are no success stages or rider message', () => {
+        expect(shouldRenderSuccessVoucherCodeBadge(false, false)).toBe(true);
+    });
+
+    it('does not render voucher code badge when success stages exist', () => {
+        expect(shouldRenderSuccessVoucherCodeBadge(true, false)).toBe(false);
+    });
+
+    it('does not render voucher code badge when rider message exists', () => {
+        expect(shouldRenderSuccessVoucherCodeBadge(false, true)).toBe(false);
     });
 });
