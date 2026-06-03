@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveCompiledRiderIntroStages, resolveCompiledRuntimeStages, resolveCompiledRedirectStages,} from '../../resources/js/components/x-change/claimWidgetStages';
+import { resolveCompiledRiderIntroStages, resolveCompiledRuntimeStages, resolveCompiledRedirectStages, isVisualPreviewStage,} from '../../resources/js/components/x-change/claimWidgetStages';
 
 describe('claim widget stage resolution', () => {
     it('resolves compiled rider intro visual stages', () => {
@@ -88,5 +88,10 @@ describe('claim widget stage resolution', () => {
         });
 
         expect(stages.map((stage) => stage.key)).toEqual(['enabled-redirect']);
+    });
+
+    it('detects visual preview stages', () => {
+        expect(isVisualPreviewStage({ key: 'message', type: 'message' } as any)).toBe(true);
+        expect(isVisualPreviewStage({ key: 'redirect', type: 'redirect' } as any)).toBe(false);
     });
 });

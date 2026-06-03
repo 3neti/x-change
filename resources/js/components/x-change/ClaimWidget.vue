@@ -26,6 +26,7 @@ import {
 } from '@/components/x-change/compiledFormFlow';
 import { activeClaimExperiencePhase } from '@/components/x-change/claimExperiencePhases';
 import {
+    isVisualPreviewStage,
     resolveCompiledRedirectStages,
     resolveCompiledRiderIntroStages,
     resolveCompiledRuntimeStages,
@@ -273,10 +274,6 @@ const riderStages = computed<RawRiderStage[]>(() => {
         hydrateInstructionSplashMeta(stage, data)
     );
 });
-
-function isVisualPreviewStage(stage: RawRiderStage): boolean {
-    return ['splash', 'message', 'image', 'link', 'cta'].indexOf(stage.type) >= 0;
-}
 
 function isPreClaimStage(stage: RawRiderStage): boolean {
     return stageIsInPhase(stage, 'pre_claim');

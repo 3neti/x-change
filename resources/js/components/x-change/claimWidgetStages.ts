@@ -42,3 +42,8 @@ export function resolveCompiledRedirectStages(
         && stageIsInPhase(stage, 'redirect')
     );
 }
+
+export function isVisualPreviewStage(stage: RawRiderStage): boolean {
+    return ['splash', 'message', 'image', 'link', 'cta'].includes(stage.type);
+}
+
