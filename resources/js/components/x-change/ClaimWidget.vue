@@ -1,28 +1,23 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
-import { useForm, usePage } from '@inertiajs/vue3';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Spinner } from '@/components/ui/spinner';
 import InputError from '@/components/InputError.vue';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import VoucherInstructionsDisplay from '@/components/x-change/VoucherInstructionsDisplay.vue';
 import VoucherMetadataDisplay from '@/components/x-change/VoucherMetadataDisplay.vue';
 import VoucherStatusStamp from '@/components/x-change/VoucherStatusStamp.vue';
-import { AlertCircle } from 'lucide-vue-next';
-import { useVoucherPreview } from '@/composables/useVoucherPreview';
-import { initializeTheme } from '@/composables/useTheme';
 import RiderRuntimeSequencer from '@/components/x-rider/RiderRuntimeSequencer.vue';
 import type { RawRiderStage } from '@/components/x-rider/types';
-import FormFlowRenderer from '@/components/x-change/FormFlowRenderer.vue';
-import {
-    normalizeCompiledFormFlowPhase,
-    resolveCompiledFormFlowPhase,
-} from '@/components/x-change/compiledFormFlow';
+import { initializeTheme } from '@/composables/useTheme';
+import { useVoucherPreview } from '@/composables/useVoucherPreview';
+import { useForm, usePage } from '@inertiajs/vue3';
+import { AlertCircle } from 'lucide-vue-next';
+import { ref, computed, onMounted } from 'vue';
 import { activeClaimExperiencePhase } from '@/components/x-change/claimExperiencePhases';
 import {
     isVisualPreviewStage,
@@ -34,16 +29,12 @@ import {
     resolveLegacyRuntimeStages,
     preferCompiledStages,
 } from '@/components/x-change/claimWidgetStages';
-import {
-    isCompiledFormValid as validateCompiledForm,
-    missingRequiredCompiledFormFields as resolveMissingRequiredCompiledFormFields,
-} from '@/components/x-change/compiledFormValidation';
-import { resolveCompiledFormSubmitState } from '@/components/x-change/compiledFormSubmitState';
+import { resolveCompiledFormFlowPhase } from '@/components/x-change/compiledFormFlow';
 import { buildCompiledFormPayload } from '@/components/x-change/compiledFormPayload';
 import { resolveCompiledFormSubmitEvent } from '@/components/x-change/compiledFormSubmit';
-import {
-    resolveFormFlowBoundary,
-} from '@/components/x-change/formFlowBoundary';
+import { resolveCompiledFormViewModel } from '@/components/x-change/compiledFormViewModel';
+import { resolveFormFlowBoundary } from '@/components/x-change/formFlowBoundary';
+import FormFlowRenderer from '@/components/x-change/FormFlowRenderer.vue';
 
 initializeTheme();
 
@@ -90,21 +81,36 @@ const currentFormValues = ref<Record<string, unknown>>({});
 
 const isNonActive = computed(() => {
     const s = voucherData.value?.status;
+
     return s === 'redeemed' || s === 'expired';
 });
 
 const statusDate = computed(() => {
-    if (!voucherData.value) return null;
-    if (voucherData.value.status === 'redeemed') return voucherData.value.redeemed_at;
-    if (voucherData.value.status === 'expired') return voucherData.value.expired_at;
+    if (!voucherData.value) {
+        return null;
+    }
+
+    if (voucherData.value.status === 'redeemed') {
+        return voucherData.value.redeemed_at;
+    }
+
+    if (voucherData.value.status === 'expired') {
+        return voucherData.value.expired_at;
+    }
+
     return null;
 });
 
 const isReturningRedeemer = computed(() => {
     try {
         const raw = localStorage.getItem('form_flow_persist_wallet_info');
-        if (!raw) return false;
+
+        if (!raw) {
+            return false;
+        }
+
         const saved = JSON.parse(raw);
+
         return !!saved.mobile;
     } catch {
         return false;
@@ -245,6 +251,7 @@ function uniqueStages(stages: RawRiderStage[]): RawRiderStage[] {
         }
 
         seen.add(key);
+
         return true;
     });
 }
@@ -314,6 +321,7 @@ function submit() {
     form.get('/x/claim', {
         preserveState: (page) => {
             const hasErrors = Object.keys(page.props.errors || {}).length > 0;
+
             return !hasErrors;
         },
         preserveScroll: true,
@@ -360,18 +368,40 @@ const formFlowBoundary = computed(() =>
     resolveFormFlowBoundary(compiledFormFlowPhase.value)
 );
 
+const isSubmittingCompiledForm = ref(false);
+
+const compiledFormViewModel = computed(() =>
+    resolveCompiledFormViewModel({
+        boundary: formFlowBoundary.value,
+        values: currentFormValues.value,
+        submitError: props.compiledFormSubmitError,
+        submitted: props.compiledFormSubmitted,
+        submitting: isSubmittingCompiledForm.value,
+    })
+);
+
 const usesCompiledFormFlow = computed(() =>
-    formFlowBoundary.value.mode === 'compiled'
+    compiledFormViewModel.value.usesCompiledFormFlow
 );
 
 const usesLegacyFormFlow = computed(() =>
-    formFlowBoundary.value.mode === 'legacy'
+    compiledFormViewModel.value.usesLegacyFormFlow
 );
 
 const normalizedCompiledFormFlow = computed(() =>
-    formFlowBoundary.value.mode === 'compiled'
-        ? normalizeCompiledFormFlowPhase(formFlowBoundary.value.phase)
-        : null
+    compiledFormViewModel.value.normalizedCompiledFormFlow
+);
+
+const missingRequiredCompiledFormFields = computed(() =>
+    compiledFormViewModel.value.missingRequiredFields
+);
+
+const isCompiledFormValid = computed(() =>
+    compiledFormViewModel.value.isValid
+);
+
+const compiledFormSubmitState = computed(() =>
+    compiledFormViewModel.value.submitState
 );
 
 function updateCurrentFormValues(values: Record<string, unknown>): void {
@@ -386,20 +416,6 @@ const claimFormPayload = computed(() =>
     )
 );
 
-const missingRequiredCompiledFormFields = computed(() =>
-    resolveMissingRequiredCompiledFormFields(
-        normalizedCompiledFormFlow.value?.fields,
-        currentFormValues.value,
-    )
-);
-
-const isCompiledFormValid = computed(() =>
-    validateCompiledForm(
-        normalizedCompiledFormFlow.value?.fields,
-        currentFormValues.value,
-    )
-);
-
 const emit = defineEmits<{
     'submit:compiled-form': [payload: {
         code: string;
@@ -407,8 +423,6 @@ const emit = defineEmits<{
     }];
     'update:compiled-form-values': [values: Record<string, unknown>];
 }>();
-
-const isSubmittingCompiledForm = ref(false);
 
 function submitCompiledForm(): void {
     const submitEvent = resolveCompiledFormSubmitEvent(
@@ -429,19 +443,12 @@ function submitCompiledForm(): void {
 function submitClaim(): void {
     if (normalizedCompiledFormFlow.value) {
         submitCompiledForm();
+
         return;
     }
 
     submit();
 }
-
-const compiledFormSubmitState = computed(() =>
-    resolveCompiledFormSubmitState({
-        submitError: props.compiledFormSubmitError,
-        submitted: props.compiledFormSubmitted,
-        submitting: isSubmittingCompiledForm.value,
-    })
-);
 
 const claimExperienceDebug = computed(() => {
     if (!props.claimExperience) {
