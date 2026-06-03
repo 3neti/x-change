@@ -11,6 +11,11 @@ import type { RawRiderStage, RiderExperience } from '@/components/x-rider/types'
 import { stageIsInPhase } from '@/components/x-rider/useRiderStagePhase';
 import { useClaimSuccessRedirect } from './useClaimSuccessRedirect';
 import { shouldRenderSuccessRedirectCountdown } from '@/components/x-change/successRedirect';
+import {
+    resolveCompiledSuccessVisualStages,
+    resolveLegacySuccessVisualStages,
+    resolveSuccessVisualStages,
+} from '@/components/x-change/successRider';
 
 defineOptions({ layout: null });
 
@@ -48,72 +53,8 @@ const riderStages = computed<RawRiderStage[]>(() => {
         : [];
 });
 
-function isRedirectStage(stage: RawRiderStage): boolean {
-    return stage.type === 'redirect'
-        || stageIsInPhase(stage, 'redirect');
-}
-
-const legacySuccessVisualStages = computed<RawRiderStage[]>(() => {
-    const stages = riderStages.value.filter((stage) =>
-            stage.enabled !== false
-            && !isRedirectStage(stage)
-            && (
-                stageIsInPhase(stage, 'success')
-                || stageIsInPhase(stage, 'post_claim')
-            )
-    );
-
-    const explicit = stages.filter((stage) =>
-        stage.key !== 'legacy-message'
-    );
-
-    return explicit.length > 0
-        ? explicit
-        : stages.slice(0, 1);
-});
-
-function claimExperiencePhase(key: string): Record<string, any> | null {
-    const phases = Array.isArray(props.claim_experience?.phases)
-        ? props.claim_experience.phases as Record<string, any>[]
-        : [];
-
-    return phases.find((phase) =>
-        phase.key === key
-        && (phase.status ?? 'active') === 'active'
-    ) ?? null;
-}
-
-function claimExperiencePhaseStages(key: string): RawRiderStage[] {
-    const phase = claimExperiencePhase(key);
-    const stages = phase?.stages;
-
-    if (Array.isArray(stages)) {
-        return stages as RawRiderStage[];
-    }
-
-    if (Array.isArray(stages?.stages)) {
-        return stages.stages as RawRiderStage[];
-    }
-
-    return [];
-}
-
-const compiledSuccessVisualStages = computed<RawRiderStage[]>(() =>
-    claimExperiencePhaseStages('success_rider')
-        .filter((stage) =>
-                stage.enabled !== false
-                && !isRedirectStage(stage)
-                && (
-                    stageIsInPhase(stage, 'success')
-                    || stageIsInPhase(stage, 'post_claim')
-                )
-        )
-);
-
 const successVisualStages = computed<RawRiderStage[]>(() =>
-    compiledSuccessVisualStages.value.length > 0
-        ? compiledSuccessVisualStages.value
-        : legacySuccessVisualStages.value
+    resolveSuccessVisualStages(props.claim_experience, props.rider)
 );
 
 const redirectRuntimeStages = computed<RawRiderStage[]>(() => {
