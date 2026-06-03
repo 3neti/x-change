@@ -596,5 +596,35 @@ describe('claim Success redirect countdown rendering', () => {
         expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="countdown-delay"]').text()).toBe('5');
     });
+
+    it('does not render redirect countdown when compiled redirect is owned by x-rider', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                claim_experience: {
+                    ...baseProps.claim_experience,
+                    phases: [
+                        {
+                            key: 'redirect',
+                            owner: 'x-rider',
+                            source: 'claim_experience',
+                            status: 'active',
+                            url: 'https://example.com/after-claim',
+                            delay_seconds: 5,
+                            show_countdown: true,
+                        },
+                    ],
+                },
+                redirect: {
+                    show_countdown: true,
+                    owner: 'x-rider',
+                    delay_seconds: 5,
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="redirect-countdown-region"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(false);
+    });
 });
 
