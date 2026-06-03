@@ -10,6 +10,7 @@ import RiderRuntimeSequencer from '@/components/x-rider/RiderRuntimeSequencer.vu
 import type { RawRiderStage, RiderExperience } from '@/components/x-rider/types';
 import { stageIsInPhase } from '@/components/x-rider/useRiderStagePhase';
 import { useClaimSuccessRedirect } from './useClaimSuccessRedirect';
+import { shouldRenderSuccessRedirectCountdown } from '@/components/x-change/successRedirect';
 
 defineOptions({ layout: null });
 
@@ -155,6 +156,10 @@ const {
     toRef(props, 'redirectEndpoint'),
 );
 
+const shouldShowRedirectCountdown = computed(() =>
+    shouldRenderSuccessRedirectCountdown(props.redirect)
+);
+
 const numericAmount = computed(() => Number(props.voucher.amount ?? 0));
 
 const hasNonZeroAmount = computed(() => numericAmount.value > 0);
@@ -250,7 +255,7 @@ const shouldRenderFallback = computed(() =>
                 />
 
                 <div
-                    v-if="hasRedirect"
+                    v-if="hasRedirect && shouldShowRedirectCountdown"
                     data-testid="redirect-countdown-region"
                     class="mt-6"
                 >
