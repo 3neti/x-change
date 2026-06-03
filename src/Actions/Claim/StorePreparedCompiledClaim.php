@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Actions\Claim;
 
 use LBHurtado\XChange\Data\CompiledClaimPreparationResult;
+use LBHurtado\XChange\Support\Claim\CompiledClaimSessionKeys;
 
 final class StorePreparedCompiledClaim
 {
@@ -16,7 +17,7 @@ final class StorePreparedCompiledClaim
             'inputs' => $prepared->submission?->inputs ?? [],
         ];
 
-        session()->flash('compiled_claim_prepared', $payload);
+        session()->flash(CompiledClaimSessionKeys::PREPARED, $payload);
 
         return $payload;
     }

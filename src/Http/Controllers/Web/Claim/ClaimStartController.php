@@ -19,6 +19,7 @@ use LBHurtado\XChange\Actions\Claim\StorePreparedCompiledClaim;
 use LBHurtado\XChange\Actions\Claim\SubmitCompiledClaimCompletion;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
+use LBHurtado\XChange\Support\Claim\CompiledClaimSessionKeys;
 
 class ClaimStartController extends Controller
 {
@@ -56,7 +57,7 @@ class ClaimStartController extends Controller
                 ]);
             }
 
-            session()->forget('compiled_claim_submission');
+            session()->forget(CompiledClaimSessionKeys::SUBMISSION);
 
             return redirect()->route('x-change.claim.success', [
                 'code' => $prepared->submission?->code,

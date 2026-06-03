@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Actions\Claim;
 
 use LBHurtado\XChange\Data\CompiledClaimSubmissionData;
+use LBHurtado\XChange\Support\Claim\CompiledClaimSessionKeys;
 
 final class ReadCompiledClaimSubmission
 {
     public function handle(bool $forget = false): ?CompiledClaimSubmissionData
     {
-        $payload = session()->get('compiled_claim_submission');
+        $payload = session()->get(CompiledClaimSessionKeys::SUBMISSION);
 
         if (! is_array($payload)) {
             return null;
@@ -23,7 +24,7 @@ final class ReadCompiledClaimSubmission
         $submission = CompiledClaimSubmissionData::fromValidated($payload);
 
         if ($forget) {
-            session()->forget('compiled_claim_submission');
+            session()->forget(CompiledClaimSessionKeys::SUBMISSION);
         }
 
         return $submission;

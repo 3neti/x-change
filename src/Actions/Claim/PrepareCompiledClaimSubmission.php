@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Actions\Claim;
 
 use Illuminate\Http\Request;
 use LBHurtado\XChange\Data\CompiledClaimSubmissionData;
+use LBHurtado\XChange\Support\Claim\CompiledClaimSessionKeys;
 
 final class PrepareCompiledClaimSubmission
 {
@@ -14,7 +15,7 @@ final class PrepareCompiledClaimSubmission
         $submission = CompiledClaimSubmissionData::fromValidated($validated);
 
         session()->put(
-            'compiled_claim_submission',
+            CompiledClaimSessionKeys::SUBMISSION,
             $submission->toSessionPayload()
         );
 
