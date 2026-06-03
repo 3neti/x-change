@@ -15,6 +15,13 @@ import {
     resolveSuccessVisualStages,
     shouldRenderFallbackSuccess,
 } from '@/components/x-change/successRider';
+import {
+    formatSuccessVoucherAmount,
+    hasNonZeroVoucherAmount,
+    isPendingClaimOutcome,
+    resolveSuccessFallbackTitle,
+} from '@/components/x-change/successFallback';
+
 
 defineOptions({ layout: null });
 
@@ -81,32 +88,27 @@ const shouldShowRedirectCountdown = computed(() =>
     shouldRenderSuccessRedirectCountdown(props.redirect)
 );
 
-const numericAmount = computed(() => Number(props.voucher.amount ?? 0));
-
-const hasNonZeroAmount = computed(() => numericAmount.value > 0);
+const hasNonZeroAmount = computed(() =>
+    hasNonZeroVoucherAmount(props.voucher)
+);
 
 const formattedAmount = computed(() =>
-    props.voucher.formatted_amount
-    ?? props.voucher.formattedAmount
-    ?? (hasNonZeroAmount.value
-        ? `${props.voucher.currency ?? ''} ${numericAmount.value.toLocaleString()}`
-        : '')
+    formatSuccessVoucherAmount(props.voucher)
 );
 
 const isPending = computed(() =>
-    props.claimOutcome === 'accepted_pending'
-    || props.rider?.state === 'accepted_pending'
+    isPendingClaimOutcome({
+        claimOutcome: props.claimOutcome,
+        riderState: props.rider?.state,
+    })
 );
 
-const fallbackTitle = computed(() => {
-    if (isPending.value) {
-        return 'Your claim is being processed';
-    }
-
-    return hasNonZeroAmount.value
-        ? 'Disbursed to your account'
-        : 'Pay Code claimed';
-});
+const fallbackTitle = computed(() =>
+    resolveSuccessFallbackTitle(props.voucher, {
+        claimOutcome: props.claimOutcome,
+        riderState: props.rider?.state,
+    })
+);
 
 const shouldRenderFallback = computed(() =>
     shouldRenderFallbackSuccess(
