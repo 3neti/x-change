@@ -20,6 +20,7 @@ import {
     hasNonZeroVoucherAmount,
     isPendingClaimOutcome,
     resolveSuccessFallbackTitle,
+    shouldRenderSuccessRiderMessage,
     shouldRenderSuccessVoucherCodeBadge,
 } from '@/components/x-change/successFallback';
 
@@ -69,7 +70,7 @@ const hasRedirectRuntimeStages = computed(() =>
 );
 
 const hasRiderMessage = computed(() =>
-    Boolean(riderContent.value?.enabled && riderContent.value?.content)
+    shouldRenderSuccessRiderMessage(riderContent.value)
 );
 
 const shouldShowVoucherCodeBadge = computed(() =>

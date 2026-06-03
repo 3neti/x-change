@@ -6,6 +6,7 @@ import {
     numericVoucherAmount,
     resolveSuccessFallbackTitle,
     shouldRenderSuccessVoucherCodeBadge,
+    shouldRenderSuccessRiderMessage,
 } from '../../resources/js/components/x-change/successFallback';
 
 describe('success fallback', () => {
@@ -87,5 +88,31 @@ describe('success fallback', () => {
 
     it('does not render voucher code badge when rider message exists', () => {
         expect(shouldRenderSuccessVoucherCodeBadge(false, true)).toBe(false);
+    });
+
+    it('renders rider message when enabled with content', () => {
+        expect(shouldRenderSuccessRiderMessage({
+            enabled: true,
+            content: 'Claim successful.',
+        })).toBe(true);
+    });
+
+    it('does not render rider message when disabled', () => {
+        expect(shouldRenderSuccessRiderMessage({
+            enabled: false,
+            content: 'Claim successful.',
+        })).toBe(false);
+    });
+
+    it('does not render rider message without content', () => {
+        expect(shouldRenderSuccessRiderMessage({
+            enabled: true,
+            content: '',
+        })).toBe(false);
+    });
+
+    it('does not render rider message when missing', () => {
+        expect(shouldRenderSuccessRiderMessage(null)).toBe(false);
+        expect(shouldRenderSuccessRiderMessage(undefined)).toBe(false);
     });
 });

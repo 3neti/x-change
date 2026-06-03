@@ -51,3 +51,14 @@ export function shouldRenderSuccessVoucherCodeBadge(
     return !hasSuccessStages
         && !hasRiderMessage;
 }
+
+export type SuccessRiderMessagePayload = {
+    enabled?: boolean | null;
+    content?: unknown;
+};
+
+export function shouldRenderSuccessRiderMessage(
+    riderContent: SuccessRiderMessagePayload | null | undefined,
+): boolean {
+    return Boolean(riderContent?.enabled && riderContent?.content);
+}
