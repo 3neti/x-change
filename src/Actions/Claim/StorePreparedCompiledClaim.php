@@ -5,20 +5,30 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Actions\Claim;
 
 use LBHurtado\XChange\Data\CompiledClaimPreparationResult;
+use LBHurtado\XChange\Data\PreparedCompiledClaimData;
 use LBHurtado\XChange\Support\Claim\CompiledClaimSessionKeys;
 
 final class StorePreparedCompiledClaim
 {
-    public function handle(CompiledClaimPreparationResult $prepared): array
+    public function handle(CompiledClaimPreparationResult $result): array
     {
         $payload = [
-            'code' => $prepared->submission?->code,
-            'voucher_id' => $prepared->voucher?->getKey(),
-            'inputs' => $prepared->submission?->inputs ?? [],
+            'code' => $result->submission?->code,
+            'voucher_id' => $result->voucher?->getKey(),
+            'inputs' => $result->submission?->inputs ?? [],
         ];
 
-        session()->flash(CompiledClaimSessionKeys::PREPARED, $payload);
+        $prepared = PreparedCompiledClaimData::fromSessionPayload($payload);
 
-        return $payload;
+        if (! $prepared) {
+            return [];
+        }
+
+        session()->flash(
+            CompiledClaimSessionKeys::PREPARED,
+            $prepared->toArray()
+        );
+
+        return $prepared->toArray();
     }
 }
