@@ -38,6 +38,7 @@ import {
     isCompiledFormValid as validateCompiledForm,
     missingRequiredCompiledFormFields as resolveMissingRequiredCompiledFormFields,
 } from '@/components/x-change/compiledFormValidation';
+import { resolveCompiledFormSubmitState } from '@/components/x-change/compiledFormSubmitState';
 
 initializeTheme();
 
@@ -436,17 +437,13 @@ function submitClaim(): void {
     submit();
 }
 
-const compiledFormSubmitState = computed(() => {
-    if (props.compiledFormSubmitError) {
-        return 'failed';
-    }
-
-    if (props.compiledFormSubmitted) {
-        return 'submitted';
-    }
-
-    return isSubmittingCompiledForm.value ? 'submitting' : 'idle';
-});
+const compiledFormSubmitState = computed(() =>
+    resolveCompiledFormSubmitState({
+        submitError: props.compiledFormSubmitError,
+        submitted: props.compiledFormSubmitted,
+        submitting: isSubmittingCompiledForm.value,
+    })
+);
 
 const claimExperienceDebug = computed(() => {
     if (!props.claimExperience) {
