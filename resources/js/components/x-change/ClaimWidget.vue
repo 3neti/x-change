@@ -20,7 +20,10 @@ import RiderRuntimeSequencer from '@/components/x-rider/RiderRuntimeSequencer.vu
 import type { RawRiderStage } from '@/components/x-rider/types';
 import { stageIsInPhase } from '@/components/x-rider/useRiderStagePhase';
 import FormFlowRenderer from '@/components/x-change/FormFlowRenderer.vue';
-import { normalizeCompiledFormFlowPhase } from '@/components/x-change/compiledFormFlow';
+import {
+    normalizeCompiledFormFlowPhase,
+    resolveCompiledFormFlowPhase,
+} from '@/components/x-change/compiledFormFlow';
 
 initializeTheme();
 
@@ -391,7 +394,7 @@ const redirectStages = computed<RawRiderStage[]>(() =>
 );
 
 const compiledFormFlowPhase = computed<Record<string, any> | null>(() =>
-    compiledPhase('form_flow')
+    resolveCompiledFormFlowPhase(props.claimExperience)
 );
 
 type FormFlowBoundaryMode = 'compiled' | 'legacy';
