@@ -37,7 +37,6 @@ import {
 import {
     isCompiledFormValid as validateCompiledForm,
     missingRequiredCompiledFormFields as resolveMissingRequiredCompiledFormFields,
-    requiredCompiledFormFields as resolveRequiredCompiledFormFields,
 } from '@/components/x-change/compiledFormValidation';
 
 initializeTheme();
@@ -393,10 +392,6 @@ const claimFormPayload = computed(() => ({
     code: props.initialCode,
     values: currentFormValues.value,
 }));
-
-const requiredCompiledFormFields = computed(() =>
-    resolveRequiredCompiledFormFields(normalizedCompiledFormFlow.value?.fields)
-);
 
 const missingRequiredCompiledFormFields = computed(() =>
     resolveMissingRequiredCompiledFormFields(
