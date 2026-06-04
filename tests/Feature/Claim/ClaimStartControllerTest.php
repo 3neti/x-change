@@ -7,6 +7,7 @@ use LBHurtado\FormFlowManager\Services\DriverService;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
+use LBHurtado\XChange\Support\Claim\CompiledClaimSessionKeys;
 
 function claimVoucherWithRiderSplash(): Voucher
 {
@@ -258,3 +259,59 @@ it('keeps empty legacy claim entry rendering through get request', function () {
             ->where('claim_experience', null)
         );
 })->skip('Pending UI-agnostic ClaimStartController response boundary.');
+
+it('does not store prepared compiled claim when voucher is missing', function () {
+    $this->withoutMiddleware();
+
+    $this->post('/x/claim', [
+        'mode' => 'compiled_form',
+        'code' => 'MISSING-CODE',
+        'inputs' => [
+            'first_name' => 'Lester',
+        ],
+    ])->assertSessionHasErrors('code');
+
+    expect(session()->has(CompiledClaimSessionKeys::PREPARED))->toBeFalse()
+        ->and(session()->has('compiled_claim_completion_submitted'))->toBeFalse();
+});
+
+it('does not store prepared compiled claim when voucher is already redeemed', function () {
+    $this->withoutMiddleware();
+
+    $voucher = issueVoucher();
+    $voucher->forceFill([
+        'redeemed_at' => now(),
+    ])->save();
+
+    $this->post('/x/claim', [
+        'mode' => 'compiled_form',
+        'code' => $voucher->code,
+        'inputs' => [
+            'first_name' => 'Lester',
+        ],
+    ])->assertSessionHasErrors('code');
+
+    expect(session()->has(CompiledClaimSessionKeys::PREPARED))->toBeFalse()
+        ->and(session()->has('compiled_claim_completion_submitted'))->toBeFalse();
+});
+
+it('does not store prepared compiled claim when voucher is expired', function () {
+    $this->withoutMiddleware();
+
+    $voucher = issueVoucher();
+    $voucher->forceFill([
+        'expires_at' => now()->subMinute(),
+    ])->save();
+
+    $this->post('/x/claim', [
+        'mode' => 'compiled_form',
+        'code' => $voucher->code,
+        'inputs' => [
+            'first_name' => 'Lester',
+        ],
+    ])->assertSessionHasErrors('code');
+
+    expect(session()->has(CompiledClaimSessionKeys::PREPARED))->toBeFalse()
+        ->and(session()->has('compiled_claim_completion_submitted'))->toBeFalse();
+});
+
