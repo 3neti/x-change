@@ -336,3 +336,26 @@ it('routes compiled form claim to success without redeeming the voucher yet', fu
 
     expect($voucher->redeemed_at)->toBeNull();
 });
+
+it('submits the current compiled claim completion payload shape', function () {
+    $this->withoutMiddleware();
+
+    $voucher = issueVoucher();
+
+    $this->post('/x/claim', [
+        'mode' => 'compiled_form',
+        'code' => $voucher->code,
+        'inputs' => [
+            'first_name' => 'Lester',
+        ],
+    ]);
+
+    expect(session('compiled_claim_completion_submitted'))->toBe([
+        'source' => 'compiled_claim',
+        'code' => $voucher->code,
+        'voucher_id' => $voucher->getKey(),
+        'inputs' => [
+            'first_name' => 'Lester',
+        ],
+    ]);
+});
