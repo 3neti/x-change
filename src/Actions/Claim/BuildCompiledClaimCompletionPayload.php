@@ -20,7 +20,7 @@ final class BuildCompiledClaimCompletionPayload
         }
 
         return $this->injectInputs->handle($prepared, [
-            'source' => 'compiled_claim',
+            'source' => 'compiled_form',
         ]);
     }
 }

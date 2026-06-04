@@ -16,7 +16,7 @@ it('builds compiled claim completion payload', function () {
     $payload = app(SubmitCompiledClaimCompletion::class)->handle();
 
     expect($payload)->toBe([
-        'source' => 'compiled_claim',
+        'source' => 'compiled_form',
         'code' => 'TEST123',
         'voucher_id' => 123,
         'inputs' => [
@@ -67,7 +67,7 @@ it('submits the current compiled claim completion payload shape', function () {
     $payload = app(SubmitCompiledClaimCompletion::class)->handle();
 
     expect($payload)->toBe([
-        'source' => 'compiled_claim',
+        'source' => 'compiled_form',
         'code' => 'TEST123',
         'voucher_id' => 123,
         'inputs' => [
