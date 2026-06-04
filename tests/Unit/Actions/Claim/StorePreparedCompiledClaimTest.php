@@ -75,3 +75,23 @@ it('does not store invalid prepared compiled claim payload', function () {
             session()->has(CompiledClaimSessionKeys::PREPARED)
         )->toBeFalse();
 });
+
+it('does not store invalid prepared compiled claim result', function () {
+    $submission = new CompiledClaimSubmissionData(
+        code: 'TEST123',
+        inputs: [
+            'first_name' => 'Lester',
+        ],
+    );
+
+    $result = CompiledClaimPreparationResult::invalid(
+        submission: $submission,
+        voucher: null,
+        errorMessage: 'Invalid Pay Code.',
+    );
+
+    $payload = app(StorePreparedCompiledClaim::class)->handle($result);
+
+    expect($payload)->toBe([])
+        ->and(session()->has(CompiledClaimSessionKeys::PREPARED))->toBeFalse();
+});
