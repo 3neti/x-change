@@ -315,3 +315,24 @@ it('does not store prepared compiled claim when voucher is expired', function ()
         ->and(session()->has('compiled_claim_completion_submitted'))->toBeFalse();
 });
 
+it('routes compiled form claim to success without redeeming the voucher yet', function () {
+    $this->withoutMiddleware();
+
+    $voucher = issueVoucher();
+
+    $response = $this->post('/x/claim', [
+        'mode' => 'compiled_form',
+        'code' => $voucher->code,
+        'inputs' => [
+            'first_name' => 'Lester',
+        ],
+    ]);
+
+    $response->assertRedirect(route('x-change.claim.success', [
+        'code' => $voucher->code,
+    ]));
+
+    $voucher->refresh();
+
+    expect($voucher->redeemed_at)->toBeNull();
+});
