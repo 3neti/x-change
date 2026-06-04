@@ -12,6 +12,10 @@ final class StorePreparedCompiledClaim
 {
     public function handle(CompiledClaimPreparationResult $result): array
     {
+        if (! $result->isValid()) {
+            return [];
+        }
+
         $payload = [
             'code' => $result->submission?->code,
             'voucher_id' => $result->voucher?->getKey(),
