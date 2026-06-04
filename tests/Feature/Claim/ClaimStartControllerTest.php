@@ -6,6 +6,7 @@ use LBHurtado\FormFlowManager\Data\FormFlowInstructionsData;
 use LBHurtado\FormFlowManager\Services\DriverService;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Claim\CompiledClaimSessionKeys;
 
@@ -337,3 +338,27 @@ it('routes compiled form claim to success without redeeming the voucher yet', fu
     expect($voucher->redeemed_at)->toBeNull();
 });
 
+it('does not use SubmitPayCodeClaim during compiled form success routing', function () {
+    $this->withoutMiddleware();
+
+    $voucher = issueVoucher();
+
+    $submitAction = Mockery::mock(SubmitPayCodeClaim::class);
+    $submitAction->shouldNotReceive('handle');
+
+    $this->app->instance(SubmitPayCodeClaim::class, $submitAction);
+
+    $this->post('/x/claim', [
+        'mode' => 'compiled_form',
+        'code' => $voucher->code,
+        'inputs' => [
+            'first_name' => 'Lester',
+        ],
+    ])->assertRedirect(route('x-change.claim.success', [
+        'code' => $voucher->code,
+    ]));
+
+    $voucher->refresh();
+
+    expect($voucher->redeemed_at)->toBeNull();
+});
