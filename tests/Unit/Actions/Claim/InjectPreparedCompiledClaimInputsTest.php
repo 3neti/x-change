@@ -49,3 +49,26 @@ it('preserves existing state while injecting prepared compiled claim inputs', fu
         ],
     ]);
 });
+
+it('injects prepared compiled claim data into a flat completion payload', function () {
+    $prepared = new PreparedCompiledClaimData(
+        code: 'TEST123',
+        voucherId: 123,
+        inputs: [
+            'first_name' => 'Lester',
+        ],
+    );
+
+    $payload = app(InjectPreparedCompiledClaimInputs::class)->handle($prepared, [
+        'source' => 'compiled_form',
+    ]);
+
+    expect($payload)->toBe([
+        'source' => 'compiled_form',
+        'code' => 'TEST123',
+        'voucher_id' => 123,
+        'inputs' => [
+            'first_name' => 'Lester',
+        ],
+    ])->and($payload)->not->toHaveKey('compiled_claim');
+});
