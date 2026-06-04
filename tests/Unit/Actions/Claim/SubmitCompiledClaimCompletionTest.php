@@ -1,7 +1,6 @@
 <?php
 
 use LBHurtado\XChange\Actions\Claim\SubmitCompiledClaimCompletion;
-use LBHurtado\XChange\Data\PreparedCompiledClaimData;
 use LBHurtado\XChange\Support\Claim\CompiledClaimSessionKeys;
 
 it('builds compiled claim completion payload', function () {
@@ -21,13 +20,6 @@ it('builds compiled claim completion payload', function () {
         'voucher_id' => 123,
         'inputs' => [
             'first_name' => 'Lester',
-        ],
-        'compiled_claim' => [
-            'code' => 'TEST123',
-            'voucher_id' => 123,
-            'inputs' => [
-                'first_name' => 'Lester',
-            ],
         ],
     ]);
 });
@@ -53,8 +45,6 @@ it('can forget prepared compiled claim after submitting completion payload', fun
         ->and(session()->has('compiled_claim_prepared'))->toBeFalse();
 });
 
-
-
 it('submits the current compiled claim completion payload shape', function () {
     session()->put(CompiledClaimSessionKeys::PREPARED, [
         'code' => 'TEST123',
@@ -72,13 +62,6 @@ it('submits the current compiled claim completion payload shape', function () {
         'voucher_id' => 123,
         'inputs' => [
             'first_name' => 'Lester',
-        ],
-        'compiled_claim' => [
-            'code' => 'TEST123',
-            'voucher_id' => 123,
-            'inputs' => [
-                'first_name' => 'Lester',
-            ],
         ],
     ]);
 });

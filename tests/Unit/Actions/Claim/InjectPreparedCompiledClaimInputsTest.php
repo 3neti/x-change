@@ -22,14 +22,6 @@ it('injects prepared compiled claim inputs into state', function () {
             'first_name' => 'Lester',
             'email' => 'lester@example.com',
         ],
-        'compiled_claim' => [
-            'code' => 'TEST123',
-            'voucher_id' => 123,
-            'inputs' => [
-                'first_name' => 'Lester',
-                'email' => 'lester@example.com',
-            ],
-        ],
     ]);
 });
 
@@ -54,13 +46,6 @@ it('preserves existing state while injecting prepared compiled claim inputs', fu
         'voucher_id' => 123,
         'inputs' => [
             'first_name' => 'Lester',
-        ],
-        'compiled_claim' => [
-            'code' => 'TEST123',
-            'voucher_id' => 123,
-            'inputs' => [
-                'first_name' => 'Lester',
-            ],
         ],
     ]);
 });

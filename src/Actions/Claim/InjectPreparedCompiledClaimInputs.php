@@ -14,11 +14,6 @@ final class InjectPreparedCompiledClaimInputs
             'code' => $prepared->code,
             'voucher_id' => $prepared->voucherId,
             'inputs' => $prepared->inputs,
-            'compiled_claim' => [
-                'code' => $prepared->code,
-                'voucher_id' => $prepared->voucherId,
-                'inputs' => $prepared->inputs,
-            ],
         ]);
     }
 }
