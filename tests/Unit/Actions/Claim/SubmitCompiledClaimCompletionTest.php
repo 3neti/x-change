@@ -88,3 +88,17 @@ it('submits completion payload without mutating voucher redemption state', funct
     ])
         ->and($voucher->redeemed_at)->toBeNull();
 });
+
+it('does not include prepared timestamp until there is an operational consumer', function () {
+    session()->put(CompiledClaimSessionKeys::PREPARED, [
+        'code' => 'TEST123',
+        'voucher_id' => 123,
+        'inputs' => [
+            'first_name' => 'Lester',
+        ],
+    ]);
+
+    $payload = app(SubmitCompiledClaimCompletion::class)->handle();
+
+    expect($payload)->not->toHaveKey('prepared_at');
+});
