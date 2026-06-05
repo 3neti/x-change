@@ -178,8 +178,11 @@ describe('ClaimWidget compiled form flow rendering', () => {
         });
 
         expect(wrapper.text()).not.toContain('compiled-form-flow-stage');
-        expect(wrapper.find('[data-testid="compiled-form-flow-boundary"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="legacy-form-flow-boundary"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="compiled-form-flow-visible-region"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="form-flow-renderer"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="claim-widget-form-flow-boundary-region"]').classes())
+            .not
+            .toContain('sr-only');
     });
 
     it('ignores inactive compiled form_flow phase', () => {
@@ -208,8 +211,10 @@ describe('ClaimWidget compiled form flow rendering', () => {
         });
 
         expect(wrapper.text()).not.toContain('compiled-form-flow-stage');
-        expect(wrapper.find('[data-testid="compiled-form-flow-boundary"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="legacy-form-flow-boundary"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="compiled-form-flow-visible-region"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="form-flow-renderer"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="claim-widget-form-flow-boundary-region"]').classes())
+            .toContain('sr-only');
     });
 
     it('uses legacy form flow boundary when compiled form_flow phase is absent', () => {
@@ -230,11 +235,13 @@ describe('ClaimWidget compiled form flow rendering', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="compiled-form-flow-boundary"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="legacy-form-flow-boundary"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="compiled-form-flow-visible-region"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="form-flow-renderer"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="claim-widget-form-flow-boundary-region"]').classes())
+            .toContain('sr-only');
     });
 
-    it('renders form flow ownership markers inside a dedicated boundary region', () => {
+    it('renders compiled form flow inside a dedicated visible boundary region', () => {
         const wrapper = mount(ClaimWidget, {
             props: {
                 initialCode: 'TEST123',
@@ -253,7 +260,8 @@ describe('ClaimWidget compiled form flow rendering', () => {
         });
 
         expect(wrapper.find('[data-testid="claim-widget-form-flow-boundary-region"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="claim-widget-form-flow-boundary-region"] [data-testid="compiled-form-flow-boundary"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="compiled-form-flow-visible-region"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="form-flow-renderer"]').exists()).toBe(true);
     });
 
     it('selects compiled form flow mode when active compiled form_flow exists', () => {
@@ -274,8 +282,11 @@ describe('ClaimWidget compiled form flow rendering', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="compiled-form-flow-boundary"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="legacy-form-flow-boundary"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="compiled-form-flow-visible-region"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="form-flow-renderer"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="claim-widget-form-flow-boundary-region"]').classes())
+            .not
+            .toContain('sr-only');
     });
 
     it('hands active compiled form_flow phase to FormFlowRenderer placeholder', () => {
@@ -297,8 +308,10 @@ describe('ClaimWidget compiled form flow rendering', () => {
         });
 
         expect(wrapper.find('[data-testid="form-flow-renderer"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="compiled-form-flow-boundary"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="legacy-form-flow-boundary"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="compiled-form-flow-visible-region"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="claim-widget-form-flow-boundary-region"]').classes())
+            .not
+            .toContain('sr-only');
     });
 
     it('does not render FormFlowRenderer placeholder for legacy form flow mode', () => {
@@ -312,8 +325,10 @@ describe('ClaimWidget compiled form flow rendering', () => {
         });
 
         expect(wrapper.find('[data-testid="form-flow-renderer"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="compiled-form-flow-boundary"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="legacy-form-flow-boundary"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="compiled-form-flow-visible-region"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="form-flow-renderer"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="claim-widget-form-flow-boundary-region"]').classes())
+            .toContain('sr-only');
     });
 
     it('normalizes compiled form_flow phase before handoff to FormFlowRenderer', () => {

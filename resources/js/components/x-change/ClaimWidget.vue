@@ -647,20 +647,6 @@ if (import.meta.env.DEV && claimExperienceDebug.value) {
             </Card>
 
             <div
-                v-if="usesCompiledFormFlow"
-                data-testid="compiled-form-flow-boundary"
-            >
-                compiled form flow boundary
-            </div>
-
-            <div
-                v-if="usesLegacyFormFlow"
-                data-testid="legacy-form-flow-boundary"
-            >
-                legacy form flow boundary
-            </div>
-
-            <div
                 data-testid="claim-widget-submit-state"
             >
                 {{ compiledFormSubmitState }}
