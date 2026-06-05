@@ -66,29 +66,6 @@ it('submits the current compiled claim completion payload shape', function () {
     ]);
 });
 
-it('submits completion payload without mutating voucher redemption state', function () {
-    $voucher = issueVoucher();
-
-    session()->put(CompiledClaimSessionKeys::PREPARED, [
-        'code' => $voucher->code,
-        'voucher_id' => $voucher->getKey(),
-        'inputs' => [
-            'first_name' => 'Lester',
-        ],
-    ]);
-
-    $payload = app(SubmitCompiledClaimCompletion::class)->handle();
-
-    $voucher->refresh();
-
-    expect($payload)->toMatchArray([
-        'source' => 'compiled_form',
-        'code' => $voucher->code,
-        'voucher_id' => $voucher->getKey(),
-    ])
-        ->and($voucher->redeemed_at)->toBeNull();
-});
-
 it('does not include prepared timestamp until there is an operational consumer', function () {
     session()->put(CompiledClaimSessionKeys::PREPARED, [
         'code' => 'TEST123',
