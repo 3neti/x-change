@@ -81,3 +81,67 @@ it('syncs compiled form claim evidence before submitting the claim', function ()
         ->and($result->status)->toBe('success')
         ->and($order)->toBe(['sync', 'submit']);
 });
+
+it('bubbles up evidence sync failures before submitting the claim', function () {
+    $voucher = issueVoucher();
+
+    $prepared = new PreparedCompiledClaimData(
+        code: $voucher->code,
+        voucherId: $voucher->getKey(),
+        inputs: [
+            'mobile' => '09173011987',
+        ],
+    );
+
+    $evidence = Mockery::mock(ClaimEvidenceSynchronizer::class);
+    $evidence
+        ->shouldReceive('sync')
+        ->once()
+        ->andThrow(new RuntimeException('Evidence sync failed.'));
+
+    $submitPayCodeClaim = Mockery::mock(SubmitPayCodeClaim::class);
+    $submitPayCodeClaim
+        ->shouldNotReceive('handle');
+
+    $action = new SubmitCompiledFormClaim(
+        new BuildCompiledFormClaimPayload,
+        $evidence,
+        $submitPayCodeClaim,
+    );
+
+    expect(fn () => $action->handle($voucher, $prepared))
+        ->toThrow(RuntimeException::class, 'Evidence sync failed.');
+});
+
+it('bubbles up redemption submission failures', function () {
+    $voucher = issueVoucher();
+
+    $prepared = new PreparedCompiledClaimData(
+        code: $voucher->code,
+        voucherId: $voucher->getKey(),
+        inputs: [
+            'mobile' => '09173011987',
+        ],
+    );
+
+    $evidence = Mockery::mock(ClaimEvidenceSynchronizer::class);
+    $evidence
+        ->shouldReceive('sync')
+        ->once();
+
+    $submitPayCodeClaim = Mockery::mock(SubmitPayCodeClaim::class);
+    $submitPayCodeClaim
+        ->shouldReceive('handle')
+        ->once()
+        ->andThrow(new RuntimeException('Compiled claim failed.'));
+
+    $action = new SubmitCompiledFormClaim(
+        new BuildCompiledFormClaimPayload,
+        $evidence,
+        $submitPayCodeClaim,
+    );
+
+    expect(fn () => $action->handle($voucher, $prepared))
+        ->toThrow(RuntimeException::class, 'Compiled claim failed.');
+});
+
