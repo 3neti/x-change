@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Actions\Claim;
 
+/**
+ * Legacy/supporting action for building the compiled-form handoff payload.
+ *
+ * The active compiled-form redemption path goes through SubmitCompiledFormClaim,
+ * which builds the payload, syncs evidence, and delegates to SubmitPayCodeClaim.
+ */
 final class SubmitCompiledClaimCompletion
 {
     public function __construct(
