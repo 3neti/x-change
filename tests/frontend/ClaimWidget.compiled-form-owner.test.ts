@@ -41,83 +41,86 @@ vi.mock('@inertiajs/vue3', () => ({
 
 import ClaimWidget from '../../resources/js/components/x-change/ClaimWidget.vue';
 
+function mountCompiledFormOwner() {
+    const Owner = defineComponent({
+        components: { ClaimWidget },
+        setup() {
+            const payload = ref<Record<string, unknown> | null>(null);
+            const submissionPayload = ref<Record<string, unknown> | null>(null);
+            const compiledFormSubmitted = ref(false);
+            const compiledFormSubmitError = ref<string | null>(null);
+
+            function capturePayload(value: CompiledClaimFormPayload) {
+                payload.value = value;
+                submissionPayload.value = toCompiledClaimFormSubmissionPayload(value);
+
+                submitCompiledClaimForm(value, {
+                    onSuccess: () => {
+                        compiledFormSubmitted.value = true;
+                    },
+                    onError: () => {
+                        compiledFormSubmitError.value = 'Submission failed.';
+                    },
+                });
+            }
+
+            return {
+                payload,
+                submissionPayload,
+                compiledFormSubmitted,
+                compiledFormSubmitError,
+                capturePayload,
+            };
+        },
+        template: `
+            <ClaimWidget
+                initial-code="TEST123"
+                :claim-experience="{
+                    phases: [
+                        {
+                            key: 'form_flow',
+                            owner: 'form-flow',
+                            source: 'claim_experience',
+                            status: 'active',
+                            fields: [
+                                {
+                                    key: 'first_name',
+                                    type: 'text',
+                                    label: 'First Name',
+                                    required: true,
+                                },
+                            ],
+                            values: {
+                                first_name: 'Lester',
+                            },
+                            stages: [],
+                        },
+                    ],
+                }"
+                :compiled-form-submitted="compiledFormSubmitted"
+                :compiled-form-submit-error="compiledFormSubmitError"
+                @submit:compiled-form="capturePayload"
+            />
+
+            <pre data-testid="owner-captured-payload">{{ JSON.stringify(payload, null, 2) }}</pre>
+            <pre data-testid="owner-submission-payload">{{ JSON.stringify(submissionPayload, null, 2) }}</pre>
+            <pre data-testid="owner-submitted">{{ JSON.stringify(compiledFormSubmitted) }}</pre>
+            <pre data-testid="owner-submit-error">{{ JSON.stringify(compiledFormSubmitError) }}</pre>
+        `,
+    });
+
+    return mount(Owner);
+}
+
 beforeEach(() => {
     post.mockClear();
 });
 
 describe('ClaimWidget compiled form owner boundary', () => {
     it('allows an owner component to capture compiled form submit payload', async () => {
-        const Owner = defineComponent({
-            components: { ClaimWidget },
-            setup() {
-                const payload = ref<Record<string, unknown> | null>(null);
-                const submissionPayload = ref<Record<string, unknown> | null>(null);
-                const compiledFormSubmitted = ref(false);
-                const compiledFormSubmitError = ref<string | null>(null);
-
-                function capturePayload(value: CompiledClaimFormPayload) {
-                    payload.value = value;
-                    submissionPayload.value = toCompiledClaimFormSubmissionPayload(value);
-
-                    submitCompiledClaimForm(value, {
-                        onSuccess: () => {
-                            compiledFormSubmitted.value = true;
-                        },
-                        onError: () => {
-                            compiledFormSubmitError.value = 'Submission failed.';
-                        },
-                    });
-                }
-
-                return {
-                    payload,
-                    submissionPayload,
-                    compiledFormSubmitted,
-                    compiledFormSubmitError,
-                    capturePayload,
-                };
-            },
-            template: `
-                <ClaimWidget
-                    initial-code="TEST123"
-                    :claim-experience="{
-                        phases: [
-                            {
-                                key: 'form_flow',
-                                owner: 'form-flow',
-                                source: 'claim_experience',
-                                status: 'active',
-                                fields: [
-                                    {
-                                        key: 'first_name',
-                                        type: 'text',
-                                        label: 'First Name',
-                                        required: true,
-                                    },
-                                ],
-                                values: {
-                                    first_name: 'Lester',
-                                },
-                                stages: [],
-                            },
-                        ],
-                    }"
-                    :compiled-form-submitted="compiledFormSubmitted"
-                    :compiled-form-submit-error="compiledFormSubmitError"
-                    @submit:compiled-form="capturePayload"
-                />
-
-                <pre data-testid="owner-captured-payload">{{ JSON.stringify(payload, null, 2) }}</pre>
-                <pre data-testid="owner-submission-payload">{{ JSON.stringify(submissionPayload, null, 2) }}</pre>
-                <pre data-testid="owner-submitted">{{ JSON.stringify(compiledFormSubmitted) }}</pre>
-                <pre data-testid="owner-submit-error">{{ JSON.stringify(compiledFormSubmitError) }}</pre>
-            `,
-        });
-
-        const wrapper = mount(Owner);
+        const wrapper = mountCompiledFormOwner();
 
         await nextTick();
-
         await wrapper.find('form').trigger('submit');
 
         expect(JSON.parse(
@@ -165,77 +168,9 @@ describe('ClaimWidget compiled form owner boundary', () => {
     });
 
     it('drives failed compiled form submit state from adapter error callback', async () => {
-        const Owner = defineComponent({
-            components: { ClaimWidget },
-            setup() {
-                const payload = ref<Record<string, unknown> | null>(null);
-                const submissionPayload = ref<Record<string, unknown> | null>(null);
-                const compiledFormSubmitted = ref(false);
-                const compiledFormSubmitError = ref<string | null>(null);
-
-                function capturePayload(value: CompiledClaimFormPayload) {
-                    payload.value = value;
-                    submissionPayload.value = toCompiledClaimFormSubmissionPayload(value);
-
-                    submitCompiledClaimForm(value, {
-                        onSuccess: () => {
-                            compiledFormSubmitted.value = true;
-                        },
-                        onError: () => {
-                            compiledFormSubmitError.value = 'Submission failed.';
-                        },
-                    });
-                }
-
-                return {
-                    payload,
-                    submissionPayload,
-                    compiledFormSubmitted,
-                    compiledFormSubmitError,
-                    capturePayload,
-                };
-            },
-            template: `
-                <ClaimWidget
-                    initial-code="TEST123"
-                    :claim-experience="{
-                        phases: [
-                            {
-                                key: 'form_flow',
-                                owner: 'form-flow',
-                                source: 'claim_experience',
-                                status: 'active',
-                                fields: [
-                                    {
-                                        key: 'first_name',
-                                        type: 'text',
-                                        label: 'First Name',
-                                        required: true,
-                                    },
-                                ],
-                                values: {
-                                    first_name: 'Lester',
-                                },
-                                stages: [],
-                            },
-                        ],
-                    }"
-                    :compiled-form-submitted="compiledFormSubmitted"
-                    :compiled-form-submit-error="compiledFormSubmitError"
-                    @submit:compiled-form="capturePayload"
-                />
-
-                <pre data-testid="owner-captured-payload">{{ JSON.stringify(payload, null, 2) }}</pre>
-                <pre data-testid="owner-submission-payload">{{ JSON.stringify(submissionPayload, null, 2) }}</pre>
-                <pre data-testid="owner-submitted">{{ JSON.stringify(compiledFormSubmitted) }}</pre>
-                <pre data-testid="owner-submit-error">{{ JSON.stringify(compiledFormSubmitError) }}</pre>
-            `,
-        });
-
-        const wrapper = mount(Owner);
+        const wrapper = mountCompiledFormOwner();
 
         await nextTick();
-
         await wrapper.find('form').trigger('submit');
 
         expect(JSON.parse(
