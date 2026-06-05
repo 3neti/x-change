@@ -162,8 +162,6 @@ describe('ClaimWidget compiled form owner boundary', () => {
         expect(JSON.parse(
             wrapper.find('[data-testid="owner-submitted"]').text()
         )).toBe(true);
-
-        expect(wrapper.find('[data-testid="claim-widget-submit-state"]').text()).toBe('submitted');
     });
 
     it('drives failed compiled form submit state from adapter error callback', async () => {
@@ -284,8 +282,6 @@ describe('ClaimWidget compiled form owner boundary', () => {
         expect(JSON.parse(
             wrapper.find('[data-testid="owner-submit-error"]').text()
         )).toBe('Submission failed.');
-
-        expect(wrapper.find('[data-testid="claim-widget-submit-state"]').text()).toBe('failed');
 
         expect(wrapper.find('[data-testid="claim-widget-submit-error"]').text()).toBe('Submission failed.');
     });

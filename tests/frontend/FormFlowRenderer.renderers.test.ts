@@ -534,55 +534,6 @@ describe('FormFlowRenderer renderer delegation', () => {
         expect(wrapper.find('[data-testid="select-field-renderer-value"]').text()).toBe('BANK_B');
     });
 
-    it('exposes current form values after delegated field updates', async () => {
-        const wrapper = mount(FormFlowRenderer, {
-            props: {
-                formFlow: {
-                    key: 'form_flow',
-                    owner: 'form-flow',
-                    source: 'claim_experience',
-                    values: {
-                        first_name: 'Initial Name',
-                        email: 'old@example.com',
-                    },
-                    fields: [
-                        {
-                            key: 'first_name',
-                            type: 'text',
-                            label: 'First Name',
-                            required: true,
-                        },
-                        {
-                            key: 'email',
-                            type: 'email',
-                            label: 'Email Address',
-                            required: true,
-                        },
-                    ],
-                    stages: [],
-                },
-            },
-        });
-
-        expect(JSON.parse(wrapper.find('[data-testid="form-flow-current-values"]').text())).toEqual({
-            first_name: 'Initial Name',
-            email: 'old@example.com',
-        });
-
-        await wrapper
-            .find('[data-testid="text-field-renderer-input"]')
-            .setValue('Updated Name');
-
-        await wrapper
-            .find('[data-testid="email-field-renderer-input"]')
-            .setValue('new@example.com');
-
-        expect(JSON.parse(wrapper.find('[data-testid="form-flow-current-values"]').text())).toEqual({
-            first_name: 'Updated Name',
-            email: 'new@example.com',
-        });
-    });
-
     it('emits current form values snapshot when field values change', async () => {
         const wrapper = mount(FormFlowRenderer, {
             props: {

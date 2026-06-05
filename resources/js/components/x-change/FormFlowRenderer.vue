@@ -140,9 +140,5 @@ watch(
                 />
             </div>
         </div>
-
-        <pre
-            data-testid="form-flow-current-values"
-        >{{ JSON.stringify(currentValues, null, 2) }}</pre>
     </div>
 </template>

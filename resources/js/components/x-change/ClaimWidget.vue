@@ -396,10 +396,6 @@ const isCompiledFormValid = computed(() =>
     compiledFormViewModel.value.isValid
 );
 
-const compiledFormSubmitState = computed(() =>
-    compiledFormViewModel.value.submitState
-);
-
 function updateCurrentFormValues(values: Record<string, unknown>): void {
     currentFormValues.value = values;
     emit('update:compiled-form-values', values);
@@ -645,12 +641,6 @@ if (import.meta.env.DEV && claimExperienceDebug.value) {
                     />
                 </CardContent>
             </Card>
-
-            <div
-                data-testid="claim-widget-submit-state"
-            >
-                {{ compiledFormSubmitState }}
-            </div>
 
             <div
                 v-if="compiledFormSubmitError"
