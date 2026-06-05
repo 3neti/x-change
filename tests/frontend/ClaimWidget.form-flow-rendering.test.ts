@@ -241,30 +241,7 @@ describe('ClaimWidget compiled form flow rendering', () => {
             .toContain('sr-only');
     });
 
-    it('renders compiled form flow inside a dedicated visible boundary region', () => {
-        const wrapper = mount(ClaimWidget, {
-            props: {
-                initialCode: 'TEST123',
-                claimExperience: {
-                    phases: [
-                        {
-                            key: 'form_flow',
-                            owner: 'form-flow',
-                            source: 'claim_experience',
-                            status: 'active',
-                            stages: [],
-                        },
-                    ],
-                },
-            },
-        });
-
-        expect(wrapper.find('[data-testid="claim-widget-form-flow-boundary-region"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="compiled-form-flow-visible-region"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="form-flow-renderer"]').exists()).toBe(true);
-    });
-
-    it('selects compiled form flow mode when active compiled form_flow exists', () => {
+    it('renders active compiled form flow in the visible claim information region', () => {
         const wrapper = mount(ClaimWidget, {
             props: {
                 initialCode: 'TEST123',
@@ -284,31 +261,6 @@ describe('ClaimWidget compiled form flow rendering', () => {
 
         expect(wrapper.find('[data-testid="compiled-form-flow-visible-region"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="form-flow-renderer"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="claim-widget-form-flow-boundary-region"]').classes())
-            .not
-            .toContain('sr-only');
-    });
-
-    it('hands active compiled form_flow phase to FormFlowRenderer placeholder', () => {
-        const wrapper = mount(ClaimWidget, {
-            props: {
-                initialCode: 'TEST123',
-                claimExperience: {
-                    phases: [
-                        {
-                            key: 'form_flow',
-                            owner: 'form-flow',
-                            source: 'claim_experience',
-                            status: 'active',
-                            stages: [],
-                        },
-                    ],
-                },
-            },
-        });
-
-        expect(wrapper.find('[data-testid="form-flow-renderer"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="compiled-form-flow-visible-region"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="claim-widget-form-flow-boundary-region"]').classes())
             .not
             .toContain('sr-only');
@@ -326,7 +278,6 @@ describe('ClaimWidget compiled form flow rendering', () => {
 
         expect(wrapper.find('[data-testid="form-flow-renderer"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="compiled-form-flow-visible-region"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="form-flow-renderer"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="claim-widget-form-flow-boundary-region"]').classes())
             .toContain('sr-only');
     });
@@ -634,41 +585,6 @@ describe('ClaimWidget compiled form flow rendering', () => {
                 first_name: 'Updated Name',
             },
         ]);
-    });
-
-    it('renders compiled form flow in a visible claim information region', () => {
-        const wrapper = mount(ClaimWidget, {
-            props: {
-                initialCode: 'TEST123',
-                claimExperience: {
-                    phases: [
-                        {
-                            key: 'form_flow',
-                            owner: 'form-flow',
-                            source: 'claim_experience',
-                            status: 'active',
-                            fields: [
-                                {
-                                    key: 'first_name',
-                                    type: 'text',
-                                    label: 'First Name',
-                                    required: true,
-                                },
-                            ],
-                            values: {
-                                first_name: 'Lester',
-                            },
-                            stages: [],
-                        },
-                    ],
-                },
-            },
-        });
-
-        expect(wrapper.find('[data-testid="compiled-form-flow-visible-region"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="claim-widget-form-flow-boundary-region"]').classes())
-            .not
-            .toContain('sr-only');
     });
 
     it('keeps legacy form flow boundary visually hidden', () => {
