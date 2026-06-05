@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 use LBHurtado\XChange\Actions\Claim\BuildCompiledFormClaimPayload;
 use LBHurtado\XChange\Actions\Claim\SubmitCompiledFormClaim;
+use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Data\PreparedCompiledClaimData;
+use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Support\Claim\ClaimEvidenceSynchronizer;
 
-it('syncs compiled form claim evidence before returning payload', function () {
+it('syncs compiled form claim evidence before submitting the claim', function () {
     $voucher = issueVoucher();
 
     $prepared = new PreparedCompiledClaimData(
@@ -17,6 +19,8 @@ it('syncs compiled form claim evidence before returning payload', function () {
             'mobile' => '09173011987',
         ],
     );
+
+    $order = [];
 
     $evidence = Mockery::mock(ClaimEvidenceSynchronizer::class);
     $evidence
@@ -29,19 +33,51 @@ it('syncs compiled form claim evidence before returning payload', function () {
             'inputs' => [
                 'mobile' => '09173011987',
             ],
-        ]);
+        ])
+        ->andReturnUsing(function () use (&$order): void {
+            $order[] = 'sync';
+        });
+
+    $submitPayCodeClaim = Mockery::mock(SubmitPayCodeClaim::class);
+    $submitPayCodeClaim
+        ->shouldReceive('handle')
+        ->once()
+        ->with($voucher, [
+            'source' => 'compiled_form',
+            'code' => $voucher->code,
+            'voucher_id' => $voucher->getKey(),
+            'inputs' => [
+                'mobile' => '09173011987',
+            ],
+        ])
+        ->andReturnUsing(function () use (&$order, $voucher) {
+            $order[] = 'submit';
+
+            return new SubmitPayCodeClaimResultData(
+                voucher_code: $voucher->code,
+                claim_type: 'withdraw',
+                claimed: true,
+                status: 'success',
+                requested_amount: null,
+                disbursed_amount: null,
+                currency: null,
+                remaining_balance: null,
+                fully_claimed: true,
+                disbursement: null,
+                messages: [],
+            );
+        });
 
     $action = new SubmitCompiledFormClaim(
         new BuildCompiledFormClaimPayload,
         $evidence,
+        $submitPayCodeClaim,
     );
 
-    expect($action->handle($voucher, $prepared))->toBe([
-        'source' => 'compiled_form',
-        'code' => $voucher->code,
-        'voucher_id' => $voucher->getKey(),
-        'inputs' => [
-            'mobile' => '09173011987',
-        ],
-    ]);
+    $result = $action->handle($voucher, $prepared);
+
+    expect($result)->toBeInstanceOf(SubmitPayCodeClaimResultData::class)
+        ->and($result->voucher_code)->toBe($voucher->code)
+        ->and($result->status)->toBe('success')
+        ->and($order)->toBe(['sync', 'submit']);
 });
