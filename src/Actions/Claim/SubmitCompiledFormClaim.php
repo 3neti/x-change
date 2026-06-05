@@ -9,6 +9,10 @@ use LBHurtado\XChange\Data\PreparedCompiledClaimData;
 
 final class SubmitCompiledFormClaim
 {
+    public function __construct(
+        protected BuildCompiledFormClaimPayload $buildPayload,
+    ) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -16,16 +20,9 @@ final class SubmitCompiledFormClaim
         Voucher $voucher,
         PreparedCompiledClaimData $prepared,
     ): array {
-        return [
-            'voucher' => $voucher,
-            'prepared' => $prepared,
-            'payload' => [
-                'source' => 'compiled_form',
-                'code' => $prepared->code,
-                'voucher_id' => $prepared->voucherId,
-                'inputs' => $prepared->inputs,
-            ],
-        ];
+        return $this->buildPayload->handle(
+            voucher: $voucher,
+            prepared: $prepared,
+        );
     }
 }
-

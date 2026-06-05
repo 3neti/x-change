@@ -2,35 +2,31 @@
 
 declare(strict_types=1);
 
+use LBHurtado\XChange\Actions\Claim\BuildCompiledFormClaimPayload;
 use LBHurtado\XChange\Actions\Claim\SubmitCompiledFormClaim;
 use LBHurtado\XChange\Data\PreparedCompiledClaimData;
 
-it('defines the compiled form claim submission contract', function () {
+it('submits compiled form claim through the payload builder', function () {
     $voucher = issueVoucher();
 
     $prepared = new PreparedCompiledClaimData(
         code: $voucher->code,
         voucherId: $voucher->getKey(),
         inputs: [
-            'mobile' => '09173011987',
-            'bank_code' => 'GXCHPHM2XXX',
-            'account_number' => '09173011987',
+            'mobile' => '09467438575',
         ],
     );
 
-    $result = app(SubmitCompiledFormClaim::class)->handle($voucher, $prepared);
+    $action = new SubmitCompiledFormClaim(
+        new BuildCompiledFormClaimPayload
+    );
 
-    expect($result['voucher']->is($voucher))->toBeTrue()
-        ->and($result['prepared'])->toBe($prepared)
-        ->and($result['payload'])->toBe([
-            'source' => 'compiled_form',
-            'code' => $voucher->code,
-            'voucher_id' => $voucher->getKey(),
-            'inputs' => [
-                'mobile' => '09173011987',
-                'bank_code' => 'GXCHPHM2XXX',
-                'account_number' => '09173011987',
-            ],
-        ]);
+    expect($action->handle($voucher, $prepared))->toBe([
+        'source' => 'compiled_form',
+        'code' => $voucher->code,
+        'voucher_id' => $voucher->getKey(),
+        'inputs' => [
+            'mobile' => '09467438575',
+        ],
+    ]);
 });
-
