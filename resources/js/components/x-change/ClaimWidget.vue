@@ -66,8 +66,6 @@ if (props.initialCode) {
     code.value = props.initialCode;
 }
 
-const hasValidCode = computed(() => code.value.trim().length > 0);
-
 onMounted(() => {
     if (props.initialCode && submitButton.value) {
         const buttonEl = submitButton.value.$el as HTMLElement;
@@ -380,10 +378,6 @@ const compiledFormViewModel = computed(() =>
     })
 );
 
-const usesCompiledFormFlow = computed(() =>
-    compiledFormViewModel.value.usesCompiledFormFlow
-);
-
 const usesLegacyFormFlow = computed(() =>
     compiledFormViewModel.value.usesLegacyFormFlow
 );
@@ -440,30 +434,6 @@ function submitClaim(): void {
     }
 
     submit();
-}
-
-const claimExperienceDebug = computed(() => {
-    if (!props.claimExperience) {
-        return null;
-    }
-
-    return {
-        mode: props.claimExperience?.entry?.mode,
-        initial_phase: props.claimExperience?.entry?.initial_phase,
-        skip_consumed_splash: props.claimExperience?.options?.skip_consumed_splash,
-        splash_owner: props.claimExperience?.diagnostics?.splash_owner,
-        form_flow_splash_policy: props.claimExperience?.diagnostics?.form_flow_splash_policy,
-        uses_compiled_rider_intro: compiledPreClaimVisualStages.value.length > 0,
-        uses_compiled_runtime: compiledRuntimeStages.value.length > 0,
-        uses_compiled_redirect: compiledRedirectStages.value.length > 0,
-        form_flow_mode: formFlowBoundary.value.mode,
-        uses_compiled_form_flow: usesCompiledFormFlow.value,
-        uses_legacy_form_flow: usesLegacyFormFlow.value,
-    };
-});
-
-if (import.meta.env.DEV && claimExperienceDebug.value) {
-    console.debug('[x-change] claim experience', claimExperienceDebug.value);
 }
 </script>
 
