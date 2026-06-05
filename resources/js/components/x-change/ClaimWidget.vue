@@ -392,10 +392,6 @@ const normalizedCompiledFormFlow = computed(() =>
     compiledFormViewModel.value.normalizedCompiledFormFlow
 );
 
-const missingRequiredCompiledFormFields = computed(() =>
-    compiledFormViewModel.value.missingRequiredFields
-);
-
 const isCompiledFormValid = computed(() =>
     compiledFormViewModel.value.isValid
 );
@@ -649,28 +645,6 @@ if (import.meta.env.DEV && claimExperienceDebug.value) {
                     />
                 </CardContent>
             </Card>
-
-            <pre
-                v-if="normalizedCompiledFormFlow"
-                data-testid="claim-widget-current-form-values"
-            >{{ JSON.stringify(currentFormValues, null, 2) }}</pre>
-
-            <pre
-                v-if="normalizedCompiledFormFlow"
-                data-testid="claim-widget-form-payload"
-            >{{ JSON.stringify(claimFormPayload, null, 2) }}</pre>
-
-            <pre
-                v-if="normalizedCompiledFormFlow"
-                data-testid="claim-widget-missing-required-fields"
-            >{{ JSON.stringify(missingRequiredCompiledFormFields.map((field) => field.key), null, 2) }}</pre>
-
-            <div
-                v-if="normalizedCompiledFormFlow"
-                data-testid="claim-widget-form-valid"
-            >
-                {{ isCompiledFormValid ? 'valid' : 'invalid' }}
-            </div>
 
             <div
                 v-if="usesCompiledFormFlow"
