@@ -7,6 +7,8 @@ use LBHurtado\FormFlowManager\Services\DriverService;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
+use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
+use LBHurtado\XChange\Support\Claim\ClaimEvidenceSynchronizer;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Claim\CompiledClaimSessionKeys;
 
@@ -186,6 +188,30 @@ it('prepares valid compiled form claim submissions', function () {
 
     $voucher = issueVoucher();
 
+    $evidence = Mockery::mock(ClaimEvidenceSynchronizer::class);
+    $evidence->shouldReceive('sync')->once();
+
+    $submitPayCodeClaim = Mockery::mock(SubmitPayCodeClaim::class);
+    $submitPayCodeClaim
+        ->shouldReceive('handle')
+        ->once()
+        ->andReturn(new SubmitPayCodeClaimResultData(
+            voucher_code: $voucher->code,
+            claim_type: 'withdraw',
+            claimed: true,
+            status: 'success',
+            requested_amount: null,
+            disbursed_amount: null,
+            currency: null,
+            remaining_balance: null,
+            fully_claimed: true,
+            disbursement: null,
+            messages: [],
+        ));
+
+    $this->app->instance(ClaimEvidenceSynchronizer::class, $evidence);
+    $this->app->instance(SubmitPayCodeClaim::class, $submitPayCodeClaim);
+
     $response = $this->post('/x/claim', [
         'mode' => 'compiled_form',
         'code' => $voucher->code,
@@ -316,37 +342,47 @@ it('does not store prepared compiled claim when voucher is expired', function ()
         ->and(session()->has('compiled_claim_completion_submitted'))->toBeFalse();
 });
 
-it('routes compiled form claim to success without redeeming the voucher yet', function () {
+it('submits compiled form claims through the canonical redemption action', function () {
     $this->withoutMiddleware();
 
     $voucher = issueVoucher();
 
-    $response = $this->post('/x/claim', [
-        'mode' => 'compiled_form',
-        'code' => $voucher->code,
-        'inputs' => [
-            'first_name' => 'Lester',
-        ],
-    ]);
+    $evidence = Mockery::mock(ClaimEvidenceSynchronizer::class);
+    $evidence
+        ->shouldReceive('sync')
+        ->once()
+        ->with(Mockery::on(fn (array $payload): bool => ($payload['source'] ?? null) === 'compiled_form'
+            && ($payload['code'] ?? null) === $voucher->code
+            && ($payload['voucher_id'] ?? null) === $voucher->getKey()
+            && ($payload['inputs']['first_name'] ?? null) === 'Lester'
+        ));
 
-    $response->assertRedirect(route('x-change.claim.success', [
-        'code' => $voucher->code,
-    ]));
+    $submitPayCodeClaim = Mockery::mock(SubmitPayCodeClaim::class);
+    $submitPayCodeClaim
+        ->shouldReceive('handle')
+        ->once()
+        ->withArgs(fn ($receivedVoucher, array $payload): bool => $receivedVoucher->is($voucher)
+            && ($payload['source'] ?? null) === 'compiled_form'
+            && ($payload['code'] ?? null) === $voucher->code
+            && ($payload['voucher_id'] ?? null) === $voucher->getKey()
+            && ($payload['inputs']['first_name'] ?? null) === 'Lester'
+        )
+        ->andReturn(new SubmitPayCodeClaimResultData(
+            voucher_code: $voucher->code,
+            claim_type: 'withdraw',
+            claimed: true,
+            status: 'success',
+            requested_amount: null,
+            disbursed_amount: null,
+            currency: null,
+            remaining_balance: null,
+            fully_claimed: true,
+            disbursement: null,
+            messages: [],
+        ));
 
-    $voucher->refresh();
-
-    expect($voucher->redeemed_at)->toBeNull();
-});
-
-it('does not use SubmitPayCodeClaim during compiled form success routing', function () {
-    $this->withoutMiddleware();
-
-    $voucher = issueVoucher();
-
-    $submitAction = Mockery::mock(SubmitPayCodeClaim::class);
-    $submitAction->shouldNotReceive('handle');
-
-    $this->app->instance(SubmitPayCodeClaim::class, $submitAction);
+    $this->app->instance(ClaimEvidenceSynchronizer::class, $evidence);
+    $this->app->instance(SubmitPayCodeClaim::class, $submitPayCodeClaim);
 
     $this->post('/x/claim', [
         'mode' => 'compiled_form',
@@ -358,7 +394,38 @@ it('does not use SubmitPayCodeClaim during compiled form success routing', funct
         'code' => $voucher->code,
     ]));
 
-    $voucher->refresh();
-
-    expect($voucher->redeemed_at)->toBeNull();
+    expect(session()->has(CompiledClaimSessionKeys::SUBMISSION))->toBeFalse()
+        ->and(session()->has(CompiledClaimSessionKeys::PREPARED))->toBeFalse();
 });
+
+it('returns to claim form when compiled form redemption fails', function () {
+    $this->withoutMiddleware();
+
+    $voucher = issueVoucher();
+
+    $evidence = Mockery::mock(ClaimEvidenceSynchronizer::class);
+    $evidence->shouldReceive('sync')->once();
+
+    $submitPayCodeClaim = Mockery::mock(SubmitPayCodeClaim::class);
+    $submitPayCodeClaim
+        ->shouldReceive('handle')
+        ->once()
+        ->andThrow(new RuntimeException('Compiled redemption failed.'));
+
+    $this->app->instance(ClaimEvidenceSynchronizer::class, $evidence);
+    $this->app->instance(SubmitPayCodeClaim::class, $submitPayCodeClaim);
+
+    $response = $this->post('/x/claim', [
+        'mode' => 'compiled_form',
+        'code' => $voucher->code,
+        'inputs' => [
+            'first_name' => 'Lester',
+        ],
+    ]);
+
+    $response->assertSessionHasErrors(['code']);
+
+    expect(session('errors')?->getBag('default')->first('code'))
+        ->toBe('Compiled redemption failed.');
+});
+

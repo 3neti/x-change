@@ -16,7 +16,8 @@ use LBHurtado\XChange\Actions\Claim\PrepareCompiledClaim;
 use LBHurtado\XChange\Actions\Claim\PrepareCompiledClaimSubmission;
 use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
 use LBHurtado\XChange\Actions\Claim\StorePreparedCompiledClaim;
-use LBHurtado\XChange\Actions\Claim\SubmitCompiledClaimCompletion;
+use LBHurtado\XChange\Actions\Claim\SubmitCompiledFormClaim;
+use LBHurtado\XChange\Data\PreparedCompiledClaimData;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Claim\CompiledClaimSessionKeys;
@@ -47,20 +48,31 @@ class ClaimStartController extends Controller
                 ]);
             }
 
-            app(StorePreparedCompiledClaim::class)->handle($prepared);
+            $preparedPayload = app(StorePreparedCompiledClaim::class)->handle($prepared);
+            $preparedData = PreparedCompiledClaimData::fromSessionPayload($preparedPayload);
 
-            $completionPayload = app(SubmitCompiledClaimCompletion::class)->handle(forget: true);
-
-            if ($completionPayload === null) {
+            if (! $preparedData || ! $prepared->voucher) {
                 return back()->withErrors([
                     'code' => 'Unable to submit compiled claim.',
                 ]);
             }
 
+            try {
+                app(SubmitCompiledFormClaim::class)->handle(
+                    voucher: $prepared->voucher,
+                    prepared: $preparedData,
+                );
+            } catch (\Throwable $e) {
+                return back()->withErrors([
+                    'code' => $e->getMessage(),
+                ]);
+            }
+
             session()->forget(CompiledClaimSessionKeys::SUBMISSION);
+            session()->forget(CompiledClaimSessionKeys::PREPARED);
 
             return redirect()->route('x-change.claim.success', [
-                'code' => $prepared->submission?->code,
+                'code' => $preparedData->code,
             ]);
         }
 
