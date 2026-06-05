@@ -183,7 +183,7 @@ it('does not emit consumed splash skip option when voucher has no rider splash',
         ->assertRedirect('/form-flow/flow-no-skip-option-test');
 });
 
-it('prepares valid compiled form claim submissions', function () {
+it('executes valid compiled form claim submissions through the redemption bridge', function () {
     $this->withoutMiddleware();
 
     $voucher = issueVoucher();
@@ -287,7 +287,7 @@ it('keeps empty legacy claim entry rendering through get request', function () {
         );
 })->skip('Pending UI-agnostic ClaimStartController response boundary.');
 
-it('does not store prepared compiled claim when voucher is missing', function () {
+it('does not enter the redemption bridge when voucher is missing', function () {
     $this->withoutMiddleware();
 
     $this->post('/x/claim', [
@@ -302,7 +302,7 @@ it('does not store prepared compiled claim when voucher is missing', function ()
         ->and(session()->has('compiled_claim_completion_submitted'))->toBeFalse();
 });
 
-it('does not store prepared compiled claim when voucher is already redeemed', function () {
+it('does not enter the redemption bridge when voucher is already redeemed', function () {
     $this->withoutMiddleware();
 
     $voucher = issueVoucher();
@@ -322,7 +322,7 @@ it('does not store prepared compiled claim when voucher is already redeemed', fu
         ->and(session()->has('compiled_claim_completion_submitted'))->toBeFalse();
 });
 
-it('does not store prepared compiled claim when voucher is expired', function () {
+it('does not enter the redemption bridge when voucher is expired', function () {
     $this->withoutMiddleware();
 
     $voucher = issueVoucher();
@@ -342,7 +342,7 @@ it('does not store prepared compiled claim when voucher is expired', function ()
         ->and(session()->has('compiled_claim_completion_submitted'))->toBeFalse();
 });
 
-it('submits compiled form claims through the canonical redemption action', function () {
+it('passes compiled form payload to the canonical redemption action', function () {
     $this->withoutMiddleware();
 
     $voucher = issueVoucher();

@@ -3,7 +3,7 @@
 use LBHurtado\XChange\Actions\Claim\SubmitCompiledClaimCompletion;
 use LBHurtado\XChange\Support\Claim\CompiledClaimSessionKeys;
 
-it('builds compiled claim completion payload', function () {
+it('builds legacy compiled form handoff payload', function () {
     session()->put('compiled_claim_prepared', [
         'code' => 'TEST123',
         'voucher_id' => 123,
@@ -24,13 +24,13 @@ it('builds compiled claim completion payload', function () {
     ]);
 });
 
-it('returns null when prepared compiled claim is missing', function () {
+it('returns null when legacy prepared compiled claim is missing', function () {
     session()->forget('compiled_claim_prepared');
 
     expect(app(SubmitCompiledClaimCompletion::class)->handle())->toBeNull();
 });
 
-it('can forget prepared compiled claim after submitting completion payload', function () {
+it('can forget legacy prepared compiled claim after building handoff payload', function () {
     session()->put('compiled_claim_prepared', [
         'code' => 'TEST123',
         'voucher_id' => 123,
@@ -45,7 +45,7 @@ it('can forget prepared compiled claim after submitting completion payload', fun
         ->and(session()->has('compiled_claim_prepared'))->toBeFalse();
 });
 
-it('submits the current compiled claim completion payload shape', function () {
+it('keeps the legacy compiled form handoff payload flat', function () {
     session()->put(CompiledClaimSessionKeys::PREPARED, [
         'code' => 'TEST123',
         'voucher_id' => 123,
