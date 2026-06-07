@@ -18,18 +18,9 @@ import { useVoucherPreview } from '@/composables/useVoucherPreview';
 import { useForm, usePage } from '@inertiajs/vue3';
 import { AlertCircle } from 'lucide-vue-next';
 import { ref, computed, onMounted } from 'vue';
-import { activeClaimExperiencePhase } from '@/components/x-change/claimExperiencePhases';
+
+import { resolveClaimWidgetExperienceStages } from '@/components/x-change/claimWidgetExperienceStages';
 import { resolveLegacyRiderStages } from '@/components/x-change/claimWidgetLegacyStages';
-import {
-    isVisualPreviewStage,
-    resolveCompiledRedirectStages,
-    resolveCompiledRiderIntroStages,
-    resolveCompiledRuntimeStages,
-    resolveLegacyPreClaimVisualStages,
-    resolveLegacyRedirectStages,
-    resolveLegacyRuntimeStages,
-    preferCompiledStages,
-} from '@/components/x-change/claimWidgetStages';
 import { resolveCompiledFormFlowPhase } from '@/components/x-change/compiledFormFlow';
 import { buildCompiledFormPayload } from '@/components/x-change/compiledFormPayload';
 import { resolveCompiledFormSubmitEvent } from '@/components/x-change/compiledFormSubmit';
@@ -116,34 +107,10 @@ const isReturningRedeemer = computed(() => {
     }
 });
 
-function compiledPhase(key: string): Record<string, any> | null {
-    return activeClaimExperiencePhase(props.claimExperience, key);
-}
-
 const riderStages = computed<RawRiderStage[]>(() =>
     resolveLegacyRiderStages(
         voucherData.value as Record<string, any> | null | undefined,
     )
-);
-
-const compiledPreClaimVisualStages = computed<RawRiderStage[]>(() =>
-    resolveCompiledRiderIntroStages(compiledPhase('rider_intro'))
-        .filter(isVisualPreviewStage)
-);
-
-const legacyPreClaimVisualStages = computed<RawRiderStage[]>(() =>
-    resolveLegacyPreClaimVisualStages(riderStages.value)
-);
-
-const preClaimVisualStages = computed<RawRiderStage[]>(() =>
-    preferCompiledStages(
-        compiledPreClaimVisualStages.value,
-        legacyPreClaimVisualStages.value,
-    )
-);
-
-const hasPreClaimContent = computed(() =>
-    preClaimVisualStages.value.length > 0
 );
 
 function submit() {
@@ -159,36 +126,27 @@ function submit() {
     });
 }
 
-const compiledRuntimeStages = computed<RawRiderStage[]>(() =>
-    resolveCompiledRuntimeStages(compiledPhase('runtime'))
-        .filter(isVisualPreviewStage)
+const experienceStages = computed(() =>
+    resolveClaimWidgetExperienceStages({
+        claimExperience: props.claimExperience,
+        legacyStages: riderStages.value,
+    })
 );
 
-const legacyRuntimeStages = computed<RawRiderStage[]>(() =>
-    resolveLegacyRuntimeStages(riderStages.value)
+const preClaimVisualStages = computed<RawRiderStage[]>(() =>
+    experienceStages.value.preClaimVisualStages
+);
+
+const hasPreClaimContent = computed(() =>
+    preClaimVisualStages.value.length > 0
 );
 
 const runtimeStages = computed<RawRiderStage[]>(() =>
-    preferCompiledStages(
-        compiledRuntimeStages.value,
-        legacyRuntimeStages.value,
-    )
-);
-
-const compiledRedirectStages = computed<RawRiderStage[]>(() =>
-    resolveCompiledRedirectStages(compiledPhase('redirect'))
-        .filter(isVisualPreviewStage)
-);
-
-const legacyRedirectStages = computed<RawRiderStage[]>(() =>
-    resolveLegacyRedirectStages(riderStages.value)
+    experienceStages.value.runtimeStages
 );
 
 const redirectStages = computed<RawRiderStage[]>(() =>
-    preferCompiledStages(
-        compiledRedirectStages.value,
-        legacyRedirectStages.value,
-    )
+    experienceStages.value.redirectStages
 );
 
 const compiledFormFlowPhase = computed<Record<string, any> | null>(() =>
