@@ -25,6 +25,7 @@ import { resolveClaimWidgetPreviewViewModel } from '@/components/x-change/claimW
 import { isReturningRedeemerFromStorage } from '@/components/x-change/claimWidgetVoucherState';
 import { useCompiledClaimForm } from '@/components/x-change/useCompiledClaimForm';
 import FormFlowRenderer from '@/components/x-change/FormFlowRenderer.vue';
+import { resolveClaimWidgetSubmitViewModel } from '@/components/x-change/claimWidgetSubmitViewModel';
 
 initializeTheme();
 
@@ -123,6 +124,14 @@ const compiledForm = useCompiledClaimForm({
     emitUpdateValues: (values) => emit('update:compiled-form-values', values),
 });
 
+const submitViewModel = computed(() =>
+    resolveClaimWidgetSubmitViewModel({
+        hasCompiledForm: Boolean(compiledForm.normalizedFlow.value),
+        compiledFormValid: compiledForm.isValid.value,
+        processing: form.processing,
+    })
+);
+
 function submitClaim(): void {
     if (compiledForm.normalizedFlow.value) {
         compiledForm.submit();
@@ -167,9 +176,9 @@ function submitClaim(): void {
                 type="submit"
                 class="w-full rounded-full"
                 data-testid="claim-widget-submit-button"
-                :disabled="compiledForm.normalizedFlow.value ? !compiledForm.isValid.value : false"
+                :disabled="submitViewModel.disabled"
             >
-                {{ form.processing ? 'Checking...' : 'Start Claim' }}
+                {{ submitViewModel.label }}
             </Button>
         </form>
 
