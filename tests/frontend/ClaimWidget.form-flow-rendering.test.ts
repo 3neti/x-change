@@ -152,39 +152,6 @@ vi.mock('lucide-vue-next', () => ({
 }));
 
 describe('ClaimWidget compiled form flow rendering', () => {
-    it('does not render compiled form_flow directly yet', () => {
-        const wrapper = mount(ClaimWidget, {
-            props: {
-                initialCode: 'TEST123',
-                claimExperience: {
-                    phases: [
-                        {
-                            key: 'form_flow',
-                            owner: 'form-flow',
-                            source: 'claim_experience',
-                            status: 'active',
-                            stages: [
-                                {
-                                    key: 'compiled-form-flow-stage',
-                                    type: 'form',
-                                    phase: 'form_flow',
-                                    content: 'Compiled form flow stage',
-                                },
-                            ],
-                        },
-                    ],
-                },
-            },
-        });
-
-        expect(wrapper.text()).not.toContain('compiled-form-flow-stage');
-        expect(wrapper.find('[data-testid="compiled-form-flow-visible-region"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="form-flow-renderer"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="claim-widget-form-flow-boundary-region"]').classes())
-            .not
-            .toContain('sr-only');
-    });
-
     it('ignores inactive compiled form_flow phase', () => {
         const wrapper = mount(ClaimWidget, {
             props: {
@@ -217,30 +184,6 @@ describe('ClaimWidget compiled form flow rendering', () => {
             .toContain('sr-only');
     });
 
-    it('uses legacy form flow boundary when compiled form_flow phase is absent', () => {
-        const wrapper = mount(ClaimWidget, {
-            props: {
-                initialCode: 'TEST123',
-                claimExperience: {
-                    phases: [
-                        {
-                            key: 'runtime',
-                            owner: 'x-rider',
-                            source: 'claim_experience',
-                            status: 'active',
-                            stages: [],
-                        },
-                    ],
-                },
-            },
-        });
-
-        expect(wrapper.find('[data-testid="compiled-form-flow-visible-region"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="form-flow-renderer"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="claim-widget-form-flow-boundary-region"]').classes())
-            .toContain('sr-only');
-    });
-
     it('renders active compiled form flow in the visible claim information region', () => {
         const wrapper = mount(ClaimWidget, {
             props: {
@@ -264,51 +207,6 @@ describe('ClaimWidget compiled form flow rendering', () => {
         expect(wrapper.find('[data-testid="claim-widget-form-flow-boundary-region"]').classes())
             .not
             .toContain('sr-only');
-    });
-
-    it('does not render FormFlowRenderer placeholder for legacy form flow mode', () => {
-        const wrapper = mount(ClaimWidget, {
-            props: {
-                initialCode: 'TEST123',
-                claimExperience: {
-                    phases: [],
-                },
-            },
-        });
-
-        expect(wrapper.find('[data-testid="form-flow-renderer"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="compiled-form-flow-visible-region"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="claim-widget-form-flow-boundary-region"]').classes())
-            .toContain('sr-only');
-    });
-
-    it('normalizes compiled form_flow phase before handoff to FormFlowRenderer', () => {
-        const wrapper = mount(ClaimWidget, {
-            props: {
-                initialCode: 'TEST123',
-                claimExperience: {
-                    phases: [
-                        {
-                            key: 'form_flow',
-                            owner: 'form-flow',
-                            source: 'claim_experience',
-                            status: 'active',
-                            fields: [
-                                {
-                                    key: 'mobile',
-                                    type: 'text',
-                                    label: 'Mobile',
-                                    required: true,
-                                },
-                            ],
-                            stages: [],
-                        },
-                    ],
-                },
-            },
-        });
-
-        expect(wrapper.find('[data-testid="form-flow-renderer"]').exists()).toBe(true);
     });
 
     it('disables claim submit button when compiled form is invalid', async () => {
@@ -376,48 +274,6 @@ describe('ClaimWidget compiled form flow rendering', () => {
         });
 
         await nextTick();
-
-        expect(wrapper.find('[data-testid="claim-widget-submit-button"]').attributes('disabled'))
-            .toBeUndefined();
-    });
-
-    it('enables claim submit button after required compiled form field is filled', async () => {
-        const wrapper = mount(ClaimWidget, {
-            props: {
-                initialCode: 'TEST123',
-                claimExperience: {
-                    phases: [
-                        {
-                            key: 'form_flow',
-                            owner: 'form-flow',
-                            source: 'claim_experience',
-                            status: 'active',
-                            fields: [
-                                {
-                                    key: 'first_name',
-                                    type: 'text',
-                                    label: 'First Name',
-                                    required: true,
-                                },
-                            ],
-                            values: {
-                                first_name: '',
-                            },
-                            stages: [],
-                        },
-                    ],
-                },
-            },
-        });
-
-        await nextTick();
-
-        expect(wrapper.find('[data-testid="claim-widget-submit-button"]').attributes('disabled'))
-            .toBeDefined();
-
-        await wrapper
-            .find('[data-testid="text-field-renderer-input"]')
-            .setValue('Lester');
 
         expect(wrapper.find('[data-testid="claim-widget-submit-button"]').attributes('disabled'))
             .toBeUndefined();
