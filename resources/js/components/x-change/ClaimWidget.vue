@@ -20,6 +20,11 @@ import { AlertCircle } from 'lucide-vue-next';
 import { ref, computed, onMounted } from 'vue';
 import { resolveClaimWidgetExperienceStages } from '@/components/x-change/claimWidgetExperienceStages';
 import { resolveLegacyRiderStages } from '@/components/x-change/claimWidgetLegacyStages';
+import {
+    isNonActiveVoucher,
+    isReturningRedeemerFromStorage,
+    resolveVoucherStatusDate,
+} from '@/components/x-change/claimWidgetVoucherState';
 import { useCompiledClaimForm } from '@/components/x-change/useCompiledClaimForm';
 import FormFlowRenderer from '@/components/x-change/FormFlowRenderer.vue';
 
@@ -63,43 +68,17 @@ onMounted(() => {
 const voucherInput = ref<HTMLInputElement | null>(null);
 const submitButton = ref<HTMLButtonElement | null>(null);
 
-const isNonActive = computed(() => {
-    const s = voucherData.value?.status;
+const isNonActive = computed(() =>
+    isNonActiveVoucher(voucherData.value)
+);
 
-    return s === 'redeemed' || s === 'expired';
-});
+const statusDate = computed(() =>
+    resolveVoucherStatusDate(voucherData.value)
+);
 
-const statusDate = computed(() => {
-    if (!voucherData.value) {
-        return null;
-    }
-
-    if (voucherData.value.status === 'redeemed') {
-        return voucherData.value.redeemed_at;
-    }
-
-    if (voucherData.value.status === 'expired') {
-        return voucherData.value.expired_at;
-    }
-
-    return null;
-});
-
-const isReturningRedeemer = computed(() => {
-    try {
-        const raw = localStorage.getItem('form_flow_persist_wallet_info');
-
-        if (!raw) {
-            return false;
-        }
-
-        const saved = JSON.parse(raw);
-
-        return !!saved.mobile;
-    } catch {
-        return false;
-    }
-});
+const isReturningRedeemer = computed(() =>
+    isReturningRedeemerFromStorage()
+);
 
 const riderStages = computed<RawRiderStage[]>(() =>
     resolveLegacyRiderStages(
