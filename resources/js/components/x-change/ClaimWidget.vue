@@ -20,6 +20,7 @@ import { AlertCircle } from 'lucide-vue-next';
 import { ref, computed, onMounted } from 'vue';
 import { resolveClaimWidgetExperienceStages } from '@/components/x-change/claimWidgetExperienceStages';
 import { resolveLegacyRiderStages } from '@/components/x-change/claimWidgetLegacyStages';
+import { submitLegacyClaimStart } from '@/components/x-change/claimWidgetLegacySubmit';
 import {
     isNonActiveVoucher,
     isReturningRedeemerFromStorage,
@@ -87,16 +88,7 @@ const riderStages = computed<RawRiderStage[]>(() =>
 );
 
 function submit() {
-    const entered = code.value || form.code;
-    form.code = (entered || '').trim().toUpperCase();
-    form.get('/x/claim', {
-        preserveState: (page) => {
-            const hasErrors = Object.keys(page.props.errors || {}).length > 0;
-
-            return !hasErrors;
-        },
-        preserveScroll: true,
-    });
+    submitLegacyClaimStart(form, code.value);
 }
 
 const experienceStages = computed(() =>
