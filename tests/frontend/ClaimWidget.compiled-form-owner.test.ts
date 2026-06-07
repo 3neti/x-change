@@ -101,11 +101,6 @@ function mountCompiledFormOwner() {
                 :compiled-form-submit-error="compiledFormSubmitError"
                 @submit:compiled-form="capturePayload"
             />
-
-            <pre data-testid="owner-captured-payload">{{ JSON.stringify(payload, null, 2) }}</pre>
-            <pre data-testid="owner-submission-payload">{{ JSON.stringify(submissionPayload, null, 2) }}</pre>
-            <pre data-testid="owner-submitted">{{ JSON.stringify(compiledFormSubmitted) }}</pre>
-            <pre data-testid="owner-submit-error">{{ JSON.stringify(compiledFormSubmitError) }}</pre>
         `,
     });
 
@@ -123,18 +118,14 @@ describe('ClaimWidget compiled form owner boundary', () => {
         await nextTick();
         await wrapper.find('form').trigger('submit');
 
-        expect(JSON.parse(
-            wrapper.find('[data-testid="owner-captured-payload"]').text()
-        )).toEqual({
+        expect(wrapper.vm.payload).toEqual({
             code: 'TEST123',
             values: {
                 first_name: 'Lester',
             },
         });
 
-        expect(JSON.parse(
-            wrapper.find('[data-testid="owner-submission-payload"]').text()
-        )).toEqual({
+        expect(wrapper.vm.submissionPayload).toEqual({
             code: 'TEST123',
             inputs: {
                 first_name: 'Lester',
@@ -162,9 +153,7 @@ describe('ClaimWidget compiled form owner boundary', () => {
 
         await nextTick();
 
-        expect(JSON.parse(
-            wrapper.find('[data-testid="owner-submitted"]').text()
-        )).toBe(true);
+        expect(wrapper.vm.compiledFormSubmitted).toBe(true);
     });
 
     it('drives failed compiled form submit state from adapter error callback', async () => {
@@ -173,18 +162,14 @@ describe('ClaimWidget compiled form owner boundary', () => {
         await nextTick();
         await wrapper.find('form').trigger('submit');
 
-        expect(JSON.parse(
-            wrapper.find('[data-testid="owner-captured-payload"]').text()
-        )).toEqual({
+        expect(wrapper.vm.payload).toEqual({
             code: 'TEST123',
             values: {
                 first_name: 'Lester',
             },
         });
 
-        expect(JSON.parse(
-            wrapper.find('[data-testid="owner-submission-payload"]').text()
-        )).toEqual({
+        expect(wrapper.vm.submissionPayload).toEqual({
             code: 'TEST123',
             inputs: {
                 first_name: 'Lester',
@@ -214,9 +199,7 @@ describe('ClaimWidget compiled form owner boundary', () => {
 
         await nextTick();
 
-        expect(JSON.parse(
-            wrapper.find('[data-testid="owner-submit-error"]').text()
-        )).toBe('Submission failed.');
+        expect(wrapper.vm.compiledFormSubmitError).toBe('Submission failed.');
 
         expect(wrapper.find('[data-testid="claim-widget-submit-error"]').text()).toBe('Submission failed.');
     });
