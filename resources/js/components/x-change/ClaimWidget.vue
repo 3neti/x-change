@@ -22,10 +22,11 @@ import { resolveClaimWidgetExperienceStages } from '@/components/x-change/claimW
 import { resolveLegacyRiderStages } from '@/components/x-change/claimWidgetLegacyStages';
 import { submitLegacyClaimStart } from '@/components/x-change/claimWidgetLegacySubmit';
 import { resolveClaimWidgetPreviewViewModel } from '@/components/x-change/claimWidgetPreviewViewModel';
+import { resolveClaimWidgetSubmitViewModel } from '@/components/x-change/claimWidgetSubmitViewModel';
 import { isReturningRedeemerFromStorage } from '@/components/x-change/claimWidgetVoucherState';
 import { useCompiledClaimForm } from '@/components/x-change/useCompiledClaimForm';
 import FormFlowRenderer from '@/components/x-change/FormFlowRenderer.vue';
-import { resolveClaimWidgetSubmitViewModel } from '@/components/x-change/claimWidgetSubmitViewModel';
+import { resolveClaimWidgetPreviewMode } from '@/components/x-change/claimWidgetPreviewMode';
 
 initializeTheme();
 
@@ -96,6 +97,15 @@ const previewViewModel = computed(() =>
     resolveClaimWidgetPreviewViewModel({
         voucherData: voucherData.value,
         preClaimVisualStages: preClaimVisualStages.value,
+    })
+);
+
+const previewMode = computed(() =>
+    resolveClaimWidgetPreviewMode({
+        loading: loading.value,
+        error: error.value,
+        voucherData: voucherData.value,
+        isNonActive: previewViewModel.value.isNonActive,
     })
 );
 
@@ -185,13 +195,13 @@ function submitClaim(): void {
         <!-- Voucher Preview -->
         <div v-if="showPreview" :class="previewViewModel.isNonActive ? '' : 'mt-6'">
             <!-- Loading State -->
-            <div v-if="loading" class="flex items-center justify-center gap-2 py-8 text-muted-foreground">
+            <div v-if="previewMode === 'loading'" class="flex items-center justify-center gap-2 py-8 text-muted-foreground">
                 <Spinner class="h-5 w-5" />
                 <span>Checking voucher...</span>
             </div>
 
             <!-- Error State -->
-            <Alert v-else-if="error" variant="destructive">
+            <Alert v-else-if="previewMode === 'error'" variant="destructive">
                 <AlertCircle class="h-4 w-4" />
                 <AlertDescription>
                     {{ error }}
@@ -199,14 +209,14 @@ function submitClaim(): void {
             </Alert>
 
             <!-- Preview disabled notice -->
-            <Alert v-else-if="voucherData && voucherData.preview && voucherData.preview.enabled === false">
+            <Alert v-else-if="previewMode === 'preview-disabled'">
                 <AlertDescription>
                     {{ voucherData.preview.message || 'Preview disabled by issuer.' }}
                 </AlertDescription>
             </Alert>
 
             <!-- Non-Active State: Stamp + Rider Content -->
-            <div v-else-if="voucherData && previewViewModel.isNonActive" class="space-y-2.5">
+            <div v-else-if="previewMode === 'non-active'" class="space-y-2.5">
                 <!-- Status Stamp -->
                 <VoucherStatusStamp
                     :status="voucherData.status as 'redeemed' | 'expired'"
@@ -229,7 +239,7 @@ function submitClaim(): void {
             </div>
 
             <!-- Active State: Tabbed preview -->
-            <div v-else-if="voucherData">
+            <div v-else-if="previewMode === 'active'">
                 <!-- Rider pre-claim content from compiled/legacy rider intro -->
                 <Card
                     v-if="previewViewModel.hasPreClaimContent"
