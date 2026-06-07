@@ -21,11 +21,8 @@ import { ref, computed, onMounted } from 'vue';
 import { resolveClaimWidgetExperienceStages } from '@/components/x-change/claimWidgetExperienceStages';
 import { resolveLegacyRiderStages } from '@/components/x-change/claimWidgetLegacyStages';
 import { submitLegacyClaimStart } from '@/components/x-change/claimWidgetLegacySubmit';
-import {
-    isNonActiveVoucher,
-    isReturningRedeemerFromStorage,
-    resolveVoucherStatusDate,
-} from '@/components/x-change/claimWidgetVoucherState';
+import { resolveClaimWidgetPreviewViewModel } from '@/components/x-change/claimWidgetPreviewViewModel';
+import { isReturningRedeemerFromStorage } from '@/components/x-change/claimWidgetVoucherState';
 import { useCompiledClaimForm } from '@/components/x-change/useCompiledClaimForm';
 import FormFlowRenderer from '@/components/x-change/FormFlowRenderer.vue';
 
@@ -69,14 +66,6 @@ onMounted(() => {
 const voucherInput = ref<HTMLInputElement | null>(null);
 const submitButton = ref<HTMLButtonElement | null>(null);
 
-const isNonActive = computed(() =>
-    isNonActiveVoucher(voucherData.value)
-);
-
-const statusDate = computed(() =>
-    resolveVoucherStatusDate(voucherData.value)
-);
-
 const isReturningRedeemer = computed(() =>
     isReturningRedeemerFromStorage()
 );
@@ -102,8 +91,11 @@ const preClaimVisualStages = computed<RawRiderStage[]>(() =>
     experienceStages.value.preClaimVisualStages
 );
 
-const hasPreClaimContent = computed(() =>
-    preClaimVisualStages.value.length > 0
+const previewViewModel = computed(() =>
+    resolveClaimWidgetPreviewViewModel({
+        voucherData: voucherData.value,
+        preClaimVisualStages: preClaimVisualStages.value,
+    })
 );
 
 const runtimeStages = computed<RawRiderStage[]>(() =>
@@ -145,17 +137,17 @@ function submitClaim(): void {
 <template>
     <div class="flex flex-col gap-6">
         <!-- Logo and App Name -->
-        <div v-if="!isNonActive" class="flex flex-col items-center gap-2">
+        <div v-if="!previewViewModel.isNonActive" class="flex flex-col items-center gap-2">
             <AppLogoIcon class="h-20 w-auto" />
         </div>
 
         <!-- Title -->
-        <div v-if="!isNonActive" class="space-y-2 text-center">
+        <div v-if="!previewViewModel.isNonActive" class="space-y-2 text-center">
             <h1 class="text-xl font-medium">Claim Pay Code</h1>
         </div>
 
         <!-- Form -->
-        <form v-if="!isNonActive" @submit.prevent="submitClaim" class="space-y-6">
+        <form v-if="!previewViewModel.isNonActive" @submit.prevent="submitClaim" class="space-y-6">
             <div class="flex flex-col gap-2">
                 <Label for="code">Pay Code</Label>
                 <Input
@@ -182,7 +174,7 @@ function submitClaim(): void {
         </form>
 
         <!-- Voucher Preview -->
-        <div v-if="showPreview" :class="isNonActive ? '' : 'mt-6'">
+        <div v-if="showPreview" :class="previewViewModel.isNonActive ? '' : 'mt-6'">
             <!-- Loading State -->
             <div v-if="loading" class="flex items-center justify-center gap-2 py-8 text-muted-foreground">
                 <Spinner class="h-5 w-5" />
@@ -205,11 +197,11 @@ function submitClaim(): void {
             </Alert>
 
             <!-- Non-Active State: Stamp + Rider Content -->
-            <div v-else-if="voucherData && isNonActive" class="space-y-2.5">
+            <div v-else-if="voucherData && previewViewModel.isNonActive" class="space-y-2.5">
                 <!-- Status Stamp -->
                 <VoucherStatusStamp
                     :status="voucherData.status as 'redeemed' | 'expired'"
-                    :status-date="statusDate"
+                    :status-date="previewViewModel.statusDate"
                     :voucher-code="voucherData.code"
                     :formatted-amount="voucherData.instructions?.formatted_amount"
                 />
@@ -231,7 +223,7 @@ function submitClaim(): void {
             <div v-else-if="voucherData">
                 <!-- Rider pre-claim content from compiled/legacy rider intro -->
                 <Card
-                    v-if="hasPreClaimContent"
+                    v-if="previewViewModel.hasPreClaimContent"
                     data-testid="pre-claim-rider-region"
                     class="mb-4 border-primary/10 bg-primary/5"
                 >
