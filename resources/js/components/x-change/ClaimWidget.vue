@@ -18,14 +18,9 @@ import { useVoucherPreview } from '@/composables/useVoucherPreview';
 import { useForm, usePage } from '@inertiajs/vue3';
 import { AlertCircle } from 'lucide-vue-next';
 import { ref, computed, onMounted } from 'vue';
-
 import { resolveClaimWidgetExperienceStages } from '@/components/x-change/claimWidgetExperienceStages';
 import { resolveLegacyRiderStages } from '@/components/x-change/claimWidgetLegacyStages';
-import { resolveCompiledFormFlowPhase } from '@/components/x-change/compiledFormFlow';
-import { buildCompiledFormPayload } from '@/components/x-change/compiledFormPayload';
-import { resolveCompiledFormSubmitEvent } from '@/components/x-change/compiledFormSubmit';
-import { resolveCompiledFormViewModel } from '@/components/x-change/compiledFormViewModel';
-import { resolveFormFlowBoundary } from '@/components/x-change/formFlowBoundary';
+import { useCompiledClaimForm } from '@/components/x-change/useCompiledClaimForm';
 import FormFlowRenderer from '@/components/x-change/FormFlowRenderer.vue';
 
 initializeTheme();
@@ -67,7 +62,6 @@ onMounted(() => {
 
 const voucherInput = ref<HTMLInputElement | null>(null);
 const submitButton = ref<HTMLButtonElement | null>(null);
-const currentFormValues = ref<Record<string, unknown>>({});
 
 const isNonActive = computed(() => {
     const s = voucherData.value?.status;
@@ -149,50 +143,6 @@ const redirectStages = computed<RawRiderStage[]>(() =>
     experienceStages.value.redirectStages
 );
 
-const compiledFormFlowPhase = computed<Record<string, any> | null>(() =>
-    resolveCompiledFormFlowPhase(props.claimExperience)
-);
-
-const formFlowBoundary = computed(() =>
-    resolveFormFlowBoundary(compiledFormFlowPhase.value)
-);
-
-const isSubmittingCompiledForm = ref(false);
-
-const compiledFormViewModel = computed(() =>
-    resolveCompiledFormViewModel({
-        boundary: formFlowBoundary.value,
-        values: currentFormValues.value,
-        submitError: props.compiledFormSubmitError,
-        submitted: props.compiledFormSubmitted,
-        submitting: isSubmittingCompiledForm.value,
-    })
-);
-
-const usesLegacyFormFlow = computed(() =>
-    compiledFormViewModel.value.usesLegacyFormFlow
-);
-
-const normalizedCompiledFormFlow = computed(() =>
-    compiledFormViewModel.value.normalizedCompiledFormFlow
-);
-
-const isCompiledFormValid = computed(() =>
-    compiledFormViewModel.value.isValid
-);
-
-function updateCurrentFormValues(values: Record<string, unknown>): void {
-    currentFormValues.value = values;
-    emit('update:compiled-form-values', values);
-}
-
-const claimFormPayload = computed(() =>
-    buildCompiledFormPayload(
-        props.initialCode,
-        currentFormValues.value,
-    )
-);
-
 const emit = defineEmits<{
     'submit:compiled-form': [payload: {
         code: string;
@@ -201,25 +151,18 @@ const emit = defineEmits<{
     'update:compiled-form-values': [values: Record<string, unknown>];
 }>();
 
-function submitCompiledForm(): void {
-    const submitEvent = resolveCompiledFormSubmitEvent(
-        normalizedCompiledFormFlow.value !== null,
-        isCompiledFormValid.value,
-        claimFormPayload.value,
-    );
-
-    if (submitEvent.intent === 'blocked') {
-        return;
-    }
-
-    isSubmittingCompiledForm.value = submitEvent.submitting;
-
-    emit('submit:compiled-form', submitEvent.payload);
-}
+const compiledForm = useCompiledClaimForm({
+    initialCode: props.initialCode,
+    claimExperience: computed(() => props.claimExperience),
+    submitted: computed(() => props.compiledFormSubmitted),
+    submitError: computed(() => props.compiledFormSubmitError),
+    emitSubmit: (payload) => emit('submit:compiled-form', payload),
+    emitUpdateValues: (values) => emit('update:compiled-form-values', values),
+});
 
 function submitClaim(): void {
-    if (normalizedCompiledFormFlow.value) {
-        submitCompiledForm();
+    if (compiledForm.normalizedFlow.value) {
+        compiledForm.submit();
 
         return;
     }
@@ -261,7 +204,7 @@ function submitClaim(): void {
                 type="submit"
                 class="w-full rounded-full"
                 data-testid="claim-widget-submit-button"
-                :disabled="normalizedCompiledFormFlow ? !isCompiledFormValid : false"
+                :disabled="compiledForm.normalizedFlow.value ? !compiledForm.isValid.value : false"
             >
                 {{ form.processing ? 'Checking...' : 'Start Claim' }}
             </Button>
@@ -379,12 +322,12 @@ function submitClaim(): void {
         </div>
 
         <div
-            v-if="normalizedCompiledFormFlow || usesLegacyFormFlow"
+            v-if="compiledForm.normalizedFlow.value || compiledForm.usesLegacyFlow.value"
             data-testid="claim-widget-form-flow-boundary-region"
-            :class="normalizedCompiledFormFlow ? 'space-y-4' : 'sr-only'"
+            :class="compiledForm.normalizedFlow.value ? 'space-y-4' : 'sr-only'"
         >
             <Card
-                v-if="normalizedCompiledFormFlow"
+                v-if="compiledForm.normalizedFlow.value"
                 data-testid="compiled-form-flow-visible-region"
                 class="border-primary/10 bg-background"
             >
@@ -397,8 +340,8 @@ function submitClaim(): void {
                     </div>
 
                     <FormFlowRenderer
-                        :form-flow="normalizedCompiledFormFlow"
-                        @update:values="updateCurrentFormValues"
+                        :form-flow="compiledForm.normalizedFlow.value"
+                        @update:values="compiledForm.updateValues"
                     />
                 </CardContent>
             </Card>
