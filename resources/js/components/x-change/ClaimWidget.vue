@@ -26,6 +26,7 @@ import { resolveClaimWidgetSubmitViewModel } from '@/components/x-change/claimWi
 import { isReturningRedeemerFromStorage } from '@/components/x-change/claimWidgetVoucherState';
 import { useCompiledClaimForm } from '@/components/x-change/useCompiledClaimForm';
 import FormFlowRenderer from '@/components/x-change/FormFlowRenderer.vue';
+import { resolveClaimWidgetFormFlowSectionViewModel } from '@/components/x-change/claimWidgetFormFlowSectionViewModel';
 import { resolveClaimWidgetPreviewMode } from '@/components/x-change/claimWidgetPreviewMode';
 
 initializeTheme();
@@ -139,6 +140,13 @@ const submitViewModel = computed(() =>
         hasCompiledForm: Boolean(compiledForm.normalizedFlow.value),
         compiledFormValid: compiledForm.isValid.value,
         processing: form.processing,
+    })
+);
+
+const formFlowSection = computed(() =>
+    resolveClaimWidgetFormFlowSectionViewModel({
+        hasCompiledFlow: Boolean(compiledForm.normalizedFlow.value),
+        usesLegacyFlow: compiledForm.usesLegacyFlow.value,
     })
 );
 
@@ -304,12 +312,12 @@ function submitClaim(): void {
         </div>
 
         <div
-            v-if="compiledForm.normalizedFlow.value || compiledForm.usesLegacyFlow.value"
+            v-if="formFlowSection.visible"
             data-testid="claim-widget-form-flow-boundary-region"
-            :class="compiledForm.normalizedFlow.value ? 'space-y-4' : 'sr-only'"
+            :class="formFlowSection.className"
         >
             <Card
-                v-if="compiledForm.normalizedFlow.value"
+                v-if="formFlowSection.compiledVisible"
                 data-testid="compiled-form-flow-visible-region"
                 class="border-primary/10 bg-background"
             >
