@@ -15,20 +15,12 @@ it('builds form-flow compatible completion payload from prepared compiled claim'
     $payload = app(BuildCompiledClaimCompletionPayload::class)->handle();
 
     expect($payload)->toBe([
-        'source' => 'compiled_claim',
+        'source' => 'compiled_form',
         'code' => 'TEST123',
         'voucher_id' => 123,
         'inputs' => [
             'first_name' => 'Lester',
             'email' => 'lester@example.com',
-        ],
-        'compiled_claim' => [
-            'code' => 'TEST123',
-            'voucher_id' => 123,
-            'inputs' => [
-                'first_name' => 'Lester',
-                'email' => 'lester@example.com',
-            ],
         ],
     ]);
 });
