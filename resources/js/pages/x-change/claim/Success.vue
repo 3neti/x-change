@@ -17,7 +17,6 @@ import {
 import {
     formatSuccessVoucherAmount,
     hasNonZeroVoucherAmount,
-    isPendingClaimOutcome,
     resolveSuccessFallbackTitle,
     shouldRenderSuccessRiderMessage,
 } from '@/components/x-change/successFallback';
@@ -26,6 +25,7 @@ import {
     resolveSuccessCompiledClaimResultViewModel,
     type CompiledClaimResultPayload,
 } from '@/components/x-change/successCompiledClaimResult';
+import { resolveSuccessPageTone } from '@/components/x-change/successPageTone';
 
 defineOptions({ layout: null });
 
@@ -110,13 +110,6 @@ const formattedAmount = computed(() =>
     formatSuccessVoucherAmount(props.voucher)
 );
 
-const isPending = computed(() =>
-    isPendingClaimOutcome({
-        claimOutcome: props.claimOutcome,
-        riderState: props.rider?.state,
-    })
-);
-
 const fallbackTitle = computed(() =>
     resolveSuccessFallbackTitle(props.voucher, {
         claimOutcome: props.claimOutcome,
@@ -131,6 +124,14 @@ const shouldRenderFallback = computed(() =>
 const compiledClaimResult = computed(() =>
     resolveSuccessCompiledClaimResultViewModel(props.compiled_claim_result ?? null)
 );
+
+const pageTone = computed(() =>
+    resolveSuccessPageTone({
+        compiledClaimStatus: compiledClaimResult.value.status,
+        claimOutcome: props.claimOutcome,
+        riderState: props.rider?.state,
+    })
+);
 </script>
 
 <template>
@@ -142,7 +143,7 @@ const compiledClaimResult = computed(() =>
                 <div class="space-y-4 pt-4 text-center">
                     <CheckCircle2
                         class="mx-auto h-16 w-16"
-                        :class="isPending ? 'text-amber-500' : 'text-green-500'"
+                        :class="pageTone.iconClass"
                     />
 
                     <div
