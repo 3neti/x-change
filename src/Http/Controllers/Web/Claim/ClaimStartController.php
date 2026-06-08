@@ -21,6 +21,7 @@ use LBHurtado\XChange\Data\PreparedCompiledClaimData;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultRedirector;
+use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 use LBHurtado\XChange\Support\Claim\CompiledClaimSessionKeys;
 
 class ClaimStartController extends Controller
@@ -68,6 +69,8 @@ class ClaimStartController extends Controller
                     'code' => $e->getMessage(),
                 ]);
             }
+
+            app(CompiledClaimResultSession::class)->put($claimResult);
 
             session()->forget(CompiledClaimSessionKeys::SUBMISSION);
             session()->forget(CompiledClaimSessionKeys::PREPARED);
