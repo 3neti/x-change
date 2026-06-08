@@ -3,10 +3,8 @@ import { computed } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import { Card, CardContent } from '@/components/ui/card';
 import { Clock3 } from 'lucide-vue-next';
-import {
-    resolveSuccessCompiledClaimResultViewModel,
-    type CompiledClaimResultPayload,
-} from '@/components/x-change/successCompiledClaimResult';
+import type { CompiledClaimResultPayload } from '@/components/x-change/successCompiledClaimResult';
+import { resolveApprovalPageViewModel } from '@/components/x-change/approvalPageViewModel';
 
 defineOptions({ layout: null });
 
@@ -22,16 +20,11 @@ const props = defineProps<{
     message?: string | null;
 }>();
 
-const compiledClaimResult = computed(() =>
-    resolveSuccessCompiledClaimResultViewModel(props.compiled_claim_result ?? null)
-);
-
-const title = computed(() =>
-    compiledClaimResult.value.title || 'Claim submitted for processing'
-);
-
-const status = computed(() =>
-    compiledClaimResult.value.status || 'pending'
+const viewModel = computed(() =>
+    resolveApprovalPageViewModel({
+        compiledClaimResult: props.compiled_claim_result ?? null,
+        message: props.message ?? null,
+    })
 );
 </script>
 
@@ -45,21 +38,21 @@ const status = computed(() =>
 
                 <div class="space-y-2">
                     <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        {{ status }}
+                        {{ viewModel.status }}
                     </p>
 
                     <h1
                         data-testid="approval-title"
                         class="text-2xl font-semibold tracking-tight"
                     >
-                        {{ title }}
+                        {{ viewModel.title }}
                     </h1>
 
                     <p
                         data-testid="approval-message"
                         class="text-sm text-muted-foreground"
                     >
-                        {{ message || 'Your claim has been submitted and is awaiting approval.' }}
+                        {{ viewModel.message }}
                     </p>
                 </div>
 
@@ -71,20 +64,20 @@ const status = computed(() =>
                 </div>
 
                 <p
-                    v-if="compiledClaimResult.amountText"
+                    v-if="viewModel.amountText"
                     data-testid="approval-amount"
                     class="text-lg font-semibold"
                 >
-                    {{ compiledClaimResult.amountText }}
+                    {{ viewModel.amountText }}
                 </p>
 
                 <ul
-                    v-if="compiledClaimResult.messages.length > 0"
+                    v-if="viewModel.messages.length > 0"
                     data-testid="approval-messages"
                     class="list-disc space-y-1 pl-5 text-left text-sm text-muted-foreground"
                 >
                     <li
-                        v-for="item in compiledClaimResult.messages"
+                        v-for="item in viewModel.messages"
                         :key="item"
                     >
                         {{ item }}
