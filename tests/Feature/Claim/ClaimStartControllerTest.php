@@ -10,6 +10,7 @@ use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Support\Claim\ClaimEvidenceSynchronizer;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
+use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 use LBHurtado\XChange\Support\Claim\CompiledClaimSessionKeys;
 
 function claimVoucherWithRiderSplash(): Voucher
@@ -470,3 +471,54 @@ it('returns to claim form when compiled form redemption fails', function () {
         ->toBe('Compiled redemption failed.');
 });
 
+it('hydrates success page with compiled claim result after compiled form submission', function () {
+    $this->withoutMiddleware();
+
+    $voucher = issueVoucher();
+
+    $evidence = Mockery::mock(ClaimEvidenceSynchronizer::class);
+    $evidence->shouldReceive('sync')->once();
+
+    $submitPayCodeClaim = Mockery::mock(SubmitPayCodeClaim::class);
+    $submitPayCodeClaim
+        ->shouldReceive('handle')
+        ->once()
+        ->andReturn(new SubmitPayCodeClaimResultData(
+            voucher_code: $voucher->code,
+            claim_type: 'withdraw',
+            claimed: true,
+            status: 'success',
+            requested_amount: null,
+            disbursed_amount: null,
+            currency: null,
+            remaining_balance: null,
+            fully_claimed: true,
+            disbursement: null,
+            messages: ['Claim successful.'],
+        ));
+
+    $this->app->instance(ClaimEvidenceSynchronizer::class, $evidence);
+    $this->app->instance(SubmitPayCodeClaim::class, $submitPayCodeClaim);
+
+    $this->post('/x/claim', [
+        'mode' => 'compiled_form',
+        'code' => $voucher->code,
+        'inputs' => [
+            'first_name' => 'Lester',
+        ],
+    ])->assertRedirect(route('x-change.claim.success', [
+        'code' => $voucher->code,
+    ]));
+
+    expect(session()->has(CompiledClaimResultSession::KEY))->toBeTrue();
+
+    $this->getJson(route('x-change.claim.success', [
+        'code' => $voucher->code,
+    ]))
+        ->assertOk()
+        ->assertJsonPath('compiled_claim_result.voucher_code', $voucher->code)
+        ->assertJsonPath('compiled_claim_result.status', 'success')
+        ->assertJsonPath('compiled_claim_result.messages.0', 'Claim successful.');
+
+    expect(session()->has(CompiledClaimResultSession::KEY))->toBeFalse();
+});
