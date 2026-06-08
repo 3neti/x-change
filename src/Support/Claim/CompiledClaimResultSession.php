@@ -38,6 +38,7 @@ final class CompiledClaimResultSession
             'remaining_balance' => data_get($result, 'remaining_balance'),
             'fully_claimed' => data_get($result, 'fully_claimed'),
             'messages' => data_get($result, 'messages', []),
+            'approval_metadata' => CompiledClaimApprovalMetadata::fromResult($result),
         ];
     }
 }

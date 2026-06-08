@@ -34,6 +34,16 @@ it('normalizes compiled claim result for session storage', function () {
         'remaining_balance' => 0,
         'fully_claimed' => true,
         'messages' => ['Claim successful.'],
+        'approval_metadata' => [
+            'provider' => null,
+            'authorization_type' => null,
+            'reference_id' => null,
+            'expires_at' => null,
+            'otp_required' => false,
+            'polling_required' => false,
+            'manual_review' => false,
+            'message' => null,
+        ],
     ]);
 });
 
@@ -99,4 +109,36 @@ it('forgets compiled claim result from session', function () {
     app(CompiledClaimResultSession::class)->forget();
 
     expect(session()->has(CompiledClaimResultSession::KEY))->toBeFalse();
+});
+
+it('stores normalized approval metadata with compiled claim result', function () {
+    $result = compiledClaimSessionResult([
+        'status' => 'pending',
+        'voucher_code' => 'TEST123',
+        'messages' => ['Approval required.'],
+        'approval_metadata' => [
+            'provider' => 'payanamics',
+            'authorization_type' => 'otp',
+            'reference_id' => 'AUTH-123',
+            'otp_required' => true,
+            'message' => 'Enter the OTP sent to your mobile number.',
+        ],
+    ]);
+
+    expect(app(CompiledClaimResultSession::class)->normalize($result))
+        ->toMatchArray([
+            'status' => 'pending',
+            'voucher_code' => 'TEST123',
+            'messages' => ['Approval required.'],
+            'approval_metadata' => [
+                'provider' => 'payanamics',
+                'authorization_type' => 'otp',
+                'reference_id' => 'AUTH-123',
+                'expires_at' => null,
+                'otp_required' => true,
+                'polling_required' => false,
+                'manual_review' => false,
+                'message' => 'Enter the OTP sent to your mobile number.',
+            ],
+        ]);
 });
