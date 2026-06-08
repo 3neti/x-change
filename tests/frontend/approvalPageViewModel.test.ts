@@ -15,6 +15,12 @@ describe('approval page view model', () => {
             message: DEFAULT_APPROVAL_MESSAGE,
             amountText: null,
             messages: [],
+            headline: 'Approval required',
+            provider: null,
+            authorizationType: null,
+            referenceId: null,
+            expiresAt: null,
+            metadataMessage: null,
         });
     });
 
@@ -48,6 +54,12 @@ describe('approval page view model', () => {
             message: DEFAULT_APPROVAL_MESSAGE,
             amountText: 'PHP 1,000.00',
             messages: ['Approval required.'],
+            headline: 'Approval required',
+            provider: null,
+            authorizationType: null,
+            referenceId: null,
+            expiresAt: null,
+            metadataMessage: null,
         });
     });
 
@@ -60,6 +72,36 @@ describe('approval page view model', () => {
         })).toMatchObject({
             status: 'pending',
             messages: ['Waiting for provider confirmation.'],
+            headline: 'Approval required',
+            provider: null,
+            authorizationType: null,
+            referenceId: null,
+            expiresAt: null,
+            metadataMessage: null,
+        });
+    });
+
+    it('resolves approval metadata details', () => {
+        expect(resolveApprovalPageViewModel({
+            compiledClaimResult: {
+                status: 'pending',
+                approval_metadata: {
+                    provider: 'payanamics',
+                    authorization_type: 'otp',
+                    reference_id: 'AUTH-123',
+                    expires_at: '2026-06-08T12:00:00+08:00',
+                    otp_required: true,
+                    message: 'Enter the OTP sent to your mobile number.',
+                },
+            },
+            message: null,
+        })).toMatchObject({
+            headline: 'OTP verification required',
+            provider: 'payanamics',
+            authorizationType: 'otp',
+            referenceId: 'AUTH-123',
+            expiresAt: '2026-06-08T12:00:00+08:00',
+            metadataMessage: 'Enter the OTP sent to your mobile number.',
         });
     });
 });

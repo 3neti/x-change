@@ -1,3 +1,4 @@
+import { resolveApprovalMetadataViewModel } from '@/components/x-change/approvalMetadataViewModel';
 import {
     resolveSuccessCompiledClaimResultViewModel,
     type CompiledClaimResultPayload,
@@ -17,6 +18,12 @@ export type ApprovalPageViewModel = {
     message: string;
     amountText: string | null;
     messages: string[];
+    headline: string;
+    provider: string | null;
+    authorizationType: string | null;
+    referenceId: string | null;
+    expiresAt: string | null;
+    metadataMessage: string | null;
 };
 
 export function resolveApprovalPageViewModel(
@@ -26,11 +33,21 @@ export function resolveApprovalPageViewModel(
         input.compiledClaimResult ?? null,
     );
 
+    const approvalMetadata = resolveApprovalMetadataViewModel(
+        input.compiledClaimResult?.approval_metadata ?? null,
+    );
+
     return {
         title: compiledClaimResult.title || 'Claim submitted for processing',
         status: compiledClaimResult.status || 'pending',
         message: input.message || DEFAULT_APPROVAL_MESSAGE,
         amountText: compiledClaimResult.amountText,
         messages: compiledClaimResult.messages,
+        headline: approvalMetadata.headline,
+        provider: approvalMetadata.provider,
+        authorizationType: approvalMetadata.authorizationType,
+        referenceId: approvalMetadata.referenceId,
+        expiresAt: approvalMetadata.expiresAt,
+        metadataMessage: approvalMetadata.message,
     };
 }

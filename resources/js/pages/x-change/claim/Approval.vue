@@ -54,6 +54,22 @@ const viewModel = computed(() =>
                     >
                         {{ viewModel.message }}
                     </p>
+
+                    <p
+                        v-if="viewModel.headline"
+                        data-testid="approval-headline"
+                        class="text-sm font-medium text-foreground"
+                    >
+                        {{ viewModel.headline }}
+                    </p>
+
+                    <p
+                        v-if="viewModel.metadataMessage"
+                        data-testid="approval-metadata-message"
+                        class="text-sm text-muted-foreground"
+                    >
+                        {{ viewModel.metadataMessage }}
+                    </p>
                 </div>
 
                 <div
@@ -61,6 +77,28 @@ const viewModel = computed(() =>
                     class="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-4 py-1 font-mono text-sm font-semibold tracking-widest text-primary"
                 >
                     {{ voucher.code }}
+                </div>
+
+                <div
+                    v-if="viewModel.provider || viewModel.referenceId || viewModel.authorizationType || viewModel.expiresAt"
+                    data-testid="approval-metadata"
+                    class="space-y-1 rounded-lg border border-primary/10 bg-primary/5 p-4 text-left text-sm"
+                >
+                    <p v-if="viewModel.provider" data-testid="approval-provider">
+                        Provider: {{ viewModel.provider }}
+                    </p>
+
+                    <p v-if="viewModel.authorizationType" data-testid="approval-authorization-type">
+                        Authorization: {{ viewModel.authorizationType }}
+                    </p>
+
+                    <p v-if="viewModel.referenceId" data-testid="approval-reference-id">
+                        Reference: {{ viewModel.referenceId }}
+                    </p>
+
+                    <p v-if="viewModel.expiresAt" data-testid="approval-expires-at">
+                        Expires: {{ viewModel.expiresAt }}
+                    </p>
                 </div>
 
                 <p

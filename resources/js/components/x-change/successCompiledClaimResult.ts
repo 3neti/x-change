@@ -1,3 +1,14 @@
+export type CompiledClaimApprovalMetadataPayload = {
+    provider?: string | null;
+    authorization_type?: string | null;
+    reference_id?: string | null;
+    expires_at?: string | null;
+    otp_required?: boolean | null;
+    polling_required?: boolean | null;
+    manual_review?: boolean | null;
+    message?: string | null;
+} | null;
+
 export type CompiledClaimResultPayload = {
     status?: string | null;
     claim_type?: string | null;
@@ -9,6 +20,7 @@ export type CompiledClaimResultPayload = {
     remaining_balance?: number | string | null;
     fully_claimed?: boolean | null;
     messages?: string[] | null;
+    approval_metadata?: CompiledClaimApprovalMetadataPayload;
 } | null;
 
 export type SuccessCompiledClaimResultViewModel = {
