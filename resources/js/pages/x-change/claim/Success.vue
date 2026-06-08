@@ -22,6 +22,10 @@ import {
     shouldRenderSuccessRiderMessage,
 } from '@/components/x-change/successFallback';
 import { resolveSuccessViewModel } from '@/components/x-change/successViewModel';
+import {
+    resolveSuccessCompiledClaimResultViewModel,
+    type CompiledClaimResultPayload,
+} from '@/components/x-change/successCompiledClaimResult';
 
 defineOptions({ layout: null });
 
@@ -44,6 +48,7 @@ interface Props {
         owner?: string | null;
         delay_seconds?: number | null;
     } | null;
+    compiled_claim_result?: CompiledClaimResultPayload;
 }
 
 const props = defineProps<Props>();
@@ -122,6 +127,10 @@ const fallbackTitle = computed(() =>
 const shouldRenderFallback = computed(() =>
     successViewModel.value.shouldRenderFallback
 );
+
+const compiledClaimResult = computed(() =>
+    resolveSuccessCompiledClaimResultViewModel(props.compiled_claim_result ?? null)
+);
 </script>
 
 <template>
@@ -168,6 +177,40 @@ const shouldRenderFallback = computed(() =>
                         <p class="text-center text-lg font-medium text-foreground">
                             {{ fallbackTitle }}
                         </p>
+                    </div>
+
+                    <div
+                        v-if="compiledClaimResult.visible"
+                        data-testid="compiled-claim-result-region"
+                        class="rounded-lg border border-primary/10 bg-primary/5 p-4 text-left"
+                    >
+                        <p
+                            data-testid="compiled-claim-result-title"
+                            class="text-sm font-semibold text-foreground"
+                        >
+                            {{ compiledClaimResult.title }}
+                        </p>
+
+                        <p
+                            v-if="compiledClaimResult.status"
+                            data-testid="compiled-claim-result-status"
+                            class="mt-1 text-xs uppercase tracking-wide text-muted-foreground"
+                        >
+                            {{ compiledClaimResult.status }}
+                        </p>
+
+                        <ul
+                            v-if="compiledClaimResult.messages.length > 0"
+                            data-testid="compiled-claim-result-messages"
+                            class="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground"
+                        >
+                            <li
+                                v-for="message in compiledClaimResult.messages"
+                                :key="message"
+                            >
+                                {{ message }}
+                            </li>
+                        </ul>
                     </div>
 
                     <div
