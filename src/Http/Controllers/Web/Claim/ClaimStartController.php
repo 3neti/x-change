@@ -20,6 +20,7 @@ use LBHurtado\XChange\Actions\Claim\SubmitCompiledFormClaim;
 use LBHurtado\XChange\Data\PreparedCompiledClaimData;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
+use LBHurtado\XChange\Support\Claim\CompiledClaimResultRedirector;
 use LBHurtado\XChange\Support\Claim\CompiledClaimSessionKeys;
 
 class ClaimStartController extends Controller
@@ -58,7 +59,7 @@ class ClaimStartController extends Controller
             }
 
             try {
-                app(SubmitCompiledFormClaim::class)->handle(
+                $claimResult = app(SubmitCompiledFormClaim::class)->handle(
                     voucher: $prepared->voucher,
                     prepared: $preparedData,
                 );
@@ -71,9 +72,10 @@ class ClaimStartController extends Controller
             session()->forget(CompiledClaimSessionKeys::SUBMISSION);
             session()->forget(CompiledClaimSessionKeys::PREPARED);
 
-            return redirect()->route('x-change.claim.success', [
-                'code' => $preparedData->code,
-            ]);
+            return app(CompiledClaimResultRedirector::class)->redirect(
+                voucher: $prepared->voucher,
+                result: $claimResult,
+            );
         }
 
         $code = strtoupper(trim((string) $request->query('code', '')));

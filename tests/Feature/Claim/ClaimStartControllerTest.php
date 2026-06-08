@@ -398,6 +398,47 @@ it('passes compiled form payload to the canonical redemption action', function (
         ->and(session()->has(CompiledClaimSessionKeys::PREPARED))->toBeFalse();
 });
 
+it('routes pending compiled form claim results to approval placeholder', function () {
+    $this->withoutMiddleware();
+
+    $voucher = issueVoucher();
+
+    $evidence = Mockery::mock(ClaimEvidenceSynchronizer::class);
+    $evidence->shouldReceive('sync')->once();
+
+    $submitPayCodeClaim = Mockery::mock(SubmitPayCodeClaim::class);
+    $submitPayCodeClaim
+        ->shouldReceive('handle')
+        ->once()
+        ->andReturn(new SubmitPayCodeClaimResultData(
+            voucher_code: $voucher->code,
+            claim_type: 'withdraw',
+            claimed: false,
+            status: 'pending',
+            requested_amount: null,
+            disbursed_amount: null,
+            currency: null,
+            remaining_balance: null,
+            fully_claimed: false,
+            disbursement: null,
+            messages: [],
+        ));
+
+    $this->app->instance(ClaimEvidenceSynchronizer::class, $evidence);
+    $this->app->instance(SubmitPayCodeClaim::class, $submitPayCodeClaim);
+
+    $this->post('/x/claim', [
+        'mode' => 'compiled_form',
+        'code' => $voucher->code,
+        'inputs' => [
+            'first_name' => 'Lester',
+        ],
+    ])->assertRedirect(url("/x/claim/{$voucher->code}/approval"));
+
+    expect(session()->has(CompiledClaimSessionKeys::SUBMISSION))->toBeFalse()
+        ->and(session()->has(CompiledClaimSessionKeys::PREPARED))->toBeFalse();
+});
+
 it('returns to claim form when compiled form redemption fails', function () {
     $this->withoutMiddleware();
 
