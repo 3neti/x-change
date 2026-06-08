@@ -10,6 +10,7 @@ use Inertia\Response;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
+use LBHurtado\XChange\Support\Claim\CompiledClaimSuccessPayload;
 use LBHurtado\XChange\Support\Rider\XChangeRiderOutcomeResolver;
 use LBHurtado\XChange\Support\Rider\XChangeRiderSubjectFactory;
 use LBHurtado\XRider\Contracts\RiderExperienceResolverContract;
@@ -52,6 +53,7 @@ class ClaimSuccessPageController
             ]),
             'claim_experience' => $claimExperience,
             'redirect' => ClaimExperiencePayload::redirect($claimExperience),
+            'compiled_claim_result' => app(CompiledClaimSuccessPayload::class)->pull(),
         ];
 
         if (request()->wantsJson()) {
