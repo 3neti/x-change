@@ -104,3 +104,60 @@ it('passes claim experience to success page payload', function () {
             'redirect',
         ]);
 });
+
+use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
+
+it('passes compiled claim result to success page payload when present in session', function () {
+    $voucher = issueVoucher();
+
+    session()->put(CompiledClaimResultSession::KEY, [
+        'status' => 'success',
+        'claim_type' => 'withdraw',
+        'voucher_code' => $voucher->code,
+        'claimed' => true,
+        'requested_amount' => null,
+        'disbursed_amount' => null,
+        'currency' => null,
+        'remaining_balance' => null,
+        'fully_claimed' => true,
+        'messages' => ['Claim successful.'],
+    ]);
+
+    $this
+        ->getJson(route('x-change.claim.success', [
+            'code' => $voucher->code,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('compiled_claim_result.status', 'success')
+        ->assertJsonPath('compiled_claim_result.claim_type', 'withdraw')
+        ->assertJsonPath('compiled_claim_result.voucher_code', $voucher->code)
+        ->assertJsonPath('compiled_claim_result.claimed', true)
+        ->assertJsonPath('compiled_claim_result.fully_claimed', true)
+        ->assertJsonPath('compiled_claim_result.messages.0', 'Claim successful.');
+});
+
+it('pulls compiled claim result after success page payload is rendered', function () {
+    $voucher = issueVoucher();
+
+    session()->put(CompiledClaimResultSession::KEY, [
+        'status' => 'success',
+        'voucher_code' => $voucher->code,
+        'messages' => [],
+    ]);
+
+    $this
+        ->getJson(route('x-change.claim.success', [
+            'code' => $voucher->code,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('compiled_claim_result.status', 'success');
+
+    expect(session()->has(CompiledClaimResultSession::KEY))->toBeFalse();
+
+    $this
+        ->getJson(route('x-change.claim.success', [
+            'code' => $voucher->code,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('compiled_claim_result', null);
+});
