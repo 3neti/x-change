@@ -522,3 +522,56 @@ it('hydrates success page with compiled claim result after compiled form submiss
 
     expect(session()->has(CompiledClaimResultSession::KEY))->toBeFalse();
 });
+
+it('hydrates approval page with pending compiled claim result after compiled form submission', function () {
+    $this->withoutMiddleware();
+
+    $voucher = issueVoucher();
+
+    $evidence = Mockery::mock(ClaimEvidenceSynchronizer::class);
+    $evidence->shouldReceive('sync')->once();
+
+    $submitPayCodeClaim = Mockery::mock(SubmitPayCodeClaim::class);
+    $submitPayCodeClaim
+        ->shouldReceive('handle')
+        ->once()
+        ->andReturn(new SubmitPayCodeClaimResultData(
+            voucher_code: $voucher->code,
+            claim_type: 'withdraw',
+            claimed: false,
+            status: 'pending',
+            requested_amount: null,
+            disbursed_amount: null,
+            currency: null,
+            remaining_balance: null,
+            fully_claimed: false,
+            disbursement: null,
+            messages: ['Approval required.'],
+        ));
+
+    $this->app->instance(ClaimEvidenceSynchronizer::class, $evidence);
+    $this->app->instance(SubmitPayCodeClaim::class, $submitPayCodeClaim);
+
+    $this->post('/x/claim', [
+        'mode' => 'compiled_form',
+        'code' => $voucher->code,
+        'inputs' => [
+            'first_name' => 'Lester',
+        ],
+    ])->assertRedirect(route('x-change.claim.approval', [
+        'code' => $voucher->code,
+    ]));
+
+    expect(session()->has(CompiledClaimResultSession::KEY))->toBeTrue();
+
+    $this->getJson(route('x-change.claim.approval', [
+        'code' => $voucher->code,
+    ]))
+        ->assertOk()
+        ->assertJsonPath('compiled_claim_result.voucher_code', $voucher->code)
+        ->assertJsonPath('compiled_claim_result.status', 'pending')
+        ->assertJsonPath('compiled_claim_result.messages.0', 'Approval required.');
+
+    expect(session()->has(CompiledClaimResultSession::KEY))->toBeFalse();
+});
+
