@@ -199,6 +199,14 @@ const compiledClaimResult = computed(() =>
                             {{ compiledClaimResult.status }}
                         </p>
 
+                        <p
+                            v-if="compiledClaimResult.amountText"
+                            data-testid="compiled-claim-result-amount"
+                            class="mt-3 text-lg font-semibold text-foreground"
+                        >
+                            {{ compiledClaimResult.amountText }}
+                        </p>
+
                         <ul
                             v-if="compiledClaimResult.messages.length > 0"
                             data-testid="compiled-claim-result-messages"

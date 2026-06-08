@@ -8,6 +8,8 @@ describe('success compiled claim result view model', () => {
             status: null,
             title: '',
             messages: [],
+            amountText: null,
+            isPending: false,
         });
     });
 
@@ -20,6 +22,8 @@ describe('success compiled claim result view model', () => {
             status: 'success',
             title: 'Claim completed',
             messages: ['Claim successful.'],
+            amountText: null,
+            isPending: false,
         });
     });
 
@@ -32,6 +36,8 @@ describe('success compiled claim result view model', () => {
             status: 'pending',
             title: 'Claim submitted for processing',
             messages: ['Approval required.'],
+            amountText: null,
+            isPending: true,
         });
     });
 
@@ -42,6 +48,26 @@ describe('success compiled claim result view model', () => {
         })).toMatchObject({
             visible: true,
             messages: [],
+        });
+    });
+
+    it('formats disbursed amount with currency', () => {
+        expect(resolveSuccessCompiledClaimResultViewModel({
+            status: 'success',
+            disbursed_amount: 1000,
+            currency: 'PHP',
+        })).toMatchObject({
+            amountText: 'PHP 1,000.00',
+        });
+    });
+
+    it('does not show amount when disbursed amount or currency is missing', () => {
+        expect(resolveSuccessCompiledClaimResultViewModel({
+            status: 'success',
+            disbursed_amount: 1000,
+            currency: null,
+        })).toMatchObject({
+            amountText: null,
         });
     });
 });
