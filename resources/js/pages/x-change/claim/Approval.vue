@@ -101,6 +101,50 @@ const viewModel = computed(() =>
                     </p>
                 </div>
 
+                <form
+                    v-if="viewModel.showOtpForm"
+                    data-testid="approval-otp-form"
+                    class="space-y-3 rounded-lg border border-primary/10 bg-background p-4 text-left"
+                >
+                    <label
+                        for="approval-otp"
+                        class="text-sm font-medium"
+                    >
+                        One-time password
+                    </label>
+
+                    <input
+                        id="approval-otp"
+                        data-testid="approval-otp-input"
+                        class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                        placeholder="Enter OTP"
+                    />
+
+                    <button
+                        type="submit"
+                        data-testid="approval-otp-submit"
+                        class="w-full rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+                    >
+                        Verify OTP
+                    </button>
+                </form>
+
+                <div
+                    v-if="viewModel.showPollingNotice"
+                    data-testid="approval-polling-notice"
+                    class="rounded-lg border border-primary/10 bg-primary/5 p-4 text-sm text-muted-foreground"
+                >
+                    Waiting for provider confirmation. This page may update once confirmation is received.
+                </div>
+
+                <div
+                    v-if="viewModel.showManualReviewNotice"
+                    data-testid="approval-manual-review-notice"
+                    class="rounded-lg border border-primary/10 bg-primary/5 p-4 text-sm text-muted-foreground"
+                >
+                    Your claim is under manual review. Please wait for further instructions.
+                </div>
+
                 <p
                     v-if="viewModel.amountText"
                     data-testid="approval-amount"

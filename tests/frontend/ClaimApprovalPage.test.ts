@@ -71,4 +71,69 @@ describe('Claim approval page', () => {
         expect(wrapper.find('[data-testid="approval-amount"]').text()).toBe('PHP 1,000.00');
         expect(wrapper.find('[data-testid="approval-messages"]').text()).toContain('Approval required.');
     });
+
+    it('renders OTP approval form when OTP is required', () => {
+        const wrapper = mount(Approval, {
+            props: {
+                voucher: {
+                    code: 'TEST123',
+                },
+                compiled_claim_result: {
+                    status: 'pending',
+                    approval_metadata: {
+                        otp_required: true,
+                    },
+                },
+                message: null,
+            },
+        });
+
+        expect(wrapper.find('[data-testid="approval-otp-form"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="approval-otp-input"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="approval-otp-submit"]').text()).toBe('Verify OTP');
+        expect(wrapper.find('[data-testid="approval-polling-notice"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="approval-manual-review-notice"]').exists()).toBe(false);
+    });
+
+    it('renders polling notice when polling is required', () => {
+        const wrapper = mount(Approval, {
+            props: {
+                voucher: {
+                    code: 'TEST123',
+                },
+                compiled_claim_result: {
+                    status: 'pending',
+                    approval_metadata: {
+                        polling_required: true,
+                    },
+                },
+                message: null,
+            },
+        });
+
+        expect(wrapper.find('[data-testid="approval-polling-notice"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="approval-otp-form"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="approval-manual-review-notice"]').exists()).toBe(false);
+    });
+
+    it('renders manual review notice when manual review is required', () => {
+        const wrapper = mount(Approval, {
+            props: {
+                voucher: {
+                    code: 'TEST123',
+                },
+                compiled_claim_result: {
+                    status: 'pending',
+                    approval_metadata: {
+                        manual_review: true,
+                    },
+                },
+                message: null,
+            },
+        });
+
+        expect(wrapper.find('[data-testid="approval-manual-review-notice"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="approval-otp-form"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="approval-polling-notice"]').exists()).toBe(false);
+    });
 });

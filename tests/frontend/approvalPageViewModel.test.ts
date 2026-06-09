@@ -21,6 +21,10 @@ describe('approval page view model', () => {
             referenceId: null,
             expiresAt: null,
             metadataMessage: null,
+            actionMode: 'none',
+            showOtpForm: false,
+            showPollingNotice: false,
+            showManualReviewNotice: false,
         });
     });
 
@@ -60,6 +64,10 @@ describe('approval page view model', () => {
             referenceId: null,
             expiresAt: null,
             metadataMessage: null,
+            actionMode: 'none',
+            showOtpForm: false,
+            showPollingNotice: false,
+            showManualReviewNotice: false,
         });
     });
 
@@ -102,6 +110,57 @@ describe('approval page view model', () => {
             referenceId: 'AUTH-123',
             expiresAt: '2026-06-08T12:00:00+08:00',
             metadataMessage: 'Enter the OTP sent to your mobile number.',
+        });
+    });
+
+    it('shows OTP action when approval metadata requires OTP', () => {
+        expect(resolveApprovalPageViewModel({
+            compiledClaimResult: {
+                status: 'pending',
+                approval_metadata: {
+                    otp_required: true,
+                },
+            },
+            message: null,
+        })).toMatchObject({
+            actionMode: 'otp',
+            showOtpForm: true,
+            showPollingNotice: false,
+            showManualReviewNotice: false,
+        });
+    });
+
+    it('shows polling notice when approval metadata requires polling', () => {
+        expect(resolveApprovalPageViewModel({
+            compiledClaimResult: {
+                status: 'pending',
+                approval_metadata: {
+                    polling_required: true,
+                },
+            },
+            message: null,
+        })).toMatchObject({
+            actionMode: 'polling',
+            showOtpForm: false,
+            showPollingNotice: true,
+            showManualReviewNotice: false,
+        });
+    });
+
+    it('shows manual review notice when approval metadata requires manual review', () => {
+        expect(resolveApprovalPageViewModel({
+            compiledClaimResult: {
+                status: 'pending',
+                approval_metadata: {
+                    manual_review: true,
+                },
+            },
+            message: null,
+        })).toMatchObject({
+            actionMode: 'manual_review',
+            showOtpForm: false,
+            showPollingNotice: false,
+            showManualReviewNotice: true,
         });
     });
 });
