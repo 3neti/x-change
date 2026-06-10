@@ -1,10 +1,17 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Approval from '../../resources/js/pages/x-change/claim/Approval.vue';
+
+const { post } = vi.hoisted(() => ({
+    post: vi.fn(),
+}));
 
 vi.mock('@inertiajs/vue3', () => ({
     Head: {
         template: '<div><slot /></div>',
+    },
+    router: {
+        post,
     },
 }));
 
@@ -22,6 +29,10 @@ vi.mock('lucide-vue-next', () => ({
         template: '<span data-testid="approval-clock-icon" />',
     },
 }));
+
+beforeEach(() => {
+    post.mockClear();
+});
 
 describe('Claim approval page', () => {
     it('renders default pending approval copy', () => {
@@ -170,6 +181,18 @@ describe('Claim approval page', () => {
                 provider: 'payanamics',
             },
         ]);
+
+        expect(post).toHaveBeenCalledWith(
+            '/x/claim/TEST123/approval/otp',
+            {
+                otp: '123456',
+                reference_id: 'AUTH-123',
+                provider: 'payanamics',
+            },
+            expect.objectContaining({
+                preserveScroll: true,
+            }),
+        );
     });
 
     it('does not emit OTP submission when OTP is empty', async () => {

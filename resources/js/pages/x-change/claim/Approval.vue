@@ -9,6 +9,7 @@ import {
     resolveApprovalOtpSubmission,
     type ApprovalOtpSubmissionPayload,
 } from '@/components/x-change/approvalOtpSubmission';
+import { submitApprovalOtp } from '@/components/x-change/approvalOtpSubmitAdapter';
 
 defineOptions({ layout: null });
 
@@ -52,6 +53,13 @@ function submitOtp(): void {
     }
 
     emit('submit:otp', event.payload);
+
+    submitApprovalOtp({
+        code: props.voucher.code,
+        otp: event.payload.otp,
+        referenceId: event.payload.referenceId,
+        provider: event.payload.provider,
+    });
 }
 </script>
 
