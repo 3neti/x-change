@@ -18,6 +18,7 @@ it('accepts approval OTP payload for an existing voucher', function () {
         ->assertRedirect()
         ->assertSessionHas('approval_otp_received', true)
         ->assertSessionHas('approval_otp', [
+            'status' => 'received',
             'voucher_code' => $voucher->code,
             'reference_id' => 'AUTH-123',
             'provider' => 'payanamics',
@@ -52,6 +53,7 @@ it('allows optional approval OTP metadata', function () {
         ])
         ->assertRedirect()
         ->assertSessionHas('approval_otp', [
+            'status' => 'received',
             'voucher_code' => $voucher->code,
             'reference_id' => null,
             'provider' => null,

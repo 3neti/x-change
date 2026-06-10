@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Http\Controllers\Web\Claim;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Actions\Claim\SubmitClaimApprovalOtp;
 
 final class ClaimApprovalOtpController
 {
@@ -22,13 +23,11 @@ final class ClaimApprovalOtpController
             'provider' => ['nullable', 'string'],
         ]);
 
+        $result = app(SubmitClaimApprovalOtp::class)->handle($voucher, $validated);
+
         return back()->with([
             'approval_otp_received' => true,
-            'approval_otp' => [
-                'voucher_code' => (string) $voucher->code,
-                'reference_id' => $validated['reference_id'] ?? null,
-                'provider' => $validated['provider'] ?? null,
-            ],
+            'approval_otp' => $result,
         ]);
     }
 }
