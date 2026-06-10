@@ -30,7 +30,13 @@ final class SubmitClaimApprovalOtp
      */
     public function handle(Voucher $voucher, array $payload): array
     {
-        return ($this->authorizer ?? app(NullClaimApprovalOtpAuthorizer::class))
+        $authorizer = $this->authorizer;
+
+        if (! $authorizer && app()->bound(ClaimApprovalOtpAuthorizer::class)) {
+            $authorizer = app(ClaimApprovalOtpAuthorizer::class);
+        }
+
+        return ($authorizer ?? app(NullClaimApprovalOtpAuthorizer::class))
             ->authorize($voucher, $payload);
     }
 }

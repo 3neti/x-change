@@ -8,6 +8,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Claim\SubmitClaimApprovalOtp;
+use LBHurtado\XChange\Support\Claim\ClaimApprovalOtpResultRedirector;
+use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 
 final class ClaimApprovalOtpController
 {
@@ -25,9 +27,8 @@ final class ClaimApprovalOtpController
 
         $result = app(SubmitClaimApprovalOtp::class)->handle($voucher, $validated);
 
-        return back()->with([
-            'approval_otp_received' => true,
-            'approval_otp' => $result,
-        ]);
+        app(CompiledClaimResultSession::class)->put((object) $result);
+
+        return app(ClaimApprovalOtpResultRedirector::class)->redirect($voucher, $result);
     }
 }
