@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Contracts\Claim\ClaimApprovalOtpAuthorizer;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 
 it('accepts approval OTP payload for an existing voucher', function () {
@@ -26,6 +28,16 @@ it('accepts approval OTP payload for an existing voucher', function () {
         'voucher_code' => $voucher->code,
         'messages' => [
             'Approval OTP received.',
+        ],
+        'approval_metadata' => [
+            'provider' => 'payanamics',
+            'authorization_type' => 'otp',
+            'reference_id' => 'AUTH-123',
+            'expires_at' => null,
+            'otp_required' => true,
+            'polling_required' => false,
+            'manual_review' => false,
+            'message' => 'Approval OTP received.',
         ],
     ]);
 });
@@ -67,6 +79,16 @@ it('allows optional approval OTP metadata', function () {
         'messages' => [
             'Approval OTP received.',
         ],
+        'approval_metadata' => [
+            'provider' => null,
+            'authorization_type' => 'otp',
+            'reference_id' => null,
+            'expires_at' => null,
+            'otp_required' => true,
+            'polling_required' => false,
+            'manual_review' => false,
+            'message' => 'Approval OTP received.',
+        ],
     ]);
 });
 
@@ -88,10 +110,10 @@ it('redirects completed approval OTP result to success page', function () {
     $voucher = issueVoucher();
 
     $this->app->bind(
-        \LBHurtado\XChange\Contracts\Claim\ClaimApprovalOtpAuthorizer::class,
-        fn () => new class implements \LBHurtado\XChange\Contracts\Claim\ClaimApprovalOtpAuthorizer
+        ClaimApprovalOtpAuthorizer::class,
+        fn () => new class implements ClaimApprovalOtpAuthorizer
         {
-            public function authorize(\LBHurtado\Voucher\Models\Voucher $voucher, array $payload): array
+            public function authorize(Voucher $voucher, array $payload): array
             {
                 return [
                     'status' => 'completed',

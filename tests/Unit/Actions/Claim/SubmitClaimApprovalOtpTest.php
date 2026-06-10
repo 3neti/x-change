@@ -23,6 +23,16 @@ it('returns received approval OTP result for voucher', function () {
         'messages' => [
             'Approval OTP received.',
         ],
+        'approval_metadata' => [
+            'provider' => 'payanamics',
+            'authorization_type' => 'otp',
+            'reference_id' => 'AUTH-123',
+            'expires_at' => null,
+            'otp_required' => true,
+            'polling_required' => false,
+            'manual_review' => false,
+            'message' => 'Approval OTP received.',
+        ],
     ]);
 });
 
@@ -40,6 +50,16 @@ it('defaults optional approval OTP metadata to null', function () {
         'provider' => null,
         'messages' => [
             'Approval OTP received.',
+        ],
+        'approval_metadata' => [
+            'provider' => null,
+            'authorization_type' => 'otp',
+            'reference_id' => null,
+            'expires_at' => null,
+            'otp_required' => true,
+            'polling_required' => false,
+            'manual_review' => false,
+            'message' => 'Approval OTP received.',
         ],
     ]);
 });

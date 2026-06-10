@@ -19,6 +19,16 @@ final class NullClaimApprovalOtpAuthorizer implements ClaimApprovalOtpAuthorizer
             'messages' => [
                 'Approval OTP received.',
             ],
+            'approval_metadata' => [
+                'provider' => $payload['provider'] ?? null,
+                'authorization_type' => 'otp',
+                'reference_id' => $payload['reference_id'] ?? null,
+                'expires_at' => null,
+                'otp_required' => true,
+                'polling_required' => false,
+                'manual_review' => false,
+                'message' => 'Approval OTP received.',
+            ],
         ];
     }
 }
