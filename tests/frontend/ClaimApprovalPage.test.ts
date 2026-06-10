@@ -136,4 +136,63 @@ describe('Claim approval page', () => {
         expect(wrapper.find('[data-testid="approval-otp-form"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="approval-polling-notice"]').exists()).toBe(false);
     });
+
+    it('emits OTP submission payload when OTP form is submitted', async () => {
+        const wrapper = mount(Approval, {
+            props: {
+                voucher: {
+                    code: 'TEST123',
+                },
+                compiled_claim_result: {
+                    status: 'pending',
+                    approval_metadata: {
+                        provider: 'payanamics',
+                        reference_id: 'AUTH-123',
+                        otp_required: true,
+                    },
+                },
+                message: null,
+            },
+        });
+
+        await wrapper
+            .find('[data-testid="approval-otp-input"]')
+            .setValue(' 123456 ');
+
+        await wrapper
+            .find('[data-testid="approval-otp-form"]')
+            .trigger('submit');
+
+        expect(wrapper.emitted('submit:otp')?.[0]).toEqual([
+            {
+                otp: '123456',
+                referenceId: 'AUTH-123',
+                provider: 'payanamics',
+            },
+        ]);
+    });
+
+    it('does not emit OTP submission when OTP is empty', async () => {
+        const wrapper = mount(Approval, {
+            props: {
+                voucher: {
+                    code: 'TEST123',
+                },
+                compiled_claim_result: {
+                    status: 'pending',
+                    approval_metadata: {
+                        otp_required: true,
+                    },
+                },
+                message: null,
+            },
+        });
+
+        await wrapper
+            .find('[data-testid="approval-otp-form"]')
+            .trigger('submit');
+
+        expect(wrapper.emitted('submit:otp')).toBeUndefined();
+        expect(wrapper.find('[data-testid="approval-otp-error"]').text()).toBe('OTP is required.');
+    });
 });

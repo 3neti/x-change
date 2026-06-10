@@ -1,10 +1,14 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import { Card, CardContent } from '@/components/ui/card';
 import { Clock3 } from 'lucide-vue-next';
 import type { CompiledClaimResultPayload } from '@/components/x-change/successCompiledClaimResult';
 import { resolveApprovalPageViewModel } from '@/components/x-change/approvalPageViewModel';
+import {
+    resolveApprovalOtpSubmission,
+    type ApprovalOtpSubmissionPayload,
+} from '@/components/x-change/approvalOtpSubmission';
 
 defineOptions({ layout: null });
 
@@ -20,12 +24,35 @@ const props = defineProps<{
     message?: string | null;
 }>();
 
+const emit = defineEmits<{
+    'submit:otp': [payload: ApprovalOtpSubmissionPayload];
+}>();
+
+const otp = ref('');
+const otpError = ref<string | null>(null);
+
 const viewModel = computed(() =>
     resolveApprovalPageViewModel({
         compiledClaimResult: props.compiled_claim_result ?? null,
         message: props.message ?? null,
     })
 );
+
+function submitOtp(): void {
+    const event = resolveApprovalOtpSubmission({
+        otp: otp.value,
+        referenceId: viewModel.value.referenceId,
+        provider: viewModel.value.provider,
+    });
+
+    otpError.value = event.error;
+
+    if (event.intent === 'blocked') {
+        return;
+    }
+
+    emit('submit:otp', event.payload);
+}
 </script>
 
 <template>
@@ -105,6 +132,7 @@ const viewModel = computed(() =>
                     v-if="viewModel.showOtpForm"
                     data-testid="approval-otp-form"
                     class="space-y-3 rounded-lg border border-primary/10 bg-background p-4 text-left"
+                    @submit.prevent="submitOtp"
                 >
                     <label
                         for="approval-otp"
@@ -115,10 +143,19 @@ const viewModel = computed(() =>
 
                     <input
                         id="approval-otp"
+                        v-model="otp"
                         data-testid="approval-otp-input"
                         class="w-full rounded-md border bg-background px-3 py-2 text-sm"
                         placeholder="Enter OTP"
                     />
+
+                    <p
+                        v-if="otpError"
+                        data-testid="approval-otp-error"
+                        class="text-sm text-destructive"
+                    >
+                        {{ otpError }}
+                    </p>
 
                     <button
                         type="submit"
