@@ -174,3 +174,70 @@ it('rehydrates approval page with OTP metadata after received OTP result', funct
         ->assertJsonPath('compiled_claim_result.approval_metadata.otp_required', true)
         ->assertJsonPath('compiled_claim_result.approval_metadata.message', 'Approval OTP received.');
 });
+
+it('hydrates success page after completed approval OTP result', function () {
+    $this->withoutMiddleware();
+
+    $voucher = issueVoucher();
+
+    $this->app->bind(
+        ClaimApprovalOtpAuthorizer::class,
+        fn () => new class implements ClaimApprovalOtpAuthorizer
+        {
+            public function authorize(Voucher $voucher, array $payload): array
+            {
+                return [
+                    'status' => 'completed',
+                    'voucher_code' => (string) $voucher->code,
+                    'claim_type' => 'withdraw',
+                    'claimed' => true,
+                    'requested_amount' => null,
+                    'disbursed_amount' => 1000,
+                    'currency' => 'PHP',
+                    'remaining_balance' => 0,
+                    'fully_claimed' => true,
+                    'reference_id' => $payload['reference_id'] ?? null,
+                    'provider' => $payload['provider'] ?? null,
+                    'messages' => ['OTP verified. Claim completed.'],
+                    'approval_metadata' => [
+                        'provider' => $payload['provider'] ?? null,
+                        'authorization_type' => 'otp',
+                        'reference_id' => $payload['reference_id'] ?? null,
+                        'expires_at' => null,
+                        'otp_required' => false,
+                        'polling_required' => false,
+                        'manual_review' => false,
+                        'message' => 'OTP verified. Claim completed.',
+                    ],
+                ];
+            }
+        }
+    );
+
+    $this
+        ->post(route('x-change.claim.approval.otp', [
+            'code' => $voucher->code,
+        ]), [
+            'otp' => '123456',
+            'reference_id' => 'AUTH-123',
+            'provider' => 'payanamics',
+        ])
+        ->assertRedirect(route('x-change.claim.success', [
+            'code' => $voucher->code,
+        ]));
+
+    $this
+        ->getJson(route('x-change.claim.success', [
+            'code' => $voucher->code,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('compiled_claim_result.status', 'completed')
+        ->assertJsonPath('compiled_claim_result.voucher_code', $voucher->code)
+        ->assertJsonPath('compiled_claim_result.claim_type', 'withdraw')
+        ->assertJsonPath('compiled_claim_result.claimed', true)
+        ->assertJsonPath('compiled_claim_result.disbursed_amount', 1000)
+        ->assertJsonPath('compiled_claim_result.currency', 'PHP')
+        ->assertJsonPath('compiled_claim_result.messages.0', 'OTP verified. Claim completed.')
+        ->assertJsonPath('compiled_claim_result.approval_metadata.provider', 'payanamics')
+        ->assertJsonPath('compiled_claim_result.approval_metadata.reference_id', 'AUTH-123');
+});
