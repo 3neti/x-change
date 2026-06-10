@@ -22,6 +22,9 @@ it('accepts approval OTP payload for an existing voucher', function () {
             'voucher_code' => $voucher->code,
             'reference_id' => 'AUTH-123',
             'provider' => 'payanamics',
+            'messages' => [
+                'Approval OTP received.',
+            ],
         ]);
 });
 
@@ -57,6 +60,9 @@ it('allows optional approval OTP metadata', function () {
             'voucher_code' => $voucher->code,
             'reference_id' => null,
             'provider' => null,
+            'messages' => [
+                'Approval OTP received.',
+            ],
         ]);
 });
 
