@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Support\Facades\Route;
 use LBHurtado\XChange\Http\Controllers\Web\BalancePageController;
+use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimApprovalOtpController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimApprovalPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimCompleteController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimRedirectController;
@@ -44,4 +45,6 @@ Route::prefix('x')->middleware(['web', ShareXChangeBranding::class])->group(func
     Route::get('claim/{code}/redirect', ClaimRedirectController::class)->name('x-change.claim.redirect');
     Route::get('claim/{code}/approval', ClaimApprovalPageController::class)
         ->name('x-change.claim.approval');
+    Route::post('claim/{code}/approval/otp', ClaimApprovalOtpController::class)
+        ->name('x-change.claim.approval.otp');
 });
