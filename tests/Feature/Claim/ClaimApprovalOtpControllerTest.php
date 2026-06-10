@@ -144,3 +144,33 @@ it('redirects completed approval OTP result to success page', function () {
         'messages' => ['OTP verified.'],
     ]);
 });
+
+it('rehydrates approval page with OTP metadata after received OTP result', function () {
+    $this->withoutMiddleware();
+
+    $voucher = issueVoucher();
+
+    $this
+        ->post(route('x-change.claim.approval.otp', [
+            'code' => $voucher->code,
+        ]), [
+            'otp' => '123456',
+            'reference_id' => 'AUTH-123',
+            'provider' => 'payanamics',
+        ])
+        ->assertRedirect(route('x-change.claim.approval', [
+            'code' => $voucher->code,
+        ]));
+
+    $this
+        ->getJson(route('x-change.claim.approval', [
+            'code' => $voucher->code,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('compiled_claim_result.status', 'received')
+        ->assertJsonPath('compiled_claim_result.approval_metadata.provider', 'payanamics')
+        ->assertJsonPath('compiled_claim_result.approval_metadata.authorization_type', 'otp')
+        ->assertJsonPath('compiled_claim_result.approval_metadata.reference_id', 'AUTH-123')
+        ->assertJsonPath('compiled_claim_result.approval_metadata.otp_required', true)
+        ->assertJsonPath('compiled_claim_result.approval_metadata.message', 'Approval OTP received.');
+});
