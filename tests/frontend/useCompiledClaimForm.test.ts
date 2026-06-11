@@ -115,6 +115,26 @@ describe('useCompiledClaimForm', () => {
         });
     });
 
+    it('is invalid when required compiled field is missing', () => {
+        const { subject } = makeSubject();
+
+        subject.updateValues({
+            first_name: '',
+        });
+
+        expect(subject.isValid.value).toBe(false);
+    });
+
+    it('is valid when required compiled field is provided', () => {
+        const { subject } = makeSubject();
+
+        subject.updateValues({
+            first_name: 'Lester',
+        });
+
+        expect(subject.isValid.value).toBe(true);
+    });
+
     it('uses submitted and error inputs in the view model', async () => {
         const submitted = computed(() => true);
         const submitError = computed(() => 'Submission failed.');
