@@ -9,7 +9,7 @@ import RiderStagePresenter from '@/components/x-rider/RiderStagePresenter.vue';
 import RiderRuntimeSequencer from '@/components/x-rider/RiderRuntimeSequencer.vue';
 import type { RawRiderStage, RiderExperience } from '@/components/x-rider/types';
 import { useClaimSuccessRedirect } from './useClaimSuccessRedirect';
-import { shouldRenderSuccessRedirectCountdown } from '@/components/x-change/successRedirect';
+import { resolveSuccessRedirectOwnershipViewModel } from '@/components/x-change/successRedirectOwnershipViewModel';
 import {
     resolveRedirectRuntimeStages,
     resolveSuccessVisualStages,
@@ -98,8 +98,12 @@ const shouldShowVoucherCodeBadge = computed(() =>
     successViewModel.value.shouldShowVoucherCodeBadge
 );
 
+const redirectOwnership = computed(() =>
+    resolveSuccessRedirectOwnershipViewModel(props.redirect ?? null)
+);
+
 const shouldShowRedirectCountdown = computed(() =>
-    shouldRenderSuccessRedirectCountdown(props.redirect)
+    redirectOwnership.value.showCountdown
 );
 
 const hasNonZeroAmount = computed(() =>

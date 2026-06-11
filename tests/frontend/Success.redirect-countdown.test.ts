@@ -324,7 +324,7 @@ describe('claim Success redirect countdown rendering', () => {
                 ...baseProps,
                 redirect: {
                     show_countdown: true,
-                    owner: 'rider-runtime',
+                    owner: 'x-rider',
                     delay_seconds: 5,
                 },
             },
