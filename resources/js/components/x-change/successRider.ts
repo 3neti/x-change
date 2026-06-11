@@ -32,6 +32,16 @@ function explicitOrFirstNonLegacy(
         : stages.slice(0, 1);
 }
 
+function redirectOwner(claimExperience: ClaimExperiencePayload): string | null {
+    return typeof claimExperience?.diagnostics?.redirect_owner === 'string'
+        ? claimExperience.diagnostics.redirect_owner
+        : null;
+}
+
+function claimWidgetOwnsRedirect(claimExperience: ClaimExperiencePayload): boolean {
+    return redirectOwner(claimExperience) === 'claim-widget';
+}
+
 export function resolveLegacySuccessVisualStages(
     rider: RiderExperience | null | undefined,
 ): RawRiderStage[] {
@@ -74,7 +84,12 @@ export function resolveSuccessVisualStages(
 
 export function resolveRedirectRuntimeStages(
     rider: RiderExperience | null | undefined,
+    claimExperience: ClaimExperiencePayload = null,
 ): RawRiderStage[] {
+    if (claimWidgetOwnsRedirect(claimExperience)) {
+        return [];
+    }
+
     const stages = riderStages(rider).filter((stage) =>
         stage.enabled !== false
         && isRedirectStage(stage)

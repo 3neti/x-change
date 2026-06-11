@@ -61,7 +61,7 @@ const successVisualStages = computed<RawRiderStage[]>(() =>
 );
 
 const redirectRuntimeStages = computed<RawRiderStage[]>(() =>
-    resolveRedirectRuntimeStages(props.rider)
+    resolveRedirectRuntimeStages(props.rider, props.claim_experience)
 );
 
 const hasRiderMessage = computed(() =>

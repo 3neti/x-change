@@ -143,6 +143,61 @@ describe('success rider stage resolution', () => {
         expect(stages[0].key).toBe('legacy-redirect');
     });
 
+    it('does not resolve rider redirect runtime stages when claim widget owns compiled redirect', () => {
+        const stages = resolveRedirectRuntimeStages(
+            {
+                stages: {
+                    stages: [
+                        { key: 'redirect', type: 'redirect', phase: 'redirect' },
+                    ],
+                },
+            } as any,
+            {
+                diagnostics: {
+                    redirect_owner: 'claim-widget',
+                },
+            },
+        );
+
+        expect(stages).toEqual([]);
+    });
+
+    it('allows rider redirect runtime stages when x-rider owns compiled redirect', () => {
+        const stages = resolveRedirectRuntimeStages(
+            {
+                stages: {
+                    stages: [
+                        { key: 'redirect', type: 'redirect', phase: 'redirect' },
+                    ],
+                },
+            } as any,
+            {
+                diagnostics: {
+                    redirect_owner: 'x-rider',
+                },
+            },
+        );
+
+        expect(stages.map((stage) => stage.key)).toEqual(['redirect']);
+    });
+
+    it('allows legacy rider redirect runtime stages when compiled redirect owner is missing', () => {
+        const stages = resolveRedirectRuntimeStages(
+            {
+                stages: {
+                    stages: [
+                        { key: 'redirect', type: 'redirect', phase: 'redirect' },
+                    ],
+                },
+            } as any,
+            {
+                diagnostics: {},
+            },
+        );
+
+        expect(stages.map((stage) => stage.key)).toEqual(['redirect']);
+    });
+
     it('renders fallback success when there are no success stages, rider message, or redirect', () => {
         expect(shouldRenderFallbackSuccess(false, false, false)).toBe(true);
     });
