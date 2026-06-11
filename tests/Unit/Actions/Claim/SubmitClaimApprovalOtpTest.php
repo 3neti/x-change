@@ -110,3 +110,71 @@ it('delegates approval OTP authorization to configured authorizer', function () 
             'messages' => ['OTP verified.'],
         ]);
 });
+
+it('uses bound provider authorizer for Paynamics OTP approval', function () {
+    $voucher = issueVoucher();
+
+    $this->app->bind(
+        \LBHurtado\XChange\Contracts\Claim\ClaimApprovalOtpAuthorizer::class,
+        fn () => new class implements \LBHurtado\XChange\Contracts\Claim\ClaimApprovalOtpAuthorizer
+        {
+            public function authorize(\LBHurtado\Voucher\Models\Voucher $voucher, array $payload): array
+            {
+                expect($payload)->toMatchArray([
+                    'otp' => '123456',
+                    'reference_id' => 'PAYNAMICS-AUTH-123',
+                    'provider' => 'payanamics',
+                ]);
+
+                return [
+                    'status' => 'completed',
+                    'voucher_code' => (string) $voucher->code,
+                    'claim_type' => 'withdraw',
+                    'claimed' => true,
+                    'requested_amount' => null,
+                    'disbursed_amount' => 1000,
+                    'currency' => 'PHP',
+                    'remaining_balance' => 0,
+                    'fully_claimed' => true,
+                    'reference_id' => 'PAYNAMICS-AUTH-123',
+                    'provider' => 'payanamics',
+                    'messages' => ['Paynamics OTP verified.'],
+                    'approval_metadata' => [
+                        'provider' => 'payanamics',
+                        'authorization_type' => 'otp',
+                        'reference_id' => 'PAYNAMICS-AUTH-123',
+                        'expires_at' => null,
+                        'otp_required' => false,
+                        'polling_required' => false,
+                        'manual_review' => false,
+                        'message' => 'Paynamics OTP verified.',
+                    ],
+                ];
+            }
+        }
+    );
+
+    $result = app(\LBHurtado\XChange\Actions\Claim\SubmitClaimApprovalOtp::class)
+        ->handle($voucher, [
+            'otp' => '123456',
+            'reference_id' => 'PAYNAMICS-AUTH-123',
+            'provider' => 'payanamics',
+        ]);
+
+    expect($result)->toMatchArray([
+        'status' => 'completed',
+        'voucher_code' => $voucher->code,
+        'provider' => 'payanamics',
+        'reference_id' => 'PAYNAMICS-AUTH-123',
+        'messages' => ['Paynamics OTP verified.'],
+    ])
+        ->and(data_get($result, 'approval_metadata'))->toMatchArray([
+            'provider' => 'payanamics',
+            'authorization_type' => 'otp',
+            'reference_id' => 'PAYNAMICS-AUTH-123',
+            'otp_required' => false,
+            'message' => 'Paynamics OTP verified.',
+        ]);
+
+});
+
