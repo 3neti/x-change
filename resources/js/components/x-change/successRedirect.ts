@@ -1,3 +1,5 @@
+export const SUCCESS_REDIRECT_OWNER_CLAIM_WIDGET = 'claim-widget';
+
 export type SuccessRedirectPayload = {
     owner?: string | null;
     show_countdown?: boolean | null;
@@ -11,8 +13,8 @@ export function shouldRenderSuccessRedirectCountdown(
         return false;
     }
 
-    return redirect.show_countdown === true
-        && ['claim-widget', 'success-page'].includes(String(redirect.owner ?? ''));
+    return redirect.owner === SUCCESS_REDIRECT_OWNER_CLAIM_WIDGET
+        && redirect.show_countdown === true;
 }
 
 export type RiderRedirectPayload = {
@@ -46,8 +48,8 @@ export function resolveSuccessRedirect(
     }
 
     if (
-        redirect?.show_countdown === true
-        && ['claim-widget', 'success-page'].includes(String(redirect.owner ?? ''))
+        redirect?.owner === SUCCESS_REDIRECT_OWNER_CLAIM_WIDGET
+        && redirect.show_countdown === true
     ) {
         return {
             enabled: true,

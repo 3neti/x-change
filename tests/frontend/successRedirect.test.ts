@@ -10,12 +10,20 @@ describe('success redirect', () => {
         })).toBe(true);
     });
 
-    it('renders countdown for success-page owned redirect', () => {
+    it('renders countdown for claim-widget owned redirect', () => {
+        expect(shouldRenderSuccessRedirectCountdown({
+            owner: 'claim-widget',
+            show_countdown: true,
+            delay_seconds: 5,
+        })).toBe(true);
+    });
+
+    it('does not render countdown for success-page owned redirect', () => {
         expect(shouldRenderSuccessRedirectCountdown({
             owner: 'success-page',
             show_countdown: true,
             delay_seconds: 5,
-        })).toBe(true);
+        })).toBe(false);
     });
 
     it('does not render countdown for x-rider owned redirect', () => {
@@ -57,6 +65,18 @@ describe('success redirect', () => {
             url: 'https://rider.example.com',
             delay_seconds: 3,
         });
+    });
+
+    it('does not build compiled redirect for success-page owned redirect', () => {
+        expect(resolveSuccessRedirect(
+            null,
+            {
+                owner: 'success-page',
+                show_countdown: true,
+                delay_seconds: 5,
+            },
+            '/x/claim/TEST123/redirect',
+        )).toBeNull();
     });
 
     it('resolves compiled redirect to redirect endpoint', () => {
