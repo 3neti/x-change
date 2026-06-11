@@ -192,7 +192,7 @@ describe('ClaimWidget compiled form flow rendering', () => {
                     phases: [
                         {
                             key: 'form_flow',
-                            owner: 'form-flow',
+                            owner: 'claim-widget',
                             source: 'claim_experience',
                             status: 'active',
                             stages: [],
@@ -217,7 +217,7 @@ describe('ClaimWidget compiled form flow rendering', () => {
                     phases: [
                         {
                             key: 'form_flow',
-                            owner: 'form-flow',
+                            owner: 'claim-widget',
                             source: 'claim_experience',
                             status: 'active',
                             fields: [
@@ -252,7 +252,7 @@ describe('ClaimWidget compiled form flow rendering', () => {
                     phases: [
                         {
                             key: 'form_flow',
-                            owner: 'form-flow',
+                            owner: 'claim-widget',
                             source: 'claim_experience',
                             status: 'active',
                             fields: [
@@ -287,7 +287,7 @@ describe('ClaimWidget compiled form flow rendering', () => {
                     phases: [
                         {
                             key: 'form_flow',
-                            owner: 'form-flow',
+                            owner: 'claim-widget',
                             source: 'claim_experience',
                             status: 'active',
                             fields: [
@@ -330,7 +330,7 @@ describe('ClaimWidget compiled form flow rendering', () => {
                     phases: [
                         {
                             key: 'form_flow',
-                            owner: 'form-flow',
+                            owner: 'claim-widget',
                             source: 'claim_experience',
                             status: 'active',
                             fields: [
@@ -369,7 +369,7 @@ describe('ClaimWidget compiled form flow rendering', () => {
                     phases: [
                         {
                             key: 'form_flow',
-                            owner: 'form-flow',
+                            owner: 'claim-widget',
                             source: 'claim_experience',
                             status: 'active',
                             fields: [
@@ -409,7 +409,7 @@ describe('ClaimWidget compiled form flow rendering', () => {
                     phases: [
                         {
                             key: 'form_flow',
-                            owner: 'form-flow',
+                            owner: 'claim-widget',
                             source: 'claim_experience',
                             status: 'active',
                             fields: [
