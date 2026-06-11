@@ -626,5 +626,22 @@ describe('claim Success redirect countdown rendering', () => {
         expect(wrapper.find('[data-testid="redirect-countdown-region"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(false);
     });
+
+    it('normalizes redirect countdown delay from compiled redirect payload', () => {
+        const wrapper = mount(Success, {
+            props: {
+                ...baseProps,
+                redirect: {
+                    show_countdown: true,
+                    owner: 'claim-widget',
+                    delay_seconds: 12,
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="rider-countdown"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="countdown-delay"]').text()).toBe('12');
+        expect(wrapper.find('[data-testid="countdown-endpoint"]').text()).toBe('/x/claim/TEST123/redirect');
+    });
 });
 

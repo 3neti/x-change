@@ -26,6 +26,7 @@ import {
     type CompiledClaimResultPayload,
 } from '@/components/x-change/successCompiledClaimResult';
 import { resolveSuccessPageTone } from '@/components/x-change/successPageTone';
+import { resolveSuccessCountdownViewModel } from '@/components/x-change/successCountdownViewModel';
 
 defineOptions({ layout: null });
 
@@ -102,8 +103,16 @@ const redirectOwnership = computed(() =>
     resolveSuccessRedirectOwnershipViewModel(props.redirect ?? null)
 );
 
+const countdownViewModel = computed(() =>
+    resolveSuccessCountdownViewModel({
+        countdownRedirect: countdownRedirect.value,
+        redirectEndpoint: props.redirectEndpoint ?? null,
+        redirectOwnership: redirectOwnership.value,
+    })
+);
+
 const shouldShowRedirectCountdown = computed(() =>
-    redirectOwnership.value.showCountdown
+    countdownViewModel.value.visible
 );
 
 const hasNonZeroAmount = computed(() =>
@@ -246,8 +255,8 @@ const pageTone = computed(() =>
                     class="mt-6"
                 >
                     <RiderCountdown
-                        :redirect="countdownRedirect"
-                        :redirect-endpoint="redirectEndpoint"
+                        :redirect="countdownViewModel.redirect"
+                        :redirect-endpoint="countdownViewModel.endpoint"
                     />
                 </div>
             </CardContent>
