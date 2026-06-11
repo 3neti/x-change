@@ -10,6 +10,7 @@ use LBHurtado\XRider\Data\RiderExperienceData;
 use LBHurtado\XRider\Data\RiderStageCollectionData;
 use LBHurtado\XRider\Data\RiderSubjectData;
 use LBHurtado\XRider\Enums\RiderOutcomeState;
+use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 
 beforeEach(function () {
     $viewsPath = __DIR__.'/../../Fixtures/views';
@@ -83,6 +84,48 @@ it('exposes claim experience redirect countdown metadata to the success page', f
     expect(ClaimExperiencePayload::isClaimWidgetRedirect($claimExperience))->toBeTrue();
 });
 
+it('passes claim widget redirect ownership metadata to success page', function () {
+    $voucher = issueVoucher(validVoucherInstructions(
+        overrides: [
+            'rider' => [
+                'message' => 'Thank you for claiming.',
+                'url' => 'https://example.com/success',
+            ],
+        ],
+    ));
+
+    $this
+        ->getJson(route('x-change.claim.success', [
+            'code' => $voucher->code,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('redirect.owner', 'claim-widget')
+        ->assertJsonPath('redirect.show_countdown', true)
+        ->assertJsonPath('redirect.delay_seconds', 5)
+        ->assertJsonPath('redirectEndpoint', route('x-change.claim.redirect', [
+            'code' => $voucher->code,
+        ]));
+});
+
+it('does not enable success countdown when redirect owner is not claim widget', function () {
+    $voucher = issueVoucher(validVoucherInstructions(
+        overrides: [
+            'rider' => [
+                'message' => 'Thank you for claiming.',
+            ],
+        ],
+    ));
+
+    $this
+        ->getJson(route('x-change.claim.success', [
+            'code' => $voucher->code,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('redirect.owner', null)
+        ->assertJsonPath('redirect.show_countdown', false)
+        ->assertJsonPath('redirect.delay_seconds', null);
+});
+
 it('passes claim experience to success page payload', function () {
     $this->withoutMiddleware();
 
@@ -104,8 +147,6 @@ it('passes claim experience to success page payload', function () {
             'redirect',
         ]);
 });
-
-use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 
 it('passes compiled claim result to success page payload when present in session', function () {
     $voucher = issueVoucher();
