@@ -65,7 +65,7 @@ describe('useClaimSuccessRedirect', () => {
             ref(null),
             ref({
                 show_countdown: true,
-                owner: 'rider-runtime',
+                owner: 'x-rider',
                 delay_seconds: 5,
             }),
             ref('/x/claim/TEST123/redirect'),

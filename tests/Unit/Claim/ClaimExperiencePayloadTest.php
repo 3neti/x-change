@@ -85,7 +85,7 @@ it('only enables success countdown when claim widget owns redirect', function ()
             'show_redirect_countdown' => true,
         ],
         'diagnostics' => [
-            'redirect_owner' => 'rider-runtime',
+            'redirect_owner' => 'x-rider',
         ],
         'phases' => [
             [
@@ -97,7 +97,7 @@ it('only enables success countdown when claim widget owns redirect', function ()
 
     expect($redirect)->toBe([
         'show_countdown' => false,
-        'owner' => 'rider-runtime',
+        'owner' => 'x-rider',
         'delay_seconds' => 5,
     ]);
 });
@@ -110,7 +110,7 @@ it('identifies claim widget owned redirects', function () {
     ]))->toBeTrue()
         ->and(ClaimExperiencePayload::isClaimWidgetRedirect([
             'diagnostics' => [
-                'redirect_owner' => 'rider-runtime',
+                'redirect_owner' => 'x-rider',
             ],
         ]))->toBeFalse()
         ->and(ClaimExperiencePayload::isClaimWidgetRedirect([
