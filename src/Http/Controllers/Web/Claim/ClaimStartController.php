@@ -23,6 +23,7 @@ use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultRedirector;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 use LBHurtado\XChange\Support\Claim\CompiledClaimSessionKeys;
+use LBHurtado\XChange\Support\Claim\FormFlowSplashSkipPolicy;
 
 class ClaimStartController extends Controller
 {
@@ -128,6 +129,8 @@ class ClaimStartController extends Controller
             $instructions->toArray(),
             $claimExperience,
         );
+
+        $instructionPayload = app(FormFlowSplashSkipPolicy::class)->apply($instructionPayload);
 
         $instructions = FormFlowInstructionsData::from($instructionPayload);
 

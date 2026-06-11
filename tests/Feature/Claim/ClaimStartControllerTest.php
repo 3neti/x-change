@@ -177,11 +177,31 @@ it('passes skip consumed splash policy to form flow when rider splash is already
         expect(data_get($experience, 'consumed.splash'))->toBeTrue()
             ->and(data_get($experience, 'options.skip_consumed_splash'))->toBeTrue()
             ->and(data_get($experience, 'diagnostics.form_flow_splash_policy'))->toBe('skip_consumed')
-            ->and(data_get($payload, 'steps.0.handler'))->toBe('splash');
+            ->and(collect(data_get($payload, 'steps', []))->pluck('handler')->all())
+            ->not->toContain('splash');
     }, 'flow-skip-consumed-splash-test');
 
     $this->get('/x/claim?code='.$voucher->code)
         ->assertRedirect('/form-flow/flow-skip-consumed-splash-test');
+});
+
+it('keeps form flow splash when rider splash was not consumed', function () {
+    $this->withoutMiddleware();
+
+    $voucher = claimVoucherWithoutRiderSplash();
+
+    mockDriverForClaimVoucher($this, $voucher, splashStep());
+
+    assertClaimExperienceStartFlow($this, function (array $experience, array $payload) {
+        expect(data_get($experience, 'consumed.splash'))->toBeFalse()
+            ->and(data_get($experience, 'options.skip_consumed_splash'))->toBeFalse()
+            ->and(data_get($experience, 'diagnostics.form_flow_splash_policy'))->toBe('allow')
+            ->and(collect(data_get($payload, 'steps', []))->pluck('handler')->all())
+            ->toContain('splash');
+    }, 'flow-keep-form-splash-test');
+
+    $this->get('/x/claim?code='.$voucher->code)
+        ->assertRedirect('/form-flow/flow-keep-form-splash-test');
 });
 
 it('does not emit consumed splash skip option when voucher has no rider splash', function () {
