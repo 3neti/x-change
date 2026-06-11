@@ -176,3 +176,87 @@ it('knows when consumed splash should be skipped', function () {
         ]))->toBeFalse();
 
 });
+
+it('builds instructions with claim experience and applies consumed splash skip policy', function () {
+    $instructions = [
+        'steps' => [
+            [
+                'handler' => 'splash',
+                'config' => [
+                    'title' => 'Welcome',
+                ],
+            ],
+            [
+                'handler' => 'form',
+                'config' => [
+                    'title' => 'Claim Details',
+                ],
+            ],
+        ],
+        'metadata' => [
+            'voucher_code' => 'TEST123',
+        ],
+    ];
+
+    $experience = [
+        'version' => 1,
+        'consumed' => [
+            'splash' => true,
+        ],
+        'options' => [
+            'skip_consumed_splash' => true,
+        ],
+        'diagnostics' => [
+            'splash_owner' => ClaimExperiencePayload::SPLASH_OWNER_X_RIDER,
+            'form_flow_splash_policy' => 'skip_consumed',
+        ],
+    ];
+
+    $payload = app(ClaimExperiencePayload::class)->build(
+        $instructions,
+        $experience,
+    );
+
+    expect(data_get($payload, 'metadata.claim_experience'))->toBe($experience)
+        ->and(collect(data_get($payload, 'steps', []))->pluck('handler')->all())
+        ->toBe(['form']);
+});
+
+it('builds instructions with claim experience and keeps splash when skip policy is disabled', function () {
+    $instructions = [
+        'steps' => [
+            [
+                'handler' => 'splash',
+            ],
+            [
+                'handler' => 'form',
+            ],
+        ],
+        'metadata' => [
+            'voucher_code' => 'TEST123',
+        ],
+    ];
+
+    $experience = [
+        'version' => 1,
+        'consumed' => [
+            'splash' => false,
+        ],
+        'options' => [
+            'skip_consumed_splash' => false,
+        ],
+        'diagnostics' => [
+            'splash_owner' => ClaimExperiencePayload::SPLASH_OWNER_FORM_FLOW,
+            'form_flow_splash_policy' => 'allow',
+        ],
+    ];
+
+    $payload = app(ClaimExperiencePayload::class)->build(
+        $instructions,
+        $experience,
+    );
+
+    expect(data_get($payload, 'metadata.claim_experience'))->toBe($experience)
+        ->and(collect(data_get($payload, 'steps', []))->pluck('handler')->all())
+        ->toBe(['splash', 'form']);
+});

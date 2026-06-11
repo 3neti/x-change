@@ -26,6 +26,13 @@ final class ClaimExperiencePayload
         return $instructions;
     }
 
+    public function build(array $instructions, array $claimExperience): array
+    {
+        $payload = self::putIntoInstructions($instructions, $claimExperience);
+
+        return app(FormFlowSplashSkipPolicy::class)->apply($payload);
+    }
+
     public static function isClaimWidgetRedirect(array $claimExperience): bool
     {
         return self::redirectOwner($claimExperience) === self::REDIRECT_OWNER_CLAIM_WIDGET;
