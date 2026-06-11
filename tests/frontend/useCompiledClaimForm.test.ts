@@ -18,7 +18,7 @@ describe('useCompiledClaimForm', () => {
                 phases: [
                     {
                         key: 'form_flow',
-                        owner: 'form-flow',
+                        owner: 'claim-widget',
                         source: 'claim_experience',
                         status: 'active',
                         fields: [
@@ -147,6 +147,7 @@ describe('useCompiledClaimForm', () => {
                 phases: [
                     {
                         key: 'form_flow',
+                        owner: 'claim-widget',
                         status: 'active',
                         fields: [],
                         stages: [],

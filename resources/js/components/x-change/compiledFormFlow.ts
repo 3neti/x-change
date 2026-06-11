@@ -6,8 +6,18 @@ import {
 
 export function resolveCompiledFormFlowPhase(
     claimExperience: ClaimExperiencePayload,
-) {
-    return activeClaimExperiencePhase(claimExperience, 'form_flow');
+): Record<string, any> | null {
+    const phase = activeClaimExperiencePhase(claimExperience, 'form_flow');
+
+    if (!phase) {
+        return null;
+    }
+
+    if (phase.owner !== 'claim-widget') {
+        return null;
+    }
+
+    return phase;
 }
 
 export type CompiledClaimPhase = Record<string, unknown>;

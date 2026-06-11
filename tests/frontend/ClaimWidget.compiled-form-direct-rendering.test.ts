@@ -198,6 +198,62 @@ describe('ClaimWidget direct compiled form rendering', () => {
         expect(wrapper.find('[data-testid="form-flow-field-count"]').text()).toBe('1');
     });
 
+    it('renders compiled form directly when form flow phase is owned by claim widget', () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'form_flow',
+                            owner: 'claim-widget',
+                            status: 'active',
+                            fields: [
+                                {
+                                    name: 'first_name',
+                                    label: 'First name',
+                                    type: 'text',
+                                    required: true,
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="compiled-form-flow-visible-region"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="form-flow-renderer"]').exists()).toBe(true);
+    });
+
+    it('does not render compiled form directly when form flow phase is owned by form-flow', () => {
+        const wrapper = mount(ClaimWidget, {
+            props: {
+                initialCode: 'TEST123',
+                claimExperience: {
+                    phases: [
+                        {
+                            key: 'form_flow',
+                            owner: 'form-flow',
+                            status: 'active',
+                            fields: [
+                                {
+                                    name: 'first_name',
+                                    label: 'First name',
+                                    type: 'text',
+                                    required: true,
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="compiled-form-flow-visible-region"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="form-flow-renderer"]').exists()).toBe(false);
+    });
+
     it('disables submit while required compiled form fields are missing', () => {
         const wrapper = mount(ClaimWidget, {
             props: {
