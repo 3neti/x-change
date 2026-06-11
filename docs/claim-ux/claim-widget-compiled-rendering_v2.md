@@ -123,7 +123,1007 @@ claim-widget-redirect-region
     → redirect-adjacent experience content
 ```
 
+---
+
+### 3.2.1 Rendering Region Model
+
+The term *Rendering Region* appears throughout this document.
+
+This section formally defines the concept.
+
+A Rendering Region represents a distinct presentation surface within the claim experience lifecycle.
+
+Conceptually:
+
+```text
+claimExperience
+        ↓
+presentation surfaces
+        ↓
+rendering regions
+```
+
+Each region exists to solve a different rendering concern.
+
+---
+
+#### Why Rendering Regions Exist
+
+Compiled rendering intentionally separates experiences into independent regions.
+
+Conceptually:
+
+```text
+single experience
+        ↓
+multiple rendering concerns
+        ↓
+multiple rendering regions
+```
+
+This separation prevents unrelated rendering responsibilities from becoming coupled.
+
+For example:
+
+```text
+rider_intro
+```
+
+and
+
+```text
+success
+```
+
+participate in entirely different stages of the claim lifecycle.
+
+Treating them as separate regions allows each to evolve independently.
+
+---
+
+#### Region Characteristics
+
+Every rendering region possesses the following characteristics:
+
+```text
+ownership
+phase type
+rendering rules
+fallback behavior
+```
+
+Conceptually:
+
+```text
+Rendering Region
+        ↓
+Ownership
+        ↓
+Rendering Logic
+        ↓
+Output
+```
+
+These characteristics remain consistent across the architecture.
+
+---
+
+#### Region Types
+
+The current architecture defines five primary rendering regions:
+
+```text
+rider_intro
+runtime
+redirect
+form_flow
+success
+```
+
+Conceptually:
+
+```text
+claimExperience
+        ↓
++-------------+
+| rider_intro |
++-------------+
+
++-------------+
+| runtime     |
++-------------+
+
++-------------+
+| redirect    |
++-------------+
+
++-------------+
+| form_flow   |
++-------------+
+
++-------------+
+| success     |
++-------------+
+```
+
+Each region represents a unique ownership and rendering concern.
+
+---
+
+#### Region Ownership
+
+Rendering regions do not own themselves.
+
+Ownership is assigned through the ownership model.
+
+Conceptually:
+
+```text
+Rendering Region
+        ↓
+Ownership Resolution
+        ↓
+Rendering Owner
+```
+
+Examples:
+
+```text
+rider_intro
+        ↓
+ClaimWidget
+
+runtime
+        ↓
+ClaimWidget
+
+form_flow
+        ↓
+FormFlowRenderer
+```
+
+The region defines the concern.
+
+Ownership defines who renders it.
+
+---
+
+#### Region Independence
+
+Rendering regions are intentionally isolated.
+
+Conceptually:
+
+```text
+rider_intro
+```
+
+does not require:
+
+```text
+runtime
+```
+
+and
+
+```text
+redirect
+```
+
+does not require:
+
+```text
+success
+```
+
+Each region may evolve independently while remaining part of the same claim experience.
+
+This isolation is a major contributor to maintainability.
+
+---
+
+#### Region Lifecycle
+
+Rendering regions participate in the broader rendering pipeline.
+
+Conceptually:
+
+```text
+claimExperience
+        ↓
+region discovery
+        ↓
+ownership selection
+        ↓
+renderer selection
+        ↓
+rendered output
+```
+
+The region therefore serves as the primary unit of rendering responsibility.
+
+---
+
+#### Architectural Summary
+
+A Rendering Region can be summarized as:
+
+```text
+A bounded presentation surface
+with a single rendering owner
+and a dedicated rendering lifecycle.
+```
+
+The remainder of this document describes how each rendering region is discovered, owned, delegated, and rendered throughout the claim experience lifecycle.
+
+---
+
+## 3.3 End-to-End Rendering Pipeline
+
+The preceding sections describe ownership boundaries and rendering regions.
+
+This section connects those concepts into a single rendering lifecycle.
+
+Its purpose is to provide a high-level view of how ClaimWidget transforms compiler-produced claim experiences into rendered output.
+
+Conceptually:
+
+```text
+Voucher Preview
+        ↓
+claimExperience
+        ↓
+phases[]
+        ↓
+ownership lookup
+        ↓
+phase selection
+        ↓
+visual filtering
+        ↓
+renderer selection
+        ↓
+rendered output
+```
+
+This pipeline represents the core execution model of compiled rendering.
+
+---
+
+### Compiler Input
+
+ClaimWidget operates on compiler-produced claim experience structures.
+
+Conceptually:
+
+```text
+Voucher Preview
+        ↓
+claimExperience
+```
+
+ClaimWidget does not construct claim experiences.
+
+ClaimWidget consumes claim experiences.
+
+The compiler remains the source of truth for phase and stage composition.
+
+---
+
+### Ownership Resolution
+
+Once a claim experience is available, ownership resolution begins.
+
+Conceptually:
+
+```text
+claimExperience
+        ↓
+phases[]
+        ↓
+ownership lookup
+```
+
+Ownership resolution determines which rendering region becomes responsible for a given experience surface.
+
+Examples include:
+
+```text
+rider_intro
+runtime
+redirect
+form_flow
+success
+```
+
+Only one ownership path becomes active for a given rendering concern.
+
+---
+
+### Phase Selection
+
+After ownership is established, the active phase is selected.
+
+Conceptually:
+
+```text
+ownership lookup
+        ↓
+phase selection
+```
+
+Phase selection determines which compiler-produced phase participates in rendering.
+
+The selected phase becomes the source of truth for downstream rendering decisions.
+
+---
+
+### Visual Filtering
+
+Not all stages are intended for visual presentation.
+
+Conceptually:
+
+```text
+selected phase
+        ↓
+stages[]
+        ↓
+visual filtering
+```
+
+Visual filtering removes operational stages from the rendering pipeline.
+
+Only stages intended for presentation continue to rendering.
+
+Examples include:
+
+```text
+message
+image
+html
+link
+```
+
+Operational stages remain available to runtime execution but do not participate in visual rendering.
+
+---
+
+### Renderer Selection
+
+Once visual stages have been identified, rendering responsibility is assigned.
+
+Conceptually:
+
+```text
+visual stages
+        ↓
+renderer selection
+```
+
+Depending on ownership and phase type, rendering may be performed by:
+
+```text
+ClaimWidget
+FormFlowRenderer
+Success rendering components
+```
+
+Renderer selection determines where rendering responsibility ultimately resides.
+
+---
+
+### Rendered Output
+
+The final stage of the pipeline produces visible user experiences.
+
+Conceptually:
+
+```text
+renderer
+        ↓
+rendered output
+```
+
+Examples include:
+
+```text
+rider experiences
+runtime experiences
+redirect experiences
+form-flow previews
+success experiences
+```
+
+The rendered output represents the final result of ownership resolution, phase selection, and renderer delegation.
+
+---
+
+### Architectural Summary
+
+The complete rendering lifecycle can be summarized as:
+
+```text
+Compiler
+        ↓
+claimExperience
+        ↓
+ownership resolution
+        ↓
+phase selection
+        ↓
+visual filtering
+        ↓
+renderer selection
+        ↓
+rendered experience
+```
+
+This lifecycle serves as the architectural foundation for all subsequent sections of this document.
+
+The remaining sections progressively expand each stage of this pipeline in greater detail.
+
+---
+
+## 3.4 Ownership Matrix
+
+The preceding sections describe ownership conceptually.
+
+This section consolidates ownership into a single reference table.
+
+Its purpose is to answer a fundamental architectural question:
+
+```text
+Who owns rendering?
+```
+
+The ownership matrix serves as the authoritative summary of rendering responsibilities within the compiled rendering architecture.
+
+---
+
+### Ownership Philosophy
+
+Compiled rendering separates:
+
+```text
+experience construction
+```
+
+from:
+
+```text
+experience rendering
+```
+
+Conceptually:
+
+```text
+Compiler
+        ↓
+claimExperience
+        ↓
+Rendering Owner
+        ↓
+Rendered Output
+```
+
+The compiler produces experiences.
+
+Rendering owners consume those experiences.
+
+Ownership determines which component becomes responsible for presentation.
+
+---
+
+### Ownership Matrix
+
+The following matrix summarizes rendering ownership.
+
+| Rendering Region | Primary Owner |
+|------------------|----------------|
+| rider_intro | ClaimWidget |
+| runtime | ClaimWidget |
+| redirect | ClaimWidget |
+| form_flow | FormFlowRenderer |
+| success | Success Experience Renderer |
+
+Conceptually:
+
+```text
+rider_intro
+        ↓
+ClaimWidget
+
+runtime
+        ↓
+ClaimWidget
+
+redirect
+        ↓
+ClaimWidget
+
+form_flow
+        ↓
+FormFlowRenderer
+
+success
+        ↓
+Success Experience Renderer
+```
+
+This ownership model reflects the current compiler-first rendering architecture.
+
+---
+
+### ClaimWidget Ownership
+
+ClaimWidget remains the owner of the majority of rendering regions.
+
+Specifically:
+
+```text
+rider_intro
+runtime
+redirect
+```
+
+Conceptually:
+
+```text
+ClaimWidget
+        ↓
+phase lookup
+        ↓
+stage filtering
+        ↓
+rendering
+```
+
+These rendering regions are stage-oriented.
+
+ClaimWidget directly interprets visual stages and produces presentation output.
+
+---
+
+### Form Flow Ownership
+
+Form Flow introduces a specialized ownership boundary.
+
+Conceptually:
+
+```text
+ClaimWidget
+        ↓
+ownership decision
+        ↓
+FormFlowRenderer
+```
+
+Unlike Rider Intro, Runtime, and Redirect rendering, Form Flow delegates responsibility to a dedicated renderer.
+
+This delegation exists because Form Flow rendering is field-oriented rather than stage-oriented.
+
+The ownership boundary is discussed in detail within Section 8.
+
+---
+
+### Success Ownership
+
+Success rendering represents the final ownership boundary in the claim experience lifecycle.
+
+Conceptually:
+
+```text
+claim completed
+        ↓
+success ownership
+        ↓
+success rendering
+```
+
+Success ownership determines how completion experiences are presented.
+
+The ownership model follows the same compiler-first selection pattern used throughout ClaimWidget.
+
+Additional details are provided in Section 9.
+
+---
+
+### Ownership Rules
+
+Ownership follows a single architectural rule:
+
+```text
+one rendering concern
+        ↓
+one owner
+```
+
+Rendering responsibility must never be shared between multiple ownership paths simultaneously.
+
+Examples:
+
+```text
+compiled ownership
+```
+
+and
+
+```text
+legacy ownership
+```
+
+must not render concurrently.
+
+Similarly:
+
+```text
+ClaimWidget
+```
+
+and
+
+```text
+FormFlowRenderer
+```
+
+must not simultaneously own the same rendering concern.
+
+Ownership selection remains deterministic.
+
+---
+
+### Ownership Lifecycle
+
+The ownership lifecycle can be summarized as:
+
+```text
+claimExperience
+        ↓
+ownership lookup
+        ↓
+ownership selected
+        ↓
+rendering delegated
+        ↓
+rendered output
+```
+
+Ownership resolution always precedes rendering.
+
+Rendering occurs only after responsibility has been clearly established.
+
+---
+
+### Ownership and Migration
+
+The ownership matrix also serves as a migration aid.
+
+Conceptually:
+
+```text
+legacy ownership
+        ↓
+compiler ownership
+```
+
+Migration activities should move rendering concerns toward compiler-owned experiences while preserving backward compatibility.
+
+The ownership matrix provides a stable reference point during this transition.
+
+---
+
+### Architectural Summary
+
+The ownership model can be summarized as:
+
+```text
+Compiler
+        ↓
+claimExperience
+        ↓
+ownership selection
+        ↓
+rendering owner
+        ↓
+rendered experience
+```
+
+The ownership matrix defines where rendering responsibility resides.
+
+The remaining sections describe how each owner fulfills that responsibility.
+
 Form-flow rendering ownership is handled separately through the form-flow boundary region and renderer handoff contract described later in this document.
+
+---
+
+## 3.5 Boundary Taxonomy
+
+The preceding sections describe ownership, rendering regions, rendering pipelines, and ownership assignment.
+
+This section formalizes the concept of architectural boundaries.
+
+A boundary represents a controlled transition of responsibility between architectural concerns.
+
+Conceptually:
+
+```text
+responsibility
+        ↓
+boundary
+        ↓
+new responsibility
+```
+
+Boundaries exist to prevent responsibility leakage between subsystems.
+
+Throughout the compiled rendering architecture, boundaries define where ownership begins and ends.
+
+---
+
+### Why Boundaries Exist
+
+The architecture intentionally separates concerns into independently evolving subsystems.
+
+Conceptually:
+
+```text
+construction
+        ↓
+boundary
+        ↓
+rendering
+```
+
+and
+
+```text
+ownership
+        ↓
+boundary
+        ↓
+presentation
+```
+
+Without explicit boundaries, responsibilities become coupled and architectural ownership becomes ambiguous.
+
+Boundaries therefore exist to preserve clarity, maintainability, and evolution safety.
+
+---
+
+### Compiler Boundary
+
+The first major boundary is the Compiler Boundary.
+
+Conceptually:
+
+```text
+Compiler
+        ↓
+claimExperience
+========================
+      Boundary
+========================
+ClaimWidget
+```
+
+This boundary separates:
+
+```text
+experience construction
+```
+
+from:
+
+```text
+experience rendering
+```
+
+The compiler owns construction.
+
+ClaimWidget owns interpretation and rendering.
+
+Neither side should assume responsibility for the other.
+
+---
+
+### Ownership Boundary
+
+The second major boundary is the Ownership Boundary.
+
+Conceptually:
+
+```text
+claimExperience
+        ↓
+ownership resolution
+========================
+      Boundary
+========================
+rendering owner
+```
+
+Ownership selection determines which component becomes responsible for rendering.
+
+Examples include:
+
+```text
+ClaimWidget
+FormFlowRenderer
+Success Experience Renderer
+```
+
+The ownership boundary ensures that rendering responsibility remains singular and deterministic.
+
+---
+
+### Rendering Boundary
+
+The Rendering Boundary separates orchestration from presentation.
+
+Conceptually:
+
+```text
+ownership selected
+        ↓
+renderer delegation
+========================
+      Boundary
+========================
+renderer execution
+```
+
+ClaimWidget may determine who renders.
+
+The renderer determines how rendering occurs.
+
+This distinction prevents orchestration logic from becoming presentation logic.
+
+---
+
+### Form Flow Boundary
+
+The most visible boundary in the architecture is the Form Flow Boundary.
+
+Conceptually:
+
+```text
+ClaimWidget
+        ↓
+delegation decision
+========================
+      Boundary
+========================
+FormFlowRenderer
+```
+
+This boundary exists because Form Flow introduces field-oriented rendering.
+
+Unlike Rider Intro, Runtime, Redirect, and Success rendering, Form Flow relies upon:
+
+```text
+field normalization
+renderer registries
+renderer specialization
+field metadata
+```
+
+The Form Flow Boundary protects ClaimWidget from needing to understand field rendering internals.
+
+---
+
+### Success Boundary
+
+Success rendering introduces a separate ownership boundary at the end of the claim lifecycle.
+
+Conceptually:
+
+```text
+claim completed
+        ↓
+success ownership
+========================
+      Boundary
+========================
+success presentation
+```
+
+This boundary allows completion experiences to evolve independently from earlier claim experiences.
+
+Success rendering therefore remains isolated from Rider Intro, Runtime, Redirect, and Form Flow concerns.
+
+---
+
+### Migration Boundary
+
+During migration, a temporary boundary exists between legacy and compiler-owned rendering.
+
+Conceptually:
+
+```text
+legacy rendering
+========================
+      Boundary
+========================
+compiled rendering
+```
+
+This boundary enables progressive migration while preserving backward compatibility.
+
+As migration completes, this boundary becomes increasingly less significant but remains useful for understanding architectural history.
+
+---
+
+### Boundary Characteristics
+
+Every architectural boundary shares the same properties.
+
+A boundary should:
+
+```text
+separate responsibilities
+preserve ownership
+prevent coupling
+enable evolution
+```
+
+A boundary should never:
+
+```text
+duplicate ownership
+share rendering authority
+blur responsibilities
+```
+
+Boundaries exist to make architectural decisions explicit.
+
+---
+
+### Boundary Hierarchy
+
+The compiled rendering architecture can be viewed as a hierarchy of boundaries.
+
+Conceptually:
+
+```text
+Compiler
+        ↓
+Compiler Boundary
+        ↓
+ClaimWidget
+        ↓
+Ownership Boundary
+        ↓
+Rendering Owner
+        ↓
+Rendering Boundary
+        ↓
+Renderer
+        ↓
+Rendered Experience
+```
+
+Each boundary narrows responsibility and increases specialization.
+
+---
+
+### Architectural Summary
+
+The boundary model can be summarized as:
+
+```text
+Construction Boundary
+        ↓
+Ownership Boundary
+        ↓
+Rendering Boundary
+        ↓
+Presentation Boundary
+```
+
+These boundaries collectively define how responsibility moves through the compiled rendering architecture.
+
+The remainder of this document describes the systems that operate within those boundaries.
 
 ---
 
@@ -320,6 +1320,929 @@ This separation allows the compiler to express operational behavior without requ
 Visual stage filtering is the final step before region-specific rendering begins.
 
 The next sections describe how Rider Intro, Runtime, and Redirect regions consume the filtered stage set.
+
+---
+
+## 4.7 Supported Phase Types
+
+The preceding sections describe how ClaimWidget discovers, selects, and filters compiler-produced phases.
+
+This section formally defines the phase types currently recognized by the compiled rendering architecture.
+
+Its purpose is to establish a common vocabulary for the remainder of this document.
+
+---
+
+### Phase Taxonomy
+
+ClaimWidget currently recognizes the following phase categories:
+
+```text id="0r18oq"
+rider_intro
+runtime
+redirect
+form_flow
+success
+```
+
+These phase types represent distinct rendering concerns within the claim experience lifecycle.
+
+Conceptually:
+
+```text id="4m0y6k"
+claimExperience
+        ↓
+phases[]
+        ↓
+phase type
+        ↓
+rendering owner
+```
+
+Phase type determines both ownership and rendering behavior.
+
+---
+
+### rider_intro
+
+The `rider_intro` phase represents pre-claim visual experiences.
+
+Conceptually:
+
+```text id="ejg6l2"
+claim not yet started
+        ↓
+rider_intro
+        ↓
+visual experience
+```
+
+Examples include:
+
+```text id="8c17lk"
+welcome messages
+instructions
+images
+introductory content
+links
+```
+
+The purpose of Rider Intro is to provide contextual information before claim execution begins.
+
+Rendering ownership belongs to:
+
+```text id="0f2zn9"
+ClaimWidget
+```
+
+---
+
+### runtime
+
+The `runtime` phase represents active claim experiences.
+
+Conceptually:
+
+```text id="1crzma"
+claim execution
+        ↓
+runtime
+        ↓
+in-progress experience
+```
+
+Examples include:
+
+```text id="j4wp0q"
+countdowns
+runtime messaging
+runtime riders
+execution feedback
+```
+
+Runtime phases are associated with claim execution state.
+
+Rendering ownership belongs to:
+
+```text id="0vwwq9"
+ClaimWidget
+```
+
+---
+
+### redirect
+
+The `redirect` phase represents redirect-adjacent experiences.
+
+Conceptually:
+
+```text id="zbqblp"
+claim execution
+        ↓
+redirect
+        ↓
+transition experience
+```
+
+Examples include:
+
+```text id="itjcrd"
+redirect notices
+redirect instructions
+completion transitions
+destination messaging
+```
+
+Redirect phases provide presentation around navigation and destination transitions.
+
+Rendering ownership belongs to:
+
+```text id="6y8gbo"
+ClaimWidget
+```
+
+---
+
+### form_flow
+
+The `form_flow` phase represents delegated form rendering experiences.
+
+Conceptually:
+
+```text id="x3kh0m"
+claim experience
+        ↓
+form_flow
+        ↓
+field-oriented rendering
+```
+
+Examples include:
+
+```text id="z0x6oh"
+identity collection
+customer onboarding
+claim metadata capture
+review forms
+```
+
+Unlike Rider Intro, Runtime, and Redirect, Form Flow rendering is field-oriented rather than stage-oriented.
+
+Rendering ownership belongs to:
+
+```text id="4kk3bt"
+FormFlowRenderer
+```
+
+The ownership boundary is discussed extensively in Section 8.
+
+---
+
+### success
+
+The `success` phase represents post-claim completion experiences.
+
+Conceptually:
+
+```text id="evp22d"
+claim completed
+        ↓
+success
+        ↓
+completion experience
+```
+
+Examples include:
+
+```text id="m2txr1"
+success messages
+completion riders
+confirmation content
+completion links
+```
+
+The purpose of the Success phase is to communicate successful claim completion.
+
+Rendering ownership belongs to:
+
+```text id="vjlwmv"
+Success Experience Renderer
+```
+
+The ownership boundary is discussed in Section 9.
+
+---
+
+### Phase Ownership Relationship
+
+Phase type directly influences ownership.
+
+Conceptually:
+
+```text id="ifv73q"
+phase type
+        ↓
+ownership lookup
+        ↓
+rendering owner
+```
+
+Examples:
+
+```text id="j8rjlwm"
+rider_intro → ClaimWidget
+runtime     → ClaimWidget
+redirect    → ClaimWidget
+form_flow   → FormFlowRenderer
+success     → Success Experience Renderer
+```
+
+The ownership matrix presented in Section 3.4 remains the authoritative ownership reference.
+
+---
+
+### Phase Lifecycle Relationship
+
+Phase types also map to different points in the claim lifecycle.
+
+Conceptually:
+
+```text id="w4dq84"
+rider_intro
+        ↓
+runtime
+        ↓
+redirect
+        ↓
+success
+```
+
+Form Flow may participate at various points depending on the claim experience design.
+
+This flexibility is one reason Form Flow ownership is delegated to a dedicated renderer.
+
+---
+
+### Architectural Summary
+
+The phase taxonomy can be summarized as:
+
+```text id="4s5s3x"
+rider_intro
+    pre-claim experience
+
+runtime
+    active claim experience
+
+redirect
+    transition experience
+
+form_flow
+    delegated form experience
+
+success
+    completion experience
+```
+
+These phase types form the foundational vocabulary of the compiled rendering architecture.
+
+The next section defines the compiler contract that produces these phases.
+
+---
+
+## 4.8 Compiler Contract
+
+The preceding sections describe how ClaimWidget discovers, selects, filters, and renders compiler-produced phases.
+
+This section formally defines the minimum contract expected from the compiler.
+
+Its purpose is to establish a clear separation between:
+
+```text id="20t6f7"
+experience construction
+```
+
+and
+
+```text id="mjlwm7"
+experience rendering
+```
+
+The compiler constructs experiences.
+
+ClaimWidget renders experiences.
+
+---
+
+### Architectural Boundary
+
+Compiled rendering is built upon a strict ownership boundary.
+
+Conceptually:
+
+```text id="grh8p5"
+Compiler
+        ↓
+claimExperience
+        ↓
+ClaimWidget
+```
+
+The compiler owns experience construction.
+
+ClaimWidget owns experience interpretation and rendering.
+
+This separation allows experience design to evolve independently from rendering implementation.
+
+---
+
+### Ownership Rule
+
+The fundamental architectural rule is:
+
+```text id="ew1w2k"
+Compiler produces.
+
+ClaimWidget consumes.
+```
+
+More specifically:
+
+```text id="1m7od5"
+Compiler constructs phases.
+
+ClaimWidget selects phases.
+```
+
+and
+
+```text id="u6h1fd"
+Compiler constructs stages.
+
+ClaimWidget renders stages.
+```
+
+ClaimWidget must never become responsible for experience construction.
+
+---
+
+### Minimum Compiler Output
+
+ClaimWidget expects a compiler-produced experience structure.
+
+Conceptually:
+
+```text id="x2n9qe"
+claimExperience
+```
+
+At minimum:
+
+```text id="7n1jv5"
+claimExperience
+    phases[]
+```
+
+must be available.
+
+This becomes the root object consumed by ClaimWidget.
+
+---
+
+### Phase Contract
+
+Each phase represents a rendering concern.
+
+Conceptually:
+
+```text id="mnjzv4"
+phase
+```
+
+Minimum structure:
+
+```text id="qks6go"
+phase
+    type
+    active
+    stages[]
+```
+
+Examples:
+
+```text id="zr3x2c"
+rider_intro
+runtime
+redirect
+form_flow
+success
+```
+
+ClaimWidget relies upon phase type to determine ownership and rendering behavior.
+
+---
+
+### Stage Contract
+
+Each phase contains one or more stages.
+
+Conceptually:
+
+```text id="pjw92m"
+phase
+        ↓
+stages[]
+```
+
+Minimum structure:
+
+```text id="tcljvz"
+stage
+    type
+```
+
+Examples:
+
+```text id="pd2eei"
+message
+image
+html
+link
+```
+
+Additional metadata may be present depending on stage type.
+
+The renderer remains stage-type aware rather than metadata-shape aware.
+
+---
+
+### Active Phase Contract
+
+ClaimWidget assumes phase activation has already been determined.
+
+Conceptually:
+
+```text id="k88r0z"
+Compiler
+        ↓
+active phase
+        ↓
+ClaimWidget
+```
+
+ClaimWidget should not be responsible for deciding:
+
+```text id="nsqbxk"
+which phase is active
+```
+
+The compiler remains the source of truth for activation state.
+
+ClaimWidget consumes activation decisions.
+
+---
+
+### Stage Ordering Contract
+
+ClaimWidget assumes stage ordering has already been established.
+
+Conceptually:
+
+```text id="swr4j8"
+Compiler
+        ↓
+ordered stages
+        ↓
+ClaimWidget
+```
+
+ClaimWidget renders stages in the order provided.
+
+ClaimWidget does not reorder stages.
+
+ClaimWidget does not perform stage prioritization beyond visual filtering and ownership selection.
+
+---
+
+### Rendering Contract
+
+Once the compiler contract has been satisfied, rendering proceeds through the standard lifecycle.
+
+Conceptually:
+
+```text id="k8rm4x"
+claimExperience
+        ↓
+phase lookup
+        ↓
+ownership selection
+        ↓
+visual filtering
+        ↓
+renderer delegation
+        ↓
+rendered output
+```
+
+The compiler is therefore responsible for producing renderable experiences.
+
+ClaimWidget is responsible for transforming those experiences into presentation.
+
+---
+
+### What ClaimWidget Does Not Own
+
+The compiler contract intentionally excludes several responsibilities from ClaimWidget.
+
+ClaimWidget does not own:
+
+```text id="9q8p7h"
+phase construction
+stage construction
+activation decisions
+experience composition
+experience compilation
+```
+
+These concerns belong to the compiler.
+
+This separation keeps rendering infrastructure focused exclusively on rendering concerns.
+
+---
+
+### What ClaimWidget Does Own
+
+ClaimWidget owns:
+
+```text id="wrwbkn"
+phase lookup
+ownership resolution
+visual filtering
+renderer selection
+renderer orchestration
+fallback behavior
+```
+
+These responsibilities begin only after the compiler contract has been satisfied.
+
+---
+
+### Compiler Contract and Migration
+
+The compiler contract serves as the foundation of the migration strategy.
+
+Conceptually:
+
+```text id="xqevsn"
+legacy reconstruction
+        ↓
+compiler-produced experiences
+```
+
+As migration progresses, more rendering regions should originate directly from compiler-produced phases rather than legacy reconstruction paths.
+
+The compiler contract remains stable regardless of migration progress.
+
+---
+
+### Architectural Summary
+
+The compiler contract can be summarized as:
+
+```text id="m3psqk"
+Compiler
+        ↓
+claimExperience
+        ↓
+phases[]
+        ↓
+stages[]
+        ↓
+ClaimWidget
+        ↓
+ownership
+        ↓
+rendering
+```
+
+The compiler remains responsible for constructing experiences.
+
+ClaimWidget remains responsible for rendering experiences.
+
+This boundary is the foundational architectural contract upon which the remainder of the compiled rendering system is built.
+
+---
+
+## 4.9 Region Comparison Matrix
+
+The preceding sections define the compiler contract, supported phase types, rendering ownership, and architectural boundaries.
+
+This section consolidates those concepts into a single architectural reference.
+
+Its purpose is to provide a concise comparison of every rendering region supported by the compiled rendering architecture.
+
+---
+
+### Architectural Overview
+
+Each rendering region participates in the claim experience lifecycle.
+
+However, each region differs in:
+
+```text
+ownership
+rendering model
+delegation behavior
+phase responsibility
+```
+
+Conceptually:
+
+```text
+claimExperience
+        ↓
+multiple regions
+        ↓
+multiple ownership models
+        ↓
+multiple rendering strategies
+```
+
+The comparison matrix below summarizes those differences.
+
+---
+
+### Region Comparison Matrix
+
+| Region | Lifecycle Position | Primary Owner | Rendering Model | Delegation Required |
+|----------|----------|----------|----------|----------|
+| rider_intro | Pre-Claim | ClaimWidget | Stage-Oriented | No |
+| runtime | In-Progress Claim | ClaimWidget | Stage-Oriented | No |
+| redirect | Transition | ClaimWidget | Stage-Oriented | No |
+| form_flow | Interactive Experience | FormFlowRenderer | Field-Oriented | Yes |
+| success | Post-Claim | Success Experience Renderer | Stage-Oriented | No |
+
+Conceptually:
+
+```text
+rider_intro
+        ↓
+ClaimWidget
+        ↓
+Stages
+
+runtime
+        ↓
+ClaimWidget
+        ↓
+Stages
+
+redirect
+        ↓
+ClaimWidget
+        ↓
+Stages
+
+form_flow
+        ↓
+FormFlowRenderer
+        ↓
+Fields
+
+success
+        ↓
+Success Renderer
+        ↓
+Stages
+```
+
+This table serves as the authoritative comparison reference for rendering regions.
+
+---
+
+### Stage-Oriented Regions
+
+Most rendering regions are stage-oriented.
+
+These include:
+
+```text
+rider_intro
+runtime
+redirect
+success
+```
+
+Conceptually:
+
+```text
+phase
+        ↓
+stages[]
+        ↓
+rendered output
+```
+
+Stage-oriented rendering focuses on rendering visual experiences directly from compiler-produced stages.
+
+Typical examples include:
+
+```text
+message
+image
+html
+link
+```
+
+The rendering path remains relatively straightforward.
+
+---
+
+### Field-Oriented Regions
+
+Form Flow represents the sole field-oriented rendering region.
+
+Conceptually:
+
+```text
+phase
+        ↓
+fields[]
+        ↓
+renderer registry
+        ↓
+field renderer
+        ↓
+rendered output
+```
+
+Unlike stage-oriented rendering, Form Flow introduces:
+
+```text
+field normalization
+renderer selection
+renderer specialization
+metadata rendering
+```
+
+This additional complexity is the reason Form Flow operates behind a dedicated ownership boundary.
+
+---
+
+### Ownership Comparison
+
+Ownership varies across rendering regions.
+
+Conceptually:
+
+```text
+ClaimWidget
+```
+
+owns:
+
+```text
+rider_intro
+runtime
+redirect
+```
+
+while:
+
+```text
+FormFlowRenderer
+```
+
+owns:
+
+```text
+form_flow
+```
+
+and:
+
+```text
+Success Experience Renderer
+```
+
+owns:
+
+```text
+success
+```
+
+Ownership therefore follows rendering specialization.
+
+---
+
+### Delegation Comparison
+
+Only one rendering region requires ownership delegation.
+
+Conceptually:
+
+```text
+ClaimWidget
+        ↓
+FormFlow Boundary
+        ↓
+FormFlowRenderer
+```
+
+All other rendering regions are rendered directly by their owner.
+
+This distinction is one of the most important architectural differences within the system.
+
+---
+
+### Complexity Comparison
+
+The relative architectural complexity of each rendering region can be viewed as:
+
+```text
+rider_intro
+runtime
+redirect
+success
+```
+
+followed by:
+
+```text
+form_flow
+```
+
+Form Flow introduces:
+
+```text
+renderer registries
+field renderers
+metadata normalization
+diagnostic rendering
+fallback rendering
+```
+
+which collectively make it the most sophisticated rendering subsystem within the architecture.
+
+---
+
+### Region Selection Relationship
+
+All rendering regions originate from the same compiler contract.
+
+Conceptually:
+
+```text
+Compiler
+        ↓
+claimExperience
+        ↓
+phases[]
+        ↓
+region selection
+        ↓
+owner selection
+        ↓
+rendering
+```
+
+The differences between regions emerge only after ownership and rendering responsibilities are determined.
+
+---
+
+### Architectural Summary
+
+The rendering architecture can be summarized as:
+
+```text
+rider_intro
+        ↓
+Stage Rendering
+
+runtime
+        ↓
+Stage Rendering
+
+redirect
+        ↓
+Stage Rendering
+
+form_flow
+        ↓
+Field Rendering
+
+success
+        ↓
+Stage Rendering
+```
+
+Four rendering regions are stage-oriented.
+
+One rendering region is field-oriented.
+
+This distinction explains the majority of ownership, delegation, and rendering behaviors described throughout the remainder of this document.
+
+The following sections examine each rendering region in detail.
 
 ---
 
@@ -1163,6 +3086,192 @@ For this reason, Form Flow is documented separately from the primary rendering r
 The Form Flow architecture is intentionally structured so that ClaimWidget can eventually stop rendering form content directly and instead delegate responsibility to specialized rendering infrastructure.
 
 Current implementation focuses on ownership detection and rendering delegation rather than full form execution.
+
+---
+
+## 8.0 Architectural Context
+
+The preceding rendering regions are fundamentally stage-oriented.
+
+Examples include:
+
+```text id="4qg2zv"
+rider_intro
+runtime
+redirect
+```
+
+These regions follow a common rendering model.
+
+Conceptually:
+
+```text id="z2qq4n"
+phase
+        ↓
+stages[]
+        ↓
+visual filtering
+        ↓
+rendered output
+```
+
+ClaimWidget directly consumes visual stages and produces presentation output.
+
+The rendering responsibility remains largely self-contained.
+
+---
+
+### Why Form Flow Is Different
+
+Form Flow introduces a fundamentally different rendering concern.
+
+Conceptually:
+
+```text id="9ewjki"
+stage-oriented rendering
+```
+
+becomes:
+
+```text id="a8f89j"
+field-oriented rendering
+```
+
+Rather than rendering visual stages directly, Form Flow renders structured field definitions.
+
+Examples include:
+
+```text id="o2vxku"
+text fields
+email fields
+date fields
+select fields
+textarea fields
+```
+
+This transition introduces architectural requirements that do not exist in Rider Intro, Runtime, Redirect, or Success rendering.
+
+---
+
+### Ownership Delegation
+
+In earlier rendering regions:
+
+```text id="u5kqzw"
+ClaimWidget
+        ↓
+renders directly
+```
+
+In Form Flow:
+
+```text id="bw0e2x"
+ClaimWidget
+        ↓
+ownership decision
+        ↓
+FormFlowRenderer
+        ↓
+field rendering
+```
+
+ClaimWidget no longer performs rendering directly.
+
+Instead, rendering responsibility is delegated to a specialized renderer.
+
+This introduces the first major ownership boundary within the compiled rendering architecture.
+
+---
+
+### Renderer Delegation
+
+Form Flow also introduces renderer specialization.
+
+Conceptually:
+
+```text id="97l9n3"
+field
+        ↓
+renderer lookup
+        ↓
+specialized renderer
+```
+
+Examples:
+
+```text id="x3czzm"
+TextFieldRenderer
+EmailFieldRenderer
+DateFieldRenderer
+SelectFieldRenderer
+```
+
+The renderer architecture therefore becomes substantially more sophisticated than stage-oriented rendering.
+
+---
+
+### Migration-Oriented Infrastructure
+
+Several Form Flow capabilities exist primarily to support migration.
+
+Examples include:
+
+```text id="l4kx8i"
+Field Diagnostics
+Readonly Preview Rows
+Unsupported Renderer
+```
+
+These features improve visibility during migration and validation.
+
+They should not be interpreted as final end-user experiences.
+
+Instead, they function as architectural checkpoints that verify:
+
+```text id="4d7xsv"
+ownership
+delegation
+normalization
+renderer resolution
+```
+
+before more advanced rendering capabilities are introduced.
+
+---
+
+### Architectural Summary
+
+The earlier rendering regions can be summarized as:
+
+```text id="vskx8o"
+phase
+        ↓
+stages[]
+        ↓
+rendered output
+```
+
+Form Flow expands this model into:
+
+```text id="4kt7rq"
+phase
+        ↓
+ownership boundary
+        ↓
+delegation contract
+        ↓
+field discovery
+        ↓
+renderer registry
+        ↓
+specialized renderer
+        ↓
+rendered output
+```
+
+For this reason, Form Flow represents the most sophisticated rendering subsystem within the current ClaimWidget architecture.
+
+The remaining sections of this chapter describe that subsystem in detail.
 
 ---
 
@@ -3854,6 +5963,228 @@ where rendering ownership leaves FormFlowRenderer and returns to broader ClaimWi
 
 ---
 
+## 8.13 Form Flow Evolution Notes
+
+The preceding sections describe the current Form Flow rendering architecture.
+
+Several capabilities discussed within this chapter exist primarily to support migration, validation, and architectural verification.
+
+These capabilities should not necessarily be interpreted as permanent end-user features.
+
+Instead, they function as scaffolding that enables safe evolution toward a fully renderer-driven architecture.
+
+---
+
+### Architectural Capabilities
+
+The following concepts are considered foundational architectural components:
+
+```text
+ownership boundary
+boundary selection
+renderer handoff
+renderer registry
+supported renderers
+field metadata rendering
+```
+
+These capabilities define the long-term architecture of Form Flow rendering.
+
+They remain valuable regardless of migration state.
+
+Conceptually:
+
+```text
+ownership
+        ↓
+delegation
+        ↓
+renderer selection
+        ↓
+field rendering
+```
+
+This lifecycle is expected to remain stable.
+
+---
+
+### Transitional Capabilities
+
+Several capabilities currently exist to assist migration and validation efforts.
+
+Examples include:
+
+```text
+Field Diagnostics
+Readonly Preview Rows
+Unsupported Renderer
+```
+
+Conceptually:
+
+```text
+migration
+        ↓
+visibility
+        ↓
+verification
+```
+
+These capabilities help developers understand:
+
+```text
+ownership selection
+field discovery
+renderer resolution
+metadata normalization
+fallback behavior
+```
+
+during migration activities.
+
+---
+
+### Field Diagnostics
+
+Field Diagnostics provide visibility into renderer selection and field normalization.
+
+Conceptually:
+
+```text
+field
+        ↓
+diagnostics
+        ↓
+verification
+```
+
+Their primary purpose is operational confidence rather than end-user functionality.
+
+As renderer maturity increases, diagnostic output may become increasingly operational rather than user-facing.
+
+---
+
+### Readonly Preview Rows
+
+Readonly Preview Rows exist primarily to verify field rendering pipelines before interactive rendering is introduced.
+
+Conceptually:
+
+```text
+field definition
+        ↓
+readonly rendering
+        ↓
+visual verification
+```
+
+They provide a safe rendering target while ownership boundaries and renderer contracts are still being validated.
+
+Their current form should be viewed as transitional infrastructure.
+
+---
+
+### Unsupported Renderer Handling
+
+Unsupported Renderer rendering provides controlled failure visibility.
+
+Conceptually:
+
+```text
+unknown field
+        ↓
+fallback renderer
+        ↓
+diagnostic output
+```
+
+This capability prevents silent rendering failures during migration.
+
+As renderer coverage expands, unsupported renderer scenarios should become increasingly uncommon.
+
+The fallback path nevertheless remains valuable as a defensive architectural safeguard.
+
+---
+
+### Future Renderer Evolution
+
+Over time, Form Flow rendering is expected to become increasingly renderer-centric.
+
+Conceptually:
+
+```text
+field
+        ↓
+renderer registry
+        ↓
+specialized renderer
+        ↓
+presentation
+```
+
+Additional renderer types may be introduced without altering ownership boundaries or delegation contracts.
+
+This flexibility is one of the primary advantages of the renderer architecture.
+
+---
+
+### Stability Expectations
+
+Not all components within this chapter share the same stability expectations.
+
+Generally:
+
+```text
+ownership boundaries
+renderer contracts
+renderer registry
+```
+
+should be considered highly stable.
+
+Whereas:
+
+```text
+diagnostics
+preview rows
+migration visibility tooling
+```
+
+may evolve significantly as the architecture matures.
+
+Understanding this distinction helps readers separate foundational architecture from migration-oriented tooling.
+
+---
+
+### Architectural Summary
+
+The Form Flow architecture consists of two categories of capability:
+
+```text
+Foundational
+        ↓
+ownership
+delegation
+registry
+renderers
+```
+
+and:
+
+```text
+Transitional
+        ↓
+diagnostics
+preview rows
+fallback visibility
+```
+
+The foundational capabilities define the long-term architecture.
+
+The transitional capabilities exist to support migration, validation, and safe architectural evolution.
+
+---
+
 # 9. Success Rider Ownership Boundary
 
 The Success experience represents the final rendering boundary within ClaimWidget.
@@ -4404,6 +6735,212 @@ Compatibility coverage allows migration to proceed incrementally.
 
 ---
 
+## Testing Architecture
+
+The test suite mirrors the layered architecture described throughout this document.
+
+Rather than organizing tests around implementation details, the testing strategy organizes validation around architectural responsibilities.
+
+Conceptually:
+
+```text
+compiler contract
+        ↓
+ownership
+        ↓
+rendering
+        ↓
+delegation
+        ↓
+presentation
+```
+
+Each layer introduces a distinct failure mode.
+
+The test suite exists to isolate those failure modes.
+
+---
+
+### Compiler Contract Validation
+
+The first layer validates compiler-produced structures.
+
+Conceptually:
+
+```text
+claimExperience
+        ↓
+phases[]
+        ↓
+stages[]
+```
+
+These tests verify that rendering inputs satisfy the compiler contract expected by ClaimWidget.
+
+Typical concerns include:
+
+```text
+phase discovery
+phase activation
+stage availability
+stage ordering
+```
+
+Failures at this layer indicate invalid rendering inputs.
+
+---
+
+### Ownership Validation
+
+The second layer validates ownership resolution.
+
+Conceptually:
+
+```text
+claimExperience
+        ↓
+ownership lookup
+        ↓
+owner selected
+```
+
+Examples include:
+
+```text
+rider_intro ownership
+runtime ownership
+redirect ownership
+form_flow ownership
+success ownership
+```
+
+Failures at this layer indicate incorrect rendering responsibility.
+
+---
+
+### Rendering Validation
+
+The third layer validates rendering behavior.
+
+Conceptually:
+
+```text
+ownership selected
+        ↓
+rendering activated
+        ↓
+output produced
+```
+
+Examples include:
+
+```text
+compiled rendering
+legacy rendering
+visual filtering
+rendering order
+```
+
+Failures at this layer indicate rendering logic defects.
+
+---
+
+### Delegation Validation
+
+The fourth layer validates delegation behavior.
+
+Conceptually:
+
+```text
+ownership
+        ↓
+delegation
+        ↓
+renderer
+```
+
+Examples include:
+
+```text
+form-flow delegation
+renderer lookup
+renderer registry
+unsupported renderer fallback
+```
+
+Failures at this layer indicate architectural boundary violations.
+
+---
+
+### Presentation Validation
+
+The final layer validates visible output.
+
+Conceptually:
+
+```text
+renderer
+        ↓
+presentation
+```
+
+Examples include:
+
+```text
+runtime displays
+redirect displays
+field rendering
+success rendering
+```
+
+Failures at this layer indicate user-visible rendering defects.
+
+---
+
+### Layered Failure Isolation
+
+The layered approach provides rapid fault isolation.
+
+Conceptually:
+
+```text
+Compiler
+        ↓
+Ownership
+        ↓
+Rendering
+        ↓
+Delegation
+        ↓
+Presentation
+```
+
+A failing test should immediately identify which architectural layer has been violated.
+
+This significantly reduces debugging complexity during migration and future development.
+
+---
+
+### Architectural Summary
+
+The testing architecture can be summarized as:
+
+```text
+Validate inputs.
+
+Validate ownership.
+
+Validate rendering.
+
+Validate delegation.
+
+Validate presentation.
+```
+
+This layered strategy mirrors the architecture itself and ensures that every major rendering responsibility is protected by an appropriate testing boundary.
+
+---
+
 ## Test Coverage Summary
 
 The testing strategy validates:
@@ -4535,6 +7072,234 @@ legacy fallback
 ```
 
 This state is intentional and represents the transitional architecture required to safely reach full compiler ownership.
+
+---
+
+## Migration Classification
+
+The migration effort described throughout this document can be understood through three architectural states:
+
+```text
+Legacy
+Hybrid
+Compiler-Owned
+```
+
+These classifications describe ownership maturity rather than implementation completeness.
+
+A component may be fully functional while still operating in a legacy state.
+
+Likewise, a component may be compiler-owned while still evolving.
+
+---
+
+### Legacy
+
+Legacy components depend primarily upon reconstruction logic rather than compiler-produced experiences.
+
+Conceptually:
+
+```text
+legacy source
+        ↓
+runtime reconstruction
+        ↓
+rendering
+```
+
+Characteristics include:
+
+```text
+reconstruction-driven
+fallback-oriented
+pre-compiler architecture
+```
+
+Examples may include:
+
+```text
+legacy rider reconstruction
+legacy redirect reconstruction
+legacy runtime reconstruction
+```
+
+Legacy paths remain valuable during migration because they preserve backward compatibility.
+
+---
+
+### Hybrid
+
+Hybrid components support both:
+
+```text
+compiler-produced experiences
+```
+
+and
+
+```text
+legacy reconstruction
+```
+
+Conceptually:
+
+```text
+compiler path
+        ↓
+ownership selection
+        ↓
+rendering
+
+legacy path
+        ↓
+fallback rendering
+```
+
+Characteristics include:
+
+```text
+compiler-first
+legacy-capable
+migration-safe
+```
+
+Most of the current compiled rendering architecture operates in this state.
+
+Hybrid ownership enables migration without requiring immediate retirement of legacy infrastructure.
+
+---
+
+### Compiler-Owned
+
+Compiler-owned components rely exclusively upon compiler-produced experiences.
+
+Conceptually:
+
+```text
+Compiler
+        ↓
+claimExperience
+        ↓
+ownership
+        ↓
+rendering
+```
+
+Characteristics include:
+
+```text
+no reconstruction
+no fallback dependency
+compiler-defined lifecycle
+```
+
+Compiler-owned regions represent the intended long-term architectural destination.
+
+---
+
+### Current Classification Snapshot
+
+The architecture currently contains elements of all three classifications.
+
+Conceptually:
+
+```text
+Legacy
+        ↓
+Hybrid
+        ↓
+Compiler-Owned
+```
+
+Migration progresses by moving responsibilities from:
+
+```text
+Legacy
+```
+
+toward:
+
+```text
+Compiler-Owned
+```
+
+while temporarily passing through:
+
+```text
+Hybrid
+```
+
+states.
+
+---
+
+### Classification and Ownership
+
+Ownership maturity is often a better indicator than implementation age.
+
+For example:
+
+```text
+Legacy
+        ↓
+ownership inferred
+```
+
+whereas:
+
+```text
+Compiler-Owned
+        ↓
+ownership explicit
+```
+
+The migration effort therefore focuses on ownership clarity as much as rendering behavior.
+
+---
+
+### Classification and Risk
+
+Migration risk decreases as ownership becomes more explicit.
+
+Conceptually:
+
+```text
+Legacy
+        ↓
+higher ambiguity
+
+Hybrid
+        ↓
+controlled ambiguity
+
+Compiler-Owned
+        ↓
+explicit ownership
+```
+
+This is one reason the architecture prioritizes ownership boundaries and compiler contracts.
+
+---
+
+### Architectural Summary
+
+Migration classification can be summarized as:
+
+```text
+Legacy
+        ↓
+reconstruction
+
+Hybrid
+        ↓
+compiler-first with fallback
+
+Compiler-Owned
+        ↓
+compiler-defined rendering
+```
+
+These classifications provide a common vocabulary for discussing migration progress, ownership maturity, and architectural evolution throughout the compiled rendering system.
 
 ---
 
@@ -4703,5 +7468,603 @@ specialized renderers
 own presentation.
 
 This architecture provides a clear separation of responsibilities, predictable ownership boundaries, and a sustainable path for future claim experience evolution.
+
+---
+
+## Architectural Synthesis
+
+The compiled rendering architecture is fundamentally an ownership-driven rendering system.
+
+Throughout this document, ownership has been the recurring architectural theme.
+
+Conceptually:
+
+```text
+compiler
+        ↓
+experience construction
+        ↓
+ownership resolution
+        ↓
+renderer delegation
+        ↓
+rendered experience
+```
+
+The architecture separates responsibility across distinct layers.
+
+---
+
+### Compiler Responsibility
+
+The compiler owns experience construction.
+
+Conceptually:
+
+```text
+Compiler
+        ↓
+claimExperience
+        ↓
+phases[]
+        ↓
+stages[]
+```
+
+The compiler determines:
+
+```text
+experience composition
+phase activation
+stage ordering
+```
+
+ClaimWidget does not perform these responsibilities.
+
+---
+
+### ClaimWidget Responsibility
+
+ClaimWidget owns orchestration.
+
+Conceptually:
+
+```text
+claimExperience
+        ↓
+ownership lookup
+        ↓
+phase selection
+        ↓
+visual filtering
+        ↓
+renderer selection
+```
+
+ClaimWidget determines how experiences are rendered.
+
+ClaimWidget does not determine what experiences exist.
+
+---
+
+### Ownership Responsibility
+
+Ownership determines rendering responsibility.
+
+Conceptually:
+
+```text
+rider_intro
+        ↓
+ClaimWidget
+
+runtime
+        ↓
+ClaimWidget
+
+redirect
+        ↓
+ClaimWidget
+
+form_flow
+        ↓
+FormFlowRenderer
+
+success
+        ↓
+Success Experience Renderer
+```
+
+Ownership exists to prevent rendering ambiguity.
+
+A rendering concern should always have a single owner.
+
+---
+
+### Renderer Responsibility
+
+Renderers own presentation.
+
+Conceptually:
+
+```text
+field
+        ↓
+renderer registry
+        ↓
+specialized renderer
+        ↓
+rendered output
+```
+
+Renderers focus exclusively on presentation concerns.
+
+They do not participate in experience construction.
+
+They do not participate in ownership selection.
+
+---
+
+### Migration Responsibility
+
+Migration exists to transition rendering responsibility from:
+
+```text
+legacy reconstruction
+```
+
+to:
+
+```text
+compiler-produced experiences
+```
+
+Conceptually:
+
+```text
+legacy rendering
+        ↓
+compiler-first rendering
+        ↓
+legacy retirement
+```
+
+The migration strategy remains subordinate to the architectural model.
+
+The architecture should remain valid even after migration completes.
+
+---
+
+### End-State Lifecycle
+
+The complete end-state lifecycle can be summarized as:
+
+```text
+Compiler
+        ↓
+claimExperience
+        ↓
+ownership resolution
+        ↓
+phase selection
+        ↓
+renderer delegation
+        ↓
+specialized rendering
+        ↓
+rendered experience
+```
+
+This lifecycle represents the intended steady-state architecture.
+
+---
+
+### Final Architectural Principle
+
+The compiled rendering architecture is built upon a simple principle:
+
+```text
+Construct experiences once.
+
+Render them through ownership.
+```
+
+Or stated differently:
+
+```text
+Compiler constructs.
+
+ClaimWidget orchestrates.
+
+Renderers present.
+```
+
+Every major architectural decision described throughout this document ultimately supports that separation of responsibilities.
+
+---
+
+# Appendix A — Architectural Glossary
+
+This appendix consolidates the terminology used throughout the compiled rendering architecture.
+
+Its purpose is to provide a single authoritative vocabulary reference for future maintainers, reviewers, and implementers.
+
+The definitions below should be interpreted consistently throughout this document.
+
+---
+
+## Claim Experience
+
+A Claim Experience represents the compiler-produced description of a claim journey.
+
+Conceptually:
+
+```text
+claimExperience
+        ↓
+phases[]
+```
+
+ClaimWidget consumes claim experiences.
+
+ClaimWidget does not construct claim experiences.
+
+---
+
+## Phase
+
+A Phase represents a major rendering concern within a claim experience.
+
+Examples include:
+
+```text
+rider_intro
+runtime
+redirect
+form_flow
+success
+```
+
+Conceptually:
+
+```text
+phase
+        ↓
+stages[]
+```
+
+A phase acts as a container for rendering behavior.
+
+---
+
+## Stage
+
+A Stage represents the smallest renderable experience unit within a phase.
+
+Examples include:
+
+```text
+message
+image
+html
+link
+```
+
+Conceptually:
+
+```text
+phase
+        ↓
+stage
+        ↓
+rendered output
+```
+
+Stages are the primary rendering units used by stage-oriented rendering regions.
+
+---
+
+## Rendering Region
+
+A Rendering Region represents a bounded presentation surface within the claim lifecycle.
+
+Examples include:
+
+```text
+rider_intro
+runtime
+redirect
+form_flow
+success
+```
+
+A rendering region possesses:
+
+```text
+ownership
+rendering rules
+lifecycle responsibilities
+```
+
+Every rendering region has a single rendering owner.
+
+---
+
+## Ownership
+
+Ownership represents rendering responsibility.
+
+Conceptually:
+
+```text
+rendering concern
+        ↓
+owner
+        ↓
+rendering
+```
+
+Ownership determines who renders.
+
+Ownership does not determine what is rendered.
+
+---
+
+## Ownership Resolution
+
+Ownership Resolution is the process of determining the rendering owner for a rendering concern.
+
+Conceptually:
+
+```text
+claimExperience
+        ↓
+ownership lookup
+        ↓
+rendering owner
+```
+
+Ownership resolution always occurs before rendering.
+
+---
+
+## Boundary
+
+A Boundary represents a controlled transition of responsibility between architectural concerns.
+
+Examples include:
+
+```text
+Compiler Boundary
+Ownership Boundary
+Rendering Boundary
+Form Flow Boundary
+```
+
+Boundaries prevent responsibility leakage between subsystems.
+
+---
+
+## Compiler Boundary
+
+The Compiler Boundary separates:
+
+```text
+experience construction
+```
+
+from:
+
+```text
+experience rendering
+```
+
+Conceptually:
+
+```text
+Compiler
+        ↓
+claimExperience
+========================
+      Boundary
+========================
+ClaimWidget
+```
+
+The compiler constructs.
+
+ClaimWidget consumes.
+
+---
+
+## Rendering Owner
+
+A Rendering Owner is the component responsible for producing presentation output.
+
+Examples include:
+
+```text
+ClaimWidget
+FormFlowRenderer
+Success Experience Renderer
+```
+
+Rendering owners are selected through ownership resolution.
+
+---
+
+## Renderer
+
+A Renderer is a presentation component responsible for rendering a specific rendering concern.
+
+Examples include:
+
+```text
+TextFieldRenderer
+EmailFieldRenderer
+DateFieldRenderer
+SelectFieldRenderer
+```
+
+Renderers focus exclusively on presentation behavior.
+
+---
+
+## Renderer Registry
+
+A Renderer Registry maps rendering concerns to renderers.
+
+Conceptually:
+
+```text
+field
+        ↓
+renderer lookup
+        ↓
+renderer
+```
+
+The registry enables renderer specialization without requiring ownership changes.
+
+---
+
+## Stage-Oriented Rendering
+
+Stage-Oriented Rendering renders visual stages directly.
+
+Conceptually:
+
+```text
+phase
+        ↓
+stages[]
+        ↓
+rendered output
+```
+
+Examples include:
+
+```text
+rider_intro
+runtime
+redirect
+success
+```
+
+This is the dominant rendering model within the architecture.
+
+---
+
+## Field-Oriented Rendering
+
+Field-Oriented Rendering renders normalized field definitions through specialized renderers.
+
+Conceptually:
+
+```text
+phase
+        ↓
+fields[]
+        ↓
+renderer registry
+        ↓
+renderer
+        ↓
+rendered output
+```
+
+Form Flow is the primary field-oriented rendering subsystem.
+
+---
+
+## Compiler Contract
+
+The Compiler Contract defines the minimum structure expected by ClaimWidget.
+
+Conceptually:
+
+```text
+claimExperience
+        ↓
+phases[]
+        ↓
+stages[]
+```
+
+ClaimWidget assumes this structure has already been produced.
+
+The compiler remains responsible for constructing it.
+
+---
+
+## Legacy Rendering
+
+Legacy Rendering refers to rendering paths that depend upon reconstruction logic rather than compiler-produced experiences.
+
+Conceptually:
+
+```text
+legacy source
+        ↓
+reconstruction
+        ↓
+rendering
+```
+
+Legacy rendering exists primarily to support backward compatibility.
+
+---
+
+## Hybrid Rendering
+
+Hybrid Rendering supports both:
+
+```text
+compiler-produced experiences
+```
+
+and:
+
+```text
+legacy reconstruction
+```
+
+Hybrid rendering represents the transitional state of migration.
+
+---
+
+## Compiler-Owned Rendering
+
+Compiler-Owned Rendering relies exclusively upon compiler-produced experiences.
+
+Conceptually:
+
+```text
+Compiler
+        ↓
+claimExperience
+        ↓
+ownership
+        ↓
+rendering
+```
+
+Compiler-owned rendering represents the intended architectural end state.
+
+---
+
+## Architectural Principle
+
+The compiled rendering architecture can be summarized as:
+
+```text
+Compiler constructs.
+
+ClaimWidget orchestrates.
+
+Renderers present.
+```
+
+This principle serves as the foundation for every ownership boundary, rendering decision, delegation contract, and migration strategy described throughout this document.
 
 ---
