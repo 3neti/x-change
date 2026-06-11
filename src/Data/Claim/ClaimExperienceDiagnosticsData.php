@@ -15,5 +15,6 @@ class ClaimExperienceDiagnosticsData extends Data
         public ?string $form_flow_splash_policy = null,
         public array $consumed = [],
         public array $warnings = [],
+        public ?string $form_flow_owner = null,
     ) {}
 }
