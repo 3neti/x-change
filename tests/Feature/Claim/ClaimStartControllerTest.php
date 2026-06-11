@@ -166,6 +166,24 @@ it('emits claim experience option to skip consumed splash for rider splash vouch
         ->assertRedirect('/form-flow/flow-skip-option-test');
 });
 
+it('passes skip consumed splash policy to form flow when rider splash is already consumed', function () {
+    $this->withoutMiddleware();
+
+    $voucher = claimVoucherWithRiderSplash();
+
+    mockDriverForClaimVoucher($this, $voucher, splashStep());
+
+    assertClaimExperienceStartFlow($this, function (array $experience, array $payload) {
+        expect(data_get($experience, 'consumed.splash'))->toBeTrue()
+            ->and(data_get($experience, 'options.skip_consumed_splash'))->toBeTrue()
+            ->and(data_get($experience, 'diagnostics.form_flow_splash_policy'))->toBe('skip_consumed')
+            ->and(data_get($payload, 'steps.0.handler'))->toBe('splash');
+    }, 'flow-skip-consumed-splash-test');
+
+    $this->get('/x/claim?code='.$voucher->code)
+        ->assertRedirect('/form-flow/flow-skip-consumed-splash-test');
+});
+
 it('does not emit consumed splash skip option when voucher has no rider splash', function () {
     $this->withoutMiddleware();
 
