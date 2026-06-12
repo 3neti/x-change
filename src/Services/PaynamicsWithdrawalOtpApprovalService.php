@@ -6,16 +6,38 @@ namespace LBHurtado\XChange\Services;
 
 use Illuminate\Support\Facades\Log;
 use LBHurtado\XChange\Contracts\WithdrawalOtpApprovalServiceContract;
+use LBHurtado\XChange\Support\Claim\ClaimApprovalPendingOtpStore;
 
 final class PaynamicsWithdrawalOtpApprovalService implements WithdrawalOtpApprovalServiceContract
 {
+    public function __construct(
+        private readonly ClaimApprovalPendingOtpStore $store,
+    ) {}
+
     /**
      * @param  array<string, mixed>  $context
      * @return array<string, mixed>
      */
     public function request(string $mobile, string $reference, array $context = []): array
     {
-        Log::info('[PaynamicsWithdrawalOtpApprovalService] Payout OTP request delegated.', [
+        $pending = $this->store->pending($reference);
+
+        if ($pending !== null) {
+            return [
+                'provider' => 'paynamics',
+                'reference' => $reference,
+                'requested' => true,
+                'target' => $pending['target'] ?? $this->maskMobile($mobile),
+                'message' => $pending['message'] ?? 'Paynamics payout OTP is pending.',
+                'context' => [
+                    'voucher_code' => data_get($context, 'voucher_code'),
+                    'amount' => data_get($context, 'amount'),
+                ],
+                'approval_metadata' => $pending,
+            ];
+        }
+
+        Log::info('[PaynamicsWithdrawalOtpApprovalService] Payout OTP request observed without pending metadata.', [
             'mobile' => $this->maskMobile($mobile),
             'reference' => $reference,
             'voucher_code' => data_get($context, 'voucher_code'),
@@ -25,9 +47,9 @@ final class PaynamicsWithdrawalOtpApprovalService implements WithdrawalOtpApprov
         return [
             'provider' => 'paynamics',
             'reference' => $reference,
-            'requested' => true,
+            'requested' => false,
             'target' => $this->maskMobile($mobile),
-            'message' => 'Paynamics payout OTP requested.',
+            'message' => 'Paynamics payout OTP has not been requested yet.',
             'context' => [
                 'voucher_code' => data_get($context, 'voucher_code'),
                 'amount' => data_get($context, 'amount'),
@@ -40,22 +62,22 @@ final class PaynamicsWithdrawalOtpApprovalService implements WithdrawalOtpApprov
      */
     public function verify(string $mobile, string $reference, string $code, array $context = []): bool
     {
-        Log::info('[PaynamicsWithdrawalOtpApprovalService] Payout OTP verification delegated.', [
+        $reference = trim($reference);
+        $code = trim($code);
+
+        Log::info('[PaynamicsWithdrawalOtpApprovalService] Payout OTP submitted.', [
             'mobile' => $this->maskMobile($mobile),
             'reference' => $reference,
             'voucher_code' => data_get($context, 'voucher_code'),
         ]);
 
-        /*
-         * Conservative first slice:
-         *
-         * This confirms the x-change driver slot without pretending that
-         * Paynamics verification has succeeded.
-         *
-         * The next slice should replace this false return with a call to the
-         * concrete emi-paynamics OTP/cash-out adapter.
-         */
-        return false;
+        if ($reference === '' || $code === '') {
+            return false;
+        }
+
+        $this->store->putSubmittedOtp($reference, $code);
+
+        return true;
     }
 
     private function maskMobile(string $mobile): string
