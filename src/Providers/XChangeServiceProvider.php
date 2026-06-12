@@ -133,6 +133,7 @@ use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
 use LBHurtado\XChange\Services\NullSettlementEnvelopeReadinessService;
 use LBHurtado\XChange\Services\NullWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\PaymentProviders\ManualVoucherPaymentProvider;
+use LBHurtado\XChange\Services\PaynamicsWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\PricelistService;
 use LBHurtado\XChange\Services\ReconciliationLifecycleService;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
@@ -334,6 +335,7 @@ class XChangeServiceProvider extends ServiceProvider
 
         $this->app->bind(WithdrawalOtpApprovalServiceContract::class, function ($app) {
             return match (config('x-change.withdrawal.otp.driver', 'null')) {
+                'paynamics' => $app->make(PaynamicsWithdrawalOtpApprovalService::class),
                 'txtcmdr' => $app->make(TxtcmdrWithdrawalOtpApprovalService::class),
                 'null' => $app->make(NullWithdrawalOtpApprovalService::class),
                 default => throw new InvalidArgumentException(

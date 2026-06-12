@@ -46,6 +46,7 @@ use LBHurtado\XChange\Services\NullClaimOtpChallengeService;
 use LBHurtado\XChange\Services\NullClaimOtpVerificationService;
 use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
 use LBHurtado\XChange\Services\PayCodeIssuanceService;
+use LBHurtado\XChange\Services\PaynamicsWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\PricingService;
 use LBHurtado\XChange\Services\SessionCompletionStore;
 use LBHurtado\XChange\Services\SystemWalletProxy;
@@ -689,6 +690,15 @@ return [
                 'timeout' => env('TXTCMDR_TIMEOUT', 30),
                 'verify_ssl' => env('TXTCMDR_VERIFY_SSL', true),
                 'test_mobile' => env('TXTCMDR_TEST_MOBILE'),
+            ],
+            'paynamics' => [
+                /*
+                 * Reserved for the concrete emi-paynamics adapter wiring.
+                 *
+                 * For now the service is selected by:
+                 * XCHANGE_WITHDRAWAL_OTP_DRIVER=paynamics
+                 */
+                'service' => PaynamicsWithdrawalOtpApprovalService::class,
             ],
         ],
     ],
