@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "8c33373521923202dad5d2b090e2c3f7",
+    "content-hash": "9b4ba5388fa64c4c4b9d9c26c8dcaf64",
     "packages": [
         {
             "name": "3neti/cash",
@@ -177,6 +177,65 @@
                 "source": "https://github.com/3neti/emi-core/tree/v1.0.4"
             },
             "time": "2026-04-01T15:03:47+00:00"
+        },
+        {
+            "name": "3neti/emi-paynamics",
+            "version": "dev-main",
+            "dist": {
+                "type": "path",
+                "url": "/Users/rli/PhpstormProjects/packages/emi-paynamics",
+                "reference": "9afbcd0dc437d06b3fdf6ca86677c5d7afc92e35"
+            },
+            "require": {
+                "3neti/emi-core": "^v1.0.1",
+                "illuminate/http": "^12.0 || ^13.0",
+                "illuminate/support": "^12.0 || ^13.0",
+                "lorisleiva/laravel-actions": "^2.9",
+                "php": "^8.3",
+                "spatie/laravel-data": "^4.0"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^10.0 || ^11.0",
+                "pestphp/pest": "^4.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "LBHurtado\\EmiPaynamicsConstellation\\ConstellationServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "LBHurtado\\EmiPaynamicsConstellation\\": "src/",
+                    "LBHurtado\\EmiPaynamicsConstellation\\Database\\Factories\\": "database/factories/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "LBHurtado\\EmiPaynamicsConstellation\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "vendor/bin/pest"
+                ]
+            },
+            "license": [
+                "proprietary"
+            ],
+            "authors": [
+                {
+                    "name": "Lester Hurtado",
+                    "email": "lester@hurtado.ph"
+                }
+            ],
+            "description": "Paynamics Constellation adapter for EMI core",
+            "transport-options": {
+                "symlink": true,
+                "relative": false
+            }
         },
         {
             "name": "3neti/form-flow",
@@ -1187,7 +1246,7 @@
             "dist": {
                 "type": "path",
                 "url": "/Users/rli/PhpstormProjects/packages/x-rider",
-                "reference": "e3716394b461f17a9f0b6127faf7ac0525096ac3"
+                "reference": "4bc3d6b79a297c69eb12ecfd8609eb6382676d22"
             },
             "require": {
                 "illuminate/http": "^12.0 || ^13.0",
@@ -13818,6 +13877,7 @@
     "minimum-stability": "dev",
     "stability-flags": {
         "3neti/cash": 20,
+        "3neti/emi-paynamics": 20,
         "3neti/form-flow": 20,
         "3neti/form-handler-kyc": 20,
         "3neti/form-handler-location": 20,
