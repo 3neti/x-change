@@ -14,6 +14,7 @@ final class ClaimApprovalProviderNormalizer
         'payanamics' => 'paynamics',
         'emi-paynamics' => 'paynamics',
         'emi_paynamics' => 'paynamics',
+
         'netbank' => 'netbank',
         'emi-netbank' => 'netbank',
         'emi_netbank' => 'netbank',
@@ -39,14 +40,16 @@ final class ClaimApprovalProviderNormalizer
             return self::ALIASES[$key];
         }
 
-        if (str_contains($key, 'paynamics')) {
-            return 'paynamics';
-        }
+        return $this->inferFromClassOrLabel($key);
+    }
 
-        if (str_contains($key, 'netbank')) {
-            return 'netbank';
-        }
-
-        return $key;
+    private function inferFromClassOrLabel(string $key): string
+    {
+        return match (true) {
+            str_contains($key, 'paynamics') => 'paynamics',
+            str_contains($key, 'netbank') => 'netbank',
+            default => $key,
+        };
     }
 }
+

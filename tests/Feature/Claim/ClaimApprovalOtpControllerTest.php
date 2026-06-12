@@ -73,6 +73,8 @@ it('allows optional approval OTP metadata', function () {
             'code' => $voucher->code,
         ]));
 
+    $provider = strtolower(\LBHurtado\XChange\Tests\Fakes\FakePayoutProvider::class);
+
     expect(session(CompiledClaimResultSession::KEY))->toMatchArray([
         'status' => 'received',
         'voucher_code' => $voucher->code,
@@ -80,7 +82,7 @@ it('allows optional approval OTP metadata', function () {
             'Approval OTP received.',
         ],
         'approval_metadata' => [
-            'provider' => null,
+            'provider' => $provider,
             'authorization_type' => 'otp',
             'reference_id' => null,
             'expires_at' => null,
