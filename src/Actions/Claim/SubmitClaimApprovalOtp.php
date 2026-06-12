@@ -6,12 +6,13 @@ namespace LBHurtado\XChange\Actions\Claim;
 
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalOtpAuthorizer;
-use LBHurtado\XChange\Support\Claim\NullClaimApprovalOtpAuthorizer;
+use LBHurtado\XChange\Support\Claim\ClaimApprovalOtpAuthorizerResolver;
 
 final class SubmitClaimApprovalOtp
 {
     public function __construct(
         private readonly ?ClaimApprovalOtpAuthorizer $authorizer = null,
+        private readonly ?ClaimApprovalOtpAuthorizerResolver $resolver = null,
     ) {}
 
     /**
@@ -30,13 +31,16 @@ final class SubmitClaimApprovalOtp
      */
     public function handle(Voucher $voucher, array $payload): array
     {
-        $authorizer = $this->authorizer;
+        $resolver = $this->resolver ?? app(ClaimApprovalOtpAuthorizerResolver::class);
 
-        if (! $authorizer && app()->bound(ClaimApprovalOtpAuthorizer::class)) {
-            $authorizer = app(ClaimApprovalOtpAuthorizer::class);
+        $payload = $resolver->normalizePayload($voucher, $payload);
+
+        if ($this->authorizer) {
+            return $this->authorizer->authorize($voucher, $payload);
         }
 
-        return ($authorizer ?? app(NullClaimApprovalOtpAuthorizer::class))
+        return $resolver
+            ->resolve($voucher, $payload)
             ->authorize($voucher, $payload);
     }
 }

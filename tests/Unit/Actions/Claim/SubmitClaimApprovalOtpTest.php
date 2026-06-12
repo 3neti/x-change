@@ -36,23 +36,25 @@ it('returns received approval OTP result for voucher', function () {
     ]);
 });
 
-it('defaults optional approval OTP metadata to null', function () {
+it('defaults optional approval OTP metadata to the active payout provider when provider is omitted', function () {
     $voucher = issueVoucher();
 
     $result = app(SubmitClaimApprovalOtp::class)->handle($voucher, [
         'otp' => '123456',
     ]);
 
+    $provider = strtolower(\LBHurtado\XChange\Tests\Fakes\FakePayoutProvider::class);
+
     expect($result)->toBe([
         'status' => 'received',
         'voucher_code' => $voucher->code,
         'reference_id' => null,
-        'provider' => null,
+        'provider' => $provider,
         'messages' => [
             'Approval OTP received.',
         ],
         'approval_metadata' => [
-            'provider' => null,
+            'provider' => $provider,
             'authorization_type' => 'otp',
             'reference_id' => null,
             'expires_at' => null,
