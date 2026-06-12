@@ -20,7 +20,7 @@ final class ClaimApprovalOtpAuthorizerResolver
             return app(ClaimApprovalOtpAuthorizer::class);
         }
 
-        return app(NullClaimApprovalOtpAuthorizer::class);
+        return app(ConfiguredClaimApprovalOtpAuthorizer::class);
     }
 
     /**
