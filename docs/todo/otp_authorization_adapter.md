@@ -1,516 +1,467 @@
-# OTP Authorization Adapter Plan — Paynamics Payout OTP in x-change Claim UI
+# Updated OTP Authorization Adapter Plan — Corrected Around Paynamics `ConstellationOtpResolver`
 
-## 1. Updated Objective
+## 1. Current Correction
 
-The goal is no longer to create a new web endpoint or move the claim UI into the Lifecycle Scenario Runner path.
+We discovered that the working Paynamics OTP logic is already inside `emi-paynamics`.
 
-The goal is to make the existing x-change claim approval UI endpoint correctly invoke the concrete Paynamics payout OTP authorization adapter.
-
-Current web endpoint already exists:
+The Lifecycle Scenario Runner works because payout execution eventually reaches:
 
 ```text
-POST /x/claim/{code}/approval/otp
+ConstellationPayoutProvider
+→ ConstellationOtpResolver::resolve()
+→ InteractiveOtpResolver
+→ CreateCashOutOtp::handle()
+→ CLI prompts for OTP
+→ CreateCashOutNonRegistered::handle(... otp ...)
 ```
 
-Current controller already exists:
+Therefore, the real Paynamics OTP seam is:
 
 ```php
-LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimApprovalOtpController
+LBHurtado\EmiPaynamicsConstellation\Contracts\ConstellationOtpResolver
 ```
 
-Current frontend already expects this route.
+Not:
 
-Therefore, the work is now:
+```php
+LBHurtado\XChange\Contracts\WithdrawalOtpApprovalServiceContract
+```
+
+The `WithdrawalOtpApprovalServiceContract` path is useful for x-change claim approval mechanics, but it is not the actual working Paynamics cash-out OTP engine.
+
+---
+
+## 2. What We Should Stop Doing
+
+Stop the `PaynamicsWithdrawalOtpApprovalService` path for now.
+
+Do not scaffold or continue:
+
+```php
+LBHurtado\XChange\Services\PaynamicsWithdrawalOtpApprovalService
+```
+
+unless we later decide to bridge it to `ConstellationOtpResolver`.
+
+Also pause this env/config route:
+
+```env
+XCHANGE_WITHDRAWAL_OTP_DRIVER=paynamics
+```
+
+because it would create a second Paynamics OTP pathway, separate from the working `emi-paynamics` pathway.
+
+---
+
+## 3. Source Codes That May Need Deletion or Reversal Later
+
+These are not necessarily wrong, but they may be unnecessary if the final architecture uses `ConstellationOtpResolver` directly.
+
+### Do not add / delete if already scaffolded but uncommitted
+
+```text
+src/Services/PaynamicsWithdrawalOtpApprovalService.php
+tests/Unit/Services/PaynamicsWithdrawalOtpApprovalServiceTest.php
+```
+
+### Revert if already patched but uncommitted
+
+```text
+config/x-change.php
+```
+
+Specifically remove any added node like:
+
+```php
+'withdrawal' => [
+    'otp' => [
+        'paynamics' => [
+            'service' => PaynamicsWithdrawalOtpApprovalService::class,
+        ],
+    ],
+],
+```
+
+### Revert if already patched but uncommitted
+
+```text
+src/Providers/XChangeServiceProvider.php
+```
+
+Specifically remove any added match branch like:
+
+```php
+'paynamics' => $app->make(PaynamicsWithdrawalOtpApprovalService::class),
+```
+
+### Keep for now
+
+```text
+src/Actions/Claim/SubmitClaimApprovalOtp.php
+src/Support/Claim/ClaimApprovalOtpAuthorizerResolver.php
+src/Support/Claim/ClaimApprovalProviderNormalizer.php
+src/Support/Claim/ConfiguredClaimApprovalOtpAuthorizer.php
+tests/Unit/Support/Claim/ConfiguredClaimApprovalOtpAuthorizerTest.php
+tests/Unit/Actions/Claim/SubmitClaimApprovalOtpConfiguredDriverTest.php
+tests/Unit/Services/WithdrawalOtpApprovalBackedClaimOtpChallengeServiceTest.php
+tests/Unit/Services/WithdrawalOtpApprovalBackedClaimOtpVerificationServiceTest.php
+tests/Unit/Contracts/WithdrawalOtpApprovalServiceContractTest.php
+```
+
+These helped characterize the current x-change approval pathway and are not harmful.
+
+But treat them as supporting scaffolds, not the final Paynamics integration seam.
+
+---
+
+## 4. Correct Target Architecture
+
+The correct target is:
 
 ```text
 Claim UI
 → existing ClaimApprovalOtpController
 → SubmitClaimApprovalOtp
-→ provider-bound approval OTP authorizer
-→ concrete Paynamics OTP adapter
-→ resume claim / payout
+→ stores/validates submitted OTP in x-change workflow
+→ Paynamics payout resumes through ConstellationPayoutProvider
+→ ConstellationOtpResolver supplies OTP without CLI prompt
+→ CreateCashOutNonRegistered submits Paynamics cash-out with OTP
 ```
 
----
-
-## 2. New Guiding Principle
-
-Do not create a parallel controller.
-
-Do not create a new UI endpoint unless API/JSON parity is needed later.
-
-Do not call Paynamics from Vue.
-
-Do not make Claim UI depend on the Lifecycle Scenario Runner.
-
-Instead:
+The key shift:
 
 ```text
-Patch the existing web approval OTP path.
-Make SubmitClaimApprovalOtp resolve the correct provider adapter.
-Make Paynamics the concrete provider implementation behind the contract.
+Do not duplicate Paynamics OTP request/cash-out logic in x-change.
+
+Instead, make the existing emi-paynamics ConstellationOtpResolver support web/deferred OTP resolution.
 ```
-
----
-
-## 3. Current Existing Flow
-
-The existing web route is:
-
-```php
-Route::post('claim/{code}/approval/otp', ClaimApprovalOtpController::class)
-    ->name('x-change.claim.approval.otp');
-```
-
-The existing controller flow is:
-
-```text
-ClaimApprovalOtpController
-→ find voucher by code
-→ validate otp/reference_id/provider
-→ SubmitClaimApprovalOtp::handle()
-→ CompiledClaimResultSession::put()
-→ ClaimApprovalOtpResultRedirector::redirect()
-```
-
-This means the web UI already has the correct surface.
-
-The missing piece is the provider adapter behind:
-
-```php
-SubmitClaimApprovalOtp
-```
-
----
-
-## 4. Correct Integration Target
-
-The main seam is:
-
-```php
-LBHurtado\XChange\Actions\Claim\SubmitClaimApprovalOtp
-```
-
-This action should become the stable adapter entry point for claim UI OTP submission.
-
-It should:
-
-```text
-- accept voucher + OTP payload
-- normalize provider name
-- resolve the configured/bound provider authorizer
-- delegate OTP authorization to provider-specific adapter
-- return normalized claim result
-```
-
-The concrete Paynamics adapter should not live in the controller.
 
 ---
 
 ## 5. Package Responsibility
-
-## x-change
-
-Owns:
-
-```text
-- claim approval route
-- claim approval controller
-- SubmitClaimApprovalOtp action
-- provider authorizer resolution
-- claim result redirect/session behavior
-- claim UI integration
-```
-
-## emi-core
-
-Owns:
-
-```text
-- provider-neutral payout OTP authorization contract if needed
-- generic DTOs/interfaces shared by EMI providers
-```
 
 ## emi-paynamics
 
 Owns:
 
 ```text
-- Paynamics-specific OTP API call
-- Paynamics-specific request/response mapping
-- Paynamics cash-out OTP verification/authorization behavior
+- request Paynamics cash-out OTP
+- cash-out with OTP
+- ConstellationPayoutProvider flow
+- ConstellationOtpResolver contract
 ```
 
-## lifecycle scenario runner
+Current working CLI implementation:
+
+```php
+InteractiveOtpResolver
+```
+
+Future web implementation:
+
+```php
+DeferredConstellationOtpResolver
+```
+
+or:
+
+```php
+WorkflowBackedConstellationOtpResolver
+```
+
+## x-change
+
+Owns:
+
+```text
+- claim approval page
+- OTP submission endpoint
+- approval workflow/session/cache
+- storing submitted OTP for the pending claim
+- telling emi-paynamics resolver where to get the OTP
+```
+
+## lifecycle runner
 
 Owns:
 
 ```text
 - CLI simulation
-- manual OTP prompt for live testing
-```
-
-It should eventually consume the same action/adapter path, but it is not the UI integration point.
-
----
-
-## 6. What To Do With Previous Scaffolds
-
-Keep these:
-
-```php
-LBHurtado\XChange\Actions\Claim\InitiateClaimApproval
-LBHurtado\XChange\Actions\Claim\VerifyClaimApprovalOtp
-```
-
-They are thin, tested application seams.
-
-But do not build new web controllers around them yet.
-
-Current canonical web path remains:
-
-```php
-ClaimApprovalOtpController
-→ SubmitClaimApprovalOtp
-```
-
-Later, if duplication becomes obvious:
-
-```text
-VerifyClaimApprovalOtp
-SubmitClaimApprovalOtp
-DefaultClaimApprovalExecutionService
-```
-
-can be consolidated.
-
-For now, keep them because tests are green and they do not interfere.
-
----
-
-## 7. Immediate Implementation Strategy
-
-### Slice 1 — Inspect and lock `SubmitClaimApprovalOtp`
-
-Find:
-
-```php
-src/Actions/Claim/SubmitClaimApprovalOtp.php
-```
-
-Confirm:
-
-```text
-- what contract it calls
-- how it resolves provider
-- whether it already supports provider-bound authorizers
-- what result shape it returns
-```
-
-Add/verify tests around:
-
-```text
-- delegates OTP authorization to configured authorizer
-- uses bound provider authorizer for Paynamics
-- preserves optional metadata
-- returns claim result consumed by ClaimApprovalOtpController
-```
-
-Important test:
-
-```text
-provider = paynamics
-→ resolves Paynamics authorizer
-→ passes OTP/reference_id/provider
-→ returns normalized claim result
+- can continue using InteractiveOtpResolver
+- later may optionally use the same workflow-backed resolver for parity
 ```
 
 ---
 
-### Slice 2 — Normalize provider naming
+## 6. Updated Implementation Plan
 
-The frontend and backend must agree on provider string.
+## Slice 1 — Characterize `ConstellationOtpResolver`
 
-Canonical provider:
-
-```text
-paynamics
-```
-
-If any test or frontend code uses:
+Add tests in `emi-paynamics` proving:
 
 ```text
-payanamics
+InteractiveOtpResolver
+→ calls CreateCashOutOtp
+→ obtains OTP via callback/STDIN
+→ returns OTP string
 ```
 
-then add normalization:
-
-```php
-'payanamics' => 'paynamics'
-```
-
-Prefer normalization in x-change support code, not scattered across Vue.
-
-Suggested class:
-
-```php
-LBHurtado\XChange\Support\Claim\PayoutProviderNameNormalizer
-```
-
-or inline normalization inside `SubmitClaimApprovalOtp` if this is the only use.
-
----
-
-### Slice 3 — Add/patch provider authorizer contract
-
-If already present, reuse it.
-
-Likely existing seam:
-
-```php
-ProviderClaimApprovalOtpAuthorizer
-ClaimApprovalOtpAuthorizer
-ClaimOtpVerificationContract
-```
-
-The contract should answer:
+Classes to inspect/test:
 
 ```text
-Given voucher + OTP payload, can this provider authorize the pending payout?
+packages/emi-paynamics/src/Contracts/ConstellationOtpResolver.php
+packages/emi-paynamics/src/Support/InteractiveOtpResolver.php
+packages/emi-paynamics/src/Support/NullOtpResolver.php
+packages/emi-paynamics/src/Adapters/ConstellationPayoutProvider.php
 ```
 
-Suggested generic shape:
-
-```php
-interface ProviderClaimApprovalOtpAuthorizer
-{
-    public function authorize(Voucher $voucher, array $payload): array|SubmitPayCodeClaimResultData;
-}
-```
-
-Do not create this if an equivalent already exists.
-
-Patch the existing one instead.
-
----
-
-### Slice 4 — Implement concrete Paynamics adapter
-
-Create or patch:
-
-```php
-LBHurtado\XChange\Support\Claim\PaynamicsClaimApprovalOtpAuthorizer
-```
-
-or, if provider-specific code belongs strictly in emi-paynamics:
-
-```php
-LBHurtado\EmiPaynamics\Claim\PaynamicsClaimApprovalOtpAuthorizer
-```
-
-Preferred split:
+Goal:
 
 ```text
-x-change adapter
-→ translates x-change voucher/claim payload into provider request
-
-emi-paynamics client/action
-→ performs actual Paynamics API call
-```
-
-The x-change adapter should call the concrete emi-paynamics action/client, not raw HTTP.
-
----
-
-### Slice 5 — Bind Paynamics authorizer
-
-Bind provider name to concrete authorizer.
-
-Possible config:
-
-```php
-'claim_approval_otp' => [
-    'default_provider' => env('XCHANGE_PAYOUT_PROVIDER', 'netbank'),
-
-    'providers' => [
-        'paynamics' => PaynamicsClaimApprovalOtpAuthorizer::class,
-        'netbank' => NullClaimApprovalOtpAuthorizer::class,
-    ],
-],
-```
-
-Then `SubmitClaimApprovalOtp` resolves:
-
-```text
-payload.provider
-or voucher/provider metadata
-or XCHANGE_PAYOUT_PROVIDER
-```
-
-Resolution order:
-
-```text
-1. payload['provider']
-2. voucher payout/provider metadata
-3. config('x-change.claim_approval_otp.default_provider')
-4. env('XCHANGE_PAYOUT_PROVIDER')
+Lock current working behavior before adding web resolver.
 ```
 
 ---
 
-### Slice 6 — Patch existing controller only if needed
+## Slice 2 — Add a web/deferred OTP resolver in emi-paynamics
 
-Existing controller should remain redirect/session based.
-
-Patch only if needed to support frontend payload names.
-
-Current accepted fields:
+Create:
 
 ```php
-'otp' => ['required', 'string'],
-'reference_id' => ['nullable', 'string'],
-'provider' => ['nullable', 'string'],
+LBHurtado\EmiPaynamicsConstellation\Support\DeferredOtpResolver
 ```
 
-If frontend sends `otp_code`, either:
+Possible behavior:
 
 ```text
-- frontend should send otp
+- request OTP through CreateCashOutOtp
+- instead of prompting on STDIN, throw/return a structured pending OTP signal
+- include request payload, provider, amount, reference, target account
 ```
 
-or backend validation should allow:
+Possible control signal:
 
 ```php
-'otp_code' => ['nullable', 'string']
+PendingConstellationOtpException
 ```
 
-But do not loosen validation unnecessarily if frontend already sends `otp`.
+or result object if the existing interface can support it.
+
+Important problem:
+
+The current `ConstellationOtpResolver::resolve()` returns `string`.
+
+So a deferred resolver cannot naturally return “pending” unless it:
+
+```text
+A. throws a domain exception
+B. blocks until OTP appears in a store
+C. returns a configured/test OTP
+```
+
+For web UI, the cleanest option is probably:
+
+```text
+throw PendingConstellationOtpException
+```
+
+Then x-change catches it and routes user/issuer to approval UI.
 
 ---
 
-### Slice 7 — Frontend contract
+## Slice 3 — Add x-change workflow-backed OTP store
 
-Claim UI should submit:
+x-change needs a way to store:
 
-```json
-{
-  "otp": "123456",
-  "reference_id": "AUTH-123",
-  "provider": "paynamics"
-}
+```text
+voucher_code
+reference_id
+provider
+otp request payload
+submitted OTP
+status
+expires_at
 ```
 
-To:
+This can initially reuse the existing claim approval workflow store if possible.
+
+Avoid adding a new database table unless the existing store is insufficient.
+
+Potential integration point:
+
+```text
+ClaimApprovalWorkflowStoreContract
+```
+
+Goal:
+
+```text
+When Paynamics resolver requests OTP in web context, x-change records pending approval metadata.
+When user submits OTP to /x/claim/{code}/approval/otp, x-change stores the OTP against that workflow/reference.
+```
+
+---
+
+## Slice 4 — Add x-change-backed resolver for emi-paynamics
+
+Create an implementation of:
+
+```php
+ConstellationOtpResolver
+```
+
+that is owned by x-change or supplied by x-change to the container.
+
+Possible name:
+
+```php
+LBHurtado\XChange\Support\Paynamics\ClaimApprovalBackedConstellationOtpResolver
+```
+
+Behavior:
+
+```text
+resolve($otpRequestPayload)
+→ if submitted OTP exists for current workflow/reference:
+      return submitted OTP
+→ else:
+      request OTP if not yet requested
+      store pending approval metadata
+      throw PendingConstellationOtpException
+```
+
+This lets `ConstellationPayoutProvider` remain unchanged.
+
+---
+
+## Slice 5 — Catch pending OTP during claim submit
+
+When payout execution triggers Paynamics OTP and the resolver throws pending OTP:
+
+```text
+ClaimSubmitController / SubmitPayCodeClaim path
+→ catch pending OTP signal
+→ compile claim result with status approval_required
+→ redirect to claim approval page
+```
+
+The approval page already exists.
+
+The existing endpoint remains:
 
 ```text
 POST /x/claim/{code}/approval/otp
 ```
 
-Expected server behavior:
-
-```text
-- redirects to success page if claim completes
-- redirects back to approval page if still pending/fails
-- stores compiled claim result in session
-```
-
-The web endpoint is not JSON-first.
-
-If the UI needs JSON later, add a separate API route.
-
 ---
 
-## 8. Regression-Limiting Tests
+## Slice 6 — Resume payout after OTP submission
 
-Before deeper changes, keep existing tests green:
-
-```bash
-./vendor/bin/pest tests/Unit/Actions/Claim/SubmitClaimApprovalOtpTest.php
-./vendor/bin/pest tests/Feature/Claim/ClaimApprovalOtpControllerTest.php
-```
-
-Add or update focused tests:
+When the approval OTP endpoint receives the OTP:
 
 ```text
-SubmitClaimApprovalOtp resolves paynamics provider
-SubmitClaimApprovalOtp delegates to Paynamics authorizer
-ClaimApprovalOtpController accepts frontend payload
-ClaimApprovalOtpController stores compiled result
-ClaimApprovalOtpController redirects correctly after provider authorization
-```
-
-Avoid broad lifecycle refactors until this path is solid.
-
----
-
-## 9. Lifecycle Runner Update Later
-
-The runner should eventually use the same adapter path:
-
-```text
-prompt OTP in CLI
-→ call SubmitClaimApprovalOtp
-→ display result
-```
-
-But this does not block claim UI integration.
-
-The lifecycle runner is the live testing gold standard, but not the production endpoint.
-
----
-
-## 10. What Not To Do Now
-
-Do not add:
-
-```text
-new ClaimApprovalOtpController
-new /x/claim/{code}/approval/otp route
-PayoutAuthorization model
-AuthorizePayout pipe
-issuer approval queue
-database notifications
-Echo broadcasting
-```
-
-Those belong to the later Payout Authorization Gate phase.
-
-For the current claim UI/UX work, the immediate job is:
-
-```text
-Make the existing web OTP approval endpoint invoke the correct Paynamics adapter.
-```
-
----
-
-## 11. Efficient Implementation Order
-
-1. Inspect `SubmitClaimApprovalOtp`.
-2. Inspect existing authorizer contract/binding.
-3. Add/confirm provider-bound Paynamics authorizer test.
-4. Normalize provider name.
-5. Implement or patch Paynamics authorizer adapter.
-6. Bind Paynamics adapter under provider key `paynamics`.
-7. Run controller and frontend OTP tests.
-8. Hand off route/payload contract to Claim UI/UX.
-
----
-
-## 12. Final Mental Model
-
-The Claim UI does not need new infrastructure.
-
-It needs the existing endpoint to be wired correctly.
-
-```text
-Approval.vue
-→ approvalOtpSubmitAdapter
-→ POST /x/claim/{code}/approval/otp
-→ ClaimApprovalOtpController
+ClaimApprovalOtpController
 → SubmitClaimApprovalOtp
-→ Provider-bound authorizer
-→ Paynamics OTP adapter
-→ claim result redirect/session
+→ store submitted OTP in workflow
+→ replay/resume claim
+→ ConstellationOtpResolver now returns OTP
+→ ConstellationPayoutProvider submits cash-out
+→ success/redirect
 ```
 
-This is now an adapter-wiring plan, not a broad refactor plan.
+This is the actual web equivalent of the working lifecycle runner.
+
+---
+
+## Slice 7 — Lifecycle runner parity
+
+Keep the runner working.
+
+Options:
+
+```text
+Option A:
+Lifecycle runner keeps InteractiveOtpResolver.
+
+Option B:
+Lifecycle runner uses the workflow-backed resolver and submits OTP through SubmitClaimApprovalOtp.
+
+Start with Option A.
+```
+
+Do not break the working CLI flow.
+
+---
+
+## 7. Updated Mental Model
+
+Old mistaken model:
+
+```text
+x-change should create a PaynamicsWithdrawalOtpApprovalService
+→ Paynamics OTP verification happens through x-change withdrawal OTP driver
+```
+
+Corrected model:
+
+```text
+emi-paynamics already owns the Paynamics OTP/cash-out sequence.
+
+x-change should provide a web-safe OTP resolver/workflow so emi-paynamics can obtain the OTP without CLI input.
+```
+
+---
+
+## 8. Updated Flow
+
+### CLI / Lifecycle Runner Today
+
+```text
+Lifecycle Runner
+→ claim submit
+→ payout provider: ConstellationPayoutProvider
+→ InteractiveOtpResolver
+→ request OTP
+→ prompt terminal
+→ submit cash-out with OTP
+→ success
+```
+
+### Web Claim UI Target
+
+```text
+Claim UI
+→ claim submit
+→ payout provider: ConstellationPayoutProvider
+→ x-change-backed ConstellationOtpResolver
+→ request OTP
+→ store pending approval
+→ redirect/show approval page
+→ issuer enters OTP
+→ SubmitClaimApprovalOtp
+→ store submitted OTP
+→ replay claim
+→ x-change-backed ConstellationOtpResolver returns OTP
+→ submit cash-out with OTP
+→ success
+```
+
+---
+
+## 9. Final Recommendation
+
+Do not continue the `PaynamicsWithdrawalOtpApprovalService` branch.
+
+The next real implementation slice should be:
+
+```text
+Characterize emi-paynamics ConstellationOtpResolver and ConstellationPayoutProvider OTP flow.
+```
+
+Then add:
+
+```text
+x-change-backed ConstellationOtpResolver
+```
+
+as the bridge between the existing claim approval UI and the existing Paynamics payout provider.
