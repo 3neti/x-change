@@ -18,7 +18,7 @@ describe('approval metadata view model', () => {
 
     it('resolves OTP approval metadata', () => {
         expect(resolveApprovalMetadataViewModel({
-            provider: 'payanamics',
+            provider: 'paynamics',
             authorization_type: 'otp',
             reference_id: 'AUTH-123',
             expires_at: '2026-06-08T12:00:00+08:00',
@@ -27,7 +27,7 @@ describe('approval metadata view model', () => {
             manual_review: false,
             message: 'Enter the OTP sent to your mobile number.',
         })).toEqual({
-            provider: 'payanamics',
+            provider: 'paynamics',
             authorizationType: 'otp',
             referenceId: 'AUTH-123',
             expiresAt: '2026-06-08T12:00:00+08:00',

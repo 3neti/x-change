@@ -157,7 +157,7 @@ describe('Claim approval page', () => {
                 compiled_claim_result: {
                     status: 'pending',
                     approval_metadata: {
-                        provider: 'payanamics',
+                        provider: 'paynamics',
                         reference_id: 'AUTH-123',
                         otp_required: true,
                     },
@@ -178,7 +178,7 @@ describe('Claim approval page', () => {
             {
                 otp: '123456',
                 referenceId: 'AUTH-123',
-                provider: 'payanamics',
+                provider: 'paynamics',
             },
         ]);
 
@@ -187,7 +187,7 @@ describe('Claim approval page', () => {
             {
                 otp: '123456',
                 reference_id: 'AUTH-123',
-                provider: 'payanamics',
+                provider: 'paynamics',
             },
             expect.objectContaining({
                 preserveScroll: true,

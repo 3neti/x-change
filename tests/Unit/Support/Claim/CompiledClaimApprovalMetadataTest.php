@@ -19,7 +19,7 @@ it('normalizes empty approval metadata', function () {
 
 it('normalizes approval metadata fields', function () {
     expect(CompiledClaimApprovalMetadata::normalize([
-        'provider' => 'payanamics',
+        'provider' => 'paynamics',
         'authorization_type' => 'otp',
         'reference_id' => 'AUTH-123',
         'expires_at' => '2026-06-08T12:00:00+08:00',
@@ -28,7 +28,7 @@ it('normalizes approval metadata fields', function () {
         'manual_review' => false,
         'message' => 'Enter the OTP sent to your mobile number.',
     ]))->toBe([
-        'provider' => 'payanamics',
+        'provider' => 'paynamics',
         'authorization_type' => 'otp',
         'reference_id' => 'AUTH-123',
         'expires_at' => '2026-06-08T12:00:00+08:00',
@@ -64,7 +64,7 @@ it('coerces scalar values safely', function () {
 it('extracts approval metadata from result object', function () {
     $result = (object) [
         'approval_metadata' => [
-            'provider' => 'payanamics',
+            'provider' => 'paynamics',
             'authorization_type' => 'otp',
             'reference_id' => 'AUTH-123',
             'otp_required' => true,
@@ -72,7 +72,7 @@ it('extracts approval metadata from result object', function () {
     ];
 
     expect(CompiledClaimApprovalMetadata::fromResult($result))->toMatchArray([
-        'provider' => 'payanamics',
+        'provider' => 'paynamics',
         'authorization_type' => 'otp',
         'reference_id' => 'AUTH-123',
         'otp_required' => true,

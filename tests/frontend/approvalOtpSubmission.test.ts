@@ -6,7 +6,7 @@ describe('approval OTP submission', () => {
         expect(resolveApprovalOtpSubmission({
             otp: '   ',
             referenceId: 'AUTH-123',
-            provider: 'payanamics',
+            provider: 'paynamics',
         })).toEqual({
             intent: 'blocked',
             payload: null,
@@ -18,13 +18,13 @@ describe('approval OTP submission', () => {
         expect(resolveApprovalOtpSubmission({
             otp: ' 123456 ',
             referenceId: 'AUTH-123',
-            provider: 'payanamics',
+            provider: 'paynamics',
         })).toEqual({
             intent: 'submit',
             payload: {
                 otp: '123456',
                 referenceId: 'AUTH-123',
-                provider: 'payanamics',
+                provider: 'paynamics',
             },
             error: null,
         });

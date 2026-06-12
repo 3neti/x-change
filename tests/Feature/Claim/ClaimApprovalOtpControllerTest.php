@@ -17,7 +17,7 @@ it('accepts approval OTP payload for an existing voucher', function () {
         ]), [
             'otp' => '123456',
             'reference_id' => 'AUTH-123',
-            'provider' => 'payanamics',
+            'provider' => 'paynamics',
         ])
         ->assertRedirect(route('x-change.claim.approval', [
             'code' => $voucher->code,
@@ -30,7 +30,7 @@ it('accepts approval OTP payload for an existing voucher', function () {
             'Approval OTP received.',
         ],
         'approval_metadata' => [
-            'provider' => 'payanamics',
+            'provider' => 'paynamics',
             'authorization_type' => 'otp',
             'reference_id' => 'AUTH-123',
             'expires_at' => null,
@@ -52,7 +52,7 @@ it('requires OTP for approval OTP payload', function () {
             'code' => $voucher->code,
         ]), [
             'reference_id' => 'AUTH-123',
-            'provider' => 'payanamics',
+            'provider' => 'paynamics',
         ])
         ->assertSessionHasErrors('otp');
 });
@@ -132,7 +132,7 @@ it('redirects completed approval OTP result to success page', function () {
         ]), [
             'otp' => '123456',
             'reference_id' => 'AUTH-123',
-            'provider' => 'payanamics',
+            'provider' => 'paynamics',
         ])
         ->assertRedirect(route('x-change.claim.success', [
             'code' => $voucher->code,
@@ -156,7 +156,7 @@ it('rehydrates approval page with OTP metadata after received OTP result', funct
         ]), [
             'otp' => '123456',
             'reference_id' => 'AUTH-123',
-            'provider' => 'payanamics',
+            'provider' => 'paynamics',
         ])
         ->assertRedirect(route('x-change.claim.approval', [
             'code' => $voucher->code,
@@ -168,7 +168,7 @@ it('rehydrates approval page with OTP metadata after received OTP result', funct
         ]))
         ->assertOk()
         ->assertJsonPath('compiled_claim_result.status', 'received')
-        ->assertJsonPath('compiled_claim_result.approval_metadata.provider', 'payanamics')
+        ->assertJsonPath('compiled_claim_result.approval_metadata.provider', 'paynamics')
         ->assertJsonPath('compiled_claim_result.approval_metadata.authorization_type', 'otp')
         ->assertJsonPath('compiled_claim_result.approval_metadata.reference_id', 'AUTH-123')
         ->assertJsonPath('compiled_claim_result.approval_metadata.otp_required', true)
@@ -220,7 +220,7 @@ it('hydrates success page after completed approval OTP result', function () {
         ]), [
             'otp' => '123456',
             'reference_id' => 'AUTH-123',
-            'provider' => 'payanamics',
+            'provider' => 'paynamics',
         ])
         ->assertRedirect(route('x-change.claim.success', [
             'code' => $voucher->code,
@@ -238,6 +238,6 @@ it('hydrates success page after completed approval OTP result', function () {
         ->assertJsonPath('compiled_claim_result.disbursed_amount', 1000)
         ->assertJsonPath('compiled_claim_result.currency', 'PHP')
         ->assertJsonPath('compiled_claim_result.messages.0', 'OTP verified. Claim completed.')
-        ->assertJsonPath('compiled_claim_result.approval_metadata.provider', 'payanamics')
+        ->assertJsonPath('compiled_claim_result.approval_metadata.provider', 'paynamics')
         ->assertJsonPath('compiled_claim_result.approval_metadata.reference_id', 'AUTH-123');
 });

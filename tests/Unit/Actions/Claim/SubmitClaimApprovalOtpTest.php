@@ -12,19 +12,19 @@ it('returns received approval OTP result for voucher', function () {
     $result = app(SubmitClaimApprovalOtp::class)->handle($voucher, [
         'otp' => '123456',
         'reference_id' => 'AUTH-123',
-        'provider' => 'payanamics',
+        'provider' => 'paynamics',
     ]);
 
     expect($result)->toBe([
         'status' => 'received',
         'voucher_code' => $voucher->code,
         'reference_id' => 'AUTH-123',
-        'provider' => 'payanamics',
+        'provider' => 'paynamics',
         'messages' => [
             'Approval OTP received.',
         ],
         'approval_metadata' => [
-            'provider' => 'payanamics',
+            'provider' => 'paynamics',
             'authorization_type' => 'otp',
             'reference_id' => 'AUTH-123',
             'expires_at' => null,
@@ -93,20 +93,20 @@ it('delegates approval OTP authorization to configured authorizer', function () 
     ])->handle($voucher, [
         'otp' => '123456',
         'reference_id' => 'AUTH-123',
-        'provider' => 'payanamics',
+        'provider' => 'paynamics',
     ]);
 
     expect($authorizer->voucher?->is($voucher))->toBeTrue()
         ->and($authorizer->payload)->toMatchArray([
             'otp' => '123456',
             'reference_id' => 'AUTH-123',
-            'provider' => 'payanamics',
+            'provider' => 'paynamics',
         ])
         ->and($result)->toBe([
             'status' => 'completed',
             'voucher_code' => $voucher->code,
             'reference_id' => 'AUTH-123',
-            'provider' => 'payanamics',
+            'provider' => 'paynamics',
             'messages' => ['OTP verified.'],
         ]);
 });
@@ -123,7 +123,7 @@ it('uses bound provider authorizer for Paynamics OTP approval', function () {
                 expect($payload)->toMatchArray([
                     'otp' => '123456',
                     'reference_id' => 'PAYNAMICS-AUTH-123',
-                    'provider' => 'payanamics',
+                    'provider' => 'paynamics',
                 ]);
 
                 return [
@@ -137,10 +137,10 @@ it('uses bound provider authorizer for Paynamics OTP approval', function () {
                     'remaining_balance' => 0,
                     'fully_claimed' => true,
                     'reference_id' => 'PAYNAMICS-AUTH-123',
-                    'provider' => 'payanamics',
+                    'provider' => 'paynamics',
                     'messages' => ['Paynamics OTP verified.'],
                     'approval_metadata' => [
-                        'provider' => 'payanamics',
+                        'provider' => 'paynamics',
                         'authorization_type' => 'otp',
                         'reference_id' => 'PAYNAMICS-AUTH-123',
                         'expires_at' => null,
@@ -158,18 +158,18 @@ it('uses bound provider authorizer for Paynamics OTP approval', function () {
         ->handle($voucher, [
             'otp' => '123456',
             'reference_id' => 'PAYNAMICS-AUTH-123',
-            'provider' => 'payanamics',
+            'provider' => 'paynamics',
         ]);
 
     expect($result)->toMatchArray([
         'status' => 'completed',
         'voucher_code' => $voucher->code,
-        'provider' => 'payanamics',
+        'provider' => 'paynamics',
         'reference_id' => 'PAYNAMICS-AUTH-123',
         'messages' => ['Paynamics OTP verified.'],
     ])
         ->and(data_get($result, 'approval_metadata'))->toMatchArray([
-            'provider' => 'payanamics',
+            'provider' => 'paynamics',
             'authorization_type' => 'otp',
             'reference_id' => 'PAYNAMICS-AUTH-123',
             'otp_required' => false,

@@ -94,7 +94,7 @@ describe('approval page view model', () => {
             compiledClaimResult: {
                 status: 'pending',
                 approval_metadata: {
-                    provider: 'payanamics',
+                    provider: 'paynamics',
                     authorization_type: 'otp',
                     reference_id: 'AUTH-123',
                     expires_at: '2026-06-08T12:00:00+08:00',
@@ -105,7 +105,7 @@ describe('approval page view model', () => {
             message: null,
         })).toMatchObject({
             headline: 'OTP verification required',
-            provider: 'payanamics',
+            provider: 'paynamics',
             authorizationType: 'otp',
             referenceId: 'AUTH-123',
             expiresAt: '2026-06-08T12:00:00+08:00',

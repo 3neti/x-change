@@ -33,11 +33,11 @@ describe('approval OTP submit adapter', () => {
             code: 'TEST123',
             otp: '123456',
             referenceId: 'AUTH-123',
-            provider: 'payanamics',
+            provider: 'paynamics',
         })).toEqual({
             otp: '123456',
             reference_id: 'AUTH-123',
-            provider: 'payanamics',
+            provider: 'paynamics',
         });
     });
 
@@ -50,7 +50,7 @@ describe('approval OTP submit adapter', () => {
             code: 'TEST123',
             otp: '123456',
             referenceId: 'AUTH-123',
-            provider: 'payanamics',
+            provider: 'paynamics',
         }, {
             onSuccess,
             onError,
@@ -62,7 +62,7 @@ describe('approval OTP submit adapter', () => {
             {
                 otp: '123456',
                 reference_id: 'AUTH-123',
-                provider: 'payanamics',
+                provider: 'paynamics',
             },
             expect.objectContaining({
                 preserveScroll: true,

@@ -117,7 +117,7 @@ it('stores normalized approval metadata with compiled claim result', function ()
         'voucher_code' => 'TEST123',
         'messages' => ['Approval required.'],
         'approval_metadata' => [
-            'provider' => 'payanamics',
+            'provider' => 'paynamics',
             'authorization_type' => 'otp',
             'reference_id' => 'AUTH-123',
             'otp_required' => true,
@@ -131,7 +131,7 @@ it('stores normalized approval metadata with compiled claim result', function ()
             'voucher_code' => 'TEST123',
             'messages' => ['Approval required.'],
             'approval_metadata' => [
-                'provider' => 'payanamics',
+                'provider' => 'paynamics',
                 'authorization_type' => 'otp',
                 'reference_id' => 'AUTH-123',
                 'expires_at' => null,
