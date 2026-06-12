@@ -17,6 +17,7 @@ use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use LBHurtado\Cash\Contracts\WithdrawalIntervalEnforcerContract;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
+use LBHurtado\EmiPaynamicsConstellation\Contracts\PendingOtpStore;
 use LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider;
 use LBHurtado\PaymentGateway\Contracts\WalletProxy;
 use LBHurtado\ReportRegistry\Contracts\ReportResolverInterface;
@@ -147,6 +148,7 @@ use LBHurtado\XChange\Services\VoucherPaymentQrRendererFactory;
 use LBHurtado\XChange\Services\WithdrawalLifecycleService;
 use LBHurtado\XChange\Services\WithdrawalPipeline;
 use LBHurtado\XChange\Services\XChangeWithdrawalIntervalEnforcer;
+use LBHurtado\XChange\Support\Claim\ClaimApprovalPendingOtpStore;
 use LBHurtado\XChange\Support\Logging\CacheEventStore;
 
 class XChangeServiceProvider extends ServiceProvider
@@ -475,6 +477,8 @@ class XChangeServiceProvider extends ServiceProvider
         );
 
         $this->app->singleton(SettlementCollectionGate::class);
+
+        $this->app->bind(PendingOtpStore::class, ClaimApprovalPendingOtpStore::class);
     }
 
     public function boot(): void
