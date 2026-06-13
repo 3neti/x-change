@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Redemption\SubmitWebPayCodeClaim;
+use LBHurtado\XChange\Support\Claim\ClaimApprovalResumePayloadSession;
 use LBHurtado\XChange\Support\Claim\ClaimEvidenceSynchronizer;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 use LBHurtado\XChange\Support\Claim\FormFlowClaimPayloadNormalizer;
@@ -23,6 +24,7 @@ class ClaimSubmitController extends Controller
         protected FormFlowClaimPayloadNormalizer $payloadNormalizer,
         protected ClaimEvidenceSynchronizer $evidenceSynchronizer,
         protected CompiledClaimResultSession $compiledClaimResultSession,
+        protected ClaimApprovalResumePayloadSession $resumePayloadSession,
     ) {}
 
     public function __invoke(Request $request, string $code): RedirectResponse
@@ -77,6 +79,7 @@ class ClaimSubmitController extends Controller
 
             if ($result->status === 'approval_required') {
                 $this->compiledClaimResultSession->put($result);
+                $this->resumePayloadSession->put($voucher, $payload);
 
                 return redirect()->route('x-change.claim.approval', ['code' => $code]);
             }
