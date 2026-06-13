@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Actions\Redemption;
 
 use BadMethodCallException;
+use LBHurtado\EmiPaynamicsConstellation\Exceptions\PendingConstellationOtpException;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ApprovalWorkflowContract;
 use LBHurtado\XChange\Contracts\ClaimApprovalInitiationContract;
@@ -15,6 +16,7 @@ use LBHurtado\XChange\Data\Redemption\RedeemPayCodeResultData;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
 use LBHurtado\XChange\Data\Settlement\SettlementExecutionResultData;
+use LBHurtado\XChange\Support\Claim\PendingPaynamicsOtpClaimResult;
 use Lorisleiva\Actions\Concerns\AsAction;
 
 class SubmitPayCodeClaim
@@ -26,6 +28,7 @@ class SubmitPayCodeClaim
         protected RecordVoucherClaim $recordVoucherClaim,
         protected ?ApprovalWorkflowContract $approvalWorkflow = null,
         protected ?ClaimApprovalInitiationContract $approvalInitiation = null,
+        protected ?PendingPaynamicsOtpClaimResult $pendingPaynamicsOtpResult = null,
     ) {}
 
     /**
@@ -35,26 +38,33 @@ class SubmitPayCodeClaim
     {
         $executor = $this->factory->make($voucher, $payload);
 
-        if ($executor instanceof SettlementExecutionContract) {
-            return $this->fromSettlementResult(
-                $executor->execute($voucher, $payload)
+        try {
+            if ($executor instanceof SettlementExecutionContract) {
+                return $this->fromSettlementResult(
+                    $executor->execute($voucher, $payload)
+                );
+            }
+
+            $result = $executor->handle($voucher, $payload);
+        } catch (PendingConstellationOtpException $e) {
+            return ClaimApprovalInitiationResultData::from(
+                $this->pendingPaynamicsOtpResult()
+                    ->fromException($voucher, $e)
             );
         }
-
-        $result = $executor->handle($voucher, $payload);
 
         if (
             $result instanceof WithdrawPayCodeResultData
             && $result->status === 'approval_required'
             && ! $this->isApprovalReplay($payload)
         ) {
-            $approval = $this->approvalWorkflow->resolve($result, [
+            $approval = $this->approvalWorkflow()->resolve($result, [
                 'voucher_code' => $voucher->code,
                 'payload' => $payload,
             ]);
 
             if ($approval->status === 'pending') {
-                return $this->approvalInitiation->initiate(
+                return $this->approvalInitiation()->initiate(
                     $voucher,
                     $payload,
                     $approval->toArray(),
@@ -184,5 +194,11 @@ class SubmitPayCodeClaim
     {
         return data_get($payload, 'approval.resume') === true
             || data_get($payload, 'otp.verified') === true;
+    }
+
+    protected function pendingPaynamicsOtpResult(): PendingPaynamicsOtpClaimResult
+    {
+        return $this->pendingPaynamicsOtpResult
+            ??= app(PendingPaynamicsOtpClaimResult::class);
     }
 }

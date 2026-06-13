@@ -14,15 +14,19 @@ final class PendingPaynamicsOtpClaimResult
      */
     public function fromException(Voucher $voucher, PendingConstellationOtpException $exception): array
     {
+        $metadata = $exception->toApprovalMetadata();
+
         return [
             'status' => 'approval_required',
             'voucher_code' => (string) $voucher->code,
+            'requirements' => ['otp'],
             'reference_id' => $exception->requestId(),
             'provider' => 'paynamics',
             'messages' => [
                 'Payout OTP approval required.',
             ],
-            'approval_metadata' => $exception->toApprovalMetadata(),
+            'meta' => $metadata,
+            'approval_metadata' => $metadata,
         ];
     }
 }
