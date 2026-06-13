@@ -5,7 +5,8 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Log;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Models\Voucher;
-use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
+use LBHurtado\XChange\Actions\Redemption\SubmitWebPayCodeClaim;
+use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
 use LBHurtado\XChange\Support\Claim\ClaimEvidenceSynchronizer;
 use LBHurtado\XChange\Support\Claim\FormFlowClaimPayloadNormalizer;
@@ -14,12 +15,12 @@ beforeEach(function (): void {
     $this->withoutMiddleware(ShareXChangeBranding::class);
 
     $this->formFlowService = Mockery::mock(FormFlowService::class);
-    $this->submitAction = Mockery::mock(SubmitPayCodeClaim::class);
+    $this->submitAction = Mockery::mock(SubmitWebPayCodeClaim::class);
     $this->payloadNormalizer = Mockery::mock(FormFlowClaimPayloadNormalizer::class);
     $this->evidenceSynchronizer = Mockery::mock(ClaimEvidenceSynchronizer::class);
 
     $this->app->instance(FormFlowService::class, $this->formFlowService);
-    $this->app->instance(SubmitPayCodeClaim::class, $this->submitAction);
+    $this->app->instance(SubmitWebPayCodeClaim::class, $this->submitAction);
     $this->app->instance(FormFlowClaimPayloadNormalizer::class, $this->payloadNormalizer);
     $this->app->instance(ClaimEvidenceSynchronizer::class, $this->evidenceSynchronizer);
 });
@@ -37,6 +38,27 @@ function claimSubmitTestVoucher(): Voucher
             ],
         ],
     ));
+}
+
+function successfulClaimSubmitResult(Voucher $voucher): SubmitPayCodeClaimResultData
+{
+    return new SubmitPayCodeClaimResultData(
+        voucher_code: (string) $voucher->code,
+        claim_type: 'withdraw',
+        claimed: true,
+        status: 'withdrawn',
+        requested_amount: 10.00,
+        disbursed_amount: 10.00,
+        currency: 'PHP',
+        remaining_balance: 0,
+        fully_claimed: true,
+        disbursement: [
+            'status' => 'requested',
+        ],
+        messages: [
+            'Voucher withdrawal successful.',
+        ],
+    );
 }
 
 it('redirects to claim start when neither flow id nor reference id is provided', function (): void {
@@ -83,16 +105,26 @@ it('loads form-flow state by reference id when reference id is provided', functi
         ->with($state['collected_data'])
         ->andReturn($payload);
 
+    $order = [];
+
     $this->evidenceSynchronizer
         ->shouldReceive('sync')
         ->once()
-        ->with(Mockery::on(fn (array $actual): bool => $actual['mobile'] === '+639173011987'
-        ));
+        ->with(Mockery::on(
+            fn (array $actual): bool => $actual['mobile'] === '+639173011987'
+        ))
+        ->andReturnUsing(function () use (&$order): void {
+            $order[] = 'sync';
+        });
 
     $this->submitAction
         ->shouldReceive('handle')
         ->once()
-        ->with(Mockery::type(Voucher::class), Mockery::type('array'));
+        ->andReturnUsing(function () use (&$order, $voucher): SubmitPayCodeClaimResultData {
+            $order[] = 'submit';
+
+            return successfulClaimSubmitResult($voucher);
+        });
 
     $this->formFlowService
         ->shouldReceive('clearFlow')
@@ -104,6 +136,8 @@ it('loads form-flow state by reference id when reference id is provided', functi
     ]);
 
     $response->assertRedirect(route('x-change.claim.success', ['code' => $voucher->code]));
+
+    expect($order)->toBe(['sync', 'submit']);
 });
 
 it('loads form-flow state by flow id when reference id is missing', function (): void {
@@ -146,7 +180,8 @@ it('loads form-flow state by flow id when reference id is missing', function ():
 
     $this->submitAction
         ->shouldReceive('handle')
-        ->once();
+        ->once()
+        ->andReturn(successfulClaimSubmitResult($voucher));
 
     $this->formFlowService
         ->shouldReceive('clearFlow')
@@ -260,8 +295,10 @@ it('syncs evidence before submitting the claim', function (): void {
     $this->submitAction
         ->shouldReceive('handle')
         ->once()
-        ->andReturnUsing(function () use (&$order): void {
+        ->andReturnUsing(function () use (&$order, $voucher): SubmitPayCodeClaimResultData {
             $order[] = 'submit';
+
+            return successfulClaimSubmitResult($voucher);
         });
 
     $this->formFlowService

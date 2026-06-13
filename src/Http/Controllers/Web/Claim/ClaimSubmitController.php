@@ -10,17 +10,19 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Models\Voucher;
-use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
+use LBHurtado\XChange\Actions\Redemption\SubmitWebPayCodeClaim;
 use LBHurtado\XChange\Support\Claim\ClaimEvidenceSynchronizer;
+use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 use LBHurtado\XChange\Support\Claim\FormFlowClaimPayloadNormalizer;
 
 class ClaimSubmitController extends Controller
 {
     public function __construct(
         protected FormFlowService $formFlowService,
-        protected SubmitPayCodeClaim $submitAction,
+        protected SubmitWebPayCodeClaim $submitAction,
         protected FormFlowClaimPayloadNormalizer $payloadNormalizer,
         protected ClaimEvidenceSynchronizer $evidenceSynchronizer,
+        protected CompiledClaimResultSession $compiledClaimResultSession,
     ) {}
 
     public function __invoke(Request $request, string $code): RedirectResponse
@@ -71,7 +73,13 @@ class ClaimSubmitController extends Controller
         try {
             $this->evidenceSynchronizer->sync($payload);
 
-            $this->submitAction->handle($voucher, $payload);
+            $result = $this->submitAction->handle($voucher, $payload);
+
+            if ($result->status === 'approval_required') {
+                $this->compiledClaimResultSession->put($result);
+
+                return redirect()->route('x-change.claim.approval', ['code' => $code]);
+            }
 
             $this->formFlowService->clearFlow($state['flow_id'] ?? $flowId);
 

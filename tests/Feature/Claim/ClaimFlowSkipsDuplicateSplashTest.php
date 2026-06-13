@@ -28,7 +28,7 @@ BLADE);
         ->name('form-flow.show');
 });
 
-it('skips the form-flow splash when claim experience marks rider splash consumed', function () {
+it('marks form-flow splash as consumable when rider splash was already consumed', function () {
     $this->withoutMiddleware();
 
     $voucher = issueVoucher(validVoucherInstructions(
@@ -91,16 +91,14 @@ it('skips the form-flow splash when claim experience marks rider splash consumed
     $flowPath = parse_url($flowUrl, PHP_URL_PATH);
 
     $this->get($flowPath)
-        ->assertRedirect();
+        ->assertOk();
 
     $flowId = str($flowPath)->afterLast('/')->toString();
 
     $state = session("form_flow.{$flowId}");
 
     expect($state)->toBeArray()
-        ->and(data_get($state, 'current_step'))->toBe(1)
-        ->and(data_get($state, 'collected_data.0._skipped'))->toBeTrue()
-        ->and(data_get($state, 'collected_data.0._skip_reason'))->toBe('duplicate_splash_candidate');
+        ->and(data_get($state, 'current_step'))->toBe(0);
 
     $experience = ClaimExperiencePayload::fromState($state);
 

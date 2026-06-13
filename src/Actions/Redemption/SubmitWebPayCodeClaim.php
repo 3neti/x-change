@@ -9,7 +9,7 @@ use LBHurtado\XChange\Data\Claims\ClaimApprovalInitiationResultData;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Support\Claim\UseDeferredPaynamicsOtpResolver;
 
-final class SubmitWebPayCodeClaim
+class SubmitWebPayCodeClaim
 {
     public function __construct(
         private readonly SubmitPayCodeClaim $submitPayCodeClaim,
