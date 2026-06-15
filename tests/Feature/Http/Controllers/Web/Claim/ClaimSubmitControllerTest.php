@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Log;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Redemption\SubmitWebPayCodeClaim;
+use LBHurtado\XChange\Data\Claims\ClaimApprovalInitiationResultData;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
 use LBHurtado\XChange\Support\Claim\ClaimEvidenceSynchronizer;
@@ -375,4 +376,89 @@ it('redirects back to claim start when claim submission fails', function (): voi
             && ($context['voucher_code'] ?? null) === $voucher->code
             && ($context['error'] ?? null) === 'Claim failed for test'
         );
+});
+
+it('redirects to approval page when claim submission requires OTP approval', function (): void {
+    $voucher = claimSubmitTestVoucher();
+
+    $state = [
+        'flow_id' => 'flow-test',
+        'collected_data' => [
+            'wallet_info' => [
+                'mobile' => '+639173011987',
+            ],
+        ],
+    ];
+
+    $payload = [
+        'mobile' => '+639173011987',
+        'country' => 'PH',
+        'bank_code' => 'GXI',
+        'account_number' => '09173011987',
+        'inputs' => [
+            'mobile' => '+639173011987',
+        ],
+    ];
+
+    $this->formFlowService
+        ->shouldReceive('getFlowState')
+        ->once()
+        ->with('flow-test')
+        ->andReturn($state);
+
+    $this->payloadNormalizer
+        ->shouldReceive('normalize')
+        ->once()
+        ->with($state['collected_data'])
+        ->andReturn($payload);
+
+    $this->evidenceSynchronizer
+        ->shouldReceive('sync')
+        ->once();
+
+    $this->submitAction
+        ->shouldReceive('handle')
+        ->once()
+        ->andReturn(new ClaimApprovalInitiationResultData(
+            voucher_code: (string) $voucher->code,
+            status: 'approval_required',
+            requirements: ['otp'],
+            actions: ['otp'],
+            meta: [
+                'provider' => 'paynamics',
+                'authorization_type' => 'otp',
+                'reference_id' => $voucher->code.'-09173011987',
+                'otp_required' => true,
+            ],
+            messages: [
+                'Payout OTP approval required.',
+            ],
+        ));
+
+    $this->formFlowService
+        ->shouldNotReceive('clearFlow');
+
+    $response = $this->post(route('x-change.claim.submit', ['code' => $voucher->code]), [
+        'flow_id' => 'flow-test',
+    ]);
+
+    $response->assertRedirect(route('x-change.claim.approval', [
+        'code' => $voucher->code,
+    ]));
+
+    $compiled = session('compiled_claim_result');
+
+    expect($compiled)->toMatchArray([
+        'status' => 'approval_required',
+        'voucher_code' => (string) $voucher->code,
+        'messages' => [
+            'Payout OTP approval required.',
+        ],
+    ])
+        ->and($compiled['approval_metadata'])->toMatchArray([
+            'provider' => 'paynamics',
+            'authorization_type' => 'otp',
+            'reference_id' => $voucher->code.'-09173011987',
+            'otp_required' => true,
+        ]);
 });

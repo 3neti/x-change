@@ -8,7 +8,10 @@ final class CompiledClaimApprovalMetadata
 {
     public static function fromResult(mixed $result): array
     {
-        $metadata = data_get($result, 'approval_metadata', []);
+        $metadata = data_get($result, 'approval_metadata')
+            ?? data_get($result, 'approval_meta')
+            ?? data_get($result, 'meta')
+            ?? [];
 
         if (! is_array($metadata)) {
             $metadata = [];
@@ -20,14 +23,14 @@ final class CompiledClaimApprovalMetadata
     public static function normalize(array $metadata): array
     {
         return [
-            'provider' => self::nullableString($metadata['provider'] ?? null),
-            'authorization_type' => self::nullableString($metadata['authorization_type'] ?? null),
-            'reference_id' => self::nullableString($metadata['reference_id'] ?? null),
-            'expires_at' => self::nullableString($metadata['expires_at'] ?? null),
-            'otp_required' => (bool) ($metadata['otp_required'] ?? false),
-            'polling_required' => (bool) ($metadata['polling_required'] ?? false),
-            'manual_review' => (bool) ($metadata['manual_review'] ?? false),
-            'message' => self::nullableString($metadata['message'] ?? null),
+            'provider' => data_get($metadata, 'provider'),
+            'authorization_type' => data_get($metadata, 'authorization_type'),
+            'reference_id' => data_get($metadata, 'reference_id'),
+            'otp_required' => (bool) data_get($metadata, 'otp_required', false),
+            'expires_at' => data_get($metadata, 'expires_at'),
+            'polling_required' => (bool) data_get($metadata, 'polling_required', false),
+            'manual_review' => (bool) data_get($metadata, 'manual_review', false),
+            'message' => data_get($metadata, 'message'),
         ];
     }
 

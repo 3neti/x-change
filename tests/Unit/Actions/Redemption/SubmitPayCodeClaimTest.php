@@ -19,7 +19,8 @@ use LBHurtado\XChange\Data\Settlement\SettlementExecutionResultData;
 use LBHurtado\XChange\Models\VoucherClaim;
 
 it('submits a claim through the selected executor and normalizes redeem result', function () {
-    $voucher = Mockery::mock(Voucher::class);
+    $voucher = new Voucher;
+    $voucher->code = 'TEST-1234';
 
     $payload = [
         'mobile' => '09171234567',
@@ -98,7 +99,8 @@ it('submits a claim through the selected executor and normalizes redeem result',
 });
 
 it('submits a claim through the selected executor and normalizes withdraw result', function () {
-    $voucher = Mockery::mock(Voucher::class);
+    $voucher = new Voucher;
+    $voucher->code = 'TEST-9999';
 
     $payload = [
         'mobile' => '09171234567',
