@@ -8,6 +8,13 @@ final class CompiledClaimResultSession
 {
     public const KEY = 'compiled_claim_result';
 
+    public function get(): ?array
+    {
+        $value = session()->get(self::KEY);
+
+        return is_array($value) ? $value : null;
+    }
+
     public function put(mixed $result): void
     {
         session()->put(self::KEY, $this->normalize($result));

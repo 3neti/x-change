@@ -8,7 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\Voucher\Models\Voucher;
-use LBHurtado\XChange\Support\Claim\CompiledClaimSuccessPayload;
+use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 
 final class ClaimApprovalPageController
 {
@@ -24,7 +24,7 @@ final class ClaimApprovalPageController
                 'amount' => data_get($voucher, 'cash.amount'),
                 'currency' => data_get($voucher, 'cash.currency'),
             ],
-            'compiled_claim_result' => app(CompiledClaimSuccessPayload::class)->pull(),
+            'compiled_claim_result' => app(CompiledClaimResultSession::class)->get(),
             'message' => 'Your claim has been submitted and is awaiting approval.',
         ];
 
