@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Lifecycle\Runners;
 
 use Illuminate\Console\Command;
 use LBHurtado\XChange\Lifecycle\Output\LifecycleOutputContract;
+use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleApprovalRequiredResult;
 use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleClaimSubmitter;
 use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleDisbursementPoller;
 use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleUserSummary;
@@ -19,6 +20,7 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
     public function __construct(
         private readonly LifecycleDisbursementPoller $poller,
         private readonly LifecycleClaimSubmitter $claimSubmitter,
+        private readonly LifecycleApprovalRequiredResult $approvalRequired,
     ) {}
 
     public function run(ScenarioRunContext $context): ScenarioRunResult
@@ -73,6 +75,34 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
 
             try {
                 $claim = $this->claimSubmitter->submit($context, $voucher, $claimPayload);
+
+                if ($this->approvalRequired->isApprovalRequired($claim)) {
+                    $actual = $this->approvalRequired->toActual($claim);
+
+                    if (! $context->wantsJson()) {
+                        $output->warn($actual['message']);
+                    }
+                } else {
+                    if (! $context->wantsJson()) {
+                        $output->line('Polling disbursement status...');
+                    }
+
+                    $finalCheck = $this->poller->poll(
+                        code: $voucher->code,
+                        timeout: $timeout,
+                        poll: $poll,
+                        maxPolls: $maxPolls,
+                        acceptPending: $context->acceptPending(),
+                        output: $output,
+                    );
+
+                    $actual = [
+                        'status' => 'succeeded',
+                        'message' => $this->resolveSuccessMessage($claim, $finalCheck),
+                        'claim' => $claim->toArray(),
+                        'disbursement_check' => $finalCheck,
+                    ];
+                }
 
                 if (! $context->wantsJson()) {
                     $output->line('Polling disbursement status...');
