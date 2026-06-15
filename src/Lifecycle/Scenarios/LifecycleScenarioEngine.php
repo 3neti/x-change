@@ -69,7 +69,7 @@ final class LifecycleScenarioEngine
             );
         }
 
-        if ($output->isJson() && $this->requiresInteractiveOtp()) {
+        if ($output->isJson() && ! $options->approvalPipeline && $this->requiresInteractiveOtp()) {
             return new LifecycleScenarioEngineResult(
                 exitCode: Command::FAILURE,
                 payload: [
@@ -176,6 +176,7 @@ final class LifecycleScenarioEngine
             'timeout' => $bootstrap->timeout,
             'poll' => $bootstrap->poll,
             'max_polls' => $bootstrap->maxPolls,
+            'approval_pipeline' => $options->approvalPipeline,
         ];
 
         $result = $resolution->runner->run(

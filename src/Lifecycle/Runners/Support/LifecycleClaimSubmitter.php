@@ -37,6 +37,7 @@ final class LifecycleClaimSubmitter
 
     private function shouldDeferApproval(ScenarioRunContext $context): bool
     {
-        return $context->wantsJson();
+        return $context->wantsJson()
+            || $context->usesApprovalPipeline();
     }
 }

@@ -29,6 +29,7 @@ class RunLifecycleScenarioCommand extends Command
         {--poll= : Poll interval in seconds}
         {--max-polls= : Maximum number of polling attempts}
         {--accept-pending : Treat a trusted pending provider transaction as good enough}
+        {--approval-pipeline : Run claims through the shared approval pipeline instead of inline provider OTP prompts}
         {--only-attempt= : Run only one named attempt from the scenario}
         {--json : Output JSON}';
 

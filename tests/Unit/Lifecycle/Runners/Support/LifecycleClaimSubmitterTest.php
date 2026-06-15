@@ -63,6 +63,46 @@ function lifecycleClaimSubmitterContext(bool $json): ScenarioRunContext
     );
 }
 
+function lifecycleClaimSubmitterApprovalPipelineContext(): ScenarioRunContext
+{
+    return new ScenarioRunContext(
+        output: new class implements \LBHurtado\XChange\Lifecycle\Output\LifecycleOutputContract
+        {
+            public function line(string $message): void {}
+            public function info(string $message): void {}
+            public function warn(string $message): void {}
+            public function error(string $message): void {}
+            public function isJson(): bool
+            {
+                return false;
+            }
+            public function acceptPending(): bool
+            {
+                return false;
+            }
+        },
+        scenarioKey: 'test',
+        scenario: [
+            '_runtime' => [
+                'approval_pipeline' => true,
+            ],
+        ],
+        issuer: new class extends \Illuminate\Database\Eloquent\Model {},
+        generated: new class {
+            public function toArray(): array
+            {
+                return [];
+            }
+        },
+        voucher: new Voucher,
+        attempts: [],
+        baseClaimMobile: '639171234567',
+        estimate: [],
+        idempotencyKey: 'test-idempotency',
+        readiness: Mockery::mock(\LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract::class),
+    );
+}
+
 it('uses deferred Paynamics OTP resolver for JSON lifecycle claim submission', function () {
     $voucher = new Voucher;
     $voucher->code = 'TEST-JSON';
@@ -122,3 +162,66 @@ it('uses deferred Paynamics OTP resolver for JSON lifecycle claim submission', f
 
     expect($executor->resolverClass)->toBe(DeferredOtpResolver::class);
 });
+
+it('uses deferred Paynamics OTP resolver when approval pipeline is enabled', function () {
+    $voucher = new Voucher;
+    $voucher->code = 'TEST-APPROVAL';
+
+    $executor = new class implements ClaimExecutorContract
+    {
+        public string $resolverClass = '';
+
+        public function handle(Voucher $voucher, array $payload): mixed
+        {
+            $this->resolverClass = app(ConstellationOtpResolver::class)::class;
+
+            return new WithdrawPayCodeResultData(
+                voucher_code: (string) $voucher->code,
+                withdrawn: true,
+                status: 'withdrawn',
+                requested_amount: 10,
+                disbursed_amount: 10,
+                currency: 'PHP',
+                remaining_balance: 0,
+                slice_number: null,
+                remaining_slices: null,
+                slice_mode: null,
+                redeemer: [],
+                bank_account: [],
+                disbursement: [],
+                messages: ['ok'],
+            );
+        }
+    };
+
+    $factory = new class($executor) implements ClaimExecutionFactoryContract
+    {
+        public function __construct(
+            private readonly ClaimExecutorContract $executor,
+        ) {}
+
+        public function make(Voucher $voucher, array $payload): ClaimExecutorContract|SettlementExecutionContract
+        {
+            return $this->executor;
+        }
+    };
+
+    $submit = new SubmitPayCodeClaim(
+        factory: $factory,
+        recordVoucherClaim: Mockery::mock(RecordVoucherClaim::class)->shouldIgnoreMissing(),
+    );
+
+    $context = lifecycleClaimSubmitterApprovalPipelineContext();
+
+    app(LifecycleClaimSubmitter::class, [
+        'submitPayCodeClaim' => $submit,
+        'deferredOtpResolver' => app(UseDeferredPaynamicsOtpResolver::class),
+    ])->submit(
+        $context,
+        $voucher,
+        ['mobile' => '639171234567'],
+    );
+
+    expect($executor->resolverClass)->toBe(DeferredOtpResolver::class);
+});
+

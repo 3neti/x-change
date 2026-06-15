@@ -44,6 +44,11 @@ final readonly class ScenarioRunContext
         return $this->output->isJson();
     }
 
+    public function usesApprovalPipeline(): bool
+    {
+        return (bool) data_get($this->scenario, '_runtime.approval_pipeline', false);
+    }
+
     public function acceptPending(): bool
     {
         return $this->output->acceptPending();

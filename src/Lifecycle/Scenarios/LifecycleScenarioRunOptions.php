@@ -18,6 +18,7 @@ final readonly class LifecycleScenarioRunOptions
         public bool $noClaim = false,
         public bool $json = false,
         public bool $acceptPending = false,
+        public bool $approvalPipeline = false,
     ) {}
 
     public static function fromConsoleOptions(array $options): self
@@ -34,6 +35,7 @@ final readonly class LifecycleScenarioRunOptions
             noClaim: (bool) ($options['no-claim'] ?? false),
             json: (bool) ($options['json'] ?? false),
             acceptPending: (bool) ($options['accept-pending'] ?? false),
+            approvalPipeline: (bool) ($options['approval-pipeline'] ?? false),
         );
     }
 
@@ -99,6 +101,7 @@ final readonly class LifecycleScenarioRunOptions
             provider: self::stringOrNull($payload['provider'] ?? null),
             noClaim: (bool) ($payload['no_claim'] ?? false),
             acceptPending: (bool) ($payload['accept_pending'] ?? false),
+            approvalPipeline: (bool) ($payload['approval_pipeline'] ?? false),
         );
     }
 }
