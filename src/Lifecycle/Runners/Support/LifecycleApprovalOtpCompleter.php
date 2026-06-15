@@ -60,6 +60,7 @@ final class LifecycleApprovalOtpCompleter
         }
 
         $otpResult = $this->submitApprovalOtp->handle($voucher, [
+            ...$baseClaimPayload,
             'otp' => $otp,
             'reference_id' => $referenceId,
             'provider' => $provider,

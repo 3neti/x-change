@@ -17,14 +17,17 @@ class WithdrawalOtpApprovalBackedClaimOtpVerificationService implements ClaimOtp
     public function verify(Voucher $voucher, string $code, array $workflow): bool
     {
         $mobile = (string) (
-            data_get($workflow, 'payload.mobile')
+            data_get($workflow, 'mobile')
+            ?? data_get($workflow, 'payload.mobile')
             ?? data_get($workflow, 'payload.redeemer.mobile')
             ?? data_get($workflow, 'payload.owner_mobile')
             ?? ''
         );
 
         $reference = (string) (
-            data_get($workflow, 'voucher_code')
+            data_get($workflow, 'reference_id')
+            ?? data_get($workflow, 'approval.reference_id')
+            ?? data_get($workflow, 'voucher_code')
             ?? $voucher->code
         );
 

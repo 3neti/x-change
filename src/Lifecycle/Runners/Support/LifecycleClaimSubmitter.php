@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Lifecycle\Runners\Support;
 
+use LBHurtado\EmiCore\Contracts\PayoutProvider;
+use LBHurtado\EmiPaynamicsConstellation\Adapters\ConstellationPayoutProvider;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Data\Claims\ClaimApprovalInitiationResultData;
@@ -28,7 +30,15 @@ final class LifecycleClaimSubmitter
     ): SubmitPayCodeClaimResultData|ClaimApprovalInitiationResultData {
         if ($this->shouldDeferApproval($context)) {
             return $this->deferredOtpResolver->run(
-                fn () => $this->submitPayCodeClaim->handle($voucher, $payload)
+                fn () => $this->submitPayCodeClaim->handle(
+                    $voucher,
+                    array_replace_recursive($payload, [
+                        'approval' => [
+                            'pipeline' => true,
+                            'provider' => 'paynamics',
+                        ],
+                    ])
+                )
             );
         }
 
@@ -37,7 +47,10 @@ final class LifecycleClaimSubmitter
 
     private function shouldDeferApproval(ScenarioRunContext $context): bool
     {
-        return $context->wantsJson()
-            || $context->usesApprovalPipeline();
+        if (! $context->wantsJson() && ! $context->usesApprovalPipeline()) {
+            return false;
+        }
+
+        return app(PayoutProvider::class) instanceof ConstellationPayoutProvider;
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Actions\Redemption;
 
 use BadMethodCallException;
+use LBHurtado\EmiCore\Data\PayoutRequestData;
 use LBHurtado\EmiPaynamicsConstellation\Exceptions\PendingConstellationOtpException;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ApprovalWorkflowContract;
@@ -16,8 +17,11 @@ use LBHurtado\XChange\Data\Redemption\RedeemPayCodeResultData;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
 use LBHurtado\XChange\Data\Settlement\SettlementExecutionResultData;
+use LBHurtado\XChange\Services\WithdrawalDisbursementExecutor;
+use LBHurtado\XChange\Support\Claim\ClaimApprovalPendingOtpStore;
 use LBHurtado\XChange\Support\Claim\PendingPaynamicsOtpClaimResult;
 use Lorisleiva\Actions\Concerns\AsAction;
+use Throwable;
 
 class SubmitPayCodeClaim
 {
@@ -29,6 +33,7 @@ class SubmitPayCodeClaim
         protected ?ApprovalWorkflowContract $approvalWorkflow = null,
         protected ?ClaimApprovalInitiationContract $approvalInitiation = null,
         protected ?PendingPaynamicsOtpClaimResult $pendingPaynamicsOtpResult = null,
+        protected ?WithdrawalDisbursementExecutor $approvalReplayDisbursements = null,
     ) {}
 
     /**
@@ -51,6 +56,12 @@ class SubmitPayCodeClaim
                 $this->pendingPaynamicsOtpResult()
                     ->fromException($voucher, $e)
             );
+        } catch (Throwable $e) {
+            if ($this->shouldReplayApprovedPaynamicsPayout($voucher, $payload, $e)) {
+                return $this->replayApprovedPaynamicsPayout($voucher, $payload);
+            }
+
+            throw $e;
         }
 
         if (
@@ -73,6 +84,22 @@ class SubmitPayCodeClaim
         }
 
         $normalized = $this->normalizeResult($voucher, $result, $payload);
+
+        if (! $this->isApprovalReplay($payload)) {
+            $pendingOtp = $this->pendingPaynamicsOtpMetadata($voucher, $normalized, $payload);
+
+            if ($pendingOtp !== null) {
+                return $this->toPendingPaynamicsOtpApprovalResult($voucher, $normalized, $pendingOtp);
+            }
+        }
+
+        if (
+            ! $this->isApprovalReplay($payload)
+            && $this->isApprovalPipelinePaynamicsPayload($payload)
+            && $this->isDeferredPaynamicsOtpPendingResult($voucher, $normalized, $payload)
+        ) {
+            return $this->toDeferredPaynamicsOtpApprovalResult($voucher, $normalized, $payload);
+        }
 
         $this->recordVoucherClaim->handle($voucher, $normalized, $payload);
 
@@ -196,9 +223,369 @@ class SubmitPayCodeClaim
             || data_get($payload, 'otp.verified') === true;
     }
 
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    protected function shouldReplayApprovedPaynamicsPayout(Voucher $voucher, array $payload, Throwable $e): bool
+    {
+        if (
+            ! $this->isApprovalReplay($payload)
+            || data_get($payload, 'approval.provider') !== 'paynamics'
+            || data_get($payload, 'otp.verified') !== true
+        ) {
+            return false;
+        }
+
+        $message = mb_strtolower($e->getMessage());
+        $class = mb_strtolower($e::class);
+
+        if (
+            str_contains($message, 'already been redeemed')
+            || str_contains($class, 'voucherredeemed')
+        ) {
+            return true;
+        }
+
+        if (! str_contains($message, 'failed to redeem voucher')) {
+            return false;
+        }
+
+        $metadata = $this->voucherMetadata($voucher);
+        $reference = data_get($payload, 'approval.reference_id') ?? data_get($payload, 'reference_id');
+        $metadataReference = data_get($metadata, 'disbursement.transaction_id')
+            ?? data_get($metadata, 'disbursement.reference_id')
+            ?? data_get($metadata, 'disbursement.provider_reference')
+            ?? data_get($metadata, 'disbursement.provider_tx')
+            ?? data_get($metadata, 'disbursement.request_id');
+
+        if (
+            is_string($reference)
+            && trim($reference) !== ''
+            && is_string($metadataReference)
+            && trim($metadataReference) !== ''
+            && trim($reference) !== trim($metadataReference)
+        ) {
+            return false;
+        }
+
+        $haystack = mb_strtolower(json_encode(
+            data_get($metadata, 'disbursement', []),
+            JSON_THROW_ON_ERROR,
+        ));
+
+        return str_contains($haystack, 'otp')
+            && str_contains($haystack, 'pending');
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    protected function replayApprovedPaynamicsPayout(
+        Voucher $voucher,
+        array $payload,
+    ): SubmitPayCodeClaimResultData {
+        $request = $this->approvedPaynamicsPayoutRequest($voucher, $payload);
+
+        $disbursement = $this->approvalReplayDisbursements()
+            ->execute($voucher, $request, 1);
+
+        return new SubmitPayCodeClaimResultData(
+            voucher_code: (string) $voucher->code,
+            claim_type: 'redeem',
+            claimed: true,
+            status: 'redeemed',
+            requested_amount: $request->amount,
+            disbursed_amount: $request->amount,
+            currency: 'PHP',
+            remaining_balance: null,
+            fully_claimed: true,
+            disbursement: [
+                'status' => $disbursement->status,
+                'bank_code' => $request->bank_code,
+                'account_number' => $request->account_number,
+                'transaction_id' => $disbursement->response->transaction_id,
+                'gateway' => $disbursement->response->provider,
+                'settlement_rail' => $request->settlement_rail,
+            ],
+            messages: [
+                'Voucher redemption payout resumed after approval OTP.',
+            ],
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    protected function approvedPaynamicsPayoutRequest(Voucher $voucher, array $payload): PayoutRequestData
+    {
+        $metadata = $this->voucherMetadata($voucher);
+
+        $reference = (string) (
+            data_get($payload, 'approval.reference_id')
+            ?? data_get($payload, 'reference_id')
+            ?? data_get($metadata, 'disbursement.transaction_id')
+            ?? $voucher->code
+        );
+
+        $amount = (float) (
+            data_get($metadata, 'disbursement.amount')
+            ?? data_get($payload, 'amount')
+            ?? 0
+        );
+
+        $accountNumber = (string) (
+            data_get($payload, 'bank_account.account_number')
+            ?? data_get($metadata, 'disbursement.recipient_identifier')
+            ?? ''
+        );
+
+        $bankCode = (string) (
+            data_get($payload, 'bank_account.bank_code')
+            ?? data_get($metadata, 'disbursement.metadata.bank_code')
+            ?? ''
+        );
+
+        return PayoutRequestData::from([
+            'reference' => $reference,
+            'amount' => $amount,
+            'account_number' => $accountNumber,
+            'bank_code' => $bankCode,
+            'recipient_name' => data_get($payload, 'bank_account.account_name', 'Voucher Recipient'),
+            'recipient_mobile' => data_get($payload, 'mobile'),
+            'settlement_rail' => data_get($metadata, 'disbursement.settlement_rail', 'INSTAPAY'),
+            'currency' => 'PHP',
+        ]);
+    }
+
+    protected function approvalReplayDisbursements(): WithdrawalDisbursementExecutor
+    {
+        return $this->approvalReplayDisbursements
+            ??= app(WithdrawalDisbursementExecutor::class);
+    }
+
+    /**
+     * @param  array<string, mixed>  $pendingOtp
+     */
+    protected function toPendingPaynamicsOtpApprovalResult(
+        Voucher $voucher,
+        SubmitPayCodeClaimResultData $result,
+        array $pendingOtp,
+    ): ClaimApprovalInitiationResultData {
+        $referenceId = (string) data_get($pendingOtp, 'reference_id', $voucher->code);
+
+        return ClaimApprovalInitiationResultData::from([
+            'status' => 'approval_required',
+            'voucher_code' => (string) $voucher->code,
+            'requirements' => ['otp'],
+            'actions' => ['otp'],
+            'meta' => [
+                'provider' => 'paynamics',
+                'authorization_type' => 'otp',
+                'reference_id' => $referenceId,
+                'amount' => data_get($pendingOtp, 'amount'),
+                'bank_account_no' => data_get($pendingOtp, 'bank_account_no'),
+                'bank_id' => data_get($pendingOtp, 'bank_id'),
+                'reason' => data_get($pendingOtp, 'reason'),
+                'target' => data_get($pendingOtp, 'target'),
+                'otp_required' => true,
+                'message' => 'Paynamics payout OTP is pending.',
+            ],
+            'messages' => [
+                'Payout OTP approval required.',
+            ],
+        ]);
+    }
+
     protected function pendingPaynamicsOtpResult(): PendingPaynamicsOtpClaimResult
     {
         return $this->pendingPaynamicsOtpResult
             ??= app(PendingPaynamicsOtpClaimResult::class);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>|null
+     */
+    protected function pendingPaynamicsOtpMetadata(
+        Voucher $voucher,
+        SubmitPayCodeClaimResultData $result,
+        array $payload,
+    ): ?array {
+        $store = app(ClaimApprovalPendingOtpStore::class);
+
+        foreach ($this->pendingPaynamicsOtpReferenceCandidates($voucher, $result, $payload) as $reference) {
+            $pending = $store->pending($reference);
+
+            if (is_array($pending)) {
+                return [
+                    ...$pending,
+                    'reference_id' => $reference,
+                ];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<int, string>
+     */
+    protected function pendingPaynamicsOtpReferenceCandidates(
+        Voucher $voucher,
+        SubmitPayCodeClaimResultData $result,
+        array $payload,
+    ): array {
+        $references = array_filter([
+            data_get($result, 'disbursement.reference_id'),
+            data_get($result, 'disbursement.provider_reference'),
+            data_get($result, 'disbursement.provider_tx'),
+            data_get($result, 'disbursement.transaction_id'),
+            data_get($result, 'disbursement.request_id'),
+        ], fn (mixed $value): bool => is_string($value) && trim($value) !== '');
+
+        $accounts = array_filter([
+            data_get($payload, 'bank_account.account_number'),
+            data_get($payload, 'account_number'),
+            data_get($payload, 'bank_account_no'),
+            data_get($result, 'disbursement.account_number'),
+            data_get($result, 'disbursement.bank_account_no'),
+        ], fn (mixed $value): bool => is_string($value) && trim($value) !== '');
+
+        foreach ($accounts as $account) {
+            $references[] = (string) $voucher->code.'-'.trim((string) $account);
+        }
+
+        return array_values(array_unique(array_map(
+            fn (mixed $value): string => trim((string) $value),
+            $references,
+        )));
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    protected function toDeferredPaynamicsOtpApprovalResult(
+        Voucher $voucher,
+        SubmitPayCodeClaimResultData $result,
+        array $payload,
+    ): ClaimApprovalInitiationResultData {
+        $referenceId = $this->resolveDeferredPaynamicsOtpReference($voucher, $result, $payload);
+
+        return ClaimApprovalInitiationResultData::from([
+            'status' => 'approval_required',
+            'voucher_code' => (string) $voucher->code,
+            'requirements' => ['otp'],
+            'actions' => ['otp'],
+            'meta' => [
+                'provider' => 'paynamics',
+                'authorization_type' => 'otp',
+                'reference_id' => $referenceId,
+                'otp_required' => true,
+                'message' => 'Paynamics payout OTP is pending.',
+            ],
+            'messages' => [
+                'Payout OTP approval required.',
+            ],
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    protected function isApprovalPipelinePaynamicsPayload(array $payload): bool
+    {
+        return data_get($payload, 'approval.pipeline') === true
+            && data_get($payload, 'approval.provider') === 'paynamics';
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    protected function isDeferredPaynamicsOtpPendingResult(
+        Voucher $voucher,
+        SubmitPayCodeClaimResultData $result,
+        array $payload,
+    ): bool {
+        if (! $this->isApprovalPipelinePaynamicsPayload($payload)) {
+            return false;
+        }
+
+        $haystack = mb_strtolower(json_encode([
+            'status' => $result->status,
+            'messages' => $result->messages,
+            'disbursement' => $result->disbursement,
+            'voucher_disbursement' => data_get($this->voucherMetadata($voucher), 'disbursement'),
+        ], JSON_THROW_ON_ERROR));
+
+        if (
+            str_contains($haystack, 'otp')
+            && str_contains($haystack, 'pending')
+        ) {
+            return true;
+        }
+
+        /*
+         * In deferred Paynamics approval-pipeline mode, the voucher pipeline may
+         * swallow the provider OTP exception and return a successful redemption
+         * result with no usable disbursement reference yet.
+         */
+        return $result->claim_type === 'redeem'
+            && $result->status === 'redeemed'
+            && (
+                $result->disbursement === null
+                || $result->disbursement === []
+                || data_get($result, 'disbursement.status') === null
+                || data_get($result, 'disbursement.needs_review') === true
+            );
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    protected function resolveDeferredPaynamicsOtpReference(
+        Voucher $voucher,
+        SubmitPayCodeClaimResultData $result,
+        array $payload,
+    ): string {
+        $reference = data_get($result, 'disbursement.reference_id')
+            ?? data_get($result, 'disbursement.provider_reference')
+            ?? data_get($result, 'disbursement.provider_tx')
+            ?? data_get($result, 'disbursement.transaction_id')
+            ?? data_get($result, 'disbursement.request_id');
+
+        $metadata = $this->voucherMetadata($voucher);
+
+        $reference ??= data_get($metadata, 'disbursement.reference_id')
+            ?? data_get($metadata, 'disbursement.provider_reference')
+            ?? data_get($metadata, 'disbursement.provider_tx')
+            ?? data_get($metadata, 'disbursement.transaction_id')
+            ?? data_get($metadata, 'disbursement.request_id');
+
+        if (is_string($reference) && trim($reference) !== '') {
+            return trim($reference);
+        }
+
+        $account = data_get($payload, 'bank_account.account_number')
+            ?? data_get($payload, 'account_number')
+            ?? data_get($payload, 'bank_account_no');
+
+        if (is_string($account) && trim($account) !== '') {
+            return (string) $voucher->code.'-'.trim($account);
+        }
+
+        return (string) $voucher->code;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function voucherMetadata(Voucher $voucher): array
+    {
+        $metadata = $voucher->exists
+            ? $voucher->fresh()?->metadata
+            : $voucher->metadata;
+
+        return is_array($metadata) ? $metadata : [];
     }
 }
