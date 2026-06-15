@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Lifecycle\Runners;
 
 use Illuminate\Console\Command;
-use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Lifecycle\Output\LifecycleOutputContract;
+use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleClaimSubmitter;
 use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleDisbursementPoller;
 use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleUserSummary;
 use LBHurtado\XChange\Lifecycle\Runners\Support\WalletTransactionSnapshot;
@@ -18,6 +18,7 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
 {
     public function __construct(
         private readonly LifecycleDisbursementPoller $poller,
+        private readonly LifecycleClaimSubmitter $claimSubmitter,
     ) {}
 
     public function run(ScenarioRunContext $context): ScenarioRunResult
@@ -71,7 +72,7 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
             );
 
             try {
-                $claim = app(SubmitPayCodeClaim::class)->handle($voucher, $claimPayload);
+                $claim = $this->claimSubmitter->submit($context, $voucher, $claimPayload);
 
                 if (! $context->wantsJson()) {
                     $output->line('Polling disbursement status...');

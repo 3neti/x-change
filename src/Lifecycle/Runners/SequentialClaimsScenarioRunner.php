@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Lifecycle\Runners;
 
 use Illuminate\Console\Command;
-use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Lifecycle\Output\LifecycleOutputContract;
+use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleClaimSubmitter;
 use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleDisbursementPoller;
 use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleUserSummary;
 use LBHurtado\XChange\Lifecycle\Runners\Support\WalletTransactionSnapshot;
@@ -16,7 +16,7 @@ use Throwable;
 final class SequentialClaimsScenarioRunner implements ScenarioRunnerContract
 {
     public function __construct(
-        private readonly SubmitPayCodeClaim $submitPayCodeClaim,
+        private readonly LifecycleClaimSubmitter $claimSubmitter,
         private readonly WalletTransactionSnapshot $walletTransactions,
         private readonly LifecycleDisbursementPoller $poller,
     ) {}
@@ -71,7 +71,8 @@ final class SequentialClaimsScenarioRunner implements ScenarioRunnerContract
             );
 
             try {
-                $submittedClaim = $this->submitPayCodeClaim->handle(
+                $submittedClaim = $this->claimSubmitter->submit(
+                    $context,
                     $context->voucher,
                     $claimPayload,
                 );
