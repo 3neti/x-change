@@ -18,13 +18,16 @@ final class ClaimApprovalPageController
             ->where('code', strtoupper(trim($code)))
             ->firstOrFail();
 
+        $compiled = app(CompiledClaimResultSession::class)->get();
+
         $props = [
             'voucher' => [
                 'code' => (string) $voucher->code,
                 'amount' => data_get($voucher, 'cash.amount'),
                 'currency' => data_get($voucher, 'cash.currency'),
             ],
-            'compiled_claim_result' => app(CompiledClaimResultSession::class)->get(),
+            'compiled_claim_result' => $compiled,
+            'approval' => $this->approvalPayload($compiled),
             'message' => 'Your claim has been submitted and is awaiting approval.',
         ];
 
@@ -33,5 +36,21 @@ final class ClaimApprovalPageController
         }
 
         return Inertia::render('x-change/claim/Approval', $props);
+    }
+
+    private function approvalPayload(?array $compiled): array
+    {
+        $metadata = (array) data_get($compiled, 'approval_metadata', []);
+
+        return [
+            'required' => (string) data_get($compiled, 'status') === 'approval_required',
+            'provider' => data_get($metadata, 'provider'),
+            'authorization_type' => data_get($metadata, 'authorization_type'),
+            'reference_id' => data_get($metadata, 'reference_id'),
+            'otp_required' => (bool) data_get($metadata, 'otp_required', false),
+            'message' => data_get($metadata, 'message')
+                ?: data_get($compiled, 'messages.0')
+                    ?: 'Approval is required to continue.',
+        ];
     }
 }

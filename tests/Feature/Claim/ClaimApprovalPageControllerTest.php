@@ -99,7 +99,14 @@ it('renders approval metadata from compiled claim result', function () {
         ->assertJsonPath('compiled_claim_result.approval_metadata.provider', 'paynamics')
         ->assertJsonPath('compiled_claim_result.approval_metadata.authorization_type', 'otp')
         ->assertJsonPath('compiled_claim_result.approval_metadata.reference_id', $voucher->code.'-09173011987')
-        ->assertJsonPath('compiled_claim_result.approval_metadata.otp_required', true);
+        ->assertJsonPath('compiled_claim_result.approval_metadata.otp_required', true)
+        ->assertJsonPath('approval.required', true)
+        ->assertJsonPath('approval.provider', 'paynamics')
+        ->assertJsonPath('approval.authorization_type', 'otp')
+        ->assertJsonPath('approval.reference_id', $voucher->code.'-09173011987')
+        ->assertJsonPath('approval.otp_required', true)
+        ->assertJsonPath('approval.message', 'Paynamics payout OTP is pending.');
+    ;
 
     expect(session()->has(CompiledClaimResultSession::KEY))->toBeTrue();
 });
