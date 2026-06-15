@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Lifecycle\Runners;
 
 use Illuminate\Console\Command;
+use LBHurtado\XChange\Data\Claims\ClaimApprovalInitiationResultData;
 use LBHurtado\XChange\Lifecycle\Output\LifecycleOutputContract;
+use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleApprovalOtpCompleter;
 use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleApprovalRequiredResult;
 use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleClaimSubmitter;
 use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleDisbursementPoller;
@@ -21,6 +23,7 @@ final class SequentialClaimsScenarioRunner implements ScenarioRunnerContract
         private readonly WalletTransactionSnapshot $walletTransactions,
         private readonly LifecycleDisbursementPoller $poller,
         private readonly LifecycleApprovalRequiredResult $approvalRequired,
+        private readonly LifecycleApprovalOtpCompleter $approvalCompleter,
     ) {}
 
     public function run(ScenarioRunContext $context): ScenarioRunResult
@@ -85,6 +88,45 @@ final class SequentialClaimsScenarioRunner implements ScenarioRunnerContract
                     if (! $context->wantsJson()) {
                         $output->warn($actual['message']);
                     }
+
+                    if ($submittedClaim instanceof ClaimApprovalInitiationResultData) {
+                        $submittedClaim = $this->approvalCompleter->complete(
+                            context: $context,
+                            voucher: $context->voucher,
+                            approval: $submittedClaim,
+                            baseClaimPayload: $claimPayload,
+                        );
+
+                        if (! $this->approvalRequired->isApprovalRequired($submittedClaim)) {
+                            if (! $context->wantsJson()) {
+                                $output->line('Polling disbursement status...');
+                            }
+
+                            $finalCheck = $this->poller->poll(
+                                code: $context->voucher->code,
+                                timeout: (int) data_get($scenario, 'timeout', 180),
+                                poll: max(1, (int) data_get($scenario, 'poll', 10)),
+                                maxPolls: null,
+                                acceptPending: $context->acceptPending(),
+                                output: $output,
+                            );
+
+                            $actual = [
+                                'status' => 'succeeded',
+                                'message' => $this->resolveSuccessMessage($submittedClaim, $finalCheck),
+                                'claim' => method_exists($submittedClaim, 'toArray')
+                                    ? $submittedClaim->toArray()
+                                    : $submittedClaim,
+                                'disbursement_check' => $finalCheck,
+                            ];
+
+                            $this->persistWaitMetadata(
+                                voucherId: (int) $context->voucher->getKey(),
+                                claimKey: (string) $claimKey,
+                                waitBeforeSeconds: $waitBeforeSeconds,
+                            );
+                        }
+                    }
                 } else {
                     if (! $context->wantsJson()) {
                         $output->line('Polling disbursement status...');
@@ -114,34 +156,6 @@ final class SequentialClaimsScenarioRunner implements ScenarioRunnerContract
                         waitBeforeSeconds: $waitBeforeSeconds,
                     );
                 }
-
-                if (! $context->wantsJson()) {
-                    $output->line('Polling disbursement status...');
-                }
-
-                $finalCheck = $this->poller->poll(
-                    code: $context->voucher->code,
-                    timeout: (int) data_get($scenario, 'timeout', 180),
-                    poll: max(1, (int) data_get($scenario, 'poll', 10)),
-                    maxPolls: null,
-                    acceptPending: $context->acceptPending(),
-                    output: $output,
-                );
-
-                $actual = [
-                    'status' => 'succeeded',
-                    'message' => $this->resolveSuccessMessage($submittedClaim, $finalCheck),
-                    'claim' => method_exists($submittedClaim, 'toArray')
-                        ? $submittedClaim->toArray()
-                        : $submittedClaim,
-                    'disbursement_check' => $finalCheck,
-                ];
-
-                $this->persistWaitMetadata(
-                    voucherId: (int) $context->voucher->getKey(),
-                    claimKey: (string) $claimKey,
-                    waitBeforeSeconds: $waitBeforeSeconds,
-                );
             } catch (Throwable $exception) {
                 $actual = $this->normalizeException($exception);
             }

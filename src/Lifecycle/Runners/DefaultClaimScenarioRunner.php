@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Lifecycle\Runners;
 
 use Illuminate\Console\Command;
+use LBHurtado\XChange\Data\Claims\ClaimApprovalInitiationResultData;
 use LBHurtado\XChange\Lifecycle\Output\LifecycleOutputContract;
+use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleApprovalOtpCompleter;
 use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleApprovalRequiredResult;
 use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleClaimSubmitter;
 use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleDisbursementPoller;
@@ -21,6 +23,7 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
         private readonly LifecycleDisbursementPoller $poller,
         private readonly LifecycleClaimSubmitter $claimSubmitter,
         private readonly LifecycleApprovalRequiredResult $approvalRequired,
+        private readonly LifecycleApprovalOtpCompleter $approvalCompleter,
     ) {}
 
     public function run(ScenarioRunContext $context): ScenarioRunResult
@@ -82,6 +85,37 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
                     if (! $context->wantsJson()) {
                         $output->warn($actual['message']);
                     }
+
+                    if ($claim instanceof ClaimApprovalInitiationResultData) {
+                        $claim = $this->approvalCompleter->complete(
+                            context: $context,
+                            voucher: $voucher,
+                            approval: $claim,
+                            baseClaimPayload: $claimPayload,
+                        );
+
+                        if (! $this->approvalRequired->isApprovalRequired($claim)) {
+                            if (! $context->wantsJson()) {
+                                $output->line('Polling disbursement status...');
+                            }
+
+                            $finalCheck = $this->poller->poll(
+                                code: $voucher->code,
+                                timeout: $timeout,
+                                poll: $poll,
+                                maxPolls: $maxPolls,
+                                acceptPending: $context->acceptPending(),
+                                output: $output,
+                            );
+
+                            $actual = [
+                                'status' => 'succeeded',
+                                'message' => $this->resolveSuccessMessage($claim, $finalCheck),
+                                'claim' => method_exists($claim, 'toArray') ? $claim->toArray() : $claim,
+                                'disbursement_check' => $finalCheck,
+                            ];
+                        }
+                    }
                 } else {
                     if (! $context->wantsJson()) {
                         $output->line('Polling disbursement status...');
@@ -99,30 +133,10 @@ final class DefaultClaimScenarioRunner implements ScenarioRunnerContract
                     $actual = [
                         'status' => 'succeeded',
                         'message' => $this->resolveSuccessMessage($claim, $finalCheck),
-                        'claim' => $claim->toArray(),
+                        'claim' => method_exists($claim, 'toArray') ? $claim->toArray() : $claim,
                         'disbursement_check' => $finalCheck,
                     ];
                 }
-
-                if (! $context->wantsJson()) {
-                    $output->line('Polling disbursement status...');
-                }
-
-                $finalCheck = $this->poller->poll(
-                    code: $voucher->code,
-                    timeout: $timeout,
-                    poll: $poll,
-                    maxPolls: $maxPolls,
-                    acceptPending: $context->acceptPending(),
-                    output: $output,
-                );
-
-                $actual = [
-                    'status' => 'succeeded',
-                    'message' => $this->resolveSuccessMessage($claim, $finalCheck),
-                    'claim' => $claim->toArray(),
-                    'disbursement_check' => $finalCheck,
-                ];
             } catch (Throwable $exception) {
                 $actual = $this->normalizeException($exception);
             }
