@@ -201,12 +201,17 @@ describe('Claim approval page', () => {
             },
         ]);
 
-        expect(submitApprovalOtp).toHaveBeenCalledWith({
-            code: 'TEST123',
-            otp: '123456',
-            referenceId: 'AUTH-123',
-            provider: 'paynamics',
-        });
+        expect(submitApprovalOtp).toHaveBeenCalledWith(
+            expect.objectContaining({
+                code: 'TEST123',
+                otp: '123456',
+                referenceId: 'AUTH-123',
+                provider: 'paynamics',
+            }),
+            expect.objectContaining({
+                onFinish: expect.any(Function),
+            }),
+        );
     });
 
     it('does not emit OTP submission when OTP is empty', async () => {
@@ -288,12 +293,17 @@ describe('Claim approval page', () => {
             provider: 'paynamics',
         });
 
-        expect(submitApprovalOtp).toHaveBeenCalledWith({
-            code: 'TEST123',
-            otp: '123456',
-            referenceId: 'TEST123-09173011987',
-            provider: 'paynamics',
-        });
+        expect(submitApprovalOtp).toHaveBeenCalledWith(
+            expect.objectContaining({
+                code: 'TEST123',
+                otp: '123456',
+                referenceId: 'TEST123-09173011987',
+                provider: 'paynamics',
+            }),
+            expect.objectContaining({
+                onFinish: expect.any(Function),
+            }),
+        );
     });
 
     it('renders server-side OTP validation error from Inertia errors', () => {
@@ -320,5 +330,43 @@ describe('Claim approval page', () => {
         });
 
         expect(wrapper.find('[data-testid="approval-otp-error"]').text()).toBe('Invalid OTP.');
+    });
+
+    it('disables OTP form while submission is processing', async () => {
+        let finish: (() => void) | undefined;
+
+        submitApprovalOtp.mockImplementationOnce((_payload, options) => {
+            finish = options?.onFinish;
+        });
+
+        const wrapper = mount(Approval, {
+            props: {
+                voucher: { code: 'TEST123' },
+                approval: {
+                    required: true,
+                    provider: 'paynamics',
+                    authorization_type: 'otp',
+                    reference_id: 'TEST123-09173011987',
+                    otp_required: true,
+                    message: 'Paynamics payout OTP is pending.',
+                },
+                compiled_claim_result: null,
+                message: null,
+            },
+        });
+
+        await wrapper.find('[data-testid="approval-otp-input"]').setValue('123456');
+        await wrapper.find('[data-testid="approval-otp-form"]').trigger('submit');
+
+        expect((wrapper.find('[data-testid="approval-otp-input"]').element as HTMLInputElement).disabled).toBe(true);
+        expect((wrapper.find('[data-testid="approval-otp-submit"]').element as HTMLButtonElement).disabled).toBe(true);
+        expect(wrapper.find('[data-testid="approval-otp-submit"]').text()).toBe('Verifying...');
+
+        finish?.();
+        await wrapper.vm.$nextTick();
+
+        expect((wrapper.find('[data-testid="approval-otp-input"]').element as HTMLInputElement).disabled).toBe(false);
+        expect((wrapper.find('[data-testid="approval-otp-submit"]').element as HTMLButtonElement).disabled).toBe(false);
+        expect(wrapper.find('[data-testid="approval-otp-submit"]').text()).toBe('Verify OTP');
     });
 });

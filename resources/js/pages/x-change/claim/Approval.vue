@@ -62,6 +62,8 @@ const viewModel = computed(() =>
     })
 );
 
+const otpProcessing = ref(false);
+
 function submitOtp(): void {
     const event = resolveApprovalOtpSubmission({
         otp: otp.value,
@@ -75,14 +77,23 @@ function submitOtp(): void {
         return;
     }
 
+    otpProcessing.value = true;
+
     emit('submit:otp', event.payload);
 
-    submitApprovalOtp({
-        code: props.voucher.code,
-        otp: event.payload.otp,
-        referenceId: event.payload.referenceId,
-        provider: event.payload.provider,
-    });
+    submitApprovalOtp(
+        {
+            code: props.voucher.code,
+            otp: event.payload.otp,
+            referenceId: event.payload.referenceId,
+            provider: event.payload.provider,
+        },
+        {
+            onFinish: () => {
+                otpProcessing.value = false;
+            },
+        },
+    );
 }
 </script>
 
@@ -176,6 +187,7 @@ function submitOtp(): void {
                         id="approval-otp"
                         v-model="otp"
                         @input="otpError = null"
+                        :disabled="otpProcessing"
                         data-testid="approval-otp-input"
                         class="w-full rounded-md border bg-background px-3 py-2 text-sm"
                         placeholder="Enter OTP"
@@ -192,9 +204,10 @@ function submitOtp(): void {
                     <button
                         type="submit"
                         data-testid="approval-otp-submit"
+                        :disabled="otpProcessing"
                         class="w-full rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
                     >
-                        Verify OTP
+                        {{ otpProcessing ? 'Verifying...' : 'Verify OTP' }}
                     </button>
                 </form>
 

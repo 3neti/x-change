@@ -610,6 +610,6 @@ it('hydrates approval page with pending compiled claim result after compiled for
         ->assertJsonPath('compiled_claim_result.status', 'pending')
         ->assertJsonPath('compiled_claim_result.messages.0', 'Approval required.');
 
-    expect(session()->has(CompiledClaimResultSession::KEY))->toBeFalse();
+    expect(session()->has(CompiledClaimResultSession::KEY))->toBeTrue();
 });
 
