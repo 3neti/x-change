@@ -270,4 +270,23 @@ describe('approval page view model', () => {
         expect(viewModel.title).toBe('Approval session unavailable');
         expect(viewModel.showOtpForm).toBe(false);
     });
+
+    it('treats non-required approval payload without compiled result as missing context', () => {
+        const viewModel = resolveApprovalPageViewModel({
+            approval: {
+                required: false,
+                provider: null,
+                authorization_type: null,
+                reference_id: null,
+                otp_required: false,
+                message: 'Approval is required to continue.',
+            },
+            compiledClaimResult: null,
+            message: null,
+        });
+
+        expect(viewModel.missingContext).toBe(true);
+        expect(viewModel.title).toBe('Approval session unavailable');
+        expect(viewModel.showOtpForm).toBe(false);
+    });
 });

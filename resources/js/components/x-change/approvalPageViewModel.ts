@@ -67,7 +67,11 @@ export function resolveApprovalPageViewModel(
         manualReview: approvalMetadata.manualReview,
     });
 
-    const missingContext = !input.approval && !input.compiledClaimResult;
+    const hasApprovalContext =
+        input.approval?.required === true
+        || input.compiledClaimResult !== null;
+
+    const missingContext = !hasApprovalContext;
 
     return {
         title: missingContext

@@ -435,4 +435,28 @@ describe('Claim approval page', () => {
 
         expect(wrapper.find('[data-testid="approval-otp-error"]').exists()).toBe(false);
     });
+
+    it('shows missing context when approval payload is not required and compiled result is missing', () => {
+        const wrapper = mount(Approval, {
+            props: {
+                voucher: {
+                    code: 'TEST123',
+                },
+                approval: {
+                    required: false,
+                    provider: null,
+                    authorization_type: null,
+                    reference_id: null,
+                    otp_required: false,
+                    message: 'Approval is required to continue.',
+                },
+                compiled_claim_result: null,
+                message: null,
+            },
+        });
+
+        expect(wrapper.find('[data-testid="approval-title"]').text()).toBe('Approval session unavailable');
+        expect(wrapper.find('[data-testid="approval-missing-context"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="approval-otp-form"]').exists()).toBe(false);
+    });
 });
