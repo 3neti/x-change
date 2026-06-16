@@ -8,6 +8,11 @@ import { resolveApprovalActionViewModel } from '@/components/x-change/approvalAc
 export const DEFAULT_APPROVAL_MESSAGE =
     'Your claim has been submitted and is awaiting approval.';
 
+export const REDEEMER_WAITING_APPROVAL_MESSAGE =
+    'Your claim is awaiting payout approval.';
+
+export type ApprovalEntryMode = 'redeemer_waiting' | 'issuer_otp_entry';
+
 export type ApprovalPayload = {
     required: boolean;
     provider: string | null;
@@ -21,6 +26,7 @@ export type ApprovalPageViewModelInput = {
     approval?: ApprovalPayload | null;
     compiledClaimResult?: CompiledClaimResultPayload;
     message?: string | null;
+    approvalEntryMode?: ApprovalEntryMode | null;
 };
 
 export type ApprovalPageViewModel = {
@@ -37,6 +43,8 @@ export type ApprovalPageViewModel = {
     metadataMessage: string | null;
     actionMode: 'otp' | 'polling' | 'manual_review' | 'none';
     showOtpForm: boolean;
+    showRedeemerWaitingNotice: boolean;
+    redeemerWaitingMessages: string[];
     showPollingNotice: boolean;
     showManualReviewNotice: boolean;
     missingContext: boolean;
@@ -67,11 +75,17 @@ export function resolveApprovalPageViewModel(
         manualReview: approvalMetadata.manualReview,
     });
 
+    const approvalEntryMode = input.approvalEntryMode ?? 'redeemer_waiting';
+
     const hasApprovalContext =
         input.approval?.required === true
         || input.compiledClaimResult !== null;
 
     const missingContext = !hasApprovalContext;
+    const showRedeemerWaitingNotice =
+        !missingContext
+        && approvalEntryMode === 'redeemer_waiting'
+        && approvalAction.mode === 'otp';
 
     return {
         title: missingContext
@@ -92,7 +106,16 @@ export function resolveApprovalPageViewModel(
         expiresAt: approvalMetadata.expiresAt,
         metadataMessage: approvalMetadata.message,
         actionMode: approvalAction.mode,
-        showOtpForm: approvalAction.showOtpForm,
+        showOtpForm: approvalEntryMode === 'issuer_otp_entry'
+            && approvalAction.showOtpForm,
+        showRedeemerWaitingNotice,
+        redeemerWaitingMessages: showRedeemerWaitingNotice
+            ? [
+                'The voucher issuer has been asked to approve this payout.',
+                'You do not need to enter an OTP here.',
+                'We will continue processing once approval is completed.',
+            ]
+            : [],
         showPollingNotice: approvalAction.showPollingNotice,
         showManualReviewNotice: approvalAction.showManualReviewNotice,
         missingContext,

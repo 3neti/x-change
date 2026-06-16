@@ -27,6 +27,7 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
     Route::prefix('pay-codes')->group(function (): void {
         Route::get('/', PayCodeIndexPageController::class)->name('x-change.pay-codes.index');
         Route::get('create', PayCodeCreatePageController::class)->name('x-change.pay-codes.create');
+        Route::get('{code}/approval', ClaimApprovalPageController::class)->name('x-change.pay-codes.approval');
         Route::get('{code}', PayCodeShowPageController::class)->name('x-change.pay-codes.show');
     });
 

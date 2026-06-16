@@ -4,7 +4,11 @@ import { Head, usePage } from '@inertiajs/vue3';
 import { Card, CardContent } from '@/components/ui/card';
 import { Clock3 } from 'lucide-vue-next';
 import type { CompiledClaimResultPayload } from '@/components/x-change/successCompiledClaimResult';
-import { resolveApprovalPageViewModel } from '@/components/x-change/approvalPageViewModel';
+import {
+    REDEEMER_WAITING_APPROVAL_MESSAGE,
+    resolveApprovalPageViewModel,
+    type ApprovalEntryMode,
+} from '@/components/x-change/approvalPageViewModel';
 import {
     resolveApprovalOtpSubmission,
     type ApprovalOtpSubmissionPayload,
@@ -31,6 +35,7 @@ type ApprovalPayload = {
 const props = defineProps<{
     voucher: VoucherProps;
     approval?: ApprovalPayload | null;
+    approval_entry_mode?: ApprovalEntryMode | null;
     compiled_claim_result?: CompiledClaimResultPayload;
     message?: string | null;
 }>();
@@ -67,6 +72,7 @@ const visibleServerOtpError = computed(() => {
 const viewModel = computed(() =>
     resolveApprovalPageViewModel({
         approval: props.approval ?? null,
+        approvalEntryMode: props.approval_entry_mode ?? 'redeemer_waiting',
         compiledClaimResult: props.compiled_claim_result ?? null,
         message: props.message ?? null,
     })
@@ -100,6 +106,9 @@ function submitOtp(): void {
             otp: event.payload.otp,
             referenceId: event.payload.referenceId,
             provider: event.payload.provider,
+            redirectTo: props.approval_entry_mode === 'issuer_otp_entry'
+                ? 'pay_codes_index'
+                : null,
         },
         {
             onFinish: () => {
@@ -167,6 +176,23 @@ function submitOtp(): void {
                     class="rounded-lg border border-primary/10 bg-primary/5 p-4 text-sm text-muted-foreground"
                 >
                     The approval session could not be restored. Please restart the claim flow or return to your voucher.
+                </div>
+
+                <div
+                    v-if="viewModel.showRedeemerWaitingNotice"
+                    data-testid="approval-redeemer-waiting"
+                    class="space-y-2 rounded-lg border border-primary/10 bg-primary/5 p-4 text-left text-sm text-muted-foreground"
+                >
+                    <p class="font-medium text-foreground">
+                        {{ REDEEMER_WAITING_APPROVAL_MESSAGE }}
+                    </p>
+
+                    <p
+                        v-for="item in viewModel.redeemerWaitingMessages"
+                        :key="item"
+                    >
+                        {{ item }}
+                    </p>
                 </div>
 
                 <div

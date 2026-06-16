@@ -47,11 +47,25 @@ final class DefaultClaimApprovalStatusResolver implements ClaimApprovalStatusRes
     private function referenceCandidates(Voucher $voucher): array
     {
         $code = (string) $voucher->code;
+        $metadata = $voucher->exists
+            ? $voucher->fresh()?->metadata
+            : $voucher->metadata;
+
+        $metadata = is_array($metadata) ? $metadata : [];
+        $account = data_get($metadata, 'disbursement.recipient_identifier');
 
         return array_values(array_filter(array_unique([
             $code,
             data_get($voucher, 'provider_reference'),
             data_get($voucher, 'reference_id'),
+            data_get($metadata, 'disbursement.reference_id'),
+            data_get($metadata, 'disbursement.provider_reference'),
+            data_get($metadata, 'disbursement.provider_tx'),
+            data_get($metadata, 'disbursement.transaction_id'),
+            data_get($metadata, 'disbursement.request_id'),
+            is_string($account) && trim($account) !== ''
+                ? $code.'-'.trim($account)
+                : null,
         ]), fn ($value): bool => is_string($value) && trim($value) !== ''));
     }
 }

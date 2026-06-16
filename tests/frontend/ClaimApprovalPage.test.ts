@@ -107,7 +107,7 @@ describe('Claim approval page', () => {
         expect(wrapper.find('[data-testid="approval-messages"]').text()).toContain('Approval required.');
     });
 
-    it('renders OTP approval form when OTP is required', () => {
+    it('renders redeemer waiting copy and hides OTP form by default when OTP is required', () => {
         const wrapper = mount(Approval, {
             props: {
                 voucher: {
@@ -123,9 +123,44 @@ describe('Claim approval page', () => {
             },
         });
 
+        expect(wrapper.find('[data-testid="approval-otp-form"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="approval-redeemer-waiting"]').text()).toContain(
+            'Your claim is awaiting payout approval.',
+        );
+        expect(wrapper.find('[data-testid="approval-redeemer-waiting"]').text()).toContain(
+            'The voucher issuer has been asked to approve this payout.',
+        );
+        expect(wrapper.find('[data-testid="approval-redeemer-waiting"]').text()).toContain(
+            'You do not need to enter an OTP here.',
+        );
+        expect(wrapper.find('[data-testid="approval-redeemer-waiting"]').text()).toContain(
+            'We will continue processing once approval is completed.',
+        );
+        expect(wrapper.find('[data-testid="approval-polling-notice"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="approval-manual-review-notice"]').exists()).toBe(false);
+    });
+
+    it('renders OTP approval form in issuer entry mode when OTP is required', () => {
+        const wrapper = mount(Approval, {
+            props: {
+                voucher: {
+                    code: 'TEST123',
+                },
+                approval_entry_mode: 'issuer_otp_entry',
+                compiled_claim_result: {
+                    status: 'pending',
+                    approval_metadata: {
+                        otp_required: true,
+                    },
+                },
+                message: null,
+            },
+        });
+
         expect(wrapper.find('[data-testid="approval-otp-form"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="approval-otp-input"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="approval-otp-submit"]').text()).toBe('Verify OTP');
+        expect(wrapper.find('[data-testid="approval-redeemer-waiting"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="approval-polling-notice"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="approval-manual-review-notice"]').exists()).toBe(false);
     });
@@ -136,6 +171,7 @@ describe('Claim approval page', () => {
                 voucher: {
                     code: 'TEST123',
                 },
+                approval_entry_mode: 'issuer_otp_entry',
                 compiled_claim_result: {
                     status: 'pending',
                     approval_metadata: {
@@ -157,6 +193,7 @@ describe('Claim approval page', () => {
                 voucher: {
                     code: 'TEST123',
                 },
+                approval_entry_mode: 'issuer_otp_entry',
                 compiled_claim_result: {
                     status: 'pending',
                     approval_metadata: {
@@ -178,6 +215,7 @@ describe('Claim approval page', () => {
                 voucher: {
                     code: 'TEST123',
                 },
+                approval_entry_mode: 'issuer_otp_entry',
                 compiled_claim_result: {
                     status: 'pending',
                     approval_metadata: {
@@ -212,6 +250,7 @@ describe('Claim approval page', () => {
                 otp: '123456',
                 referenceId: 'AUTH-123',
                 provider: 'paynamics',
+                redirectTo: 'pay_codes_index',
             }),
             expect.objectContaining({
                 onFinish: expect.any(Function),
@@ -225,6 +264,7 @@ describe('Claim approval page', () => {
                 voucher: {
                     code: 'TEST123',
                 },
+                approval_entry_mode: 'issuer_otp_entry',
                 compiled_claim_result: {
                     status: 'pending',
                     approval_metadata: {
@@ -250,6 +290,7 @@ describe('Claim approval page', () => {
                 voucher: {
                     code: 'TEST123',
                 },
+                approval_entry_mode: 'issuer_otp_entry',
                 approval: {
                     required: true,
                     provider: 'paynamics',
@@ -276,6 +317,7 @@ describe('Claim approval page', () => {
                 voucher: {
                     code: 'TEST123',
                 },
+                approval_entry_mode: 'issuer_otp_entry',
                 approval: {
                     required: true,
                     provider: 'paynamics',
@@ -321,6 +363,7 @@ describe('Claim approval page', () => {
                 voucher: {
                     code: 'TEST123',
                 },
+                approval_entry_mode: 'issuer_otp_entry',
                 approval: {
                     required: true,
                     provider: 'paynamics',
@@ -347,6 +390,7 @@ describe('Claim approval page', () => {
         const wrapper = mount(Approval, {
             props: {
                 voucher: { code: 'TEST123' },
+                approval_entry_mode: 'issuer_otp_entry',
                 approval: {
                     required: true,
                     provider: 'paynamics',
@@ -381,6 +425,7 @@ describe('Claim approval page', () => {
                 voucher: {
                     code: 'TEST123',
                 },
+                approval_entry_mode: 'issuer_otp_entry',
                 compiled_claim_result: {
                     status: 'failed',
                     voucher_code: 'TEST123',
@@ -416,6 +461,7 @@ describe('Claim approval page', () => {
                 voucher: {
                     code: 'TEST123',
                 },
+                approval_entry_mode: 'issuer_otp_entry',
                 approval: {
                     required: true,
                     provider: 'paynamics',

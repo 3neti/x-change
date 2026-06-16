@@ -23,6 +23,8 @@ describe('approval page view model', () => {
             metadataMessage: null,
             actionMode: 'none',
             showOtpForm: false,
+            showRedeemerWaitingNotice: false,
+            redeemerWaitingMessages: [],
             showPollingNotice: false,
             showManualReviewNotice: false,
             missingContext: true,
@@ -81,6 +83,8 @@ describe('approval page view model', () => {
             metadataMessage: null,
             actionMode: 'none',
             showOtpForm: false,
+            showRedeemerWaitingNotice: false,
+            redeemerWaitingMessages: [],
             showPollingNotice: false,
             showManualReviewNotice: false,
             missingContext: false,
@@ -129,7 +133,7 @@ describe('approval page view model', () => {
         });
     });
 
-    it('shows OTP action when approval metadata requires OTP', () => {
+    it('shows redeemer waiting action when approval metadata requires OTP by default', () => {
         expect(resolveApprovalPageViewModel({
             compiledClaimResult: {
                 status: 'pending',
@@ -140,7 +144,33 @@ describe('approval page view model', () => {
             message: null,
         })).toMatchObject({
             actionMode: 'otp',
+            showOtpForm: false,
+            showRedeemerWaitingNotice: true,
+            redeemerWaitingMessages: [
+                'The voucher issuer has been asked to approve this payout.',
+                'You do not need to enter an OTP here.',
+                'We will continue processing once approval is completed.',
+            ],
+            showPollingNotice: false,
+            showManualReviewNotice: false,
+        });
+    });
+
+    it('shows OTP form when issuer entry mode requires OTP', () => {
+        expect(resolveApprovalPageViewModel({
+            approvalEntryMode: 'issuer_otp_entry',
+            compiledClaimResult: {
+                status: 'pending',
+                approval_metadata: {
+                    otp_required: true,
+                },
+            },
+            message: null,
+        })).toMatchObject({
+            actionMode: 'otp',
             showOtpForm: true,
+            showRedeemerWaitingNotice: false,
+            redeemerWaitingMessages: [],
             showPollingNotice: false,
             showManualReviewNotice: false,
         });
@@ -159,6 +189,7 @@ describe('approval page view model', () => {
             actionMode: 'polling',
             showOtpForm: false,
             showPollingNotice: true,
+            showRedeemerWaitingNotice: false,
             showManualReviewNotice: false,
         });
     });
@@ -175,6 +206,7 @@ describe('approval page view model', () => {
         })).toMatchObject({
             actionMode: 'manual_review',
             showOtpForm: false,
+            showRedeemerWaitingNotice: false,
             showPollingNotice: false,
             showManualReviewNotice: true,
         });
@@ -182,6 +214,7 @@ describe('approval page view model', () => {
 
     it('prefers approval payload over compiled claim approval metadata', () => {
         const viewModel = resolveApprovalPageViewModel({
+            approvalEntryMode: 'issuer_otp_entry',
             approval: {
                 required: true,
                 provider: 'paynamics',
@@ -226,6 +259,7 @@ describe('approval page view model', () => {
 
     it('keeps OTP form available after failed OTP approval result', () => {
         const viewModel = resolveApprovalPageViewModel({
+            approvalEntryMode: 'issuer_otp_entry',
             compiledClaimResult: {
                 status: 'failed',
                 claim_type: null,

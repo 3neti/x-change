@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Redemption\SubmitWebPayCodeClaim;
+use LBHurtado\XChange\Contracts\ClaimApprovalWorkflowStoreContract;
 use LBHurtado\XChange\Support\Claim\ClaimApprovalResumePayloadSession;
 use LBHurtado\XChange\Support\Claim\ClaimEvidenceSynchronizer;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
@@ -25,6 +26,7 @@ class ClaimSubmitController extends Controller
         protected ClaimEvidenceSynchronizer $evidenceSynchronizer,
         protected CompiledClaimResultSession $compiledClaimResultSession,
         protected ClaimApprovalResumePayloadSession $resumePayloadSession,
+        protected ClaimApprovalWorkflowStoreContract $approvalWorkflows,
     ) {}
 
     public function __invoke(Request $request, string $code): RedirectResponse
@@ -80,6 +82,13 @@ class ClaimSubmitController extends Controller
             if ($result->status === 'approval_required') {
                 $this->compiledClaimResultSession->put($result);
                 $this->resumePayloadSession->put($voucher, $payload);
+                $this->approvalWorkflows->put($voucher, [
+                    'status' => 'pending',
+                    'voucher_code' => (string) $voucher->code,
+                    'payload' => $payload,
+                    'approval' => $result->toArray(),
+                    'created_at' => now()->toIso8601String(),
+                ]);
 
                 return redirect()->route('x-change.claim.approval', ['code' => $code]);
             }

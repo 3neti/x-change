@@ -5,6 +5,7 @@ export type ApprovalOtpSubmitAdapterPayload = {
     otp: string;
     referenceId: string | null;
     provider: string | null;
+    redirectTo?: 'pay_codes_index' | null;
 };
 
 export type ApprovalOtpSubmitAdapterOptions = {
@@ -20,6 +21,7 @@ export function toApprovalOtpPostPayload(
         otp: payload.otp,
         reference_id: payload.referenceId,
         provider: payload.provider,
+        redirect_to: payload.redirectTo ?? null,
     };
 }
 

@@ -34,10 +34,12 @@ describe('approval OTP submit adapter', () => {
             otp: '123456',
             referenceId: 'AUTH-123',
             provider: 'paynamics',
+            redirectTo: 'pay_codes_index',
         })).toEqual({
             otp: '123456',
             reference_id: 'AUTH-123',
             provider: 'paynamics',
+            redirect_to: 'pay_codes_index',
         });
     });
 
@@ -63,6 +65,7 @@ describe('approval OTP submit adapter', () => {
                 otp: '123456',
                 reference_id: 'AUTH-123',
                 provider: 'paynamics',
+                redirect_to: null,
             },
             expect.objectContaining({
                 preserveScroll: true,
