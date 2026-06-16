@@ -30,8 +30,15 @@ vi.mock('lucide-vue-next', () => ({
     },
 }));
 
+const submitApprovalOtp = vi.fn();
+
+vi.mock('../../resources/js/components/x-change/approvalOtpSubmitAdapter', () => ({
+    submitApprovalOtp: (...args: unknown[]) => submitApprovalOtp(...args),
+}));
+
 beforeEach(() => {
     post.mockClear();
+    submitApprovalOtp.mockClear();
 });
 
 describe('Claim approval page', () => {
@@ -182,17 +189,12 @@ describe('Claim approval page', () => {
             },
         ]);
 
-        expect(post).toHaveBeenCalledWith(
-            '/x/claim/TEST123/approval/otp',
-            {
-                otp: '123456',
-                reference_id: 'AUTH-123',
-                provider: 'paynamics',
-            },
-            expect.objectContaining({
-                preserveScroll: true,
-            }),
-        );
+        expect(submitApprovalOtp).toHaveBeenCalledWith({
+            code: 'TEST123',
+            otp: '123456',
+            referenceId: 'AUTH-123',
+            provider: 'paynamics',
+        });
     });
 
     it('does not emit OTP submission when OTP is empty', async () => {
@@ -217,5 +219,68 @@ describe('Claim approval page', () => {
 
         expect(wrapper.emitted('submit:otp')).toBeUndefined();
         expect(wrapper.find('[data-testid="approval-otp-error"]').text()).toBe('OTP is required.');
+        expect(submitApprovalOtp).not.toHaveBeenCalled();
+    });
+
+    it('blocks empty OTP submission and shows inline error', async () => {
+        const wrapper = mount(Approval, {
+            props: {
+                voucher: {
+                    code: 'TEST123',
+                },
+                approval: {
+                    required: true,
+                    provider: 'paynamics',
+                    authorization_type: 'otp',
+                    reference_id: 'TEST123-09173011987',
+                    otp_required: true,
+                    message: 'Paynamics payout OTP is pending.',
+                },
+                compiled_claim_result: null,
+                message: null,
+            },
+        });
+
+        await wrapper.find('[data-testid="approval-otp-submit"]').trigger('submit');
+
+        expect(wrapper.find('[data-testid="approval-otp-error"]').text()).toBe('OTP is required.');
+        expect(wrapper.emitted('submit:otp')).toBeUndefined();
+        expect(submitApprovalOtp).not.toHaveBeenCalled();
+    });
+
+    it('submits valid OTP payload through emit and adapter', async () => {
+        const wrapper = mount(Approval, {
+            props: {
+                voucher: {
+                    code: 'TEST123',
+                },
+                approval: {
+                    required: true,
+                    provider: 'paynamics',
+                    authorization_type: 'otp',
+                    reference_id: 'TEST123-09173011987',
+                    otp_required: true,
+                    message: 'Paynamics payout OTP is pending.',
+                },
+                compiled_claim_result: null,
+                message: null,
+            },
+        });
+
+        await wrapper.find('[data-testid="approval-otp-input"]').setValue('123456');
+        await wrapper.find('[data-testid="approval-otp-form"]').trigger('submit');
+
+        expect(wrapper.emitted('submit:otp')?.[0]?.[0]).toEqual({
+            otp: '123456',
+            referenceId: 'TEST123-09173011987',
+            provider: 'paynamics',
+        });
+
+        expect(submitApprovalOtp).toHaveBeenCalledWith({
+            code: 'TEST123',
+            otp: '123456',
+            referenceId: 'TEST123-09173011987',
+            provider: 'paynamics',
+        });
     });
 });
