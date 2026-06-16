@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 
 final class ClaimApprovalPageController
@@ -18,7 +19,8 @@ final class ClaimApprovalPageController
             ->where('code', strtoupper(trim($code)))
             ->firstOrFail();
 
-        $compiled = app(CompiledClaimResultSession::class)->get();
+        $compiled = app(CompiledClaimResultSession::class)->get()
+            ?? app(ClaimApprovalStatusResolver::class)->resolve($voucher);
 
         $props = [
             'voucher' => [

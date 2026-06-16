@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 
 it('renders approval payload for a pending compiled claim', function () {
@@ -111,3 +113,48 @@ it('renders approval metadata from compiled claim result', function () {
     expect(session()->has(CompiledClaimResultSession::KEY))->toBeTrue();
 });
 
+it('hydrates approval page from approval status resolver when session result is missing', function () {
+    $this->withoutMiddleware();
+
+    $voucher = issueVoucher();
+
+    session()->forget(CompiledClaimResultSession::KEY);
+
+    $this->app->bind(
+        ClaimApprovalStatusResolver::class,
+        fn () => new class implements ClaimApprovalStatusResolver
+        {
+            public function resolve(Voucher $voucher): ?array
+            {
+                return [
+                    'status' => 'approval_required',
+                    'voucher_code' => (string) $voucher->code,
+                    'messages' => ['Payout OTP approval required.'],
+                    'approval_metadata' => [
+                        'provider' => 'paynamics',
+                        'authorization_type' => 'otp',
+                        'reference_id' => $voucher->code.'-09173011987',
+                        'otp_required' => true,
+                        'expires_at' => null,
+                        'polling_required' => false,
+                        'manual_review' => false,
+                        'message' => 'Paynamics payout OTP is pending.',
+                    ],
+                ];
+            }
+        }
+    );
+
+    $this
+        ->getJson(route('x-change.claim.approval', [
+            'code' => $voucher->code,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('compiled_claim_result.status', 'approval_required')
+        ->assertJsonPath('compiled_claim_result.voucher_code', $voucher->code)
+        ->assertJsonPath('compiled_claim_result.approval_metadata.provider', 'paynamics')
+        ->assertJsonPath('compiled_claim_result.approval_metadata.reference_id', $voucher->code.'-09173011987')
+        ->assertJsonPath('approval.required', true)
+        ->assertJsonPath('approval.provider', 'paynamics')
+        ->assertJsonPath('approval.reference_id', $voucher->code.'-09173011987');
+});

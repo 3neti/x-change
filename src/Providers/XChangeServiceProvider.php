@@ -41,6 +41,7 @@ use LBHurtado\XChange\Console\Commands\Revenue\ShowPendingRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Settlement\EvaluateSettlementEnvelopeCommand;
 use LBHurtado\XChange\Console\Commands\Wallet\GetWalletBalanceCommand;
 use LBHurtado\XChange\Contracts\ApprovalWorkflowContract;
+use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
 use LBHurtado\XChange\Contracts\ClaimApprovalExecutionContract;
 use LBHurtado\XChange\Contracts\ClaimApprovalInitiationContract;
 use LBHurtado\XChange\Contracts\ClaimApprovalNotificationContract;
@@ -149,6 +150,7 @@ use LBHurtado\XChange\Services\WithdrawalLifecycleService;
 use LBHurtado\XChange\Services\WithdrawalPipeline;
 use LBHurtado\XChange\Services\XChangeWithdrawalIntervalEnforcer;
 use LBHurtado\XChange\Support\Claim\ClaimApprovalPendingOtpStore;
+use LBHurtado\XChange\Support\Claim\DefaultClaimApprovalStatusResolver;
 use LBHurtado\XChange\Support\Logging\CacheEventStore;
 
 class XChangeServiceProvider extends ServiceProvider
@@ -479,6 +481,11 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->singleton(SettlementCollectionGate::class);
 
         $this->app->bind(PendingOtpStore::class, ClaimApprovalPendingOtpStore::class);
+
+        $this->app->singleton(
+            ClaimApprovalStatusResolver::class,
+            DefaultClaimApprovalStatusResolver::class,
+        );
     }
 
     public function boot(): void
