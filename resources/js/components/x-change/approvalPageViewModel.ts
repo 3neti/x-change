@@ -8,7 +8,17 @@ import { resolveApprovalActionViewModel } from '@/components/x-change/approvalAc
 export const DEFAULT_APPROVAL_MESSAGE =
     'Your claim has been submitted and is awaiting approval.';
 
+export type ApprovalPayload = {
+    required: boolean;
+    provider: string | null;
+    authorization_type: string | null;
+    reference_id: string | null;
+    otp_required: boolean;
+    message: string | null;
+};
+
 export type ApprovalPageViewModelInput = {
+    approval?: ApprovalPayload | null;
     compiledClaimResult?: CompiledClaimResultPayload;
     message?: string | null;
 };
@@ -39,7 +49,15 @@ export function resolveApprovalPageViewModel(
     );
 
     const approvalMetadata = resolveApprovalMetadataViewModel(
-        input.compiledClaimResult?.approval_metadata ?? null,
+        input.approval
+            ? {
+                provider: input.approval.provider,
+                authorization_type: input.approval.authorization_type,
+                reference_id: input.approval.reference_id,
+                otp_required: input.approval.otp_required,
+                message: input.approval.message,
+            }
+            : input.compiledClaimResult?.approval_metadata ?? null,
     );
 
     const approvalAction = resolveApprovalActionViewModel({
@@ -50,7 +68,9 @@ export function resolveApprovalPageViewModel(
 
     return {
         title: compiledClaimResult.title || 'Claim submitted for processing',
-        status: compiledClaimResult.status || 'pending',
+        status:
+            compiledClaimResult.status
+            || (input.approval?.required ? 'approval_required' : 'pending'),
         message: input.message || DEFAULT_APPROVAL_MESSAGE,
         amountText: compiledClaimResult.amountText,
         messages: compiledClaimResult.messages,

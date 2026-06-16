@@ -19,8 +19,18 @@ type VoucherProps = {
     currency?: string | null;
 };
 
+type ApprovalPayload = {
+    required: boolean;
+    provider: string | null;
+    authorization_type: string | null;
+    reference_id: string | null;
+    otp_required: boolean;
+    message: string | null;
+};
+
 const props = defineProps<{
     voucher: VoucherProps;
+    approval?: ApprovalPayload | null;
     compiled_claim_result?: CompiledClaimResultPayload;
     message?: string | null;
 }>();
@@ -34,6 +44,7 @@ const otpError = ref<string | null>(null);
 
 const viewModel = computed(() =>
     resolveApprovalPageViewModel({
+        approval: props.approval ?? null,
         compiledClaimResult: props.compiled_claim_result ?? null,
         message: props.message ?? null,
     })

@@ -163,4 +163,48 @@ describe('approval page view model', () => {
             showManualReviewNotice: true,
         });
     });
+
+    it('prefers approval payload over compiled claim approval metadata', () => {
+        const viewModel = resolveApprovalPageViewModel({
+            approval: {
+                required: true,
+                provider: 'paynamics',
+                authorization_type: 'otp',
+                reference_id: 'APPROVAL-REF',
+                otp_required: true,
+                message: 'Approval prop message.',
+            },
+            compiledClaimResult: {
+                status: null,
+                claim_type: null,
+                voucher_code: 'TEST-1234',
+                claimed: null,
+                requested_amount: null,
+                disbursed_amount: null,
+                currency: null,
+                remaining_balance: null,
+                fully_claimed: null,
+                messages: [],
+                approval_metadata: {
+                    provider: 'old-provider',
+                    authorization_type: 'old-auth',
+                    reference_id: 'OLD-REF',
+                    otp_required: false,
+                    expires_at: null,
+                    polling_required: false,
+                    manual_review: false,
+                    message: 'Old metadata message.',
+                },
+            },
+            message: null,
+        });
+
+        expect(viewModel.status).toBe('approval_required');
+        expect(viewModel.provider).toBe('paynamics');
+        expect(viewModel.authorizationType).toBe('otp');
+        expect(viewModel.referenceId).toBe('APPROVAL-REF');
+        expect(viewModel.metadataMessage).toBe('Approval prop message.');
+        expect(viewModel.actionMode).toBe('otp');
+        expect(viewModel.showOtpForm).toBe(true);
+    });
 });

@@ -79,7 +79,7 @@ function mountCompiledFormOwner() {
                     phases: [
                         {
                             key: 'form_flow',
-                            owner: 'form-flow',
+                            owner: 'claim-widget',
                             source: 'claim_experience',
                             status: 'active',
                             fields: [

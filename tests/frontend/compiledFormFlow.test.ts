@@ -38,14 +38,16 @@ describe('compiled form flow', () => {
             phases: [
                 {
                     key: 'form_flow',
+                    owner: 'claim-widget',
                     status: 'active',
                     fields: [
                         { key: 'first_name', type: 'text', required: true },
                     ],
-                },
+                }
             ],
         })).toEqual({
             key: 'form_flow',
+            owner: 'claim-widget',
             status: 'active',
             fields: [
                 { key: 'first_name', type: 'text', required: true },
