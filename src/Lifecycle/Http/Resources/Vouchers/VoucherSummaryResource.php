@@ -33,6 +33,7 @@ class VoucherSummaryResource extends JsonResource
             'issuer_id' => data_get($this->resource, 'issuer_id') !== null
                 ? (int) data_get($this->resource, 'issuer_id')
                 : null,
+            'approval' => data_get($this->resource, 'approval'),
         ];
     }
 }

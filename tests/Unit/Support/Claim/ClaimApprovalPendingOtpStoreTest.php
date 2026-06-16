@@ -58,6 +58,29 @@ it('returns null when no submitted OTP exists', function () {
     ]))->toBeNull();
 });
 
+it('forgets pending and submitted OTP state by Paynamics request id', function () {
+    $store = app(ClaimApprovalPendingOtpStore::class);
+
+    $store->putPendingOtp([
+        'request_id' => 'TEST-Z3EL-09173011987-S1',
+        'bank_account_no' => '09173011987',
+        'bank_id' => 'GXI',
+        'reason' => 'Voucher payout TEST-Z3EL-09173011987-S1',
+        'amount' => '75.00',
+    ], [
+        'success' => true,
+        'data' => 'OTP successfully sent to 639171234567',
+    ]);
+    $store->putSubmittedOtp('TEST-Z3EL-09173011987-S1', '441498');
+
+    $store->forget('TEST-Z3EL-09173011987-S1');
+
+    expect($store->pending('TEST-Z3EL-09173011987-S1'))->toBeNull()
+        ->and($store->getSubmittedOtp([
+            'request_id' => 'TEST-Z3EL-09173011987-S1',
+        ]))->toBeNull();
+});
+
 it('binds the pending OTP store contract', function () {
     expect(app(PendingOtpStore::class))
         ->toBeInstanceOf(ClaimApprovalPendingOtpStore::class);

@@ -11,6 +11,7 @@ export function useXChangeRoutes() {
             index: () => '/x/pay-codes',
             create: () => '/x/pay-codes/create',
             show: (code: string) => `/x/pay-codes/${encodeURIComponent(code)}`,
+            approval: (code: string) => `/x/pay-codes/${encodeURIComponent(code)}/approval`,
         },
 
         balances: '/x/balances',

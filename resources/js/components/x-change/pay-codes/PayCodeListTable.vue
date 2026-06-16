@@ -4,7 +4,7 @@ import { router } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import PayCodeStatusBadge from './PayCodeStatusBadge.vue';
-import { Eye, Copy, ExternalLink } from 'lucide-vue-next';
+import { Eye, Copy, ExternalLink, KeyRound } from 'lucide-vue-next';
 
 interface Voucher {
     code: string;
@@ -16,17 +16,27 @@ interface Voucher {
     redeemed_at?: string | null;
     expires_at?: string | null;
     claim_url?: string | null;
+    approval?: {
+        required: boolean;
+        type: 'otp' | null;
+        provider: string | null;
+        reference_id: string | null;
+        message: string | null;
+        action_url: string | null;
+    } | null;
 }
 
 interface Props {
     vouchers: Voucher[];
     showUrl?: (code: string) => string;
     claimUrl?: (code: string) => string;
+    approvalUrl?: (code: string) => string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     showUrl: undefined,
     claimUrl: undefined,
+    approvalUrl: undefined,
 });
 
 const hasVouchers = computed(() => props.vouchers.length > 0);
@@ -73,6 +83,20 @@ async function copyClaimUrl(code: string): Promise<void> {
 function openClaim(code: string): void {
     const url = props.claimUrl?.(code) ?? `/x/claim?code=${code}`;
     window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function needsApproval(voucher: Voucher): boolean {
+    return voucher.approval?.required === true;
+}
+
+function approvalActionUrl(voucher: Voucher): string {
+    return voucher.approval?.action_url
+        ?? props.approvalUrl?.(voucher.code)
+        ?? `/x/pay-codes/${voucher.code}/approval`;
+}
+
+function goToApproval(voucher: Voucher): void {
+    router.visit(approvalActionUrl(voucher));
 }
 
 function createdAt(voucher: Voucher): string | null {
@@ -126,6 +150,14 @@ function redeemedAt(voucher: Voucher): string | null {
                                 :redeemed_at="voucher.redeemed_at"
                                 :expires_at="voucher.expires_at"
                             />
+
+                            <span
+                                v-if="needsApproval(voucher)"
+                                data-testid="pay-code-approval-badge"
+                                class="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700"
+                            >
+                                Needs OTP approval
+                            </span>
                         </div>
 
                         <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
@@ -133,6 +165,14 @@ function redeemedAt(voucher: Voucher): string | null {
                             <span v-if="createdAt(voucher)">Created {{ dateLabel(createdAt(voucher)) }}</span>
                             <span v-if="redeemedAt(voucher)">Redeemed {{ dateLabel(redeemedAt(voucher)) }}</span>
                         </div>
+
+                        <p
+                            v-if="needsApproval(voucher)"
+                            data-testid="pay-code-approval-helper"
+                            class="text-sm text-amber-700"
+                        >
+                            Issuer action required before payout can complete.
+                        </p>
                     </div>
 
                     <div class="flex flex-wrap gap-2">
@@ -152,6 +192,17 @@ function redeemedAt(voucher: Voucher): string | null {
                         >
                             <ExternalLink class="mr-1.5 h-3.5 w-3.5" />
                             Claim
+                        </Button>
+
+                        <Button
+                            v-if="needsApproval(voucher)"
+                            size="sm"
+                            variant="outline"
+                            data-testid="pay-code-approval-action"
+                            @click="goToApproval(voucher)"
+                        >
+                            <KeyRound class="mr-1.5 h-3.5 w-3.5" />
+                            Approve
                         </Button>
 
                         <Button

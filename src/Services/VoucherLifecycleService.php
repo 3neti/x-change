@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services;
 
 use Brick\Money\Money;
+use Illuminate\Support\Facades\Route;
 use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 
@@ -14,6 +16,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
 {
     public function __construct(
         protected VoucherAccessContract $vouchers,
+        protected ?ClaimApprovalStatusResolver $approvalStatus = null,
     ) {}
 
     public function list(array $filters = []): array
@@ -77,6 +80,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             'currency' => $this->currency($voucher),
             'status' => $this->statusLabel($voucher),
             'issuer_id' => $this->issuerId($voucher),
+            'approval' => $this->approvalSummary($voucher),
         ];
     }
 
@@ -154,6 +158,43 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
         $ownerKey = $voucher->owner?->getKey();
 
         return $ownerKey !== null ? (int) $ownerKey : null;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    protected function approvalSummary(Voucher $voucher): ?array
+    {
+        if ($voucher->redeemed_at !== null) {
+            return null;
+        }
+
+        $approval = ($this->approvalStatus ?? app(ClaimApprovalStatusResolver::class))
+            ->resolve($voucher);
+
+        if ($approval === null || ! $approval->otp_required) {
+            return null;
+        }
+
+        return [
+            'required' => true,
+            'type' => 'otp',
+            'provider' => $approval->provider,
+            'reference_id' => $approval->reference_id,
+            'message' => $approval->message,
+            'action_url' => $this->approvalUrl($voucher),
+        ];
+    }
+
+    protected function approvalUrl(Voucher $voucher): string
+    {
+        if (Route::has('x-change.pay-codes.approval')) {
+            return route('x-change.pay-codes.approval', [
+                'code' => $voucher->code,
+            ]);
+        }
+
+        return '/x/pay-codes/'.$voucher->code.'/approval';
     }
 
     protected function statusLabel(Voucher $voucher): string

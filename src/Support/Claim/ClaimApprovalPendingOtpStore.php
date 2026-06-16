@@ -75,6 +75,18 @@ final class ClaimApprovalPendingOtpStore implements PendingOtpStore
         $this->cache->put($this->submittedKey($referenceId), trim($otp), $ttl);
     }
 
+    public function forget(string $referenceId): void
+    {
+        $referenceId = trim($referenceId);
+
+        if ($referenceId === '') {
+            return;
+        }
+
+        $this->cache->forget($this->pendingKey($referenceId));
+        $this->cache->forget($this->submittedKey($referenceId));
+    }
+
     /**
      * @return array<string, mixed>|null
      */

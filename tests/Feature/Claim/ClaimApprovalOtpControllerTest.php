@@ -7,6 +7,7 @@ use LBHurtado\XChange\Actions\Redemption\SubmitWebPayCodeClaim;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalOtpAuthorizer;
 use LBHurtado\XChange\Contracts\ClaimApprovalWorkflowStoreContract;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
+use LBHurtado\XChange\Support\Claim\ClaimApprovalPendingOtpStore;
 use LBHurtado\XChange\Support\Claim\ClaimApprovalResumePayloadSession;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 use LBHurtado\XChange\Tests\Fakes\FakePayoutProvider;
@@ -329,6 +330,18 @@ it('replays claim after completed approval OTP submission', function () {
     $this->withoutMiddleware();
 
     $voucher = issueVoucher();
+    $reference = 'TEST-Z3EL-09173011987-S1';
+
+    app(ClaimApprovalPendingOtpStore::class)->putPendingOtp([
+        'request_id' => $reference,
+        'bank_account_no' => '09173011987',
+        'bank_id' => 'GXI',
+        'reason' => 'Voucher payout '.$reference,
+        'amount' => '10.00',
+    ], [
+        'success' => true,
+        'data' => 'OTP successfully sent to 639171234567',
+    ]);
 
     app(ClaimApprovalResumePayloadSession::class)->put($voucher, [
         'mobile' => '639171234567',
@@ -396,19 +409,32 @@ it('replays claim after completed approval OTP submission', function () {
         'code' => $voucher->code,
     ]), [
         'otp' => '441498',
-        'reference_id' => 'TEST-Z3EL-09173011987-S1',
+        'reference_id' => $reference,
         'provider' => 'paynamics',
     ])->assertRedirect(route('x-change.claim.success', [
         'code' => $voucher->code,
     ]));
 
     expect(app(ClaimApprovalResumePayloadSession::class)->get($voucher))->toBeNull();
+    expect(app(ClaimApprovalPendingOtpStore::class)->pending($reference))->toBeNull();
 });
 
 it('replays claim after completed approval OTP submission using cached workflow payload when session is unavailable', function () {
     $this->withoutMiddleware();
 
     $voucher = issueVoucher();
+    $reference = 'TEST-Z3EL-09173011987-S1';
+
+    app(ClaimApprovalPendingOtpStore::class)->putPendingOtp([
+        'request_id' => $reference,
+        'bank_account_no' => '09173011987',
+        'bank_id' => 'GXI',
+        'reason' => 'Voucher payout '.$reference,
+        'amount' => '10.00',
+    ], [
+        'success' => true,
+        'data' => 'OTP successfully sent to 639171234567',
+    ]);
 
     app(ClaimApprovalWorkflowStoreContract::class)->put($voucher, [
         'status' => 'pending',
@@ -480,13 +506,14 @@ it('replays claim after completed approval OTP submission using cached workflow 
         'code' => $voucher->code,
     ]), [
         'otp' => '441498',
-        'reference_id' => 'TEST-Z3EL-09173011987-S1',
+        'reference_id' => $reference,
         'provider' => 'paynamics',
     ])->assertRedirect(route('x-change.claim.success', [
         'code' => $voucher->code,
     ]));
 
     expect(app(ClaimApprovalWorkflowStoreContract::class)->get($voucher))->toBeNull();
+    expect(app(ClaimApprovalPendingOtpStore::class)->pending($reference))->toBeNull();
 });
 
 it('replays claim after completed approval OTP submission using voucher disbursement metadata when no resume payload exists', function () {

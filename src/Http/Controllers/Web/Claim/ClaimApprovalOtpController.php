@@ -12,6 +12,7 @@ use LBHurtado\XChange\Actions\Claim\SubmitClaimApprovalOtp;
 use LBHurtado\XChange\Actions\Redemption\SubmitWebPayCodeClaim;
 use LBHurtado\XChange\Contracts\ClaimApprovalWorkflowStoreContract;
 use LBHurtado\XChange\Support\Claim\ClaimApprovalOtpResultRedirector;
+use LBHurtado\XChange\Support\Claim\ClaimApprovalPendingOtpStore;
 use LBHurtado\XChange\Support\Claim\ClaimApprovalResumePayload;
 use LBHurtado\XChange\Support\Claim\ClaimApprovalResumePayloadSession;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
@@ -23,6 +24,7 @@ final class ClaimApprovalOtpController
         private readonly ClaimApprovalResumePayload $resumePayload,
         private readonly SubmitWebPayCodeClaim $submitWebPayCodeClaim,
         private readonly ClaimApprovalWorkflowStoreContract $approvalWorkflows,
+        private readonly ClaimApprovalPendingOtpStore $pendingOtpStore,
     ) {}
 
     public function __invoke(Request $request, string $code): RedirectResponse
@@ -62,6 +64,14 @@ final class ClaimApprovalOtpController
         $redirectResult = is_array($result)
             ? $result
             : $result->toArray();
+
+        if ($this->completedApprovalStatus($redirectResult)) {
+            $referenceId = $this->approvalReferenceId($validated, $redirectResult);
+
+            if ($referenceId !== null) {
+                $this->pendingOtpStore->forget($referenceId);
+            }
+        }
 
         app(CompiledClaimResultSession::class)->put((object) $redirectResult);
 
@@ -128,6 +138,27 @@ final class ClaimApprovalOtpController
 
         return $path === '/x/pay-codes/'.rawurlencode((string) $voucher->code).'/approval'
             || $path === '/x/pay-codes/'.(string) $voucher->code.'/approval';
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $result
+     */
+    private function approvalReferenceId(array $payload, array $result): ?string
+    {
+        foreach ([
+            data_get($payload, 'reference_id'),
+            data_get($result, 'reference_id'),
+            data_get($result, 'approval_metadata.reference_id'),
+            data_get($result, 'meta.reference_id'),
+            data_get($result, 'disbursement.reference_id'),
+        ] as $candidate) {
+            if (is_string($candidate) && trim($candidate) !== '') {
+                return trim($candidate);
+            }
+        }
+
+        return null;
     }
 
     /**

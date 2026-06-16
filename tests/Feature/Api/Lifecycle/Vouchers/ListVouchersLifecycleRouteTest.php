@@ -14,6 +14,14 @@ it('lists vouchers through the lifecycle route surface', function () {
             'currency' => 'PHP',
             'status' => 'issued',
             'issuer_id' => 1,
+            'approval' => [
+                'required' => true,
+                'type' => 'otp',
+                'provider' => 'paynamics',
+                'reference_id' => 'TEST-1234-09173011987',
+                'message' => 'Paynamics payout OTP is pending.',
+                'action_url' => '/x/pay-codes/TEST-1234/approval',
+            ],
         ],
     ];
 
@@ -31,5 +39,9 @@ it('lists vouchers through the lifecycle route surface', function () {
         ->assertOk()
         ->assertJsonPath('success', true)
         ->assertJsonPath('data.items.0.code', 'TEST-1234')
-        ->assertJsonPath('data.items.0.status', 'issued');
+        ->assertJsonPath('data.items.0.status', 'issued')
+        ->assertJsonPath('data.items.0.approval.required', true)
+        ->assertJsonPath('data.items.0.approval.type', 'otp')
+        ->assertJsonPath('data.items.0.approval.provider', 'paynamics')
+        ->assertJsonPath('data.items.0.approval.reference_id', 'TEST-1234-09173011987');
 });

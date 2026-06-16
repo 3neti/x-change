@@ -33,6 +33,14 @@ interface Voucher {
     bank_code?: string | null;
     claim_url?: string | null;
     instructions?: Record<string, any> | null;
+    approval?: {
+        required: boolean;
+        type: 'otp' | null;
+        provider: string | null;
+        reference_id: string | null;
+        message: string | null;
+        action_url: string | null;
+    } | null;
 }
 
 interface PaginatedVouchers {
@@ -201,6 +209,14 @@ function claimUrl(code: string): string {
     return `/x/claim?code=${code}`;
 }
 
+function approvalUrl(code: string): string {
+    if (routes.payCodes?.approval) {
+        return routes.payCodes.approval(code);
+    }
+
+    return `/x/pay-codes/${code}/approval`;
+}
+
 function goToCreate(): void {
     if (routes.payCodes?.create) {
         router.visit(routes.payCodes.create());
@@ -268,7 +284,7 @@ onMounted(fetchVouchers);
         <Card>
             <CardHeader class="space-y-4">
                 <div class="flex flex-col gap-1">
-                    <CardTitle class="text-base">
+                    <CardTitle class="text-base text-red-600">
                         Pay Code Registry
                     </CardTitle>
                     <p class="text-sm text-muted-foreground">
@@ -291,6 +307,7 @@ onMounted(fetchVouchers);
                     :vouchers="filteredVouchers"
                     :show-url="showUrl"
                     :claim-url="claimUrl"
+                    :approval-url="approvalUrl"
                 />
             </CardContent>
         </Card>
