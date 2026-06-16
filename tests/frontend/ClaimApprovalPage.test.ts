@@ -369,4 +369,65 @@ describe('Claim approval page', () => {
         expect((wrapper.find('[data-testid="approval-otp-submit"]').element as HTMLButtonElement).disabled).toBe(false);
         expect(wrapper.find('[data-testid="approval-otp-submit"]').text()).toBe('Verify OTP');
     });
+
+    it('keeps OTP retry form visible after failed OTP result', () => {
+        const wrapper = mount(Approval, {
+            props: {
+                voucher: {
+                    code: 'TEST123',
+                },
+                compiled_claim_result: {
+                    status: 'failed',
+                    voucher_code: 'TEST123',
+                    messages: ['Invalid OTP.'],
+                    approval_metadata: {
+                        provider: 'paynamics',
+                        authorization_type: 'otp',
+                        reference_id: 'AUTH-123',
+                        otp_required: true,
+                        expires_at: null,
+                        polling_required: false,
+                        manual_review: false,
+                        message: 'Paynamics payout OTP is pending.',
+                    },
+                },
+                message: null,
+            },
+        });
+
+        expect(wrapper.find('[data-testid="approval-otp-form"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="approval-reference-id"]').text()).toContain('AUTH-123');
+        expect(wrapper.find('[data-testid="approval-messages"]').text()).toContain('Invalid OTP.');
+        expect(wrapper.find('[data-testid="approval-otp-submit"]').text()).toBe('Verify OTP');
+    });
+
+    it('dismisses server-side OTP error when user edits OTP', async () => {
+        pageProps.value.errors = {
+            otp: 'Invalid OTP.',
+        };
+
+        const wrapper = mount(Approval, {
+            props: {
+                voucher: {
+                    code: 'TEST123',
+                },
+                approval: {
+                    required: true,
+                    provider: 'paynamics',
+                    authorization_type: 'otp',
+                    reference_id: 'TEST123-09173011987',
+                    otp_required: true,
+                    message: 'Paynamics payout OTP is pending.',
+                },
+                compiled_claim_result: null,
+                message: null,
+            },
+        });
+
+        expect(wrapper.find('[data-testid="approval-otp-error"]').text()).toBe('Invalid OTP.');
+
+        await wrapper.find('[data-testid="approval-otp-input"]').setValue('123456');
+
+        expect(wrapper.find('[data-testid="approval-otp-error"]').exists()).toBe(false);
+    });
 });

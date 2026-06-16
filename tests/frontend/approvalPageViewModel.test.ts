@@ -207,4 +207,39 @@ describe('approval page view model', () => {
         expect(viewModel.actionMode).toBe('otp');
         expect(viewModel.showOtpForm).toBe(true);
     });
+
+    it('keeps OTP form available after failed OTP approval result', () => {
+        const viewModel = resolveApprovalPageViewModel({
+            compiledClaimResult: {
+                status: 'failed',
+                claim_type: null,
+                voucher_code: 'TEST123',
+                claimed: null,
+                requested_amount: null,
+                disbursed_amount: null,
+                currency: null,
+                remaining_balance: null,
+                fully_claimed: null,
+                messages: ['Invalid OTP.'],
+                approval_metadata: {
+                    provider: 'paynamics',
+                    authorization_type: 'otp',
+                    reference_id: 'AUTH-123',
+                    otp_required: true,
+                    expires_at: null,
+                    polling_required: false,
+                    manual_review: false,
+                    message: 'Paynamics payout OTP is pending.',
+                },
+            },
+            message: null,
+        });
+
+        expect(viewModel.status).toBe('failed');
+        expect(viewModel.messages).toContain('Invalid OTP.');
+        expect(viewModel.provider).toBe('paynamics');
+        expect(viewModel.referenceId).toBe('AUTH-123');
+        expect(viewModel.showOtpForm).toBe(true);
+        expect(viewModel.actionMode).toBe('otp');
+    });
 });

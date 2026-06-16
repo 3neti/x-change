@@ -53,6 +53,16 @@ const emit = defineEmits<{
 
 const otp = ref('');
 const otpError = ref<string | null>(null);
+const otpProcessing = ref(false);
+const dismissServerOtpError = ref(false);
+
+const visibleServerOtpError = computed(() => {
+    if (dismissServerOtpError.value) {
+        return null;
+    }
+
+    return serverOtpError.value;
+});
 
 const viewModel = computed(() =>
     resolveApprovalPageViewModel({
@@ -62,7 +72,10 @@ const viewModel = computed(() =>
     })
 );
 
-const otpProcessing = ref(false);
+function clearOtpErrors(): void {
+    otpError.value = null;
+    dismissServerOtpError.value = true;
+}
 
 function submitOtp(): void {
     const event = resolveApprovalOtpSubmission({
@@ -186,7 +199,7 @@ function submitOtp(): void {
                     <input
                         id="approval-otp"
                         v-model="otp"
-                        @input="otpError = null"
+                        @input="clearOtpErrors"
                         :disabled="otpProcessing"
                         data-testid="approval-otp-input"
                         class="w-full rounded-md border bg-background px-3 py-2 text-sm"
@@ -194,11 +207,11 @@ function submitOtp(): void {
                     />
 
                     <p
-                        v-if="otpError || serverOtpError"
+                        v-if="otpError || visibleServerOtpError"
                         data-testid="approval-otp-error"
                         class="text-sm text-destructive"
                     >
-                        {{ otpError || serverOtpError }}
+                        {{ otpError || visibleServerOtpError }}
                     </p>
 
                     <button
