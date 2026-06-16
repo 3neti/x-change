@@ -162,6 +162,14 @@ function submitOtp(): void {
                 </div>
 
                 <div
+                    v-if="viewModel.missingContext"
+                    data-testid="approval-missing-context"
+                    class="rounded-lg border border-primary/10 bg-primary/5 p-4 text-sm text-muted-foreground"
+                >
+                    The approval session could not be restored. Please restart the claim flow or return to your voucher.
+                </div>
+
+                <div
                     v-if="viewModel.provider || viewModel.referenceId || viewModel.authorizationType || viewModel.expiresAt"
                     data-testid="approval-metadata"
                     class="space-y-1 rounded-lg border border-primary/10 bg-primary/5 p-4 text-left text-sm"

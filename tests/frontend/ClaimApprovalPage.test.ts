@@ -66,11 +66,16 @@ describe('Claim approval page', () => {
         });
 
         expect(wrapper.find('[data-testid="approval-clock-icon"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="approval-title"]').text()).toBe('Claim submitted for processing');
-        expect(wrapper.find('[data-testid="approval-message"]').text()).toBe('Your claim has been submitted and is awaiting approval.');
+        expect(wrapper.find('[data-testid="approval-title"]').text()).toBe('Approval session unavailable');
+        expect(wrapper.find('[data-testid="approval-message"]').text()).toBe(
+            'We could not find the approval session for this claim. Please restart the claim flow or try again from your voucher.',
+        );
         expect(wrapper.find('[data-testid="approval-voucher-code"]').text()).toBe('TEST123');
         expect(wrapper.find('[data-testid="approval-amount"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="approval-messages"]').exists()).toBe(false);
+
+        expect(wrapper.find('[data-testid="approval-missing-context"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="approval-otp-form"]').exists()).toBe(false);
     });
 
     it('renders pending compiled claim result details', () => {

@@ -39,6 +39,7 @@ export type ApprovalPageViewModel = {
     showOtpForm: boolean;
     showPollingNotice: boolean;
     showManualReviewNotice: boolean;
+    missingContext: boolean;
 };
 
 export function resolveApprovalPageViewModel(
@@ -66,12 +67,18 @@ export function resolveApprovalPageViewModel(
         manualReview: approvalMetadata.manualReview,
     });
 
+    const missingContext = !input.approval && !input.compiledClaimResult;
+
     return {
-        title: compiledClaimResult.title || 'Claim submitted for processing',
+        title: missingContext
+            ? 'Approval session unavailable'
+            : compiledClaimResult.title || 'Claim submitted for processing',
         status:
             compiledClaimResult.status
             || (input.approval?.required ? 'approval_required' : 'pending'),
-        message: input.message || DEFAULT_APPROVAL_MESSAGE,
+        message: missingContext
+            ? 'We could not find the approval session for this claim. Please restart the claim flow or try again from your voucher.'
+            : input.message || DEFAULT_APPROVAL_MESSAGE,
         amountText: compiledClaimResult.amountText,
         messages: compiledClaimResult.messages,
         headline: approvalMetadata.headline,
@@ -84,5 +91,6 @@ export function resolveApprovalPageViewModel(
         showOtpForm: approvalAction.showOtpForm,
         showPollingNotice: approvalAction.showPollingNotice,
         showManualReviewNotice: approvalAction.showManualReviewNotice,
+        missingContext,
     };
 }

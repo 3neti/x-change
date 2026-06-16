@@ -5,14 +5,14 @@ import {
 } from '../../resources/js/components/x-change/approvalPageViewModel';
 
 describe('approval page view model', () => {
-    it('uses default approval copy without compiled claim result', () => {
+    it('uses missing context copy without approval or compiled claim result', () => {
         expect(resolveApprovalPageViewModel({
             compiledClaimResult: null,
             message: null,
         })).toEqual({
-            title: 'Claim submitted for processing',
+            title: 'Approval session unavailable',
             status: 'pending',
-            message: DEFAULT_APPROVAL_MESSAGE,
+            message: 'We could not find the approval session for this claim. Please restart the claim flow or try again from your voucher.',
             amountText: null,
             messages: [],
             headline: 'Approval required',
@@ -25,15 +25,30 @@ describe('approval page view model', () => {
             showOtpForm: false,
             showPollingNotice: false,
             showManualReviewNotice: false,
+            missingContext: true,
         });
     });
 
-    it('uses provided approval message', () => {
+    it('uses missing context message when approval result is unavailable', () => {
         expect(resolveApprovalPageViewModel({
             compiledClaimResult: null,
             message: 'Please wait while your claim is reviewed.',
         })).toMatchObject({
+            message: 'We could not find the approval session for this claim. Please restart the claim flow or try again from your voucher.',
+            missingContext: true,
+        });
+    });
+
+    it('uses provided approval message when approval result is available', () => {
+        expect(resolveApprovalPageViewModel({
+            compiledClaimResult: {
+                status: 'pending',
+                messages: [],
+            },
             message: 'Please wait while your claim is reviewed.',
+        })).toMatchObject({
+            message: 'Please wait while your claim is reviewed.',
+            missingContext: false,
         });
     });
 
@@ -68,6 +83,7 @@ describe('approval page view model', () => {
             showOtpForm: false,
             showPollingNotice: false,
             showManualReviewNotice: false,
+            missingContext: false,
         });
     });
 
@@ -241,5 +257,17 @@ describe('approval page view model', () => {
         expect(viewModel.referenceId).toBe('AUTH-123');
         expect(viewModel.showOtpForm).toBe(true);
         expect(viewModel.actionMode).toBe('otp');
+    });
+
+    it('marks approval context missing when no approval result is available', () => {
+        const viewModel = resolveApprovalPageViewModel({
+            compiledClaimResult: null,
+            approval: null,
+            message: null,
+        });
+
+        expect(viewModel.missingContext).toBe(true);
+        expect(viewModel.title).toBe('Approval session unavailable');
+        expect(viewModel.showOtpForm).toBe(false);
     });
 });
