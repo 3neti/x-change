@@ -1,6 +1,7 @@
 <?php
 
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Data\Claims\ApprovalStatusData;
 use LBHurtado\XChange\Support\Claim\ClaimApprovalPendingOtpStore;
 use LBHurtado\XChange\Support\Claim\DefaultClaimApprovalStatusResolver;
 
@@ -21,18 +22,21 @@ it('resolves pending Paynamics OTP approval status from pending OTP store', func
 
     $result = app(DefaultClaimApprovalStatusResolver::class)->resolve($voucher);
 
+    expect($result)->toBeInstanceOf(ApprovalStatusData::class);
 
-    expect($result)->toMatchArray([
+    $payload = $result->toCompiledClaimResult();
+
+    expect($payload)->toMatchArray([
         'status' => 'approval_required',
         'voucher_code' => 'TEST-OTP',
     ])
-        ->and(data_get($result, 'approval_metadata'))->toMatchArray([
+        ->and(data_get($payload, 'approval_metadata'))->toMatchArray([
             'provider' => 'paynamics',
             'authorization_type' => 'otp',
             'reference_id' => 'TEST-OTP',
             'otp_required' => true,
         ])
-        ->and(data_get($result, 'approval_metadata'))->toMatchArray([
+        ->and(data_get($payload, 'approval_metadata'))->toMatchArray([
             'polling_required' => false,
             'manual_review' => false,
             'message' => 'Paynamics payout OTP is pending.',

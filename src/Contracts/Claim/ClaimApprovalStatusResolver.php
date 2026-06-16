@@ -5,11 +5,9 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Contracts\Claim;
 
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Data\Claims\ApprovalStatusData;
 
 interface ClaimApprovalStatusResolver
 {
-    /**
-     * @return array<string, mixed>|null
-     */
-    public function resolve(Voucher $voucher): ?array;
+    public function resolve(Voucher $voucher): ?ApprovalStatusData;
 }

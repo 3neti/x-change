@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Support\Claim;
 
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
+use LBHurtado\XChange\Data\Claims\ApprovalStatusData;
 
 final class DefaultClaimApprovalStatusResolver implements ClaimApprovalStatusResolver
 {
@@ -13,10 +14,7 @@ final class DefaultClaimApprovalStatusResolver implements ClaimApprovalStatusRes
         private readonly ClaimApprovalPendingOtpStore $pendingOtpStore,
     ) {}
 
-    /**
-     * @return array<string, mixed>|null
-     */
-    public function resolve(Voucher $voucher): ?array
+    public function resolve(Voucher $voucher): ?ApprovalStatusData
     {
         foreach ($this->referenceCandidates($voucher) as $reference) {
             $pending = $this->pendingOtpStore->pending($reference);
@@ -25,23 +23,19 @@ final class DefaultClaimApprovalStatusResolver implements ClaimApprovalStatusRes
                 continue;
             }
 
-            return [
-                'status' => 'approval_required',
-                'voucher_code' => (string) $voucher->code,
-                'messages' => [
-                    'Payout OTP approval required.',
-                ],
-                'approval_metadata' => [
-                    'provider' => data_get($pending, 'provider', 'paynamics'),
-                    'authorization_type' => data_get($pending, 'authorization_type', 'otp'),
-                    'reference_id' => data_get($pending, 'reference_id', $reference),
-                    'otp_required' => true,
-                    'expires_at' => data_get($pending, 'expires_at'),
-                    'polling_required' => false,
-                    'manual_review' => false,
-                    'message' => data_get($pending, 'message', 'Paynamics payout OTP is pending.'),
-                ],
-            ];
+            return new ApprovalStatusData(
+                status: 'approval_required',
+                voucher_code: (string) $voucher->code,
+                messages: ['Payout OTP approval required.'],
+                provider: data_get($pending, 'provider', 'paynamics'),
+                authorization_type: data_get($pending, 'authorization_type', 'otp'),
+                reference_id: data_get($pending, 'reference_id', $reference),
+                otp_required: true,
+                expires_at: data_get($pending, 'expires_at'),
+                polling_required: false,
+                manual_review: false,
+                message: data_get($pending, 'message', 'Paynamics payout OTP is pending.'),
+            );
         }
 
         return null;

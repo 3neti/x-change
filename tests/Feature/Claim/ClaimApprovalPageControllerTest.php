@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
+use LBHurtado\XChange\Data\Claims\ApprovalStatusData;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 
 it('renders approval payload for a pending compiled claim', function () {
@@ -124,23 +125,18 @@ it('hydrates approval page from approval status resolver when session result is 
         ClaimApprovalStatusResolver::class,
         fn () => new class implements ClaimApprovalStatusResolver
         {
-            public function resolve(Voucher $voucher): ?array
+            public function resolve(Voucher $voucher): ?ApprovalStatusData
             {
-                return [
-                    'status' => 'approval_required',
-                    'voucher_code' => (string) $voucher->code,
-                    'messages' => ['Payout OTP approval required.'],
-                    'approval_metadata' => [
-                        'provider' => 'paynamics',
-                        'authorization_type' => 'otp',
-                        'reference_id' => $voucher->code.'-09173011987',
-                        'otp_required' => true,
-                        'expires_at' => null,
-                        'polling_required' => false,
-                        'manual_review' => false,
-                        'message' => 'Paynamics payout OTP is pending.',
-                    ],
-                ];
+                return new ApprovalStatusData(
+                    status: 'approval_required',
+                    voucher_code: (string) $voucher->code,
+                    messages: ['Payout OTP approval required.'],
+                    provider: 'paynamics',
+                    authorization_type: 'otp',
+                    reference_id: $voucher->code.'-09173011987',
+                    otp_required: true,
+                    message: 'Paynamics payout OTP is pending.',
+                );
             }
         }
     );

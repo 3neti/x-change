@@ -19,8 +19,13 @@ final class ClaimApprovalPageController
             ->where('code', strtoupper(trim($code)))
             ->firstOrFail();
 
-        $compiled = app(CompiledClaimResultSession::class)->get()
-            ?? app(ClaimApprovalStatusResolver::class)->resolve($voucher);
+        $compiled = app(CompiledClaimResultSession::class)->get();
+
+        if ($compiled === null) {
+            $compiled = app(ClaimApprovalStatusResolver::class)
+                ->resolve($voucher)
+                ?->toCompiledClaimResult();
+        }
 
         $props = [
             'voucher' => [
