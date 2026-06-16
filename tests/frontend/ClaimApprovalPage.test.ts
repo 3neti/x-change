@@ -6,10 +6,21 @@ const { post } = vi.hoisted(() => ({
     post: vi.fn(),
 }));
 
+const pageProps = vi.hoisted(() => ({
+    value: {
+        errors: {},
+    } as {
+        errors: Record<string, string>;
+    },
+}));
+
 vi.mock('@inertiajs/vue3', () => ({
     Head: {
         template: '<div><slot /></div>',
     },
+    usePage: () => ({
+        props: pageProps.value,
+    }),
     router: {
         post,
     },
@@ -39,6 +50,7 @@ vi.mock('../../resources/js/components/x-change/approvalOtpSubmitAdapter', () =>
 beforeEach(() => {
     post.mockClear();
     submitApprovalOtp.mockClear();
+    pageProps.value.errors = {};
 });
 
 describe('Claim approval page', () => {
@@ -282,5 +294,31 @@ describe('Claim approval page', () => {
             referenceId: 'TEST123-09173011987',
             provider: 'paynamics',
         });
+    });
+
+    it('renders server-side OTP validation error from Inertia errors', () => {
+        pageProps.value.errors = {
+            otp: 'Invalid OTP.',
+        };
+
+        const wrapper = mount(Approval, {
+            props: {
+                voucher: {
+                    code: 'TEST123',
+                },
+                approval: {
+                    required: true,
+                    provider: 'paynamics',
+                    authorization_type: 'otp',
+                    reference_id: 'TEST123-09173011987',
+                    otp_required: true,
+                    message: 'Paynamics payout OTP is pending.',
+                },
+                compiled_claim_result: null,
+                message: null,
+            },
+        });
+
+        expect(wrapper.find('[data-testid="approval-otp-error"]').text()).toBe('Invalid OTP.');
     });
 });

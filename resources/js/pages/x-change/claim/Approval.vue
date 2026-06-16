@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, usePage } from '@inertiajs/vue3';
 import { Card, CardContent } from '@/components/ui/card';
 import { Clock3 } from 'lucide-vue-next';
 import type { CompiledClaimResultPayload } from '@/components/x-change/successCompiledClaimResult';
@@ -34,6 +34,18 @@ const props = defineProps<{
     compiled_claim_result?: CompiledClaimResultPayload;
     message?: string | null;
 }>();
+
+const page = usePage<{
+    errors?: Record<string, string>;
+}>();
+
+const serverOtpError = computed(() => {
+    const error = page.props.errors?.otp;
+
+    return typeof error === 'string' && error.trim() !== ''
+        ? error
+        : null;
+});
 
 const emit = defineEmits<{
     'submit:otp': [payload: ApprovalOtpSubmissionPayload];
@@ -163,17 +175,18 @@ function submitOtp(): void {
                     <input
                         id="approval-otp"
                         v-model="otp"
+                        @input="otpError = null"
                         data-testid="approval-otp-input"
                         class="w-full rounded-md border bg-background px-3 py-2 text-sm"
                         placeholder="Enter OTP"
                     />
 
                     <p
-                        v-if="otpError"
+                        v-if="otpError || serverOtpError"
                         data-testid="approval-otp-error"
                         class="text-sm text-destructive"
                     >
-                        {{ otpError }}
+                        {{ otpError || serverOtpError }}
                     </p>
 
                     <button
