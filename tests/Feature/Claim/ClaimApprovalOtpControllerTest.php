@@ -326,3 +326,73 @@ it('replays claim after completed approval OTP submission', function () {
 
     expect(app(ClaimApprovalResumePayloadSession::class)->get($voucher))->toBeNull();
 });
+
+it('keeps approval metadata available after failed OTP verification', function () {
+    $this->withoutMiddleware();
+
+    $voucher = issueVoucher();
+
+    app(CompiledClaimResultSession::class)->put((object) [
+        'status' => 'approval_required',
+        'voucher_code' => (string) $voucher->code,
+        'messages' => ['Payout OTP approval required.'],
+        'meta' => [
+            'provider' => 'paynamics',
+            'authorization_type' => 'otp',
+            'reference_id' => 'AUTH-123',
+            'otp_required' => true,
+            'message' => 'Paynamics payout OTP is pending.',
+        ],
+    ]);
+
+    $this->app->bind(
+        \LBHurtado\XChange\Contracts\Claim\ClaimApprovalOtpAuthorizer::class,
+        fn () => new class implements \LBHurtado\XChange\Contracts\Claim\ClaimApprovalOtpAuthorizer {
+            public function authorize(\LBHurtado\Voucher\Models\Voucher $voucher, array $payload): array
+            {
+                return [
+                    'status' => 'failed',
+                    'voucher_code' => (string) $voucher->code,
+                    'messages' => ['Invalid OTP.'],
+                    'approval_metadata' => [
+                        'provider' => 'paynamics',
+                        'authorization_type' => 'otp',
+                        'reference_id' => $payload['reference_id'],
+                        'otp_required' => true,
+                        'message' => 'Paynamics payout OTP is pending.',
+                    ],
+                ];
+            }
+        }
+    );
+
+    $response = $this->from(route('x-change.claim.approval', [
+        'code' => $voucher->code,
+    ]))->post(route('x-change.claim.approval.otp', [
+        'code' => $voucher->code,
+    ]), [
+        'otp' => '000000',
+        'reference_id' => 'AUTH-123',
+        'provider' => 'paynamics',
+    ]);
+
+    $response
+        ->assertRedirect(route('x-change.claim.approval', [
+            'code' => $voucher->code,
+        ]))
+        ->assertSessionHasErrors(['otp']);
+
+    $compiled = session(CompiledClaimResultSession::KEY);
+
+    expect($compiled)->toMatchArray([
+        'status' => 'failed',
+        'voucher_code' => (string)$voucher->code,
+    ])
+        ->and($compiled['approval_metadata'])->toMatchArray([
+            'provider' => 'paynamics',
+            'authorization_type' => 'otp',
+            'reference_id' => 'AUTH-123',
+            'otp_required' => true,
+        ]);
+});
+
