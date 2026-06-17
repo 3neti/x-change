@@ -96,7 +96,7 @@ vi.mock('lucide-vue-next', () => ({
 }));
 
 describe('PayCodeIndexPage', () => {
-    it('renders the registry heading in red', () => {
+    it('renders the registry heading in black', () => {
         const wrapper = mount(IndexPage, {
             props: {
                 vouchers: [
@@ -111,7 +111,10 @@ describe('PayCodeIndexPage', () => {
         });
 
         expect(wrapper.text()).toContain('Pay Code Registry');
-        expect(wrapper.find('.text-red-600').text()).toBe('Pay Code Registry');
+        expect(wrapper.find('.text-black').text()).toBe('Pay Code Registry');
+        expect(
+            wrapper.find('div.flex.h-full.flex-1.flex-col.gap-6.overflow-x-auto.rounded-xl.p-4').exists(),
+        ).toBe(true);
     });
 
     it('filters vouchers by awaiting approval display status', async () => {

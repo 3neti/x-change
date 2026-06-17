@@ -268,7 +268,7 @@ onMounted(fetchVouchers);
 <template>
     <Head title="Pay Codes" />
 
-    <div class="space-y-6">
+    <div class="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
         <!-- Header -->
         <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
@@ -293,7 +293,7 @@ onMounted(fetchVouchers);
         <Card>
             <CardHeader class="space-y-4">
                 <div class="flex flex-col gap-1">
-                    <CardTitle class="text-base text-red-600">
+                    <CardTitle class="text-base text-black">
                         Pay Code Registry
                     </CardTitle>
                     <p class="text-sm text-muted-foreground">
