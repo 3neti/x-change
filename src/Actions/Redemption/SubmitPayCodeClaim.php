@@ -11,12 +11,20 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\ApprovalWorkflowContract;
 use LBHurtado\XChange\Contracts\ClaimApprovalInitiationContract;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
+use LBHurtado\XChange\Contracts\ProviderReadinessGuardContract;
+use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Contracts\SettlementExecutionContract;
+use LBHurtado\XChange\Contracts\UserResolverContract;
+use LBHurtado\XChange\Contracts\XChangeOnboardingGatewayContract;
 use LBHurtado\XChange\Data\Claims\ClaimApprovalInitiationResultData;
 use LBHurtado\XChange\Data\Redemption\RedeemPayCodeResultData;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
 use LBHurtado\XChange\Data\Settlement\SettlementExecutionResultData;
+use LBHurtado\XChange\Enums\ProviderProvisioningMode;
+use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
+use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
+use LBHurtado\XChange\Services\ResumeProviderProvisioningFromOnboarding;
 use LBHurtado\XChange\Services\WithdrawalDisbursementExecutor;
 use LBHurtado\XChange\Support\Claim\ClaimApprovalPendingOtpStore;
 use LBHurtado\XChange\Support\Claim\PendingPaynamicsOtpClaimResult;
@@ -34,6 +42,12 @@ class SubmitPayCodeClaim
         protected ?ClaimApprovalInitiationContract $approvalInitiation = null,
         protected ?PendingPaynamicsOtpClaimResult $pendingPaynamicsOtpResult = null,
         protected ?WithdrawalDisbursementExecutor $approvalReplayDisbursements = null,
+        protected ?ProviderReadinessGuardContract $readinessGuard = null,
+        protected ?ProviderRuntimeSettingsResolverContract $settings = null,
+        protected ?UserResolverContract $users = null,
+        protected ?XChangeOnboardingGatewayContract $onboarding = null,
+        protected ?BuildProvisioningFlowDescriptor $descriptors = null,
+        protected ?ResumeProviderProvisioningFromOnboarding $onboardingProvisioning = null,
     ) {}
 
     /**
@@ -41,6 +55,8 @@ class SubmitPayCodeClaim
      */
     public function handle(Voucher $voucher, array $payload): SubmitPayCodeClaimResultData|ClaimApprovalInitiationResultData
     {
+        $this->guardClaimantProvisioning($voucher, $payload);
+
         $executor = $this->factory->make($voucher, $payload);
 
         try {
@@ -205,6 +221,97 @@ class SubmitPayCodeClaim
         );
     }
 
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    protected function guardClaimantProvisioning(Voucher $voucher, array $payload): void
+    {
+        if (! $this->shouldGuardClaimantProvisioning()) {
+            return;
+        }
+
+        $provider = $this->settings()->provider(data_get($payload, 'provider'));
+
+        if (! $this->requiresClaimantProvisioning($voucher, $provider)) {
+            return;
+        }
+
+        $claimant = $this->users()->resolve($payload);
+        $mode = ProviderProvisioningMode::BankAccountLink->value;
+        $topology = $this->settings()->topology($provider);
+        $resume = null;
+
+        if ($claimant !== null) {
+            $resume = $this->onboardingProvisioning()->handle(
+                $this->onboardingReference($payload),
+                $claimant,
+                [
+                    'provider' => $provider,
+                    'mode' => $mode,
+                    'purpose' => 'BankOnboardingRequired',
+                    'status' => 'ready',
+                    'bank_code' => data_get($payload, 'bank_account.bank_code'),
+                    'account_number_masked' => $this->maskAccountNumber(data_get($payload, 'bank_account.account_number')),
+                ],
+            );
+
+            if ((bool) data_get($resume, 'ready') === true) {
+                $readiness = $this->readinessGuard()->evaluateClaimant($claimant, $provider, [
+                    'requires_bank_account' => true,
+                ]);
+
+                if ($readiness->ready) {
+                    return;
+                }
+            }
+
+            $readiness = $this->readinessGuard()->evaluateClaimant($claimant, $provider, [
+                'requires_bank_account' => true,
+            ]);
+
+            if ($readiness->ready) {
+                return;
+            }
+
+            throw new ProviderProvisioningRequired(
+                'Claim requires provider bank-account provisioning before payout can continue.',
+                $this->buildProvisioningContext(
+                    purpose: 'redeem_pay_code',
+                    provider: $provider,
+                    mode: $mode,
+                    topology: $topology,
+                    reason: $readiness->reason,
+                    missing: $readiness->missing,
+                    readiness: $readiness->toArray(),
+                    onboarding: data_get($resume, 'onboarding')
+                        ?? $this->startClaimOnboarding($payload, $provider, $mode),
+                ),
+            );
+        }
+
+        throw new ProviderProvisioningRequired(
+            'Claim requires claimant onboarding before provider bank-account provisioning can continue.',
+            $this->buildProvisioningContext(
+                purpose: 'redeem_pay_code',
+                provider: $provider,
+                mode: $mode,
+                topology: $topology,
+                reason: 'Claimant identity is not resolved.',
+                missing: ['claimant_identity', 'bank_account_link'],
+                readiness: [
+                    'status' => 'blocked',
+                    'provider' => $provider,
+                    'topology' => $topology,
+                    'mode' => $mode,
+                    'reason' => 'Claimant identity is not resolved.',
+                    'missing' => ['claimant_identity', 'bank_account_link'],
+                    'ready' => false,
+                ],
+                onboarding: $this->startClaimOnboarding($payload, $provider, $mode),
+            ),
+        );
+    }
+
     protected function approvalWorkflow(): ApprovalWorkflowContract
     {
         return $this->approvalWorkflow
@@ -221,6 +328,141 @@ class SubmitPayCodeClaim
     {
         return data_get($payload, 'approval.resume') === true
             || data_get($payload, 'otp.verified') === true;
+    }
+
+    protected function readinessGuard(): ProviderReadinessGuardContract
+    {
+        return $this->readinessGuard ??= app(ProviderReadinessGuardContract::class);
+    }
+
+    protected function settings(): ProviderRuntimeSettingsResolverContract
+    {
+        return $this->settings ??= app(ProviderRuntimeSettingsResolverContract::class);
+    }
+
+    protected function users(): UserResolverContract
+    {
+        return $this->users ??= app(UserResolverContract::class);
+    }
+
+    protected function onboarding(): XChangeOnboardingGatewayContract
+    {
+        return $this->onboarding ??= app(XChangeOnboardingGatewayContract::class);
+    }
+
+    protected function descriptors(): BuildProvisioningFlowDescriptor
+    {
+        return $this->descriptors ??= app(BuildProvisioningFlowDescriptor::class);
+    }
+
+    protected function onboardingProvisioning(): ResumeProviderProvisioningFromOnboarding
+    {
+        return $this->onboardingProvisioning ??= app(ResumeProviderProvisioningFromOnboarding::class);
+    }
+
+    protected function requiresClaimantProvisioning(Voucher $voucher, string $provider): bool
+    {
+        if ($provider !== 'netbank') {
+            return false;
+        }
+
+        return (bool) (
+            data_get($voucher->metadata, 'instructions.redemption_form.collect_bank_account')
+            ?? data_get($voucher->instructions?->toArray(), 'redemption_form.collect_bank_account', false)
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    protected function startClaimOnboarding(array $payload, string $provider, string $mode): array
+    {
+        return (array) $this->onboarding()->startRedemption([
+            ...$payload,
+            'provider' => $provider,
+            'mode' => $mode,
+            'purpose' => 'BankOnboardingRequired',
+            'disbursement' => [
+                'bank_onboarding' => 'required',
+            ],
+            'bank_code' => data_get($payload, 'bank_account.bank_code'),
+            'account_number' => data_get($payload, 'bank_account.account_number'),
+            'metadata' => [
+                'onboarding_reference' => $this->onboardingReference($payload),
+            ],
+        ]);
+    }
+
+    /**
+     * @param  array<int, string>  $missing
+     * @param  array<string, mixed>  $readiness
+     * @param  array<string, mixed>  $onboarding
+     * @return array<string, mixed>
+     */
+    protected function buildProvisioningContext(
+        string $purpose,
+        string $provider,
+        string $mode,
+        string $topology,
+        string $reason,
+        array $missing,
+        array $readiness,
+        array $onboarding,
+    ): array {
+        return [
+            'purpose' => $purpose,
+            'provider' => $provider,
+            'mode' => $mode,
+            'reason' => $reason,
+            'missing' => $missing,
+            'readiness' => $readiness,
+            'onboarding' => $onboarding,
+            'descriptor' => $this->descriptors()->handle($provider, $mode, $topology)->toArray(),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    protected function onboardingReference(array $payload): ?string
+    {
+        $reference = data_get($payload, 'onboarding.reference')
+            ?? data_get($payload, 'metadata.onboarding_reference')
+            ?? data_get($payload, '_meta.onboarding_reference');
+
+        if (! is_string($reference) || trim($reference) === '') {
+            return null;
+        }
+
+        return trim($reference);
+    }
+
+    protected function maskAccountNumber(mixed $value): ?string
+    {
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        $digits = trim($value);
+        $length = strlen($digits);
+
+        if ($length <= 4) {
+            return str_repeat('*', $length);
+        }
+
+        return str_repeat('*', $length - 4).substr($digits, -4);
+    }
+
+    protected function shouldGuardClaimantProvisioning(): bool
+    {
+        if ($this->readinessGuard !== null || $this->settings !== null || $this->users !== null) {
+            return true;
+        }
+
+        return app()->bound(ProviderReadinessGuardContract::class)
+            && app()->bound(ProviderRuntimeSettingsResolverContract::class)
+            && app()->bound(UserResolverContract::class);
     }
 
     /**

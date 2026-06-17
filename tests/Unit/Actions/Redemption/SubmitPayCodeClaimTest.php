@@ -9,14 +9,24 @@ use LBHurtado\XChange\Contracts\ApprovalWorkflowContract;
 use LBHurtado\XChange\Contracts\ClaimApprovalInitiationContract;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
 use LBHurtado\XChange\Contracts\ClaimExecutorContract;
+use LBHurtado\XChange\Contracts\ProviderReadinessGuardContract;
+use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Contracts\SettlementExecutionContract;
+use LBHurtado\XChange\Contracts\UserResolverContract;
+use LBHurtado\XChange\Contracts\XChangeOnboardingGatewayContract;
 use LBHurtado\XChange\Data\ApprovalWorkflowResultData;
 use LBHurtado\XChange\Data\Claims\ClaimApprovalInitiationResultData;
+use LBHurtado\XChange\Data\ProviderReadinessData;
+use LBHurtado\XChange\Data\ProvisioningFlowDescriptorData;
 use LBHurtado\XChange\Data\Redemption\RedeemPayCodeResultData;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
 use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
 use LBHurtado\XChange\Data\Settlement\SettlementExecutionResultData;
+use LBHurtado\XChange\Enums\ProviderProvisioningMode;
+use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Models\VoucherClaim;
+use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
+use LBHurtado\XChange\Services\ResumeProviderProvisioningFromOnboarding;
 
 it('submits a claim through the selected executor and normalizes redeem result', function () {
     $voucher = new Voucher;
@@ -258,6 +268,107 @@ it('submits settlement claims through the selected settlement executor and norma
     expect($result->settlement)->toMatchArray([
         'settlement_mode' => 'stub',
     ]);
+});
+
+it('throws provisioning required when claimant bank-account readiness is missing', function () {
+    $voucher = new Voucher;
+    $voucher->code = 'TEST-GUARD';
+    $voucher->metadata = [
+        'instructions' => validPayCodePayload(overrides: [
+            'redemption_form' => [
+                'collect_bank_account' => true,
+            ],
+        ]),
+    ];
+
+    $payload = [
+        'mobile' => '09171234567',
+        'inputs' => [],
+        'bank_account' => [
+            'bank_code' => 'GXCHPHM2XXX',
+            'account_number' => '09171234567',
+        ],
+    ];
+
+    $factory = Mockery::mock(ClaimExecutionFactoryContract::class);
+    $factory->shouldNotReceive('make');
+
+    $recorder = Mockery::mock(RecordVoucherClaim::class);
+    $recorder->shouldNotReceive('handle');
+
+    $claimant = (object) [
+        'id' => 99,
+        'mobile' => '09171234567',
+    ];
+
+    $users = Mockery::mock(UserResolverContract::class);
+    $users->shouldReceive('resolve')
+        ->once()
+        ->with($payload)
+        ->andReturn($claimant);
+
+    $settings = Mockery::mock(ProviderRuntimeSettingsResolverContract::class);
+    $settings->shouldReceive('provider')->once()->with(null)->andReturn('netbank');
+    $settings->shouldReceive('topology')->once()->with('netbank')->andReturn('ledger_pooled');
+
+    $readinessGuard = Mockery::mock(ProviderReadinessGuardContract::class);
+    $readinessGuard->shouldReceive('evaluateClaimant')
+        ->once()
+        ->with($claimant, 'netbank', ['requires_bank_account' => true])
+        ->andReturn(ProviderReadinessData::blocked(
+            provider: 'netbank',
+            topology: 'ledger_pooled',
+            mode: ProviderProvisioningMode::BankAccountLink->value,
+            reason: 'Claimant bank-account readiness is required.',
+            missing: ['bank_account_link'],
+        ));
+
+    $onboarding = Mockery::mock(XChangeOnboardingGatewayContract::class);
+    $onboarding->shouldReceive('startRedemption')
+        ->once()
+        ->andReturn([
+            'available' => false,
+            'status' => 'unavailable',
+            'purpose' => 'BankOnboardingRequired',
+        ]);
+
+    $descriptors = Mockery::mock(BuildProvisioningFlowDescriptor::class);
+    $descriptors->shouldReceive('handle')
+        ->once()
+        ->with('netbank', ProviderProvisioningMode::BankAccountLink->value, 'ledger_pooled')
+        ->andReturn(new ProvisioningFlowDescriptorData(
+            provider: 'netbank',
+            topology: 'ledger_pooled',
+            mode: ProviderProvisioningMode::BankAccountLink->value,
+            title: 'Add payout destination',
+            description: 'Link a destination bank account before redeeming.',
+            steps: ['bank_account', 'consent', 'ready'],
+        ));
+
+    $resume = Mockery::mock(ResumeProviderProvisioningFromOnboarding::class);
+    $resume->shouldReceive('handle')
+        ->once()
+        ->with(null, $claimant, Mockery::subset([
+            'provider' => 'netbank',
+            'mode' => ProviderProvisioningMode::BankAccountLink->value,
+            'purpose' => 'BankOnboardingRequired',
+            'status' => 'ready',
+        ]))
+        ->andReturn(null);
+
+    $action = new SubmitPayCodeClaim(
+        $factory,
+        $recorder,
+        users: $users,
+        readinessGuard: $readinessGuard,
+        settings: $settings,
+        onboarding: $onboarding,
+        descriptors: $descriptors,
+        onboardingProvisioning: $resume,
+    );
+
+    expect(fn () => $action->handle($voucher, $payload))
+        ->toThrow(ProviderProvisioningRequired::class, 'Claim requires provider bank-account provisioning before payout can continue.');
 });
 
 it('initiates approval workflow when withdrawal result requires approval', function () {

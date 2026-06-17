@@ -101,6 +101,7 @@ use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Exceptions\PayCodeWalletNotResolved;
+use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Exceptions\VoucherCannotCollect;
 use LBHurtado\XChange\Exceptions\VoucherCannotDisburse;
 use LBHurtado\XChange\Exceptions\VoucherCollectionConflict;
@@ -889,6 +890,21 @@ class XChangeServiceProvider extends ServiceProvider
                 'PAY_CODE_ISSUANCE_FAILED',
                 [],
                 500,
+            );
+        });
+
+        $exceptions->renderable(function (ProviderProvisioningRequired $e, Request $request) {
+            if (! $request->expectsJson()) {
+                return null;
+            }
+
+            return $this->apiResponses()->error(
+                $e->getMessage(),
+                'PROVIDER_PROVISIONING_REQUIRED',
+                [
+                    'provisioning' => $e->provisioning,
+                ],
+                409,
             );
         });
 

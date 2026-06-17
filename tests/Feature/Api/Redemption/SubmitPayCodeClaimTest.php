@@ -3,16 +3,9 @@
 declare(strict_types=1);
 
 use LBHurtado\Voucher\Models\Voucher;
-use LBHurtado\XChange\Actions\Redemption\RecordVoucherClaim;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
-use LBHurtado\XChange\Contracts\ApprovalWorkflowContract;
-use LBHurtado\XChange\Contracts\ClaimApprovalInitiationContract;
-use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
-use LBHurtado\XChange\Contracts\ClaimExecutorContract;
-use LBHurtado\XChange\Data\ApprovalWorkflowResultData;
-use LBHurtado\XChange\Data\Claims\ClaimApprovalInitiationResultData;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
-use LBHurtado\XChange\Data\Redemption\WithdrawPayCodeResultData;
+use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 
 it('submits claim through redeem path via api', function () {
     $voucher = issueVoucher(validVoucherInstructions());
@@ -191,5 +184,58 @@ it('validates required claim submit payload fields', function () {
         ->assertJson([
             'success' => false,
             'code' => 'VALIDATION_ERROR',
+        ]);
+});
+
+it('returns provisioning-required payload when claim payout setup is missing', function () {
+    $voucher = issueVoucher(validVoucherInstructions());
+
+    $payload = [
+        'mobile' => '09171234567',
+        'inputs' => [],
+        'bank_account' => [
+            'bank_code' => 'GXCHPHM2XXX',
+            'account_number' => '09171234567',
+        ],
+    ];
+
+    $action = Mockery::mock(SubmitPayCodeClaim::class);
+    $action->shouldReceive('handle')
+        ->once()
+        ->andThrow(new ProviderProvisioningRequired(
+            'Claim requires provider bank-account provisioning before payout can continue.',
+            [
+                'provider' => 'netbank',
+                'mode' => 'bank_account_link',
+                'descriptor' => [
+                    'title' => 'Add payout destination',
+                    'steps' => ['bank_account', 'consent', 'ready'],
+                ],
+            ],
+        ));
+
+    $this->app->instance(SubmitPayCodeClaim::class, $action);
+
+    $response = $this->postJson(
+        xchangeApi('pay-codes/'.$voucher->code.'/claim/submit'),
+        $payload,
+    );
+
+    $response
+        ->assertStatus(409)
+        ->assertJson([
+            'success' => false,
+            'code' => 'PROVIDER_PROVISIONING_REQUIRED',
+            'message' => 'Claim requires provider bank-account provisioning before payout can continue.',
+            'errors' => [
+                'provisioning' => [
+                    'provider' => 'netbank',
+                    'mode' => 'bank_account_link',
+                    'descriptor' => [
+                        'title' => 'Add payout destination',
+                        'steps' => ['bank_account', 'consent', 'ready'],
+                    ],
+                ],
+            ],
         ]);
 });
