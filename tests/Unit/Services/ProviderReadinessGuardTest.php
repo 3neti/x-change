@@ -64,7 +64,8 @@ it('allows claim readiness when required bank account link is ready', function (
     app(ProviderProvisioningManagerContract::class)->startOrResume($owner, [
         'provider' => 'netbank',
         'mode' => ProviderProvisioningMode::BankAccountLink->value,
-        'status' => 'ready',
+        'bank_code' => 'GXCHPHM2XXX',
+        'account_number_masked' => '*******1987',
     ]);
 
     $readiness = app(ProviderReadinessGuardContract::class)

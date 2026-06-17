@@ -447,7 +447,8 @@ final class TurnkeyOnboardingScenarioRunner implements ScenarioRunnerContract
             'provider' => 'netbank',
             'mode' => ProviderProvisioningMode::BankAccountLink->value,
             'purpose' => 'BankOnboardingRequired',
-            'status' => 'ready',
+            'bank_code' => data_get($context->scenario, 'turnkey.bank_code', 'GXCHPHM2XXX'),
+            'account_number_masked' => data_get($context->scenario, 'turnkey.account_number_masked', '*******1987'),
         ]);
 
         $readiness = $this->readinessGuard->evaluateClaimant($owner, 'netbank', [
