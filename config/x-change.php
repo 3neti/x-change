@@ -11,6 +11,11 @@ use LBHurtado\XChange\Contracts\IssuerOnboardingContract;
 use LBHurtado\XChange\Contracts\IssuerResolverContract;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
+use LBHurtado\XChange\Contracts\ProviderAccountLinkRepositoryContract;
+use LBHurtado\XChange\Contracts\ProviderProvisioningGatewayContract;
+use LBHurtado\XChange\Contracts\ProviderProvisioningManagerContract;
+use LBHurtado\XChange\Contracts\ProviderReadinessGuardContract;
+use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Contracts\SystemWalletResolverContract;
 use LBHurtado\XChange\Contracts\TerminologyServiceContract;
 use LBHurtado\XChange\Contracts\UserResolverContract;
@@ -20,11 +25,13 @@ use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Contracts\WalletProvisioningContract;
 use LBHurtado\XChange\Contracts\XChangeOnboardingGatewayContract;
 use LBHurtado\XChange\Contracts\XChangeProviderTopologyResolverContract;
+use LBHurtado\XChange\Repositories\EloquentProviderAccountLinkRepository;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\ApprovalHandlers\ManualApprovalRequirementHandler;
 use LBHurtado\XChange\Services\ApprovalHandlers\OtpApprovalRequirementHandler;
 use LBHurtado\XChange\Services\Base64PngVoucherPaymentQrRenderer;
 use LBHurtado\XChange\Services\CacheIdempotencyStore;
+use LBHurtado\XChange\Services\ConfigProviderRuntimeSettingsResolver;
 use LBHurtado\XChange\Services\ConfigProviderTopologyResolver;
 use LBHurtado\XChange\Services\ContextUserResolver;
 use LBHurtado\XChange\Services\DefaultClaimExecutionFactory;
@@ -33,6 +40,8 @@ use LBHurtado\XChange\Services\DefaultDisbursementReconciliationStore;
 use LBHurtado\XChange\Services\DefaultDisbursementStatusFetcherService;
 use LBHurtado\XChange\Services\DefaultDisbursementStatusResolverService;
 use LBHurtado\XChange\Services\DefaultIssuerOnboardingService;
+use LBHurtado\XChange\Services\DefaultProviderProvisioningManager;
+use LBHurtado\XChange\Services\DefaultProviderReadinessGuard;
 use LBHurtado\XChange\Services\DefaultRedemptionCompletionContextService;
 use LBHurtado\XChange\Services\DefaultRedemptionContextResolverService;
 use LBHurtado\XChange\Services\DefaultRedemptionExecutionService;
@@ -55,6 +64,7 @@ use LBHurtado\XChange\Services\PayCodeIssuanceService;
 use LBHurtado\XChange\Services\PaynamicsWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\PricingService;
 use LBHurtado\XChange\Services\ProviderCustomerWalletTopology;
+use LBHurtado\XChange\Services\Provisioning\FakeProviderProvisioningGateway;
 use LBHurtado\XChange\Services\SessionCompletionStore;
 use LBHurtado\XChange\Services\SystemWalletProxy;
 use LBHurtado\XChange\Services\TerminologyService;
@@ -169,6 +179,11 @@ return [
         'issuer_onboarding' => DefaultIssuerOnboardingService::class,
         'onboarding_gateway' => DefaultXChangeOnboardingGateway::class,
         'provider_topology_resolver' => ConfigProviderTopologyResolver::class,
+        'provider_runtime_settings' => ConfigProviderRuntimeSettingsResolver::class,
+        'provider_account_links' => EloquentProviderAccountLinkRepository::class,
+        'provider_provisioning_gateway' => FakeProviderProvisioningGateway::class,
+        'provider_provisioning_manager' => DefaultProviderProvisioningManager::class,
+        'provider_readiness_guard' => DefaultProviderReadinessGuard::class,
         'wallet_provisioning' => DefaultWalletProvisioningService::class,
         'issuer_resolver' => DefaultIssuerResolver::class,
         'redemption_flow_preparation' => DefaultRedemptionFlowPreparationService::class,
@@ -200,6 +215,11 @@ return [
         IssuerOnboardingContract::class => 'issuer_onboarding',
         XChangeOnboardingGatewayContract::class => 'onboarding_gateway',
         XChangeProviderTopologyResolverContract::class => 'provider_topology_resolver',
+        ProviderRuntimeSettingsResolverContract::class => 'provider_runtime_settings',
+        ProviderAccountLinkRepositoryContract::class => 'provider_account_links',
+        ProviderProvisioningGatewayContract::class => 'provider_provisioning_gateway',
+        ProviderProvisioningManagerContract::class => 'provider_provisioning_manager',
+        ProviderReadinessGuardContract::class => 'provider_readiness_guard',
         WalletProvisioningContract::class => 'wallet_provisioning',
         IssuerResolverContract::class => 'issuer_resolver',
     ],
@@ -256,6 +276,30 @@ return [
             'manual' => ManualProviderTopology::class,
             'ledger_pooled' => LedgerPooledProviderTopology::class,
             'provider_customer_wallet' => ProviderCustomerWalletTopology::class,
+        ],
+    ],
+
+    'provider_runtime' => [
+        'default_provider' => env('XCHANGE_PROVIDER', env('XCHANGE_PROVIDER_TOPOLOGY', 'manual')),
+
+        'providers' => [
+            'manual' => [
+                'enabled' => env('XCHANGE_PROVIDER_MANUAL_ENABLED', true),
+            ],
+            'netbank' => [
+                'enabled' => env('XCHANGE_PROVIDER_NETBANK_ENABLED', true),
+            ],
+            'paynamics' => [
+                'enabled' => env('XCHANGE_PROVIDER_PAYNAMICS_ENABLED', true),
+            ],
+        ],
+
+        'lifecycle' => [
+            'allow_live_provider_scenarios' => env('XCHANGE_LIFECYCLE_ALLOW_LIVE_PROVIDER_SCENARIOS', false),
+        ],
+
+        'settlement' => [
+            'default_rail' => env('XCHANGE_DEFAULT_SETTLEMENT_RAIL', 'INSTAPAY'),
         ],
     ],
 
@@ -324,6 +368,14 @@ return [
                 'scenarios' => [
                     'turnkey_mobile_boot',
                     'turnkey_bank_onboarding_required',
+                    'turnkey_provider_link_ready',
+                    'turnkey_provider_link_pending_blocks',
+                    'turnkey_netbank_bank_account_ready',
+                    'turnkey_paynamics_wallet_fake_provisioned',
+                    'turnkey_issuer_blocks_missing_provider_wallet',
+                    'turnkey_issuer_allows_ready_provider_wallet',
+                    'turnkey_claim_blocks_missing_bank_account',
+                    'turnkey_claim_resumes_after_provider_account_ready',
                     'turnkey_basic_cash_mobile',
                 ],
             ],

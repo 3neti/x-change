@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Schema;
+use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Contracts\XChangeProviderTopologyResolverContract;
 use Throwable;
 
@@ -16,8 +17,10 @@ class DoctorXChangeCommand extends Command
 
     protected $description = 'Inspect X-Change turnkey installation readiness.';
 
-    public function handle(XChangeProviderTopologyResolverContract $topologies): int
-    {
+    public function handle(
+        XChangeProviderTopologyResolverContract $topologies,
+        ProviderRuntimeSettingsResolverContract $settings,
+    ): int {
         $checks = [
             $this->check('x-change config', config('x-change') !== [], 'config(x-change) is loaded'),
             $this->check('onboarding package', class_exists('LBHurtado\\Onboarding\\OnboardingServiceProvider'), '3neti/onboarding is installed'),
@@ -28,6 +31,7 @@ class DoctorXChangeCommand extends Command
             $this->check('users.identity_level column', $this->hasColumn('users', 'identity_level'), 'users.identity_level exists'),
             $this->check('Fortify mobile username', config('fortify.username') === 'mobile', 'fortify.username is mobile'),
             $this->providerTopologyCheck($topologies),
+            $this->providerRuntimeSettingsCheck($settings),
         ];
 
         if ($this->option('json')) {
@@ -71,6 +75,25 @@ class DoctorXChangeCommand extends Command
             ]);
         } catch (Throwable $e) {
             return $this->check('provider topology', false, $e->getMessage());
+        }
+    }
+
+    /**
+     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
+     */
+    protected function providerRuntimeSettingsCheck(ProviderRuntimeSettingsResolverContract $settings): array
+    {
+        try {
+            $provider = $settings->provider();
+
+            return $this->check('provider runtime settings', true, 'provider runtime settings resolve', [
+                'provider' => $provider,
+                'topology' => $settings->topology($provider),
+                'enabled' => $settings->isEnabled($provider),
+                'allows_live_provider_scenarios' => $settings->allowsLiveProviderScenarios(),
+            ]);
+        } catch (Throwable $e) {
+            return $this->check('provider runtime settings', false, $e->getMessage());
         }
     }
 
