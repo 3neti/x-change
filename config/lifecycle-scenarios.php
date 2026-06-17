@@ -83,6 +83,135 @@ return [
             ],
         ],
 
+        'turnkey_provider_link_ready' => [
+            'label' => 'Turnkey Provider Link Ready',
+            'description' => 'Verifies provider account links can transition to ready without live provider calls.',
+            'category' => 'smoke',
+            'tags' => ['turnkey', 'onboarding', 'provider'],
+            'mode' => 'turnkey_onboarding',
+            'mobile' => env('XCHANGE_LIFECYCLE_TURNKEY_MOBILE', env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987')),
+            'turnkey' => [
+                'provider' => env('XCHANGE_PROVIDER', 'manual'),
+                'provider_topology' => env('XCHANGE_PROVIDER_TOPOLOGY', 'manual'),
+                'provisioning_mode' => 'ledger_wallet',
+                'checks' => [
+                    'provider_runtime_settings',
+                    'provider_link_ready',
+                ],
+            ],
+        ],
+
+        'turnkey_provider_link_pending_blocks' => [
+            'label' => 'Turnkey Provider Link Pending Blocks',
+            'description' => 'Verifies pending provider account links do not satisfy readiness.',
+            'category' => 'smoke',
+            'tags' => ['turnkey', 'onboarding', 'provider'],
+            'mode' => 'turnkey_onboarding',
+            'mobile' => env('XCHANGE_LIFECYCLE_TURNKEY_MOBILE', env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987')),
+            'turnkey' => [
+                'provider' => env('XCHANGE_PROVIDER', 'manual'),
+                'provider_topology' => env('XCHANGE_PROVIDER_TOPOLOGY', 'manual'),
+                'provisioning_mode' => 'ledger_wallet',
+                'checks' => [
+                    'provider_link_pending_blocks',
+                ],
+            ],
+        ],
+
+        'turnkey_netbank_bank_account_ready' => [
+            'label' => 'Turnkey NetBank Bank Account Ready',
+            'description' => 'Verifies NetBank pooled-ledger bank-account readiness through fake provisioning.',
+            'category' => 'smoke',
+            'tags' => ['turnkey', 'onboarding', 'netbank'],
+            'mode' => 'turnkey_onboarding',
+            'mobile' => env('XCHANGE_LIFECYCLE_TURNKEY_MOBILE', env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987')),
+            'turnkey' => [
+                'provider' => 'netbank',
+                'provider_topology' => 'netbank',
+                'checks' => [
+                    'provider_runtime_settings',
+                    'netbank_bank_account_ready',
+                ],
+            ],
+        ],
+
+        'turnkey_paynamics_wallet_fake_provisioned' => [
+            'label' => 'Turnkey Paynamics Wallet Fake Provisioned',
+            'description' => 'Verifies Paynamics customer-wallet provisioning response mapping without live provider calls.',
+            'category' => 'smoke',
+            'tags' => ['turnkey', 'onboarding', 'paynamics'],
+            'mode' => 'turnkey_onboarding',
+            'mobile' => env('XCHANGE_LIFECYCLE_TURNKEY_MOBILE', env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987')),
+            'turnkey' => [
+                'provider' => 'paynamics',
+                'provider_topology' => 'paynamics',
+                'checks' => [
+                    'provider_runtime_settings',
+                    'paynamics_wallet_fake_provisioned',
+                ],
+            ],
+        ],
+
+        'turnkey_issuer_blocks_missing_provider_wallet' => [
+            'label' => 'Turnkey Issuer Blocks Missing Provider Wallet',
+            'description' => 'Verifies Paynamics issuer readiness blocks when no provider customer wallet link is ready.',
+            'category' => 'smoke',
+            'tags' => ['turnkey', 'onboarding', 'provider', 'guard'],
+            'mode' => 'turnkey_onboarding',
+            'mobile' => env('XCHANGE_LIFECYCLE_TURNKEY_MOBILE', env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987')),
+            'turnkey' => [
+                'provider' => 'paynamics',
+                'checks' => [
+                    'issuer_missing_provider_wallet_blocks',
+                ],
+            ],
+        ],
+
+        'turnkey_issuer_allows_ready_provider_wallet' => [
+            'label' => 'Turnkey Issuer Allows Ready Provider Wallet',
+            'description' => 'Verifies Paynamics issuer readiness passes when provider customer wallet link is ready.',
+            'category' => 'smoke',
+            'tags' => ['turnkey', 'onboarding', 'provider', 'guard'],
+            'mode' => 'turnkey_onboarding',
+            'mobile' => env('XCHANGE_LIFECYCLE_TURNKEY_MOBILE', env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987')),
+            'turnkey' => [
+                'provider' => 'paynamics',
+                'checks' => [
+                    'issuer_ready_provider_wallet_allows',
+                ],
+            ],
+        ],
+
+        'turnkey_claim_blocks_missing_bank_account' => [
+            'label' => 'Turnkey Claim Blocks Missing Bank Account',
+            'description' => 'Verifies claim readiness blocks when bank-account readiness is required but missing.',
+            'category' => 'smoke',
+            'tags' => ['turnkey', 'onboarding', 'provider', 'guard'],
+            'mode' => 'turnkey_onboarding',
+            'mobile' => env('XCHANGE_LIFECYCLE_TURNKEY_MOBILE', env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987')),
+            'turnkey' => [
+                'provider' => 'netbank',
+                'checks' => [
+                    'claim_missing_bank_account_blocks',
+                ],
+            ],
+        ],
+
+        'turnkey_claim_resumes_after_provider_account_ready' => [
+            'label' => 'Turnkey Claim Resumes After Provider Account Ready',
+            'description' => 'Verifies claim readiness passes when required bank-account link is ready.',
+            'category' => 'smoke',
+            'tags' => ['turnkey', 'onboarding', 'provider', 'guard'],
+            'mode' => 'turnkey_onboarding',
+            'mobile' => env('XCHANGE_LIFECYCLE_TURNKEY_MOBILE', env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987')),
+            'turnkey' => [
+                'provider' => 'netbank',
+                'checks' => [
+                    'claim_ready_provider_account_allows',
+                ],
+            ],
+        ],
+
         'turnkey_basic_cash_mobile' => [
             'label' => 'Turnkey Basic Cash Mobile',
             'description' => 'Issues and claims a basic cash Pay Code through the mobile-first lifecycle path.',

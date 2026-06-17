@@ -5,9 +5,17 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Lifecycle\Runners;
 
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
+use LBHurtado\XChange\Contracts\ProviderAccountLinkRepositoryContract;
+use LBHurtado\XChange\Contracts\ProviderProvisioningManagerContract;
+use LBHurtado\XChange\Contracts\ProviderReadinessGuardContract;
+use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Contracts\XChangeOnboardingGatewayContract;
 use LBHurtado\XChange\Contracts\XChangeProviderTopologyResolverContract;
+use LBHurtado\XChange\Enums\ProviderProvisioningMode;
 use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleUserSummary;
 use Throwable;
 
@@ -16,6 +24,10 @@ final class TurnkeyOnboardingScenarioRunner implements ScenarioRunnerContract
     public function __construct(
         private readonly XChangeOnboardingGatewayContract $onboarding,
         private readonly XChangeProviderTopologyResolverContract $topologies,
+        private readonly ProviderRuntimeSettingsResolverContract $settings,
+        private readonly ProviderProvisioningManagerContract $provisioning,
+        private readonly ProviderAccountLinkRepositoryContract $links,
+        private readonly ProviderReadinessGuardContract $readinessGuard,
     ) {}
 
     public function run(ScenarioRunContext $context): ScenarioRunResult
@@ -92,8 +104,17 @@ final class TurnkeyOnboardingScenarioRunner implements ScenarioRunnerContract
             'fortify_mobile_username' => $this->fortifyMobileUsernameCheck(),
             'user_mobile' => $this->userMobileCheck($context),
             'provider_topology' => $this->providerTopologyCheck($context),
+            'provider_runtime_settings' => $this->providerRuntimeSettingsCheck($context),
             'issuer_onboarding' => $this->issuerOnboardingCheck($context),
             'bank_onboarding_required' => $this->bankOnboardingRequiredCheck($context),
+            'provider_link_ready' => $this->providerLinkReadyCheck($context),
+            'provider_link_pending_blocks' => $this->providerLinkPendingBlocksCheck($context),
+            'netbank_bank_account_ready' => $this->netbankBankAccountReadyCheck($context),
+            'paynamics_wallet_fake_provisioned' => $this->paynamicsWalletFakeProvisionedCheck($context),
+            'issuer_missing_provider_wallet_blocks' => $this->issuerMissingProviderWalletBlocksCheck($context),
+            'issuer_ready_provider_wallet_allows' => $this->issuerReadyProviderWalletAllowsCheck($context),
+            'claim_missing_bank_account_blocks' => $this->claimMissingBankAccountBlocksCheck($context),
+            'claim_ready_provider_account_allows' => $this->claimReadyProviderAccountAllowsCheck($context),
             default => [
                 'passed' => false,
                 'message' => "Unknown turnkey onboarding check [{$name}].",
@@ -185,6 +206,36 @@ final class TurnkeyOnboardingScenarioRunner implements ScenarioRunnerContract
     /**
      * @return array{passed: bool, message: string, actual: mixed}
      */
+    private function providerRuntimeSettingsCheck(ScenarioRunContext $context): array
+    {
+        try {
+            $provider = $this->settings->provider(data_get($context->scenario, 'turnkey.provider'));
+            $topology = $this->settings->topology($provider);
+
+            return [
+                'passed' => $provider !== '' && $topology !== '',
+                'message' => "Provider runtime settings resolved [{$provider}:{$topology}].",
+                'actual' => [
+                    'provider' => $provider,
+                    'topology' => $topology,
+                    'enabled' => $this->settings->isEnabled($provider),
+                    'allows_live_provider_scenarios' => $this->settings->allowsLiveProviderScenarios(),
+                ],
+            ];
+        } catch (Throwable $e) {
+            return [
+                'passed' => false,
+                'message' => $e->getMessage(),
+                'actual' => [
+                    'error' => $e::class,
+                ],
+            ];
+        }
+    }
+
+    /**
+     * @return array{passed: bool, message: string, actual: mixed}
+     */
     private function issuerOnboardingCheck(ScenarioRunContext $context): array
     {
         $result = $this->onboarding->startIssuer([
@@ -227,6 +278,189 @@ final class TurnkeyOnboardingScenarioRunner implements ScenarioRunnerContract
         ];
     }
 
+    /**
+     * @return array{passed: bool, message: string, actual: mixed}
+     */
+    private function providerLinkReadyCheck(ScenarioRunContext $context): array
+    {
+        $provider = (string) data_get($context->scenario, 'turnkey.provider', 'manual');
+        $mode = (string) data_get($context->scenario, 'turnkey.provisioning_mode', ProviderProvisioningMode::LedgerWallet->value);
+
+        $result = $this->provisioning->startOrResume($context->issuer, [
+            'provider' => $provider,
+            'mode' => $mode,
+            'purpose' => data_get($context->scenario, 'turnkey.purpose', 'IssuePayCode'),
+            'status' => 'ready',
+        ]);
+
+        $link = $this->links->findReadyForOwner($context->issuer, $provider, $mode);
+
+        return [
+            'passed' => $link !== null && (bool) data_get($result, 'ready') === true,
+            'message' => $link !== null
+                ? 'Provider account link is ready.'
+                : 'Provider account link is not ready.',
+            'actual' => [
+                'result' => $this->withoutMetadata($result),
+                'link_id' => $link?->getKey(),
+            ],
+        ];
+    }
+
+    /**
+     * @return array{passed: bool, message: string, actual: mixed}
+     */
+    private function providerLinkPendingBlocksCheck(ScenarioRunContext $context): array
+    {
+        $provider = (string) data_get($context->scenario, 'turnkey.provider', 'manual');
+        $mode = (string) data_get($context->scenario, 'turnkey.provisioning_mode', ProviderProvisioningMode::LedgerWallet->value);
+
+        $this->provisioning->startOrResume($context->issuer, [
+            'provider' => $provider,
+            'mode' => $mode,
+            'purpose' => data_get($context->scenario, 'turnkey.purpose', 'IssuePayCode'),
+            'status' => 'pending',
+        ]);
+
+        $readyLink = $this->links->findReadyForOwner($context->issuer, $provider, $mode);
+        $latestLink = $this->links->findLatestForOwner($context->issuer, $provider, $mode);
+
+        return [
+            'passed' => $readyLink === null && $latestLink?->status === 'pending',
+            'message' => $readyLink === null
+                ? 'Pending provider account link blocks readiness.'
+                : 'Pending provider account link unexpectedly resolved as ready.',
+            'actual' => [
+                'latest_status' => $latestLink?->status,
+                'ready_link_id' => $readyLink?->getKey(),
+            ],
+        ];
+    }
+
+    /**
+     * @return array{passed: bool, message: string, actual: mixed}
+     */
+    private function netbankBankAccountReadyCheck(ScenarioRunContext $context): array
+    {
+        $result = $this->provisioning->startOrResume($context->issuer, [
+            'provider' => 'netbank',
+            'mode' => ProviderProvisioningMode::BankAccountLink->value,
+            'purpose' => 'BankOnboardingRequired',
+            'bank_code' => data_get($context->scenario, 'turnkey.bank_code', 'GXCHPHM2XXX'),
+            'account_number_masked' => data_get($context->scenario, 'turnkey.account_number_masked', '*******1987'),
+            'status' => 'ready',
+        ]);
+
+        return [
+            'passed' => (bool) data_get($result, 'ready') === true
+                && data_get($result, 'provider') === 'netbank'
+                && data_get($result, 'mode') === ProviderProvisioningMode::BankAccountLink->value,
+            'message' => 'NetBank bank-account readiness resolved through provider provisioning.',
+            'actual' => $this->withoutMetadata($result),
+        ];
+    }
+
+    /**
+     * @return array{passed: bool, message: string, actual: mixed}
+     */
+    private function paynamicsWalletFakeProvisionedCheck(ScenarioRunContext $context): array
+    {
+        $result = $this->provisioning->startOrResume($context->issuer, [
+            'provider' => 'paynamics',
+            'mode' => ProviderProvisioningMode::WalletCreate->value,
+            'purpose' => 'IssuePayCode',
+            'status' => 'ready',
+        ]);
+
+        return [
+            'passed' => (bool) data_get($result, 'ready') === true
+                && data_get($result, 'provider') === 'paynamics'
+                && filled(data_get($result, 'link.provider_wallet_id')),
+            'message' => 'Paynamics wallet provisioning mapped to a ready provider account link.',
+            'actual' => $this->withoutMetadata($result),
+        ];
+    }
+
+    /**
+     * @return array{passed: bool, message: string, actual: mixed}
+     */
+    private function issuerMissingProviderWalletBlocksCheck(ScenarioRunContext $context): array
+    {
+        $owner = $this->freshLifecycleOwner($context, 'missing-wallet');
+        $readiness = $this->readinessGuard->evaluateIssuer($owner, 'paynamics');
+
+        return [
+            'passed' => ! $readiness->ready && in_array('provider_customer_wallet', $readiness->missing, true),
+            'message' => 'Issuer is blocked when Paynamics provider wallet is missing.',
+            'actual' => $readiness->toArray(),
+        ];
+    }
+
+    /**
+     * @return array{passed: bool, message: string, actual: mixed}
+     */
+    private function issuerReadyProviderWalletAllowsCheck(ScenarioRunContext $context): array
+    {
+        $owner = $this->freshLifecycleOwner($context, 'ready-wallet');
+
+        $this->provisioning->startOrResume($owner, [
+            'provider' => 'paynamics',
+            'mode' => ProviderProvisioningMode::WalletCreate->value,
+            'purpose' => 'IssuePayCode',
+            'status' => 'ready',
+        ]);
+
+        $readiness = $this->readinessGuard->evaluateIssuer($owner, 'paynamics');
+
+        return [
+            'passed' => $readiness->ready,
+            'message' => 'Issuer is allowed when Paynamics provider wallet is ready.',
+            'actual' => $readiness->toArray(),
+        ];
+    }
+
+    /**
+     * @return array{passed: bool, message: string, actual: mixed}
+     */
+    private function claimMissingBankAccountBlocksCheck(ScenarioRunContext $context): array
+    {
+        $owner = $this->freshLifecycleOwner($context, 'missing-bank');
+        $readiness = $this->readinessGuard->evaluateClaimant($owner, 'netbank', [
+            'requires_bank_account' => true,
+        ]);
+
+        return [
+            'passed' => ! $readiness->ready && in_array('bank_account_link', $readiness->missing, true),
+            'message' => 'Claim is blocked when bank-account readiness is missing.',
+            'actual' => $readiness->toArray(),
+        ];
+    }
+
+    /**
+     * @return array{passed: bool, message: string, actual: mixed}
+     */
+    private function claimReadyProviderAccountAllowsCheck(ScenarioRunContext $context): array
+    {
+        $owner = $this->freshLifecycleOwner($context, 'ready-bank');
+
+        $this->provisioning->startOrResume($owner, [
+            'provider' => 'netbank',
+            'mode' => ProviderProvisioningMode::BankAccountLink->value,
+            'purpose' => 'BankOnboardingRequired',
+            'status' => 'ready',
+        ]);
+
+        $readiness = $this->readinessGuard->evaluateClaimant($owner, 'netbank', [
+            'requires_bank_account' => true,
+        ]);
+
+        return [
+            'passed' => $readiness->ready,
+            'message' => 'Claim is allowed when provider bank-account readiness is ready.',
+            'actual' => $readiness->toArray(),
+        ];
+    }
+
     private function normalizeResult(mixed $result): mixed
     {
         if (is_object($result) && method_exists($result, 'toArray')) {
@@ -234,5 +468,37 @@ final class TurnkeyOnboardingScenarioRunner implements ScenarioRunnerContract
         }
 
         return $result;
+    }
+
+    /**
+     * @param  array<string, mixed>  $result
+     * @return array<string, mixed>
+     */
+    private function withoutMetadata(array $result): array
+    {
+        if (isset($result['link']) && is_array($result['link'])) {
+            unset($result['link']['metadata']);
+        }
+
+        return $result;
+    }
+
+    private function freshLifecycleOwner(ScenarioRunContext $context, string $label): mixed
+    {
+        $issuer = $context->issuer;
+
+        if (! $issuer instanceof Model) {
+            return $issuer;
+        }
+
+        $class = $issuer::class;
+        $token = Str::lower(Str::random(10));
+
+        return $class::query()->create([
+            'name' => 'Lifecycle '.$label,
+            'email' => "lifecycle-{$label}-{$token}@example.test",
+            'mobile' => '63917'.random_int(1000000, 9999999),
+            'password' => Hash::make(Str::random(24)),
+        ]);
     }
 }
