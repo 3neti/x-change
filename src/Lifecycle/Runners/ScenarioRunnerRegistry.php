@@ -13,6 +13,7 @@ final class ScenarioRunnerRegistry
         return in_array($mode, [
             null,
             'default',
+            'turnkey_onboarding',
             'sequential_claims',
             'settlement_envelope_evaluation',
             'settlement_three_party_flow',
@@ -23,6 +24,7 @@ final class ScenarioRunnerRegistry
     {
         return match ($mode) {
             null, 'default' => app(DefaultClaimScenarioRunner::class),
+            'turnkey_onboarding' => app(TurnkeyOnboardingScenarioRunner::class),
             'sequential_claims' => app(SequentialClaimsScenarioRunner::class),
             'settlement_envelope_evaluation' => app(SettlementEnvelopeEvaluationScenarioRunner::class),
             'settlement_three_party_flow' => app(SettlementThreePartyScenarioRunner::class),

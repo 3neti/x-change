@@ -8,12 +8,14 @@ use Illuminate\Console\Command;
 use Illuminate\Contracts\Container\Container;
 use InvalidArgumentException;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
+use LBHurtado\EmiPaynamicsConstellation\Adapters\ConstellationPayoutProvider;
 use LBHurtado\EmiPaynamicsConstellation\Contracts\ConstellationOtpResolver;
 use LBHurtado\EmiPaynamicsConstellation\Support\InteractiveOtpResolver;
 use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
 use LBHurtado\XChange\Lifecycle\Output\ConsoleLifecycleOutput;
 use LBHurtado\XChange\Lifecycle\Output\LifecycleOutputContract;
 use LBHurtado\XChange\Lifecycle\Runners\ScenarioRunContext;
+use LBHurtado\XChange\Lifecycle\Runners\ScenarioRunnerContract;
 use LBHurtado\XChange\Lifecycle\Runners\ScenarioRunnerResolver;
 use LBHurtado\XChange\Lifecycle\Runners\Support\LifecycleUserSummary;
 use LBHurtado\XChange\Lifecycle\Runners\Support\WalletTransactionSnapshot;
@@ -69,18 +71,6 @@ final class LifecycleScenarioEngine
             );
         }
 
-        if ($output->isJson() && ! $options->approvalPipeline && $this->requiresInteractiveOtp()) {
-            return new LifecycleScenarioEngineResult(
-                exitCode: Command::FAILURE,
-                payload: [
-                    'success' => false,
-                    'message' => 'Cannot use --json with a provider that requires interactive OTP. '
-                        .'Remove --json or set CONSTELLATION_OTP_RESOLVER=null.',
-                    'scenario' => $scenarioKey,
-                ],
-            );
-        }
-
         try {
             $resolution = $this->resolver->resolve($scenario);
         } catch (RuntimeException $e) {
@@ -98,6 +88,18 @@ final class LifecycleScenarioEngine
         $scenario = $resolution->scenario;
         $mode = $resolution->mode;
 
+        if ($mode !== 'turnkey_onboarding' && $output->isJson() && ! $options->approvalPipeline && $this->requiresInteractiveOtp()) {
+            return new LifecycleScenarioEngineResult(
+                exitCode: Command::FAILURE,
+                payload: [
+                    'success' => false,
+                    'message' => 'Cannot use --json with a provider that requires interactive OTP. '
+                        .'Remove --json or set CONSTELLATION_OTP_RESOLVER=null.',
+                    'scenario' => $scenarioKey,
+                ],
+            );
+        }
+
         try {
             $attempts = $mode === 'sequential_claims'
                 ? []
@@ -114,6 +116,19 @@ final class LifecycleScenarioEngine
                     'scenario' => $scenarioKey,
                     'selected_attempt' => $options->onlyAttempt,
                 ],
+            );
+        }
+
+        if ($mode === 'turnkey_onboarding') {
+            return $this->runWithoutVoucherBootstrap(
+                scenarioKey: $scenarioKey,
+                scenario: $scenario,
+                mode: $mode,
+                attempts: $attempts,
+                options: $options,
+                output: $output,
+                resolvedProvider: $resolvedProvider,
+                runner: $resolution->runner,
             );
         }
 
@@ -208,6 +223,63 @@ final class LifecycleScenarioEngine
     }
 
     /**
+     * @param  array<string, mixed>  $scenario
+     * @param  array<string, array<string, mixed>>  $attempts
+     */
+    private function runWithoutVoucherBootstrap(
+        string $scenarioKey,
+        array $scenario,
+        string $mode,
+        array $attempts,
+        LifecycleScenarioRunOptions $options,
+        LifecycleOutputContract $output,
+        ?string $resolvedProvider,
+        ScenarioRunnerContract $runner,
+    ): LifecycleScenarioEngineResult {
+        if (! $output->isJson()) {
+            $output->info("Running scenario: {$scenarioKey}");
+        }
+
+        $issuerId = (int) ($options->issuer ?: data_get($scenario, 'issuer_id', 1));
+        $issuer = $this->bootstrapper->resolveIssuerModel($issuerId);
+        $baseClaimMobile = $this->bootstrapper->resolveScenarioMobile($scenario, $issuer);
+
+        $scenario['_runtime'] = [
+            ...(array) data_get($scenario, '_runtime', []),
+            'selected_attempt' => $options->onlyAttempt,
+            'approval_pipeline' => $options->approvalPipeline,
+        ];
+
+        $result = $runner->run(
+            new ScenarioRunContext(
+                output: $output,
+                scenarioKey: $scenarioKey,
+                scenario: $scenario,
+                issuer: $issuer,
+                generated: null,
+                voucher: null,
+                attempts: $attempts,
+                baseClaimMobile: $baseClaimMobile,
+                estimate: [],
+                idempotencyKey: 'lifecycle-'.(string) str()->uuid(),
+                readiness: $this->settlementEnvelopeReadiness,
+            )
+        );
+
+        $payload = $result->payload;
+        $payload['mode'] = $payload['mode'] ?? $mode;
+
+        if ($resolvedProvider !== null) {
+            $payload['provider'] = $resolvedProvider;
+        }
+
+        return new LifecycleScenarioEngineResult(
+            exitCode: $result->exitCode,
+            payload: $payload,
+        );
+    }
+
+    /**
      * Resolve and rebind the payout provider.
      *
      * Precedence: CLI/API option → scenario config → container default.
@@ -252,7 +324,7 @@ final class LifecycleScenarioEngine
         // Only relevant when the active payout provider is Constellation.
         $activeProvider = $this->container->make(PayoutProvider::class);
 
-        if (! $activeProvider instanceof \LBHurtado\EmiPaynamicsConstellation\Adapters\ConstellationPayoutProvider) {
+        if (! $activeProvider instanceof ConstellationPayoutProvider) {
             return false;
         }
 

@@ -315,6 +315,18 @@ return [
                     // optionally explicit scenario keys
                 ],
             ],
+
+            'turnkey-onboarding' => [
+                'label' => 'Turnkey Onboarding',
+                'description' => 'Runs safe mobile-first install and onboarding readiness scenarios.',
+                'categories' => [],
+                'tags' => [],
+                'scenarios' => [
+                    'turnkey_mobile_boot',
+                    'turnkey_bank_onboarding_required',
+                    'turnkey_basic_cash_mobile',
+                ],
+            ],
         ],
     ],
     /*

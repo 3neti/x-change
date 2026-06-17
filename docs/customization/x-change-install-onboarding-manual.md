@@ -18,6 +18,7 @@ php artisan x-change:install
 npm install
 npm run build
 php artisan x-change:doctor --json
+php artisan xchange:lifecycle:run-group turnkey-onboarding --no-claim --timeout=1 --poll=1 --max-polls=1
 php artisan test
 ```
 
@@ -296,6 +297,50 @@ Run it after installing or republishing scaffolds:
 php artisan x-change:doctor --json
 ```
 
+## Turnkey Lifecycle Verification
+
+The installer should leave the host in a state where onboarding readiness can be checked through the lifecycle runtime, not only through static config inspection.
+
+Use the `turnkey-onboarding` group for a fast, credential-safe host smoke check:
+
+```bash
+php artisan xchange:lifecycle:run-group turnkey-onboarding --no-claim --timeout=1 --poll=1 --max-polls=1
+```
+
+This group currently runs:
+
+- `turnkey_mobile_boot`
+- `turnkey_bank_onboarding_required`
+- `turnkey_basic_cash_mobile`
+
+The first two scenarios use the `turnkey_onboarding` runner. They do not generate vouchers, do not attempt provider disbursement, and do not require NetBank, Paynamics, SMS, or OTP credentials. They verify that the installed host can resolve the mobile-first auth surface, issuer mobile channel, provider topology, and onboarding gateway boundary.
+
+The `turnkey_basic_cash_mobile` scenario keeps the standard voucher lifecycle connected to the same mobile-first defaults. In the group command above, `--no-claim` prevents a real claim/disbursement attempt.
+
+For JSON diagnostics, run the individual onboarding scenarios:
+
+```bash
+php artisan xchange:lifecycle:run turnkey_mobile_boot --prepare --json
+php artisan xchange:lifecycle:run turnkey_bank_onboarding_required --json
+```
+
+Expected checks for `turnkey_mobile_boot`:
+
+- mobile-first auth is enabled
+- Fortify username is `mobile`
+- lifecycle issuer has a mobile channel
+- provider topology resolves
+- issuer onboarding gateway accepts or safely falls back
+
+Expected checks for `turnkey_bank_onboarding_required`:
+
+- mobile-first auth is enabled
+- lifecycle issuer has a mobile channel
+- provider topology resolves
+- bank onboarding requirement is handled or safely falls back
+
+If `3neti/onboarding` is installed and registered, these scenarios should exercise the real onboarding gateway. If it is absent or not bound in the host container, the scenarios should still pass through the explicit fallback response so that package installation can be validated without external credentials.
+
 ## Customization Rules
 
 Treat `packages/x-change/stubs/**` as the source of truth for host scaffolding.
@@ -326,6 +371,7 @@ Then verify:
 ```bash
 php artisan test --compact tests/Feature/Auth/AuthenticationTest.php tests/Feature/Auth/RegistrationTest.php tests/Feature/Settings/ProfileUpdateTest.php tests/Feature/Settings/SecurityTest.php
 php artisan x-change:doctor --json
+php artisan xchange:lifecycle:run-group turnkey-onboarding --no-claim --timeout=1 --poll=1 --max-polls=1
 npm run build
 ```
 
@@ -364,6 +410,7 @@ After a fresh install, this should pass:
 
 ```bash
 php artisan x-change:doctor --json
+php artisan xchange:lifecycle:run-group turnkey-onboarding --no-claim --timeout=1 --poll=1 --max-polls=1
 php artisan test --compact tests/Feature/Auth/AuthenticationTest.php tests/Feature/Auth/RegistrationTest.php tests/Feature/Settings/ProfileUpdateTest.php tests/Feature/Settings/SecurityTest.php
 npx eslint resources/js/pages/auth/Login.vue resources/js/pages/auth/Register.vue resources/js/pages/settings/Profile.vue resources/js/pages/settings/SecurityConfirm.vue
 ```

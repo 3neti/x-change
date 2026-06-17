@@ -42,6 +42,68 @@ return [
 
         /*
         |--------------------------------------------------------------------------
+        | Turnkey onboarding scenarios
+        |--------------------------------------------------------------------------
+        */
+
+        'turnkey_mobile_boot' => [
+            'label' => 'Turnkey Mobile Boot',
+            'description' => 'Verifies the mobile-first host install surface without issuing a voucher.',
+            'category' => 'smoke',
+            'tags' => ['turnkey', 'onboarding', 'mobile'],
+            'mode' => 'turnkey_onboarding',
+            'mobile' => env('XCHANGE_LIFECYCLE_TURNKEY_MOBILE', env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987')),
+            'turnkey' => [
+                'provider_topology' => env('XCHANGE_PROVIDER_TOPOLOGY', 'manual'),
+                'checks' => [
+                    'mobile_first_auth',
+                    'fortify_mobile_username',
+                    'user_mobile',
+                    'provider_topology',
+                    'issuer_onboarding',
+                ],
+            ],
+        ],
+
+        'turnkey_bank_onboarding_required' => [
+            'label' => 'Turnkey Bank Onboarding Required',
+            'description' => 'Verifies the onboarding gateway maps redemption bank onboarding requirements.',
+            'category' => 'smoke',
+            'tags' => ['turnkey', 'onboarding', 'bank'],
+            'mode' => 'turnkey_onboarding',
+            'mobile' => env('XCHANGE_LIFECYCLE_TURNKEY_MOBILE', env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987')),
+            'turnkey' => [
+                'provider_topology' => env('XCHANGE_PROVIDER_TOPOLOGY', 'manual'),
+                'checks' => [
+                    'mobile_first_auth',
+                    'user_mobile',
+                    'provider_topology',
+                    'bank_onboarding_required',
+                ],
+            ],
+        ],
+
+        'turnkey_basic_cash_mobile' => [
+            'label' => 'Turnkey Basic Cash Mobile',
+            'description' => 'Issues and claims a basic cash Pay Code through the mobile-first lifecycle path.',
+            'category' => 'smoke',
+            'tags' => ['turnkey', 'mobile', 'cash'],
+            'amount' => 12.50,
+            'currency' => 'PHP',
+            'mobile' => env('XCHANGE_LIFECYCLE_TURNKEY_MOBILE', env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987')),
+            'cash' => [],
+            'inputs' => [
+                'fields' => [],
+            ],
+            'feedback' => [],
+            'claim' => [],
+            'expect' => [
+                'tariffs' => ['cash'],
+            ],
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
         | Legacy lifecycle scenarios
         |--------------------------------------------------------------------------
         */
