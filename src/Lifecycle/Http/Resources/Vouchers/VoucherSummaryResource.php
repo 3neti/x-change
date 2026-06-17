@@ -30,6 +30,9 @@ class VoucherSummaryResource extends JsonResource
             'status' => data_get($this->resource, 'status') !== null
                 ? (string) data_get($this->resource, 'status')
                 : null,
+            'display_status' => data_get($this->resource, 'display_status') !== null
+                ? (string) data_get($this->resource, 'display_status')
+                : null,
             'issuer_id' => data_get($this->resource, 'issuer_id') !== null
                 ? (int) data_get($this->resource, 'issuer_id')
                 : null,

@@ -65,6 +65,7 @@ it('includes pending approval summary for vouchers requiring Paynamics OTP appro
         'reference_id' => $voucher->code.'-09173011987',
         'message' => 'Paynamics payout OTP is pending.',
     ])
+        ->and($result[0]['display_status'])->toBe('awaiting_approval')
         ->and($result[0]['approval']['action_url'])->toContain('/x/pay-codes/'.$voucher->code.'/approval');
 });
 
@@ -89,10 +90,11 @@ it('omits approval summary for vouchers without pending approval', function () {
 
     $result = $service->list([]);
 
-    expect($result[0]['approval'])->toBeNull();
+    expect($result[0]['approval'])->toBeNull()
+        ->and($result[0]['display_status'])->toBe($result[0]['status']);
 });
 
-it('omits stale approval summary for redeemed vouchers', function () {
+it('uses awaiting approval display status for redeemed vouchers with pending approval', function () {
     $voucher = issueVoucher();
     $voucher->redeemed_at = now();
     $voucher->save();
@@ -125,7 +127,14 @@ it('omits stale approval summary for redeemed vouchers', function () {
     $result = $service->list([]);
 
     expect($result[0]['status'])->toBe('redeemed')
-        ->and($result[0]['approval'])->toBeNull();
+        ->and($result[0]['display_status'])->toBe('awaiting_approval')
+        ->and($result[0]['approval'])->toMatchArray([
+            'required' => true,
+            'type' => 'otp',
+            'provider' => 'paynamics',
+            'reference_id' => $voucher->code.'-09173011987',
+            'message' => 'Paynamics payout OTP is pending.',
+        ]);
 });
 
 it('shows a voucher by id', function () {
@@ -143,7 +152,8 @@ it('shows a voucher by id', function () {
 
     expect($result)->toBeArray()
         ->and($result['voucher_id'])->toBe($voucher->id)
-        ->and($result['code'])->toBe($voucher->code);
+        ->and($result['code'])->toBe($voucher->code)
+        ->and($result['display_status'])->toBe($result['status']);
 });
 
 it('shows a voucher by code', function () {

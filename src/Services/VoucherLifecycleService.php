@@ -72,27 +72,35 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
 
     protected function toSummaryArray(Voucher $voucher): array
     {
+        $status = $this->statusLabel($voucher);
+        $approval = $this->approvalSummary($voucher);
+
         return [
             'id' => $voucher->id,
             'voucher_id' => $voucher->id,
             'code' => $voucher->code,
             'amount' => $this->amount($voucher),
             'currency' => $this->currency($voucher),
-            'status' => $this->statusLabel($voucher),
+            'status' => $status,
+            'display_status' => $this->displayStatus($status, $approval),
             'issuer_id' => $this->issuerId($voucher),
-            'approval' => $this->approvalSummary($voucher),
+            'approval' => $approval,
         ];
     }
 
     protected function toDetailArray(Voucher $voucher): array
     {
+        $status = $this->statusLabel($voucher);
+        $approval = $this->approvalSummary($voucher);
+
         return [
             'id' => $voucher->id,
             'voucher_id' => $voucher->id,
             'code' => $voucher->code,
             'amount' => $this->amount($voucher),
             'currency' => $this->currency($voucher),
-            'status' => $this->statusLabel($voucher),
+            'status' => $status,
+            'display_status' => $this->displayStatus($status, $approval),
             'issuer_id' => $this->issuerId($voucher),
             'claimed' => $voucher->redeemed_at !== null,
             'fully_claimed' => $voucher->redeemed_at !== null,
@@ -102,6 +110,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             'redeemed_at' => $voucher->redeemed_at?->toIso8601String(),
             'instructions' => $this->instructionsArray($voucher),
             'claims' => $this->claimsArray($voucher),
+            'approval' => $approval,
         ];
     }
 
@@ -165,10 +174,6 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
      */
     protected function approvalSummary(Voucher $voucher): ?array
     {
-        if ($voucher->redeemed_at !== null) {
-            return null;
-        }
-
         $approval = ($this->approvalStatus ?? app(ClaimApprovalStatusResolver::class))
             ->resolve($voucher);
 
@@ -195,6 +200,18 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
         }
 
         return '/x/pay-codes/'.$voucher->code.'/approval';
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $approval
+     */
+    protected function displayStatus(string $status, ?array $approval): string
+    {
+        if (($approval['required'] ?? false) === true) {
+            return 'awaiting_approval';
+        }
+
+        return $status;
     }
 
     protected function statusLabel(Voucher $voucher): string

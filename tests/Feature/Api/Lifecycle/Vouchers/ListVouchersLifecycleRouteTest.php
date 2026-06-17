@@ -13,6 +13,7 @@ it('lists vouchers through the lifecycle route surface', function () {
             'amount' => 100.00,
             'currency' => 'PHP',
             'status' => 'issued',
+            'display_status' => 'awaiting_approval',
             'issuer_id' => 1,
             'approval' => [
                 'required' => true,
@@ -40,6 +41,7 @@ it('lists vouchers through the lifecycle route surface', function () {
         ->assertJsonPath('success', true)
         ->assertJsonPath('data.items.0.code', 'TEST-1234')
         ->assertJsonPath('data.items.0.status', 'issued')
+        ->assertJsonPath('data.items.0.display_status', 'awaiting_approval')
         ->assertJsonPath('data.items.0.approval.required', true)
         ->assertJsonPath('data.items.0.approval.type', 'otp')
         ->assertJsonPath('data.items.0.approval.provider', 'paynamics')

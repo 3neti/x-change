@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
-
 use LBHurtado\XRider\Contracts\RiderExperienceResolverContract;
 use LBHurtado\XRider\Data\RiderContentData;
 use LBHurtado\XRider\Data\RiderExperienceData;
@@ -22,9 +21,18 @@ it('shows a voucher by code through the lifecycle route surface', function () {
         'amount' => 100.00,
         'currency' => 'PHP',
         'status' => 'issued',
+        'display_status' => 'awaiting_approval',
         'issuer_id' => 1,
         'claimed' => false,
         'fully_claimed' => false,
+        'approval' => [
+            'required' => true,
+            'type' => 'otp',
+            'provider' => 'paynamics',
+            'reference_id' => 'TEST-1234-09173011987',
+            'message' => 'Paynamics payout OTP is pending.',
+            'action_url' => '/x/pay-codes/TEST-1234/approval',
+        ],
     ];
 
     $service = Mockery::mock(VoucherLifecycleServiceContract::class);
@@ -40,7 +48,9 @@ it('shows a voucher by code through the lifecycle route surface', function () {
     $response
         ->assertOk()
         ->assertJsonPath('success', true)
-        ->assertJsonPath('data.voucher.code', 'TEST-1234');
+        ->assertJsonPath('data.voucher.code', 'TEST-1234')
+        ->assertJsonPath('data.voucher.display_status', 'awaiting_approval')
+        ->assertJsonPath('data.voucher.approval.required', true);
 });
 
 it('exposes resolved rider pre claim content in voucher preview', function (): void {

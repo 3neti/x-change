@@ -16,7 +16,7 @@ defineOptions({
     layout: XChangeLayout,
 });
 
-type PayCodeStatus = 'all' | 'active' | 'redeemed' | 'expired' | 'pending' | 'failed';
+type PayCodeStatus = 'all' | 'awaiting_approval' | 'active' | 'redeemed' | 'expired' | 'pending' | 'failed';
 
 interface Voucher {
     code: string;
@@ -24,6 +24,7 @@ interface Voucher {
     formatted_amount?: string | null;
     currency?: string | null;
     status?: string | null;
+    display_status?: string | null;
     created_at?: string | null;
     redeemed_at?: string | null;
     expires_at?: string | null;
@@ -129,6 +130,14 @@ function isExpired(voucher: Voucher): boolean {
 }
 
 function inferredStatus(voucher: Voucher): string {
+    if (voucher.display_status) {
+        return String(voucher.display_status).toLowerCase();
+    }
+
+    if (voucher.approval?.required === true) {
+        return 'awaiting_approval';
+    }
+
     if (voucher.status) {
         return String(voucher.status).toLowerCase();
     }

@@ -28,6 +28,8 @@ const normalizedStatus = computed(() => {
 
 const label = computed(() => {
     switch (normalizedStatus.value) {
+        case 'awaiting_approval':
+            return 'Awaiting approval';
         case 'redeemed':
             return 'Redeemed';
         case 'expired':
@@ -50,6 +52,8 @@ const variant = computed(() => {
         case 'failed':
         case 'expired':
             return 'destructive';
+        case 'awaiting_approval':
+            return 'outline';
         case 'redeemed':
             return 'secondary';
         case 'pending':

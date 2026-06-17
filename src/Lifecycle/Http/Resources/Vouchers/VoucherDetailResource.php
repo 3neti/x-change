@@ -33,6 +33,9 @@ class VoucherDetailResource extends JsonResource
             'status' => data_get($this->resource, 'status') !== null
                 ? (string) data_get($this->resource, 'status')
                 : null,
+            'display_status' => data_get($this->resource, 'display_status') !== null
+                ? (string) data_get($this->resource, 'display_status')
+                : null,
             'issuer_id' => data_get($this->resource, 'issuer_id') !== null
                 ? (int) data_get($this->resource, 'issuer_id')
                 : null,
@@ -47,6 +50,7 @@ class VoucherDetailResource extends JsonResource
             'starts_at' => data_get($this->resource, 'starts_at'),
             'redeemed_at' => data_get($this->resource, 'redeemed_at'),
             'instructions' => data_get($this->resource, 'instructions'),
+            'approval' => data_get($this->resource, 'approval'),
             'rider' => $this->riderPayload(),
         ];
 

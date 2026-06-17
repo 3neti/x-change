@@ -12,6 +12,7 @@ interface Voucher {
     formatted_amount?: string | null;
     currency?: string | null;
     status?: string | null;
+    display_status?: string | null;
     created_at?: string | null;
     redeemed_at?: string | null;
     expires_at?: string | null;
@@ -89,6 +90,18 @@ function needsApproval(voucher: Voucher): boolean {
     return voucher.approval?.required === true;
 }
 
+function displayStatus(voucher: Voucher): string | null | undefined {
+    if (voucher.display_status) {
+        return voucher.display_status;
+    }
+
+    if (needsApproval(voucher)) {
+        return 'awaiting_approval';
+    }
+
+    return voucher.status;
+}
+
 function approvalActionUrl(voucher: Voucher): string {
     return voucher.approval?.action_url
         ?? props.approvalUrl?.(voucher.code)
@@ -146,18 +159,10 @@ function redeemedAt(voucher: Voucher): string | null {
                             </span>
 
                             <PayCodeStatusBadge
-                                :status="voucher.status"
+                                :status="displayStatus(voucher)"
                                 :redeemed_at="voucher.redeemed_at"
                                 :expires_at="voucher.expires_at"
                             />
-
-                            <span
-                                v-if="needsApproval(voucher)"
-                                data-testid="pay-code-approval-badge"
-                                class="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700"
-                            >
-                                Needs OTP approval
-                            </span>
                         </div>
 
                         <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
@@ -171,7 +176,7 @@ function redeemedAt(voucher: Voucher): string | null {
                             data-testid="pay-code-approval-helper"
                             class="text-sm text-amber-700"
                         >
-                            Issuer action required before payout can complete.
+                            Issuer OTP approval required before payout can complete.
                         </p>
                     </div>
 

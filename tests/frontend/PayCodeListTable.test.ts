@@ -68,7 +68,7 @@ describe('PayCodeListTable', () => {
         PayCodeListTable = (await import('../../resources/js/components/x-change/pay-codes/PayCodeListTable.vue')).default;
     });
 
-    it('renders approval badge and action when voucher requires OTP approval', async () => {
+    it('renders awaiting approval status and action when voucher requires OTP approval', async () => {
         const wrapper = mount(PayCodeListTable, {
             props: {
                 vouchers: [
@@ -77,6 +77,7 @@ describe('PayCodeListTable', () => {
                         amount: 50,
                         currency: 'PHP',
                         status: 'redeemed',
+                        display_status: 'awaiting_approval',
                         approval: {
                             required: true,
                             type: 'otp',
@@ -90,9 +91,11 @@ describe('PayCodeListTable', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="pay-code-approval-badge"]').text()).toBe('Needs OTP approval');
+        expect(wrapper.find('[data-testid="pay-code-status-badge"]').text()).toBe('awaiting_approval');
+        expect(wrapper.text()).not.toContain('Needs OTP approval');
+        expect(wrapper.text()).not.toContain('redeemed');
         expect(wrapper.find('[data-testid="pay-code-approval-helper"]').text()).toBe(
-            'Issuer action required before payout can complete.',
+            'Issuer OTP approval required before payout can complete.',
         );
         expect(wrapper.find('[data-testid="pay-code-approval-action"]').text()).toContain('Approve');
 
@@ -144,7 +147,7 @@ describe('PayCodeListTable', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="pay-code-approval-badge"]').exists()).toBe(false);
+        expect(wrapper.text()).not.toContain('Needs OTP approval');
         expect(wrapper.find('[data-testid="pay-code-approval-helper"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="pay-code-approval-action"]').exists()).toBe(false);
     });

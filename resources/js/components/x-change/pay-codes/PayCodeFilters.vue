@@ -37,6 +37,7 @@ const emit = defineEmits<{
             </SelectTrigger>
             <SelectContent>
                 <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="awaiting_approval">Awaiting approval</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="redeemed">Redeemed</SelectItem>
                 <SelectItem value="expired">Expired</SelectItem>

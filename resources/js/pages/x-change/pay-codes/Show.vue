@@ -42,6 +42,7 @@ interface Voucher {
     formatted_amount?: string | null;
     currency?: string | null;
     status?: string | null;
+    display_status?: string | null;
     created_at?: string | null;
     starts_at?: string | null;
     expires_at?: string | null;
@@ -52,6 +53,14 @@ interface Voucher {
     metadata?: Record<string, any> | null;
     meta?: Record<string, any> | null;
     claims?: Claim[] | null;
+    approval?: {
+        required: boolean;
+        type: 'otp' | null;
+        provider: string | null;
+        reference_id: string | null;
+        message: string | null;
+        action_url: string | null;
+    } | null;
 }
 
 interface Props {
@@ -79,6 +88,18 @@ const metadata = computed(() => {
 });
 
 const hasMetadata = computed(() => Object.keys(metadata.value ?? {}).length > 0);
+
+const displayStatus = computed(() => {
+    if (props.voucher.display_status) {
+        return props.voucher.display_status;
+    }
+
+    if (props.voucher.approval?.required === true) {
+        return 'awaiting_approval';
+    }
+
+    return props.voucher.status;
+});
 
 const lifecycleRows = computed(() => {
     return [
@@ -170,7 +191,7 @@ async function copyCode(): Promise<void> {
                         </h1>
 
                         <PayCodeStatusBadge
-                            :status="voucher.status"
+                            :status="displayStatus"
                             :redeemed_at="voucher.redeemed_at"
                             :expires_at="voucher.expires_at"
                         />
@@ -222,7 +243,7 @@ async function copyCode(): Promise<void> {
                                 </p>
                                 <div class="mt-2">
                                     <PayCodeStatusBadge
-                                        :status="voucher.status"
+                                        :status="displayStatus"
                                         :redeemed_at="voucher.redeemed_at"
                                         :expires_at="voucher.expires_at"
                                     />
