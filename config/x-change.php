@@ -18,11 +18,14 @@ use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Contracts\VoucherEntryRouteResolverContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Contracts\WalletProvisioningContract;
+use LBHurtado\XChange\Contracts\XChangeOnboardingGatewayContract;
+use LBHurtado\XChange\Contracts\XChangeProviderTopologyResolverContract;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\ApprovalHandlers\ManualApprovalRequirementHandler;
 use LBHurtado\XChange\Services\ApprovalHandlers\OtpApprovalRequirementHandler;
 use LBHurtado\XChange\Services\Base64PngVoucherPaymentQrRenderer;
 use LBHurtado\XChange\Services\CacheIdempotencyStore;
+use LBHurtado\XChange\Services\ConfigProviderTopologyResolver;
 use LBHurtado\XChange\Services\ContextUserResolver;
 use LBHurtado\XChange\Services\DefaultClaimExecutionFactory;
 use LBHurtado\XChange\Services\DefaultDisbursementReconciliationService;
@@ -41,13 +44,17 @@ use LBHurtado\XChange\Services\DefaultWalletProvisioningService;
 use LBHurtado\XChange\Services\DefaultWithdrawalExecutionService;
 use LBHurtado\XChange\Services\DefaultWithdrawalProcessorService;
 use LBHurtado\XChange\Services\DefaultWithdrawalValidationService;
+use LBHurtado\XChange\Services\DefaultXChangeOnboardingGateway;
 use LBHurtado\XChange\Services\DisburseFlowStarterService;
+use LBHurtado\XChange\Services\LedgerPooledProviderTopology;
+use LBHurtado\XChange\Services\ManualProviderTopology;
 use LBHurtado\XChange\Services\NullClaimOtpChallengeService;
 use LBHurtado\XChange\Services\NullClaimOtpVerificationService;
 use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
 use LBHurtado\XChange\Services\PayCodeIssuanceService;
 use LBHurtado\XChange\Services\PaynamicsWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\PricingService;
+use LBHurtado\XChange\Services\ProviderCustomerWalletTopology;
 use LBHurtado\XChange\Services\SessionCompletionStore;
 use LBHurtado\XChange\Services\SystemWalletProxy;
 use LBHurtado\XChange\Services\TerminologyService;
@@ -160,6 +167,8 @@ return [
         'wallet_access' => WalletAccessService::class,
         'idempotency_store' => CacheIdempotencyStore::class,
         'issuer_onboarding' => DefaultIssuerOnboardingService::class,
+        'onboarding_gateway' => DefaultXChangeOnboardingGateway::class,
+        'provider_topology_resolver' => ConfigProviderTopologyResolver::class,
         'wallet_provisioning' => DefaultWalletProvisioningService::class,
         'issuer_resolver' => DefaultIssuerResolver::class,
         'redemption_flow_preparation' => DefaultRedemptionFlowPreparationService::class,
@@ -189,6 +198,8 @@ return [
         WalletAccessContract::class => 'wallet_access',
         IdempotencyStoreContract::class => 'idempotency_store',
         IssuerOnboardingContract::class => 'issuer_onboarding',
+        XChangeOnboardingGatewayContract::class => 'onboarding_gateway',
+        XChangeProviderTopologyResolverContract::class => 'provider_topology_resolver',
         WalletProvisioningContract::class => 'wallet_provisioning',
         IssuerResolverContract::class => 'issuer_resolver',
     ],
@@ -228,6 +239,24 @@ return [
         'issuer_model' => env('XCHANGE_ONBOARDING_DEFAULT_ISSUER_MODEL', User::class),
         'default_wallet_slug' => env('XCHANGE_ONBOARDING_DEFAULT_WALLET_SLUG', 'platform'),
         'default_wallet_name' => env('XCHANGE_ONBOARDING_DEFAULT_WALLET_NAME', 'Platform Wallet'),
+        'driver' => env('XCHANGE_ONBOARDING_DRIVER', 'legacy'),
+        'mobile_first_auth' => env('XCHANGE_MOBILE_FIRST_AUTH', true),
+        'email_required' => env('XCHANGE_AUTH_EMAIL_REQUIRED', false),
+        'auth_enforcement' => env('XCHANGE_ONBOARDING_AUTH_ENFORCEMENT', 'scaffold'),
+    ],
+
+    'provider_topologies' => [
+        'default' => env('XCHANGE_PROVIDER_TOPOLOGY', 'manual'),
+        'aliases' => [
+            'manual' => 'manual',
+            'netbank' => 'ledger_pooled',
+            'paynamics' => 'provider_customer_wallet',
+        ],
+        'topologies' => [
+            'manual' => ManualProviderTopology::class,
+            'ledger_pooled' => LedgerPooledProviderTopology::class,
+            'provider_customer_wallet' => ProviderCustomerWalletTopology::class,
+        ],
     ],
 
     'redemption' => [

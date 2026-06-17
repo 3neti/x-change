@@ -25,6 +25,13 @@
         },
         {
             "type": "path",
+            "url": "/Users/rli/PhpstormProjects/packages/onboarding",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
             "url": "/Users/rli/PhpstormProjects/packages/form-flow-manager",
             "options": {
                 "symlink": true
@@ -85,6 +92,7 @@
         "3neti/cash": "dev-main",
         "3neti/contact": "^1.1",
         "3neti/emi-paynamics": "dev-main",
+        "3neti/onboarding": "dev-main",
         "3neti/form-flow": "dev-main",
         "3neti/form-handler-kyc": "dev-main",
         "3neti/form-handler-location": "dev-main",

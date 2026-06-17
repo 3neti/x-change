@@ -12,9 +12,14 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Pipeline\Pipeline;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
 use InvalidArgumentException;
+use Laravel\Fortify\Contracts\CreatesNewUsers;
+use Laravel\Fortify\Features;
+use Laravel\Fortify\Fortify;
 use LBHurtado\Cash\Contracts\WithdrawalIntervalEnforcerContract;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\EmiPaynamicsConstellation\Contracts\PendingOtpStore;
@@ -23,10 +28,13 @@ use LBHurtado\PaymentGateway\Contracts\WalletProxy;
 use LBHurtado\ReportRegistry\Contracts\ReportResolverInterface;
 use LBHurtado\Voucher\Events\VoucherDisbursementFailed;
 use LBHurtado\Voucher\Events\VoucherDisbursementSucceeded;
+use LBHurtado\XChange\Actions\Auth\AuthenticateMobileFirstUser;
+use LBHurtado\XChange\Actions\Auth\CreateNewMobileFirstUser;
 use LBHurtado\XChange\Console\Commands\Claim\LoadPayCodeRedemptionCompletionContextCommand;
 use LBHurtado\XChange\Console\Commands\Claim\PreparePayCodeRedemptionFlowCommand;
 use LBHurtado\XChange\Console\Commands\Claim\SubmitPayCodeClaimCommand;
 use LBHurtado\XChange\Console\Commands\Disbursement\CheckDisbursementStatusCommand;
+use LBHurtado\XChange\Console\Commands\DoctorXChangeCommand;
 use LBHurtado\XChange\Console\Commands\InstallXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Lifecycle\PrepareLifecycleEnvironmentCommand;
 use LBHurtado\XChange\Console\Commands\Lifecycle\RunLifecycleScenarioCommand;
@@ -85,6 +93,8 @@ use LBHurtado\XChange\Contracts\WithdrawalLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\WithdrawalOtpApprovalServiceContract;
 use LBHurtado\XChange\Contracts\WithdrawalProcessorContract;
 use LBHurtado\XChange\Contracts\WithdrawalValidationContract;
+use LBHurtado\XChange\Contracts\XChangeOnboardingGatewayContract;
+use LBHurtado\XChange\Contracts\XChangeProviderTopologyResolverContract;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
 use LBHurtado\XChange\Exceptions\IdempotencyConflict;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
@@ -102,6 +112,7 @@ use LBHurtado\XChange\Listeners\RecordFailedVoucherDisbursement;
 use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\CacheClaimApprovalWorkflowStore;
+use LBHurtado\XChange\Services\ConfigProviderTopologyResolver;
 use LBHurtado\XChange\Services\ConfigVendorRegistry;
 use LBHurtado\XChange\Services\DefaultApprovalWorkflowService;
 use LBHurtado\XChange\Services\DefaultClaimApprovalExecutionService;
@@ -128,6 +139,7 @@ use LBHurtado\XChange\Services\DefaultVoucherPaymentQrGenerator;
 use LBHurtado\XChange\Services\DefaultWithdrawalExecutionService;
 use LBHurtado\XChange\Services\DefaultWithdrawalProcessorService;
 use LBHurtado\XChange\Services\DefaultWithdrawalValidationService;
+use LBHurtado\XChange\Services\DefaultXChangeOnboardingGateway;
 use LBHurtado\XChange\Services\EventLifecycleService;
 use LBHurtado\XChange\Services\InstructionBackedPricingService;
 use LBHurtado\XChange\Services\NullClaimApprovalNotificationService;
@@ -492,6 +504,7 @@ class XChangeServiceProvider extends ServiceProvider
     {
         $this->bootConfig();
         $this->bootRoutes();
+        $this->bootMobileFirstFortify();
         $this->bootExceptionRendering();
         $this->bootMigrations();
 
@@ -516,6 +529,7 @@ class XChangeServiceProvider extends ServiceProvider
                 EvaluateSettlementEnvelopeCommand::class,
                 RunLifecycleScenarioGroupCommand::class,
                 InstallXChangeCommand::class,
+                DoctorXChangeCommand::class,
             ]);
         }
 
@@ -578,6 +592,18 @@ class XChangeServiceProvider extends ServiceProvider
                 return $app->make("x-change.services.{$serviceKey}");
             });
         }
+
+        if (! $this->app->bound(XChangeOnboardingGatewayContract::class)) {
+            $this->app->singleton(XChangeOnboardingGatewayContract::class, function ($app) {
+                return $app->make(config('x-change.services.onboarding_gateway', DefaultXChangeOnboardingGateway::class));
+            });
+        }
+
+        if (! $this->app->bound(XChangeProviderTopologyResolverContract::class)) {
+            $this->app->singleton(XChangeProviderTopologyResolverContract::class, function ($app) {
+                return $app->make(config('x-change.services.provider_topology_resolver', ConfigProviderTopologyResolver::class));
+            });
+        }
     }
 
     protected function registerIntegrationContracts(): void
@@ -617,8 +643,7 @@ class XChangeServiceProvider extends ServiceProvider
         ], 'x-change-config');
 
         $this->publishes([
-            $this->packagePath('config/form-flow-drivers/voucher-redemption.yaml')
-            => config_path('form-flow-drivers/voucher-redemption.yaml'),
+            $this->packagePath('config/form-flow-drivers/voucher-redemption.yaml') => config_path('form-flow-drivers/voucher-redemption.yaml'),
         ], 'x-change-form-flow-drivers');
 
         $this->publishes([
@@ -661,6 +686,76 @@ class XChangeServiceProvider extends ServiceProvider
             $this->packagePath('resources/assets/favicon.svg') => public_path('vendor/x-change/favicon.svg'),
             $this->packagePath('resources/assets/apple-touch-icon.png') => public_path('vendor/x-change/apple-touch-icon.png'),
         ], 'x-change-assets');
+
+        $this->publishes([
+            $this->packagePath('stubs/migrations/2026_06_17_000000_prepare_users_for_mobile_first_xchange.php.stub') => database_path('migrations/2026_06_17_000000_prepare_users_for_mobile_first_xchange.php'),
+            $this->packagePath('stubs/app/Models/User.php.stub') => app_path('Models/User.php'),
+            $this->packagePath('stubs/database/factories/UserFactory.php.stub') => database_path('factories/UserFactory.php'),
+            $this->packagePath('stubs/resources/js/pages/auth/Login.vue.stub') => resource_path('js/pages/auth/Login.vue'),
+            $this->packagePath('stubs/resources/js/pages/auth/Register.vue.stub') => resource_path('js/pages/auth/Register.vue'),
+        ], 'x-change-auth');
+
+        $this->publishes([
+            $this->packagePath('stubs/tests/Feature/Auth/AuthenticationTest.php.stub') => base_path('tests/Feature/Auth/AuthenticationTest.php'),
+            $this->packagePath('stubs/tests/Feature/Auth/RegistrationTest.php.stub') => base_path('tests/Feature/Auth/RegistrationTest.php'),
+        ], 'x-change-auth-tests');
+
+        $this->publishes([
+            $this->packagePath('stubs/app/Concerns/ProfileValidationRules.php.stub') => app_path('Concerns/ProfileValidationRules.php'),
+            $this->packagePath('stubs/app/Http/Requests/Settings/ProfileUpdateRequest.php.stub') => app_path('Http/Requests/Settings/ProfileUpdateRequest.php'),
+            $this->packagePath('stubs/app/Http/Controllers/Settings/ProfileController.php.stub') => app_path('Http/Controllers/Settings/ProfileController.php'),
+            $this->packagePath('stubs/app/Http/Controllers/Settings/SecurityController.php.stub') => app_path('Http/Controllers/Settings/SecurityController.php'),
+            $this->packagePath('stubs/routes/settings.php.stub') => base_path('routes/settings.php'),
+            $this->packagePath('stubs/resources/js/pages/settings/Profile.vue.stub') => resource_path('js/pages/settings/Profile.vue'),
+            $this->packagePath('stubs/resources/js/pages/settings/SecurityConfirm.vue.stub') => resource_path('js/pages/settings/SecurityConfirm.vue'),
+        ], 'x-change-settings');
+
+        $this->publishes([
+            $this->packagePath('stubs/tests/Feature/Settings/ProfileUpdateTest.php.stub') => base_path('tests/Feature/Settings/ProfileUpdateTest.php'),
+            $this->packagePath('stubs/tests/Feature/Settings/SecurityTest.php.stub') => base_path('tests/Feature/Settings/SecurityTest.php'),
+        ], 'x-change-settings-tests');
+    }
+
+    protected function bootMobileFirstFortify(): void
+    {
+        if (
+            ! $this->mobileFirstAuthEnabled()
+            || ! class_exists(Fortify::class)
+            || ! interface_exists(CreatesNewUsers::class)
+            || ! class_exists(Inertia::class)
+        ) {
+            return;
+        }
+
+        $this->app->booted(function (): void {
+            $this->app['config']->set('fortify.username', 'mobile');
+            $this->app['config']->set('fortify.lowercase_usernames', false);
+
+            Fortify::authenticateUsing($this->app->make(AuthenticateMobileFirstUser::class));
+            Fortify::createUsersUsing(CreateNewMobileFirstUser::class);
+
+            $this->app->singleton(CreatesNewUsers::class, CreateNewMobileFirstUser::class);
+
+            Fortify::confirmPasswordsUsing(function ($user, string $password): bool {
+                return Hash::check($password, (string) $user->getAuthPassword());
+            });
+
+            Fortify::loginView(fn (Request $request) => Inertia::render('auth/Login', [
+                'canResetPassword' => false,
+                'canRegister' => Features::enabled(Features::registration()),
+                'status' => $request->session()->get('status'),
+            ]));
+
+            Fortify::registerView(fn () => Inertia::render('auth/Register'));
+        });
+    }
+
+    protected function mobileFirstAuthEnabled(): bool
+    {
+        return (bool) $this->app['config']->get(
+            'x-change.onboarding.mobile_first_auth',
+            env('XCHANGE_MOBILE_FIRST_AUTH', true),
+        );
     }
 
     protected function bootRoutes(): void
