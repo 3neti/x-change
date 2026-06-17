@@ -268,7 +268,7 @@ onMounted(fetchVouchers);
 <template>
     <Head title="Pay Codes" />
 
-    <div class="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
+    <div class="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4 sm:p-6 lg:p-8">
         <!-- Header -->
         <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
