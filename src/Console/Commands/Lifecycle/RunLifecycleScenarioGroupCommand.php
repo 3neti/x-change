@@ -21,6 +21,7 @@ final class RunLifecycleScenarioGroupCommand extends Command
         {--only-attempt= : Selected attempt to run for each scenario}
         {--no-claim : Issue vouchers without submitting claims}
         {--accept-pending : Treat pending provider outcomes as acceptable}
+        {--live-provider : Allow live provider lifecycle verification scenarios}
         {--stop-on-failure : Stop after the first failing scenario}
         {--json : Render JSON output}';
 

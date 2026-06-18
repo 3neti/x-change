@@ -11,6 +11,7 @@ use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\EmiPaynamicsConstellation\Adapters\ConstellationPayoutProvider;
 use LBHurtado\EmiPaynamicsConstellation\Contracts\ConstellationOtpResolver;
 use LBHurtado\EmiPaynamicsConstellation\Support\InteractiveOtpResolver;
+use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
 use LBHurtado\XChange\Lifecycle\Output\ConsoleLifecycleOutput;
 use LBHurtado\XChange\Lifecycle\Output\LifecycleOutputContract;
@@ -30,6 +31,7 @@ final class LifecycleScenarioEngine
         private readonly SettlementEnvelopeReadinessContract $settlementEnvelopeReadiness,
         private readonly WalletTransactionSnapshot $walletTransactions,
         private readonly Container $container,
+        private readonly ProviderRuntimeSettingsResolverContract $settings,
     ) {}
 
     public function run(
@@ -88,7 +90,26 @@ final class LifecycleScenarioEngine
         $scenario = $resolution->scenario;
         $mode = $resolution->mode;
 
-        if ($mode !== 'turnkey_onboarding' && $output->isJson() && ! $options->approvalPipeline && $this->requiresInteractiveOtp()) {
+        if ($mode === 'live_provider_verification' && ! $options->liveProvider) {
+            return $this->liveProviderRefusal(
+                scenarioKey: $scenarioKey,
+                message: 'Live provider lifecycle scenarios require the --live-provider option.',
+            );
+        }
+
+        if ($mode === 'live_provider_verification' && ! $this->settings->allowsLiveProviderScenarios()) {
+            return $this->liveProviderRefusal(
+                scenarioKey: $scenarioKey,
+                message: 'Live provider lifecycle scenarios are disabled by runtime settings.',
+            );
+        }
+
+        if (
+            ! in_array($mode, ['turnkey_onboarding', 'live_provider_verification'], true)
+            && $output->isJson()
+            && ! $options->approvalPipeline
+            && $this->requiresInteractiveOtp()
+        ) {
             return new LifecycleScenarioEngineResult(
                 exitCode: Command::FAILURE,
                 payload: [
@@ -119,7 +140,7 @@ final class LifecycleScenarioEngine
             );
         }
 
-        if ($mode === 'turnkey_onboarding') {
+        if (in_array($mode, ['turnkey_onboarding', 'live_provider_verification'], true)) {
             return $this->runWithoutVoucherBootstrap(
                 scenarioKey: $scenarioKey,
                 scenario: $scenario,
@@ -337,5 +358,18 @@ final class LifecycleScenarioEngine
         }
 
         return $this->container->make(ConstellationOtpResolver::class) instanceof InteractiveOtpResolver;
+    }
+
+    private function liveProviderRefusal(string $scenarioKey, string $message): LifecycleScenarioEngineResult
+    {
+        return new LifecycleScenarioEngineResult(
+            exitCode: Command::FAILURE,
+            payload: [
+                'success' => false,
+                'scenario' => $scenarioKey,
+                'mode' => 'live_provider_verification',
+                'message' => $message,
+            ],
+        );
     }
 }

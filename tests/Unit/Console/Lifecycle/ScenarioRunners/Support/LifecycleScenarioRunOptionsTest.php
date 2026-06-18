@@ -16,18 +16,20 @@ it('builds lifecycle scenario run options from console options', function () {
         'no-claim' => true,
         'json' => true,
         'accept-pending' => true,
+        'live-provider' => true,
     ]);
 
     expect($options->issuer)->toBe('1')
         ->and($options->wallet)->toBe('2')
-        ->and($options->amount)->toBe('100')
-        ->and($options->timeout)->toBe('180')
-        ->and($options->poll)->toBe('10')
-        ->and($options->maxPolls)->toBe('18')
+        ->and($options->amount)->toBe(100.0)
+        ->and($options->timeout)->toBe(180)
+        ->and($options->poll)->toBe(10)
+        ->and($options->maxPolls)->toBe(18)
         ->and($options->onlyAttempt)->toBe('success')
         ->and($options->noClaim)->toBeTrue()
         ->and($options->json)->toBeTrue()
-        ->and($options->acceptPending)->toBeTrue();
+        ->and($options->acceptPending)->toBeTrue()
+        ->and($options->liveProvider)->toBeTrue();
 });
 
 it('normalizes empty string options to null', function () {

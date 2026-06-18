@@ -365,6 +365,18 @@ return [
                 'scenarios' => [],
             ],
 
+            'live-provider' => [
+                'label' => 'Live Provider Verification',
+                'description' => 'Runs opt-in provider API lifecycle verification scenarios.',
+                'categories' => [],
+                'tags' => [],
+                'scenarios' => [
+                    'provider_paynamics_wallet_live_provision',
+                    'provider_paynamics_bank_account_live_link',
+                    'provider_netbank_source_account_live_readiness',
+                ],
+            ],
+
             'demo' => [
                 'label' => 'Demo Automation',
                 'description' => 'Runs scenarios useful for predictable demos.',

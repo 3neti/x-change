@@ -19,6 +19,7 @@ final readonly class LifecycleScenarioRunOptions
         public bool $json = false,
         public bool $acceptPending = false,
         public bool $approvalPipeline = false,
+        public bool $liveProvider = false,
     ) {}
 
     public static function fromConsoleOptions(array $options): self
@@ -36,6 +37,7 @@ final readonly class LifecycleScenarioRunOptions
             json: (bool) ($options['json'] ?? false),
             acceptPending: (bool) ($options['accept-pending'] ?? false),
             approvalPipeline: (bool) ($options['approval-pipeline'] ?? false),
+            liveProvider: (bool) ($options['live-provider'] ?? false),
         );
     }
 

@@ -233,6 +233,71 @@ return [
 
         /*
         |--------------------------------------------------------------------------
+        | Live provider verification scenarios
+        |--------------------------------------------------------------------------
+        |
+        | These scenarios are disabled unless the operator passes --live-provider
+        | and enables x-change.provider_runtime.lifecycle.allow_live_provider_scenarios.
+        |
+        */
+
+        'provider_paynamics_wallet_live_provision' => [
+            'label' => 'Paynamics Wallet Live Provision',
+            'description' => 'Verifies live Paynamics customer-wallet provisioning through the provider gateway.',
+            'category' => 'provider',
+            'tags' => ['provider', 'live-provider', 'paynamics'],
+            'mode' => 'live_provider_verification',
+            'mobile' => env('XCHANGE_LIFECYCLE_PROVIDER_MOBILE', env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987')),
+            'live_provider' => [
+                'payload' => [
+                    'provider' => 'paynamics',
+                    'mode' => 'wallet_create',
+                    'purpose' => 'IssuePayCode',
+                    'notification_url' => env('XCHANGE_PAYNAMICS_PROVISIONING_NOTIFICATION_URL'),
+                ],
+            ],
+        ],
+
+        'provider_paynamics_bank_account_live_link' => [
+            'label' => 'Paynamics Bank Account Live Link',
+            'description' => 'Verifies live Paynamics wallet creation and bank-account linking through the provider gateway.',
+            'category' => 'provider',
+            'tags' => ['provider', 'live-provider', 'paynamics'],
+            'mode' => 'live_provider_verification',
+            'mobile' => env('XCHANGE_LIFECYCLE_PROVIDER_MOBILE', env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987')),
+            'live_provider' => [
+                'payload' => [
+                    'provider' => 'paynamics',
+                    'mode' => 'bank_account_link',
+                    'purpose' => 'BankOnboardingRequired',
+                    'bank_code' => env('XCHANGE_LIFECYCLE_BANK_CODE', 'GXCHPHM2XXX'),
+                    'bank_name' => env('XCHANGE_LIFECYCLE_BANK_NAME', 'GCash'),
+                    'account_number' => env('XCHANGE_LIFECYCLE_ACCOUNT_NUMBER', '09173011987'),
+                    'notification_url' => env('XCHANGE_PAYNAMICS_PROVISIONING_NOTIFICATION_URL'),
+                ],
+            ],
+        ],
+
+        'provider_netbank_source_account_live_readiness' => [
+            'label' => 'NetBank Source Account Live Readiness',
+            'description' => 'Verifies NetBank source-account readiness through the provider gateway.',
+            'category' => 'provider',
+            'tags' => ['provider', 'live-provider', 'netbank'],
+            'mode' => 'live_provider_verification',
+            'mobile' => env('XCHANGE_LIFECYCLE_PROVIDER_MOBILE', env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987')),
+            'live_provider' => [
+                'payload' => [
+                    'provider' => 'netbank',
+                    'mode' => 'bank_account_link',
+                    'purpose' => 'BankOnboardingRequired',
+                    'bank_code' => env('XCHANGE_LIFECYCLE_BANK_CODE', 'GXCHPHM2XXX'),
+                    'account_number_masked' => env('XCHANGE_LIFECYCLE_ACCOUNT_NUMBER_MASKED', '*******1987'),
+                ],
+            ],
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
         | Legacy lifecycle scenarios
         |--------------------------------------------------------------------------
         */
