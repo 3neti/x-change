@@ -292,6 +292,7 @@ return [
 
     'provider_runtime' => [
         'default_provider' => env('XCHANGE_PROVIDER', env('XCHANGE_PROVIDER_TOPOLOGY', 'manual')),
+        'payout_provider_hint' => env('XCHANGE_PAYOUT_PROVIDER'),
         'default_provisioning_gateway' => FakeProviderProvisioningGateway::class,
 
         'providers' => [
@@ -304,7 +305,7 @@ return [
                 'provisioning_gateway' => NetbankProviderProvisioningGateway::class,
                 'source_account_readiness' => [
                     'enabled' => env('XCHANGE_PROVIDER_NETBANK_SOURCE_ACCOUNT_READINESS_ENABLED', false),
-                    'account_number' => env('XCHANGE_PROVIDER_NETBANK_SOURCE_ACCOUNT_NUMBER'),
+                    'account_number' => env('XCHANGE_PROVIDER_NETBANK_SOURCE_ACCOUNT_NUMBER', env('NETBANK_SOURCE_ACCOUNT_NUMBER')),
                 ],
             ],
             'paynamics' => [

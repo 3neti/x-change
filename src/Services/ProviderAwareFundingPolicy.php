@@ -23,6 +23,7 @@ class ProviderAwareFundingPolicy implements ProviderFundingPolicyContract
         protected ProviderProvisioningGatewayContract $provisioning,
         protected WalletAccessContract $wallets,
         protected ?SyncPaynamicsWalletBalance $paynamicsBalances = null,
+        protected ?CheckNetbankSourceAccountReadiness $netbankSourceAccount = null,
     ) {}
 
     /**
@@ -55,6 +56,14 @@ class ProviderAwareFundingPolicy implements ProviderFundingPolicyContract
             ));
         }
 
+        if ($provider === 'netbank') {
+            $sourceAccount = $this->netbankSourceAccountReadiness($requiredMinor);
+
+            if (! (bool) ($sourceAccount['ready'] ?? false)) {
+                throw new InsufficientWalletBalance((string) ($sourceAccount['message'] ?? 'NetBank source account is not ready.'));
+            }
+        }
+
         return FundingDecisionData::allowed(
             authority: $topology === 'ledger_pooled' ? 'local_ledger' : 'manual',
             availableMinor: $availableMinor,
@@ -64,6 +73,9 @@ class ProviderAwareFundingPolicy implements ProviderFundingPolicyContract
             meta: [
                 'provider' => $provider,
                 'topology' => $topology,
+                'source_account' => $provider === 'netbank'
+                    ? ($sourceAccount ?? null)
+                    : null,
             ],
         );
     }
@@ -207,6 +219,16 @@ class ProviderAwareFundingPolicy implements ProviderFundingPolicyContract
         $this->paynamicsBalances->handle($walletId, $owner);
 
         return ['refreshed' => true];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function netbankSourceAccountReadiness(int $requiredMinor): array
+    {
+        $this->netbankSourceAccount ??= app(CheckNetbankSourceAccountReadiness::class);
+
+        return $this->netbankSourceAccount->handle($requiredMinor);
     }
 
     protected function effectiveProviderForOwner(mixed $owner, mixed $provider): string

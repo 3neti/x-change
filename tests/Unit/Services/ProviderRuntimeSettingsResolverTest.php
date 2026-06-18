@@ -18,3 +18,20 @@ it('resolves provider runtime settings from config without exposing secrets', fu
         ->and($settings->setting('providers.paynamics.enabled'))->toBeTrue()
         ->and($settings->setting('password'))->toBeNull();
 });
+
+it('infers NetBank runtime provider from an explicit payout provider hint when default remains manual', function () {
+    config()->set('x-change.provider_runtime.default_provider', 'manual');
+    config()->set('x-change.provider_runtime.payout_provider_hint', 'LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider');
+
+    $settings = app(ProviderRuntimeSettingsResolverContract::class);
+
+    expect($settings->provider())->toBe('netbank')
+        ->and($settings->topology())->toBe('ledger_pooled');
+});
+
+it('does not infer a provider from an empty payout provider hint', function () {
+    config()->set('x-change.provider_runtime.default_provider', 'manual');
+    config()->set('x-change.provider_runtime.payout_provider_hint', null);
+
+    expect(app(ProviderRuntimeSettingsResolverContract::class)->provider())->toBe('manual');
+});

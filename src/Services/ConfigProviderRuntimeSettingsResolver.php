@@ -19,7 +19,13 @@ class ConfigProviderRuntimeSettingsResolver implements ProviderRuntimeSettingsRe
             ?? config('x-change.provider_runtime.default_provider')
             ?? config('x-change.provider_topologies.default', 'manual');
 
-        return strtolower((string) $provider);
+        $provider = strtolower((string) $provider);
+
+        if ($override === null && $provider === 'manual') {
+            return $this->providerFromExplicitPayoutHint() ?? $provider;
+        }
+
+        return $provider;
     }
 
     public function topology(?string $provider = null): string
@@ -42,5 +48,22 @@ class ConfigProviderRuntimeSettingsResolver implements ProviderRuntimeSettingsRe
     public function setting(string $key, mixed $default = null): mixed
     {
         return config("x-change.provider_runtime.{$key}", $default);
+    }
+
+    protected function providerFromExplicitPayoutHint(): ?string
+    {
+        $provider = config('x-change.provider_runtime.payout_provider_hint');
+
+        if (! is_string($provider) || trim($provider) === '') {
+            return null;
+        }
+
+        $provider = strtolower($provider);
+
+        return match (true) {
+            str_contains($provider, 'netbank') => 'netbank',
+            str_contains($provider, 'paynamics'), str_contains($provider, 'constellation') => 'paynamics',
+            default => null,
+        };
     }
 }

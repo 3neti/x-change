@@ -8,6 +8,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import NetbankProfileCard from '@/components/x-change/NetbankProfileCard.vue';
 import PaynamicsWalletProfileCard from '@/components/x-change/PaynamicsWalletProfileCard.vue';
 import { edit } from '@/routes/profile';
 import { send } from '@/routes/verification';
@@ -21,6 +22,7 @@ type Props = {
     mustVerifyEmail: boolean;
     status?: string;
     paynamicsWallet: Record<string, unknown>;
+    netbankProfile: Record<string, unknown>;
 };
 
 const props = defineProps<Props>();
@@ -147,6 +149,8 @@ const user = computed(() => page.props.auth.user as ProfileUser);
         :wallet="props.paynamicsWallet"
         :status="props.status"
     />
+
+    <NetbankProfileCard :profile="props.netbankProfile" />
 
     <DeleteUser />
 </template>

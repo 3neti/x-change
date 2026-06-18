@@ -15,6 +15,7 @@ use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Enums\ProviderProvisioningMode;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
+use LBHurtado\XChange\Services\CheckNetbankSourceAccountReadiness;
 use LBHurtado\XChange\Services\ProviderAwareFundingPolicy;
 use LBHurtado\XChange\Services\SyncPaynamicsWalletBalance;
 use LBHurtado\XChange\Tests\Fakes\User;
@@ -59,6 +60,80 @@ it('blocks ledger pooled providers when the local ledger balance is insufficient
     expect(fn () => (new ProviderAwareFundingPolicy($settings, $links, $provisioning, $wallets))
         ->assertCanIssue($owner, $wallet, 25.00, ['provider' => 'netbank']))
         ->toThrow(InsufficientWalletBalance::class, 'Issuer wallet cannot afford the requested amount.');
+});
+
+it('allows NetBank issuance when local ledger and source account can cover the amount', function () {
+    $owner = new stdClass;
+    $wallet = (object) ['balance' => 100000];
+
+    $settings = Mockery::mock(ProviderRuntimeSettingsResolverContract::class);
+    $settings->shouldReceive('provider')->once()->with('netbank')->andReturn('netbank');
+    $settings->shouldReceive('topology')->once()->with('netbank')->andReturn('ledger_pooled');
+
+    $links = Mockery::mock(ProviderAccountLinkRepositoryContract::class);
+    $provisioning = Mockery::mock(ProviderProvisioningGatewayContract::class);
+
+    $wallets = Mockery::mock(WalletAccessContract::class);
+    $wallets->shouldReceive('getBalance')->once()->with($wallet)->andReturn(100000);
+
+    $sourceAccount = Mockery::mock(CheckNetbankSourceAccountReadiness::class);
+    $sourceAccount->shouldReceive('handle')
+        ->once()
+        ->with(75000)
+        ->andReturn([
+            'enabled' => true,
+            'ready' => true,
+            'available_balance_minor' => 125000,
+        ]);
+
+    $decision = (new ProviderAwareFundingPolicy(
+        $settings,
+        $links,
+        $provisioning,
+        $wallets,
+        null,
+        $sourceAccount,
+    ))->assertCanIssue($owner, $wallet, 750.00, ['provider' => 'netbank']);
+
+    expect($decision->allowed)->toBeTrue()
+        ->and($decision->authority)->toBe('local_ledger')
+        ->and($decision->meta['source_account']['ready'])->toBeTrue();
+});
+
+it('blocks NetBank issuance when source account readiness cannot cover the amount', function () {
+    $owner = new stdClass;
+    $wallet = (object) ['balance' => 100000];
+
+    $settings = Mockery::mock(ProviderRuntimeSettingsResolverContract::class);
+    $settings->shouldReceive('provider')->once()->with('netbank')->andReturn('netbank');
+    $settings->shouldReceive('topology')->once()->with('netbank')->andReturn('ledger_pooled');
+
+    $links = Mockery::mock(ProviderAccountLinkRepositoryContract::class);
+    $provisioning = Mockery::mock(ProviderProvisioningGatewayContract::class);
+
+    $wallets = Mockery::mock(WalletAccessContract::class);
+    $wallets->shouldReceive('getBalance')->once()->with($wallet)->andReturn(100000);
+
+    $sourceAccount = Mockery::mock(CheckNetbankSourceAccountReadiness::class);
+    $sourceAccount->shouldReceive('handle')
+        ->once()
+        ->with(75000)
+        ->andReturn([
+            'enabled' => true,
+            'ready' => false,
+            'available_balance_minor' => 50000,
+            'message' => 'NetBank source account cannot cover the requested amount.',
+        ]);
+
+    expect(fn () => (new ProviderAwareFundingPolicy(
+        $settings,
+        $links,
+        $provisioning,
+        $wallets,
+        null,
+        $sourceAccount,
+    ))->assertCanIssue($owner, $wallet, 750.00, ['provider' => 'netbank']))
+        ->toThrow(InsufficientWalletBalance::class, 'NetBank source account cannot cover the requested amount.');
 });
 
 it('uses Paynamics provider wallet balance even when the local Bavix wallet has zero balance', function () {
