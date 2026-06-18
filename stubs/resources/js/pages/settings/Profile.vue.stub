@@ -8,15 +8,22 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import PaynamicsWalletProfileCard from '@/components/x-change/PaynamicsWalletProfileCard.vue';
 import { edit } from '@/routes/profile';
 import { send } from '@/routes/verification';
+import type { User } from '@/types/auth';
+
+type ProfileUser = User & {
+    mobile?: string;
+};
 
 type Props = {
     mustVerifyEmail: boolean;
     status?: string;
+    paynamicsWallet: Record<string, unknown>;
 };
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 defineOptions({
     layout: {
@@ -30,7 +37,7 @@ defineOptions({
 });
 
 const page = usePage();
-const user = computed(() => page.props.auth.user);
+const user = computed(() => page.props.auth.user as ProfileUser);
 </script>
 
 <template>
@@ -135,6 +142,11 @@ const user = computed(() => page.props.auth.user);
             </div>
         </Form>
     </div>
+
+    <PaynamicsWalletProfileCard
+        :wallet="props.paynamicsWallet"
+        :status="props.status"
+    />
 
     <DeleteUser />
 </template>

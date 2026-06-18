@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import { onMounted, ref } from 'vue';
-import BalanceWidget from '@/components/x-change/BalanceWidget.vue';
+import BalanceOverviewCards, {
+    type BalanceOverview,
+} from '@/components/x-change/BalanceOverviewCards.vue';
 import ReconciliationStatusCard from '@/components/x-change/ReconciliationStatusCard.vue';
 import {
     useXChangeDashboardApi,
@@ -19,6 +21,10 @@ defineOptions({
 });
 
 const { getStats } = useXChangeDashboardApi();
+defineProps<{
+    balance_overview?: BalanceOverview | null;
+}>();
+
 const stats = ref<DashboardStats | null>(null);
 const loading = ref(true);
 
@@ -32,10 +38,15 @@ onMounted(async () => {
     <Head title="Balances" />
 
     <div class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-        <h2 class="text-lg font-semibold">Balances & Reconciliation</h2>
+        <div class="space-y-1">
+            <h2 class="text-lg font-semibold">Balances & Reconciliation</h2>
+            <p class="text-sm text-muted-foreground">
+                Balance authority changes by provider. Paynamics uses the provider wallet; NetBank uses the local ledger.
+            </p>
+        </div>
 
         <div class="grid gap-4 md:grid-cols-2">
-            <BalanceWidget />
+            <BalanceOverviewCards :overview="balance_overview ?? null" />
 
             <ReconciliationStatusCard
                 v-if="stats"

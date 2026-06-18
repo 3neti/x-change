@@ -13,6 +13,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimStartController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSubmitController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSuccessPageController;
 use LBHurtado\XChange\Http\Controllers\Web\DashboardPageController;
+use LBHurtado\XChange\Http\Controllers\Web\LinkPaynamicsWalletController;
 use LBHurtado\XChange\Http\Controllers\Web\PayCodeCreatePageController;
 use LBHurtado\XChange\Http\Controllers\Web\PayCodeIndexPageController;
 use LBHurtado\XChange\Http\Controllers\Web\PayCodeShowPageController;
@@ -32,6 +33,8 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
     });
 
     Route::get('balances', BalancePageController::class)->name('x-change.balances.index');
+    Route::post('provider-wallets/paynamics', LinkPaynamicsWalletController::class)
+        ->name('x-change.provider-wallets.paynamics.store');
 });
 
 // Public claim routes (no auth required)

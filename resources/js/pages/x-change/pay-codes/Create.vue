@@ -21,6 +21,7 @@ import {
     normalizeProvisioningRequirement,
     type ProvisioningRequirement,
 } from '../../../components/x-change/provisioningRequirement';
+import type { BalanceOverview } from '../../../components/x-change/BalanceOverviewCards.vue';
 import { useXChangeRoutes } from '@/composables/useXChangeRoutes';
 import { AlertCircle, ArrowLeft, Loader2, PlusCircle } from 'lucide-vue-next';
 
@@ -75,6 +76,7 @@ interface PayCodeGenerationForm {
 
 const props = defineProps<{
     provisioning_requirement?: ProvisioningRequirement | null;
+    balance_overview?: BalanceOverview | null;
 }>();
 
 const routes = useXChangeRoutes();
@@ -527,6 +529,7 @@ async function submit(): Promise<void> {
                     :estimate="estimate"
                     :loading="estimating"
                     :error="estimateError"
+                    :balance-overview="props.balance_overview ?? null"
                 />
 
                 <PayCodeInstructionPreview

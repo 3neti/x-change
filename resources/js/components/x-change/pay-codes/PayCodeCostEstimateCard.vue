@@ -2,6 +2,9 @@
 import { computed } from 'vue';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import BalanceOverviewCards, {
+    type BalanceOverview,
+} from '@/components/x-change/BalanceOverviewCards.vue';
 
 interface PricingEstimate {
     currency?: string;
@@ -21,6 +24,7 @@ interface Props {
     estimate?: PricingEstimate | null;
     loading?: boolean;
     error?: string | null;
+    balanceOverview?: BalanceOverview | null;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -28,6 +32,7 @@ const props = withDefaults(defineProps<Props>(), {
     estimate: null,
     loading: false,
     error: null,
+    balanceOverview: null,
 });
 
 const currency = computed(() => props.estimate?.currency ?? 'PHP');
@@ -77,13 +82,7 @@ const totalFees = computed(() => {
     return itemizedTotal || legacyFees.value || baseFee.value;
 });
 
-const total = computed(() => {
-    if (props.estimate?.total !== undefined) {
-        return Number(props.estimate.total);
-    }
-
-    return subtotal.value + totalFees.value;
-});
+const total = computed(() => subtotal.value + totalFees.value);
 
 const hasEstimate = computed(() => props.estimate !== null);
 const showInitialLoading = computed(() => props.loading && !hasEstimate.value);
@@ -238,13 +237,20 @@ function money(value: number): string {
                 </div>
 
                 <div class="flex items-center justify-between gap-4">
-                    <span class="font-medium">Total Wallet Debit</span>
+                    <span class="font-medium">Required Funding</span>
                     <span class="text-xl font-bold">{{ money(total) }}</span>
                 </div>
 
                 <p class="min-h-4 text-xs text-muted-foreground">
-                    Total Wallet Debit includes the cash amount plus service and instruction fees.
+                    Required funding includes the cash amount plus service and instruction fees.
                 </p>
+
+                <BalanceOverviewCards
+                    v-if="balanceOverview"
+                    :overview="balanceOverview"
+                    :required-amount="total"
+                    compact
+                />
             </div>
         </CardContent>
     </Card>

@@ -5,11 +5,13 @@ declare(strict_types=1);
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
+use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
 use LBHurtado\XChange\Contracts\ProviderReadinessGuardContract;
 use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Contracts\UserResolverContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Contracts\XChangeOnboardingGatewayContract;
+use LBHurtado\XChange\Data\FundingDecisionData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Data\ProviderReadinessData;
@@ -94,11 +96,6 @@ it('generates a pay code by resolving issuer, estimating cost, allocating revenu
         ->with($wallet)
         ->andReturn(1000.0);
 
-    $wallets->shouldReceive('assertCanAfford')
-        ->once()
-        ->with($wallet, 31.0)
-        ->andReturnNull();
-
     $wallets->shouldReceive('getBalance')
         ->once()
         ->with($wallet)
@@ -127,12 +124,26 @@ it('generates a pay code by resolving issuer, estimating cost, allocating revenu
             'allocations' => [],
         ]);
 
+    $funding = Mockery::mock(ProviderFundingPolicyContract::class);
+    $funding->shouldReceive('assertCanIssue')
+        ->once()
+        ->with($issuer, $wallet, 131.0, Mockery::subset([
+            'provider' => null,
+            'currency' => 'PHP',
+        ]))
+        ->andReturn(FundingDecisionData::allowed(
+            authority: 'local_ledger',
+            availableMinor: 100000,
+            requiredMinor: 13100,
+        ));
+
     $action = new GeneratePayCode(
         $users,
         $wallets,
         $estimateAction,
         $issuance,
         $allocator,
+        funding: $funding,
     );
 
     $result = $action->handle($input);
@@ -221,9 +232,13 @@ it('stops before issuance when wallet cannot afford the estimated cost', functio
         ->with($wallet)
         ->andReturn(100.0);
 
-    $wallets->shouldReceive('assertCanAfford')
+    $funding = Mockery::mock(ProviderFundingPolicyContract::class);
+    $funding->shouldReceive('assertCanIssue')
         ->once()
-        ->with($wallet, 999.0)
+        ->with($issuer, $wallet, 1099.0, Mockery::subset([
+            'provider' => null,
+            'currency' => 'PHP',
+        ]))
         ->andThrow(new InsufficientWalletBalance('Insufficient balance.'));
 
     $estimateAction = Mockery::mock(EstimatePayCodeCost::class);
@@ -243,6 +258,7 @@ it('stops before issuance when wallet cannot afford the estimated cost', functio
         $estimateAction,
         $issuance,
         $allocator,
+        funding: $funding,
     );
 
     expect(fn () => $action->handle($input))

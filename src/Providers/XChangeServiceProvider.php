@@ -66,6 +66,7 @@ use LBHurtado\XChange\Contracts\EventStoreContract;
 use LBHurtado\XChange\Contracts\PayCodePresentationResolverContract;
 use LBHurtado\XChange\Contracts\PricelistServiceContract;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
+use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
 use LBHurtado\XChange\Contracts\ReconciliationLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\RedemptionCompletionContextContract;
 use LBHurtado\XChange\Contracts\RedemptionCompletionStoreContract;
@@ -150,6 +151,7 @@ use LBHurtado\XChange\Services\NullWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\PaymentProviders\ManualVoucherPaymentProvider;
 use LBHurtado\XChange\Services\PaynamicsWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\PricelistService;
+use LBHurtado\XChange\Services\ProviderAwareFundingPolicy;
 use LBHurtado\XChange\Services\ProvisioningAwareOnboardingService;
 use LBHurtado\XChange\Services\ReconciliationLifecycleService;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
@@ -626,6 +628,12 @@ class XChangeServiceProvider extends ServiceProvider
         if (! $this->app->bound(XChangeProviderTopologyResolverContract::class)) {
             $this->app->singleton(XChangeProviderTopologyResolverContract::class, function ($app) {
                 return $app->make(config('x-change.services.provider_topology_resolver', ConfigProviderTopologyResolver::class));
+            });
+        }
+
+        if (! $this->app->bound(ProviderFundingPolicyContract::class)) {
+            $this->app->singleton(ProviderFundingPolicyContract::class, function ($app) {
+                return $app->make(config('x-change.services.provider_funding_policy', ProviderAwareFundingPolicy::class));
             });
         }
     }

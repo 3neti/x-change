@@ -12,6 +12,7 @@ use LBHurtado\XChange\Contracts\IssuerResolverContract;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
 use LBHurtado\XChange\Contracts\ProviderAccountLinkRepositoryContract;
+use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
 use LBHurtado\XChange\Contracts\ProviderProvisioningGatewayContract;
 use LBHurtado\XChange\Contracts\ProviderProvisioningManagerContract;
 use LBHurtado\XChange\Contracts\ProviderReadinessGuardContract;
@@ -63,6 +64,7 @@ use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
 use LBHurtado\XChange\Services\PayCodeIssuanceService;
 use LBHurtado\XChange\Services\PaynamicsWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\PricingService;
+use LBHurtado\XChange\Services\ProviderAwareFundingPolicy;
 use LBHurtado\XChange\Services\ProviderCustomerWalletTopology;
 use LBHurtado\XChange\Services\Provisioning\DelegatingProviderProvisioningGateway;
 use LBHurtado\XChange\Services\Provisioning\FakeProviderProvisioningGateway;
@@ -187,6 +189,7 @@ return [
         'provider_provisioning_gateway' => DelegatingProviderProvisioningGateway::class,
         'provider_provisioning_manager' => DefaultProviderProvisioningManager::class,
         'provider_readiness_guard' => DefaultProviderReadinessGuard::class,
+        'provider_funding_policy' => ProviderAwareFundingPolicy::class,
         'wallet_provisioning' => DefaultWalletProvisioningService::class,
         'issuer_resolver' => DefaultIssuerResolver::class,
         'redemption_flow_preparation' => DefaultRedemptionFlowPreparationService::class,
@@ -223,8 +226,13 @@ return [
         ProviderProvisioningGatewayContract::class => 'provider_provisioning_gateway',
         ProviderProvisioningManagerContract::class => 'provider_provisioning_manager',
         ProviderReadinessGuardContract::class => 'provider_readiness_guard',
+        ProviderFundingPolicyContract::class => 'provider_funding_policy',
         WalletProvisioningContract::class => 'wallet_provisioning',
         IssuerResolverContract::class => 'issuer_resolver',
+    ],
+
+    'funding' => [
+        'provider_balance_max_age_seconds' => (int) env('XCHANGE_PROVIDER_BALANCE_MAX_AGE_SECONDS', 300),
     ],
 
     'integrations' => [

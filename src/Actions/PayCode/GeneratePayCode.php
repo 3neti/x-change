@@ -7,12 +7,14 @@ namespace LBHurtado\XChange\Actions\PayCode;
 use Bavix\Wallet\Interfaces\Wallet;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
+use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
 use LBHurtado\XChange\Contracts\ProviderReadinessGuardContract;
 use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Contracts\UserResolverContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Contracts\XChangeOnboardingGatewayContract;
 use LBHurtado\XChange\Data\DebitData;
+use LBHurtado\XChange\Data\FundingDecisionData;
 use LBHurtado\XChange\Data\IssuerData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Data\PayCodeLinksData;
@@ -38,6 +40,7 @@ class GeneratePayCode
         protected ?BuildProvisioningFlowDescriptor $descriptors = null,
         protected ?XChangeOnboardingGatewayContract $onboarding = null,
         protected ?ResumeProviderProvisioningFromOnboarding $onboardingProvisioning = null,
+        protected ?ProviderFundingPolicyContract $funding = null,
     ) {}
 
     /**
@@ -98,13 +101,24 @@ class GeneratePayCode
         return DB::transaction(function () use ($issuer, $wallet, $input, $estimate): GeneratePayCodeResultData {
             $balanceBefore = $this->wallets->getBalance($wallet);
 
-            $this->wallets->assertCanAfford($wallet, $estimate->total);
-
-            $allocation = $this->allocator->allocate(
-                issuer: $this->assertWalletableIssuer($issuer),
-                estimate: $estimate,
-                context: $this->buildAllocationContext($input, $estimate),
+            $funding = $this->fundingPolicy()->assertCanIssue(
+                owner: $issuer,
+                localWallet: $wallet,
+                amount: $this->requiredIssuanceAmount($input, $estimate),
+                context: [
+                    'provider' => data_get($input, 'provider'),
+                    'currency' => $estimate->currency,
+                    'cash_amount' => data_get($input, 'cash.amount'),
+                ],
             );
+
+            $allocation = $this->shouldAllocateLocalRevenue($funding->authority)
+                ? $this->allocator->allocate(
+                    issuer: $this->assertWalletableIssuer($issuer),
+                    estimate: $estimate,
+                    context: $this->buildAllocationContext($input, $estimate),
+                )
+                : $this->providerWalletAllocationPlaceholder($funding);
 
             $issued = $this->issuance->issue($issuer, $input);
 
@@ -183,6 +197,38 @@ class GeneratePayCode
         }
 
         return new DebitData;
+    }
+
+    protected function fundingPolicy(): ProviderFundingPolicyContract
+    {
+        return $this->funding ??= app(ProviderFundingPolicyContract::class);
+    }
+
+    protected function shouldAllocateLocalRevenue(string $authority): bool
+    {
+        return in_array($authority, ['local_ledger', 'manual'], true);
+    }
+
+    protected function requiredIssuanceAmount(array $input, PricingEstimateData $estimate): float
+    {
+        return (float) data_get($input, 'cash.amount', 0) + $estimate->total;
+    }
+
+    /**
+     * @return array{total_minor:int,total:float,currency:string,allocations:array<int, array<string, mixed>>,debit:array{id:null,amount:string}}
+     */
+    protected function providerWalletAllocationPlaceholder(FundingDecisionData $funding): array
+    {
+        return [
+            'total_minor' => $funding->required_minor,
+            'total' => $funding->required_minor / 100,
+            'currency' => $funding->currency,
+            'allocations' => [],
+            'debit' => [
+                'id' => null,
+                'amount' => '0',
+            ],
+        ];
     }
 
     /**
