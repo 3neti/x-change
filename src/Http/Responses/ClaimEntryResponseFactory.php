@@ -9,11 +9,15 @@ use Inertia\Response;
 
 class ClaimEntryResponseFactory
 {
-    public function render(?string $initialCode = null, ?array $claimExperience = null): Response
-    {
+    public function render(
+        ?string $initialCode = null,
+        ?array $claimExperience = null,
+        ?array $provisioningRequirement = null,
+    ): Response {
         return Inertia::render('x-change/claim/Entry', [
             'initial_code' => $initialCode,
             'claim_experience' => $claimExperience,
+            'provisioning_requirement' => $provisioningRequirement,
         ]);
     }
 

@@ -3,12 +3,16 @@ import { nextTick } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import CreatePage from '../../resources/js/pages/x-change/pay-codes/Create.vue';
 
+const { routerVisit } = vi.hoisted(() => ({
+    routerVisit: vi.fn(),
+}));
+
 vi.mock('@inertiajs/vue3', () => ({
     Head: {
         template: '<div><slot /></div>',
     },
     router: {
-        visit: vi.fn(),
+        visit: routerVisit,
     },
 }));
 
@@ -92,10 +96,16 @@ vi.mock('@/composables/useXChangeRoutes', () => ({
 }));
 
 vi.mock('lucide-vue-next', () => ({
+    ArrowRight: {
+        template: '<span />',
+    },
     AlertCircle: {
         template: '<span />',
     },
     ArrowLeft: {
+        template: '<span />',
+    },
+    CheckCircle2: {
         template: '<span />',
     },
     Loader2: {
@@ -104,31 +114,51 @@ vi.mock('lucide-vue-next', () => ({
     PlusCircle: {
         template: '<span />',
     },
+    RefreshCcw: {
+        template: '<span />',
+    },
+    ShieldAlert: {
+        template: '<span />',
+    },
 }));
 
 describe('PayCodeCreatePage', () => {
     beforeEach(() => {
+        routerVisit.mockReset();
         vi.useFakeTimers();
-        global.fetch = vi.fn().mockResolvedValue({
-            ok: false,
-            json: async () => ({
-                success: false,
-                code: 'PROVIDER_PROVISIONING_REQUIRED',
-                message: 'Pay Code issuance requires provider provisioning before the voucher can be created.',
-                errors: {
-                    provisioning: {
-                        provider: 'paynamics',
-                        mode: 'wallet_create',
-                        reason: 'Issuer provider customer wallet is not ready.',
-                        descriptor: {
-                            title: 'Create your Paynamics wallet',
-                            description: 'Complete wallet setup so Pay Codes can be issued and paid out.',
-                            steps: ['profile', 'wallet', 'kyc', 'ready'],
+        global.fetch = vi.fn()
+            .mockResolvedValueOnce({
+                ok: false,
+                json: async () => ({
+                    success: false,
+                    code: 'PROVIDER_PROVISIONING_REQUIRED',
+                    message: 'Pay Code issuance requires provider provisioning before the voucher can be created.',
+                    errors: {
+                        provisioning: {
+                            provider: 'paynamics',
+                            mode: 'wallet_create',
+                            reason: 'Issuer provider customer wallet is not ready.',
+                            onboarding: {
+                                reference: 'onb-issue-123',
+                            },
+                            descriptor: {
+                                title: 'Create your Paynamics wallet',
+                                description: 'Complete wallet setup so Pay Codes can be issued and paid out.',
+                                steps: ['profile', 'wallet', 'kyc', 'ready'],
+                            },
                         },
                     },
-                },
-            }),
-        }) as typeof fetch;
+                }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    success: true,
+                    data: {
+                        code: 'PC-12345',
+                    },
+                }),
+            }) as typeof fetch;
     });
 
     afterEach(() => {
@@ -149,7 +179,32 @@ describe('PayCodeCreatePage', () => {
 
         expect(wrapper.text()).toContain('Create your Paynamics wallet');
         expect(wrapper.text()).toContain('Complete wallet setup so Pay Codes can be issued and paid out.');
-        expect(wrapper.text()).toContain('Provider: paynamics');
-        expect(wrapper.text()).toContain('Mode: wallet_create');
+        expect(wrapper.find('[data-testid="set-valid-form"]').exists()).toBe(false);
+    });
+
+    it('resumes pay code issuance with the onboarding reference payload', async () => {
+        const wrapper = mount(CreatePage);
+
+        await wrapper.find('[data-testid="set-valid-form"]').trigger('click');
+        await nextTick();
+
+        await wrapper.findAll('button').find((button) => button.text().includes('Generate Pay Code'))?.trigger('click');
+        await nextTick();
+        await Promise.resolve();
+        await nextTick();
+
+        await wrapper.findAll('button').find((button) => button.text().includes('Continue setup'))?.trigger('click');
+        await nextTick();
+        await Promise.resolve();
+        await nextTick();
+
+        const lastGenerateCall = vi.mocked(global.fetch).mock.calls.at(-1);
+        const request = lastGenerateCall?.[1] as RequestInit | undefined;
+        const body = JSON.parse(String(request?.body ?? '{}'));
+
+        expect(lastGenerateCall?.[0]).toBe('/api/x/v1/pay-codes');
+        expect(body.onboarding.reference).toBe('onb-issue-123');
+        expect(body.metadata.onboarding_reference).toBe('onb-issue-123');
+        expect(routerVisit).toHaveBeenCalledWith('/x/pay-codes/PC-12345');
     });
 });

@@ -9,4 +9,6 @@ final class CompiledClaimSessionKeys
     public const SUBMISSION = 'compiled_claim_submission';
 
     public const PREPARED = 'compiled_claim_prepared';
+
+    public const PROVISIONING_REQUIREMENT = 'xchange.claim.provisioning_requirement';
 }

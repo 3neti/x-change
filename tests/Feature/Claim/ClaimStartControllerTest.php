@@ -2,12 +2,14 @@
 
 declare(strict_types=1);
 
+use Inertia\Response;
 use LBHurtado\FormFlowManager\Data\FormFlowInstructionsData;
 use LBHurtado\FormFlowManager\Services\DriverService;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
+use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
 use LBHurtado\XChange\Support\Claim\ClaimEvidenceSynchronizer;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
@@ -326,6 +328,62 @@ it('keeps empty legacy claim entry rendering through get request', function () {
         );
 })->skip('Pending UI-agnostic ClaimStartController response boundary.');
 
+it('renders flashed provisioning requirement data on failed claim entry reload', function () {
+    $inertiaResponse = Mockery::mock(Response::class);
+    $inertiaResponse
+        ->shouldReceive('toResponse')
+        ->once()
+        ->andReturn(response('claim entry'));
+
+    $responseFactory = Mockery::mock(ClaimEntryResponseFactory::class);
+    $responseFactory
+        ->shouldReceive('render')
+        ->once()
+        ->with(
+            'TEST123',
+            null,
+            Mockery::on(fn (?array $requirement): bool => data_get($requirement, 'provider') === 'netbank'
+                && data_get($requirement, 'descriptor.title') === 'Add payout destination'
+            ),
+        )
+        ->andReturn($inertiaResponse);
+
+    app()->instance(ClaimEntryResponseFactory::class, $responseFactory);
+
+    $this->withSession([
+        CompiledClaimSessionKeys::PROVISIONING_REQUIREMENT => [
+            'provider' => 'netbank',
+            'mode' => 'bank_account_link',
+            'reason' => 'Bank account readiness is missing.',
+            'onboarding' => [
+                'reference' => 'onb-claim-123',
+            ],
+            'descriptor' => [
+                'title' => 'Add payout destination',
+                'description' => 'Complete your payout destination setup before continuing.',
+            ],
+        ],
+    ])->get('/x/claim?code=TEST123&failed=1')
+        ->assertOk()
+        ->assertSee('claim entry');
+});
+
+it('attaches onboarding reference metadata before restarting the claim form flow', function () {
+    $this->withoutMiddleware();
+
+    $voucher = claimVoucherWithRiderSplash();
+
+    mockDriverForClaimVoucher($this, $voucher);
+
+    assertClaimExperienceStartFlow($this, function (array $experience, array $payload) {
+        expect(data_get($experience, 'version'))->toBe(1)
+            ->and(data_get($payload, 'metadata.onboarding_reference'))->toBe('onb-claim-789');
+    }, 'flow-onboarding-reference-test');
+
+    $this->get('/x/claim?code='.$voucher->code.'&onboarding_reference=onb-claim-789')
+        ->assertRedirect('/form-flow/flow-onboarding-reference-test');
+});
+
 it('does not enter the redemption bridge when voucher is missing', function () {
     $this->withoutMiddleware();
 
@@ -612,4 +670,3 @@ it('hydrates approval page with pending compiled claim result after compiled for
 
     expect(session()->has(CompiledClaimResultSession::KEY))->toBeTrue();
 });
-

@@ -16,6 +16,11 @@ import {
     PayCodeGenerationBasicForm,
     PayCodeInstructionPreview,
 } from '@/components/x-change/pay-codes';
+import ProvisioningSetup from '../../../components/x-change/ProvisioningSetup.vue';
+import {
+    normalizeProvisioningRequirement,
+    type ProvisioningRequirement,
+} from '../../../components/x-change/provisioningRequirement';
 import { useXChangeRoutes } from '@/composables/useXChangeRoutes';
 import { AlertCircle, ArrowLeft, Loader2, PlusCircle } from 'lucide-vue-next';
 
@@ -68,12 +73,19 @@ interface PayCodeGenerationForm {
     metadata?: string | null;
 }
 
+const props = defineProps<{
+    provisioning_requirement?: ProvisioningRequirement | null;
+}>();
+
 const routes = useXChangeRoutes();
 
 const activeTab = ref<'basic' | 'advanced'>('basic');
 const submitting = ref(false);
 const errorMessage = ref<string | null>(null);
-const provisioningRequirement = ref<Record<string, any> | null>(null);
+const provisioningRequirement = ref<ProvisioningRequirement | null>(
+    normalizeProvisioningRequirement(props.provisioning_requirement),
+);
+const hasProvisioningRequirement = computed(() => provisioningRequirement.value !== null);
 
 const estimate = ref<Record<string, any> | null>(null);
 const estimating = ref(false);
@@ -257,6 +269,24 @@ const canEstimate = computed(() => {
     return normalizedAmount.value > 0 && normalizedQuantity.value > 0;
 });
 
+function requestPayloadWithProvisioningReference(): Record<string, unknown> {
+    const payload = {
+        ...requestPayload.value,
+    } as Record<string, unknown>;
+    const reference = provisioningRequirement.value?.onboarding?.reference;
+
+    if (typeof reference === 'string' && reference.trim() !== '') {
+        payload.onboarding = {
+            reference,
+        };
+        payload.metadata = {
+            onboarding_reference: reference,
+        };
+    }
+
+    return payload;
+}
+
 function scheduleEstimate(): void {
     if (estimateTimer) {
         clearTimeout(estimateTimer);
@@ -365,12 +395,11 @@ async function submit(): Promise<void> {
         return;
     }
 
+    const payloadToSubmit = requestPayloadWithProvisioningReference();
+
     submitting.value = true;
     errorMessage.value = null;
     provisioningRequirement.value = null;
-
-    const payloadToSubmit = requestPayload.value;
-    console.log('[Create Pay Code] payload', JSON.stringify(payloadToSubmit, null, 2));
 
     try {
         const response = await fetch(routes.api.generatePayCode, {
@@ -380,13 +409,13 @@ async function submit(): Promise<void> {
                 'Content-Type': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest',
             },
-            body: JSON.stringify(requestPayload.value),
+            body: JSON.stringify(payloadToSubmit),
         });
 
         const payload = await response.json().catch(() => ({}));
 
         if (!response.ok || payload?.success === false) {
-            provisioningRequirement.value = payload?.errors?.provisioning ?? null;
+            provisioningRequirement.value = normalizeProvisioningRequirement(payload?.errors?.provisioning);
             const firstValidationError = payload?.errors
                 ? Object.entries(payload.errors)
                     .filter(([key]) => key !== 'provisioning')
@@ -446,7 +475,7 @@ async function submit(): Promise<void> {
                 </div>
             </div>
 
-            <Button :disabled="!canSubmit" @click="submit">
+            <Button v-if="!hasProvisioningRequirement" :disabled="!canSubmit" @click="submit">
                 <Loader2 v-if="submitting" class="mr-2 h-4 w-4 animate-spin" />
                 <PlusCircle v-else class="mr-2 h-4 w-4" />
                 {{ submitting ? 'Generating…' : 'Generate' }}
@@ -460,43 +489,13 @@ async function submit(): Promise<void> {
             </AlertDescription>
         </Alert>
 
-        <Alert v-if="provisioningRequirement" class="border-primary/20 bg-primary/5 text-foreground">
-            <AlertCircle class="h-4 w-4" />
-            <AlertDescription class="space-y-3">
-                <div>
-                    <p class="font-medium">
-                        {{ provisioningRequirement.descriptor?.title || 'Provider setup required' }}
-                    </p>
-                    <p class="text-sm text-muted-foreground">
-                        {{ provisioningRequirement.descriptor?.description || provisioningRequirement.reason }}
-                    </p>
-                </div>
+        <ProvisioningSetup
+            :requirement="provisioningRequirement"
+            resume-label="Continue setup"
+            @resume="submit"
+        />
 
-                <div class="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                    <span class="rounded-full border px-2 py-1">
-                        Provider: {{ provisioningRequirement.provider }}
-                    </span>
-                    <span class="rounded-full border px-2 py-1">
-                        Mode: {{ provisioningRequirement.mode }}
-                    </span>
-                </div>
-
-                <div
-                    v-if="Array.isArray(provisioningRequirement.descriptor?.steps) && provisioningRequirement.descriptor.steps.length > 0"
-                    class="flex flex-wrap gap-2"
-                >
-                    <span
-                        v-for="step in provisioningRequirement.descriptor.steps"
-                        :key="step"
-                        class="rounded-full bg-background px-2.5 py-1 text-xs font-medium capitalize"
-                    >
-                        {{ String(step).replaceAll('_', ' ') }}
-                    </span>
-                </div>
-            </AlertDescription>
-        </Alert>
-
-        <div class="grid gap-6 lg:grid-cols-[1fr_380px]">
+        <div v-if="!hasProvisioningRequirement" class="grid gap-6 lg:grid-cols-[1fr_380px]">
             <div class="space-y-6">
                 <Tabs v-model="activeTab" class="w-full">
                     <TabsList class="grid w-full grid-cols-2">

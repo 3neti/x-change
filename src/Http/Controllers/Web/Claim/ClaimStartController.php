@@ -19,6 +19,7 @@ use LBHurtado\XChange\Actions\Claim\StorePreparedCompiledClaim;
 use LBHurtado\XChange\Actions\Claim\SubmitCompiledFormClaim;
 use LBHurtado\XChange\Data\PreparedCompiledClaimData;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
+use LBHurtado\XChange\Services\BuildProvisioningRequirementViewData;
 use LBHurtado\XChange\Support\Claim\ClaimExperiencePayload;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultRedirector;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
@@ -30,6 +31,7 @@ class ClaimStartController extends Controller
     public function __construct(
         protected DriverService $driverService,
         protected FormFlowService $formFlowService,
+        protected BuildProvisioningRequirementViewData $provisioning,
     ) {}
 
     public function __invoke(Request $request): RedirectResponse|Response
@@ -83,11 +85,15 @@ class ClaimStartController extends Controller
         }
 
         $code = strtoupper(trim((string) $request->query('code', '')));
+        $onboardingReference = $this->normalizedOnboardingReference(
+            $request->query('onboarding_reference')
+        );
 
         if ($code === '') {
             return $this->claimEntryResponse()->render(
                 initialCode: null,
                 claimExperience: null,
+                provisioningRequirement: null,
             );
         }
 
@@ -95,6 +101,9 @@ class ClaimStartController extends Controller
             return $this->claimEntryResponse()->render(
                 initialCode: $code,
                 claimExperience: null,
+                provisioningRequirement: $this->provisioning->handle(
+                    session()->get(CompiledClaimSessionKeys::PROVISIONING_REQUIREMENT)
+                ),
             );
         }
 
@@ -130,6 +139,10 @@ class ClaimStartController extends Controller
             $claimExperience,
         );
 
+        if ($onboardingReference !== null) {
+            data_set($instructionPayload, 'metadata.onboarding_reference', $onboardingReference);
+        }
+
         $instructionPayload = app(FormFlowSplashSkipPolicy::class)->apply($instructionPayload);
 
         $instructions = FormFlowInstructionsData::from($instructionPayload);
@@ -142,5 +155,16 @@ class ClaimStartController extends Controller
     private function claimEntryResponse(): ClaimEntryResponseFactory
     {
         return app(ClaimEntryResponseFactory::class);
+    }
+
+    protected function normalizedOnboardingReference(mixed $reference): ?string
+    {
+        if (! is_string($reference)) {
+            return null;
+        }
+
+        $reference = trim($reference);
+
+        return $reference === '' ? null : $reference;
     }
 }

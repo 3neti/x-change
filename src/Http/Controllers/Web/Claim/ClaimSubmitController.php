@@ -12,9 +12,12 @@ use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Redemption\SubmitWebPayCodeClaim;
 use LBHurtado\XChange\Contracts\ClaimApprovalWorkflowStoreContract;
+use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
+use LBHurtado\XChange\Services\BuildProvisioningRequirementViewData;
 use LBHurtado\XChange\Support\Claim\ClaimApprovalResumePayloadSession;
 use LBHurtado\XChange\Support\Claim\ClaimEvidenceSynchronizer;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
+use LBHurtado\XChange\Support\Claim\CompiledClaimSessionKeys;
 use LBHurtado\XChange\Support\Claim\FormFlowClaimPayloadNormalizer;
 
 class ClaimSubmitController extends Controller
@@ -27,6 +30,7 @@ class ClaimSubmitController extends Controller
         protected CompiledClaimResultSession $compiledClaimResultSession,
         protected ClaimApprovalResumePayloadSession $resumePayloadSession,
         protected ClaimApprovalWorkflowStoreContract $approvalWorkflows,
+        protected BuildProvisioningRequirementViewData $provisioning,
     ) {}
 
     public function __invoke(Request $request, string $code): RedirectResponse
@@ -52,6 +56,12 @@ class ClaimSubmitController extends Controller
         }
 
         $payload = $this->payloadNormalizer->normalize($state['collected_data'] ?? []);
+        $onboardingReference = data_get($state, 'instructions.metadata.onboarding_reference');
+
+        if (is_string($onboardingReference) && trim($onboardingReference) !== '') {
+            data_set($payload, 'metadata.onboarding_reference', trim($onboardingReference));
+            data_set($payload, 'onboarding.reference', trim($onboardingReference));
+        }
 
         $mobile = $payload['mobile'] ?? null;
         $country = $payload['country'] ?? 'PH';
@@ -96,6 +106,24 @@ class ClaimSubmitController extends Controller
             $this->formFlowService->clearFlow($state['flow_id'] ?? $flowId);
 
             return redirect()->route('x-change.claim.success', ['code' => $code]);
+        } catch (ProviderProvisioningRequired $e) {
+            Log::warning('[ClaimSubmitController] Claim provisioning required', [
+                'voucher_code' => $code,
+                'provider' => data_get($e->provisioning, 'provider'),
+                'mode' => data_get($e->provisioning, 'mode'),
+                'reason' => data_get($e->provisioning, 'reason'),
+            ]);
+
+            return redirect()
+                ->route('x-change.claim.start', [
+                    'code' => $code,
+                    'failed' => 1,
+                ])
+                ->withErrors(['code' => $e->getMessage()])
+                ->with(
+                    CompiledClaimSessionKeys::PROVISIONING_REQUIREMENT,
+                    $this->provisioning->handle($e->provisioning),
+                );
         } catch (\Throwable $e) {
             Log::error('[ClaimSubmitController] Claim failed', [
                 'voucher_code' => $code,

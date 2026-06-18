@@ -8,8 +8,10 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Redemption\SubmitWebPayCodeClaim;
 use LBHurtado\XChange\Data\Claims\ClaimApprovalInitiationResultData;
 use LBHurtado\XChange\Data\Redemption\SubmitPayCodeClaimResultData;
+use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
 use LBHurtado\XChange\Support\Claim\ClaimEvidenceSynchronizer;
+use LBHurtado\XChange\Support\Claim\CompiledClaimSessionKeys;
 use LBHurtado\XChange\Support\Claim\FormFlowClaimPayloadNormalizer;
 
 beforeEach(function (): void {
@@ -376,6 +378,145 @@ it('redirects back to claim start when claim submission fails', function (): voi
             && ($context['voucher_code'] ?? null) === $voucher->code
             && ($context['error'] ?? null) === 'Claim failed for test'
         );
+});
+
+it('flashes descriptor-backed provisioning guidance when claim submission requires provider onboarding', function (): void {
+    $voucher = claimSubmitTestVoucher();
+
+    $state = [
+        'flow_id' => 'flow-test',
+        'collected_data' => [
+            'wallet_info' => [
+                'mobile' => '+639173011987',
+            ],
+        ],
+    ];
+
+    $payload = [
+        'mobile' => '+639173011987',
+        'country' => 'PH',
+        'bank_account' => [
+            'bank_code' => 'GXCHPHM2XXX',
+            'account_number' => '09173011987',
+        ],
+        'inputs' => [
+            'mobile' => '+639173011987',
+        ],
+    ];
+
+    $this->formFlowService
+        ->shouldReceive('getFlowState')
+        ->once()
+        ->with('flow-test')
+        ->andReturn($state);
+
+    $this->payloadNormalizer
+        ->shouldReceive('normalize')
+        ->once()
+        ->with($state['collected_data'])
+        ->andReturn($payload);
+
+    $this->evidenceSynchronizer
+        ->shouldReceive('sync')
+        ->once();
+
+    $this->submitAction
+        ->shouldReceive('handle')
+        ->once()
+        ->andThrow(new ProviderProvisioningRequired(
+            'Claim requires provider bank-account provisioning before payout can continue.',
+            [
+                'provider' => 'netbank',
+                'mode' => 'bank_account_link',
+                'reason' => 'Bank account readiness is missing.',
+                'readiness' => [
+                    'topology' => 'ledger_pooled',
+                ],
+                'onboarding' => [
+                    'reference' => 'onb-claim-123',
+                ],
+            ],
+        ));
+
+    $response = $this->post(route('x-change.claim.submit', ['code' => $voucher->code]), [
+        'flow_id' => 'flow-test',
+    ]);
+
+    $response
+        ->assertRedirect(route('x-change.claim.start', ['code' => $voucher->code, 'failed' => 1]))
+        ->assertSessionHasErrors(['code'])
+        ->assertSessionHas(CompiledClaimSessionKeys::PROVISIONING_REQUIREMENT, function (?array $requirement): bool {
+            return data_get($requirement, 'provider') === 'netbank'
+                && data_get($requirement, 'mode') === 'bank_account_link'
+                && data_get($requirement, 'descriptor.title') === 'Add payout destination';
+        });
+});
+
+it('passes onboarding reference from flow metadata into the resumed claim payload', function (): void {
+    $voucher = claimSubmitTestVoucher();
+
+    $state = [
+        'flow_id' => 'flow-test',
+        'instructions' => [
+            'metadata' => [
+                'onboarding_reference' => 'onb-claim-789',
+            ],
+        ],
+        'collected_data' => [
+            'wallet_info' => [
+                'mobile' => '+639173011987',
+            ],
+        ],
+    ];
+
+    $payload = [
+        'mobile' => '+639173011987',
+        'country' => 'PH',
+        'bank_code' => 'GXCHPHM2XXX',
+        'account_number' => '09173011987',
+        'inputs' => [
+            'mobile' => '+639173011987',
+        ],
+    ];
+
+    $this->formFlowService
+        ->shouldReceive('getFlowState')
+        ->once()
+        ->with('flow-test')
+        ->andReturn($state);
+
+    $this->payloadNormalizer
+        ->shouldReceive('normalize')
+        ->once()
+        ->with($state['collected_data'])
+        ->andReturn($payload);
+
+    $this->evidenceSynchronizer
+        ->shouldReceive('sync')
+        ->once()
+        ->with(Mockery::on(fn (array $actual): bool => data_get($actual, 'metadata.onboarding_reference') === 'onb-claim-789'
+            && data_get($actual, 'onboarding.reference') === 'onb-claim-789'
+        ));
+
+    $this->submitAction
+        ->shouldReceive('handle')
+        ->once()
+        ->withArgs(fn ($receivedVoucher, array $actual): bool => $receivedVoucher->is($voucher)
+            && data_get($actual, 'metadata.onboarding_reference') === 'onb-claim-789'
+            && data_get($actual, 'onboarding.reference') === 'onb-claim-789'
+        )
+        ->andReturn(successfulClaimSubmitResult($voucher));
+
+    $this->formFlowService
+        ->shouldReceive('clearFlow')
+        ->once()
+        ->with('flow-test');
+
+    $response = $this->post(route('x-change.claim.submit', ['code' => $voucher->code]), [
+        'flow_id' => 'flow-test',
+    ]);
+
+    $response->assertRedirect(route('x-change.claim.success', ['code' => $voucher->code]));
 });
 
 it('redirects to approval page when claim submission requires OTP approval', function (): void {
