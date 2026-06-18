@@ -67,6 +67,7 @@ use LBHurtado\XChange\Services\ProviderCustomerWalletTopology;
 use LBHurtado\XChange\Services\Provisioning\DelegatingProviderProvisioningGateway;
 use LBHurtado\XChange\Services\Provisioning\FakeProviderProvisioningGateway;
 use LBHurtado\XChange\Services\Provisioning\NetbankProviderProvisioningGateway;
+use LBHurtado\XChange\Services\Provisioning\PaynamicsProviderProvisioningGateway;
 use LBHurtado\XChange\Services\SessionCompletionStore;
 use LBHurtado\XChange\Services\SystemWalletProxy;
 use LBHurtado\XChange\Services\TerminologyService;
@@ -300,7 +301,11 @@ return [
             ],
             'paynamics' => [
                 'enabled' => env('XCHANGE_PROVIDER_PAYNAMICS_ENABLED', true),
-                'provisioning_gateway' => FakeProviderProvisioningGateway::class,
+                'provisioning_gateway' => PaynamicsProviderProvisioningGateway::class,
+                'live_requests_enabled' => env('XCHANGE_PROVIDER_PAYNAMICS_LIVE_REQUESTS_ENABLED', false),
+                'generate_kyc_link' => env('XCHANGE_PROVIDER_PAYNAMICS_GENERATE_KYC_LINK', true),
+                'kyc_level' => (string) env('XCHANGE_PROVIDER_PAYNAMICS_KYC_LEVEL', '1'),
+                'customer_profile_type' => env('XCHANGE_PROVIDER_PAYNAMICS_CUSTOMER_PROFILE_TYPE', 'DEFAULT_CONSUMER'),
             ],
         ],
 
