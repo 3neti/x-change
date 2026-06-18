@@ -25,6 +25,8 @@ it('backfills descriptor data for frontend provisioning requirements', function 
     expect(data_get($result, 'descriptor.title'))->toBe('Add payout destination');
 
     $statusUrl = data_get($result, 'onboarding.links.status_url');
+    $resumeUrl = data_get($result, 'onboarding.links.resume_url');
 
     expect(is_null($statusUrl) || is_string($statusUrl))->toBeTrue();
+    expect(is_null($resumeUrl) || is_string($resumeUrl))->toBeTrue();
 });

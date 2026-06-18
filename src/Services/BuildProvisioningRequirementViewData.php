@@ -69,6 +69,7 @@ class BuildProvisioningRequirementViewData
 
         if ($reference !== null) {
             data_set($onboarding, 'links.status_url', $this->onboardingStatusUrl($reference));
+            data_set($onboarding, 'links.resume_url', $this->onboardingResumeUrl($reference));
         }
 
         return $onboarding;
@@ -81,6 +82,15 @@ class BuildProvisioningRequirementViewData
         }
 
         return route('onboarding.show', ['reference' => $reference], false);
+    }
+
+    protected function onboardingResumeUrl(string $reference): ?string
+    {
+        if (! Route::has('onboarding.web.show')) {
+            return null;
+        }
+
+        return route('onboarding.web.show', ['reference' => $reference], false);
     }
 
     protected function stringOrNull(mixed $value): ?string

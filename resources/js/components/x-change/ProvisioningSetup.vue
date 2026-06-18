@@ -47,6 +47,29 @@ const onboardingStatusUrl = computed(() => {
 
     return typeof url === 'string' && url.trim() !== '' ? url : null;
 });
+const onboardingResumeUrl = computed(() => {
+    const url = props.requirement?.onboarding?.links?.resume_url;
+
+    return typeof url === 'string' && url.trim() !== '' ? url : null;
+});
+const onboardingResumeHref = computed(() => {
+    if (! onboardingResumeUrl.value) {
+        return null;
+    }
+
+    if (typeof window === 'undefined') {
+        return onboardingResumeUrl.value;
+    }
+
+    const currentUrl = `${window.location.pathname}${window.location.search}`;
+    const url = new URL(onboardingResumeUrl.value, window.location.origin);
+
+    if (currentUrl !== '') {
+        url.searchParams.set('return_url', currentUrl);
+    }
+
+    return `${url.pathname}${url.search}${url.hash}`;
+});
 
 const primaryActionLabel = computed(() => {
     if (props.resumeLabel) {
@@ -283,6 +306,18 @@ function retryNow(): void {
             </Button>
 
             <Button
+                v-if="onboardingResumeHref"
+                as="a"
+                class="w-full md:w-auto"
+                :disabled="checkingStatus"
+                :href="onboardingResumeHref"
+            >
+                <ArrowRight class="mr-2 h-4 w-4" />
+                {{ primaryActionLabel }}
+            </Button>
+
+            <Button
+                v-else
                 class="w-full md:w-auto"
                 :disabled="checkingStatus"
                 @click="continueSetup"

@@ -11,8 +11,8 @@ vi.mock('@/components/ui/badge', () => ({
 vi.mock('@/components/ui/button', () => ({
     Button: {
         emits: ['click'],
-        template: '<button type="button" @click="$emit(\'click\')" :disabled="disabled"><slot /></button>',
-        props: ['disabled'],
+        props: ['as', 'href', 'disabled'],
+        template: '<component :is="as || \'button\'" :href="href" :disabled="disabled" type="button" @click="$emit(\'click\')"><slot /></component>',
     },
 }));
 
@@ -99,6 +99,29 @@ describe('ProvisioningSetup', () => {
 
         expect(global.fetch).not.toHaveBeenCalled();
         expect(wrapper.emitted('resume')).toHaveLength(1);
+    });
+
+    it('links the primary CTA to the onboarding web surface when projected', () => {
+        const wrapper = mount(ProvisioningSetup, {
+            props: {
+                requirement: {
+                    descriptor: {
+                        title: 'Create your Paynamics wallet',
+                    },
+                    onboarding: {
+                        reference: 'onb-123',
+                        links: {
+                            resume_url: '/onboarding/onb-123',
+                        },
+                    },
+                },
+            },
+        });
+
+        const link = wrapper.find('a[href^="/onboarding/onb-123"]');
+
+        expect(link.exists()).toBe(true);
+        expect(link.attributes('href')).toContain('return_url=');
     });
 
     it('checks onboarding status from the secondary CTA and emits resume when setup is complete', async () => {

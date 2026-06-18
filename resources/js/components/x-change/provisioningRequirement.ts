@@ -22,6 +22,7 @@ export interface ProvisioningRequirement {
         reference?: string | null;
         links?: {
             status_url?: string | null;
+            resume_url?: string | null;
         } | null;
         [key: string]: unknown;
     } | null;
@@ -87,6 +88,7 @@ export function normalizeProvisioningRequirement(value: unknown): ProvisioningRe
                 links: links ? {
                     ...links,
                     status_url: stringOrNull(links.status_url),
+                    resume_url: stringOrNull(links.resume_url),
                 } : null,
             };
         })(),
