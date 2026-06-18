@@ -150,9 +150,11 @@ use LBHurtado\XChange\Services\NullWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\PaymentProviders\ManualVoucherPaymentProvider;
 use LBHurtado\XChange\Services\PaynamicsWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\PricelistService;
+use LBHurtado\XChange\Services\ProvisioningAwareOnboardingService;
 use LBHurtado\XChange\Services\ReconciliationLifecycleService;
 use LBHurtado\XChange\Services\SettlementCollectionGate;
 use LBHurtado\XChange\Services\SettlementEnvelopeReadinessService;
+use LBHurtado\XChange\Services\StartProviderProvisioningFromOnboardingCompletion;
 use LBHurtado\XChange\Services\SystemWalletProxy;
 use LBHurtado\XChange\Services\TxtcmdrWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\UserLifecycleService;
@@ -503,6 +505,7 @@ class XChangeServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->decorateOnboardingCompletionHook();
         $this->bootConfig();
         $this->bootRoutes();
         $this->bootMobileFirstFortify();
@@ -548,6 +551,26 @@ class XChangeServiceProvider extends ServiceProvider
             DisbursementConfirmed::class,
             HandleConfirmedDisbursement::class
         );
+    }
+
+    protected function decorateOnboardingCompletionHook(): void
+    {
+        $contract = 'LBHurtado\\Onboarding\\Contracts\\OnboardingServiceContract';
+
+        if (! interface_exists($contract) || ! $this->app->bound($contract)) {
+            return;
+        }
+
+        $this->app->extend($contract, function (mixed $service, $app) {
+            if ($service instanceof ProvisioningAwareOnboardingService) {
+                return $service;
+            }
+
+            return new ProvisioningAwareOnboardingService(
+                onboarding: $service,
+                completionHook: $app->make(StartProviderProvisioningFromOnboardingCompletion::class),
+            );
+        });
     }
 
     protected function registerServices(): void
