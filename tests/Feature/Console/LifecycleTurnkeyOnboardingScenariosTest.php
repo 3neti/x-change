@@ -70,8 +70,11 @@ it('includes turnkey onboarding scenarios in a runnable group', function () {
             'turnkey_bank_onboarding_required',
             'turnkey_provider_link_ready',
             'turnkey_provider_link_pending_blocks',
+            'turnkey_netbank_ledger_wallet_ready',
             'turnkey_netbank_bank_account_ready',
             'turnkey_paynamics_wallet_fake_provisioned',
+            'turnkey_paynamics_bank_account_fake_linked',
+            'turnkey_paynamics_wallet_link_ready',
             'turnkey_issuer_blocks_missing_provider_wallet',
             'turnkey_issuer_allows_ready_provider_wallet',
             'turnkey_claim_blocks_missing_bank_account',
@@ -122,8 +125,11 @@ it('runs fake NetBank and Paynamics provisioning readiness scenarios', function 
         ->and(data_get($payload, "turnkey_checks.{$check}.passed"))->toBeTrue()
         ->and(data_get($payload, "turnkey_checks.{$check}.actual.ready"))->toBeTrue();
 })->with([
+    ['turnkey_netbank_ledger_wallet_ready', 'netbank_ledger_wallet_ready'],
     ['turnkey_netbank_bank_account_ready', 'netbank_bank_account_ready'],
     ['turnkey_paynamics_wallet_fake_provisioned', 'paynamics_wallet_fake_provisioned'],
+    ['turnkey_paynamics_bank_account_fake_linked', 'paynamics_bank_account_fake_linked'],
+    ['turnkey_paynamics_wallet_link_ready', 'paynamics_wallet_link_ready'],
 ]);
 
 it('runs provider readiness guard scenarios', function (string $scenario, string $check, bool $ready) {

@@ -109,8 +109,11 @@ final class TurnkeyOnboardingScenarioRunner implements ScenarioRunnerContract
             'bank_onboarding_required' => $this->bankOnboardingRequiredCheck($context),
             'provider_link_ready' => $this->providerLinkReadyCheck($context),
             'provider_link_pending_blocks' => $this->providerLinkPendingBlocksCheck($context),
+            'netbank_ledger_wallet_ready' => $this->netbankLedgerWalletReadyCheck($context),
             'netbank_bank_account_ready' => $this->netbankBankAccountReadyCheck($context),
             'paynamics_wallet_fake_provisioned' => $this->paynamicsWalletFakeProvisionedCheck($context),
+            'paynamics_bank_account_fake_linked' => $this->paynamicsBankAccountFakeLinkedCheck($context),
+            'paynamics_wallet_link_ready' => $this->paynamicsWalletLinkReadyCheck($context),
             'issuer_missing_provider_wallet_blocks' => $this->issuerMissingProviderWalletBlocksCheck($context),
             'issuer_ready_provider_wallet_allows' => $this->issuerReadyProviderWalletAllowsCheck($context),
             'claim_missing_bank_account_blocks' => $this->claimMissingBankAccountBlocksCheck($context),
@@ -340,6 +343,27 @@ final class TurnkeyOnboardingScenarioRunner implements ScenarioRunnerContract
     /**
      * @return array{passed: bool, message: string, actual: mixed}
      */
+    private function netbankLedgerWalletReadyCheck(ScenarioRunContext $context): array
+    {
+        $result = $this->provisioning->startOrResume($context->issuer, [
+            'provider' => 'netbank',
+            'mode' => ProviderProvisioningMode::LedgerWallet->value,
+            'purpose' => 'IssuePayCode',
+            'status' => 'ready',
+        ]);
+
+        return [
+            'passed' => (bool) data_get($result, 'ready') === true
+                && data_get($result, 'provider') === 'netbank'
+                && data_get($result, 'mode') === ProviderProvisioningMode::LedgerWallet->value,
+            'message' => 'NetBank ledger-wallet readiness resolved through provider provisioning.',
+            'actual' => $this->withoutMetadata($result),
+        ];
+    }
+
+    /**
+     * @return array{passed: bool, message: string, actual: mixed}
+     */
     private function netbankBankAccountReadyCheck(ScenarioRunContext $context): array
     {
         $result = $this->provisioning->startOrResume($context->issuer, [
@@ -378,6 +402,64 @@ final class TurnkeyOnboardingScenarioRunner implements ScenarioRunnerContract
                 && filled(data_get($result, 'link.provider_wallet_id')),
             'message' => 'Paynamics wallet provisioning mapped to a ready provider account link.',
             'actual' => $this->withoutMetadata($result),
+        ];
+    }
+
+    /**
+     * @return array{passed: bool, message: string, actual: mixed}
+     */
+    private function paynamicsBankAccountFakeLinkedCheck(ScenarioRunContext $context): array
+    {
+        $result = $this->provisioning->startOrResume($context->issuer, [
+            'provider' => 'paynamics',
+            'mode' => ProviderProvisioningMode::BankAccountLink->value,
+            'purpose' => 'BankOnboardingRequired',
+            'status' => 'ready',
+            'account_number' => data_get($context->scenario, 'turnkey.account_number', '09173011987'),
+            'bank_code' => data_get($context->scenario, 'turnkey.bank_code', 'GXCHPHM2XXX'),
+            'bank_name' => data_get($context->scenario, 'turnkey.bank_name', 'GCash'),
+        ]);
+
+        return [
+            'passed' => (bool) data_get($result, 'ready') === true
+                && data_get($result, 'provider') === 'paynamics'
+                && data_get($result, 'mode') === ProviderProvisioningMode::BankAccountLink->value
+                && filled(data_get($result, 'link.provider_bank_account_id')),
+            'message' => 'Paynamics fake bank-account provisioning mapped to a ready provider account link.',
+            'actual' => $this->withoutMetadata($result),
+        ];
+    }
+
+    /**
+     * @return array{passed: bool, message: string, actual: mixed}
+     */
+    private function paynamicsWalletLinkReadyCheck(ScenarioRunContext $context): array
+    {
+        $result = $this->provisioning->startOrResume($context->issuer, [
+            'provider' => 'paynamics',
+            'mode' => ProviderProvisioningMode::WalletCreate->value,
+            'purpose' => 'IssuePayCode',
+            'status' => 'ready',
+        ]);
+
+        $link = $this->links->findReadyForOwner(
+            $context->issuer,
+            'paynamics',
+            ProviderProvisioningMode::WalletCreate->value,
+        );
+
+        return [
+            'passed' => $link !== null
+                && (bool) data_get($result, 'ready') === true
+                && filled(data_get($result, 'link.provider_wallet_id')),
+            'message' => $link !== null
+                ? 'Paynamics wallet link is ready.'
+                : 'Paynamics wallet link is not ready.',
+            'actual' => [
+                'ready' => (bool) data_get($result, 'ready'),
+                'result' => $this->withoutMetadata($result),
+                'link_id' => $link?->getKey(),
+            ],
         ];
     }
 

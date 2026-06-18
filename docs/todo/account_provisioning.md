@@ -758,6 +758,41 @@ claim guard passes when required link is ready
 
 ## Implementation Slices
 
+### Current Implementation Status
+
+Last updated after Slice 10 live provider lifecycle verification.
+
+The target ownership model is now implemented in x-change:
+
+```text
+x-change decides why account provisioning is needed.
+onboarding records the user's readiness journey.
+emi-core provides normalized EMI contracts and persistence primitives.
+emi-netbank and emi-paynamics execute provider-specific API calls.
+x-change stores owner-to-provider-account links and renders the product UX.
+```
+
+#### Completed slices
+
+| Slice | Status | Implemented result |
+| --- | --- | --- |
+| Slice 1 - Rename the mental model | Done | The plan and code use provider account link/readiness language and avoid adding a duplicate x-change provider account table. |
+| Slice 2 - Runtime settings resolver | Done | `ProviderRuntimeSettingsResolverContract`, config resolver, provider enablement, live-provider lifecycle opt-in, and doctor/runtime checks are in place. |
+| Slice 3 - x-change provider account links | Done | `xchange_provider_account_links`, model, repository contract, Eloquent repository, bindings, and tests are in place. |
+| Slice 4 - Provisioning modes and flow descriptors | Done | `ProviderProvisioningMode`, `ProvisioningFlowDescriptorData`, descriptor builder, and descriptor tests are in place. |
+| Slice 5 - Provisioning manager and fake gateway | Done | Provisioning manager, gateway contract, fake/delegating gateway, bindings, and tests are in place. |
+| Slice 6 - Lifecycle account-link verification | Done | Turnkey lifecycle scenarios now cover provider link persistence, pending blocks, ready passes, NetBank ledger/bank readiness, and Paynamics fake wallet/bank/link readiness. |
+| Slice 7 - NetBank gateway | Done | NetBank provisioning gateway supports local ledger wallet readiness, bank-account readiness, and optional source-account readiness checks. |
+| Slice 8 - Paynamics gateway | Done | Paynamics provisioning gateway maps fake and opt-in live customer-wallet, KYC, and bank-account responses into EMI records and x-change provider links. |
+| Slice 9 - Claim/issuance guard | Done | Pay Code issuance and claim preparation use provider readiness guards and project provisioning requirements into the product UI. |
+| Slice 10 - Live provider lifecycle verification | Done | Live-provider scenarios exist for Paynamics wallet provisioning, Paynamics bank-account linking, and NetBank source-account readiness; they require both runtime setting opt-in and `--live-provider`. |
+
+#### Remaining non-blocking follow-ups
+
+- Keep `spatie/laravel-settings` as an optional adapter until the host app needs an operator settings console.
+- Run real live-provider lifecycle scenarios only in a configured environment with provider sandbox credentials.
+- Expand browser/UI coverage around provider setup screens if the onboarding package adds richer provider-specific web surfaces.
+
 ### Slice 1 - Rename the mental model
 
 Documentation and naming only:

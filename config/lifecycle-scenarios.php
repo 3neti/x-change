@@ -135,6 +135,23 @@ return [
             ],
         ],
 
+        'turnkey_netbank_ledger_wallet_ready' => [
+            'label' => 'Turnkey NetBank Ledger Wallet Ready',
+            'description' => 'Verifies NetBank pooled-ledger wallet readiness through local wallet provisioning.',
+            'category' => 'smoke',
+            'tags' => ['turnkey', 'onboarding', 'netbank'],
+            'mode' => 'turnkey_onboarding',
+            'mobile' => env('XCHANGE_LIFECYCLE_TURNKEY_MOBILE', env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987')),
+            'turnkey' => [
+                'provider' => 'netbank',
+                'provider_topology' => 'netbank',
+                'checks' => [
+                    'provider_runtime_settings',
+                    'netbank_ledger_wallet_ready',
+                ],
+            ],
+        ],
+
         'turnkey_paynamics_wallet_fake_provisioned' => [
             'label' => 'Turnkey Paynamics Wallet Fake Provisioned',
             'description' => 'Verifies Paynamics customer-wallet provisioning response mapping without live provider calls.',
@@ -148,6 +165,43 @@ return [
                 'checks' => [
                     'provider_runtime_settings',
                     'paynamics_wallet_fake_provisioned',
+                ],
+            ],
+        ],
+
+        'turnkey_paynamics_bank_account_fake_linked' => [
+            'label' => 'Turnkey Paynamics Bank Account Fake Linked',
+            'description' => 'Verifies Paynamics fake bank-account response mapping without live provider calls.',
+            'category' => 'smoke',
+            'tags' => ['turnkey', 'onboarding', 'paynamics'],
+            'mode' => 'turnkey_onboarding',
+            'mobile' => env('XCHANGE_LIFECYCLE_TURNKEY_MOBILE', env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987')),
+            'turnkey' => [
+                'provider' => 'paynamics',
+                'provider_topology' => 'paynamics',
+                'bank_code' => env('XCHANGE_LIFECYCLE_BANK_CODE', 'GXCHPHM2XXX'),
+                'bank_name' => env('XCHANGE_LIFECYCLE_BANK_NAME', 'GCash'),
+                'account_number' => env('XCHANGE_LIFECYCLE_ACCOUNT_NUMBER', '09173011987'),
+                'checks' => [
+                    'provider_runtime_settings',
+                    'paynamics_bank_account_fake_linked',
+                ],
+            ],
+        ],
+
+        'turnkey_paynamics_wallet_link_ready' => [
+            'label' => 'Turnkey Paynamics Wallet Link Ready',
+            'description' => 'Verifies Paynamics wallet provisioning produces a ready x-change provider account link.',
+            'category' => 'smoke',
+            'tags' => ['turnkey', 'onboarding', 'paynamics'],
+            'mode' => 'turnkey_onboarding',
+            'mobile' => env('XCHANGE_LIFECYCLE_TURNKEY_MOBILE', env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987')),
+            'turnkey' => [
+                'provider' => 'paynamics',
+                'provider_topology' => 'paynamics',
+                'checks' => [
+                    'provider_runtime_settings',
+                    'paynamics_wallet_link_ready',
                 ],
             ],
         ],
