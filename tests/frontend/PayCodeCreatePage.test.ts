@@ -25,7 +25,8 @@ vi.mock('@/layouts/x-change/XChangeLayout.vue', () => ({
 vi.mock('@/components/ui/button', () => ({
     Button: {
         emits: ['click'],
-        template: '<button type="button" @click="$emit(\'click\')"><slot /></button>',
+        template:
+            '<button type="button" @click="$emit(\'click\')"><slot /></button>',
     },
 }));
 
@@ -53,11 +54,13 @@ vi.mock('@/components/ui/tabs', () => ({
     },
 }));
 
-vi.mock('@/components/x-change/pay-codes', () => ({
-    PayCodeGenerationBasicForm: {
-        props: ['modelValue'],
-        emits: ['update:modelValue'],
-        template: `
+vi.mock(
+    '@/components/x-change/pay-codes',
+    () => ({
+        PayCodeGenerationBasicForm: {
+            props: ['modelValue'],
+            emits: ['update:modelValue'],
+            template: `
             <button
                 data-testid="set-valid-form"
                 type="button"
@@ -70,17 +73,19 @@ vi.mock('@/components/x-change/pay-codes', () => ({
                 Set Valid
             </button>
         `,
-    },
-    PayCodeGenerationAdvancedForm: {
-        template: '<div />',
-    },
-    PayCodeCostEstimateCard: {
-        template: '<div />',
-    },
-    PayCodeInstructionPreview: {
-        template: '<div />',
-    },
-}), { virtual: true });
+        },
+        PayCodeGenerationAdvancedForm: {
+            template: '<div />',
+        },
+        PayCodeCostEstimateCard: {
+            template: '<div />',
+        },
+        PayCodeInstructionPreview: {
+            template: '<div />',
+        },
+    }),
+    { virtual: true },
+);
 
 vi.mock('@/composables/useXChangeRoutes', () => ({
     useXChangeRoutes: () => ({
@@ -126,13 +131,15 @@ describe('PayCodeCreatePage', () => {
     beforeEach(() => {
         routerVisit.mockReset();
         vi.useFakeTimers();
-        global.fetch = vi.fn()
+        global.fetch = vi
+            .fn()
             .mockResolvedValueOnce({
                 ok: false,
                 json: async () => ({
                     success: false,
                     code: 'PROVIDER_PROVISIONING_REQUIRED',
-                    message: 'Pay Code issuance requires provider provisioning before the voucher can be created.',
+                    message:
+                        'Pay Code issuance requires provider provisioning before the voucher can be created.',
                     errors: {
                         provisioning: {
                             provider: 'paynamics',
@@ -143,7 +150,8 @@ describe('PayCodeCreatePage', () => {
                             },
                             descriptor: {
                                 title: 'Create your Paynamics wallet',
-                                description: 'Complete wallet setup so Pay Codes can be issued and paid out.',
+                                description:
+                                    'Complete wallet setup so Pay Codes can be issued and paid out.',
                                 steps: ['profile', 'wallet', 'kyc', 'ready'],
                             },
                         },
@@ -172,14 +180,32 @@ describe('PayCodeCreatePage', () => {
         await wrapper.find('[data-testid="set-valid-form"]').trigger('click');
         await nextTick();
 
-        await wrapper.findAll('button').find((button) => button.text().includes('Generate Pay Code'))?.trigger('click');
+        await wrapper
+            .findAll('button')
+            .find((button) => button.text().includes('Generate Pay Code'))
+            ?.trigger('click');
         await nextTick();
         await Promise.resolve();
         await nextTick();
 
         expect(wrapper.text()).toContain('Create your Paynamics wallet');
-        expect(wrapper.text()).toContain('Complete wallet setup so Pay Codes can be issued and paid out.');
-        expect(wrapper.find('[data-testid="set-valid-form"]').exists()).toBe(false);
+        expect(wrapper.text()).toContain(
+            'Complete wallet setup so Pay Codes can be issued and paid out.',
+        );
+        expect(wrapper.find('[data-testid="set-valid-form"]').exists()).toBe(
+            false,
+        );
+    });
+
+    it('uses the padded pay code page shell', () => {
+        const wrapper = mount(CreatePage);
+        const shell = wrapper
+            .findAll('div')
+            .find((element) => element.classes().includes('lg:p-8'));
+
+        expect(shell?.classes()).toEqual(
+            expect.arrayContaining(['p-4', 'sm:p-6', 'lg:p-8']),
+        );
     });
 
     it('resumes pay code issuance with the onboarding reference payload', async () => {
@@ -188,12 +214,18 @@ describe('PayCodeCreatePage', () => {
         await wrapper.find('[data-testid="set-valid-form"]').trigger('click');
         await nextTick();
 
-        await wrapper.findAll('button').find((button) => button.text().includes('Generate Pay Code'))?.trigger('click');
+        await wrapper
+            .findAll('button')
+            .find((button) => button.text().includes('Generate Pay Code'))
+            ?.trigger('click');
         await nextTick();
         await Promise.resolve();
         await nextTick();
 
-        await wrapper.findAll('button').find((button) => button.text().includes('Continue setup'))?.trigger('click');
+        await wrapper
+            .findAll('button')
+            .find((button) => button.text().includes('Continue setup'))
+            ?.trigger('click');
         await nextTick();
         await Promise.resolve();
         await nextTick();

@@ -4,12 +4,7 @@ import { Head, router } from '@inertiajs/vue3';
 import XChangeLayout from '@/layouts/x-change/XChangeLayout.vue';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import {
-    Tabs,
-    TabsContent,
-    TabsList,
-    TabsTrigger,
-} from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     PayCodeCostEstimateCard,
     PayCodeGenerationAdvancedForm,
@@ -98,7 +93,9 @@ const errorMessage = ref<string | null>(null);
 const provisioningRequirement = ref<ProvisioningRequirement | null>(
     normalizeProvisioningRequirement(props.provisioning_requirement),
 );
-const hasProvisioningRequirement = computed(() => provisioningRequirement.value !== null);
+const hasProvisioningRequirement = computed(
+    () => provisioningRequirement.value !== null,
+);
 
 const estimate = ref<Record<string, any> | null>(null);
 const estimating = ref(false);
@@ -167,21 +164,27 @@ const normalizedNamedSlices = computed(() => {
         return [];
     }
 
-    const source = Array.isArray(form.value.named_slices) && form.value.named_slices.length > 0
-        ? form.value.named_slices
-        : [{
-            id: 'slice_1',
-            amount: normalizedAmount.value,
-            description: 'Whole amount',
-            tag: '',
-            claim_on: '',
-            claim_by: '',
-        }];
+    const source =
+        Array.isArray(form.value.named_slices) &&
+        form.value.named_slices.length > 0
+            ? form.value.named_slices
+            : [
+                  {
+                      id: 'slice_1',
+                      amount: normalizedAmount.value,
+                      description: 'Whole amount',
+                      tag: '',
+                      claim_on: '',
+                      claim_by: '',
+                  },
+              ];
 
     return source.map((slice, index) => ({
         id: slice.id || `slice_${index + 1}`,
         amount: Number(slice.amount || 0),
-        description: String(slice.description || '').trim() || (source.length === 1 ? 'Whole amount' : `Slice ${index + 1}`),
+        description:
+            String(slice.description || '').trim() ||
+            (source.length === 1 ? 'Whole amount' : `Slice ${index + 1}`),
         tag: String(slice.tag || '').trim() || null,
         claim_on: String(slice.claim_on || '').trim() || null,
         claim_by: String(slice.claim_by || '').trim() || null,
@@ -189,7 +192,10 @@ const normalizedNamedSlices = computed(() => {
 });
 
 const namedSliceTotal = computed(() =>
-    normalizedNamedSlices.value.reduce((total, slice) => total + Number(slice.amount || 0), 0)
+    normalizedNamedSlices.value.reduce(
+        (total, slice) => total + Number(slice.amount || 0),
+        0,
+    ),
 );
 
 const namedSliceValidationMessage = computed(() => {
@@ -231,10 +237,12 @@ const metadataPayload = computed<Record<string, unknown>>(() => {
 });
 
 const canSubmit = computed(() => {
-    return normalizedAmount.value > 0
-        && normalizedQuantity.value > 0
-        && namedSliceValidationMessage.value === null
-        && !submitting.value;
+    return (
+        normalizedAmount.value > 0 &&
+        normalizedQuantity.value > 0 &&
+        namedSliceValidationMessage.value === null &&
+        !submitting.value
+    );
 });
 
 const voucherInputFields = computed<string[]>(() => {
@@ -245,11 +253,13 @@ const voucherInputFields = computed<string[]>(() => {
     if (form.value.require_birth_date) fields.push('birth_date');
     if (form.value.require_address) fields.push('address');
     if (form.value.require_reference_code) fields.push('reference_code');
-    if (form.value.require_gross_monthly_income) fields.push('gross_monthly_income');
+    if (form.value.require_gross_monthly_income)
+        fields.push('gross_monthly_income');
 
     if (form.value.require_kyc) fields.push('kyc');
     if (form.value.require_location) fields.push('location');
-    if (form.value.require_otp || normalizedValidationMobile.value) fields.push('otp');
+    if (form.value.require_otp || normalizedValidationMobile.value)
+        fields.push('otp');
     if (form.value.require_selfie) fields.push('selfie');
     if (form.value.require_signature) fields.push('signature');
 
@@ -295,8 +305,12 @@ const generatedInstructions = computed(() => {
         rider: {
             message: form.value.rider_message || null,
             url: form.value.rider_url || null,
-            splash: form.value.splash_enabled ? form.value.splash_content || null : null,
-            splash_timeout: form.value.splash_enabled ? form.value.splash_timeout || null : null,
+            splash: form.value.splash_enabled
+                ? form.value.splash_content || null
+                : null,
+            splash_timeout: form.value.splash_enabled
+                ? form.value.splash_timeout || null
+                : null,
         },
 
         code: {
@@ -334,7 +348,9 @@ const requestPayload = computed(() => {
     if (normalizedNamedSlices.value.length > 0) {
         cash.slice_mode = 'open';
         cash.max_slices = normalizedNamedSlices.value.length;
-        cash.min_withdrawal = Math.min(...normalizedNamedSlices.value.map((slice) => slice.amount));
+        cash.min_withdrawal = Math.min(
+            ...normalizedNamedSlices.value.map((slice) => slice.amount),
+        );
 
         Object.assign(metadata, {
             slices: normalizedNamedSlices.value,
@@ -362,8 +378,12 @@ const requestPayload = computed(() => {
         rider: {
             message: form.value.rider_message || null,
             url: form.value.rider_url || null,
-            splash: form.value.splash_enabled ? form.value.splash_content || null : null,
-            splash_timeout: form.value.splash_enabled ? form.value.splash_timeout || null : null,
+            splash: form.value.splash_enabled
+                ? form.value.splash_content || null
+                : null,
+            splash_timeout: form.value.splash_enabled
+                ? form.value.splash_timeout || null
+                : null,
         },
 
         count: normalizedQuantity.value,
@@ -389,7 +409,10 @@ function requestPayloadWithProvisioningReference(): Record<string, unknown> {
             reference,
         };
         payload.metadata = {
-            ...(typeof payload.metadata === 'object' && payload.metadata !== null ? payload.metadata : {}),
+            ...(typeof payload.metadata === 'object' &&
+            payload.metadata !== null
+                ? payload.metadata
+                : {}),
             onboarding_reference: reference,
         };
     }
@@ -449,9 +472,9 @@ async function fetchEstimate(): Promise<void> {
 
             throw new Error(
                 firstValidationError ||
-                payload?.message ||
-                payload?.error ||
-                `Unable to estimate Pay Code cost: ${response.status}`,
+                    payload?.message ||
+                    payload?.error ||
+                    `Unable to estimate Pay Code cost: ${response.status}`,
             );
         }
 
@@ -466,9 +489,10 @@ async function fetchEstimate(): Promise<void> {
         }
 
         // Keep the last good estimate to avoid flicker.
-        estimateError.value = error instanceof Error
-            ? error.message
-            : 'Unable to estimate Pay Code cost.';
+        estimateError.value =
+            error instanceof Error
+                ? error.message
+                : 'Unable to estimate Pay Code cost.';
     } finally {
         if (requestId === estimateRequestId) {
             estimating.value = false;
@@ -501,7 +525,9 @@ function goBack(): void {
 
 async function submit(): Promise<void> {
     if (!canSubmit.value) {
-        errorMessage.value = namedSliceValidationMessage.value || 'Please enter a valid amount and quantity.';
+        errorMessage.value =
+            namedSliceValidationMessage.value ||
+            'Please enter a valid amount and quantity.';
         return;
     }
 
@@ -525,19 +551,23 @@ async function submit(): Promise<void> {
         const payload = await response.json().catch(() => ({}));
 
         if (!response.ok || payload?.success === false) {
-            provisioningRequirement.value = normalizeProvisioningRequirement(payload?.errors?.provisioning);
+            provisioningRequirement.value = normalizeProvisioningRequirement(
+                payload?.errors?.provisioning,
+            );
             const firstValidationError = payload?.errors
                 ? Object.entries(payload.errors)
-                    .filter(([key]) => key !== 'provisioning')
-                    .flatMap(([, value]) => Array.isArray(value) ? value : [])
-                    .join(' ')
+                      .filter(([key]) => key !== 'provisioning')
+                      .flatMap(([, value]) =>
+                          Array.isArray(value) ? value : [],
+                      )
+                      .join(' ')
                 : null;
 
             throw new Error(
                 firstValidationError ||
-                payload?.message ||
-                payload?.error ||
-                `Failed to generate Pay Code: ${response.status}`,
+                    payload?.message ||
+                    payload?.error ||
+                    `Failed to generate Pay Code: ${response.status}`,
             );
         }
 
@@ -555,9 +585,10 @@ async function submit(): Promise<void> {
 
         router.visit(routes.payCodes.index());
     } catch (error) {
-        errorMessage.value = error instanceof Error
-            ? error.message
-            : 'Unable to generate Pay Code.';
+        errorMessage.value =
+            error instanceof Error
+                ? error.message
+                : 'Unable to generate Pay Code.';
     } finally {
         submitting.value = false;
     }
@@ -567,8 +598,12 @@ async function submit(): Promise<void> {
 <template>
     <Head title="Generate Pay Code" />
 
-    <div class="space-y-6">
-        <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+    <div
+        class="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4 sm:p-6 lg:p-8"
+    >
+        <div
+            class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between"
+        >
             <div class="space-y-2">
                 <Button variant="ghost" class="-ml-3" @click="goBack">
                     <ArrowLeft class="mr-2 h-4 w-4" />
@@ -580,12 +615,17 @@ async function submit(): Promise<void> {
                         Generate Pay Code
                     </h1>
                     <p class="text-sm text-muted-foreground">
-                        Create disburseable Pay Codes with optional redemption requirements.
+                        Create disburseable Pay Codes with optional redemption
+                        requirements.
                     </p>
                 </div>
             </div>
 
-            <Button v-if="!hasProvisioningRequirement" :disabled="!canSubmit" @click="submit">
+            <Button
+                v-if="!hasProvisioningRequirement"
+                :disabled="!canSubmit"
+                @click="submit"
+            >
                 <Loader2 v-if="submitting" class="mr-2 h-4 w-4 animate-spin" />
                 <PlusCircle v-else class="mr-2 h-4 w-4" />
                 {{ submitting ? 'Generating…' : 'Generate' }}
@@ -605,7 +645,10 @@ async function submit(): Promise<void> {
             @resume="submit"
         />
 
-        <div v-if="!hasProvisioningRequirement" class="grid gap-6 lg:grid-cols-[1fr_380px]">
+        <div
+            v-if="!hasProvisioningRequirement"
+            class="grid gap-6 lg:grid-cols-[1fr_380px]"
+        >
             <div class="space-y-6">
                 <Tabs v-model="activeTab" class="w-full">
                     <TabsList class="grid w-full grid-cols-2">
@@ -624,7 +667,10 @@ async function submit(): Promise<void> {
 
                 <div class="flex justify-end">
                     <Button :disabled="!canSubmit" @click="submit">
-                        <Loader2 v-if="submitting" class="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2
+                            v-if="submitting"
+                            class="mr-2 h-4 w-4 animate-spin"
+                        />
                         <PlusCircle v-else class="mr-2 h-4 w-4" />
                         {{ submitting ? 'Generating…' : 'Generate Pay Code' }}
                     </Button>

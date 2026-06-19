@@ -87,7 +87,9 @@ const metadata = computed(() => {
     return props.voucher.metadata ?? props.voucher.meta ?? {};
 });
 
-const hasMetadata = computed(() => Object.keys(metadata.value ?? {}).length > 0);
+const hasMetadata = computed(
+    () => Object.keys(metadata.value ?? {}).length > 0,
+);
 
 const displayStatus = computed(() => {
     if (props.voucher.display_status) {
@@ -127,7 +129,11 @@ function amountLabel(): string {
         return props.voucher.formatted_amount;
     }
 
-    if (props.voucher.amount === null || props.voucher.amount === undefined || props.voucher.amount === '') {
+    if (
+        props.voucher.amount === null ||
+        props.voucher.amount === undefined ||
+        props.voucher.amount === ''
+    ) {
         return '—';
     }
 
@@ -175,9 +181,13 @@ async function copyCode(): Promise<void> {
 <template>
     <Head :title="`Pay Code ${voucher.code}`" />
 
-    <div class="space-y-6">
+    <div
+        class="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4 sm:p-6 lg:p-8"
+    >
         <!-- Header -->
-        <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div
+            class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between"
+        >
             <div class="space-y-2">
                 <Button variant="ghost" class="-ml-3" @click="goBack">
                     <ArrowLeft class="mr-2 h-4 w-4" />
@@ -186,7 +196,9 @@ async function copyCode(): Promise<void> {
 
                 <div>
                     <div class="flex flex-wrap items-center gap-3">
-                        <h1 class="font-mono text-3xl font-semibold tracking-widest">
+                        <h1
+                            class="font-mono text-3xl font-semibold tracking-widest"
+                        >
                             {{ voucher.code }}
                         </h1>
 
@@ -223,13 +235,17 @@ async function copyCode(): Promise<void> {
                 <!-- Status / hero card -->
                 <Card>
                     <CardHeader>
-                        <CardTitle class="text-base">Pay Code Summary</CardTitle>
+                        <CardTitle class="text-base"
+                            >Pay Code Summary</CardTitle
+                        >
                     </CardHeader>
 
                     <CardContent class="space-y-6">
                         <div class="grid gap-4 sm:grid-cols-3">
                             <div class="rounded-lg border p-4">
-                                <p class="text-xs uppercase tracking-wide text-muted-foreground">
+                                <p
+                                    class="text-xs tracking-wide text-muted-foreground uppercase"
+                                >
                                     Amount
                                 </p>
                                 <p class="mt-1 text-2xl font-semibold">
@@ -238,7 +254,9 @@ async function copyCode(): Promise<void> {
                             </div>
 
                             <div class="rounded-lg border p-4">
-                                <p class="text-xs uppercase tracking-wide text-muted-foreground">
+                                <p
+                                    class="text-xs tracking-wide text-muted-foreground uppercase"
+                                >
                                     Status
                                 </p>
                                 <div class="mt-2">
@@ -251,7 +269,9 @@ async function copyCode(): Promise<void> {
                             </div>
 
                             <div class="rounded-lg border p-4">
-                                <p class="text-xs uppercase tracking-wide text-muted-foreground">
+                                <p
+                                    class="text-xs tracking-wide text-muted-foreground uppercase"
+                                >
                                     Currency
                                 </p>
                                 <p class="mt-1 text-2xl font-semibold">
@@ -283,7 +303,9 @@ async function copyCode(): Promise<void> {
                 </Card>
 
                 <!-- Instructions -->
-                <PayCodeInstructionSummary :instructions="voucher.instructions" />
+                <PayCodeInstructionSummary
+                    :instructions="voucher.instructions"
+                />
 
                 <!-- Claim history -->
                 <PayCodeClaimHistory :claims="voucher.claims" />
@@ -300,7 +322,9 @@ async function copyCode(): Promise<void> {
                 <Card>
                     <CardHeader>
                         <CardTitle class="flex items-center gap-2 text-base">
-                            <ReceiptText class="h-4 w-4 text-muted-foreground" />
+                            <ReceiptText
+                                class="h-4 w-4 text-muted-foreground"
+                            />
                             Metadata
                         </CardTitle>
                     </CardHeader>
@@ -309,9 +333,13 @@ async function copyCode(): Promise<void> {
                         <pre
                             v-if="hasMetadata"
                             class="max-h-96 overflow-auto rounded-md bg-muted p-3 text-xs"
-                        >{{ JSON.stringify(metadata, null, 2) }}</pre>
+                            >{{ JSON.stringify(metadata, null, 2) }}</pre
+                        >
 
-                        <div v-else class="rounded-lg border border-dashed p-6 text-center">
+                        <div
+                            v-else
+                            class="rounded-lg border border-dashed p-6 text-center"
+                        >
                             <p class="text-sm font-medium">No metadata</p>
                             <p class="mt-1 text-xs text-muted-foreground">
                                 System metadata will appear here if available.
