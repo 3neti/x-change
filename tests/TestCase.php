@@ -22,6 +22,8 @@ use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Providers\XChangeServiceProvider;
 use LBHurtado\XChange\Tests\Fakes\FakeAuditLogger;
 use LBHurtado\XChange\Tests\Fakes\FakePayoutProvider;
+use LBHurtado\XChange\Tests\Fakes\User;
+use LBHurtado\XRay\XRayServiceProvider;
 use LBHurtado\XRider\XRiderServiceProvider;
 use Mews\Purifier\PurifierServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
@@ -75,6 +77,7 @@ abstract class TestCase extends Orchestra
             XChangeServiceProvider::class,
             PurifierServiceProvider::class,
             XRiderServiceProvider::class,
+            XRayServiceProvider::class,
         ];
     }
 
@@ -143,7 +146,7 @@ abstract class TestCase extends Orchestra
         ]);
         $app['config']->set('data.date_format', 'Y-m-d\\TH:i:sP');
 
-        config()->set('x-change.onboarding.issuer_model', \LBHurtado\XChange\Tests\Fakes\User::class);
+        config()->set('x-change.onboarding.issuer_model', User::class);
 
         $app['config']->set('model-channel.rules.mobile', ['string']);
     }

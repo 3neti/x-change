@@ -81,6 +81,13 @@
         },
         {
             "type": "path",
+            "url": "/Users/rli/PhpstormProjects/packages/x-ray",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
             "url": "/Users/rli/PhpstormProjects/packages/emi-paynamics",
             "options": {
                 "symlink": true
@@ -104,6 +111,7 @@
         "3neti/money-issuer": "^1.0",
         "3neti/report-registry": "^1.1",
         "3neti/voucher": "dev-main",
+        "3neti/x-ray": "dev-main",
         "3neti/x-rider": "dev-main",
         "brick/money": "^0.10.3",
         "endroid/qr-code": "^6.1",

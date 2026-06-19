@@ -37,6 +37,7 @@ export function useXChangeRoutes() {
             pricelist: '/api/x/v1/pricelist',
             estimatePayCode: '/api/x/v1/pay-codes/estimate',
             generatePayCode: '/api/x/v1/pay-codes',
+            inspectPayCodeXRay: '/api/x/v1/pay-codes/x-ray',
             vouchers: '/api/x/v1/vouchers',
         },
     };

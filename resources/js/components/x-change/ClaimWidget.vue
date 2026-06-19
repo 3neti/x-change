@@ -7,11 +7,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import VoucherInstructionsDisplay from '@/components/x-change/VoucherInstructionsDisplay.vue';
-import VoucherMetadataDisplay from '@/components/x-change/VoucherMetadataDisplay.vue';
 import VoucherStatusStamp from '@/components/x-change/VoucherStatusStamp.vue';
 import RiderRuntimeSequencer from '@/components/x-rider/RiderRuntimeSequencer.vue';
+import XRayClaimPreview from '@/components/x-change/XRayClaimPreview.vue';
 import type { RawRiderStage } from '@/components/x-rider/types';
 import { initializeTheme } from '@/composables/useTheme';
 import { useXChangeRoutes } from '@/composables/useXChangeRoutes';
@@ -73,6 +71,10 @@ const reactiveClaimExperience = ref<Record<string, unknown> | null>(
 const claimExperienceLoading = ref(false);
 const claimExperienceError = ref<string | null>(null);
 let claimExperienceAbortController: AbortController | null = null;
+const xrayResult = ref<Record<string, unknown> | null>(null);
+const xrayLoading = ref(false);
+const xrayError = ref<string | null>(null);
+let xrayAbortController: AbortController | null = null;
 
 const normalizedCode = computed(() => code.value.trim().toUpperCase());
 const normalizedInitialCode = computed(() =>
@@ -253,6 +255,55 @@ async function fetchClaimExperience(voucherCode: string): Promise<void> {
     }
 }
 
+async function fetchXRay(voucherCode: string): Promise<void> {
+    if (voucherCode.length < 4) {
+        xrayResult.value = null;
+
+        return;
+    }
+
+    xrayAbortController?.abort();
+    xrayAbortController = new AbortController();
+    xrayLoading.value = true;
+    xrayError.value = null;
+
+    try {
+        const response = await fetch(routes.api.inspectPayCodeXRay, {
+            method: 'POST',
+            signal: xrayAbortController.signal,
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({
+                code: voucherCode,
+                channel: 'claim',
+            }),
+        });
+        const data = await response.json();
+
+        if (!response.ok || data.success === false) {
+            xrayResult.value = null;
+            xrayError.value =
+                data.message || 'Unable to inspect this Pay Code.';
+
+            return;
+        }
+
+        xrayResult.value = data.data?.xray ?? data.data ?? data;
+    } catch (error: any) {
+        if (error?.name === 'AbortError') {
+            return;
+        }
+
+        xrayResult.value = null;
+        xrayError.value = 'Unable to inspect this Pay Code.';
+    } finally {
+        xrayLoading.value = false;
+    }
+}
+
 watch(
     () => props.claimExperience,
     (next) => {
@@ -268,11 +319,15 @@ watch(
         }
 
         claimExperienceAbortController?.abort();
+        xrayAbortController?.abort();
         claimExperienceLoading.value = false;
         claimExperienceError.value = null;
+        xrayLoading.value = false;
+        xrayError.value = null;
 
         if (next !== normalizedInitialCode.value) {
             reactiveClaimExperience.value = null;
+            xrayResult.value = null;
         }
     },
 );
@@ -285,16 +340,20 @@ watch(
             .toUpperCase();
 
         if (!voucher || voucherCode.length < 4) {
+            xrayResult.value = null;
+
             return;
         }
 
         if (voucher.status === 'redeemed' || voucher.status === 'expired') {
             reactiveClaimExperience.value = null;
+            void fetchXRay(voucherCode);
 
             return;
         }
 
         void fetchClaimExperience(voucherCode);
+        void fetchXRay(voucherCode);
     },
     { immediate: true },
 );
@@ -444,40 +503,11 @@ watch(
                     </AlertDescription>
                 </Alert>
 
-                <Tabs default-value="instructions">
-                    <TabsList class="grid w-full grid-cols-2">
-                        <TabsTrigger value="instructions"
-                            >Instructions</TabsTrigger
-                        >
-                        <TabsTrigger value="system-info"
-                            >System Info</TabsTrigger
-                        >
-                    </TabsList>
-
-                    <TabsContent value="instructions" class="mt-4">
-                        <VoucherInstructionsDisplay
-                            v-if="
-                                voucherData.instructions &&
-                                typeof voucherData.instructions === 'object'
-                            "
-                            :instructions="voucherData.instructions"
-                            :voucher-status="voucherData.status"
-                        />
-                        <Alert v-else>
-                            <AlertCircle class="h-4 w-4" />
-                            <AlertDescription>
-                                No instruction details available.
-                            </AlertDescription>
-                        </Alert>
-                    </TabsContent>
-
-                    <TabsContent value="system-info" class="mt-4 space-y-4">
-                        <VoucherMetadataDisplay
-                            :metadata="voucherData.metadata"
-                            :show-all-fields="true"
-                        />
-                    </TabsContent>
-                </Tabs>
+                <XRayClaimPreview
+                    :result="xrayResult"
+                    :loading="xrayLoading"
+                    :error="xrayError"
+                />
             </div>
         </div>
 

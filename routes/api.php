@@ -7,6 +7,7 @@ use LBHurtado\XChange\Http\Controllers\Onboarding\OnboardIssuerController;
 use LBHurtado\XChange\Http\Controllers\Onboarding\OpenIssuerWalletController;
 use LBHurtado\XChange\Http\Controllers\PayCode\EstimatePayCodeController;
 use LBHurtado\XChange\Http\Controllers\PayCode\GeneratePayCodeController;
+use LBHurtado\XChange\Http\Controllers\PayCode\InspectPayCodeXRayController;
 use LBHurtado\XChange\Http\Controllers\Redemption\LoadPayCodeRedemptionCompletionContextController;
 use LBHurtado\XChange\Http\Controllers\Redemption\PreparePayCodeRedemptionFlowController;
 use LBHurtado\XChange\Http\Controllers\Redemption\RedeemPayCodeController;
@@ -16,6 +17,9 @@ $prefix = trim((string) config('x-change.routes.api_prefix', 'api/x'), '/');
 $version = trim((string) config('x-change.routes.api_version', 'v1'), '/');
 
 Route::prefix($prefix.'/'.$version)->group(function (): void {
+    Route::post('/pay-codes/x-ray', InspectPayCodeXRayController::class)
+        ->name('x-change.api.pay-codes.x-ray');
+
     Route::post('/pay-codes/estimate', EstimatePayCodeController::class)
         ->name('x-change.api.pay-codes.estimate');
 

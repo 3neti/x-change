@@ -17,6 +17,7 @@ class InstallXChangeCommand extends Command
         {--no-assets : Skip branding asset publishing}
         {--no-handlers : Skip form-flow and handler asset publishing}
         {--no-rider : Skip x-rider asset publishing}
+        {--no-x-ray : Skip x-ray asset publishing}
         {--no-migrate : Skip database migrations}';
 
     protected $description = 'Install the X-Change package UI, assets, and run migrations';
@@ -135,6 +136,26 @@ class InstallXChangeCommand extends Command
                 $this->components->task('Publishing x-rider drivers', function () use ($force): void {
                     $this->callSilently('vendor:publish', [
                         '--tag' => 'x-rider-drivers',
+                        '--force' => $force,
+                    ]);
+                });
+            }
+        }
+
+        if (! $this->option('no-x-ray')) {
+            $provider = 'LBHurtado\\XRay\\XRayServiceProvider';
+
+            if (class_exists($provider)) {
+                $this->components->task('Publishing x-ray config', function () use ($force): void {
+                    $this->callSilently('vendor:publish', [
+                        '--tag' => 'x-ray-config',
+                        '--force' => $force,
+                    ]);
+                });
+
+                $this->components->task('Publishing x-ray UI files', function () use ($force): void {
+                    $this->callSilently('vendor:publish', [
+                        '--tag' => 'x-ray-assets',
                         '--force' => $force,
                     ]);
                 });

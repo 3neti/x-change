@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "dbda6329e6befeb9e3d8ef42ee9d9546",
+    "content-hash": "c2c9b6574e5d4fc46923bf4a3cd26c9d",
     "packages": [
         {
             "name": "3neti/cash",
@@ -184,7 +184,7 @@
             "dist": {
                 "type": "path",
                 "url": "/Users/rli/PhpstormProjects/packages/emi-paynamics",
-                "reference": "9afbcd0dc437d06b3fdf6ca86677c5d7afc92e35"
+                "reference": "3dd83a1c737f737773742b70351133b4fafb3149"
             },
             "require": {
                 "3neti/emi-core": "^v1.0.1",
@@ -983,6 +983,69 @@
             "time": "2026-04-01T07:17:18+00:00"
         },
         {
+            "name": "3neti/onboarding",
+            "version": "dev-main",
+            "dist": {
+                "type": "path",
+                "url": "/Users/rli/PhpstormProjects/packages/onboarding",
+                "reference": "c38c22a8d6d9516d69d089574c318b8281f341f5"
+            },
+            "require": {
+                "illuminate/database": "^12.0 || ^13.0",
+                "illuminate/http": "^12.0 || ^13.0",
+                "illuminate/support": "^12.0 || ^13.0",
+                "php": ">=8.3",
+                "propaganistas/laravel-phone": "^6.0",
+                "spatie/laravel-data": "^4.17"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^10.3 || ^11.0",
+                "pestphp/pest": "^3.8 || ^4.0",
+                "pestphp/pest-plugin-laravel": "^3.2 || ^4.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "LBHurtado\\Onboarding\\OnboardingServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "LBHurtado\\Onboarding\\": "src/",
+                    "LBHurtado\\Onboarding\\Database\\Factories\\": "database/factories/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "LBHurtado\\Onboarding\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "vendor/bin/pest"
+                ],
+                "test:coverage": [
+                    "vendor/bin/pest --coverage"
+                ]
+            },
+            "license": [
+                "proprietary"
+            ],
+            "authors": [
+                {
+                    "name": "Lester Hurtado",
+                    "email": "lester@hurtado.ph"
+                }
+            ],
+            "description": "Slim onboarding orchestration layer for identity, KYC, and wallet provisioning.",
+            "transport-options": {
+                "symlink": true,
+                "relative": false
+            }
+        },
+        {
             "name": "3neti/report-registry",
             "version": "v1.1.1",
             "source": {
@@ -1239,6 +1302,67 @@
                 "source": "https://github.com/3neti/wallet/tree/v1.1.0"
             },
             "time": "2026-04-10T03:50:58+00:00"
+        },
+        {
+            "name": "3neti/x-ray",
+            "version": "dev-main",
+            "dist": {
+                "type": "path",
+                "url": "/Users/rli/PhpstormProjects/packages/x-ray",
+                "reference": "c8a71411b61d0735c625124eba91580ca03b2c82"
+            },
+            "require": {
+                "illuminate/http": "^12.0 || ^13.0",
+                "illuminate/routing": "^12.0 || ^13.0",
+                "illuminate/support": "^12.0 || ^13.0",
+                "php": ">=8.3",
+                "spatie/laravel-data": "^4.17"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^10.3 || ^11.0",
+                "pestphp/pest": "^3.8 || ^4.0",
+                "pestphp/pest-plugin-laravel": "^3.2 || ^4.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "LBHurtado\\XRay\\XRayServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "LBHurtado\\XRay\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "LBHurtado\\XRay\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "vendor/bin/pest"
+                ],
+                "test:coverage": [
+                    "vendor/bin/pest --coverage"
+                ]
+            },
+            "license": [
+                "proprietary"
+            ],
+            "authors": [
+                {
+                    "name": "Lester Hurtado",
+                    "email": "lester@hurtado.ph"
+                }
+            ],
+            "description": "Permissioned pre-claim inspection and disclosure runtime for Pay Codes.",
+            "transport-options": {
+                "symlink": true,
+                "relative": false
+            }
         },
         {
             "name": "3neti/x-rider",
@@ -2443,16 +2567,16 @@
         },
         {
             "name": "giggsey/libphonenumber-for-php-lite",
-            "version": "9.0.30",
+            "version": "9.0.32",
             "source": {
                 "type": "git",
                 "url": "https://github.com/giggsey/libphonenumber-for-php-lite.git",
-                "reference": "6561e5617cceed8a96ce911090b8d65f6cfbe0c7"
+                "reference": "8e3b2cfd8fb77b3922dad43f9a70d516c28570d2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/giggsey/libphonenumber-for-php-lite/zipball/6561e5617cceed8a96ce911090b8d65f6cfbe0c7",
-                "reference": "6561e5617cceed8a96ce911090b8d65f6cfbe0c7",
+                "url": "https://api.github.com/repos/giggsey/libphonenumber-for-php-lite/zipball/8e3b2cfd8fb77b3922dad43f9a70d516c28570d2",
+                "reference": "8e3b2cfd8fb77b3922dad43f9a70d516c28570d2",
                 "shasum": ""
             },
             "require": {
@@ -2517,7 +2641,7 @@
                 "issues": "https://github.com/giggsey/libphonenumber-for-php-lite/issues",
                 "source": "https://github.com/giggsey/libphonenumber-for-php-lite"
             },
-            "time": "2026-05-07T12:02:55+00:00"
+            "time": "2026-06-05T07:33:50+00:00"
         },
         {
             "name": "graham-campbell/result-type",
@@ -8461,16 +8585,16 @@
         },
         {
             "name": "symfony/polyfill-mbstring",
-            "version": "v1.37.0",
+            "version": "v1.38.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/polyfill-mbstring.git",
-                "reference": "6a21eb99c6973357967f6ce3708cd55a6bec6315"
+                "reference": "d3d318bad5e7a1bfbd026009c8bfb8d8f99ae6b6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/polyfill-mbstring/zipball/6a21eb99c6973357967f6ce3708cd55a6bec6315",
-                "reference": "6a21eb99c6973357967f6ce3708cd55a6bec6315",
+                "url": "https://api.github.com/repos/symfony/polyfill-mbstring/zipball/d3d318bad5e7a1bfbd026009c8bfb8d8f99ae6b6",
+                "reference": "d3d318bad5e7a1bfbd026009c8bfb8d8f99ae6b6",
                 "shasum": ""
             },
             "require": {
@@ -8522,7 +8646,7 @@
                 "shim"
             ],
             "support": {
-                "source": "https://github.com/symfony/polyfill-mbstring/tree/v1.37.0"
+                "source": "https://github.com/symfony/polyfill-mbstring/tree/v1.38.2"
             },
             "funding": [
                 {
@@ -8542,7 +8666,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-04-10T17:25:58+00:00"
+            "time": "2026-05-27T06:59:30+00:00"
         },
         {
             "name": "symfony/polyfill-php80",
@@ -13957,7 +14081,9 @@
         "3neti/form-handler-otp": 20,
         "3neti/form-handler-selfie": 20,
         "3neti/form-handler-signature": 20,
+        "3neti/onboarding": 20,
         "3neti/voucher": 20,
+        "3neti/x-ray": 20,
         "3neti/x-rider": 20
     },
     "prefer-stable": true,
