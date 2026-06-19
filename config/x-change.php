@@ -304,7 +304,8 @@ return [
                 'enabled' => env('XCHANGE_PROVIDER_NETBANK_ENABLED', true),
                 'provisioning_gateway' => NetbankProviderProvisioningGateway::class,
                 'source_account_readiness' => [
-                    'enabled' => env('XCHANGE_PROVIDER_NETBANK_SOURCE_ACCOUNT_READINESS_ENABLED', false),
+                    'enabled' => env('XCHANGE_PROVIDER_NETBANK_SOURCE_ACCOUNT_READINESS_ENABLED', true),
+                    'allow_unavailable' => env('XCHANGE_PROVIDER_NETBANK_SOURCE_ACCOUNT_ALLOW_UNAVAILABLE', false),
                     'account_number' => env('XCHANGE_PROVIDER_NETBANK_SOURCE_ACCOUNT_NUMBER', env('NETBANK_SOURCE_ACCOUNT_NUMBER')),
                 ],
             ],
@@ -335,7 +336,7 @@ return [
         ],
     ],
     'payout' => [
-        'provider' => NetbankPayoutProvider::class,
+        'provider' => env('XCHANGE_PAYOUT_PROVIDER', NetbankPayoutProvider::class),
         'wallet_proxy' => SystemWalletProxy::class,
         'system_user_id' => env('XCHANGE_SYSTEM_USER_ID'),
         'system_user_column' => env('XCHANGE_SYSTEM_USER_COLUMN', 'id'),

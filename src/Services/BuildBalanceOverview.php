@@ -19,6 +19,7 @@ class BuildBalanceOverview
         protected ProviderProvisioningGatewayContract $provisioning,
         protected WalletAccessContract $wallets,
         protected ?SyncPaynamicsWalletBalance $paynamicsBalances = null,
+        protected ?CheckNetbankSourceAccountReadiness $netbankSourceAccount = null,
     ) {}
 
     /**
@@ -36,10 +37,12 @@ class BuildBalanceOverview
         $providerBalance = $topology === 'provider_customer_wallet'
             ? $this->providerWalletBalance($owner, $provider, $syncIfStale)
             : null;
+        $netbankSourceBalance = $this->netbankSourceAccountBalance($provider, $topology);
 
         $balances = array_values(array_filter([
             $providerBalance,
             $local,
+            $netbankSourceBalance,
         ]));
 
         $authoritative = collect($balances)
@@ -51,8 +54,8 @@ class BuildBalanceOverview
             'authority' => $authority,
             'checked_at' => now()->toIso8601String(),
             'max_age_seconds' => (int) config('x-change.funding.provider_balance_max_age_seconds', 300),
-            'sync_status' => $providerBalance['sync_status'] ?? 'not_required',
-            'sync_message' => $providerBalance['sync_message'] ?? 'Local ledger balance does not require provider balance sync.',
+            'sync_status' => $providerBalance['sync_status'] ?? $netbankSourceBalance['sync_status'] ?? 'not_required',
+            'sync_message' => $providerBalance['sync_message'] ?? $netbankSourceBalance['sync_message'] ?? 'Local ledger balance does not require provider balance sync.',
             'authoritative' => $authoritative,
             'balances' => $balances,
         ];
@@ -184,6 +187,53 @@ class BuildBalanceOverview
             'checked_at' => null,
             'sync_status' => $status,
             'sync_message' => $syncMessage ?? $message,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    protected function netbankSourceAccountBalance(string $provider, string $topology): ?array
+    {
+        if ($provider !== 'netbank' || $topology !== 'ledger_pooled') {
+            return null;
+        }
+
+        $this->netbankSourceAccount ??= app(CheckNetbankSourceAccountReadiness::class);
+        $readiness = $this->netbankSourceAccount->handle();
+        $availableMinor = array_key_exists('available_balance_minor', $readiness)
+            ? (int) $readiness['available_balance_minor']
+            : null;
+        $balanceMinor = array_key_exists('balance_minor', $readiness)
+            ? (int) $readiness['balance_minor']
+            : $availableMinor;
+        $checked = (bool) ($readiness['checked'] ?? false);
+        $enabled = (bool) ($readiness['enabled'] ?? false);
+        $ready = (bool) ($readiness['ready'] ?? false);
+        $syncStatus = match (true) {
+            ! $enabled => 'disabled',
+            $checked && $ready => 'fresh',
+            $checked => 'unavailable',
+            default => 'not_checked',
+        };
+
+        return [
+            'key' => 'netbank_source_account',
+            'label' => 'NetBank Source Account Balance',
+            'description' => 'Provider-side mother account liquidity used to back NetBank Pay Code issuance.',
+            'authority' => 'provider_source_account',
+            'source' => 'netbank',
+            'is_authoritative' => false,
+            'is_liquidity_guard' => true,
+            'is_stale' => ! $checked || ! $ready,
+            'balance_minor' => $balanceMinor,
+            'available_balance_minor' => $availableMinor,
+            'balance' => $availableMinor !== null ? $availableMinor / 100 : null,
+            'currency' => (string) ($readiness['currency'] ?? config('x-change.pricing.currency', 'PHP')),
+            'checked_at' => $readiness['as_of'] ?? ($checked ? now()->toIso8601String() : null),
+            'account_number_masked' => $readiness['account_number_masked'] ?? null,
+            'sync_status' => $syncStatus,
+            'sync_message' => $readiness['message'] ?? 'NetBank source account readiness was not checked.',
         ];
     }
 

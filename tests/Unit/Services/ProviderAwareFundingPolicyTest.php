@@ -34,7 +34,24 @@ it('uses the local ledger balance for ledger pooled providers', function () {
     $wallets = Mockery::mock(WalletAccessContract::class);
     $wallets->shouldReceive('getBalance')->once()->with($wallet)->andReturn(5000);
 
-    $decision = (new ProviderAwareFundingPolicy($settings, $links, $provisioning, $wallets))
+    $sourceAccount = Mockery::mock(CheckNetbankSourceAccountReadiness::class);
+    $sourceAccount->shouldReceive('handle')
+        ->once()
+        ->with(2500)
+        ->andReturn([
+            'enabled' => true,
+            'ready' => true,
+            'available_balance_minor' => 100000,
+        ]);
+
+    $decision = (new ProviderAwareFundingPolicy(
+        $settings,
+        $links,
+        $provisioning,
+        $wallets,
+        null,
+        $sourceAccount,
+    ))
         ->assertCanIssue($owner, $wallet, 25.00, ['provider' => 'netbank']);
 
     expect($decision->allowed)->toBeTrue()
@@ -121,6 +138,87 @@ it('blocks NetBank issuance when source account readiness cannot cover the amoun
         ->andReturn([
             'enabled' => true,
             'ready' => false,
+            'available_balance_minor' => 50000,
+            'message' => 'NetBank source account cannot cover the requested amount.',
+        ]);
+
+    expect(fn () => (new ProviderAwareFundingPolicy(
+        $settings,
+        $links,
+        $provisioning,
+        $wallets,
+        null,
+        $sourceAccount,
+    ))->assertCanIssue($owner, $wallet, 750.00, ['provider' => 'netbank']))
+        ->toThrow(InsufficientWalletBalance::class, 'NetBank source account cannot cover the requested amount.');
+});
+
+it('allows NetBank issuance when source account balance is unavailable and bypass is enabled', function () {
+    config()->set('x-change.provider_runtime.providers.netbank.source_account_readiness.allow_unavailable', true);
+
+    $owner = new stdClass;
+    $wallet = (object) ['balance' => 100000];
+
+    $settings = Mockery::mock(ProviderRuntimeSettingsResolverContract::class);
+    $settings->shouldReceive('provider')->once()->with('netbank')->andReturn('netbank');
+    $settings->shouldReceive('topology')->once()->with('netbank')->andReturn('ledger_pooled');
+
+    $links = Mockery::mock(ProviderAccountLinkRepositoryContract::class);
+    $provisioning = Mockery::mock(ProviderProvisioningGatewayContract::class);
+
+    $wallets = Mockery::mock(WalletAccessContract::class);
+    $wallets->shouldReceive('getBalance')->once()->with($wallet)->andReturn(100000);
+
+    $sourceAccount = Mockery::mock(CheckNetbankSourceAccountReadiness::class);
+    $sourceAccount->shouldReceive('handle')
+        ->once()
+        ->with(75000)
+        ->andReturn([
+            'enabled' => true,
+            'ready' => false,
+            'checked' => true,
+            'reason' => 'balance_unavailable',
+            'message' => 'NetBank source account balance check failed.',
+        ]);
+
+    $decision = (new ProviderAwareFundingPolicy(
+        $settings,
+        $links,
+        $provisioning,
+        $wallets,
+        null,
+        $sourceAccount,
+    ))->assertCanIssue($owner, $wallet, 750.00, ['provider' => 'netbank']);
+
+    expect($decision->allowed)->toBeTrue()
+        ->and($decision->meta['source_account']['bypassed'])->toBeTrue()
+        ->and($decision->meta['source_account']['bypass_reason'])->toContain('unavailable-balance bypass is enabled');
+});
+
+it('still blocks NetBank issuance when an actual source account balance is insufficient even if bypass is enabled', function () {
+    config()->set('x-change.provider_runtime.providers.netbank.source_account_readiness.allow_unavailable', true);
+
+    $owner = new stdClass;
+    $wallet = (object) ['balance' => 100000];
+
+    $settings = Mockery::mock(ProviderRuntimeSettingsResolverContract::class);
+    $settings->shouldReceive('provider')->once()->with('netbank')->andReturn('netbank');
+    $settings->shouldReceive('topology')->once()->with('netbank')->andReturn('ledger_pooled');
+
+    $links = Mockery::mock(ProviderAccountLinkRepositoryContract::class);
+    $provisioning = Mockery::mock(ProviderProvisioningGatewayContract::class);
+
+    $wallets = Mockery::mock(WalletAccessContract::class);
+    $wallets->shouldReceive('getBalance')->once()->with($wallet)->andReturn(100000);
+
+    $sourceAccount = Mockery::mock(CheckNetbankSourceAccountReadiness::class);
+    $sourceAccount->shouldReceive('handle')
+        ->once()
+        ->with(75000)
+        ->andReturn([
+            'enabled' => true,
+            'ready' => false,
+            'checked' => true,
             'available_balance_minor' => 50000,
             'message' => 'NetBank source account cannot cover the requested amount.',
         ]);

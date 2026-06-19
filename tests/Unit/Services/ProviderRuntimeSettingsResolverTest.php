@@ -29,6 +29,20 @@ it('infers NetBank runtime provider from an explicit payout provider hint when d
         ->and($settings->topology())->toBe('ledger_pooled');
 });
 
+it('infers NetBank runtime provider from a friendly payout provider hint', function () {
+    config()->set('x-change.provider_runtime.default_provider', 'manual');
+    config()->set('x-change.provider_runtime.payout_provider_hint', 'netbank');
+
+    expect(app(ProviderRuntimeSettingsResolverContract::class)->provider())->toBe('netbank');
+});
+
+it('infers Paynamics runtime provider from a friendly payout provider hint', function () {
+    config()->set('x-change.provider_runtime.default_provider', 'manual');
+    config()->set('x-change.provider_runtime.payout_provider_hint', 'paynamics');
+
+    expect(app(ProviderRuntimeSettingsResolverContract::class)->provider())->toBe('paynamics');
+});
+
 it('does not infer a provider from an empty payout provider hint', function () {
     config()->set('x-change.provider_runtime.default_provider', 'manual');
     config()->set('x-change.provider_runtime.payout_provider_hint', null);

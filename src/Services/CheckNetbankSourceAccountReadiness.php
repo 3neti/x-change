@@ -53,7 +53,22 @@ class CheckNetbankSourceAccountReadiness
 
         try {
             $balance = $this->gateway->checkAccountBalance($accountNumber);
-            $availableMinor = (int) ($balance['available_balance'] ?? $balance['balance'] ?? 0);
+
+            if ($this->isFailedProviderResponse($balance)) {
+                return [
+                    'enabled' => true,
+                    'ready' => false,
+                    'checked' => true,
+                    'reason' => 'balance_unavailable',
+                    'account_number' => $accountNumber,
+                    'account_number_masked' => $this->maskAccountNumber($accountNumber),
+                    'currency' => $this->resolveCurrency($balance),
+                    'message' => 'NetBank source account balance check failed.',
+                ];
+            }
+
+            $balanceMinor = $this->normalizeMoneyToMinor($balance['balance'] ?? data_get($balance, 'raw.balance') ?? 0);
+            $availableMinor = $this->normalizeMoneyToMinor($balance['available_balance'] ?? data_get($balance, 'raw.available_balance') ?? $balanceMinor);
             $ready = $requiredMinor === null || $availableMinor >= $requiredMinor;
 
             return [
@@ -62,20 +77,19 @@ class CheckNetbankSourceAccountReadiness
                 'checked' => true,
                 'account_number' => $accountNumber,
                 'account_number_masked' => $this->maskAccountNumber($accountNumber),
-                'balance_minor' => (int) ($balance['balance'] ?? $availableMinor),
+                'balance_minor' => $balanceMinor,
                 'available_balance_minor' => $availableMinor,
                 'required_minor' => $requiredMinor,
-                'currency' => (string) ($balance['currency'] ?? config('x-change.pricing.currency', 'PHP')),
+                'currency' => $this->resolveCurrency($balance),
                 'as_of' => $balance['as_of'] ?? now()->toIso8601String(),
-                'message' => $ready
-                    ? 'NetBank source account has enough available balance.'
-                    : 'NetBank source account cannot cover the requested amount.',
+                'message' => $this->message($ready, $requiredMinor),
             ];
         } catch (Throwable $e) {
             return [
                 'enabled' => true,
                 'ready' => false,
                 'checked' => true,
+                'reason' => 'balance_unavailable',
                 'account_number' => $accountNumber,
                 'account_number_masked' => $this->maskAccountNumber($accountNumber),
                 'message' => $e->getMessage(),
@@ -101,6 +115,77 @@ class CheckNetbankSourceAccountReadiness
         $value = trim((string) $value);
 
         return $value === '' ? null : $value;
+    }
+
+    protected function normalizeMoneyToMinor(mixed $value): int
+    {
+        if (is_array($value)) {
+            return $this->normalizeMoneyToMinor($value['num'] ?? $value['amount'] ?? $value['value'] ?? 0);
+        }
+
+        if (is_int($value)) {
+            return $value;
+        }
+
+        if (is_float($value)) {
+            return (int) round($value * 100);
+        }
+
+        if (is_string($value)) {
+            $normalized = preg_replace('/[^\d.\-]/', '', trim($value));
+
+            if ($normalized === null || $normalized === '' || $normalized === '-' || $normalized === '.') {
+                return 0;
+            }
+
+            if (str_contains($normalized, '.')) {
+                return (int) round(((float) $normalized) * 100);
+            }
+
+            return (int) $normalized;
+        }
+
+        return 0;
+    }
+
+    /**
+     * @param  array<string, mixed>  $balance
+     */
+    protected function resolveCurrency(array $balance): string
+    {
+        return (string) (
+            $balance['currency']
+            ?? data_get($balance, 'balance.cur')
+            ?? data_get($balance, 'available_balance.cur')
+            ?? data_get($balance, 'raw.balance.cur')
+            ?? data_get($balance, 'raw.available_balance.cur')
+            ?? config('x-change.pricing.currency', 'PHP')
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $balance
+     */
+    protected function isFailedProviderResponse(array $balance): bool
+    {
+        $raw = $balance['raw'] ?? null;
+        $asOf = $balance['as_of'] ?? null;
+
+        return $asOf === null
+            && (is_array($raw) && $raw === [])
+            && $this->normalizeMoneyToMinor($balance['balance'] ?? 0) === 0
+            && $this->normalizeMoneyToMinor($balance['available_balance'] ?? 0) === 0;
+    }
+
+    protected function message(bool $ready, ?int $requiredMinor): string
+    {
+        if ($requiredMinor === null) {
+            return 'NetBank source account balance was refreshed.';
+        }
+
+        return $ready
+            ? 'NetBank source account has enough available balance.'
+            : 'NetBank source account cannot cover the requested amount.';
     }
 
     protected function maskAccountNumber(string $accountNumber): string

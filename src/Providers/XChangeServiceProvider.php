@@ -150,6 +150,7 @@ use LBHurtado\XChange\Services\NullSettlementEnvelopeReadinessService;
 use LBHurtado\XChange\Services\NullWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\PaymentProviders\ManualVoucherPaymentProvider;
 use LBHurtado\XChange\Services\PaynamicsWithdrawalOtpApprovalService;
+use LBHurtado\XChange\Services\PayoutProviderResolver;
 use LBHurtado\XChange\Services\PricelistService;
 use LBHurtado\XChange\Services\ProviderAwareFundingPolicy;
 use LBHurtado\XChange\Services\ProvisioningAwareOnboardingService;
@@ -326,7 +327,7 @@ class XChangeServiceProvider extends ServiceProvider
                 NetbankPayoutProvider::class
             );
 
-            return $app->make($provider);
+            return $app->make($app->make(PayoutProviderResolver::class)->resolve($provider));
         });
 
         $this->app->bind(

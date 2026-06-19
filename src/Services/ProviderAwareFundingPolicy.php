@@ -60,7 +60,12 @@ class ProviderAwareFundingPolicy implements ProviderFundingPolicyContract
             $sourceAccount = $this->netbankSourceAccountReadiness($requiredMinor);
 
             if (! (bool) ($sourceAccount['ready'] ?? false)) {
-                throw new InsufficientWalletBalance((string) ($sourceAccount['message'] ?? 'NetBank source account is not ready.'));
+                if ($this->canBypassUnavailableNetbankSourceAccount($sourceAccount)) {
+                    $sourceAccount['bypassed'] = true;
+                    $sourceAccount['bypass_reason'] = 'NetBank source account balance is unavailable and unavailable-balance bypass is enabled.';
+                } else {
+                    throw new InsufficientWalletBalance((string) ($sourceAccount['message'] ?? 'NetBank source account is not ready.'));
+                }
             }
         }
 
@@ -201,6 +206,19 @@ class ProviderAwareFundingPolicy implements ProviderFundingPolicyContract
                 'provider_wallet_id' => $wallet->provider_wallet_id,
             ],
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $sourceAccount
+     */
+    protected function canBypassUnavailableNetbankSourceAccount(array $sourceAccount): bool
+    {
+        if (! (bool) config('x-change.provider_runtime.providers.netbank.source_account_readiness.allow_unavailable', false)) {
+            return false;
+        }
+
+        return ($sourceAccount['reason'] ?? null) === 'balance_unavailable'
+            && ! array_key_exists('available_balance_minor', $sourceAccount);
     }
 
     protected function resolveEmiWallet(string $providerWalletId): ?EmiWallet

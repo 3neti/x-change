@@ -16,6 +16,8 @@ export interface BalanceEntry {
     currency: string;
     checked_at?: string | null;
     provider_wallet_id?: string | null;
+    account_number_masked?: string | null;
+    is_liquidity_guard?: boolean;
     sync_status?: string | null;
     sync_message?: string | null;
 }
@@ -45,6 +47,7 @@ const props = withDefaults(defineProps<{
 const balances = computed(() => props.overview?.balances ?? []);
 const authoritative = computed(() => props.overview?.authoritative ?? balances.value.find((balance) => balance.is_authoritative) ?? null);
 const projections = computed(() => balances.value.filter((balance) => !balance.is_authoritative));
+const hasLiquidityGuard = computed(() => projections.value.some((balance) => balance.is_liquidity_guard));
 const isProviderWalletAuthority = computed(() => props.overview?.authority === 'provider_wallet');
 const remainingAfterRequired = computed(() => {
     if (!authoritative.value || authoritative.value.balance === null || props.requiredAmount === null) {
@@ -53,6 +56,14 @@ const remainingAfterRequired = computed(() => {
 
     return authoritative.value.balance - props.requiredAmount;
 });
+
+function remainingAfterRequiredFor(balance: BalanceEntry): number | null {
+    if (!balance.is_liquidity_guard || balance.balance === null || props.requiredAmount === null) {
+        return null;
+    }
+
+    return balance.balance - props.requiredAmount;
+}
 
 function money(value: number | null | undefined, currency = 'PHP'): string {
     if (value === null || value === undefined || !Number.isFinite(Number(value))) {
@@ -99,6 +110,7 @@ function relativeTime(value?: string | null): string {
 function authorityLabel(value?: string | null): string {
     const labels: Record<string, string> = {
         provider_wallet: 'Provider wallet balance',
+        provider_source_account: 'Provider source account',
         local_ledger: 'Local ledger',
         manual: 'Manual ledger',
     };
@@ -111,11 +123,25 @@ function syncTone(status?: string | null): string {
         return 'border-emerald-200 bg-emerald-50 text-emerald-800';
     }
 
-    if (status === 'stale') {
+    if (status === 'stale' || status === 'disabled' || status === 'not_checked') {
         return 'border-amber-200 bg-amber-50 text-amber-800';
     }
 
     return 'border-red-200 bg-red-50 text-red-800';
+}
+
+function projectionBadge(balance: BalanceEntry): string {
+    return balance.is_liquidity_guard ? 'Liquidity guard' : 'Not spendable';
+}
+
+function projectionSectionTitle(): string {
+    return hasLiquidityGuard.value ? 'Provider liquidity guard' : 'Accounting projection';
+}
+
+function projectionSectionDescription(): string {
+    return hasLiquidityGuard.value
+        ? 'NetBank issuance still needs provider-side source account liquidity even when the local ledger is sufficient.'
+        : 'Shown for reconciliation only. This is not the spendable balance for Paynamics issuance.';
 }
 </script>
 
@@ -218,14 +244,17 @@ function syncTone(status?: string | null): string {
                     </p>
                 </div>
 
-                <div v-if="!compact && projections.length > 0" class="rounded-xl border border-dashed bg-muted/20 p-3">
+                <div
+                    v-if="(!compact || hasLiquidityGuard) && projections.length > 0"
+                    class="rounded-xl border border-dashed bg-muted/20 p-3"
+                >
                     <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                                Accounting projection
+                                {{ projectionSectionTitle() }}
                             </p>
                             <p class="text-xs text-muted-foreground">
-                                Shown for reconciliation only. This is not the spendable balance for Paynamics issuance.
+                                {{ projectionSectionDescription() }}
                             </p>
                         </div>
                     </div>
@@ -241,13 +270,52 @@ function syncTone(status?: string | null): string {
                                     <p class="text-sm font-medium">{{ balance.label }}</p>
                                     <p class="mt-1 text-xs text-muted-foreground">{{ balance.description }}</p>
                                 </div>
-                                <span class="rounded-full bg-muted px-2 py-1 text-[11px] text-muted-foreground">
-                                    Not spendable
+                                <span
+                                    class="rounded-full px-2 py-1 text-[11px]"
+                                    :class="balance.is_liquidity_guard ? syncTone(balance.sync_status) : 'bg-muted text-muted-foreground'"
+                                >
+                                    {{ projectionBadge(balance) }}
                                 </span>
                             </div>
-                            <p class="mt-2 text-lg font-semibold text-muted-foreground">
-                                {{ money(balance.balance, balance.currency) }}
-                            </p>
+                            <div class="mt-2 flex flex-wrap items-end justify-between gap-3">
+                                <div>
+                                    <p class="text-xs uppercase tracking-wide text-muted-foreground">
+                                        {{ balance.is_liquidity_guard ? 'Available' : 'Projection' }}
+                                    </p>
+                                    <p class="text-lg font-semibold text-muted-foreground">
+                                        {{ money(balance.balance, balance.currency) }}
+                                    </p>
+                                </div>
+
+                                <div
+                                    v-if="remainingAfterRequiredFor(balance) !== null"
+                                    class="text-right"
+                                >
+                                    <p class="text-xs uppercase tracking-wide text-muted-foreground">After Estimate</p>
+                                    <p
+                                        class="text-sm font-semibold"
+                                        :class="remainingAfterRequiredFor(balance)! < 0 ? 'text-destructive' : 'text-emerald-700'"
+                                    >
+                                        {{ money(remainingAfterRequiredFor(balance), balance.currency) }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                                <span v-if="balance.account_number_masked">
+                                    Account {{ balance.account_number_masked }}
+                                </span>
+                                <span v-if="balance.checked_at" class="inline-flex items-center gap-1">
+                                    <Clock class="h-3.5 w-3.5" />
+                                    Checked {{ relativeTime(balance.checked_at) }}
+                                </span>
+                                <span
+                                    v-if="balance.sync_message"
+                                    :class="balance.is_stale ? 'text-amber-700' : 'text-emerald-700'"
+                                >
+                                    {{ balance.sync_message }}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
