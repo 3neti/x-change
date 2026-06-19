@@ -272,6 +272,131 @@ it('executes valid compiled form claim submissions through the redemption bridge
     expect(session()->has('compiled_claim_completion_payload'))->toBeFalse();
 });
 
+it('starts form flow with selected named slice amount after slice selection', function () {
+    $this->withoutMiddleware();
+
+    $voucher = issueVoucher(validVoucherInstructions(
+        amount: 200,
+        overrides: [
+            'cash' => [
+                'amount' => 200,
+                'currency' => 'PHP',
+                'slice_mode' => 'open',
+                'max_slices' => 3,
+                'min_withdrawal' => 45,
+                'validation' => [
+                    'country' => 'PH',
+                ],
+            ],
+            'metadata' => [
+                'custom' => [
+                    'named_slices' => [
+                        [
+                            'id' => 'slice_1',
+                            'amount' => 80,
+                            'description' => 'Buy coffee',
+                        ],
+                        [
+                            'id' => 'slice_2',
+                            'amount' => 55,
+                            'description' => 'Buy doughnut',
+                        ],
+                        [
+                            'id' => 'slice_3',
+                            'amount' => 65,
+                            'description' => 'Taxi fare',
+                        ],
+                    ],
+                    'named_slice_policy' => [
+                        'mode' => 'named',
+                        'selection' => 'one_or_many',
+                        'enforced' => true,
+                    ],
+                ],
+            ],
+        ],
+    ));
+
+    $metadata = $voucher->metadata ?? [];
+    data_set($metadata, 'instructions.metadata.custom.named_slices', [
+        [
+            'id' => 'slice_1',
+            'amount' => 80,
+            'description' => 'Buy coffee',
+        ],
+        [
+            'id' => 'slice_2',
+            'amount' => 55,
+            'description' => 'Buy doughnut',
+        ],
+        [
+            'id' => 'slice_3',
+            'amount' => 65,
+            'description' => 'Taxi fare',
+        ],
+    ]);
+    data_set($metadata, 'instructions.metadata.custom.named_slice_policy', [
+        'mode' => 'named',
+        'selection' => 'one_or_many',
+        'enforced' => true,
+    ]);
+    $voucher->forceFill(['metadata' => $metadata])->save();
+    $voucher->refresh();
+
+    mockDriverForClaimVoucher($this, $voucher, [
+        [
+            'handler' => 'form',
+            'config' => [
+                'step_name' => 'wallet_info',
+                'title' => 'Disbursement Details',
+                'fields' => [
+                    [
+                        'name' => 'amount',
+                        'type' => 'number',
+                        'label' => 'Amount',
+                        'default' => 200,
+                        'readonly' => true,
+                        'required' => true,
+                        'variant' => 'readonly-badge',
+                        'slice_mode' => 'open',
+                        'available_balance' => 200,
+                    ],
+                    [
+                        'name' => 'mobile',
+                        'type' => 'tel',
+                        'label' => 'Mobile Number',
+                        'required' => true,
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
+    assertClaimExperienceStartFlow($this, function (array $experience, array $payload) {
+        $fields = collect(data_get($payload, 'steps.0.config.fields'));
+
+        expect(data_get($experience, 'version'))->toBe(1)
+            ->and($fields->firstWhere('name', 'amount')['default'])->toBe(135.0)
+            ->and($fields->firstWhere('name', 'amount')['slice_mode'])->toBeNull()
+            ->and($fields->firstWhere('name', 'amount')['readonly'])->toBeTrue()
+            ->and($fields->firstWhere('name', 'slice_ids')['type'])->toBe('hidden')
+            ->and($fields->firstWhere('name', 'slice_ids')['default'])->toBe('slice_1,slice_2')
+            ->and(data_get($payload, 'metadata.named_slices.selected_ids'))->toBe(['slice_1', 'slice_2'])
+            ->and(data_get($payload, 'metadata.named_slices.amount'))->toBe(135.0);
+    }, 'flow-named-slices-test');
+
+    $this->post('/x/claim', [
+        'mode' => 'compiled_form',
+        'code' => $voucher->code,
+        'inputs' => [
+            'slice_ids' => ['slice_1', 'slice_2'],
+        ],
+    ])->assertRedirect('/form-flow/flow-named-slices-test');
+
+    expect(session()->has(CompiledClaimSessionKeys::SUBMISSION))->toBeFalse()
+        ->and(session()->has(CompiledClaimSessionKeys::PREPARED))->toBeFalse();
+});
+
 it('requires a code for compiled form claim submissions', function () {
     $this->withoutMiddleware();
 

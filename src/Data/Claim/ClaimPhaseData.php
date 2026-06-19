@@ -14,6 +14,7 @@ class ClaimPhaseData extends Data
         public string $source,
         public string $status = 'active',
         public array $stages = [],
+        public array $fields = [],
         public ?string $url = null,
         public ?string $action_url = null,
         public array $skip_stages = [],

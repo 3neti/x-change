@@ -26,6 +26,10 @@ class GeneratePayCodeRequest extends FormRequest
             'cash.amount' => ['required', 'numeric', 'min:0.01'],
             'cash.currency' => ['required', 'string', 'max:10'],
             'cash.settlement_rail' => ['nullable', 'string', 'max:50'],
+            'cash.slice_mode' => ['nullable', 'string', 'in:fixed,open'],
+            'cash.slices' => ['nullable', 'integer', 'min:1'],
+            'cash.max_slices' => ['nullable', 'integer', 'min:1'],
+            'cash.min_withdrawal' => ['nullable', 'numeric', 'min:0'],
 
             'cash.validation' => ['nullable', 'array'],
             'cash.validation.secret' => ['nullable'],
@@ -59,6 +63,22 @@ class GeneratePayCodeRequest extends FormRequest
             'mask' => ['nullable', 'string'],
             'ttl' => ['nullable'],
             'metadata' => ['nullable', 'array'],
+            'metadata.slices' => ['nullable', 'array'],
+            'metadata.slices.*' => ['required', 'array'],
+            'metadata.slices.*.id' => ['nullable', 'string', 'max:80'],
+            'metadata.slices.*.amount' => ['required_with:metadata.slices', 'numeric', 'min:0.01'],
+            'metadata.slices.*.description' => ['nullable', 'string', 'max:255'],
+            'metadata.slices.*.tag' => ['nullable', 'string', 'max:80'],
+            'metadata.slices.*.claim_on' => ['nullable', 'date'],
+            'metadata.slices.*.claim_by' => ['nullable', 'date'],
+            'metadata.slices.*.metadata' => ['nullable', 'array'],
+            'metadata.slice_policy' => ['nullable', 'array'],
+            'metadata.slice_policy.mode' => ['nullable', 'string'],
+            'metadata.slice_policy.selection' => ['nullable', 'string'],
+            'metadata.slice_policy.enforced' => ['nullable', 'boolean'],
+            'metadata.custom' => ['nullable', 'array'],
+            'metadata.custom.named_slices' => ['nullable', 'array'],
+            'metadata.custom.named_slice_policy' => ['nullable', 'array'],
 
             'issuer_id' => ['sometimes', 'integer'], // TODO: make this intentional, require this
         ];

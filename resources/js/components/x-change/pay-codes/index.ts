@@ -7,5 +7,6 @@ export { default as PayCodeInstructionSummary } from './PayCodeInstructionSummar
 export { default as PayCodeClaimHistory } from './PayCodeClaimHistory.vue';
 export { default as PayCodeGenerationBasicForm } from './PayCodeGenerationBasicForm.vue';
 export { default as PayCodeGenerationAdvancedForm } from './PayCodeGenerationAdvancedForm.vue';
+export { default as PayCodeNamedSlicesBuilder } from './PayCodeNamedSlicesBuilder.vue';
 export { default as PayCodeCostEstimateCard } from './PayCodeCostEstimateCard.vue';
 export { default as PayCodeInstructionPreview } from './PayCodeInstructionPreview.vue';

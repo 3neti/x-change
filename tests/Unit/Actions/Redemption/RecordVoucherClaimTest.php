@@ -69,6 +69,7 @@ it('records a voucher claim row from a normalized claim result', function () {
     expect($claim->reference)->toBe('REF-CLAIM-001');
     expect($claim->attempted_at)->not->toBeNull();
     expect($claim->completed_at)->not->toBeNull();
+    expect($voucher->fresh()->redeemed_at)->toBeNull();
 });
 
 it('increments claim number for subsequent claims on the same voucher', function () {
@@ -106,4 +107,44 @@ it('increments claim number for subsequent claims on the same voucher', function
     $second = app(RecordVoucherClaim::class)->handle($voucher, $result, []);
 
     expect($second->claim_number)->toBe(2);
+    expect($voucher->fresh()->redeemed_at)->not->toBeNull();
+});
+
+it('marks a voucher redeemed when a withdrawal fully consumes it', function () {
+    $voucher = Voucher::query()->create([
+        'code' => 'TEST-RECORD-003',
+        'metadata' => [
+            'instructions' => [
+                'cash' => [
+                    'amount' => 100,
+                    'currency' => 'PHP',
+                    'slice_mode' => 'open',
+                    'max_slices' => 1,
+                    'min_withdrawal' => 100,
+                ],
+                'inputs' => ['fields' => []],
+                'feedback' => [],
+                'rider' => [],
+            ],
+        ],
+        'state' => 'active',
+    ]);
+
+    $result = new SubmitPayCodeClaimResultData(
+        voucher_code: $voucher->code,
+        claim_type: 'withdraw',
+        claimed: true,
+        status: 'withdrawn',
+        requested_amount: 100,
+        disbursed_amount: 100,
+        currency: 'PHP',
+        remaining_balance: 0,
+        fully_claimed: true,
+        disbursement: [],
+        messages: ['OK'],
+    );
+
+    app(RecordVoucherClaim::class)->handle($voucher, $result, []);
+
+    expect($voucher->fresh()->redeemed_at)->not->toBeNull();
 });

@@ -5,6 +5,7 @@ export const FORM_FLOW_RENDERERS = {
     number: 'NumberFieldRenderer',
     select: 'SelectFieldRenderer',
     textarea: 'TextareaFieldRenderer',
+    slice_selector: 'SliceSelectorFieldRenderer',
 } as const;
 
 export function resolveFormFlowRenderer(type: string): string {

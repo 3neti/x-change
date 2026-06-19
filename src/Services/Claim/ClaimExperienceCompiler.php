@@ -8,10 +8,15 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Data\Claim\ClaimExperienceData;
 use LBHurtado\XChange\Data\Claim\ClaimExperienceDiagnosticsData;
 use LBHurtado\XChange\Data\Claim\ClaimPhaseData;
+use LBHurtado\XChange\Services\NamedVoucherSliceService;
 use Spatie\LaravelData\DataCollection;
 
 class ClaimExperienceCompiler
 {
+    public function __construct(
+        protected NamedVoucherSliceService $namedSlices,
+    ) {}
+
     public function compile(Voucher $voucher): ClaimExperienceData
     {
         $instructions = $this->instructions($voucher);
@@ -59,6 +64,7 @@ class ClaimExperienceCompiler
             key: 'form_flow',
             owner: 'claim-widget',
             source: 'voucher-redemption.yaml',
+            fields: $this->formFlowFields($voucher),
             skip_stages: $hasRiderSplash ? ['splash'] : [],
         );
 
@@ -131,5 +137,26 @@ class ClaimExperienceCompiler
         $metadata = $voucher->metadata ?? [];
 
         return (array) data_get($metadata, 'instructions', []);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function formFlowFields(Voucher $voucher): array
+    {
+        if (! $this->namedSlices->hasNamedSlices($voucher)) {
+            return [];
+        }
+
+        return [
+            [
+                'key' => 'slice_ids',
+                'type' => 'slice_selector',
+                'label' => 'Slices to Redeem',
+                'required' => true,
+                'options' => $this->namedSlices->claimOptions($voucher),
+                'selection' => 'one_or_many',
+            ],
+        ];
     }
 }

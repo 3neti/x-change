@@ -72,6 +72,17 @@ interface PayCodeGenerationForm {
     validation_mobile?: string | null;
 
     metadata?: string | null;
+    named_slices_enabled?: boolean;
+    named_slices?: PayCodeNamedSlice[];
+}
+
+interface PayCodeNamedSlice {
+    id?: string | null;
+    amount?: number | string | null;
+    description?: string | null;
+    tag?: string | null;
+    claim_on?: string | null;
+    claim_by?: string | null;
 }
 
 const props = defineProps<{
@@ -139,6 +150,8 @@ const form = ref<PayCodeGenerationForm>({
     validation_mobile: '',
 
     metadata: '',
+    named_slices_enabled: false,
+    named_slices: [],
 });
 
 const normalizedAmount = computed(() => Number(form.value.amount || 0));
@@ -149,8 +162,79 @@ const normalizedValidationMobile = computed(() => {
     return value === '' ? null : value;
 });
 
+const normalizedNamedSlices = computed(() => {
+    if (form.value.named_slices_enabled !== true) {
+        return [];
+    }
+
+    const source = Array.isArray(form.value.named_slices) && form.value.named_slices.length > 0
+        ? form.value.named_slices
+        : [{
+            id: 'slice_1',
+            amount: normalizedAmount.value,
+            description: 'Whole amount',
+            tag: '',
+            claim_on: '',
+            claim_by: '',
+        }];
+
+    return source.map((slice, index) => ({
+        id: slice.id || `slice_${index + 1}`,
+        amount: Number(slice.amount || 0),
+        description: String(slice.description || '').trim() || (source.length === 1 ? 'Whole amount' : `Slice ${index + 1}`),
+        tag: String(slice.tag || '').trim() || null,
+        claim_on: String(slice.claim_on || '').trim() || null,
+        claim_by: String(slice.claim_by || '').trim() || null,
+    }));
+});
+
+const namedSliceTotal = computed(() =>
+    normalizedNamedSlices.value.reduce((total, slice) => total + Number(slice.amount || 0), 0)
+);
+
+const namedSliceValidationMessage = computed(() => {
+    if (form.value.named_slices_enabled !== true) {
+        return null;
+    }
+
+    if (normalizedNamedSlices.value.length === 0) {
+        return 'Add at least one named slice.';
+    }
+
+    if (normalizedNamedSlices.value.some((slice) => slice.amount <= 0)) {
+        return 'Each named slice must have an amount greater than zero.';
+    }
+
+    if (Math.abs(namedSliceTotal.value - normalizedAmount.value) >= 0.01) {
+        return 'Named slice amounts must equal the Pay Code amount.';
+    }
+
+    return null;
+});
+
+const metadataPayload = computed<Record<string, unknown>>(() => {
+    const raw = String(form.value.metadata || '').trim();
+
+    if (raw === '') {
+        return {};
+    }
+
+    try {
+        const parsed = JSON.parse(raw);
+
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+            ? parsed
+            : {};
+    } catch {
+        return {};
+    }
+});
+
 const canSubmit = computed(() => {
-    return normalizedAmount.value > 0 && normalizedQuantity.value > 0 && !submitting.value;
+    return normalizedAmount.value > 0
+        && normalizedQuantity.value > 0
+        && namedSliceValidationMessage.value === null
+        && !submitting.value;
 });
 
 const voucherInputFields = computed<string[]>(() => {
@@ -182,6 +266,7 @@ const generatedInstructions = computed(() => {
                 secret: form.value.validation_secret ? 'configured' : null,
                 mobile: normalizedValidationMobile.value,
             },
+            slices: normalizedNamedSlices.value,
         },
 
         inputs: {
@@ -229,19 +314,40 @@ const generatedInstructions = computed(() => {
 });
 
 const requestPayload = computed(() => {
-    return {
-        cash: {
-            amount: normalizedAmount.value,
-            currency: 'PHP',
-            validation: {
-                secret: form.value.validation_secret || null,
-                mobile: normalizedValidationMobile.value,
-                payable: null,
-                country: null,
-                location: null,
-                radius: null,
-            },
+    const cash: Record<string, unknown> = {
+        amount: normalizedAmount.value,
+        currency: 'PHP',
+        validation: {
+            secret: form.value.validation_secret || null,
+            mobile: normalizedValidationMobile.value,
+            payable: null,
+            country: null,
+            location: null,
+            radius: null,
         },
+    };
+
+    const metadata = {
+        ...metadataPayload.value,
+    };
+
+    if (normalizedNamedSlices.value.length > 0) {
+        cash.slice_mode = 'open';
+        cash.max_slices = normalizedNamedSlices.value.length;
+        cash.min_withdrawal = Math.min(...normalizedNamedSlices.value.map((slice) => slice.amount));
+
+        Object.assign(metadata, {
+            slices: normalizedNamedSlices.value,
+            slice_policy: {
+                mode: 'named',
+                selection: 'one_or_many',
+                enforced: true,
+            },
+        });
+    }
+
+    return {
+        cash,
 
         inputs: {
             fields: voucherInputFields.value,
@@ -264,6 +370,7 @@ const requestPayload = computed(() => {
         prefix: form.value.prefix || null,
         mask: form.value.mask || null,
         ttl: form.value.ttl_minutes || null,
+        metadata,
     };
 });
 
@@ -282,6 +389,7 @@ function requestPayloadWithProvisioningReference(): Record<string, unknown> {
             reference,
         };
         payload.metadata = {
+            ...(typeof payload.metadata === 'object' && payload.metadata !== null ? payload.metadata : {}),
             onboarding_reference: reference,
         };
     }
@@ -393,7 +501,7 @@ function goBack(): void {
 
 async function submit(): Promise<void> {
     if (!canSubmit.value) {
-        errorMessage.value = 'Please enter a valid amount and quantity.';
+        errorMessage.value = namedSliceValidationMessage.value || 'Please enter a valid amount and quantity.';
         return;
     }
 

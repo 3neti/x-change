@@ -135,7 +135,15 @@ class ClaimSubmitController extends Controller
                     'code' => $code,
                     'failed' => 1,
                 ])
-                ->withErrors(['code' => $e->getMessage()]);
+                ->withErrors(['code' => $this->claimErrorMessage($e)]);
         }
+    }
+
+    protected function claimErrorMessage(\Throwable $e): string
+    {
+        return match ($e->getMessage()) {
+            'Withdrawal amount is required for open-slice vouchers.' => 'Enter a withdrawal amount to continue with this Pay Code.',
+            default => $e->getMessage(),
+        };
     }
 }

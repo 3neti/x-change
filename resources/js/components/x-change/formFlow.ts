@@ -3,6 +3,8 @@ export type FormFlowField = {
     type?: string;
     label?: string;
     required?: boolean;
+    options?: unknown[];
+    selection?: string;
 };
 
 export type NormalizedFormFlow = {
@@ -36,6 +38,7 @@ export const SUPPORTED_FORM_FLOW_FIELD_TYPES = [
     'number',
     'select',
     'textarea',
+    'slice_selector',
 ] as const;
 
 export type SupportedFormFlowFieldType =

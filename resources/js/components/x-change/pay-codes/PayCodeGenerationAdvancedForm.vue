@@ -6,13 +6,25 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import PayCodeNamedSlicesBuilder from './PayCodeNamedSlicesBuilder.vue';
+
+interface PayCodeNamedSlice {
+    id?: string | null;
+    amount?: number | string | null;
+    description?: string | null;
+    tag?: string | null;
+    claim_on?: string | null;
+    claim_by?: string | null;
+}
 
 interface PayCodeGenerationForm {
+    amount?: number | string | null;
     prefix?: string | null;
     mask?: string | null;
     code_length?: number | string | null;
 
     validation_secret?: string | null;
+    validation_mobile?: string | null;
 
     starts_at?: string | null;
     expires_at?: string | null;
@@ -27,6 +39,8 @@ interface PayCodeGenerationForm {
     feedback_email?: boolean;
 
     metadata?: string | null;
+    named_slices_enabled?: boolean;
+    named_slices?: PayCodeNamedSlice[];
 }
 
 interface Props {
@@ -54,12 +68,20 @@ function updateField(key: keyof PayCodeGenerationForm, value: unknown): void {
 function updateBoolean(key: keyof PayCodeGenerationForm, value: boolean | 'indeterminate'): void {
     updateField(key, value === true);
 }
+
+function updateNamedSlicesEnabled(value: boolean): void {
+    updateField('named_slices_enabled', value);
+}
+
+function updateNamedSlices(value: PayCodeNamedSlice[]): void {
+    updateField('named_slices', value);
+}
 </script>
 
 <template>
     <Card>
         <CardHeader>
-            <CardTitle class="text-base">Advanced Options</CardTitle>
+            <CardTitle class="text-base text-emerald-700">Advanced Options</CardTitle>
             <CardDescription>
                 Optional controls for code generation, timing, splash screen, and feedback.
             </CardDescription>
@@ -118,9 +140,10 @@ function updateBoolean(key: keyof PayCodeGenerationForm, value: boolean | 'indet
                 <Label for="validation_secret">Secret / PIN</Label>
                 <Input
                     id="validation_secret"
-                    v-model="form.validation_secret"
                     type="text"
                     placeholder="Optional redemption secret"
+                    :model-value="form.validation_secret ?? ''"
+                    @update:model-value="updateField('validation_secret', $event)"
                 />
                 <p class="text-xs text-muted-foreground">
                     Redeemer must provide this secret before the Pay Code can be claimed.
@@ -131,9 +154,10 @@ function updateBoolean(key: keyof PayCodeGenerationForm, value: boolean | 'indet
                 <Label for="validation_mobile">Allowed Mobile Number</Label>
                 <Input
                     id="validation_mobile"
-                    v-model="form.validation_mobile"
                     type="tel"
                     placeholder="+639171234567"
+                    :model-value="form.validation_mobile ?? ''"
+                    @update:model-value="updateField('validation_mobile', $event)"
                 />
                 <p class="text-xs text-muted-foreground">
                     Only this mobile number can redeem the Pay Code. OTP will be required automatically.
@@ -269,6 +293,16 @@ function updateBoolean(key: keyof PayCodeGenerationForm, value: boolean | 'indet
                     </label>
                 </div>
             </div>
+
+            <Separator />
+
+            <PayCodeNamedSlicesBuilder
+                :enabled="form.named_slices_enabled === true"
+                :amount="form.amount"
+                :slices="form.named_slices ?? []"
+                @update:enabled="updateNamedSlicesEnabled"
+                @update:slices="updateNamedSlices"
+            />
 
             <Separator />
 

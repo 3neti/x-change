@@ -24,6 +24,7 @@ use LBHurtado\XChange\Data\Settlement\SettlementExecutionResultData;
 use LBHurtado\XChange\Enums\ProviderProvisioningMode;
 use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
+use LBHurtado\XChange\Services\NamedVoucherSliceService;
 use LBHurtado\XChange\Services\ResumeProviderProvisioningFromOnboarding;
 use LBHurtado\XChange\Services\WithdrawalDisbursementExecutor;
 use LBHurtado\XChange\Support\Claim\ClaimApprovalPendingOtpStore;
@@ -48,6 +49,7 @@ class SubmitPayCodeClaim
         protected ?XChangeOnboardingGatewayContract $onboarding = null,
         protected ?BuildProvisioningFlowDescriptor $descriptors = null,
         protected ?ResumeProviderProvisioningFromOnboarding $onboardingProvisioning = null,
+        protected ?NamedVoucherSliceService $namedSlices = null,
     ) {}
 
     /**
@@ -55,6 +57,8 @@ class SubmitPayCodeClaim
      */
     public function handle(Voucher $voucher, array $payload): SubmitPayCodeClaimResultData|ClaimApprovalInitiationResultData
     {
+        $payload = $this->namedSlices()->enrichClaimPayload($voucher, $payload);
+
         $this->guardClaimantProvisioning($voucher, $payload);
 
         $executor = $this->factory->make($voucher, $payload);
@@ -120,6 +124,11 @@ class SubmitPayCodeClaim
         $this->recordVoucherClaim->handle($voucher, $normalized, $payload);
 
         return $normalized;
+    }
+
+    protected function namedSlices(): NamedVoucherSliceService
+    {
+        return $this->namedSlices ??= app(NamedVoucherSliceService::class);
     }
 
     /**

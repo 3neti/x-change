@@ -10,6 +10,8 @@ class VoucherIssuancePayloadNormalizer
 {
     public function normalize(array $input): array
     {
+        $input = app(NamedVoucherSliceService::class)->normalizeIssuancePayload($input);
+
         $flowType = Arr::get($input, 'metadata.flow_type');
 
         if ($flowType !== 'collectible') {

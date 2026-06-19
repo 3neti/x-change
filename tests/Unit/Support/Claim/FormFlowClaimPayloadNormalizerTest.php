@@ -16,6 +16,7 @@ it('preserves wallet fields and builds mobile country bank account payload', fun
             'bank_code' => 'GXCHPHM2XXX',
             'account_number' => '09173011987',
             'amount' => '100',
+            'slice_ids' => ['slice_1'],
             'settlement_rail' => 'INSTAPAY',
         ],
     ]);
@@ -25,12 +26,16 @@ it('preserves wallet fields and builds mobile country bank account payload', fun
         ->toHaveKey('country', 'PH')
         ->toHaveKey('bank_code', 'GXCHPHM2XXX')
         ->toHaveKey('account_number', '09173011987')
+        ->toHaveKey('amount', '100')
+        ->toHaveKey('slice_ids', ['slice_1'])
+        ->toHaveKey('settlement_rail', 'INSTAPAY')
         ->and($payload['inputs'])
         ->toHaveKey('mobile', '+639173011987')
         ->toHaveKey('bank_code', 'GXCHPHM2XXX')
         ->toHaveKey('account_number', '09173011987')
         ->not->toHaveKey('recipient_country')
         ->not->toHaveKey('amount')
+        ->not->toHaveKey('slice_ids')
         ->not->toHaveKey('settlement_rail');
 });
 

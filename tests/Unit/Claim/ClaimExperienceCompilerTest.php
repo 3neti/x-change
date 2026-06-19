@@ -23,7 +23,7 @@ function fakeClaimVoucher(array $instructionOverrides = []): Voucher
         'rider' => [],
     ], $instructionOverrides);
 
-    return (new Voucher())->forceFill([
+    return (new Voucher)->forceFill([
         'code' => 'CLAIM1234',
         'metadata' => [
             'instructions' => $instructions,
@@ -138,4 +138,45 @@ it('emits no anonymous phases', function () {
             ->and($phase['source'] ?? null)->toBeString()->not->toBe('')
             ->and($phase['status'] ?? null)->toBeString()->not->toBe('');
     });
+});
+
+it('emits a slice selector field for named slice vouchers', function () {
+    $voucher = fakeClaimVoucher([
+        'cash' => [
+            'amount' => 10000,
+            'currency' => 'PHP',
+            'slice_mode' => 'open',
+            'max_slices' => 2,
+            'min_withdrawal' => 4000,
+            'validation' => [
+                'country' => 'PH',
+            ],
+        ],
+        'metadata' => [
+            'slices' => [
+                [
+                    'id' => 'slice_1',
+                    'amount' => 6000,
+                    'description' => 'Buy Product 1',
+                ],
+                [
+                    'id' => 'slice_2',
+                    'amount' => 4000,
+                    'description' => 'Pay for Service 1',
+                ],
+            ],
+        ],
+    ]);
+
+    $experience = app(ClaimExperienceCompiler::class)
+        ->compile($voucher)
+        ->toArray();
+
+    $formFlow = collect($experience['phases'])->firstWhere('key', 'form_flow');
+    $sliceField = collect($formFlow['fields'])->firstWhere('key', 'slice_ids');
+
+    expect($formFlow['fields'])->toHaveCount(1)
+        ->and(collect($formFlow['fields'])->pluck('key')->all())->toBe(['slice_ids'])
+        ->and($sliceField['type'])->toBe('slice_selector')
+        ->and($sliceField['options'])->toHaveCount(2);
 });

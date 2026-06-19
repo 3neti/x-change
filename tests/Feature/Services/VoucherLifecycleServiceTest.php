@@ -7,6 +7,7 @@ use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Data\Claims\ApprovalStatusData;
+use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Services\VoucherLifecycleService;
 
 it('lists vouchers as lifecycle summaries', function () {
@@ -223,6 +224,60 @@ it('returns voucher status', function () {
         ->and($result['voucher_id'])->toBe($voucher->id)
         ->and($result['code'])->toBe($voucher->code)
         ->and($result['claimed'])->toBeFalse();
+});
+
+it('projects fully claimed voucher claims as redeemed even before redeemed_at is stamped', function () {
+    $voucher = issueVoucher(validVoucherInstructions(
+        amount: 25,
+        overrides: [
+            'cash' => [
+                'slice_mode' => 'open',
+                'max_slices' => 1,
+                'min_withdrawal' => 25,
+            ],
+        ],
+    ));
+
+    VoucherClaim::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'claim_number' => 1,
+        'claim_type' => 'withdraw',
+        'status' => 'withdrawn',
+        'requested_amount_minor' => 1000,
+        'disbursed_amount_minor' => 1000,
+        'remaining_balance_minor' => 1500,
+        'currency' => 'PHP',
+        'meta' => [
+            'fully_claimed' => false,
+        ],
+    ]);
+
+    VoucherClaim::query()->create([
+        'voucher_id' => $voucher->getKey(),
+        'claim_number' => 2,
+        'claim_type' => 'withdraw',
+        'status' => 'withdrawn',
+        'requested_amount_minor' => 2500,
+        'disbursed_amount_minor' => 2500,
+        'remaining_balance_minor' => 0,
+        'currency' => 'PHP',
+        'meta' => [
+            'fully_claimed' => true,
+        ],
+    ]);
+
+    $access = Mockery::mock(VoucherAccessContract::class);
+    $access->shouldReceive('list')
+        ->once()
+        ->with([])
+        ->andReturn([$voucher->fresh()]);
+
+    $service = new VoucherLifecycleService($access);
+
+    $result = $service->list([]);
+
+    expect($result[0]['status'])->toBe('redeemed')
+        ->and($result[0]['display_status'])->toBe('redeemed');
 });
 
 it('cancels a voucher', function () {

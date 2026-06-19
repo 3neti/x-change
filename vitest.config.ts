@@ -11,6 +11,7 @@ export default defineConfig({
             '@/components/ui/card': path.resolve(__dirname, 'tests/frontend/stubs/ui-card.ts'),
             '@/components/ui/button': path.resolve(__dirname, 'tests/frontend/stubs/ui-button.ts'),
             '@/components/ui/badge': path.resolve(__dirname, 'tests/frontend/stubs/ui-badge.ts'),
+            '@/components/ui/checkbox': path.resolve(__dirname, 'tests/frontend/stubs/ui-checkbox.ts'),
             '@/components/ui/input': path.resolve(__dirname, 'tests/frontend/stubs/ui-input.ts'),
             '@/components/ui/label': path.resolve(__dirname, 'tests/frontend/stubs/ui-label.ts'),
             '@/components/ui/alert': path.resolve(__dirname, 'tests/frontend/stubs/ui-alert.ts'),

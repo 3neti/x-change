@@ -23,7 +23,7 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
         $input = $this->withCollectionWalletContext($issuer, $input);
         $instructions = VoucherInstructionsData::createFromAttribs($input);
 
-        /** @var \Illuminate\Contracts\Auth\Authenticatable|null $previousUser */
+        /** @var Authenticatable|null $previousUser */
         $previousUser = Auth::user();
 
         try {
@@ -34,6 +34,8 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
             if (! $issued) {
                 throw new PayCodeIssuanceFailed('Pay Code issuance did not return a voucher.');
             }
+
+            $this->persistNamedSliceMetadata($issued, $input);
 
             $code = (string) $issued->code;
             $redeemPath = $this->redeemPath($code);
@@ -61,6 +63,30 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
                 Auth::forgetGuards();
             }
         }
+    }
+
+    protected function persistNamedSliceMetadata(mixed $voucher, array $input): void
+    {
+        $slices = data_get($input, 'metadata.custom.named_slices');
+
+        if (! is_array($slices) || $slices === []) {
+            return;
+        }
+
+        $metadata = is_array($voucher->metadata ?? null) ? $voucher->metadata : [];
+
+        data_set($metadata, 'instructions.metadata.custom.named_slices', $slices);
+        data_set($metadata, 'instructions.metadata.custom.named_slice_policy', data_get($input, 'metadata.custom.named_slice_policy', [
+            'mode' => 'named',
+            'selection' => 'one_or_many',
+            'enforced' => true,
+        ]));
+
+        $voucher->forceFill([
+            'metadata' => $metadata,
+        ])->save();
+
+        $voucher->refresh();
     }
 
     protected function redeemPath(string $code): string

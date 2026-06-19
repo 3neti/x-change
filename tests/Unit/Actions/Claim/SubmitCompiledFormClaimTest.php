@@ -30,6 +30,12 @@ it('syncs compiled form claim evidence before submitting the claim', function ()
             'source' => 'compiled_form',
             'code' => $voucher->code,
             'voucher_id' => $voucher->getKey(),
+            'mobile' => '09173011987',
+            'country' => 'PH',
+            'bank_code' => null,
+            'account_number' => null,
+            'amount' => null,
+            'settlement_rail' => null,
             'inputs' => [
                 'mobile' => '09173011987',
             ],
@@ -46,6 +52,12 @@ it('syncs compiled form claim evidence before submitting the claim', function ()
             'source' => 'compiled_form',
             'code' => $voucher->code,
             'voucher_id' => $voucher->getKey(),
+            'mobile' => '09173011987',
+            'country' => 'PH',
+            'bank_code' => null,
+            'account_number' => null,
+            'amount' => null,
+            'settlement_rail' => null,
             'inputs' => [
                 'mobile' => '09173011987',
             ],
@@ -144,4 +156,3 @@ it('bubbles up redemption submission failures', function () {
     expect(fn () => $action->handle($voucher, $prepared))
         ->toThrow(RuntimeException::class, 'Compiled claim failed.');
 });
-

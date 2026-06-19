@@ -59,8 +59,8 @@ watch(
 </script>
 
 <template>
-    <div data-testid="form-flow-renderer">
-        <div data-testid="form-flow-fields">
+    <div data-testid="form-flow-renderer" class="space-y-4">
+        <div hidden data-testid="form-flow-fields">
             <div
                 v-for="field in formFlow.fields"
                 :key="field.key"
@@ -84,27 +84,33 @@ watch(
             </div>
         </div>
 
-        <div data-testid="form-flow-field-preview-rows">
+        <div class="space-y-4" data-testid="form-flow-field-preview-rows">
             <div
                 v-for="field in formFlow.fields"
                 :key="`preview-${field.key}`"
+                class="space-y-2"
                 data-testid="form-flow-field-preview-row"
             >
-                <div data-testid="form-flow-field-preview-label">
-                    {{ field.label ?? field.key }}
+                <label
+                    :for="`compiled-${field.key}`"
+                    class="flex items-center justify-between gap-3 text-sm font-medium"
+                    data-testid="form-flow-field-preview-label"
+                >
+                    <span>{{ field.label ?? field.key }}</span>
+                    <span v-if="field.required" class="text-xs font-normal text-muted-foreground">
+                        Required
+                    </span>
+                </label>
+
+                <div hidden data-testid="form-flow-field-preview-meta">
+                    {{ fieldPresentation(field).normalizedType }} · {{ field.required ? 'required' : 'optional' }}
                 </div>
 
-                <div data-testid="form-flow-field-preview-meta">
-                    {{ fieldPresentation(field).normalizedType }}
-                    ·
-                    {{ field.required ? 'required' : 'optional' }}
-                </div>
-
-                <div data-testid="form-flow-field-preview-kind">
+                <div hidden data-testid="form-flow-field-preview-kind">
                     {{ fieldPresentation(field).previewKind }}
                 </div>
 
-                <div data-testid="form-flow-field-preview-renderer">
+                <div hidden data-testid="form-flow-field-preview-renderer">
                     {{
                         resolveFormFlowRenderer(
                             normalizeFormFlowFieldType(field.type ?? 'text')

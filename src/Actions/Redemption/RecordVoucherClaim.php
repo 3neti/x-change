@@ -27,10 +27,10 @@ class RecordVoucherClaim
         $disbursedAmount = $result->disbursed_amount;
         $remainingBalance = $result->remaining_balance;
 
-        $bankCode = data_get($payload, 'bank_account.bank_code');
-        $accountNumber = data_get($payload, 'bank_account.account_number');
+        $bankCode = data_get($payload, 'bank_account.bank_code', data_get($payload, 'bank_code'));
+        $accountNumber = data_get($payload, 'bank_account.account_number', data_get($payload, 'account_number'));
 
-        return VoucherClaim::query()->create([
+        $claim = VoucherClaim::query()->create([
             'voucher_id' => $voucher->getKey(),
             'claim_number' => $nextClaimNumber,
             'claim_type' => (string) ($result->claim_type ?: 'claim'),
@@ -40,7 +40,7 @@ class RecordVoucherClaim
             'remaining_balance_minor' => $this->toMinorUnits($remainingBalance),
             'currency' => $result->currency ?: 'PHP',
             'claimer_mobile' => data_get($payload, 'mobile'),
-            'recipient_country' => data_get($payload, 'recipient_country'),
+            'recipient_country' => data_get($payload, 'recipient_country', data_get($payload, 'country')),
             'bank_code' => $bankCode,
             'account_number_masked' => $this->maskAccountNumber($accountNumber),
             'idempotency_key' => data_get($payload, '_meta.idempotency_key'),
@@ -52,8 +52,16 @@ class RecordVoucherClaim
                 'messages' => $result->messages,
                 'disbursement' => $result->disbursement,
                 'fully_claimed' => $result->fully_claimed,
+                'named_slices' => [
+                    'selected_ids' => data_get($payload, 'slice_ids', []),
+                    'selected' => data_get($payload, '_named_slices.selected', []),
+                ],
             ],
         ]);
+
+        $this->markVoucherRedeemedWhenFullyClaimed($voucher, $result);
+
+        return $claim;
     }
 
     protected function toMinorUnits(?float $amount): ?int
@@ -100,6 +108,38 @@ class RecordVoucherClaim
         }
 
         return null;
+    }
+
+    protected function markVoucherRedeemedWhenFullyClaimed(
+        Voucher $voucher,
+        SubmitPayCodeClaimResultData $result,
+    ): void {
+        if (! $this->shouldMarkVoucherRedeemed($result)) {
+            return;
+        }
+
+        if ($voucher->redeemed_at !== null) {
+            return;
+        }
+
+        $voucher->forceFill([
+            'redeemed_at' => now(),
+        ])->save();
+    }
+
+    protected function shouldMarkVoucherRedeemed(SubmitPayCodeClaimResultData $result): bool
+    {
+        if (! $result->fully_claimed || ! $result->claimed) {
+            return false;
+        }
+
+        return in_array($this->normalizeStatus((string) $result->status), [
+            'succeeded',
+            'success',
+            'completed',
+            'redeemed',
+            'withdrawn',
+        ], true);
     }
 
     protected function maskAccountNumber(?string $accountNumber): ?string

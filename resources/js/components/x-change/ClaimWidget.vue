@@ -47,13 +47,10 @@ const form = useForm({
     code: props.initialCode || '',
 });
 
-const {
-    code,
-    loading,
-    error,
-    voucherData,
-    showPreview
-} = useVoucherPreview({ debounceMs: 500, minCodeLength: 4 });
+const { code, loading, error, voucherData, showPreview } = useVoucherPreview({
+    debounceMs: 500,
+    minCodeLength: 4,
+});
 
 if (props.initialCode) {
     code.value = props.initialCode;
@@ -69,14 +66,12 @@ onMounted(() => {
 const voucherInput = ref<HTMLInputElement | null>(null);
 const submitButton = ref<HTMLButtonElement | null>(null);
 
-const isReturningRedeemer = computed(() =>
-    isReturningRedeemerFromStorage()
-);
+const isReturningRedeemer = computed(() => isReturningRedeemerFromStorage());
 
 const riderStages = computed<RawRiderStage[]>(() =>
     resolveLegacyRiderStages(
         voucherData.value as Record<string, any> | null | undefined,
-    )
+    ),
 );
 
 function submit() {
@@ -87,18 +82,18 @@ const experienceStages = computed(() =>
     resolveClaimWidgetExperienceStages({
         claimExperience: props.claimExperience,
         legacyStages: riderStages.value,
-    })
+    }),
 );
 
-const preClaimVisualStages = computed<RawRiderStage[]>(() =>
-    experienceStages.value.preClaimVisualStages
+const preClaimVisualStages = computed<RawRiderStage[]>(
+    () => experienceStages.value.preClaimVisualStages,
 );
 
 const previewViewModel = computed(() =>
     resolveClaimWidgetPreviewViewModel({
         voucherData: voucherData.value,
         preClaimVisualStages: preClaimVisualStages.value,
-    })
+    }),
 );
 
 const previewMode = computed(() =>
@@ -107,22 +102,24 @@ const previewMode = computed(() =>
         error: error.value,
         voucherData: voucherData.value,
         isNonActive: previewViewModel.value.isNonActive,
-    })
+    }),
 );
 
-const runtimeStages = computed<RawRiderStage[]>(() =>
-    experienceStages.value.runtimeStages
+const runtimeStages = computed<RawRiderStage[]>(
+    () => experienceStages.value.runtimeStages,
 );
 
-const redirectStages = computed<RawRiderStage[]>(() =>
-    experienceStages.value.redirectStages
+const redirectStages = computed<RawRiderStage[]>(
+    () => experienceStages.value.redirectStages,
 );
 
 const emit = defineEmits<{
-    'submit:compiled-form': [payload: {
-        code: string;
-        values: Record<string, unknown>;
-    }];
+    'submit:compiled-form': [
+        payload: {
+            code: string;
+            values: Record<string, unknown>;
+        },
+    ];
     'update:compiled-form-values': [values: Record<string, unknown>];
 }>();
 
@@ -140,14 +137,36 @@ const submitViewModel = computed(() =>
         hasCompiledForm: Boolean(compiledForm.normalizedFlow.value),
         compiledFormValid: compiledForm.isValid.value,
         processing: form.processing,
-    })
+    }),
 );
 
 const formFlowSection = computed(() =>
     resolveClaimWidgetFormFlowSectionViewModel({
         hasCompiledFlow: Boolean(compiledForm.normalizedFlow.value),
         usesLegacyFlow: compiledForm.usesLegacyFlow.value,
-    })
+    }),
+);
+
+const compiledFormFields = computed<Record<string, unknown>[]>(() => {
+    const fields = compiledForm.normalizedFlow.value?.fields;
+
+    return Array.isArray(fields) ? (fields as Record<string, unknown>[]) : [];
+});
+
+const isSliceSelectionOnly = computed(
+    () =>
+        compiledFormFields.value.length === 1 &&
+        compiledFormFields.value[0]?.type === 'slice_selector',
+);
+
+const compiledFormTitle = computed(() =>
+    isSliceSelectionOnly.value ? 'Choose Slices' : 'Claim Information',
+);
+
+const compiledFormDescription = computed(() =>
+    isSliceSelectionOnly.value
+        ? 'Choose which slices to redeem. Payout details are collected in the next step.'
+        : 'Complete the required claim details to continue.',
 );
 
 function submitClaim(): void {
@@ -164,7 +183,10 @@ function submitClaim(): void {
 <template>
     <div class="flex flex-col gap-6">
         <!-- Logo and App Name -->
-        <div v-if="!previewViewModel.isNonActive" class="flex flex-col items-center gap-2">
+        <div
+            v-if="!previewViewModel.isNonActive"
+            class="flex flex-col items-center gap-2"
+        >
             <AppLogoIcon class="h-20 w-auto" />
         </div>
 
@@ -174,7 +196,11 @@ function submitClaim(): void {
         </div>
 
         <!-- Form -->
-        <form v-if="!previewViewModel.isNonActive" @submit.prevent="submitClaim" class="space-y-6">
+        <form
+            v-if="!previewViewModel.isNonActive"
+            @submit.prevent="submitClaim"
+            class="space-y-6"
+        >
             <div class="flex flex-col gap-2">
                 <Label for="code">Pay Code</Label>
                 <Input
@@ -201,9 +227,15 @@ function submitClaim(): void {
         </form>
 
         <!-- Voucher Preview -->
-        <div v-if="showPreview" :class="previewViewModel.isNonActive ? '' : 'mt-6'">
+        <div
+            v-if="showPreview"
+            :class="previewViewModel.isNonActive ? '' : 'mt-6'"
+        >
             <!-- Loading State -->
-            <div v-if="previewMode === 'loading'" class="flex items-center justify-center gap-2 py-8 text-muted-foreground">
+            <div
+                v-if="previewMode === 'loading'"
+                class="flex items-center justify-center gap-2 py-8 text-muted-foreground"
+            >
                 <Spinner class="h-5 w-5" />
                 <span>Checking voucher...</span>
             </div>
@@ -219,7 +251,10 @@ function submitClaim(): void {
             <!-- Preview disabled notice -->
             <Alert v-else-if="previewMode === 'preview-disabled'">
                 <AlertDescription>
-                    {{ voucherData.preview.message || 'Preview disabled by issuer.' }}
+                    {{
+                        voucherData.preview.message ||
+                        'Preview disabled by issuer.'
+                    }}
                 </AlertDescription>
             </Alert>
 
@@ -230,7 +265,9 @@ function submitClaim(): void {
                     :status="voucherData.status as 'redeemed' | 'expired'"
                     :status-date="previewViewModel.statusDate"
                     :voucher-code="voucherData.code"
-                    :formatted-amount="voucherData.instructions?.formatted_amount"
+                    :formatted-amount="
+                        voucherData.instructions?.formatted_amount
+                    "
                 />
 
                 <!-- Rider Content (only for returning redeemers) -->
@@ -238,7 +275,9 @@ function submitClaim(): void {
                     <!-- Rider Message -->
                     <Card v-if="voucherData.instructions?.rider?.message">
                         <CardContent class="pt-3 pb-3">
-                            <p class="text-sm font-medium text-foreground leading-relaxed">
+                            <p
+                                class="text-sm leading-relaxed font-medium text-foreground"
+                            >
                                 {{ voucherData.instructions.rider.message }}
                             </p>
                         </CardContent>
@@ -260,21 +299,33 @@ function submitClaim(): void {
                 </Card>
 
                 <!-- Preview Message (if provided by issuer) -->
-                <Alert v-if="voucherData.preview && voucherData.preview.message" class="mb-4" variant="default">
+                <Alert
+                    v-if="voucherData.preview && voucherData.preview.message"
+                    class="mb-4"
+                    variant="default"
+                >
                     <AlertDescription>
-                        <strong class="font-semibold">Note from issuer:</strong> {{ voucherData.preview.message }}
+                        <strong class="font-semibold">Note from issuer:</strong>
+                        {{ voucherData.preview.message }}
                     </AlertDescription>
                 </Alert>
 
                 <Tabs default-value="instructions">
                     <TabsList class="grid w-full grid-cols-2">
-                        <TabsTrigger value="instructions">Instructions</TabsTrigger>
-                        <TabsTrigger value="system-info">System Info</TabsTrigger>
+                        <TabsTrigger value="instructions"
+                            >Instructions</TabsTrigger
+                        >
+                        <TabsTrigger value="system-info"
+                            >System Info</TabsTrigger
+                        >
                     </TabsList>
 
                     <TabsContent value="instructions" class="mt-4">
                         <VoucherInstructionsDisplay
-                            v-if="voucherData.instructions && typeof voucherData.instructions === 'object'"
+                            v-if="
+                                voucherData.instructions &&
+                                typeof voucherData.instructions === 'object'
+                            "
                             :instructions="voucherData.instructions"
                             :voucher-status="voucherData.status"
                         />
@@ -321,11 +372,13 @@ function submitClaim(): void {
                 data-testid="compiled-form-flow-visible-region"
                 class="border-primary/10 bg-background"
             >
-                <CardContent class="pt-4 pb-4 space-y-4">
+                <CardContent class="space-y-4 pt-4 pb-4">
                     <div class="space-y-1 text-center">
-                        <h2 class="text-base font-medium">Claim Information</h2>
+                        <h2 class="text-base font-medium">
+                            {{ compiledFormTitle }}
+                        </h2>
                         <p class="text-sm text-muted-foreground">
-                            Please complete the required details to continue.
+                            {{ compiledFormDescription }}
                         </p>
                     </div>
 

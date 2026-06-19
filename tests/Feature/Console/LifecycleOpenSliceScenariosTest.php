@@ -133,6 +133,10 @@ it('runs the divisible open three slices enforced interval scenario successfully
 
     expect(data_get($claims[2]->meta, 'fully_claimed'))->toBeTrue();
 
+    $voucher = Voucher::query()->find($claims[2]->voucher_id);
+
+    expect($voucher?->redeemed_at)->not->toBeNull();
+
     $reconciliations = DisbursementReconciliation::query()
         ->latest('id')
         ->take(3)

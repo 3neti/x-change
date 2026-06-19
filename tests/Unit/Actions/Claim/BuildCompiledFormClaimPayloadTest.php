@@ -15,6 +15,9 @@ it('builds compiled form claim payload from prepared compiled claim data', funct
             'mobile' => '09173011987',
             'bank_code' => 'GXCHPHM2XXX',
             'account_number' => '09173011987',
+            'amount' => '75',
+            'slice_ids' => ['slice_1'],
+            'settlement_rail' => 'INSTAPAY',
         ],
     );
 
@@ -27,6 +30,13 @@ it('builds compiled form claim payload from prepared compiled claim data', funct
         'source' => 'compiled_form',
         'code' => $voucher->code,
         'voucher_id' => $voucher->getKey(),
+        'mobile' => '09173011987',
+        'country' => 'PH',
+        'bank_code' => 'GXCHPHM2XXX',
+        'account_number' => '09173011987',
+        'amount' => '75',
+        'slice_ids' => ['slice_1'],
+        'settlement_rail' => 'INSTAPAY',
         'inputs' => [
             'mobile' => '09173011987',
             'bank_code' => 'GXCHPHM2XXX',

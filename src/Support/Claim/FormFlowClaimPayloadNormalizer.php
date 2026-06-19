@@ -22,6 +22,9 @@ class FormFlowClaimPayloadNormalizer
             'country' => $country,
             'bank_code' => $flatData['bank_code'] ?? null,
             'account_number' => $flatData['account_number'] ?? null,
+            'amount' => $flatData['amount'] ?? null,
+            'slice_ids' => $flatData['slice_ids'] ?? [],
+            'settlement_rail' => $flatData['settlement_rail'] ?? null,
             'inputs' => $inputs,
             '_flat_data' => $flatData,
         ];
@@ -43,7 +46,7 @@ class FormFlowClaimPayloadNormalizer
     protected function buildInputs(array $flatData, array $collectedData): array
     {
         $inputs = collect($flatData)
-            ->except(['recipient_country', 'amount', 'settlement_rail'])
+            ->except(['recipient_country', 'amount', 'settlement_rail', 'slice_ids'])
             ->toArray();
 
         $kycData = $this->extractKycData($flatData, $collectedData);

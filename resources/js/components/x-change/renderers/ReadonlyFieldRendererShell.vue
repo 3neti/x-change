@@ -10,7 +10,7 @@ defineProps<{
 </script>
 
 <template>
-    <div :data-testid="testId">
+    <div hidden :data-testid="testId">
         <div :data-testid="`${testId}-label`">
             {{ field.label ?? field.key }}
         </div>

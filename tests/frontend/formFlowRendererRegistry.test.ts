@@ -13,6 +13,9 @@ describe('form flow renderer registry', () => {
 
         expect(resolveFormFlowRenderer('date'))
             .toBe('DateFieldRenderer');
+
+        expect(resolveFormFlowRenderer('slice_selector'))
+            .toBe('SliceSelectorFieldRenderer');
     });
 
     it('returns unsupported renderer for unknown types', () => {

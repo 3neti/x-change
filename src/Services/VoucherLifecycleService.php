@@ -17,6 +17,7 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
     public function __construct(
         protected VoucherAccessContract $vouchers,
         protected ?ClaimApprovalStatusResolver $approvalStatus = null,
+        protected ?NamedVoucherSliceService $namedSlices = null,
     ) {}
 
     public function list(array $filters = []): array
@@ -102,8 +103,8 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             'status' => $status,
             'display_status' => $this->displayStatus($status, $approval),
             'issuer_id' => $this->issuerId($voucher),
-            'claimed' => $voucher->redeemed_at !== null,
-            'fully_claimed' => $voucher->redeemed_at !== null,
+            'claimed' => $this->isClaimed($voucher),
+            'fully_claimed' => $this->isFullyClaimed($voucher),
             'created_at' => $voucher->created_at?->toIso8601String(),
             'expires_at' => $voucher->expires_at?->toIso8601String(),
             'starts_at' => $voucher->starts_at?->toIso8601String(),
@@ -116,7 +117,8 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
 
     protected function toStatusArray(Voucher $voucher): array
     {
-        $claimed = $voucher->redeemed_at !== null;
+        $claimed = $this->isClaimed($voucher);
+        $fullyClaimed = $this->isFullyClaimed($voucher);
         $amount = $this->amount($voucher);
 
         return [
@@ -124,8 +126,8 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             'code' => $voucher->code,
             'status' => $this->statusLabel($voucher),
             'claimed' => $claimed,
-            'fully_claimed' => $claimed,
-            'remaining_balance' => $claimed ? 0.0 : $amount,
+            'fully_claimed' => $fullyClaimed,
+            'remaining_balance' => $fullyClaimed ? 0.0 : $amount,
             'currency' => $this->currency($voucher),
         ];
     }
@@ -224,11 +226,49 @@ class VoucherLifecycleService implements VoucherLifecycleServiceContract
             return 'expired';
         }
 
-        if ($voucher->redeemed_at !== null) {
+        if ($this->isFullyClaimed($voucher)) {
             return 'redeemed';
         }
 
         return strtolower((string) $voucher->state->value);
+    }
+
+    protected function isClaimed(Voucher $voucher): bool
+    {
+        return $voucher->redeemed_at !== null
+            || $voucher->claims()->exists();
+    }
+
+    protected function isFullyClaimed(Voucher $voucher): bool
+    {
+        if ($this->namedSlices()->hasNamedSlices($voucher)) {
+            return $this->namedSlices()->allSlicesClaimed($voucher);
+        }
+
+        if ($voucher->redeemed_at !== null) {
+            return true;
+        }
+
+        $latestClaim = $voucher->claims()
+            ->reorder()
+            ->orderByDesc('claim_number')
+            ->first();
+
+        if ($latestClaim === null) {
+            return false;
+        }
+
+        if ((bool) data_get($latestClaim->meta, 'fully_claimed') === true) {
+            return true;
+        }
+
+        return $latestClaim->remaining_balance_minor !== null
+            && (int) $latestClaim->remaining_balance_minor <= 0;
+    }
+
+    protected function namedSlices(): NamedVoucherSliceService
+    {
+        return $this->namedSlices ??= app(NamedVoucherSliceService::class);
     }
 
     protected function instructionsArray(Voucher $voucher): ?array
