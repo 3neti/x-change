@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import ClaimWidget from '../../resources/js/components/x-change/ClaimWidget.vue';
 
@@ -136,7 +136,8 @@ vi.mock('@/components/x-change/VoucherStatusStamp.vue', () => ({
 vi.mock('@/components/x-rider/RiderRuntimeSequencer.vue', () => ({
     default: {
         props: ['stages'],
-        template: '<div data-testid="rider-runtime">{{ stages?.length ?? 0 }}</div>',
+        template:
+            '<div data-testid="rider-runtime">{{ stages?.length ?? 0 }}</div>',
     },
 }));
 
@@ -192,10 +193,22 @@ describe('ClaimWidget direct compiled form rendering', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="claim-widget-form-flow-boundary-region"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="compiled-form-flow-visible-region"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="form-flow-renderer"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="form-flow-field-count"]').text()).toBe('1');
+        expect(
+            wrapper
+                .find('[data-testid="claim-widget-form-flow-boundary-region"]')
+                .exists(),
+        ).toBe(true);
+        expect(
+            wrapper
+                .find('[data-testid="compiled-form-flow-visible-region"]')
+                .exists(),
+        ).toBe(true);
+        expect(
+            wrapper.find('[data-testid="form-flow-renderer"]').exists(),
+        ).toBe(true);
+        expect(
+            wrapper.find('[data-testid="form-flow-field-count"]').text(),
+        ).toBe('1');
     });
 
     it('renders compiled form directly when form flow phase is owned by claim widget', () => {
@@ -222,8 +235,14 @@ describe('ClaimWidget direct compiled form rendering', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="compiled-form-flow-visible-region"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="form-flow-renderer"]').exists()).toBe(true);
+        expect(
+            wrapper
+                .find('[data-testid="compiled-form-flow-visible-region"]')
+                .exists(),
+        ).toBe(true);
+        expect(
+            wrapper.find('[data-testid="form-flow-renderer"]').exists(),
+        ).toBe(true);
     });
 
     it('does not render compiled form directly when form flow phase is owned by form-flow', () => {
@@ -250,8 +269,14 @@ describe('ClaimWidget direct compiled form rendering', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="compiled-form-flow-visible-region"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="form-flow-renderer"]').exists()).toBe(false);
+        expect(
+            wrapper
+                .find('[data-testid="compiled-form-flow-visible-region"]')
+                .exists(),
+        ).toBe(false);
+        expect(
+            wrapper.find('[data-testid="form-flow-renderer"]').exists(),
+        ).toBe(false);
     });
 
     it('disables submit while required compiled form fields are missing', () => {
@@ -262,7 +287,11 @@ describe('ClaimWidget direct compiled form rendering', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="claim-widget-submit-button"]').attributes('disabled')).toBeDefined();
+        expect(
+            wrapper
+                .find('[data-testid="claim-widget-submit-button"]')
+                .attributes('disabled'),
+        ).toBeDefined();
     });
 
     it('emits compiled form value updates from direct renderer', async () => {
@@ -305,7 +334,64 @@ describe('ClaimWidget direct compiled form rendering', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="claim-widget-submit-error"]').text())
-            .toBe('Compiled claim failed.');
+        expect(
+            wrapper.find('[data-testid="claim-widget-submit-error"]').text(),
+        ).toBe('Compiled claim failed.');
+    });
+
+    it('reactively renders slice selection after claim experience lookup resolves', async () => {
+        const fetch = vi.fn().mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                success: true,
+                claim_experience: {
+                    phases: [
+                        {
+                            key: 'form_flow',
+                            owner: 'claim-widget',
+                            status: 'active',
+                            fields: [
+                                {
+                                    key: 'slice_ids',
+                                    label: 'Slices to Redeem',
+                                    type: 'slice_selector',
+                                    required: true,
+                                    options: [
+                                        {
+                                            id: 'slice_1',
+                                            amount: 80,
+                                            description: 'Buy coffee',
+                                            available: true,
+                                            disabled: false,
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                },
+            }),
+        });
+
+        vi.stubGlobal('fetch', fetch);
+
+        const wrapper = mount(ClaimWidget);
+
+        await flushPromises();
+
+        expect(fetch).toHaveBeenCalledWith(
+            '/x/claim/TEST123/experience',
+            expect.objectContaining({
+                headers: expect.objectContaining({
+                    Accept: 'application/json',
+                }),
+            }),
+        );
+        expect(wrapper.text()).toContain('Choose Slices');
+        expect(
+            wrapper.find('[data-testid="form-flow-field-count"]').text(),
+        ).toBe('1');
+
+        vi.unstubAllGlobals();
     });
 });

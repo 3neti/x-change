@@ -23,7 +23,24 @@ it('rejects redeemed voucher', function () {
 });
 
 it('accepts redeemed named slice voucher while slices remain unclaimed', function () {
-    $voucher = namedSliceVoucher([
+    $voucher = issueVoucher(validVoucherInstructions(
+        amount: 155,
+        overrides: [
+            'cash' => [
+                'amount' => 155,
+                'currency' => 'PHP',
+                'slice_mode' => 'open',
+                'max_slices' => 2,
+                'min_withdrawal' => 75,
+                'validation' => [
+                    'country' => 'PH',
+                ],
+            ],
+        ],
+    ));
+
+    $metadata = $voucher->metadata ?? [];
+    data_set($metadata, 'instructions.metadata.custom.named_slices', [
         [
             'id' => 'slice_1',
             'amount' => 80,
@@ -35,8 +52,14 @@ it('accepts redeemed named slice voucher while slices remain unclaimed', functio
             'description' => 'Buy doughnut',
         ],
     ]);
+    data_set($metadata, 'instructions.metadata.custom.named_slice_policy', [
+        'mode' => 'named',
+        'selection' => 'one_or_many',
+        'enforced' => true,
+    ]);
 
     $voucher->forceFill([
+        'metadata' => $metadata,
         'redeemed_at' => now(),
         'state' => VoucherState::ACTIVE,
         'expires_at' => Carbon::now()->addDay(),

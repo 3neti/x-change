@@ -1,12 +1,15 @@
-import { computed, ref, type ComputedRef } from 'vue';
+import { computed, ref, unref, type ComputedRef, type MaybeRef } from 'vue';
 import { resolveCompiledFormFlowPhase } from '@/components/x-change/compiledFormFlow';
-import { buildCompiledFormPayload, type CompiledFormPayload } from '@/components/x-change/compiledFormPayload';
+import {
+    buildCompiledFormPayload,
+    type CompiledFormPayload,
+} from '@/components/x-change/compiledFormPayload';
 import { resolveCompiledFormSubmitEvent } from '@/components/x-change/compiledFormSubmit';
 import { resolveCompiledFormViewModel } from '@/components/x-change/compiledFormViewModel';
 import { resolveFormFlowBoundary } from '@/components/x-change/formFlowBoundary';
 
 export type UseCompiledClaimFormInput = {
-    initialCode?: string | null;
+    initialCode?: MaybeRef<string | null | undefined>;
     claimExperience: ComputedRef<Record<string, unknown> | null | undefined>;
     submitted: ComputedRef<boolean | null | undefined>;
     submitError: ComputedRef<string | null | undefined>;
@@ -19,11 +22,11 @@ export function useCompiledClaimForm(input: UseCompiledClaimFormInput) {
     const submitting = ref(false);
 
     const compiledFormFlowPhase = computed<Record<string, any> | null>(() =>
-        resolveCompiledFormFlowPhase(input.claimExperience.value)
+        resolveCompiledFormFlowPhase(input.claimExperience.value),
     );
 
     const boundary = computed(() =>
-        resolveFormFlowBoundary(compiledFormFlowPhase.value)
+        resolveFormFlowBoundary(compiledFormFlowPhase.value),
     );
 
     const viewModel = computed(() =>
@@ -33,26 +36,19 @@ export function useCompiledClaimForm(input: UseCompiledClaimFormInput) {
             submitError: input.submitError.value,
             submitted: input.submitted.value,
             submitting: submitting.value,
-        })
+        }),
     );
 
-    const usesLegacyFlow = computed(() =>
-        viewModel.value.usesLegacyFormFlow
+    const usesLegacyFlow = computed(() => viewModel.value.usesLegacyFormFlow);
+
+    const normalizedFlow = computed(
+        () => viewModel.value.normalizedCompiledFormFlow,
     );
 
-    const normalizedFlow = computed(() =>
-        viewModel.value.normalizedCompiledFormFlow
-    );
-
-    const isValid = computed(() =>
-        viewModel.value.isValid
-    );
+    const isValid = computed(() => viewModel.value.isValid);
 
     const payload = computed(() =>
-        buildCompiledFormPayload(
-            input.initialCode,
-            values.value,
-        )
+        buildCompiledFormPayload(unref(input.initialCode), values.value),
     );
 
     function updateValues(nextValues: Record<string, unknown>): void {
@@ -89,4 +85,3 @@ export function useCompiledClaimForm(input: UseCompiledClaimFormInput) {
         submit,
     };
 }
-

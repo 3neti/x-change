@@ -11,17 +11,24 @@ export function useXChangeRoutes() {
             index: () => '/x/pay-codes',
             create: () => '/x/pay-codes/create',
             show: (code: string) => `/x/pay-codes/${encodeURIComponent(code)}`,
-            approval: (code: string) => `/x/pay-codes/${encodeURIComponent(code)}/approval`,
+            approval: (code: string) =>
+                `/x/pay-codes/${encodeURIComponent(code)}/approval`,
         },
 
         balances: '/x/balances',
 
         claim: {
             start: () => '/x/claim',
-            startWithCode: (code: string) => `/x/claim?code=${encodeURIComponent(code)}`,
-            submit: (code: string) => `/x/claim/${encodeURIComponent(code)}/submit`,
-            success: (code: string) => `/x/claim/${encodeURIComponent(code)}/success`,
-            redirect: (code: string) => `/x/claim/${encodeURIComponent(code)}/redirect`,
+            startWithCode: (code: string) =>
+                `/x/claim?code=${encodeURIComponent(code)}`,
+            experience: (code: string) =>
+                `/x/claim/${encodeURIComponent(code)}/experience`,
+            submit: (code: string) =>
+                `/x/claim/${encodeURIComponent(code)}/submit`,
+            success: (code: string) =>
+                `/x/claim/${encodeURIComponent(code)}/success`,
+            redirect: (code: string) =>
+                `/x/claim/${encodeURIComponent(code)}/redirect`,
         },
 
         api: {

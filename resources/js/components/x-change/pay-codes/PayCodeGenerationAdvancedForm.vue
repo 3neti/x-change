@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -65,12 +71,35 @@ function updateField(key: keyof PayCodeGenerationForm, value: unknown): void {
     };
 }
 
-function updateBoolean(key: keyof PayCodeGenerationForm, value: boolean | 'indeterminate'): void {
+function updateBoolean(
+    key: keyof PayCodeGenerationForm,
+    value: boolean | 'indeterminate',
+): void {
     updateField(key, value === true);
 }
 
 function updateNamedSlicesEnabled(value: boolean): void {
-    updateField('named_slices_enabled', value);
+    const hasSlices =
+        Array.isArray(form.value.named_slices) &&
+        form.value.named_slices.length > 0;
+
+    form.value = {
+        ...form.value,
+        named_slices_enabled: value,
+        named_slices:
+            value && !hasSlices
+                ? [
+                      {
+                          id: 'slice_1',
+                          amount: form.value.amount || '',
+                          description: 'Whole amount',
+                          tag: '',
+                          claim_on: '',
+                          claim_by: '',
+                      },
+                  ]
+                : form.value.named_slices,
+    };
 }
 
 function updateNamedSlices(value: PayCodeNamedSlice[]): void {
@@ -81,9 +110,12 @@ function updateNamedSlices(value: PayCodeNamedSlice[]): void {
 <template>
     <Card>
         <CardHeader>
-            <CardTitle class="text-base text-emerald-700">Advanced Options</CardTitle>
+            <CardTitle class="text-base text-emerald-700"
+                >Advanced Options</CardTitle
+            >
             <CardDescription>
-                Optional controls for code generation, timing, splash screen, and feedback.
+                Optional controls for code generation, timing, splash screen,
+                and feedback.
             </CardDescription>
         </CardHeader>
 
@@ -127,7 +159,9 @@ function updateNamedSlices(value: PayCodeNamedSlice[]): void {
                             max="32"
                             placeholder="4"
                             :model-value="form.code_length ?? ''"
-                            @update:model-value="updateField('code_length', $event)"
+                            @update:model-value="
+                                updateField('code_length', $event)
+                            "
                         />
                     </div>
                 </div>
@@ -143,10 +177,13 @@ function updateNamedSlices(value: PayCodeNamedSlice[]): void {
                     type="text"
                     placeholder="Optional redemption secret"
                     :model-value="form.validation_secret ?? ''"
-                    @update:model-value="updateField('validation_secret', $event)"
+                    @update:model-value="
+                        updateField('validation_secret', $event)
+                    "
                 />
                 <p class="text-xs text-muted-foreground">
-                    Redeemer must provide this secret before the Pay Code can be claimed.
+                    Redeemer must provide this secret before the Pay Code can be
+                    claimed.
                 </p>
             </div>
 
@@ -157,10 +194,13 @@ function updateNamedSlices(value: PayCodeNamedSlice[]): void {
                     type="tel"
                     placeholder="+639171234567"
                     :model-value="form.validation_mobile ?? ''"
-                    @update:model-value="updateField('validation_mobile', $event)"
+                    @update:model-value="
+                        updateField('validation_mobile', $event)
+                    "
                 />
                 <p class="text-xs text-muted-foreground">
-                    Only this mobile number can redeem the Pay Code. OTP will be required automatically.
+                    Only this mobile number can redeem the Pay Code. OTP will be
+                    required automatically.
                 </p>
             </div>
 
@@ -182,7 +222,9 @@ function updateNamedSlices(value: PayCodeNamedSlice[]): void {
                             id="starts_at"
                             type="datetime-local"
                             :model-value="form.starts_at ?? ''"
-                            @update:model-value="updateField('starts_at', $event)"
+                            @update:model-value="
+                                updateField('starts_at', $event)
+                            "
                         />
                     </div>
 
@@ -192,7 +234,9 @@ function updateNamedSlices(value: PayCodeNamedSlice[]): void {
                             id="expires_at"
                             type="datetime-local"
                             :model-value="form.expires_at ?? ''"
-                            @update:model-value="updateField('expires_at', $event)"
+                            @update:model-value="
+                                updateField('expires_at', $event)
+                            "
                         />
                     </div>
 
@@ -204,7 +248,9 @@ function updateNamedSlices(value: PayCodeNamedSlice[]): void {
                             min="1"
                             placeholder="1440"
                             :model-value="form.ttl_minutes ?? ''"
-                            @update:model-value="updateField('ttl_minutes', $event)"
+                            @update:model-value="
+                                updateField('ttl_minutes', $event)
+                            "
                         />
                     </div>
                 </div>
@@ -214,7 +260,9 @@ function updateNamedSlices(value: PayCodeNamedSlice[]): void {
 
             <!-- Splash -->
             <div class="space-y-4">
-                <label class="flex items-center justify-between rounded-lg border p-3">
+                <label
+                    class="flex items-center justify-between rounded-lg border p-3"
+                >
                     <div>
                         <p class="text-sm font-medium">Splash Screen</p>
                         <p class="text-xs text-muted-foreground">
@@ -224,11 +272,16 @@ function updateNamedSlices(value: PayCodeNamedSlice[]): void {
 
                     <Checkbox
                         :checked="form.splash_enabled === true"
-                        @update:model-value="updateBoolean('splash_enabled', $event)"
+                        @update:model-value="
+                            updateBoolean('splash_enabled', $event)
+                        "
                     />
                 </label>
 
-                <div v-if="form.splash_enabled" class="space-y-4 rounded-lg border bg-muted/20 p-4">
+                <div
+                    v-if="form.splash_enabled"
+                    class="space-y-4 rounded-lg border bg-muted/20 p-4"
+                >
                     <div class="space-y-2">
                         <Label for="splash_timeout">Timeout Seconds</Label>
                         <Input
@@ -237,7 +290,9 @@ function updateNamedSlices(value: PayCodeNamedSlice[]): void {
                             min="0"
                             placeholder="5"
                             :model-value="form.splash_timeout ?? ''"
-                            @update:model-value="updateField('splash_timeout', $event)"
+                            @update:model-value="
+                                updateField('splash_timeout', $event)
+                            "
                         />
                     </div>
 
@@ -247,7 +302,9 @@ function updateNamedSlices(value: PayCodeNamedSlice[]): void {
                             id="splash_title"
                             placeholder="Welcome"
                             :model-value="form.splash_title ?? ''"
-                            @update:model-value="updateField('splash_title', $event)"
+                            @update:model-value="
+                                updateField('splash_title', $event)
+                            "
                         />
                     </div>
 
@@ -258,7 +315,9 @@ function updateNamedSlices(value: PayCodeNamedSlice[]): void {
                             rows="4"
                             placeholder="Please prepare your details before continuing."
                             :model-value="form.splash_content ?? ''"
-                            @update:model-value="updateField('splash_content', $event)"
+                            @update:model-value="
+                                updateField('splash_content', $event)
+                            "
                         />
                     </div>
                 </div>
@@ -276,18 +335,26 @@ function updateNamedSlices(value: PayCodeNamedSlice[]): void {
                 </div>
 
                 <div class="grid gap-3 sm:grid-cols-2">
-                    <label class="flex items-center gap-3 rounded-lg border p-3">
+                    <label
+                        class="flex items-center gap-3 rounded-lg border p-3"
+                    >
                         <Checkbox
                             :checked="form.feedback_sms === true"
-                            @update:model-value="updateBoolean('feedback_sms', $event)"
+                            @update:model-value="
+                                updateBoolean('feedback_sms', $event)
+                            "
                         />
                         <span class="text-sm font-medium">SMS feedback</span>
                     </label>
 
-                    <label class="flex items-center gap-3 rounded-lg border p-3">
+                    <label
+                        class="flex items-center gap-3 rounded-lg border p-3"
+                    >
                         <Checkbox
                             :checked="form.feedback_email === true"
-                            @update:model-value="updateBoolean('feedback_email', $event)"
+                            @update:model-value="
+                                updateBoolean('feedback_email', $event)
+                            "
                         />
                         <span class="text-sm font-medium">Email feedback</span>
                     </label>
@@ -317,7 +384,8 @@ function updateNamedSlices(value: PayCodeNamedSlice[]): void {
                     @update:model-value="updateField('metadata', $event)"
                 />
                 <p class="text-xs text-muted-foreground">
-                    Optional JSON metadata. Validation will be handled when Create.vue is wired.
+                    Optional JSON metadata. Validation will be handled when
+                    Create.vue is wired.
                 </p>
             </div>
         </CardContent>

@@ -14,10 +14,11 @@ import VoucherStatusStamp from '@/components/x-change/VoucherStatusStamp.vue';
 import RiderRuntimeSequencer from '@/components/x-rider/RiderRuntimeSequencer.vue';
 import type { RawRiderStage } from '@/components/x-rider/types';
 import { initializeTheme } from '@/composables/useTheme';
+import { useXChangeRoutes } from '@/composables/useXChangeRoutes';
 import { useVoucherPreview } from '@/composables/useVoucherPreview';
 import { useForm, usePage } from '@inertiajs/vue3';
 import { AlertCircle } from 'lucide-vue-next';
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { resolveClaimWidgetExperienceStages } from '@/components/x-change/claimWidgetExperienceStages';
 import { resolveLegacyRiderStages } from '@/components/x-change/claimWidgetLegacyStages';
 import { submitLegacyClaimStart } from '@/components/x-change/claimWidgetLegacySubmit';
@@ -42,6 +43,7 @@ const props = defineProps<Props>();
 
 const page = usePage();
 const errors = computed(() => page.props.errors as Record<string, string>);
+const routes = useXChangeRoutes();
 
 const form = useForm({
     code: props.initialCode || '',
@@ -65,6 +67,27 @@ onMounted(() => {
 
 const voucherInput = ref<HTMLInputElement | null>(null);
 const submitButton = ref<HTMLButtonElement | null>(null);
+const reactiveClaimExperience = ref<Record<string, unknown> | null>(
+    props.claimExperience ?? null,
+);
+const claimExperienceLoading = ref(false);
+const claimExperienceError = ref<string | null>(null);
+let claimExperienceAbortController: AbortController | null = null;
+
+const normalizedCode = computed(() => code.value.trim().toUpperCase());
+const normalizedInitialCode = computed(() =>
+    typeof props.initialCode === 'string'
+        ? props.initialCode.trim().toUpperCase()
+        : '',
+);
+
+const currentClaimExperience = computed(() => {
+    if (normalizedCode.value === normalizedInitialCode.value) {
+        return reactiveClaimExperience.value ?? props.claimExperience;
+    }
+
+    return reactiveClaimExperience.value;
+});
 
 const isReturningRedeemer = computed(() => isReturningRedeemerFromStorage());
 
@@ -80,7 +103,7 @@ function submit() {
 
 const experienceStages = computed(() =>
     resolveClaimWidgetExperienceStages({
-        claimExperience: props.claimExperience,
+        claimExperience: currentClaimExperience.value,
         legacyStages: riderStages.value,
     }),
 );
@@ -124,8 +147,8 @@ const emit = defineEmits<{
 }>();
 
 const compiledForm = useCompiledClaimForm({
-    initialCode: props.initialCode,
-    claimExperience: computed(() => props.claimExperience),
+    initialCode: computed(() => normalizedCode.value || props.initialCode),
+    claimExperience: currentClaimExperience,
     submitted: computed(() => props.compiledFormSubmitted),
     submitError: computed(() => props.compiledFormSubmitError),
     emitSubmit: (payload) => emit('submit:compiled-form', payload),
@@ -178,6 +201,103 @@ function submitClaim(): void {
 
     submit();
 }
+
+async function fetchClaimExperience(voucherCode: string): Promise<void> {
+    if (voucherCode.length < 4) {
+        reactiveClaimExperience.value = null;
+
+        return;
+    }
+
+    if (
+        voucherCode === normalizedInitialCode.value &&
+        props.claimExperience &&
+        reactiveClaimExperience.value === props.claimExperience
+    ) {
+        return;
+    }
+
+    claimExperienceAbortController?.abort();
+    claimExperienceAbortController = new AbortController();
+    claimExperienceLoading.value = true;
+    claimExperienceError.value = null;
+
+    try {
+        const response = await fetch(routes.claim.experience(voucherCode), {
+            signal: claimExperienceAbortController.signal,
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+        const data = await response.json();
+
+        if (!response.ok || data.success === false) {
+            reactiveClaimExperience.value = null;
+            claimExperienceError.value =
+                data.message || 'Unable to prepare claim options.';
+
+            return;
+        }
+
+        reactiveClaimExperience.value = data.claim_experience ?? null;
+    } catch (error: any) {
+        if (error?.name === 'AbortError') {
+            return;
+        }
+
+        reactiveClaimExperience.value = null;
+        claimExperienceError.value = 'Unable to prepare claim options.';
+    } finally {
+        claimExperienceLoading.value = false;
+    }
+}
+
+watch(
+    () => props.claimExperience,
+    (next) => {
+        reactiveClaimExperience.value = next ?? null;
+    },
+);
+
+watch(
+    () => normalizedCode.value,
+    (next, previous) => {
+        if (next === previous) {
+            return;
+        }
+
+        claimExperienceAbortController?.abort();
+        claimExperienceLoading.value = false;
+        claimExperienceError.value = null;
+
+        if (next !== normalizedInitialCode.value) {
+            reactiveClaimExperience.value = null;
+        }
+    },
+);
+
+watch(
+    () => voucherData.value,
+    (voucher) => {
+        const voucherCode = String(voucher?.code ?? normalizedCode.value)
+            .trim()
+            .toUpperCase();
+
+        if (!voucher || voucherCode.length < 4) {
+            return;
+        }
+
+        if (voucher.status === 'redeemed' || voucher.status === 'expired') {
+            reactiveClaimExperience.value = null;
+
+            return;
+        }
+
+        void fetchClaimExperience(voucherCode);
+    },
+    { immediate: true },
+);
 </script>
 
 <template>
@@ -224,6 +344,20 @@ function submitClaim(): void {
             >
                 {{ submitViewModel.label }}
             </Button>
+
+            <p
+                v-if="claimExperienceLoading"
+                data-testid="claim-experience-loading"
+                class="text-center text-sm text-muted-foreground"
+            >
+                Preparing claim options...
+            </p>
+
+            <InputError
+                v-if="claimExperienceError"
+                :message="claimExperienceError"
+                data-testid="claim-experience-error"
+            />
         </form>
 
         <!-- Voucher Preview -->

@@ -8,6 +8,7 @@ use LBHurtado\XChange\Http\Controllers\Web\BalancePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimApprovalOtpController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimApprovalPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimCompleteController;
+use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimExperienceController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimRedirectController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimStartController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSubmitController;
@@ -41,6 +42,8 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
 Route::prefix('x')->middleware(['web', ShareXChangeBranding::class])->group(function (): void {
     Route::get('claim', ClaimStartController::class)->name('x-change.claim.start');
     Route::post('claim', ClaimStartController::class)->name('x-change.claim.start.submit');
+    Route::get('claim/{code}/experience', ClaimExperienceController::class)
+        ->name('x-change.claim.experience');
     Route::post('claim/{code}/complete', ClaimCompleteController::class)
         ->withoutMiddleware([VerifyCsrfToken::class])
         ->name('x-change.claim.complete');
