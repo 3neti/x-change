@@ -25,6 +25,7 @@ Last updated: 2026-06-24
 
 ## Completed Work
 
+- Commits: voucher `6b7d2a0`; x-change baseline `136f12f`; canonical documentation `a2599f7`.
 - Created the five canonical architecture documents and Slice 0 report.
 - Inspected generation, redemption, observers/handlers, all voucher lifecycle pipelines, validation, claim submission, branch selection, withdrawal, provider events, callbacks, and reconciliation.
 - Added voucher issuance characterization for exact post-generation/mint-cash order and resulting processed/cash state.

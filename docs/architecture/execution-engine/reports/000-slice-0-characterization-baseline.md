@@ -113,3 +113,9 @@ None of these findings contradict the target ownership rule that the future exec
 ## Next Slice
 
 Recommended: Slice 1 — Contract Extraction. Authorization has not been granted. Stop after Slice 0 and request approval.
+
+## Repository-specific Commits
+
+- voucher `6b7d2a0` — `test(execution-engine): characterize voucher runtime for slice 0`
+- x-change `136f12f` — `test(x-change): restore lifecycle baseline`
+- x-change `a2599f7` — `docs(execution-engine): establish slice 0 architecture baseline`
