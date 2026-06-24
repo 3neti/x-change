@@ -142,9 +142,9 @@ final class LifecycleScenarioBootstrapper
     public function resolveScenarioMobile(array $scenario, Model $issuer): string
     {
         $mobile = (string) (
-        data_get($scenario, 'mobile')
-            ?: ($issuer instanceof HasMobileChannel ? $issuer->getMobileChannel() : null)
-            ?: ''
+            data_get($scenario, 'mobile')
+                ?: ($issuer instanceof HasMobileChannel ? $issuer->getMobileChannel() : null)
+                ?: ''
         );
 
         if ($mobile === '') {
@@ -170,6 +170,7 @@ final class LifecycleScenarioBootstrapper
         return [
             'issuer_id' => $issuerId,
             'wallet_id' => $walletId,
+            'provider' => data_get($scenario, 'provider'),
 
             'cash' => [
                 'amount' => $amount,

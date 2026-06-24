@@ -50,10 +50,13 @@ it('returns a voucher estimate via the lifecycle route surface', function () {
         total: 0.0,
     );
 
+    $validatedPayload = $payload;
+    unset($validatedPayload['metadata']);
+
     $action = Mockery::mock(EstimatePayCodeCost::class);
     $action->shouldReceive('handle')
         ->once()
-        ->with($payload)
+        ->with($validatedPayload)
         ->andReturn($result);
 
     $this->app->instance(EstimatePayCodeCost::class, $action);

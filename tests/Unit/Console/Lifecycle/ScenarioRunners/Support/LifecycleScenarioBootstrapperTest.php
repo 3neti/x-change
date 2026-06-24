@@ -10,6 +10,7 @@ it('builds lifecycle input from scenario values', function () {
 
     $input = $bootstrapper->buildLifecycleInput(
         scenario: [
+            'provider' => 'manual',
             'currency' => 'PHP',
             'cash' => [
                 'validation' => [
@@ -36,6 +37,7 @@ it('builds lifecycle input from scenario values', function () {
 
     expect($input['issuer_id'])->toBe(1)
         ->and($input['wallet_id'])->toBe(1)
+        ->and($input['provider'])->toBe('manual')
         ->and(data_get($input, 'cash.amount'))->toBe(100.0)
         ->and(data_get($input, 'cash.currency'))->toBe('PHP')
         ->and(data_get($input, 'cash.validation.secret'))->toBe('secret123')

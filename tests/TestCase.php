@@ -15,6 +15,7 @@ use LBHurtado\EmiCore\EmiCoreServiceProvider;
 use LBHurtado\Instruction\Database\Seeders\InstructionItemSeeder;
 use LBHurtado\Instruction\InstructionServiceProvider;
 use LBHurtado\ModelChannel\ModelChannelServiceProvider;
+use LBHurtado\Onboarding\OnboardingServiceProvider;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Voucher\VoucherServiceProvider;
 use LBHurtado\Wallet\WalletServiceProvider as LBHurtadoWalletServiceProvider;
@@ -182,6 +183,9 @@ abstract class TestCase extends Orchestra
         // Instruction package migrations.
         $this->loadInstructionPackageMigrations();
 
+        // Onboarding package migrations.
+        $this->loadOnboardingPackageMigrations();
+
         // Extra voucher-support tables used by voucher package tests/flows.
         $this->runVoucherSupportMigrations();
 
@@ -191,6 +195,15 @@ abstract class TestCase extends Orchestra
     protected function loadInstructionPackageMigrations(): void
     {
         $path = $this->packageRoot(InstructionServiceProvider::class).'/database/migrations';
+
+        if (is_dir($path) && (glob($path.'/*.php') ?: []) !== []) {
+            $this->loadMigrationsFrom($path);
+        }
+    }
+
+    protected function loadOnboardingPackageMigrations(): void
+    {
+        $path = $this->packageRoot(OnboardingServiceProvider::class).'/database/migrations';
 
         if (is_dir($path) && (glob($path.'/*.php') ?: []) !== []) {
             $this->loadMigrationsFrom($path);

@@ -25,9 +25,9 @@ it('starts provisioning from completed issuer onboarding sessions', function () 
     $owner = User::query()->create([
         'name' => 'Issuer Owner',
         'email' => 'issuer-owner@example.test',
-        'mobile' => '639171234500',
         'password' => 'password',
     ]);
+    $owner->setMobileChannel('639171234500')->save();
 
     OnboardingSession::query()->create([
         'reference' => 'onb-issuer-123',

@@ -35,6 +35,7 @@ it('syncs compiled form claim evidence before submitting the claim', function ()
             'bank_code' => null,
             'account_number' => null,
             'amount' => null,
+            'slice_ids' => [],
             'settlement_rail' => null,
             'inputs' => [
                 'mobile' => '09173011987',
@@ -57,6 +58,7 @@ it('syncs compiled form claim evidence before submitting the claim', function ()
             'bank_code' => null,
             'account_number' => null,
             'amount' => null,
+            'slice_ids' => [],
             'settlement_rail' => null,
             'inputs' => [
                 'mobile' => '09173011987',

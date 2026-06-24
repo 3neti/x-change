@@ -189,7 +189,8 @@ it('submits a claim through the selected executor and normalizes withdraw result
 });
 
 it('throws for unsupported executor result types', function () {
-    $voucher = Mockery::mock(Voucher::class);
+    $voucher = new Voucher;
+    $voucher->code = 'TEST-UNSUPPORTED';
 
     $payload = [
         'mobile' => '09171234567',

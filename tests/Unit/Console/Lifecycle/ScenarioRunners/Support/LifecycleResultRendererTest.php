@@ -6,7 +6,8 @@ use Illuminate\Console\Command;
 use LBHurtado\XChange\Console\Commands\Lifecycle\LifecycleResultRenderer;
 
 it('renders json payload when json option is enabled', function () {
-    $command = new class extends Command {
+    $command = new class extends Command
+    {
         public array $lines = [];
 
         public function option($key = null): mixed
@@ -38,8 +39,9 @@ it('renders json payload when json option is enabled', function () {
 });
 
 it('renders human lifecycle summary when json option is disabled', function () {
-    $command = new class extends Command {
-        public array $output = [];
+    $command = new class extends Command
+    {
+        public array $capturedOutput = [];
 
         public function option($key = null): mixed
         {
@@ -48,17 +50,17 @@ it('renders human lifecycle summary when json option is disabled', function () {
 
         public function info($string, $verbosity = null): void
         {
-            $this->output[] = $string;
+            $this->capturedOutput[] = $string;
         }
 
         public function line($string, $style = null, $verbosity = null): void
         {
-            $this->output[] = $string;
+            $this->capturedOutput[] = $string;
         }
 
         public function newLine($count = 1): void
         {
-            $this->output[] = '';
+            $this->capturedOutput[] = '';
         }
     };
 
@@ -81,20 +83,16 @@ it('renders human lifecycle summary when json option is disabled', function () {
     );
 
     expect($exitCode)->toBe(0)
-        ->and($command->output)->toContain('Lifecycle scenario completed.')
-        ->and($command->output)->toContain('Scenario: basic_cash')
-        ->and($command->output)->toContain('Label: Basic Cash')
-        ->and($command->output)->toContain('Mode: default')
-        ->and($command->output)->toContain('Voucher Code: ABCD')
-        ->and($command->output)->toContain('Attempt Summary:')
-        ->and($command->output)->toContain('Passed: 1')
-        ->and($command->output)->toContain('Failed: 0')
-        ->and($command->output)->toContain('Total: 1');
+        ->and($command->capturedOutput)->toContain('Lifecycle scenario completed.')
+        ->and($command->capturedOutput)->toContain('Scenario: basic_cash')
+        ->and($command->capturedOutput)->toContain('Voucher Code: ABCD')
+        ->and($command->capturedOutput)->toContain('Attempts: 1/1 passed');
 });
 
 it('renders phase summary reconciliation and wallet transactions when present', function () {
-    $command = new class extends Command {
-        public array $output = [];
+    $command = new class extends Command
+    {
+        public array $capturedOutput = [];
 
         public function option($key = null): mixed
         {
@@ -103,17 +101,27 @@ it('renders phase summary reconciliation and wallet transactions when present', 
 
         public function info($string, $verbosity = null): void
         {
-            $this->output[] = $string;
+            $this->capturedOutput[] = $string;
         }
 
         public function line($string, $style = null, $verbosity = null): void
         {
-            $this->output[] = $string;
+            $this->capturedOutput[] = $string;
         }
 
         public function newLine($count = 1): void
         {
-            $this->output[] = '';
+            $this->capturedOutput[] = '';
+        }
+
+        public function table($headers, $rows, $tableStyle = 'default', array $columnStyles = []): void
+        {
+            foreach ($rows as $row) {
+                $this->capturedOutput[] = implode(' | ', array_map(
+                    static fn (mixed $value): string => (string) $value,
+                    $row,
+                ));
+            }
         }
     };
 
@@ -145,9 +153,9 @@ it('renders phase summary reconciliation and wallet transactions when present', 
         exitCode: 0,
     );
 
-    expect($command->output)->toContain('Phase Summary:')
-        ->and($command->output)->toContain('Reconciliation:')
-        ->and($command->output)->toContain('Recent Wallet Transactions:')
-        ->and(collect($command->output)->contains(fn (string $line): bool => str_contains($line, 'provider-123')))->toBeTrue()
-        ->and(collect($command->output)->contains(fn (string $line): bool => str_contains($line, 'deposit')))->toBeTrue();
+    expect($command->capturedOutput)->toContain('Phases: 5/5 passed')
+        ->and($command->capturedOutput)->toContain('Reconciliation:')
+        ->and($command->capturedOutput)->toContain('Recent Wallet Transactions:')
+        ->and(collect($command->capturedOutput)->contains(fn (string $line): bool => str_contains($line, 'provider-123')))->toBeTrue()
+        ->and(collect($command->capturedOutput)->contains(fn (string $line): bool => str_contains($line, 'deposit')))->toBeTrue();
 });

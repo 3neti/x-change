@@ -3,9 +3,11 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Artisan;
+use LBHurtado\XChange\Tests\Fakes\FakePayoutProvider;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 beforeEach(function () {
+    config()->set('emi.payout_providers.manual', FakePayoutProvider::class);
     config()->set('x-change.lifecycle.defaults.user_model', User::class);
     config()->set('x-change.lifecycle.defaults.system_user_email', 'system@example.test');
     config()->set('x-change.lifecycle.defaults.test_user_email', 'lester@hurtado.ph');

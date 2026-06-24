@@ -271,6 +271,7 @@ return [
             'description' => 'Issues and claims a basic cash Pay Code through the mobile-first lifecycle path.',
             'category' => 'smoke',
             'tags' => ['turnkey', 'mobile', 'cash'],
+            'provider' => 'manual',
             'amount' => 12.50,
             'currency' => 'PHP',
             'mobile' => env('XCHANGE_LIFECYCLE_TURNKEY_MOBILE', env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987')),
