@@ -6,7 +6,7 @@ Evolve voucher redemption into a programmable, voucher-owned execution runtime w
 
 ## Current Position
 
-Current slice: Slice 1 — Contract Extraction  
+Current slice: Slice 2 — Execution Instruction Introduction  
 Status: Completed  
 Last updated: 2026-06-25
 
@@ -14,7 +14,7 @@ Last updated: 2026-06-25
 |---|---|---|
 | 0 | Characterization Baseline | Completed |
 | 1 | Contract Extraction | Completed |
-| 2 | Execution Instruction Introduction | Pending |
+| 2 | Execution Instruction Introduction | Completed |
 | 3 | Execution Engine Introduction | Pending |
 | 4 | Default Driver Extraction | Pending |
 | 5 | Driver Registry | Pending |
@@ -39,6 +39,10 @@ Last updated: 2026-06-25
 - Completed Slice 1 x-change adaptation: `PayCodeIssuanceService` and `DefaultRedemptionProcessorService` now consume voucher runtime contracts instead of importing concrete voucher actions.
 - Added an x-change architecture guard that resolves the voucher runtime contracts and blocks production imports of the concrete voucher generation/redemption actions.
 - Slice 1 commits: voucher `25e7b75` (`execution-engine: extract voucher runtime contracts`); x-change `55374ee` (`execution-engine: consume voucher runtime contracts`).
+- Completed Slice 2 execution instruction introduction in voucher: added `ExecutionInstructionData`, optional execution support in `VoucherInstructionsData`, and an effective implicit default instruction with `driver: default`.
+- Preserved legacy voucher metadata shape: vouchers with no explicit execution block still omit `metadata.instructions.execution`.
+- Added tests for default instruction creation, explicit instruction hydration, default driver behavior, legacy instruction hydration, explicit instruction serialization, legacy issuance metadata preservation, and DTO autoloading.
+- Slice 2 commit: voucher `477313b` (`execution-engine: introduce execution instruction data`).
 
 ## Discoveries
 
@@ -48,6 +52,8 @@ Last updated: 2026-06-25
 - x-change withdrawal is a separate, configurable, traced pipeline with intent-first reconciliation.
 - Provider readiness state can influence lifecycle provider selection; deterministic scenarios must carry their provider explicitly.
 - Contract extraction was possible without introducing execution instructions, an execution engine, execution drivers, a driver registry, public API changes, voucher pipeline changes, or money-movement behavior changes.
+- The default execution instruction is intentionally implicit for legacy vouchers; it is available via voucher instruction data but is not persisted into legacy clean instruction payloads unless explicitly supplied.
+- Explicit execution blocks can now be serialized into voucher instruction metadata, but no runtime behavior consumes them yet.
 
 ## Risks
 
@@ -58,6 +64,7 @@ Last updated: 2026-06-25
 - Full suites depend on linked local packages and normal Testbench filesystem permissions.
 - Voucher and x-change have separate package test environments; run each package from its own root with its own `vendor/bin/pest`, `tests/Pest.php`, and `tests/TestCase.php`.
 - x-change now depends on the newly extracted voucher contract names being available from the linked/local voucher package.
+- Later slices must not assume `ExecutionInstructionData` implies engine execution; it is currently metadata only.
 
 ## Architectural Decisions
 
@@ -68,18 +75,20 @@ Last updated: 2026-06-25
 - Existing `voucher-pipeline.php` is the Slice 0 compatibility baseline and remains unchanged.
 - Planning DTO/class snippets are illustrative until introduced test-first in an authorized slice.
 - Slice 1 contracts are compatibility seams around existing actions only; they are not the future execution engine, instruction model, driver contract, or registry.
+- Slice 2 introduces only the instruction DTO/metadata boundary. It does not introduce `ExecutionEngine`, `ExecutionContextData`, `ExecutionResultData`, driver contracts, driver implementations, or a registry.
 
 ## Test Coverage Status
 
 - Characterization: strong across the identified danger zone.
 - Contract extraction: completed for voucher generation/redemption runtime seams.
+- Execution instruction: completed as optional voucher metadata with an implicit legacy default.
 - Architecture invariants: x-change now has an executable guard preventing production imports of concrete voucher generation/redemption actions.
 - Feature/regression: current voucher and x-change suites cover issuance, redemption, claim, withdrawal, provider failure, and reconciliation.
-- Verification: voucher full suite is green as of 2026-06-25 with 316 passed and 28 skipped; x-change package full suite is green as of 2026-06-25 with 970 passed and 5 skipped.
+- Verification: voucher full suite is green as of 2026-06-25 with 323 passed and 28 skipped; x-change package full suite is green as of 2026-06-25 with 970 passed and 5 skipped.
 
 ## Next Recommended Slice
 
-Slice 2 — Execution Instruction Introduction, only after explicit human approval. Start in voucher with failing tests for the instruction DTO/normalization boundary, and do not introduce the execution engine, drivers, or registry in the same slice.
+Slice 3 — Execution Engine Introduction, only after explicit human approval. Start in voucher with failing tests for `ExecutionContextData`, `ExecutionResultData`, and a compatibility `ExecutionEngine` that proxies current behavior without changing voucher pipeline, money movement, public APIs, or claim UX.
 
 ## Open Questions
 
@@ -87,3 +96,4 @@ Slice 2 — Execution Instruction Introduction, only after explicit human approv
 - Registry extension API and driver registration ownership.
 - Execution result persistence location and correlation strategy.
 - Versioning policy for issued execution instructions.
+- Whether explicit execution instruction payloads should gain a schema/version field before persisted production use.
