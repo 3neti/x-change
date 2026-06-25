@@ -6,7 +6,7 @@ Evolve voucher redemption into a programmable, voucher-owned execution runtime w
 
 ## Current Position
 
-Current slice: Slice 2 — Execution Instruction Introduction  
+Current slice: Slice 3 — Execution Engine Introduction  
 Status: Completed  
 Last updated: 2026-06-25
 
@@ -15,7 +15,7 @@ Last updated: 2026-06-25
 | 0 | Characterization Baseline | Completed |
 | 1 | Contract Extraction | Completed |
 | 2 | Execution Instruction Introduction | Completed |
-| 3 | Execution Engine Introduction | Pending |
+| 3 | Execution Engine Introduction | Completed |
 | 4 | Default Driver Extraction | Pending |
 | 5 | Driver Registry | Pending |
 | 6 | Architecture Stabilization | Pending |
@@ -43,6 +43,11 @@ Last updated: 2026-06-25
 - Preserved legacy voucher metadata shape: vouchers with no explicit execution block still omit `metadata.instructions.execution`.
 - Added tests for default instruction creation, explicit instruction hydration, default driver behavior, legacy instruction hydration, explicit instruction serialization, legacy issuance metadata preservation, and DTO autoloading.
 - Slice 2 commit: voucher `477313b` (`execution-engine: introduce execution instruction data`).
+- Completed Slice 3 execution engine introduction in voucher: added `ExecutionContextData`, `ExecutionResultData`, and a compatibility `ExecutionEngine`.
+- The compatibility engine resolves the current execution instruction driver key, delegates actual redemption to the existing `RedeemsVouchers` contract, and returns structured success/failure result data.
+- Preserved existing runtime behavior: the engine is not wired into legacy redemption, does not alter voucher metadata, and does not introduce driver contracts, driver classes, a registry, public API changes, claim UX changes, or money-movement changes.
+- Added tests for context creation from vouchers, driver-key resolution, compatibility execution success/failure, metadata reporting, autoload coverage, and container resolution.
+- Slice 3 commit: voucher `3dc846f` (`execution-engine: introduce compatibility execution engine`).
 
 ## Discoveries
 
@@ -54,6 +59,8 @@ Last updated: 2026-06-25
 - Contract extraction was possible without introducing execution instructions, an execution engine, execution drivers, a driver registry, public API changes, voucher pipeline changes, or money-movement behavior changes.
 - The default execution instruction is intentionally implicit for legacy vouchers; it is available via voucher instruction data but is not persisted into legacy clean instruction payloads unless explicitly supplied.
 - Explicit execution blocks can now be serialized into voucher instruction metadata, but no runtime behavior consumes them yet.
+- Slice 3 introduces a compatibility execution engine surface only. It resolves an instruction driver key, but it does not resolve or execute driver objects.
+- `ExecutionResultData` now provides a structured return shape for execution outcomes, but those outcomes are not persisted or journaled yet.
 
 ## Risks
 
@@ -65,6 +72,7 @@ Last updated: 2026-06-25
 - Voucher and x-change have separate package test environments; run each package from its own root with its own `vendor/bin/pest`, `tests/Pest.php`, and `tests/TestCase.php`.
 - x-change now depends on the newly extracted voucher contract names being available from the linked/local voucher package.
 - Later slices must not assume `ExecutionInstructionData` implies engine execution; it is currently metadata only.
+- Later slices must not treat the Slice 3 compatibility engine as the final driver-composed runtime. The current executor still delegates to the existing redemption contract.
 
 ## Architectural Decisions
 
@@ -76,19 +84,22 @@ Last updated: 2026-06-25
 - Planning DTO/class snippets are illustrative until introduced test-first in an authorized slice.
 - Slice 1 contracts are compatibility seams around existing actions only; they are not the future execution engine, instruction model, driver contract, or registry.
 - Slice 2 introduces only the instruction DTO/metadata boundary. It does not introduce `ExecutionEngine`, `ExecutionContextData`, `ExecutionResultData`, driver contracts, driver implementations, or a registry.
+- Slice 3 introduces the first engine surface in voucher, but deliberately keeps execution behavior behind the existing `RedeemsVouchers` contract.
+- Driver contract extraction, default driver extraction, driver registry, settlement-envelope execution, and stored-value execution remain future slices.
 
 ## Test Coverage Status
 
 - Characterization: strong across the identified danger zone.
 - Contract extraction: completed for voucher generation/redemption runtime seams.
 - Execution instruction: completed as optional voucher metadata with an implicit legacy default.
+- Execution engine introduction: completed as a compatibility surface with context/result DTOs and no runtime wiring change.
 - Architecture invariants: x-change now has an executable guard preventing production imports of concrete voucher generation/redemption actions.
 - Feature/regression: current voucher and x-change suites cover issuance, redemption, claim, withdrawal, provider failure, and reconciliation.
-- Verification: voucher full suite is green as of 2026-06-25 with 323 passed and 28 skipped; x-change package full suite is green as of 2026-06-25 with 970 passed and 5 skipped.
+- Verification: voucher full suite is green as of 2026-06-25 with 329 passed and 28 skipped; x-change package full suite is green as of 2026-06-25 with 970 passed and 5 skipped.
 
 ## Next Recommended Slice
 
-Slice 3 — Execution Engine Introduction, only after explicit human approval. Start in voucher with failing tests for `ExecutionContextData`, `ExecutionResultData`, and a compatibility `ExecutionEngine` that proxies current behavior without changing voucher pipeline, money movement, public APIs, or claim UX.
+Slice 4 — Default Driver Extraction, only after explicit human approval. Start in voucher with failing tests for a driver contract/default driver extraction that delegates the same existing redemption behavior without changing voucher pipeline, money movement, public APIs, or claim UX.
 
 ## Open Questions
 
@@ -97,3 +108,5 @@ Slice 3 — Execution Engine Introduction, only after explicit human approval. S
 - Execution result persistence location and correlation strategy.
 - Versioning policy for issued execution instructions.
 - Whether explicit execution instruction payloads should gain a schema/version field before persisted production use.
+- Whether Slice 4 should keep `RedeemsVouchers` as the default driver's backing executor or introduce a narrower internal executor boundary.
+- Where execution results should be persisted or journaled once x-journal integration begins.
