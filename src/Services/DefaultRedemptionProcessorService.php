@@ -6,7 +6,7 @@ namespace LBHurtado\XChange\Services;
 
 use Illuminate\Support\Facades\DB;
 use LBHurtado\Contact\Models\Contact;
-use LBHurtado\Voucher\Actions\RedeemVoucher;
+use LBHurtado\Voucher\Contracts\RedeemsVouchers;
 use LBHurtado\Voucher\Data\RedemptionContext;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\RedemptionProcessorContract;
@@ -35,7 +35,7 @@ class DefaultRedemptionProcessorService implements RedemptionProcessorContract
 
             $meta = $this->prepareMetadata($context);
 
-            $redeemed = RedeemVoucher::run($contact, $voucher->code, $meta);
+            $redeemed = app(RedeemsVouchers::class)->handle($contact, $voucher->code, $meta);
 
             if (! $redeemed) {
                 throw new RuntimeException('Failed to redeem voucher.');

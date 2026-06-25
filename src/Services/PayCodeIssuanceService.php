@@ -6,7 +6,7 @@ namespace LBHurtado\XChange\Services;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Auth;
-use LBHurtado\Voucher\Actions\GenerateVouchers;
+use LBHurtado\Voucher\Contracts\GeneratesVouchers;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
@@ -29,7 +29,7 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
         try {
             Auth::setUser($issuer);
 
-            $issued = GenerateVouchers::run($instructions)->first();
+            $issued = app(GeneratesVouchers::class)->handle($instructions)->first();
 
             if (! $issued) {
                 throw new PayCodeIssuanceFailed('Pay Code issuance did not return a voucher.');
