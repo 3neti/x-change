@@ -6,14 +6,14 @@ Evolve voucher redemption into a programmable, voucher-owned execution runtime w
 
 ## Current Position
 
-Current slice: Slice 0 — Characterization Baseline  
+Current slice: Slice 1 — Contract Extraction  
 Status: Completed  
-Last updated: 2026-06-24
+Last updated: 2026-06-25
 
 | Slice | Name | Status |
 |---|---|---|
 | 0 | Characterization Baseline | Completed |
-| 1 | Contract Extraction | Pending approval |
+| 1 | Contract Extraction | Completed |
 | 2 | Execution Instruction Introduction | Pending |
 | 3 | Execution Engine Introduction | Pending |
 | 4 | Default Driver Extraction | Pending |
@@ -31,6 +31,14 @@ Last updated: 2026-06-24
 - Added voucher issuance characterization for exact post-generation/mint-cash order and resulting processed/cash state.
 - Restored the x-change baseline by correcting stale test expectations, loading onboarding migrations in Testbench, and isolating the turnkey manual-provider scenario.
 - Confirmed the actual `turnkey_basic_cash_mobile` sandbox scenario succeeds with bank-side credits; no system/user wallet top-up was required for this path.
+- Repaired approval metadata normalization and x-change package-local Testbench/Pest bootstrap.
+- Added x-change package `phpunit.xml` with `memory_limit=1G`; `vendor/bin/pest` now uses the package-local default memory limit.
+- Committed latest sandbox cleanup: `6b779bc` scaffold instructions, `d4ce09f` x-ray config and generated vendor ignore rule, `59b98f2` x-change package baseline runner.
+- Verified x-change package full suite with default `vendor/bin/pest`: 968 passed, 5 skipped.
+- Completed Slice 1 contract extraction in voucher: added `GeneratesVouchers` and `RedeemsVouchers` contracts, bound them to the existing `GenerateVouchers` and `RedeemVoucher` actions, and protected the bindings with package-local tests.
+- Completed Slice 1 x-change adaptation: `PayCodeIssuanceService` and `DefaultRedemptionProcessorService` now consume voucher runtime contracts instead of importing concrete voucher actions.
+- Added an x-change architecture guard that resolves the voucher runtime contracts and blocks production imports of the concrete voucher generation/redemption actions.
+- Slice 1 commits: voucher `25e7b75` (`execution-engine: extract voucher runtime contracts`); x-change `55374ee` (`execution-engine: consume voucher runtime contracts`).
 
 ## Discoveries
 
@@ -39,6 +47,7 @@ Last updated: 2026-06-24
 - Voucher's post-redemption pipeline validates then disburses; handled provider failures preserve redemption and become pending reconciliation.
 - x-change withdrawal is a separate, configurable, traced pipeline with intent-first reconciliation.
 - Provider readiness state can influence lifecycle provider selection; deterministic scenarios must carry their provider explicitly.
+- Contract extraction was possible without introducing execution instructions, an execution engine, execution drivers, a driver registry, public API changes, voucher pipeline changes, or money-movement behavior changes.
 
 ## Risks
 
@@ -47,7 +56,8 @@ Last updated: 2026-06-24
 - Contract extraction spans separate repositories and requires ordered, independent commits.
 - Settlement readiness/pending behavior could be mistaken for implemented envelope execution.
 - Full suites depend on linked local packages and normal Testbench filesystem permissions.
-- Five unrelated claim-support assertions remain red: four expect the previous approval-metadata key order and one expects scalar/null coercion that current production code does not perform. Changing that production contract is outside Slice 0.
+- Voucher and x-change have separate package test environments; run each package from its own root with its own `vendor/bin/pest`, `tests/Pest.php`, and `tests/TestCase.php`.
+- x-change now depends on the newly extracted voucher contract names being available from the linked/local voucher package.
 
 ## Architectural Decisions
 
@@ -57,23 +67,23 @@ Last updated: 2026-06-24
 - Settlement Envelope is a readiness/authorization participant, not the engine.
 - Existing `voucher-pipeline.php` is the Slice 0 compatibility baseline and remains unchanged.
 - Planning DTO/class snippets are illustrative until introduced test-first in an authorized slice.
+- Slice 1 contracts are compatibility seams around existing actions only; they are not the future execution engine, instruction model, driver contract, or registry.
 
 ## Test Coverage Status
 
 - Characterization: strong across the identified danger zone.
-- Contract extraction: not started.
-- Architecture invariants: documented; executable guards begin with the relevant later slices.
+- Contract extraction: completed for voucher generation/redemption runtime seams.
+- Architecture invariants: x-change now has an executable guard preventing production imports of concrete voucher generation/redemption actions.
 - Feature/regression: current voucher and x-change suites cover issuance, redemption, claim, withdrawal, provider failure, and reconciliation.
-- Verification: voucher full suite and x-change Feature suite are green; the focused execution baseline is green. The unrelated claim-support mismatch above is documented rather than silently changed.
+- Verification: voucher full suite is green as of 2026-06-25 with 316 passed and 28 skipped; x-change package full suite is green as of 2026-06-25 with 970 passed and 5 skipped.
 
 ## Next Recommended Slice
 
-Slice 1 — Contract Extraction, only after explicit human approval. Begin in voucher with failing contract/container-binding tests, then adapt x-change's two concrete dependencies in a separate commit.
+Slice 2 — Execution Instruction Introduction, only after explicit human approval. Start in voucher with failing tests for the instruction DTO/normalization boundary, and do not introduce the execution engine, drivers, or registry in the same slice.
 
 ## Open Questions
 
-- Exact public namespaces and method signatures for generation/redemption contracts.
-- Whether x-change's current redemption workflow contract remains as an adapter or is replaced at its call sites.
+- Whether x-change's current redemption workflow contract remains as an adapter or is replaced at its call sites in later slices.
 - Registry extension API and driver registration ownership.
 - Execution result persistence location and correlation strategy.
 - Versioning policy for issued execution instructions.
