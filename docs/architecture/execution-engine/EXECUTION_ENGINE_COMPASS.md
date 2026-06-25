@@ -6,7 +6,7 @@ Evolve voucher redemption into a programmable, voucher-owned execution runtime w
 
 ## Current Position
 
-Current slice: Slice 3 — Execution Engine Introduction  
+Current slice: Slice 4 — Default Driver Extraction  
 Status: Completed  
 Last updated: 2026-06-25
 
@@ -16,7 +16,7 @@ Last updated: 2026-06-25
 | 1 | Contract Extraction | Completed |
 | 2 | Execution Instruction Introduction | Completed |
 | 3 | Execution Engine Introduction | Completed |
-| 4 | Default Driver Extraction | Pending |
+| 4 | Default Driver Extraction | Completed |
 | 5 | Driver Registry | Pending |
 | 6 | Architecture Stabilization | Pending |
 | 7 | Settlement Envelope Driver | Pending |
@@ -48,6 +48,12 @@ Last updated: 2026-06-25
 - Preserved existing runtime behavior: the engine is not wired into legacy redemption, does not alter voucher metadata, and does not introduce driver contracts, driver classes, a registry, public API changes, claim UX changes, or money-movement changes.
 - Added tests for context creation from vouchers, driver-key resolution, compatibility execution success/failure, metadata reporting, autoload coverage, and container resolution.
 - Slice 3 commit: voucher `3dc846f` (`execution-engine: introduce compatibility execution engine`).
+- Completed Slice 4 default driver extraction in voucher: added `ExecutionDriverContract` and `DefaultExecutionDriver`.
+- Moved the existing voucher redemption behavior behind the default execution driver while preserving the public `RedeemVoucher` action and `RedeemsVouchers` contract.
+- `RedeemVoucher` now routes through `ExecutionEngine`, and `ExecutionEngine` delegates to the bound default execution driver.
+- Preserved existing runtime behavior: no registry, no alternate driver resolution, no settlement-envelope driver, no stored-value driver, no public API change, no claim UX change, and no money-movement semantic change.
+- Added tests for default driver binding, no-instruction/default-instruction behavior, engine-to-driver delegation, `RedeemVoucher::run()` routing through the engine/default driver, autoload coverage, and container resolution.
+- Slice 4 commit: voucher `2491132` (`execution-engine: extract default execution driver`).
 
 ## Discoveries
 
@@ -61,6 +67,8 @@ Last updated: 2026-06-25
 - Explicit execution blocks can now be serialized into voucher instruction metadata, but no runtime behavior consumes them yet.
 - Slice 3 introduces a compatibility execution engine surface only. It resolves an instruction driver key, but it does not resolve or execute driver objects.
 - `ExecutionResultData` now provides a structured return shape for execution outcomes, but those outcomes are not persisted or journaled yet.
+- Slice 4 moves the current redemption behavior into `DefaultExecutionDriver`. This makes the runtime path `RedeemVoucher -> ExecutionEngine -> DefaultExecutionDriver -> existing behavior`.
+- Driver resolution is still not registry-based. The engine has only the default driver dependency until Slice 5.
 
 ## Risks
 
@@ -73,6 +81,7 @@ Last updated: 2026-06-25
 - x-change now depends on the newly extracted voucher contract names being available from the linked/local voucher package.
 - Later slices must not assume `ExecutionInstructionData` implies engine execution; it is currently metadata only.
 - Later slices must not treat the Slice 3 compatibility engine as the final driver-composed runtime. The current executor still delegates to the existing redemption contract.
+- Slice 4 intentionally extracts only the default driver. Adding unknown-driver handling or extension APIs before the registry slice would spread resolution policy into the wrong layer.
 
 ## Architectural Decisions
 
@@ -85,7 +94,8 @@ Last updated: 2026-06-25
 - Slice 1 contracts are compatibility seams around existing actions only; they are not the future execution engine, instruction model, driver contract, or registry.
 - Slice 2 introduces only the instruction DTO/metadata boundary. It does not introduce `ExecutionEngine`, `ExecutionContextData`, `ExecutionResultData`, driver contracts, driver implementations, or a registry.
 - Slice 3 introduces the first engine surface in voucher, but deliberately keeps execution behavior behind the existing `RedeemsVouchers` contract.
-- Driver contract extraction, default driver extraction, driver registry, settlement-envelope execution, and stored-value execution remain future slices.
+- Slice 4 makes the default driver the compatibility owner for current redemption behavior. The public `RedeemsVouchers` contract remains a stable entrypoint and now routes through the engine/default-driver path.
+- Driver registry, settlement-envelope execution, stored-value execution, and driver-composed runtime remain future slices.
 
 ## Test Coverage Status
 
@@ -93,13 +103,14 @@ Last updated: 2026-06-25
 - Contract extraction: completed for voucher generation/redemption runtime seams.
 - Execution instruction: completed as optional voucher metadata with an implicit legacy default.
 - Execution engine introduction: completed as a compatibility surface with context/result DTOs and no runtime wiring change.
+- Default driver extraction: completed with `ExecutionDriverContract`, `DefaultExecutionDriver`, engine delegation, and `RedeemVoucher` routing through the engine/default driver.
 - Architecture invariants: x-change now has an executable guard preventing production imports of concrete voucher generation/redemption actions.
 - Feature/regression: current voucher and x-change suites cover issuance, redemption, claim, withdrawal, provider failure, and reconciliation.
-- Verification: voucher full suite is green as of 2026-06-25 with 329 passed and 28 skipped; x-change package full suite is green as of 2026-06-25 with 970 passed and 5 skipped.
+- Verification: voucher full suite is green as of 2026-06-25 with 334 passed and 28 skipped; x-change package full suite is green as of 2026-06-25 with 970 passed and 5 skipped.
 
 ## Next Recommended Slice
 
-Slice 4 — Default Driver Extraction, only after explicit human approval. Start in voucher with failing tests for a driver contract/default driver extraction that delegates the same existing redemption behavior without changing voucher pipeline, money movement, public APIs, or claim UX.
+Slice 5 — Driver Registry, only after explicit human approval. Start in voucher with failing tests for registry registration, default-driver resolution by key, clear unknown-driver failure, and package-consumer extension seams. Keep only the default driver registered initially.
 
 ## Open Questions
 
@@ -108,5 +119,6 @@ Slice 4 — Default Driver Extraction, only after explicit human approval. Start
 - Execution result persistence location and correlation strategy.
 - Versioning policy for issued execution instructions.
 - Whether explicit execution instruction payloads should gain a schema/version field before persisted production use.
-- Whether Slice 4 should keep `RedeemsVouchers` as the default driver's backing executor or introduce a narrower internal executor boundary.
 - Where execution results should be persisted or journaled once x-journal integration begins.
+- Whether Slice 5 should bind the registry as a singleton with package-level registration APIs or as a lightweight resolver composed in the service provider.
+- How unknown execution drivers should fail before any public API starts accepting arbitrary driver keys.
