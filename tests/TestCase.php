@@ -6,6 +6,8 @@ namespace LBHurtado\XChange\Tests;
 
 use Bavix\Wallet\WalletServiceProvider as BavixWalletServiceProvider;
 use FrittenKeeZ\Vouchers\VouchersServiceProvider;
+use Illuminate\Cookie\CookieServiceProvider;
+use Illuminate\Session\SessionServiceProvider;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use LBHurtado\Cash\CashServiceProvider;
@@ -66,6 +68,8 @@ abstract class TestCase extends Orchestra
         return [
             LaravelDataServiceProvider::class,
             SchemalessAttributesServiceProvider::class,
+            CookieServiceProvider::class,
+            SessionServiceProvider::class,
             BavixWalletServiceProvider::class,
             CashServiceProvider::class,
             LBHurtadoWalletServiceProvider::class,

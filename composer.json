@@ -157,8 +157,8 @@
         }
     },
     "scripts": {
-        "test": "pest",
-        "test:unit": "pest",
-        "test:coverage": "pest --coverage"
+        "test": "php -d memory_limit=1G vendor/bin/pest",
+        "test:unit": "php -d memory_limit=1G vendor/bin/pest",
+        "test:coverage": "php -d memory_limit=1G vendor/bin/pest --coverage"
     }
 }

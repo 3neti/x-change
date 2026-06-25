@@ -23,14 +23,14 @@ final class CompiledClaimApprovalMetadata
     public static function normalize(array $metadata): array
     {
         return [
-            'provider' => data_get($metadata, 'provider'),
-            'authorization_type' => data_get($metadata, 'authorization_type'),
-            'reference_id' => data_get($metadata, 'reference_id'),
+            'provider' => self::nullableString(data_get($metadata, 'provider')),
+            'authorization_type' => self::nullableString(data_get($metadata, 'authorization_type')),
+            'reference_id' => self::nullableString(data_get($metadata, 'reference_id')),
+            'expires_at' => self::nullableString(data_get($metadata, 'expires_at')),
             'otp_required' => (bool) data_get($metadata, 'otp_required', false),
-            'expires_at' => data_get($metadata, 'expires_at'),
             'polling_required' => (bool) data_get($metadata, 'polling_required', false),
             'manual_review' => (bool) data_get($metadata, 'manual_review', false),
-            'message' => data_get($metadata, 'message'),
+            'message' => self::nullableString(data_get($metadata, 'message')),
         ];
     }
 
@@ -40,6 +40,10 @@ final class CompiledClaimApprovalMetadata
             return null;
         }
 
-        return (string) $value;
+        if (is_scalar($value) || $value instanceof \Stringable) {
+            return (string) $value;
+        }
+
+        return null;
     }
 }
