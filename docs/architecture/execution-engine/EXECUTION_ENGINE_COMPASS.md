@@ -96,6 +96,21 @@ Last updated: 2026-06-25
 - Slice 3 introduces the first engine surface in voucher, but deliberately keeps execution behavior behind the existing `RedeemsVouchers` contract.
 - Slice 4 makes the default driver the compatibility owner for current redemption behavior. The public `RedeemsVouchers` contract remains a stable entrypoint and now routes through the engine/default-driver path.
 - Driver registry, settlement-envelope execution, stored-value execution, and driver-composed runtime remain future slices.
+- x-change's current redemption workflow contract remains an adapter during the Execution Engine migration. No x-change call-site replacement is authorized during Slices 0–6.
+- The execution path during early migration is `Claim Submit -> x-change Workflow Contract -> Voucher Redemption Contract -> Execution Engine -> Execution Driver`.
+- Voucher owns `ExecutionDriverRegistry`, `ExecutionDriverContract`, driver resolution rules, default driver resolution, and unknown-driver failure behavior.
+- x-change and future packages may contribute drivers through voucher-owned registry extension points.
+- The precise driver registration API remains an implementation detail, but registry ownership is settled.
+- Every execution must have a durable `execution_id` as the primary correlation mechanism.
+- `ExecutionResultData` should return `execution_id`, `status`, `events`, and `metadata`; persistence and journaling remain deferred.
+- The Execution Engine must be journal-ready but not journal-dependent. Do not scaffold x-journal, journal tables, journal repositories, or journal storage in the execution-engine migration.
+- Explicit execution instructions require schema versioning before production use. Target shape: `execution.schema: voucher.execution.v1` and `execution.driver: default`.
+- Legacy vouchers without execution instructions continue using implicit compatibility behavior.
+- Schema/version hardening should be finalized before non-default drivers become production-capable, preferably across Slice 5 registry work, Slice 6 schema hardening, and before Slice 7 first non-default driver.
+- Slice 5 should introduce a singleton `ExecutionDriverRegistry` bound in the voucher service provider.
+- The registry resolves drivers but does not execute drivers.
+- Unknown execution drivers must fail closed with `UnknownExecutionDriverException` before any execution side effect occurs.
+- Driver resolution rules are: no execution block resolves default driver; explicit default resolves default driver; explicit known driver executes that driver; explicit unknown driver fails closed.
 
 ## Test Coverage Status
 
@@ -114,11 +129,7 @@ Slice 5 — Driver Registry, only after explicit human approval. Start in vouche
 
 ## Open Questions
 
-- Whether x-change's current redemption workflow contract remains as an adapter or is replaced at its call sites in later slices.
-- Registry extension API and driver registration ownership.
-- Execution result persistence location and correlation strategy.
-- Versioning policy for issued execution instructions.
-- Whether explicit execution instruction payloads should gain a schema/version field before persisted production use.
-- Where execution results should be persisted or journaled once x-journal integration begins.
-- Whether Slice 5 should bind the registry as a singleton with package-level registration APIs or as a lightweight resolver composed in the service provider.
-- How unknown execution drivers should fail before any public API starts accepting arbitrary driver keys.
+- Exact package-level driver registration API shape for Slice 5.
+- Exact `execution_id` generation mechanism and where it is introduced.
+- Exact schema hardening scope for Slice 6.
+- Exact `UnknownExecutionDriverException` namespace and error payload.
