@@ -6,9 +6,9 @@ Evolve voucher redemption into a programmable, voucher-owned execution runtime w
 
 ## Current Position
 
-Current slice: Slice 4 — Default Driver Extraction  
+Current slice: Slice 5 — Driver Registry  
 Status: Completed  
-Last updated: 2026-06-25
+Last updated: 2026-06-28
 
 | Slice | Name | Status |
 |---|---|---|
@@ -17,7 +17,7 @@ Last updated: 2026-06-25
 | 2 | Execution Instruction Introduction | Completed |
 | 3 | Execution Engine Introduction | Completed |
 | 4 | Default Driver Extraction | Completed |
-| 5 | Driver Registry | Pending |
+| 5 | Driver Registry | Completed |
 | 6 | Architecture Stabilization | Pending |
 | 7 | Settlement Envelope Driver | Pending |
 | 8 | Stored Value Driver | Pending |
@@ -54,6 +54,13 @@ Last updated: 2026-06-25
 - Preserved existing runtime behavior: no registry, no alternate driver resolution, no settlement-envelope driver, no stored-value driver, no public API change, no claim UX change, and no money-movement semantic change.
 - Added tests for default driver binding, no-instruction/default-instruction behavior, engine-to-driver delegation, `RedeemVoucher::run()` routing through the engine/default driver, autoload coverage, and container resolution.
 - Slice 4 commit: voucher `2491132` (`execution-engine: extract default execution driver`).
+- Completed Slice 5 driver registry in voucher: added singleton `ExecutionDriverRegistry` and `UnknownExecutionDriverException`.
+- `ExecutionEngine` now resolves the execution instruction driver key through the registry before executing a driver.
+- The voucher service provider registers only the `default` driver initially.
+- Added package-consumer extension seam through `ExecutionDriverRegistry::register()`, with tests proving extension drivers can be registered and executed without changing engine conditionals.
+- Added fail-closed unknown-driver tests proving explicit unknown drivers throw before any driver side effect executes.
+- Added support coverage for registry autoloading and singleton container resolution.
+- Slice 5 commit: voucher `adf3ae7` (`execution-engine: add execution driver registry`).
 
 ## Discoveries
 
@@ -68,7 +75,9 @@ Last updated: 2026-06-25
 - Slice 3 introduces a compatibility execution engine surface only. It resolves an instruction driver key, but it does not resolve or execute driver objects.
 - `ExecutionResultData` now provides a structured return shape for execution outcomes, but those outcomes are not persisted or journaled yet.
 - Slice 4 moves the current redemption behavior into `DefaultExecutionDriver`. This makes the runtime path `RedeemVoucher -> ExecutionEngine -> DefaultExecutionDriver -> existing behavior`.
-- Driver resolution is still not registry-based. The engine has only the default driver dependency until Slice 5.
+- Slice 5 makes driver resolution registry-based. The engine no longer directly depends on the default driver.
+- The package-level extension API is `ExecutionDriverRegistry::register(string $key, ExecutionDriverContract|string|Closure $driver)`.
+- The unknown-driver exception namespace is `LBHurtado\Voucher\Exceptions\UnknownExecutionDriverException`.
 
 ## Risks
 
@@ -82,6 +91,8 @@ Last updated: 2026-06-25
 - Later slices must not assume `ExecutionInstructionData` implies engine execution; it is currently metadata only.
 - Later slices must not treat the Slice 3 compatibility engine as the final driver-composed runtime. The current executor still delegates to the existing redemption contract.
 - Slice 4 intentionally extracts only the default driver. Adding unknown-driver handling or extension APIs before the registry slice would spread resolution policy into the wrong layer.
+- Slice 5 intentionally registers only the default driver. Non-default registration by x-change or future packages must remain explicit and additive.
+- `execution_id` is still not implemented; do not assume `ExecutionResultData` has durable correlation until the authorized schema/correlation hardening slice.
 
 ## Architectural Decisions
 
@@ -111,6 +122,8 @@ Last updated: 2026-06-25
 - The registry resolves drivers but does not execute drivers.
 - Unknown execution drivers must fail closed with `UnknownExecutionDriverException` before any execution side effect occurs.
 - Driver resolution rules are: no execution block resolves default driver; explicit default resolves default driver; explicit known driver executes that driver; explicit unknown driver fails closed.
+- Slice 5 introduced the singleton registry and locked the extension API to key-based registration.
+- The default package registration list contains only `default` until later slices explicitly add non-default drivers.
 
 ## Test Coverage Status
 
@@ -119,17 +132,16 @@ Last updated: 2026-06-25
 - Execution instruction: completed as optional voucher metadata with an implicit legacy default.
 - Execution engine introduction: completed as a compatibility surface with context/result DTOs and no runtime wiring change.
 - Default driver extraction: completed with `ExecutionDriverContract`, `DefaultExecutionDriver`, engine delegation, and `RedeemVoucher` routing through the engine/default driver.
+- Driver registry: completed with singleton registry resolution, package extension registration, fail-closed unknown-driver behavior, and no engine if/else driver selection.
 - Architecture invariants: x-change now has an executable guard preventing production imports of concrete voucher generation/redemption actions.
 - Feature/regression: current voucher and x-change suites cover issuance, redemption, claim, withdrawal, provider failure, and reconciliation.
-- Verification: voucher full suite is green as of 2026-06-25 with 334 passed and 28 skipped; x-change package full suite is green as of 2026-06-25 with 970 passed and 5 skipped.
+- Verification: voucher full suite is green as of 2026-06-28 with 341 passed and 28 skipped; x-change package full suite is green as of 2026-06-28 with 970 passed and 5 skipped.
 
 ## Next Recommended Slice
 
-Slice 5 — Driver Registry, only after explicit human approval. Start in voucher with failing tests for registry registration, default-driver resolution by key, clear unknown-driver failure, and package-consumer extension seams. Keep only the default driver registered initially.
+Slice 6 — Architecture Stabilization, only after explicit human approval. Review and stabilize contracts, engine, registry, driver boundaries, context/result shape, execution correlation, schema versioning, and architecture tests without adding settlement-envelope or stored-value driver behavior.
 
 ## Open Questions
 
-- Exact package-level driver registration API shape for Slice 5.
 - Exact `execution_id` generation mechanism and where it is introduced.
 - Exact schema hardening scope for Slice 6.
-- Exact `UnknownExecutionDriverException` namespace and error payload.
