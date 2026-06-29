@@ -33,13 +33,13 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 2A — x-journal  
-Current status: Wave 2A Phase 4 complete in x-journal  
+Current status: Wave 2A Phase 5 complete in x-journal  
 Last updated: 2026-06-29
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
-| 2A | x-journal | System log / audit trail | Phase 4 complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
+| 2A | x-journal | System log / audit trail | Phase 5 complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Not started | Pending |
 | 3 | x-feedback | Notification / communication layer | Not started | Pending |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
@@ -144,6 +144,15 @@ ExecutionDriverContract
   - explicit `x-journal.view` permission support
   - tests proving visibility does not alter journal truth
   - green x-journal package suite: `43 passed, 126 assertions`
+- Completed Phase 5 Artifact Generation in x-journal:
+  - artifact profile and result DTOs
+  - artifact renderer contract
+  - artifact generator registry
+  - text receipt renderer baseline
+  - text statement renderer baseline
+  - package-consumer renderer registration seam
+  - tests proving artifacts render canonical journal entries without becoming or mutating journal truth
+  - green x-journal package suite: `49 passed, 145 assertions`
 
 ## Current Architectural Decisions
 
@@ -170,6 +179,8 @@ ExecutionDriverContract
 - x-journal domain transformers preserve payloads and do not interpret claim outcomes, provider success, or reconciliation resolution.
 - x-journal secondary sinks are currently synchronous after canonical database persistence.
 - x-journal visibility is currently package-local and programmatically composed.
+- x-journal artifact generation currently produces in-memory text/plain receipt and statement renderings only; persistence, public URLs, PDFs, and signatures are deferred.
+- Artifact generation assumes callers have already scoped and authorized the entries being rendered.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -178,14 +189,14 @@ ExecutionDriverContract
 
 ## Next Recommended Workstream
 
-Begin Phase 5 — Artifact Generation.
+Continue Wave 2A with Phase 6 — Verification and Integrity.
 
 Recommended actions:
 
-1. Add artifact generation contracts.
-2. Add statement/receipt rendering baseline.
-3. Add artifact profile DTOs.
-4. Prove artifacts are renderings of journal truth, not journal truth itself.
+1. Add integrity verification service coverage.
+2. Verify hash-chain continuity for canonical entries.
+3. Define clear tamper/corruption failure behavior.
+4. Explore signature strategy without forcing production signing yet.
 
 ## x-journal Initial Intent
 
