@@ -6,7 +6,7 @@ Evolve voucher redemption into a programmable, voucher-owned execution runtime w
 
 ## Current Position
 
-Current slice: Slice 8 — Stored Value Driver
+Current slice: Slice 9 — Driver-Composed Runtime
 Status: Completed  
 Last updated: 2026-06-29
 
@@ -21,7 +21,7 @@ Last updated: 2026-06-29
 | 6 | Architecture Stabilization | Completed |
 | 7 | Settlement Envelope Driver | Completed |
 | 8 | Stored Value Driver | Completed |
-| 9 | Driver-Composed Runtime | Pending / optional |
+| 9 | Driver-Composed Runtime | Completed / optional |
 
 ## Completed Work
 
@@ -78,6 +78,12 @@ Last updated: 2026-06-29
 - Kept stored-value ledger/wallet mutation behind a gateway seam. Voucher owns execution semantics; wallet/cash/x-change or a future integration package can provide concrete ledger behavior by binding the gateway contract.
 - Preserved package boundary: no new voucher species, no direct wallet/provider implementation, no x-journal persistence, and no changes to default voucher disbursement behavior.
 - Slice 8 commit: `9dbc7be execution-engine: add stored value driver`.
+- Completed optional Slice 9 driver-composed runtime scaffold in voucher: added `ExecutionPipelineStepContract`, `ExecutionPipelineStateData`, `ExecutionPipelineStepRegistry`, `ExecutionPipelineRuntime`, and `UnknownExecutionPipelineStepException`.
+- Added a package-level singleton registry/runtime for named execution pipeline blocks while keeping driver resolution in `ExecutionDriverRegistry`.
+- Added driver-composed runtime tests for step registration, unknown-step failure, ordered step execution, class-string and closure resolution, short-circuiting finalized results, and a fake driver assembling pipeline blocks from instruction metadata.
+- Preserved existing drivers: `default`, `settlement_envelope`, and `stored_value` are not rewritten to use the pipeline runtime in this slice.
+- Added an architecture guard proving the central `ExecutionEngine` remains driver-only and does not compose pipeline steps directly.
+- Slice 9 commit: `d7abbe6 execution-engine: add driver composed runtime`.
 
 ## Discoveries
 
@@ -102,6 +108,9 @@ Last updated: 2026-06-29
 - Slice 8 confirms stored-value can be modeled as execution-driver behavior without introducing `StoredValueVoucher` as a separate voucher species.
 - `StoredValueExecutionDriver` uses `context.meta.operation` for driver operations: `activate` by default, plus `spend` and `replenish`.
 - Stored-value spend/replenishment returns the same durable `execution_id` through the result and gateway call.
+- Slice 9 introduces a generic opt-in pipeline runtime. Drivers may assemble modular execution steps, but the central engine still only resolves and executes drivers.
+- Pipeline steps can be registered as instances, class strings, or closures through `ExecutionPipelineStepRegistry`.
+- Pipeline execution short-circuits when a step finalizes `ExecutionPipelineStateData::$result`.
 
 ## Risks
 
@@ -123,6 +132,9 @@ Last updated: 2026-06-29
 - The default stored-value gateway is intentionally minimal and does not perform real ledger mutation. Concrete ledger behavior must be bound by a consuming package before production stored-value spending.
 - Stored-value operation metadata is currently scaffold-level and may need schema hardening before production use.
 - Concrete stored-value gateway implementation must avoid duplicating wallet/cash ledger policy and must not bypass existing financial controls.
+- Slice 9 is infrastructure only. Existing drivers are not yet decomposed into pipeline steps, so there is no production driver using modular blocks by default.
+- Pipeline step naming/versioning needs the same production hardening as driver instruction metadata before issued vouchers depend on explicit step lists.
+- Pipeline steps can encode side effects; concrete step registration must maintain fail-closed behavior before money movement or voucher mutation.
 
 ## Architectural Decisions
 
@@ -167,6 +179,9 @@ Last updated: 2026-06-29
 - Slice 8 registers built-in drivers explicitly as `default`, `settlement_envelope`, and `stored_value`.
 - Slice 8 treats stored-value as execution behavior, not a new voucher model/species.
 - Slice 8 does not introduce direct provider behavior, claim UX behavior, x-journal persistence, or a concrete wallet/cash/x-change gateway binding.
+- Slice 9 introduces modular execution pipelines as opt-in driver infrastructure, not a replacement for `ExecutionEngine`.
+- Slice 9 keeps the execution path as `ExecutionEngine -> ExecutionDriverRegistry -> ExecutionDriverContract`; drivers may then use `ExecutionPipelineRuntime` internally.
+- Slice 9 does not migrate existing drivers into pipeline steps and does not introduce provider, wallet, x-journal, claim UX, or persistence behavior.
 
 ## Test Coverage Status
 
@@ -179,13 +194,14 @@ Last updated: 2026-06-29
 - Architecture stabilization: completed with instruction schema tests, execution result `execution_id` tests, registry-only resolution guards, default-only package registration guard, and no later-driver scaffold guard.
 - Settlement-envelope driver: completed with gateway-seam tests for load, readiness, lock, child generation, auto-redemption, fallback claim-voucher generation, registry resolution, and stored-value absence.
 - Stored-value driver: completed with gateway-seam tests for activation, no-disbursement ownership claim, spend, over-balance rejection, OTP threshold rejection, replenishment, max-balance rejection, registry resolution, and no stored-value voucher species.
+- Driver-composed runtime: completed with tests for step registry registration, unknown-step failure, ordered execution, container/closure resolution, result short-circuiting, fake driver composition, singleton booting, autoloading, and central-engine isolation.
 - Architecture invariants: x-change now has an executable guard preventing production imports of concrete voucher generation/redemption actions.
 - Feature/regression: current voucher and x-change suites cover issuance, redemption, claim, withdrawal, provider failure, and reconciliation.
-- Verification: voucher full suite is green as of 2026-06-29 with 372 passed and 28 skipped; x-change package full suite is green with 970 passed and 5 skipped.
+- Verification: voucher full suite is green as of 2026-06-29 with 381 passed and 28 skipped; x-change package full suite is green with 970 passed and 5 skipped.
 
 ## Next Recommended Slice
 
-Slice 9 — Driver-Composed Runtime, only after explicit human approval. This remains optional and should only proceed if modular driver pipelines are needed after the concrete driver seams are stable.
+Execution Engine migration slices 0–9 are now scaffolded. Next work should be an explicit integration-hardening decision, not an automatic new execution-engine slice.
 
 ## Open Questions
 
@@ -193,4 +209,6 @@ Slice 9 — Driver-Composed Runtime, only after explicit human approval. This re
 - Exact instruction metadata shape for production settlement-envelope authority vouchers beyond the current `metadata.envelope_reference`, `metadata.auto_redeem_children`, and `metadata.fallback_to_claim` scaffold.
 - Concrete stored-value gateway binding location: wallet package provider, cash package provider, x-change provider, or a dedicated integration package.
 - Exact production instruction metadata shape for stored-value operations beyond the current `metadata.stored_value_reference`, `metadata.replenishable`, `metadata.max_balance`, `metadata.otp_required_above`, and `context.meta.operation` scaffold.
+- Whether existing `settlement_envelope` and `stored_value` drivers should be decomposed into concrete pipeline steps or remain hand-composed until production behavior stabilizes.
+- Production naming/versioning policy for explicit pipeline step lists.
 - Whether execution results should be persisted by voucher directly or only consumed by the future x-journal layer remains deferred.
