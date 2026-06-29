@@ -33,13 +33,13 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 2A — x-journal  
-Current status: Ready to begin x-journal documentation/bootstrap and Slice 0-style characterization  
+Current status: Wave 2A package bootstrap in progress  
 Last updated: 2026-06-29
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
-| 2A | x-journal | System log / audit trail | Next | Pending |
+| 2A | x-journal | System log / audit trail | Package bootstrap in progress | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Not started | Pending |
 | 3 | x-feedback | Notification / communication layer | Not started | Pending |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
@@ -90,6 +90,17 @@ ExecutionDriverContract
   - voucher: `d7abbe6 execution-engine: add driver composed runtime`
   - x-change: `ca6a91d docs(execution-engine): record slice 9 composed runtime`
 
+### Wave 2A — x-journal
+
+- Read the Wave 2A planning set under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-journal`.
+- Verified the expected package path `/Users/rli/PhpstormProjects/packages/x-journal` does not currently exist.
+- Verified `docs/todo/x-journal/x-journal_codex_instructions.md` is empty.
+- The addendum and functional specifications are present and coherent enough to establish the workstream intent, Compass rules, phase roadmap, and architectural invariants.
+- Stopped before package scaffolding or implementation because a required package is missing.
+- Created the independent package scaffold at `/Users/rli/PhpstormProjects/packages/x-journal` after explicit approval.
+- Established the namespace convention `LBHurtado\XJournal`.
+- Added the x-journal workstream Compass at `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md`.
+
 ## Current Architectural Decisions
 
 - x-change is the Settlement Operating System / orchestration layer.
@@ -109,6 +120,8 @@ ExecutionDriverContract
 
 - Package boundaries can blur as integration pressure increases. Record boundary decisions before implementation.
 - Execution result persistence is still deferred; x-journal must be designed without forcing voucher to depend on journal storage.
+- Wave 2A runtime implementation should not begin until the new package scaffold is installed and its bootstrap tests are green.
+- The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
 - Each package has its own Pest/Testbench environment. Run tests from the relevant package root.
@@ -116,16 +129,14 @@ ExecutionDriverContract
 
 ## Next Recommended Workstream
 
-Begin Wave 2A — x-journal.
+Complete the Wave 2A package bootstrap, then begin Phase 1A — Core Journal Foundation tests.
 
-First actions:
+Recommended actions:
 
-1. Read the x-journal planning docs under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-journal`.
-2. Inspect the actual x-journal package at `/Users/rli/PhpstormProjects/packages/x-journal`.
-3. Create or update an x-journal workstream Compass in the relevant package/docs path.
-4. Characterize existing x-journal behavior before changing architecture.
-5. Add baseline tests for journal append/read/query invariants.
-6. Report discrepancies before production changes.
+1. Install package dependencies in `/Users/rli/PhpstormProjects/packages/x-journal`.
+2. Run the x-journal bootstrap tests from the x-journal package root.
+3. Commit the x-journal package bootstrap separately from the x-change Compass update.
+4. Begin Phase 1A with failing tests for journal entry persistence, ERN generation, DTO normalization, recorder behavior, default database sink behavior, and append-only protection.
 
 ## x-journal Initial Intent
 
@@ -156,8 +167,10 @@ It must not enforce business policy or decide workflow outcomes.
 
 ## Open Questions
 
-- Where should the x-journal Compass live if the x-journal package already has a preferred docs structure?
-- What is the existing x-journal storage model, if any?
+- Should the new x-journal package be wired into the host app path repositories now, or only after Phase 1 core behavior exists?
+- Should the empty `x-journal_codex_instructions.md` remain empty, or should the addendum be promoted/merged into the primary instruction file?
+- Should Phase 1 use `spatie/laravel-data` DTOs immediately or plain immutable PHP data objects first?
+- What is the initial ERN format and uniqueness scope?
 - Should execution results be journaled by x-change adapters, voucher event listeners, or a future integration package?
 - What is the canonical correlation mapping from voucher `execution_id` to journal correlation/causation IDs?
 - Should provider callbacks and reconciliation events use the same journal entry schema as execution events?
