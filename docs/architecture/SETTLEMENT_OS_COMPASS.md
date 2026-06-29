@@ -33,13 +33,13 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 2A — x-journal  
-Current status: Wave 2A Phase 14 complete in x-journal  
+Current status: Wave 2A complete in x-journal; ready to begin Wave 2B — x-action  
 Last updated: 2026-06-29
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
-| 2A | x-journal | System log / audit trail | Phase 14 complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
+| 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Not started | Pending |
 | 3 | x-feedback | Notification / communication layer | Not started | Pending |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
@@ -241,6 +241,15 @@ ExecutionDriverContract
   - fail-closed unsupported event coverage before persistence side effects
   - Cockpit post-retrieval visibility-window characterization
   - green x-journal package suite: `99 passed, 466 assertions`
+- Completed Phase 15 Production Readiness in x-journal:
+  - production readiness checklist
+  - production deferrals ADR
+  - release posture documentation
+  - installation expectations documentation
+  - validation command documentation
+  - tests covering readiness documentation, Composer metadata, Laravel auto-discovery, config publishing, and migration availability
+  - Wave 2A closure recommendation
+  - green x-journal package suite: `102 passed, 496 assertions`
 
 ## Current Architectural Decisions
 
@@ -291,6 +300,8 @@ ExecutionDriverContract
 - x-journal append-only behavior remains model-level; direct database mutation protection is still unresolved.
 - x-journal idempotency remains unresolved for execution outcomes, provider callbacks, reconciliation records, operator actions, and campaign records.
 - x-journal consumers should not assume every transformed entry has `metadata.domain`; the execution transformer currently records transformer class without a domain key.
+- x-journal Wave 2A is package-ready as a foundation, but host-app production wiring remains deferred to explicit package-specific characterization/integration work.
+- x-journal production deferrals are documented for idempotency, database-level immutability, signatures, artifact persistence, redaction, visibility-aware pagination, secondary-sink queueing, and live host wiring.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -299,14 +310,15 @@ ExecutionDriverContract
 
 ## Next Recommended Workstream
 
-Continue Wave 2A with Phase 15 — Production Readiness.
+Begin Wave 2B — x-action.
 
 Recommended actions:
 
-1. Create production readiness checklist and release notes.
-2. Add explicit ADRs or deferral records for idempotency, database-level immutability, signatures, redaction, and visibility-aware pagination.
-3. Confirm package release posture, supported Laravel versions, and installation expectations.
-4. Decide whether Phase 15 completes Wave 2A or whether host-app wiring should remain a later cross-package integration wave.
+1. Inspect `/Users/rli/PhpstormProjects/packages/x-action` and its repository status.
+2. Read `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-action`.
+3. Establish or update the x-action Compass.
+4. Begin only the authorized first x-action slice.
+5. Keep x-action as workflow continuation / CTA state; it must not execute money movement or mutate journal truth.
 
 ## x-journal Initial Intent
 
