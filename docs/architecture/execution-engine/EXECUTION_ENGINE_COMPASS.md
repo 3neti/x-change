@@ -6,7 +6,7 @@ Evolve voucher redemption into a programmable, voucher-owned execution runtime w
 
 ## Current Position
 
-Current slice: Slice 6 — Architecture Stabilization
+Current slice: Slice 7 — Settlement Envelope Driver
 Status: Completed  
 Last updated: 2026-06-29
 
@@ -19,7 +19,7 @@ Last updated: 2026-06-29
 | 4 | Default Driver Extraction | Completed |
 | 5 | Driver Registry | Completed |
 | 6 | Architecture Stabilization | Completed |
-| 7 | Settlement Envelope Driver | Pending |
+| 7 | Settlement Envelope Driver | Completed |
 | 8 | Stored Value Driver | Pending |
 | 9 | Driver-Composed Runtime | Pending / optional |
 
@@ -66,6 +66,12 @@ Last updated: 2026-06-29
 - Added result-shape coverage proving succeeded and failed execution results expose `execution_id`, `status`, `events`, and `metadata` consistently without adding persistence or journaling.
 - Preserved legacy compatibility: implicit default execution instructions are still not persisted into legacy voucher instruction payloads, while explicit execution instructions now serialize `schema: voucher.execution.v1`.
 - Slice 6 commit: voucher `04ecddd` (`execution-engine: stabilize architecture contracts`).
+- Completed Slice 7 settlement-envelope driver scaffold in voucher: added `SettlementEnvelopeExecutionDriver`, `SettlementEnvelopeExecutionGateway`, `NullSettlementEnvelopeExecutionGateway`, and `SettlementEnvelopeNotReadyException`.
+- Registered `settlement_envelope` as the first non-default built-in execution driver while preserving `default` driver behavior and registry-based resolution.
+- Added driver tests for authority-voucher execution, configured envelope loading, readiness verification before side effects, lock-before-child-generation ordering, child voucher generation, optional child auto-redemption, and claim-fallback voucher generation on failed child execution.
+- Kept settlement-envelope readiness/gating behind a gateway seam. Voucher orchestrates execution semantics; settlement-envelope/x-change can provide concrete readiness and envelope access by binding the gateway contract.
+- Preserved later-slice boundary: `StoredValueExecutionDriver` remains absent.
+- Slice 7 commit: `4478639 execution-engine: add settlement envelope driver`.
 
 ## Discoveries
 
@@ -85,6 +91,8 @@ Last updated: 2026-06-29
 - The unknown-driver exception namespace is `LBHurtado\Voucher\Exceptions\UnknownExecutionDriverException`.
 - Slice 6 introduces the canonical instruction schema field as `ExecutionInstructionData::SCHEMA = voucher.execution.v1`.
 - `ExecutionResultData` now assigns a durable UUID `execution_id` to every succeeded and failed result unless an explicit execution id is supplied by the caller.
+- Slice 7 resolves the package boundary by introducing a voucher-owned `SettlementEnvelopeExecutionGateway` seam instead of putting settlement-envelope readiness logic directly into the execution driver.
+- `SettlementEnvelopeExecutionDriver` uses the same `execution_id` across the returned result and child auto-redemption metadata.
 
 ## Risks
 
@@ -101,6 +109,8 @@ Last updated: 2026-06-29
 - Slice 5 intentionally registers only the default driver. Non-default registration by x-change or future packages must remain explicit and additive.
 - Execution result persistence remains deferred. `execution_id` is now present for correlation, but results are not persisted or journaled by the execution engine.
 - Schema hardening is limited to the instruction-level `schema` field. No non-default driver schema contract has been introduced yet.
+- The default settlement-envelope gateway is intentionally non-operational and fails readiness until a concrete gateway is bound by a consuming package.
+- The Slice 7 gateway currently defines the envelope-child-voucher translation seam; a concrete implementation must avoid duplicating x-change claim UX or provider behavior.
 
 ## Architectural Decisions
 
@@ -136,6 +146,10 @@ Last updated: 2026-06-29
 - Slice 6 implements result correlation in `ExecutionResultData` through an `execution_id` UUID generated at result construction time.
 - Slice 6 confirms execution persistence and x-journal integration remain deferred; the engine is correlation-ready and journal-ready, not journal-dependent.
 - Slice 6 keeps the first non-default driver deferred. `SettlementEnvelopeExecutionDriver` and `StoredValueExecutionDriver` are intentionally absent.
+- Slice 7 introduces `SettlementEnvelopeExecutionDriver` as the first non-default driver owned by voucher.
+- Slice 7 keeps settlement-envelope policy/readiness outside voucher execution semantics through `SettlementEnvelopeExecutionGateway`.
+- Slice 7 registers built-in drivers explicitly as `default` and `settlement_envelope`.
+- Slice 7 does not introduce stored-value behavior, direct provider behavior, claim UX behavior, x-journal persistence, or a concrete x-change gateway binding.
 
 ## Test Coverage Status
 
@@ -146,16 +160,17 @@ Last updated: 2026-06-29
 - Default driver extraction: completed with `ExecutionDriverContract`, `DefaultExecutionDriver`, engine delegation, and `RedeemVoucher` routing through the engine/default driver.
 - Driver registry: completed with singleton registry resolution, package extension registration, fail-closed unknown-driver behavior, and no engine if/else driver selection.
 - Architecture stabilization: completed with instruction schema tests, execution result `execution_id` tests, registry-only resolution guards, default-only package registration guard, and no later-driver scaffold guard.
+- Settlement-envelope driver: completed with gateway-seam tests for load, readiness, lock, child generation, auto-redemption, fallback claim-voucher generation, registry resolution, and stored-value absence.
 - Architecture invariants: x-change now has an executable guard preventing production imports of concrete voucher generation/redemption actions.
 - Feature/regression: current voucher and x-change suites cover issuance, redemption, claim, withdrawal, provider failure, and reconciliation.
-- Verification: voucher full suite is green as of 2026-06-29 with 349 passed and 28 skipped; x-change package full suite is green as of 2026-06-29 with 970 passed and 5 skipped.
+- Verification: voucher full suite is green as of 2026-06-29 with 360 passed and 28 skipped; x-change package full suite is green with 970 passed and 5 skipped.
 
 ## Next Recommended Slice
 
-Slice 7 — Settlement Envelope Driver, only after explicit human approval. Add the first non-default driver behind the voucher-owned registry without changing default vouchers, claim UX, or money-movement behavior.
+Slice 8 — Stored Value Driver, only after explicit human approval. Add stored-value ownership/spend semantics as driver-specific behavior without changing default vouchers or settlement-envelope execution.
 
 ## Open Questions
 
-- Exact settlement-envelope readiness contract and package boundary for Slice 7.
-- Exact x-change registration seam for a future `settlement_envelope` driver contribution.
+- Concrete settlement-envelope gateway binding location: x-change service provider, settlement-envelope package provider, or a dedicated integration package.
+- Exact instruction metadata shape for production settlement-envelope authority vouchers beyond the current `metadata.envelope_reference`, `metadata.auto_redeem_children`, and `metadata.fallback_to_claim` scaffold.
 - Whether execution results should be persisted by voucher directly or only consumed by the future x-journal layer remains deferred.
