@@ -33,13 +33,13 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 2A — x-journal  
-Current status: Wave 2A Phase 8 complete in x-journal  
+Current status: Wave 2A Phase 9 complete in x-journal  
 Last updated: 2026-06-29
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
-| 2A | x-journal | System log / audit trail | Phase 8 complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
+| 2A | x-journal | System log / audit trail | Phase 9 complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Not started | Pending |
 | 3 | x-feedback | Notification / communication layer | Not started | Pending |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
@@ -183,6 +183,16 @@ ExecutionDriverContract
   - tests proving recording does not mutate supplied outcome data
   - no x-change or voucher call sites modified yet
   - green x-journal package suite: `68 passed, 232 assertions`
+- Completed Phase 9 Provider Callback Integration in x-journal:
+  - provider callback DTO
+  - provider callback journal recorder seam
+  - provider callback payload normalization
+  - provider reference and execution reference preservation
+  - raw provider payload preservation
+  - failed callback recording without settlement/reconciliation/next-action decisions
+  - retrieval of provider callbacks by execution and provider references
+  - tests proving recording does not mutate supplied callback data
+  - green x-journal package suite: `73 passed, 276 assertions`
 
 ## Current Architectural Decisions
 
@@ -217,6 +227,8 @@ ExecutionDriverContract
 - Offset-based retrieval is acceptable for the baseline but may need cursor pagination before high-volume Cockpit views.
 - x-journal Phase 8 adds a recording seam only; live x-change execution call-site wiring remains deferred until call-site characterization tests are in place.
 - Execution outcome journaling can duplicate entries if hosts call the recorder repeatedly for the same execution result; idempotency strategy remains open.
+- Provider callback journaling can duplicate entries when providers retry webhooks; idempotency strategy remains open.
+- Provider callback records preserve provider-supplied status but must not be treated as settlement or reconciliation truth without domain processing.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -225,14 +237,14 @@ ExecutionDriverContract
 
 ## Next Recommended Workstream
 
-Continue Wave 2A with Phase 9 — Provider Callback Integration.
+Continue Wave 2A with Phase 10 — Reconciliation Integration.
 
 Recommended actions:
 
-1. Add provider callback payload normalization.
-2. Record provider callbacks through x-journal without interpreting provider success/failure.
-3. Preserve raw provider state and references for later reconciliation.
-4. Map provider references to execution and subject references without mutating settlement or execution state.
+1. Add reconciliation payload normalization.
+2. Record reconciliation events through x-journal without resolving discrepancies.
+3. Preserve expected/actual comparison facts and references.
+4. Map provider and execution references into reconciliation journal events without mutating settlement state.
 
 ## x-journal Initial Intent
 
