@@ -33,14 +33,14 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 2B — x-action  
-Current status: x-action Phase 1 core grammar and authorized registry/resolver foundation complete  
-Last updated: 2026-06-29
+Current status: x-action Phase 2B Resolution Rules and Capability Filtering complete  
+Last updated: 2026-06-30
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
-| 2B | x-action | Workflow continuation / CTA layer | Phase 1 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
+| 2B | x-action | Workflow continuation / CTA layer | Phase 2B complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Not started | Pending |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
 | 5 | x-campaign | Program / bulk distribution layer | Not started | Pending |
@@ -277,6 +277,16 @@ ExecutionDriverContract
   - package config and service provider bindings
   - architecture safety coverage proving no persistence, routes, controllers, connectors, models, or UI were scaffolded
   - green x-action package suite: `13 passed, 35 assertions`
+- Completed x-action Phase 2B Resolution Rules and Capability Filtering:
+  - dedicated `ActionEligibilityFilter`
+  - `InvalidActionResolutionRuleException`
+  - permission/capability-aware action filtering
+  - feature profile condition filtering
+  - subject predicate filtering via `ActionSubjectData::get()`
+  - deterministic ordering after mixed config/runtime registration and filtering
+  - malformed/unsupported rule fail-closed behavior in non-strict mode
+  - malformed/unsupported rule exception behavior in strict mode
+  - green x-action package suite: `19 passed, 41 assertions`
 
 ## Current Architectural Decisions
 
@@ -332,6 +342,8 @@ ExecutionDriverContract
 - x-action Phase 1 is package-ready as a workflow action grammar foundation, but it has no host integration, persistence, analytics storage, routing layer, connector runtime, UI, or claim compiler decoration yet.
 - x-action must remain workflow continuation infrastructure. It must not become claim execution, money movement, compliance authority, voucher mutation, or journal truth.
 - x-action invalid providers are ignored by default for rendering safety; strict mode exists for fail-closed environments and requires explicit host/package choice.
+- x-action capability filtering is not authorization. Host applications must still enforce domain policy at the execution endpoint or workflow command.
+- x-action non-strict malformed-rule behavior is safe for rendering because it hides malformed actions, but strict validation should be used in tests/CI to catch configuration mistakes.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -345,10 +357,10 @@ Continue Wave 2B — x-action with the next authorized slice.
 Recommended actions:
 
 1. Request approval for the next x-action slice before proceeding.
-2. Recommended next slice: Phase 2B — Resolution Rules and Capability Filtering.
-3. Add permission/capability-aware filtering without making x-action a policy authority.
-4. Add feature-profile and subject-state predicate coverage.
-5. Preserve deterministic action ordering across config and runtime registration.
+2. Recommended next slice: Phase 2C — Resolution Diagnostics and Explainability.
+3. Add optional diagnostics explaining why actions were included or filtered.
+4. Preserve `resolve()` as the stable production API returning `ActionData[]`.
+5. Keep diagnostics read-only and non-authoritative.
 6. Keep x-action as workflow continuation / CTA state; it must not execute money movement or mutate journal truth.
 
 ## x-journal Initial Intent
