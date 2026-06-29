@@ -33,13 +33,13 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 2A — x-journal  
-Current status: Wave 2A Phase 5 complete in x-journal  
+Current status: Wave 2A Phase 6 complete in x-journal  
 Last updated: 2026-06-29
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
-| 2A | x-journal | System log / audit trail | Phase 5 complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
+| 2A | x-journal | System log / audit trail | Phase 6 complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Not started | Pending |
 | 3 | x-feedback | Notification / communication layer | Not started | Pending |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
@@ -153,6 +153,16 @@ ExecutionDriverContract
   - package-consumer renderer registration seam
   - tests proving artifacts render canonical journal entries without becoming or mutating journal truth
   - green x-journal package suite: `49 passed, 145 assertions`
+- Completed Phase 6 Verification and Integrity in x-journal:
+  - integrity issue and verification result DTOs
+  - read-side journal integrity verifier
+  - clean SHA-256 hash-chain verification
+  - canonical payload tamper detection
+  - broken previous-hash continuity detection
+  - missing-hash detection
+  - unsigned baseline retained for future signature strategy
+  - tests proving verification does not mutate journal entries
+  - green x-journal package suite: `55 passed, 165 assertions`
 
 ## Current Architectural Decisions
 
@@ -181,6 +191,8 @@ ExecutionDriverContract
 - x-journal visibility is currently package-local and programmatically composed.
 - x-journal artifact generation currently produces in-memory text/plain receipt and statement renderings only; persistence, public URLs, PDFs, and signatures are deferred.
 - Artifact generation assumes callers have already scoped and authorized the entries being rendered.
+- x-journal verification detects direct database tampering after the fact; it does not prevent direct database mutation.
+- Scoped verification windows will need an explicit starting previous-hash strategy before partial-chain verification becomes production-facing.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -189,14 +201,14 @@ ExecutionDriverContract
 
 ## Next Recommended Workstream
 
-Continue Wave 2A with Phase 6 — Verification and Integrity.
+Continue Wave 2A with Phase 7 — Search and Retrieval.
 
 Recommended actions:
 
-1. Add integrity verification service coverage.
-2. Verify hash-chain continuity for canonical entries.
-3. Define clear tamper/corruption failure behavior.
-4. Explore signature strategy without forcing production signing yet.
+1. Add journal retrieval/query service coverage.
+2. Support lookup by reference, actor, subject, correlation, causation, execution ID, and event type.
+3. Add pagination/windowing baselines for API/operator use.
+4. Preserve separation between retrieval, visibility authorization, artifact generation, and integrity verification.
 
 ## x-journal Initial Intent
 
