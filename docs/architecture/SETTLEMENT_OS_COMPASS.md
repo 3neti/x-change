@@ -33,13 +33,13 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 2A — x-journal  
-Current status: Wave 2A Phase 2B complete in x-journal  
+Current status: Wave 2A Phase 3 complete in x-journal  
 Last updated: 2026-06-29
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
-| 2A | x-journal | System log / audit trail | Phase 2B complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
+| 2A | x-journal | System log / audit trail | Phase 3 complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Not started | Pending |
 | 3 | x-feedback | Notification / communication layer | Not started | Pending |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
@@ -129,6 +129,13 @@ ExecutionDriverContract
   - reconciliation transformer baseline
   - tests proving domain event normalization without business decisions
   - green x-journal package suite: `31 passed, 98 assertions`
+- Completed Phase 3 Sink Architecture in x-journal:
+  - canonical database sink retained
+  - `JournalSinkDispatcher`
+  - `SecondaryJournalSinkContract`
+  - secondary sink fan-out for projections/exports
+  - tests proving secondary sinks do not become canonical journal truth
+  - green x-journal package suite: `36 passed, 113 assertions`
 
 ## Current Architectural Decisions
 
@@ -153,6 +160,7 @@ ExecutionDriverContract
 - x-journal integrity hashes are deterministic but unsigned; signature strategy remains open for future verification phases.
 - x-journal event transformers are package-local and intentionally not wired to voucher or x-change runtime events yet.
 - x-journal domain transformers preserve payloads and do not interpret claim outcomes, provider success, or reconciliation resolution.
+- x-journal secondary sinks are currently synchronous after canonical database persistence.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -161,14 +169,14 @@ ExecutionDriverContract
 
 ## Next Recommended Workstream
 
-Begin Phase 3 — Sink Architecture.
+Begin Phase 4 — Visibility and Authorization.
 
 Recommended actions:
 
-1. Add explicit sink registry / multi-sink dispatcher.
-2. Keep database sink as canonical default.
-3. Add secondary sink contract behavior for projections/exports.
-4. Prove secondary sinks do not become canonical journal truth.
+1. Add journal visibility policy contracts.
+2. Add access decision DTOs.
+3. Add actor/subject visibility checks.
+4. Prove visibility controls access only and does not alter journal truth.
 
 ## x-journal Initial Intent
 
