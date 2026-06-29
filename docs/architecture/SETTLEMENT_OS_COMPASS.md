@@ -33,13 +33,13 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 2A — x-journal  
-Current status: Wave 2A Phase 10 complete in x-journal  
+Current status: Wave 2A Phase 11 complete in x-journal  
 Last updated: 2026-06-29
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
-| 2A | x-journal | System log / audit trail | Phase 10 complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
+| 2A | x-journal | System log / audit trail | Phase 11 complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Not started | Pending |
 | 3 | x-feedback | Notification / communication layer | Not started | Pending |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
@@ -202,6 +202,16 @@ ExecutionDriverContract
   - retrieval of reconciliation entries by execution and provider references
   - tests proving recording does not mutate supplied reconciliation data
   - green x-journal package suite: `78 passed, 315 assertions`
+- Completed Phase 11 Operator Action Integration in x-journal:
+  - operator action DTO
+  - operator action journal recorder seam
+  - `operator.*` journal transformer baseline
+  - operator action payload normalization
+  - actor/action/context and target reference preservation
+  - blocked or denied action recording without workflow mutation, execution, money movement, or CTA completion
+  - retrieval of operator actions by execution and causation references
+  - tests proving recording does not mutate supplied operator action data
+  - green x-journal package suite: `83 passed, 359 assertions`
 
 ## Current Architectural Decisions
 
@@ -240,6 +250,9 @@ ExecutionDriverContract
 - Provider callback records preserve provider-supplied status but must not be treated as settlement or reconciliation truth without domain processing.
 - Reconciliation journaling can duplicate entries if host reconciliation jobs are retried; idempotency strategy remains open.
 - Reconciliation records may contain sensitive provider/bank file details; host APIs must compose retrieval with visibility/redaction controls.
+- Operator action journaling can duplicate entries if host applications retry the same command/audit hook; idempotency strategy remains open.
+- Operator action records may contain sensitive operator context, reasons, IP addresses, case details, and manual review notes; host APIs must compose retrieval with visibility/redaction controls.
+- Host UIs and workflow layers must not treat operator journal records as action authorization, action execution, money movement, workflow mutation, or CTA completion.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -248,14 +261,14 @@ ExecutionDriverContract
 
 ## Next Recommended Workstream
 
-Continue Wave 2A with Phase 11 — Operator Action Integration.
+Continue Wave 2A with Phase 12 — Campaign Integration.
 
 Recommended actions:
 
-1. Add operator action payload normalization.
-2. Record operator actions as audit facts without performing those actions.
-3. Preserve actor/action/context and target references.
-4. Map operator actions to execution, provider, reconciliation, claim, and subject references without mutating workflow state.
+1. Add campaign event payload normalization.
+2. Record campaign/program/distribution events as audit facts without issuing vouchers or deciding execution.
+3. Preserve campaign, program, beneficiary-list, batch, and distribution context.
+4. Map campaign events to execution, voucher, claim, provider, and subject references without mutating campaign or voucher lifecycle state.
 
 ## x-journal Initial Intent
 
