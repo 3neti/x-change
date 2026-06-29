@@ -6,7 +6,7 @@ Evolve voucher redemption into a programmable, voucher-owned execution runtime w
 
 ## Current Position
 
-Current slice: Slice 7 — Settlement Envelope Driver
+Current slice: Slice 8 — Stored Value Driver
 Status: Completed  
 Last updated: 2026-06-29
 
@@ -20,7 +20,7 @@ Last updated: 2026-06-29
 | 5 | Driver Registry | Completed |
 | 6 | Architecture Stabilization | Completed |
 | 7 | Settlement Envelope Driver | Completed |
-| 8 | Stored Value Driver | Pending |
+| 8 | Stored Value Driver | Completed |
 | 9 | Driver-Composed Runtime | Pending / optional |
 
 ## Completed Work
@@ -72,6 +72,12 @@ Last updated: 2026-06-29
 - Kept settlement-envelope readiness/gating behind a gateway seam. Voucher orchestrates execution semantics; settlement-envelope/x-change can provide concrete readiness and envelope access by binding the gateway contract.
 - Preserved later-slice boundary: `StoredValueExecutionDriver` remains absent.
 - Slice 7 commit: `4478639 execution-engine: add settlement envelope driver`.
+- Completed Slice 8 stored-value driver scaffold in voucher: added `StoredValueExecutionDriver`, `StoredValueExecutionGateway`, `NullStoredValueExecutionGateway`, `StoredValueSpendRejectedException`, and `StoredValueSpendRequiresOtpException`.
+- Registered `stored_value` as the second non-default built-in execution driver while preserving `default` and `settlement_envelope` driver behavior and registry-based resolution.
+- Added stored-value tests for ownership activation, no cash disbursement on claim, slice spending, over-balance rejection, OTP threshold enforcement, replenishable vouchers, max-balance replenishment rejection, registry resolution, and execution through the engine.
+- Kept stored-value ledger/wallet mutation behind a gateway seam. Voucher owns execution semantics; wallet/cash/x-change or a future integration package can provide concrete ledger behavior by binding the gateway contract.
+- Preserved package boundary: no new voucher species, no direct wallet/provider implementation, no x-journal persistence, and no changes to default voucher disbursement behavior.
+- Slice 8 commit: `9dbc7be execution-engine: add stored value driver`.
 
 ## Discoveries
 
@@ -93,6 +99,9 @@ Last updated: 2026-06-29
 - `ExecutionResultData` now assigns a durable UUID `execution_id` to every succeeded and failed result unless an explicit execution id is supplied by the caller.
 - Slice 7 resolves the package boundary by introducing a voucher-owned `SettlementEnvelopeExecutionGateway` seam instead of putting settlement-envelope readiness logic directly into the execution driver.
 - `SettlementEnvelopeExecutionDriver` uses the same `execution_id` across the returned result and child auto-redemption metadata.
+- Slice 8 confirms stored-value can be modeled as execution-driver behavior without introducing `StoredValueVoucher` as a separate voucher species.
+- `StoredValueExecutionDriver` uses `context.meta.operation` for driver operations: `activate` by default, plus `spend` and `replenish`.
+- Stored-value spend/replenishment returns the same durable `execution_id` through the result and gateway call.
 
 ## Risks
 
@@ -111,6 +120,9 @@ Last updated: 2026-06-29
 - Schema hardening is limited to the instruction-level `schema` field. No non-default driver schema contract has been introduced yet.
 - The default settlement-envelope gateway is intentionally non-operational and fails readiness until a concrete gateway is bound by a consuming package.
 - The Slice 7 gateway currently defines the envelope-child-voucher translation seam; a concrete implementation must avoid duplicating x-change claim UX or provider behavior.
+- The default stored-value gateway is intentionally minimal and does not perform real ledger mutation. Concrete ledger behavior must be bound by a consuming package before production stored-value spending.
+- Stored-value operation metadata is currently scaffold-level and may need schema hardening before production use.
+- Concrete stored-value gateway implementation must avoid duplicating wallet/cash ledger policy and must not bypass existing financial controls.
 
 ## Architectural Decisions
 
@@ -150,6 +162,11 @@ Last updated: 2026-06-29
 - Slice 7 keeps settlement-envelope policy/readiness outside voucher execution semantics through `SettlementEnvelopeExecutionGateway`.
 - Slice 7 registers built-in drivers explicitly as `default` and `settlement_envelope`.
 - Slice 7 does not introduce stored-value behavior, direct provider behavior, claim UX behavior, x-journal persistence, or a concrete x-change gateway binding.
+- Slice 8 introduces `StoredValueExecutionDriver` as the second non-default driver owned by voucher.
+- Slice 8 keeps stored-value wallet/ledger mutation outside voucher execution semantics through `StoredValueExecutionGateway`.
+- Slice 8 registers built-in drivers explicitly as `default`, `settlement_envelope`, and `stored_value`.
+- Slice 8 treats stored-value as execution behavior, not a new voucher model/species.
+- Slice 8 does not introduce direct provider behavior, claim UX behavior, x-journal persistence, or a concrete wallet/cash/x-change gateway binding.
 
 ## Test Coverage Status
 
@@ -161,16 +178,19 @@ Last updated: 2026-06-29
 - Driver registry: completed with singleton registry resolution, package extension registration, fail-closed unknown-driver behavior, and no engine if/else driver selection.
 - Architecture stabilization: completed with instruction schema tests, execution result `execution_id` tests, registry-only resolution guards, default-only package registration guard, and no later-driver scaffold guard.
 - Settlement-envelope driver: completed with gateway-seam tests for load, readiness, lock, child generation, auto-redemption, fallback claim-voucher generation, registry resolution, and stored-value absence.
+- Stored-value driver: completed with gateway-seam tests for activation, no-disbursement ownership claim, spend, over-balance rejection, OTP threshold rejection, replenishment, max-balance rejection, registry resolution, and no stored-value voucher species.
 - Architecture invariants: x-change now has an executable guard preventing production imports of concrete voucher generation/redemption actions.
 - Feature/regression: current voucher and x-change suites cover issuance, redemption, claim, withdrawal, provider failure, and reconciliation.
-- Verification: voucher full suite is green as of 2026-06-29 with 360 passed and 28 skipped; x-change package full suite is green with 970 passed and 5 skipped.
+- Verification: voucher full suite is green as of 2026-06-29 with 372 passed and 28 skipped; x-change package full suite is green with 970 passed and 5 skipped.
 
 ## Next Recommended Slice
 
-Slice 8 — Stored Value Driver, only after explicit human approval. Add stored-value ownership/spend semantics as driver-specific behavior without changing default vouchers or settlement-envelope execution.
+Slice 9 — Driver-Composed Runtime, only after explicit human approval. This remains optional and should only proceed if modular driver pipelines are needed after the concrete driver seams are stable.
 
 ## Open Questions
 
 - Concrete settlement-envelope gateway binding location: x-change service provider, settlement-envelope package provider, or a dedicated integration package.
 - Exact instruction metadata shape for production settlement-envelope authority vouchers beyond the current `metadata.envelope_reference`, `metadata.auto_redeem_children`, and `metadata.fallback_to_claim` scaffold.
+- Concrete stored-value gateway binding location: wallet package provider, cash package provider, x-change provider, or a dedicated integration package.
+- Exact production instruction metadata shape for stored-value operations beyond the current `metadata.stored_value_reference`, `metadata.replenishable`, `metadata.max_balance`, `metadata.otp_required_above`, and `context.meta.operation` scaffold.
 - Whether execution results should be persisted by voucher directly or only consumed by the future x-journal layer remains deferred.
