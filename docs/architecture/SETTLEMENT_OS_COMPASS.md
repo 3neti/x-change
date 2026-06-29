@@ -32,15 +32,15 @@ This Compass is the program-level memory. Future workstream compasses should be 
 
 ## Current Position
 
-Current wave: Wave 2A — x-journal  
-Current status: Wave 2A complete in x-journal; ready to begin Wave 2B — x-action  
+Current wave: Wave 2B — x-action  
+Current status: x-action Phase 1 core grammar and authorized registry/resolver foundation complete  
 Last updated: 2026-06-29
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
-| 2B | x-action | Workflow continuation / CTA layer | Not started | Pending |
+| 2B | x-action | Workflow continuation / CTA layer | Phase 1 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Not started | Pending |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
 | 5 | x-campaign | Program / bulk distribution layer | Not started | Pending |
@@ -251,6 +251,33 @@ ExecutionDriverContract
   - Wave 2A closure recommendation
   - green x-journal package suite: `102 passed, 496 assertions`
 
+### Wave 2B — x-action
+
+- Read the Wave 2B planning set under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-action`.
+- Verified `/Users/rli/PhpstormProjects/packages/x-action` did not exist before this workstream.
+- Created the independent package scaffold at `/Users/rli/PhpstormProjects/packages/x-action`.
+- Established package identity:
+  - Composer package: `3neti/x-action`
+  - Namespace: `LBHurtado\XAction`
+  - Compass: `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md`
+- Completed x-action Phase 1 Core Grammar plus the authorized Phase 2 registry/resolver foundation:
+  - `spatie/laravel-data` DTO foundation
+  - `ActionData`
+  - `ActionTargetData`
+  - `ActionSubjectData`
+  - `ActionContextData`
+  - `WorkflowActionContract`
+  - `ActionRegistryContract`
+  - `ActionResolverContract`
+  - `ActionRecorderContract`
+  - in-memory/config-backed `ActionRegistry`
+  - Laravel-container-backed `ActionResolver`
+  - strict and non-strict invalid provider behavior
+  - `NullActionRecorder`
+  - package config and service provider bindings
+  - architecture safety coverage proving no persistence, routes, controllers, connectors, models, or UI were scaffolded
+  - green x-action package suite: `13 passed, 35 assertions`
+
 ## Current Architectural Decisions
 
 - x-change is the Settlement Operating System / orchestration layer.
@@ -302,6 +329,9 @@ ExecutionDriverContract
 - x-journal consumers should not assume every transformed entry has `metadata.domain`; the execution transformer currently records transformer class without a domain key.
 - x-journal Wave 2A is package-ready as a foundation, but host-app production wiring remains deferred to explicit package-specific characterization/integration work.
 - x-journal production deferrals are documented for idempotency, database-level immutability, signatures, artifact persistence, redaction, visibility-aware pagination, secondary-sink queueing, and live host wiring.
+- x-action Phase 1 is package-ready as a workflow action grammar foundation, but it has no host integration, persistence, analytics storage, routing layer, connector runtime, UI, or claim compiler decoration yet.
+- x-action must remain workflow continuation infrastructure. It must not become claim execution, money movement, compliance authority, voucher mutation, or journal truth.
+- x-action invalid providers are ignored by default for rendering safety; strict mode exists for fail-closed environments and requires explicit host/package choice.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -310,15 +340,16 @@ ExecutionDriverContract
 
 ## Next Recommended Workstream
 
-Begin Wave 2B — x-action.
+Continue Wave 2B — x-action with the next authorized slice.
 
 Recommended actions:
 
-1. Inspect `/Users/rli/PhpstormProjects/packages/x-action` and its repository status.
-2. Read `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-action`.
-3. Establish or update the x-action Compass.
-4. Begin only the authorized first x-action slice.
-5. Keep x-action as workflow continuation / CTA state; it must not execute money movement or mutate journal truth.
+1. Request approval for the next x-action slice before proceeding.
+2. Recommended next slice: Phase 2B — Resolution Rules and Capability Filtering.
+3. Add permission/capability-aware filtering without making x-action a policy authority.
+4. Add feature-profile and subject-state predicate coverage.
+5. Preserve deterministic action ordering across config and runtime registration.
+6. Keep x-action as workflow continuation / CTA state; it must not execute money movement or mutate journal truth.
 
 ## x-journal Initial Intent
 
