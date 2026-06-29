@@ -33,13 +33,13 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 2A — x-journal  
-Current status: Wave 2A Phase 1B complete in x-journal  
+Current status: Wave 2A Phase 2 complete in x-journal  
 Last updated: 2026-06-29
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
-| 2A | x-journal | System log / audit trail | Phase 1B complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
+| 2A | x-journal | System log / audit trail | Phase 2 complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Not started | Pending |
 | 3 | x-feedback | Notification / communication layer | Not started | Pending |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
@@ -115,6 +115,14 @@ ExecutionDriverContract
   - previous-hash chaining across persisted journal entries
   - tested package-consumer sink replacement via `JournalSinkContract`
   - green x-journal package suite: `19 passed, 49 assertions`
+- Completed Phase 2 Event Transformation Layer in x-journal:
+  - generic `JournalEventData`
+  - event transformer contract and registry
+  - `JournalEventRecorder`
+  - execution-result transformer baseline for `execution.*` events
+  - unsupported-event failure behavior
+  - package-consumer transformer registration seam
+  - green x-journal package suite: `25 passed, 71 assertions`
 
 ## Current Architectural Decisions
 
@@ -137,6 +145,7 @@ ExecutionDriverContract
 - Execution result persistence is still deferred; x-journal must be designed without forcing voucher to depend on journal storage.
 - x-journal append-only enforcement is currently model-event based; direct database mutation protection is not yet addressed.
 - x-journal integrity hashes are deterministic but unsigned; signature strategy remains open for future verification phases.
+- x-journal event transformers are package-local and intentionally not wired to voucher or x-change runtime events yet.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -145,14 +154,14 @@ ExecutionDriverContract
 
 ## Next Recommended Workstream
 
-Begin Phase 2 — Event Transformation Layer.
+Begin Phase 2B — Domain Event Transformer Baselines.
 
 Recommended actions:
 
-1. Define event transformer contracts.
-2. Add tests for event-to-journal DTO normalization.
-3. Start with execution/result event transformation.
-4. Add claim lifecycle and provider callback transformer baselines only after execution events are stable.
+1. Add claim lifecycle transformer baseline.
+2. Add provider callback transformer baseline.
+3. Add reconciliation event transformer baseline.
+4. Keep transformer behavior limited to normalization and recording; no business decisions.
 
 ## x-journal Initial Intent
 
