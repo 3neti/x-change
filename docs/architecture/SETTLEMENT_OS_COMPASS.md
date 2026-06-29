@@ -33,13 +33,13 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 2A — x-journal  
-Current status: Wave 2A Phase 12 complete in x-journal  
+Current status: Wave 2A Phase 13 complete in x-journal  
 Last updated: 2026-06-29
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
-| 2A | x-journal | System log / audit trail | Phase 12 complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
+| 2A | x-journal | System log / audit trail | Phase 13 complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Not started | Pending |
 | 3 | x-feedback | Notification / communication layer | Not started | Pending |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
@@ -222,6 +222,16 @@ ExecutionDriverContract
   - retrieval of campaign entries by execution and program/causation references
   - tests proving recording does not mutate supplied campaign event data
   - green x-journal package suite: `88 passed, 410 assertions`
+- Completed Phase 13 Cockpit Integration in x-journal:
+  - Cockpit journal query DTO
+  - Cockpit journal entry read model
+  - Cockpit journal view result DTO
+  - Cockpit journal reader service
+  - Cockpit-facing journal query normalization
+  - read-model projection over canonical journal entries
+  - retrieval composed with `JournalVisibilityGate`
+  - tests proving Cockpit reads expose journal facts without bypassing visibility, executing operator actions, or mutating journal entries
+  - green x-journal package suite: `93 passed, 441 assertions`
 
 ## Current Architectural Decisions
 
@@ -266,6 +276,9 @@ ExecutionDriverContract
 - Campaign journaling can duplicate entries if host batch planners or distribution jobs retry journal recording; idempotency strategy remains open.
 - Campaign records may contain sensitive beneficiary-list counts, targeting criteria, program details, distribution schedules, and voucher batch identifiers; host APIs must compose retrieval with visibility/redaction controls.
 - Host campaign layers must not treat campaign journal records as voucher issuance, execution, distribution dispatch, or campaign lifecycle mutation.
+- Cockpit read models can expose sensitive canonical payloads. Host Cockpit APIs must add presentation/redaction rules before broad operator exposure.
+- Phase 13 Cockpit visibility filtering happens after the retrieval window. Production Cockpit pagination may need visibility-aware cursor/windowing.
+- Cockpit journal read models must not be treated as command execution, action authorization, or lifecycle truth beyond the underlying journal facts.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -274,14 +287,14 @@ ExecutionDriverContract
 
 ## Next Recommended Workstream
 
-Continue Wave 2A with Phase 13 — Cockpit Integration.
+Continue Wave 2A with Phase 14 — Hardening.
 
 Recommended actions:
 
-1. Add Cockpit-facing journal event/query payload normalization.
-2. Expose journal facts for operator views without inventing domain behavior.
-3. Preserve visibility boundaries and avoid bypassing `JournalVisibilityGate`.
-4. Map Cockpit views/actions to journal entries, operator actions, execution, provider, reconciliation, claim, campaign, and subject references without executing actions or mutating journal entries.
+1. Add architecture invariant tests around append-only behavior, unsupported event failure, visibility composition, and package independence.
+2. Document or explicitly defer idempotency strategy for execution outcomes, provider callbacks, reconciliation records, operator actions, and campaign records.
+3. Characterize visibility-aware retrieval/pagination risks for Cockpit-facing views.
+4. Characterize redaction and presentation boundaries for Cockpit read models.
 
 ## x-journal Initial Intent
 
