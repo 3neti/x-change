@@ -33,13 +33,13 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 2A — x-journal  
-Current status: Wave 2A Phase 11 complete in x-journal  
+Current status: Wave 2A Phase 12 complete in x-journal  
 Last updated: 2026-06-29
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
-| 2A | x-journal | System log / audit trail | Phase 11 complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
+| 2A | x-journal | System log / audit trail | Phase 12 complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Not started | Pending |
 | 3 | x-feedback | Notification / communication layer | Not started | Pending |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
@@ -212,6 +212,16 @@ ExecutionDriverContract
   - retrieval of operator actions by execution and causation references
   - tests proving recording does not mutate supplied operator action data
   - green x-journal package suite: `83 passed, 359 assertions`
+- Completed Phase 12 Campaign Integration in x-journal:
+  - campaign event DTO
+  - campaign journal recorder seam
+  - `campaign.*` journal transformer baseline
+  - campaign event payload normalization
+  - campaign, program, beneficiary-list, distribution, and voucher batch context preservation
+  - campaign batch fact recording without voucher issuance, execution decisions, campaign state mutation, or distribution dispatch
+  - retrieval of campaign entries by execution and program/causation references
+  - tests proving recording does not mutate supplied campaign event data
+  - green x-journal package suite: `88 passed, 410 assertions`
 
 ## Current Architectural Decisions
 
@@ -253,6 +263,9 @@ ExecutionDriverContract
 - Operator action journaling can duplicate entries if host applications retry the same command/audit hook; idempotency strategy remains open.
 - Operator action records may contain sensitive operator context, reasons, IP addresses, case details, and manual review notes; host APIs must compose retrieval with visibility/redaction controls.
 - Host UIs and workflow layers must not treat operator journal records as action authorization, action execution, money movement, workflow mutation, or CTA completion.
+- Campaign journaling can duplicate entries if host batch planners or distribution jobs retry journal recording; idempotency strategy remains open.
+- Campaign records may contain sensitive beneficiary-list counts, targeting criteria, program details, distribution schedules, and voucher batch identifiers; host APIs must compose retrieval with visibility/redaction controls.
+- Host campaign layers must not treat campaign journal records as voucher issuance, execution, distribution dispatch, or campaign lifecycle mutation.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -261,14 +274,14 @@ ExecutionDriverContract
 
 ## Next Recommended Workstream
 
-Continue Wave 2A with Phase 12 — Campaign Integration.
+Continue Wave 2A with Phase 13 — Cockpit Integration.
 
 Recommended actions:
 
-1. Add campaign event payload normalization.
-2. Record campaign/program/distribution events as audit facts without issuing vouchers or deciding execution.
-3. Preserve campaign, program, beneficiary-list, batch, and distribution context.
-4. Map campaign events to execution, voucher, claim, provider, and subject references without mutating campaign or voucher lifecycle state.
+1. Add Cockpit-facing journal event/query payload normalization.
+2. Expose journal facts for operator views without inventing domain behavior.
+3. Preserve visibility boundaries and avoid bypassing `JournalVisibilityGate`.
+4. Map Cockpit views/actions to journal entries, operator actions, execution, provider, reconciliation, claim, campaign, and subject references without executing actions or mutating journal entries.
 
 ## x-journal Initial Intent
 
