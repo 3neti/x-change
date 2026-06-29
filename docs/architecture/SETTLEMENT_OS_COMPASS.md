@@ -33,13 +33,13 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 2A — x-journal  
-Current status: Wave 2A Phase 13 complete in x-journal  
+Current status: Wave 2A Phase 14 complete in x-journal  
 Last updated: 2026-06-29
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
-| 2A | x-journal | System log / audit trail | Phase 13 complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
+| 2A | x-journal | System log / audit trail | Phase 14 complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Not started | Pending |
 | 3 | x-feedback | Notification / communication layer | Not started | Pending |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
@@ -232,6 +232,15 @@ ExecutionDriverContract
   - retrieval composed with `JournalVisibilityGate`
   - tests proving Cockpit reads expose journal facts without bypassing visibility, executing operator actions, or mutating journal entries
   - green x-journal package suite: `93 passed, 441 assertions`
+- Completed Phase 14 Hardening in x-journal:
+  - architecture hardening test suite
+  - runtime Composer dependency boundary coverage for settlement domain packages
+  - singleton infrastructure binding coverage
+  - append-only model guard invariant coverage
+  - explicit built-in transformer support coverage
+  - fail-closed unsupported event coverage before persistence side effects
+  - Cockpit post-retrieval visibility-window characterization
+  - green x-journal package suite: `99 passed, 466 assertions`
 
 ## Current Architectural Decisions
 
@@ -279,6 +288,9 @@ ExecutionDriverContract
 - Cockpit read models can expose sensitive canonical payloads. Host Cockpit APIs must add presentation/redaction rules before broad operator exposure.
 - Phase 13 Cockpit visibility filtering happens after the retrieval window. Production Cockpit pagination may need visibility-aware cursor/windowing.
 - Cockpit journal read models must not be treated as command execution, action authorization, or lifecycle truth beyond the underlying journal facts.
+- x-journal append-only behavior remains model-level; direct database mutation protection is still unresolved.
+- x-journal idempotency remains unresolved for execution outcomes, provider callbacks, reconciliation records, operator actions, and campaign records.
+- x-journal consumers should not assume every transformed entry has `metadata.domain`; the execution transformer currently records transformer class without a domain key.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -287,14 +299,14 @@ ExecutionDriverContract
 
 ## Next Recommended Workstream
 
-Continue Wave 2A with Phase 14 — Hardening.
+Continue Wave 2A with Phase 15 — Production Readiness.
 
 Recommended actions:
 
-1. Add architecture invariant tests around append-only behavior, unsupported event failure, visibility composition, and package independence.
-2. Document or explicitly defer idempotency strategy for execution outcomes, provider callbacks, reconciliation records, operator actions, and campaign records.
-3. Characterize visibility-aware retrieval/pagination risks for Cockpit-facing views.
-4. Characterize redaction and presentation boundaries for Cockpit read models.
+1. Create production readiness checklist and release notes.
+2. Add explicit ADRs or deferral records for idempotency, database-level immutability, signatures, redaction, and visibility-aware pagination.
+3. Confirm package release posture, supported Laravel versions, and installation expectations.
+4. Decide whether Phase 15 completes Wave 2A or whether host-app wiring should remain a later cross-package integration wave.
 
 ## x-journal Initial Intent
 
