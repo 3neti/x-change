@@ -33,13 +33,13 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 2A — x-journal  
-Current status: Wave 2A Phase 7 complete in x-journal  
+Current status: Wave 2A Phase 8 complete in x-journal  
 Last updated: 2026-06-29
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
-| 2A | x-journal | System log / audit trail | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
+| 2A | x-journal | System log / audit trail | Phase 8 complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Not started | Pending |
 | 3 | x-feedback | Notification / communication layer | Not started | Pending |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
@@ -173,6 +173,16 @@ ExecutionDriverContract
   - deterministic ascending/descending ordering
   - tests proving retrieval does not mutate journal entries
   - green x-journal package suite: `62 passed, 189 assertions`
+- Completed Phase 8 x-change Execution Integration in x-journal:
+  - x-change execution outcome DTO
+  - x-change execution journal recorder seam
+  - execution outcome normalization from plain arrays
+  - voucher `execution_id` mapping into journal references
+  - successful and failed execution outcome recording
+  - retrieval of recorded execution outcomes by execution ID
+  - tests proving recording does not mutate supplied outcome data
+  - no x-change or voucher call sites modified yet
+  - green x-journal package suite: `68 passed, 232 assertions`
 
 ## Current Architectural Decisions
 
@@ -205,6 +215,8 @@ ExecutionDriverContract
 - Scoped verification windows will need an explicit starting previous-hash strategy before partial-chain verification becomes production-facing.
 - x-journal retrieval is intentionally separate from visibility; host APIs and operator screens must compose retrieval with `JournalVisibilityGate`.
 - Offset-based retrieval is acceptable for the baseline but may need cursor pagination before high-volume Cockpit views.
+- x-journal Phase 8 adds a recording seam only; live x-change execution call-site wiring remains deferred until call-site characterization tests are in place.
+- Execution outcome journaling can duplicate entries if hosts call the recorder repeatedly for the same execution result; idempotency strategy remains open.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -213,14 +225,14 @@ ExecutionDriverContract
 
 ## Next Recommended Workstream
 
-Continue Wave 2A with Phase 8 — x-change Execution Integration.
+Continue Wave 2A with Phase 9 — Provider Callback Integration.
 
 Recommended actions:
 
-1. Review x-change/voucher execution outcome surfaces before modifying call sites.
-2. Add integration adapter tests proving execution outcomes can be recorded as journal facts.
-3. Map voucher `execution_id` into x-journal references without making execution depend on journal storage.
-4. Preserve current execution behavior; journal integration must observe and record, not decide or execute.
+1. Add provider callback payload normalization.
+2. Record provider callbacks through x-journal without interpreting provider success/failure.
+3. Preserve raw provider state and references for later reconciliation.
+4. Map provider references to execution and subject references without mutating settlement or execution state.
 
 ## x-journal Initial Intent
 
