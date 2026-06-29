@@ -6,9 +6,9 @@ Evolve voucher redemption into a programmable, voucher-owned execution runtime w
 
 ## Current Position
 
-Current slice: Slice 5 — Driver Registry  
+Current slice: Slice 6 — Architecture Stabilization
 Status: Completed  
-Last updated: 2026-06-28
+Last updated: 2026-06-29
 
 | Slice | Name | Status |
 |---|---|---|
@@ -18,7 +18,7 @@ Last updated: 2026-06-28
 | 3 | Execution Engine Introduction | Completed |
 | 4 | Default Driver Extraction | Completed |
 | 5 | Driver Registry | Completed |
-| 6 | Architecture Stabilization | Pending |
+| 6 | Architecture Stabilization | Completed |
 | 7 | Settlement Envelope Driver | Pending |
 | 8 | Stored Value Driver | Pending |
 | 9 | Driver-Composed Runtime | Pending / optional |
@@ -61,6 +61,11 @@ Last updated: 2026-06-28
 - Added fail-closed unknown-driver tests proving explicit unknown drivers throw before any driver side effect executes.
 - Added support coverage for registry autoloading and singleton container resolution.
 - Slice 5 commit: voucher `adf3ae7` (`execution-engine: add execution driver registry`).
+- Completed Slice 6 architecture stabilization in voucher: hardened execution instructions with canonical schema versioning and execution results with durable `execution_id` correlation.
+- Added architecture guards proving public voucher redemption still passes through `ExecutionEngine`, driver resolution remains registry-only, only the default driver is package-registered, and later-slice drivers have not been scaffolded.
+- Added result-shape coverage proving succeeded and failed execution results expose `execution_id`, `status`, `events`, and `metadata` consistently without adding persistence or journaling.
+- Preserved legacy compatibility: implicit default execution instructions are still not persisted into legacy voucher instruction payloads, while explicit execution instructions now serialize `schema: voucher.execution.v1`.
+- Slice 6 commit: voucher `04ecddd` (`execution-engine: stabilize architecture contracts`).
 
 ## Discoveries
 
@@ -78,6 +83,8 @@ Last updated: 2026-06-28
 - Slice 5 makes driver resolution registry-based. The engine no longer directly depends on the default driver.
 - The package-level extension API is `ExecutionDriverRegistry::register(string $key, ExecutionDriverContract|string|Closure $driver)`.
 - The unknown-driver exception namespace is `LBHurtado\Voucher\Exceptions\UnknownExecutionDriverException`.
+- Slice 6 introduces the canonical instruction schema field as `ExecutionInstructionData::SCHEMA = voucher.execution.v1`.
+- `ExecutionResultData` now assigns a durable UUID `execution_id` to every succeeded and failed result unless an explicit execution id is supplied by the caller.
 
 ## Risks
 
@@ -92,7 +99,8 @@ Last updated: 2026-06-28
 - Later slices must not treat the Slice 3 compatibility engine as the final driver-composed runtime. The current executor still delegates to the existing redemption contract.
 - Slice 4 intentionally extracts only the default driver. Adding unknown-driver handling or extension APIs before the registry slice would spread resolution policy into the wrong layer.
 - Slice 5 intentionally registers only the default driver. Non-default registration by x-change or future packages must remain explicit and additive.
-- `execution_id` is still not implemented; do not assume `ExecutionResultData` has durable correlation until the authorized schema/correlation hardening slice.
+- Execution result persistence remains deferred. `execution_id` is now present for correlation, but results are not persisted or journaled by the execution engine.
+- Schema hardening is limited to the instruction-level `schema` field. No non-default driver schema contract has been introduced yet.
 
 ## Architectural Decisions
 
@@ -124,6 +132,10 @@ Last updated: 2026-06-28
 - Driver resolution rules are: no execution block resolves default driver; explicit default resolves default driver; explicit known driver executes that driver; explicit unknown driver fails closed.
 - Slice 5 introduced the singleton registry and locked the extension API to key-based registration.
 - The default package registration list contains only `default` until later slices explicitly add non-default drivers.
+- Slice 6 sets the current canonical execution instruction schema to `voucher.execution.v1`.
+- Slice 6 implements result correlation in `ExecutionResultData` through an `execution_id` UUID generated at result construction time.
+- Slice 6 confirms execution persistence and x-journal integration remain deferred; the engine is correlation-ready and journal-ready, not journal-dependent.
+- Slice 6 keeps the first non-default driver deferred. `SettlementEnvelopeExecutionDriver` and `StoredValueExecutionDriver` are intentionally absent.
 
 ## Test Coverage Status
 
@@ -133,15 +145,17 @@ Last updated: 2026-06-28
 - Execution engine introduction: completed as a compatibility surface with context/result DTOs and no runtime wiring change.
 - Default driver extraction: completed with `ExecutionDriverContract`, `DefaultExecutionDriver`, engine delegation, and `RedeemVoucher` routing through the engine/default driver.
 - Driver registry: completed with singleton registry resolution, package extension registration, fail-closed unknown-driver behavior, and no engine if/else driver selection.
+- Architecture stabilization: completed with instruction schema tests, execution result `execution_id` tests, registry-only resolution guards, default-only package registration guard, and no later-driver scaffold guard.
 - Architecture invariants: x-change now has an executable guard preventing production imports of concrete voucher generation/redemption actions.
 - Feature/regression: current voucher and x-change suites cover issuance, redemption, claim, withdrawal, provider failure, and reconciliation.
-- Verification: voucher full suite is green as of 2026-06-28 with 341 passed and 28 skipped; x-change package full suite is green as of 2026-06-28 with 970 passed and 5 skipped.
+- Verification: voucher full suite is green as of 2026-06-29 with 349 passed and 28 skipped; x-change package full suite is green as of 2026-06-29 with 970 passed and 5 skipped.
 
 ## Next Recommended Slice
 
-Slice 6 — Architecture Stabilization, only after explicit human approval. Review and stabilize contracts, engine, registry, driver boundaries, context/result shape, execution correlation, schema versioning, and architecture tests without adding settlement-envelope or stored-value driver behavior.
+Slice 7 — Settlement Envelope Driver, only after explicit human approval. Add the first non-default driver behind the voucher-owned registry without changing default vouchers, claim UX, or money-movement behavior.
 
 ## Open Questions
 
-- Exact `execution_id` generation mechanism and where it is introduced.
-- Exact schema hardening scope for Slice 6.
+- Exact settlement-envelope readiness contract and package boundary for Slice 7.
+- Exact x-change registration seam for a future `settlement_envelope` driver contribution.
+- Whether execution results should be persisted by voucher directly or only consumed by the future x-journal layer remains deferred.
