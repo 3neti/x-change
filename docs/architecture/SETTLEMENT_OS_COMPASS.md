@@ -33,13 +33,13 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 2A — x-journal  
-Current status: Wave 2A Phase 6 complete in x-journal  
+Current status: Wave 2A Phase 7 complete in x-journal  
 Last updated: 2026-06-29
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
-| 2A | x-journal | System log / audit trail | Phase 6 complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
+| 2A | x-journal | System log / audit trail | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Not started | Pending |
 | 3 | x-feedback | Notification / communication layer | Not started | Pending |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
@@ -163,6 +163,16 @@ ExecutionDriverContract
   - unsigned baseline retained for future signature strategy
   - tests proving verification does not mutate journal entries
   - green x-journal package suite: `55 passed, 165 assertions`
+- Completed Phase 7 Search and Retrieval in x-journal:
+  - retrieval query and result DTOs
+  - read-only journal entry retriever
+  - reference-number lookup
+  - actor and subject projection filtering
+  - correlation, causation, execution ID, and event-type filtering
+  - bounded limit/offset retrieval windows
+  - deterministic ascending/descending ordering
+  - tests proving retrieval does not mutate journal entries
+  - green x-journal package suite: `62 passed, 189 assertions`
 
 ## Current Architectural Decisions
 
@@ -193,6 +203,8 @@ ExecutionDriverContract
 - Artifact generation assumes callers have already scoped and authorized the entries being rendered.
 - x-journal verification detects direct database tampering after the fact; it does not prevent direct database mutation.
 - Scoped verification windows will need an explicit starting previous-hash strategy before partial-chain verification becomes production-facing.
+- x-journal retrieval is intentionally separate from visibility; host APIs and operator screens must compose retrieval with `JournalVisibilityGate`.
+- Offset-based retrieval is acceptable for the baseline but may need cursor pagination before high-volume Cockpit views.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -201,14 +213,14 @@ ExecutionDriverContract
 
 ## Next Recommended Workstream
 
-Continue Wave 2A with Phase 7 — Search and Retrieval.
+Continue Wave 2A with Phase 8 — x-change Execution Integration.
 
 Recommended actions:
 
-1. Add journal retrieval/query service coverage.
-2. Support lookup by reference, actor, subject, correlation, causation, execution ID, and event type.
-3. Add pagination/windowing baselines for API/operator use.
-4. Preserve separation between retrieval, visibility authorization, artifact generation, and integrity verification.
+1. Review x-change/voucher execution outcome surfaces before modifying call sites.
+2. Add integration adapter tests proving execution outcomes can be recorded as journal facts.
+3. Map voucher `execution_id` into x-journal references without making execution depend on journal storage.
+4. Preserve current execution behavior; journal integration must observe and record, not decide or execute.
 
 ## x-journal Initial Intent
 
