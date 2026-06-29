@@ -33,13 +33,13 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 2A — x-journal  
-Current status: Wave 2A package bootstrap in progress  
+Current status: Wave 2A Phase 1A complete in x-journal  
 Last updated: 2026-06-29
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
-| 2A | x-journal | System log / audit trail | Package bootstrap in progress | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
+| 2A | x-journal | System log / audit trail | Phase 1A complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Not started | Pending |
 | 3 | x-feedback | Notification / communication layer | Not started | Pending |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
@@ -100,6 +100,14 @@ ExecutionDriverContract
 - Created the independent package scaffold at `/Users/rli/PhpstormProjects/packages/x-journal` after explicit approval.
 - Established the namespace convention `LBHurtado\XJournal`.
 - Added the x-journal workstream Compass at `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md`.
+- Completed Phase 1A Core Journal Foundation in x-journal:
+  - `ExecutionJournalEntry` model and migration
+  - Spatie Laravel Data DTOs for actor, subject, money, references, integrity, and journal entry payloads
+  - `ExecutionReferenceNumberGenerator`
+  - `ExecutionJournalRecorder`
+  - default `DatabaseJournalSink`
+  - append-only update/delete guards
+  - green x-journal package suite: `13 passed, 25 assertions`
 
 ## Current Architectural Decisions
 
@@ -120,7 +128,8 @@ ExecutionDriverContract
 
 - Package boundaries can blur as integration pressure increases. Record boundary decisions before implementation.
 - Execution result persistence is still deferred; x-journal must be designed without forcing voucher to depend on journal storage.
-- Wave 2A runtime implementation should not begin until the new package scaffold is installed and its bootstrap tests are green.
+- x-journal ERN sequencing is currently database-backed and should be hardened before production concurrency.
+- x-journal append-only enforcement is currently model-event based; direct database mutation protection is not yet addressed.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -129,14 +138,14 @@ ExecutionDriverContract
 
 ## Next Recommended Workstream
 
-Complete the Wave 2A package bootstrap, then begin Phase 1A — Core Journal Foundation tests.
+Begin Phase 1B — Core Journal Foundation hardening.
 
 Recommended actions:
 
-1. Install package dependencies in `/Users/rli/PhpstormProjects/packages/x-journal`.
-2. Run the x-journal bootstrap tests from the x-journal package root.
-3. Commit the x-journal package bootstrap separately from the x-change Compass update.
-4. Begin Phase 1A with failing tests for journal entry persistence, ERN generation, DTO normalization, recorder behavior, default database sink behavior, and append-only protection.
+1. Harden ERN generation for concurrency/race behavior.
+2. Decide whether common query fields need scalar projection columns beyond JSON payloads.
+3. Define the hash/integrity calculation strategy.
+4. Add sink extension seam tests beyond the default database sink.
 
 ## x-journal Initial Intent
 
