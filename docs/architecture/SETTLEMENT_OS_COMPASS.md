@@ -33,13 +33,13 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 2A — x-journal  
-Current status: Wave 2A Phase 9 complete in x-journal  
+Current status: Wave 2A Phase 10 complete in x-journal  
 Last updated: 2026-06-29
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
-| 2A | x-journal | System log / audit trail | Phase 9 complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
+| 2A | x-journal | System log / audit trail | Phase 10 complete | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Not started | Pending |
 | 3 | x-feedback | Notification / communication layer | Not started | Pending |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
@@ -193,6 +193,15 @@ ExecutionDriverContract
   - retrieval of provider callbacks by execution and provider references
   - tests proving recording does not mutate supplied callback data
   - green x-journal package suite: `73 passed, 276 assertions`
+- Completed Phase 10 Reconciliation Integration in x-journal:
+  - reconciliation event DTO
+  - reconciliation journal recorder seam
+  - reconciliation comparison payload normalization
+  - expected/actual/comparison fact preservation
+  - discrepancy recording without correction, settlement, or next-action decisions
+  - retrieval of reconciliation entries by execution and provider references
+  - tests proving recording does not mutate supplied reconciliation data
+  - green x-journal package suite: `78 passed, 315 assertions`
 
 ## Current Architectural Decisions
 
@@ -229,6 +238,8 @@ ExecutionDriverContract
 - Execution outcome journaling can duplicate entries if hosts call the recorder repeatedly for the same execution result; idempotency strategy remains open.
 - Provider callback journaling can duplicate entries when providers retry webhooks; idempotency strategy remains open.
 - Provider callback records preserve provider-supplied status but must not be treated as settlement or reconciliation truth without domain processing.
+- Reconciliation journaling can duplicate entries if host reconciliation jobs are retried; idempotency strategy remains open.
+- Reconciliation records may contain sensitive provider/bank file details; host APIs must compose retrieval with visibility/redaction controls.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -237,14 +248,14 @@ ExecutionDriverContract
 
 ## Next Recommended Workstream
 
-Continue Wave 2A with Phase 10 — Reconciliation Integration.
+Continue Wave 2A with Phase 11 — Operator Action Integration.
 
 Recommended actions:
 
-1. Add reconciliation payload normalization.
-2. Record reconciliation events through x-journal without resolving discrepancies.
-3. Preserve expected/actual comparison facts and references.
-4. Map provider and execution references into reconciliation journal events without mutating settlement state.
+1. Add operator action payload normalization.
+2. Record operator actions as audit facts without performing those actions.
+3. Preserve actor/action/context and target references.
+4. Map operator actions to execution, provider, reconciliation, claim, and subject references without mutating workflow state.
 
 ## x-journal Initial Intent
 
