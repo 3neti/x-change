@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 3 — x-feedback  
-Current status: x-feedback Phase 8 Journal Receipt Handoff Baseline complete  
+Current status: x-feedback Phase 9 Provider Callback Feedback Mapping Baseline complete  
 Last updated: 2026-06-30
 
 | Wave | Workstream | Role | Status | Compass |
@@ -41,7 +41,7 @@ Last updated: 2026-06-30
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
-| 3 | x-feedback | Notification / communication layer | Phase 8 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
+| 3 | x-feedback | Notification / communication layer | Phase 9 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
 | 5 | x-campaign | Program / bulk distribution layer | Not started | Pending |
 
@@ -469,6 +469,17 @@ ExecutionDriverContract
   - no x-journal dependency, database persistence, queues, routes, jobs, provider SDKs, or host coupling introduced
   - green focused Phase 8 suite: `6 passed, 41 assertions`
   - green x-feedback package suite: `52 passed, 280 assertions`
+- Completed x-feedback Phase 9 Provider Callback Feedback Mapping Baseline:
+  - `FeedbackProviderCallbackData`
+  - `FeedbackProviderCallbackMapperContract`
+  - `FeedbackProviderCallbackMapper`
+  - package-consumer provider callback mapper binding
+  - provider callback to provider receipt mapping
+  - provider callback to feedback event mapping
+  - provider callback status normalization
+  - no webhook routes, provider SDKs, persistence, queues, retries, or host coupling introduced
+  - green focused Phase 9 suite: `6 passed, 44 assertions`
+  - green x-feedback package suite: `58 passed, 324 assertions`
 
 ## Current Architectural Decisions
 
@@ -553,6 +564,7 @@ ExecutionDriverContract
 - Unknown planned delivery channels fail closed before later planned items are executed.
 - x-feedback Phase 7 delivery records are process-local and non-canonical. They must not be treated as durable audit history or a replacement for x-journal.
 - x-feedback Phase 8 journal receipt handoffs are portable facts only. They are not durable journal entries and do not make x-feedback depend on x-journal.
+- x-feedback Phase 9 provider callback mapping normalizes facts only. It must not be treated as webhook handling, provider verification, reconciliation, settlement, or lifecycle truth.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -566,8 +578,8 @@ Continue Wave 3 — x-feedback with the next authorized slice.
 Recommended actions:
 
 1. Request approval for the next x-feedback slice before proceeding.
-2. Recommended next slice: Phase 9 — Provider Callback Feedback Mapping Baseline.
-3. Define provider callback feedback DTOs and map callback facts into feedback receipts/events without real webhook routes or provider SDKs.
+2. Recommended next slice: Phase 10 — Retry and Freshness Policy Baseline.
+3. Define retry/freshness policy DTOs and evaluators without queueing retries or adding provider SDKs.
 4. Avoid real provider delivery, persistence, queues, retries, routes, and host coupling until explicitly authorized.
 5. Keep x-feedback communication-only; it must not own lifecycle truth, execute actions, or mutate journal truth.
 
