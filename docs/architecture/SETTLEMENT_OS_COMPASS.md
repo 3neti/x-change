@@ -33,14 +33,14 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 2B — x-action  
-Current status: x-action Phase 5 Action Run Identity and Correlation Baseline complete  
+Current status: x-action Phase 6 Action Run Lifecycle and Journal Handoff Boundary complete  
 Last updated: 2026-06-30
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
-| 2B | x-action | Workflow continuation / CTA layer | Phase 5 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
+| 2B | x-action | Workflow continuation / CTA layer | Phase 6 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Not started | Pending |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
 | 5 | x-campaign | Program / bulk distribution layer | Not started | Pending |
@@ -328,6 +328,18 @@ ExecutionDriverContract
   - legacy recorder calls remain uncorrelated unless a run is supplied
   - no persistence, routes, connectors, execution runtime, or x-journal dependency introduced
   - green x-action package suite: `47 passed, 161 assertions`
+- Completed x-action Phase 6 Action Run Lifecycle and Journal Handoff Boundary:
+  - `ActionRunLifecycle`
+  - `InvalidActionRunTransitionException`
+  - immutable action run status transitions
+  - fail-closed terminal-state transition protection
+  - lifecycle transitions remain separate from recorder side effects
+  - `ActionRunJournalHandoffData`
+  - `ActionRunJournalHandoffMapper`
+  - plain journal-ready handoff payloads for action lifecycle events
+  - uncorrelated legacy lifecycle event handoff preservation
+  - no persistence, routes, models, execution runtime, or x-journal dependency introduced
+  - green x-action package suite: `62 passed, 211 assertions`
 
 ## Current Architectural Decisions
 
@@ -393,6 +405,8 @@ ExecutionDriverContract
 - Redirectable target resolution may expose host URLs or external URLs; host renderers/surfaces must decide which targets are safe to display.
 - x-action action run identity is a correlation seam only. Host applications must not treat an action run as proof of authorization, execution, completion, persistence, or journal truth.
 - Future durable action runs must define idempotency and x-journal handoff boundaries before production use.
+- x-action journal handoff payloads are descriptive only. They are not durable journal entries and do not make x-action depend on x-journal.
+- Future host integrations must define redaction, idempotency, and visibility before exposing action handoff payloads broadly.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -407,8 +421,8 @@ Recommended actions:
 
 1. Request approval for the next x-action slice before proceeding.
 2. Recommended next slice: confirm the next x-action phase from the planning scaffold or explicit human instruction.
-3. If the next slice touches durable action runs, define idempotency and x-journal handoff before writing production code.
-4. Keep action runs observational, not execution authority.
+3. Avoid persistence, routes, controllers, connectors, or package coupling until an explicit integration target is authorized.
+4. Keep action runs and journal handoff observational, not execution authority.
 5. Keep x-action as workflow continuation / CTA state; it must not execute money movement or mutate journal truth.
 
 ## x-journal Initial Intent
