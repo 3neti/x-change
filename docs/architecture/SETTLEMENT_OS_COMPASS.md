@@ -607,6 +607,11 @@ ExecutionDriverContract
 - x-feedback Phase 11 baseline drivers are safe handoff drivers only. `mail` and `webhook` do not prove SMTP, HTTP, provider acceptance, or delivery confirmation.
 - x-feedback Phase 12 transport dispatch proves attempted dispatch only. It must not be treated as beneficiary receipt, provider confirmation, settlement truth, workflow completion, or journal truth.
 - x-feedback Phase 12 wraps Spatie Webhook Server behind `FeedbackWebhookSenderContract`; Spatie must not leak into higher-level x-feedback APIs.
+- x-feedback remaining work is now prioritized against `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-feedback/x-feedback_functional_specifications.md`.
+- x-feedback functional specification gaps after Phase 12 include notification preferences, notification routes, feature-profile hardening, action/artifact rendering policy, durable delivery records, in-app notification state, operational monitoring, delivery console APIs, credential resolution, journal event handoff strengthening, and reusable UI components.
+- x-feedback durable delivery records must remain communication delivery state. x-journal remains audit/system truth.
+- x-feedback delivery console APIs and UI components must expose communication facts only. Cockpit owns pages and broader operator workflows.
+- x-feedback credential resolution introduces secret-handling risk. Credentials must not leak into rendered messages, logs, delivery records, provider responses, or journal handoff payloads.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -621,9 +626,21 @@ Recommended actions:
 
 1. Request approval for the next x-feedback slice before proceeding.
 2. Recommended next slice: Phase 13 — Preference and Suppression Policy Baseline.
-3. Define recipient/channel preference DTOs and evaluate suppression, opt-out, quiet-hours, and required-channel policy.
-4. Avoid persistence, routes, host coupling, lifecycle truth ownership, workflow execution, and journal truth mutation.
-5. Keep x-feedback communication-only; it must not own lifecycle truth, execute actions, or mutate journal truth.
+3. Use the x-feedback functional specification as the primary checklist for remaining Wave 3 coverage.
+4. Define recipient/channel preference DTOs and evaluate suppression, opt-out, quiet-hours, required-channel policy, and freshness-aware non-delivery gates.
+5. Avoid persistence, routes, host coupling, lifecycle truth ownership, workflow execution, and journal truth mutation in Phase 13 unless explicitly authorized.
+6. Planned subsequent x-feedback slices:
+   - Phase 14 — Notification Route Baseline
+   - Phase 15 — Feature Profile and Template Policy Baseline
+   - Phase 16 — Action and Artifact Rendering Policy Baseline
+   - Phase 17 — Durable Delivery Records Baseline
+   - Phase 18 — In-App Notification Baseline
+   - Phase 19 — Operational Monitoring Baseline
+   - Phase 20 — Delivery Console API Baseline
+   - Phase 21 — Credential Resolution Baseline
+   - Phase 22 — Journal Event Emission / Handoff Integration
+   - Phase 23 — UI Component Baseline
+7. Keep x-feedback communication-only; it must not own lifecycle truth, execute actions, own Cockpit pages, or mutate journal truth.
 
 ## x-journal Initial Intent
 
