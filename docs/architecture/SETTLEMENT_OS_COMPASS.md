@@ -33,14 +33,14 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 2B — x-action  
-Current status: x-action Phase 3 Action Recording and Analytics Baseline complete  
+Current status: x-action Phase 4 Action Routing and Redirect Baseline complete  
 Last updated: 2026-06-30
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
-| 2B | x-action | Workflow continuation / CTA layer | Phase 3 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
+| 2B | x-action | Workflow continuation / CTA layer | Phase 4 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Not started | Pending |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
 | 5 | x-campaign | Program / bulk distribution layer | Not started | Pending |
@@ -304,6 +304,18 @@ ExecutionDriverContract
   - recording does not change action availability
   - no persistence, routes, connectors, or x-journal dependency introduced
   - green x-action package suite: `28 passed, 82 assertions`
+- Completed x-action Phase 4 Action Routing and Redirect Baseline:
+  - `ActionTargetResolverContract`
+  - `ActionTargetResolutionData`
+  - `ActionTargetResolver`
+  - invalid and unsupported target exceptions
+  - named route target resolution
+  - signed route target resolution
+  - external URL, mobile deep link, and API target resolution
+  - redirect response creation for redirectable targets
+  - non-redirectable interpretation for action-router and connector targets
+  - no package routes, controllers, persistence, connectors, or UI introduced
+  - green x-action package suite: `40 passed, 121 assertions`
 
 ## Current Architectural Decisions
 
@@ -365,6 +377,8 @@ ExecutionDriverContract
 - x-action diagnostics can expose internal action keys, provider classes, and rule details; host-facing presentation should be scoped/redacted before broad Cockpit or Copilot use.
 - x-action in-memory recording is process-local and not durable. It is an analytics seam and test baseline, not production storage or journal truth.
 - Future durable action recording must not compete with x-journal and must not affect action availability.
+- x-action target routing is target interpretation only. Host applications still own endpoint authorization, middleware, execution, and side effects.
+- Redirectable target resolution may expose host URLs or external URLs; host renderers/surfaces must decide which targets are safe to display.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -378,10 +392,10 @@ Continue Wave 2B — x-action with the next authorized slice.
 Recommended actions:
 
 1. Request approval for the next x-action slice before proceeding.
-2. Recommended next slice: Phase 4 — Action Routing and Redirect Baseline.
-3. Define route/URL target interpretation without adding controllers.
-4. Keep routing as target interpretation, not workflow execution.
-5. Preserve host-owned authorization and endpoint behavior.
+2. Recommended next slice: Phase 5 — Action Run Identity and Correlation Baseline.
+3. Introduce non-persistent action run identity/correlation DTOs.
+4. Correlate rendered/clicked/completed/failed lifecycle events.
+5. Keep action runs observational, not execution authority.
 6. Keep x-action as workflow continuation / CTA state; it must not execute money movement or mutate journal truth.
 
 ## x-journal Initial Intent
