@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 3 — x-feedback  
-Current status: x-feedback Phase 1 Core Feedback Grammar and Channel Contract Baseline complete  
+Current status: x-feedback Phase 2 Feedback Event Mapping Baseline complete  
 Last updated: 2026-06-30
 
 | Wave | Workstream | Role | Status | Compass |
@@ -41,7 +41,7 @@ Last updated: 2026-06-30
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
-| 3 | x-feedback | Notification / communication layer | Phase 1 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
+| 3 | x-feedback | Notification / communication layer | Phase 2 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
 | 5 | x-campaign | Program / bulk distribution layer | Not started | Pending |
 
@@ -380,6 +380,19 @@ ExecutionDriverContract
   - package config and service provider bindings
   - no persistence, routes, controllers, models, provider SDKs, x-action, x-journal, or x-change dependency introduced
   - green x-feedback package suite: `9 passed, 38 assertions`
+- Completed x-feedback Phase 2 Feedback Event Mapping Baseline:
+  - `FeedbackEventData`
+  - `FeedbackEventMapperContract`
+  - `FeedbackEventMapperRegistryContract`
+  - `FeedbackEventMapperRegistry`
+  - `UnknownFeedbackEventMapperException`
+  - package config mapper extension seam
+  - runtime mapper registration
+  - mapper class-string resolution through the Laravel container
+  - registered feedback event to feedback intent mapping
+  - unmapped event fail-closed behavior before delivery dispatch
+  - no real provider delivery, persistence, queues, retries, routes, x-action, x-journal, or x-change dependency introduced
+  - green x-feedback package suite: `15 passed, 71 assertions`
 
 ## Current Architectural Decisions
 
@@ -452,6 +465,8 @@ ExecutionDriverContract
 - x-feedback Phase 1 is package-ready as a communication grammar foundation, but it has no real channel drivers, persistence, queues, retries, templates, provider callbacks, or host integration yet.
 - x-feedback must not own lifecycle truth. It can communicate state supplied by upstream packages but must not decide what happened or what should happen.
 - The null feedback driver is a baseline test seam and does not prove real provider delivery.
+- x-feedback event mappers must translate upstream event facts into intents; they must not infer workflow truth from voucher, claim, or settlement internals.
+- Unknown feedback events fail closed until hosts register explicit mappers.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -465,8 +480,8 @@ Continue Wave 3 — x-feedback with the next authorized slice.
 Recommended actions:
 
 1. Request approval for the next x-feedback slice before proceeding.
-2. Recommended next slice: Phase 2 — Feedback Event Mapping Baseline.
-3. Add generic feedback event DTOs, mapper contracts, and mapper registry tests.
+2. Recommended next slice: Phase 3 — Template Resolution Baseline.
+3. Add template DTOs, registry/resolver contracts, locale/profile-aware resolution tests.
 4. Avoid real provider delivery, persistence, queues, retries, routes, and host coupling until explicitly authorized.
 5. Keep x-feedback communication-only; it must not own lifecycle truth, execute actions, or mutate journal truth.
 
