@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 3 — x-feedback  
-Current status: x-feedback Phase 5 Delivery Dispatch Preparation and Receipt Handoff Baseline complete  
+Current status: x-feedback Phase 6 Delivery Attempt Runtime Baseline complete  
 Last updated: 2026-06-30
 
 | Wave | Workstream | Role | Status | Compass |
@@ -41,7 +41,7 @@ Last updated: 2026-06-30
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
-| 3 | x-feedback | Notification / communication layer | Phase 5 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
+| 3 | x-feedback | Notification / communication layer | Phase 6 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
 | 5 | x-campaign | Program / bulk distribution layer | Not started | Pending |
 
@@ -435,6 +435,18 @@ ExecutionDriverContract
   - no real provider delivery, persistence, queues, retries, routes, or host coupling introduced
   - green focused Phase 5 suite: `6 passed, 44 assertions`
   - green x-feedback package suite: `35 passed, 180 assertions`
+- Completed x-feedback Phase 6 Delivery Attempt Runtime Baseline:
+  - `FeedbackDeliveryAttemptData`
+  - `FeedbackDeliveryAttemptRuntimeContract`
+  - `FeedbackDeliveryAttemptRuntime`
+  - package-consumer delivery attempt runtime binding
+  - prepared delivery plan execution through registered channel drivers
+  - default null-driver delivery attempt coverage
+  - delivery-result to provider-receipt handoff generation
+  - unknown planned channel fail-closed behavior before later side effects
+  - no durable delivery records, queues, retries, routes, provider SDKs, or host coupling introduced
+  - green focused Phase 6 suite: `5 passed, 28 assertions`
+  - green x-feedback package suite: `40 passed, 208 assertions`
 
 ## Current Architectural Decisions
 
@@ -515,6 +527,8 @@ ExecutionDriverContract
 - Delivery planning intentionally does not resolve channel drivers; provider capability validation remains deferred until real dispatch/provider phases.
 - x-feedback dispatch preparation composes message rendering and delivery planning only. It must not be treated as provider delivery, queued delivery, durable delivery tracking, lifecycle truth, or action execution.
 - x-feedback provider receipt handoff payloads are portable facts only. They are not durable journal entries or delivery-record storage.
+- x-feedback delivery attempt runtime can invoke registered channel drivers, but it is not durable delivery tracking, queueing, retry policy, lifecycle truth, or journal truth.
+- Unknown planned delivery channels fail closed before later planned items are executed.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -528,8 +542,8 @@ Continue Wave 3 — x-feedback with the next authorized slice.
 Recommended actions:
 
 1. Request approval for the next x-feedback slice before proceeding.
-2. Recommended next slice: Phase 6 — Delivery Attempt Runtime Baseline.
-3. Execute prepared delivery plan items through registered channel drivers while keeping persistence, queues, real provider SDKs, and host coupling deferred unless explicitly authorized.
+2. Recommended next slice: Phase 7 — Delivery Recording Strategy Baseline.
+3. Define delivery record contracts and decide whether the first recording seam is in-memory, database-backed, x-journal handoff only, or a staged combination.
 4. Avoid real provider delivery, persistence, queues, retries, routes, and host coupling until explicitly authorized.
 5. Keep x-feedback communication-only; it must not own lifecycle truth, execute actions, or mutate journal truth.
 
