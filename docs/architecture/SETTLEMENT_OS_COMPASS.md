@@ -32,8 +32,8 @@ This Compass is the program-level memory. Future workstream compasses should be 
 
 ## Current Position
 
-Current wave: Wave 2B — x-action  
-Current status: x-action Phase 7 Host Integration Seams complete  
+Current wave: Wave 3 — x-feedback  
+Current status: x-feedback Phase 1 Core Feedback Grammar and Channel Contract Baseline complete  
 Last updated: 2026-06-30
 
 | Wave | Workstream | Role | Status | Compass |
@@ -41,7 +41,7 @@ Last updated: 2026-06-30
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
-| 3 | x-feedback | Notification / communication layer | Not started | Pending |
+| 3 | x-feedback | Notification / communication layer | Phase 1 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
 | 5 | x-campaign | Program / bulk distribution layer | Not started | Pending |
 
@@ -351,6 +351,36 @@ ExecutionDriverContract
   - no x-change, x-feedback, x-journal, persistence, routes, controllers, or connector dependency introduced
   - green x-action package suite: `68 passed, 240 assertions`
 
+### Wave 3 — x-feedback
+
+- Read the Wave 3 planning set under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-feedback`.
+- Treated `x-feedback/x-feedbacl_codex_instructions.md` as the active Codex instruction file despite the filename typo.
+- Verified `/Users/rli/PhpstormProjects/packages/x-feedback` did not exist before this workstream.
+- Created the independent package scaffold at `/Users/rli/PhpstormProjects/packages/x-feedback`.
+- Established package identity:
+  - Composer package: `3neti/x-feedback`
+  - Namespace: `LBHurtado\XFeedback`
+  - Compass: `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md`
+- Completed x-feedback Phase 1 Core Feedback Grammar and Channel Contract Baseline:
+  - `FeedbackIntentData`
+  - `FeedbackRecipientData`
+  - `FeedbackChannelData`
+  - `FeedbackMessageData`
+  - `FeedbackContextData`
+  - `FeedbackDeliveryData`
+  - explicit delivery status constants
+  - `FeedbackChannelDriverContract`
+  - `FeedbackChannelRegistryContract`
+  - `FeedbackDispatcherContract`
+  - `FeedbackTemplateResolverContract`
+  - `FeedbackCredentialResolverContract`
+  - `NullFeedbackChannelDriver`
+  - `FeedbackChannelRegistry`
+  - `FeedbackDispatcher`
+  - package config and service provider bindings
+  - no persistence, routes, controllers, models, provider SDKs, x-action, x-journal, or x-change dependency introduced
+  - green x-feedback package suite: `9 passed, 38 assertions`
+
 ## Current Architectural Decisions
 
 - x-change is the Settlement Operating System / orchestration layer.
@@ -419,6 +449,9 @@ ExecutionDriverContract
 - Future host integrations must define redaction, idempotency, and visibility before exposing action handoff payloads broadly.
 - x-action host bundles are read-side composition only. Host packages must still enforce authorization, redaction, command endpoint behavior, and side effects.
 - Host composition can generate action run IDs repeatedly if called repeatedly; callers must not treat composition as durable run persistence.
+- x-feedback Phase 1 is package-ready as a communication grammar foundation, but it has no real channel drivers, persistence, queues, retries, templates, provider callbacks, or host integration yet.
+- x-feedback must not own lifecycle truth. It can communicate state supplied by upstream packages but must not decide what happened or what should happen.
+- The null feedback driver is a baseline test seam and does not prove real provider delivery.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -427,15 +460,15 @@ ExecutionDriverContract
 
 ## Next Recommended Workstream
 
-Continue Wave 2B — x-action with the next authorized slice.
+Continue Wave 3 — x-feedback with the next authorized slice.
 
 Recommended actions:
 
-1. Request approval for the next x-action slice before proceeding.
-2. Choose the first explicit host integration target: x-change claim surfaces, x-feedback rendering, or Cockpit read models.
-3. Avoid persistence, routes, controllers, connectors, or package coupling until an explicit integration target is authorized.
-4. Keep host bundles, action runs, and journal handoff observational, not execution authority.
-5. Keep x-action as workflow continuation / CTA state; it must not execute money movement or mutate journal truth.
+1. Request approval for the next x-feedback slice before proceeding.
+2. Recommended next slice: Phase 2 — Feedback Event Mapping Baseline.
+3. Add generic feedback event DTOs, mapper contracts, and mapper registry tests.
+4. Avoid real provider delivery, persistence, queues, retries, routes, and host coupling until explicitly authorized.
+5. Keep x-feedback communication-only; it must not own lifecycle truth, execute actions, or mutate journal truth.
 
 ## x-journal Initial Intent
 
