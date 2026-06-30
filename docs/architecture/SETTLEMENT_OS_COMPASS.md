@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 3 — x-feedback  
-Current status: x-feedback Phase 10 Retry and Freshness Policy Baseline complete  
+Current status: x-feedback Phase 11 Channel Driver Architecture Backfill complete  
 Last updated: 2026-06-30
 
 | Wave | Workstream | Role | Status | Compass |
@@ -41,7 +41,7 @@ Last updated: 2026-06-30
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
-| 3 | x-feedback | Notification / communication layer | Phase 10 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
+| 3 | x-feedback | Notification / communication layer | Phase 11 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
 | 5 | x-campaign | Program / bulk distribution layer | Not started | Pending |
 
@@ -491,6 +491,19 @@ ExecutionDriverContract
   - no queued retries, persistence, provider SDKs, routes, jobs, or host coupling introduced
   - green focused Phase 10 suite: `7 passed, 33 assertions`
   - green x-feedback package suite: `65 passed, 357 assertions`
+- Completed x-feedback Phase 11 Channel Driver Architecture Backfill:
+  - reconciled implementation with the original x-feedback todo Phase 2 driver architecture expectations
+  - `FeedbackChannelHealthData`
+  - expanded `FeedbackChannelDriverContract` to `send`, `supports`, and `health`
+  - safe baseline drivers for `null`, `log`, `in_app`, `mail`, and `webhook`
+  - baseline driver config registration
+  - known-driver registry resolution coverage
+  - unknown-driver fail-closed coverage
+  - driver health and supports/capability coverage
+  - package-local handoff facts without provider side effects
+  - no provider SDKs, outbound webhook calls, SMTP assumptions, queues, routes, persistence, or host coupling introduced
+  - green focused Phase 11 suite: `18 passed, 86 assertions`
+  - green x-feedback package suite: `83 passed, 443 assertions`
 
 ## Current Architectural Decisions
 
@@ -577,6 +590,8 @@ ExecutionDriverContract
 - x-feedback Phase 8 journal receipt handoffs are portable facts only. They are not durable journal entries and do not make x-feedback depend on x-journal.
 - x-feedback Phase 9 provider callback mapping normalizes facts only. It must not be treated as webhook handling, provider verification, reconciliation, settlement, or lifecycle truth.
 - x-feedback Phase 10 retry/freshness decisions are advisory only. They do not queue retries, persist retry state, call providers, or mutate delivery records.
+- x-feedback Phase 11 baseline drivers are safe handoff drivers only. `mail` and `webhook` do not prove SMTP, HTTP, provider acceptance, or delivery confirmation.
+- `spatie/laravel-webhook-server` is not currently installed in x-feedback. Adding it requires explicit dependency approval.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -590,10 +605,10 @@ Continue Wave 3 — x-feedback with the next authorized slice.
 Recommended actions:
 
 1. Request approval for the next x-feedback slice before proceeding.
-2. Recommended next slice: Phase 11 — Channel Driver Architecture Backfill.
-3. Reconcile x-feedback with the original todo Phase 2 driver architecture expectation for `mail`, `webhook`, `in_app`, `log`, and `null` baseline drivers.
-4. Test and, if justified, extend the channel driver surface from `send` only to `send`, `health`, and `supports`.
-5. Avoid real provider delivery, provider SDKs, outbound webhook calls, persistence, queues, retries, routes, and host coupling until explicitly authorized.
+2. Recommended next slice: Phase 12 — Transport Driver Baseline for explicit `email`, `sms`, and `webhook` drivers.
+3. Decide whether `mail` remains an alias/compatibility key for `email`.
+4. Explicitly decide whether to add `spatie/laravel-webhook-server`; it is not currently installed in `x-feedback`.
+5. Avoid unapproved provider SDKs, outbound webhook calls, persistence, queues, retries, routes, and host coupling.
 6. Keep x-feedback communication-only; it must not own lifecycle truth, execute actions, or mutate journal truth.
 
 ## x-journal Initial Intent
