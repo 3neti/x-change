@@ -590,10 +590,11 @@ Continue Wave 3 — x-feedback with the next authorized slice.
 Recommended actions:
 
 1. Request approval for the next x-feedback slice before proceeding.
-2. Recommended next slice: Phase 11 — Preference and Suppression Policy Baseline.
-3. Define recipient/channel preference DTOs and evaluate suppression, opt-out, quiet-hours, and required-channel policy.
-4. Avoid real provider delivery, persistence, queues, retries, routes, and host coupling until explicitly authorized.
-5. Keep x-feedback communication-only; it must not own lifecycle truth, execute actions, or mutate journal truth.
+2. Recommended next slice: Phase 11 — Channel Driver Architecture Backfill.
+3. Reconcile x-feedback with the original todo Phase 2 driver architecture expectation for `mail`, `webhook`, `in_app`, `log`, and `null` baseline drivers.
+4. Test and, if justified, extend the channel driver surface from `send` only to `send`, `health`, and `supports`.
+5. Avoid real provider delivery, provider SDKs, outbound webhook calls, persistence, queues, retries, routes, and host coupling until explicitly authorized.
+6. Keep x-feedback communication-only; it must not own lifecycle truth, execute actions, or mutate journal truth.
 
 ## x-journal Initial Intent
 
