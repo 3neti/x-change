@@ -33,14 +33,14 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 2B — x-action  
-Current status: x-action Phase 6 Action Run Lifecycle and Journal Handoff Boundary complete  
+Current status: x-action Phase 7 Host Integration Seams complete  
 Last updated: 2026-06-30
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
-| 2B | x-action | Workflow continuation / CTA layer | Phase 6 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
+| 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Not started | Pending |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
 | 5 | x-campaign | Program / bulk distribution layer | Not started | Pending |
@@ -340,6 +340,16 @@ ExecutionDriverContract
   - uncorrelated legacy lifecycle event handoff preservation
   - no persistence, routes, models, execution runtime, or x-journal dependency introduced
   - green x-action package suite: `62 passed, 211 assertions`
+- Completed x-action Phase 7 Host Integration Seams:
+  - `ActionHostComposerContract`
+  - `ActionHostComposer`
+  - `ActionHostActionData`
+  - `ActionHostResultData`
+  - host-facing read-side bundles for resolved actions, target interpretations, action runs, rendered handoff payloads, and optional diagnostics
+  - composition aligned with resolver filtering
+  - composition remains separate from lifecycle recording side effects
+  - no x-change, x-feedback, x-journal, persistence, routes, controllers, or connector dependency introduced
+  - green x-action package suite: `68 passed, 240 assertions`
 
 ## Current Architectural Decisions
 
@@ -407,6 +417,8 @@ ExecutionDriverContract
 - Future durable action runs must define idempotency and x-journal handoff boundaries before production use.
 - x-action journal handoff payloads are descriptive only. They are not durable journal entries and do not make x-action depend on x-journal.
 - Future host integrations must define redaction, idempotency, and visibility before exposing action handoff payloads broadly.
+- x-action host bundles are read-side composition only. Host packages must still enforce authorization, redaction, command endpoint behavior, and side effects.
+- Host composition can generate action run IDs repeatedly if called repeatedly; callers must not treat composition as durable run persistence.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -420,9 +432,9 @@ Continue Wave 2B — x-action with the next authorized slice.
 Recommended actions:
 
 1. Request approval for the next x-action slice before proceeding.
-2. Recommended next slice: confirm the next x-action phase from the planning scaffold or explicit human instruction.
+2. Choose the first explicit host integration target: x-change claim surfaces, x-feedback rendering, or Cockpit read models.
 3. Avoid persistence, routes, controllers, connectors, or package coupling until an explicit integration target is authorized.
-4. Keep action runs and journal handoff observational, not execution authority.
+4. Keep host bundles, action runs, and journal handoff observational, not execution authority.
 5. Keep x-action as workflow continuation / CTA state; it must not execute money movement or mutate journal truth.
 
 ## x-journal Initial Intent
