@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 3 — x-feedback  
-Current status: x-feedback Phase 2 Feedback Event Mapping Baseline complete  
+Current status: x-feedback Phase 3 Template Resolution Baseline complete  
 Last updated: 2026-06-30
 
 | Wave | Workstream | Role | Status | Compass |
@@ -41,7 +41,7 @@ Last updated: 2026-06-30
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
-| 3 | x-feedback | Notification / communication layer | Phase 2 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
+| 3 | x-feedback | Notification / communication layer | Phase 3 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
 | 5 | x-campaign | Program / bulk distribution layer | Not started | Pending |
 
@@ -393,6 +393,19 @@ ExecutionDriverContract
   - unmapped event fail-closed behavior before delivery dispatch
   - no real provider delivery, persistence, queues, retries, routes, x-action, x-journal, or x-change dependency introduced
   - green x-feedback package suite: `15 passed, 71 assertions`
+- Completed x-feedback Phase 3 Template Resolution Baseline:
+  - `FeedbackTemplateData`
+  - `FeedbackTemplateRegistryContract`
+  - `FeedbackTemplateRegistry`
+  - `FeedbackTemplateResolver`
+  - `UnknownFeedbackTemplateException`
+  - package config template extension seam
+  - key, locale, profile, and channel-aware template resolution
+  - key-level default template fallback
+  - placeholder rendering from template defaults and intent variables
+  - immutable intent resolution behavior
+  - no real provider delivery, persistence, queues, retries, routes, or host coupling introduced
+  - green x-feedback package suite: `22 passed, 99 assertions`
 
 ## Current Architectural Decisions
 
@@ -467,6 +480,8 @@ ExecutionDriverContract
 - The null feedback driver is a baseline test seam and does not prove real provider delivery.
 - x-feedback event mappers must translate upstream event facts into intents; they must not infer workflow truth from voucher, claim, or settlement internals.
 - Unknown feedback events fail closed until hosts register explicit mappers.
+- x-feedback template resolution prepares message content only. It must not be treated as provider delivery, delivery tracking, lifecycle truth, or action execution.
+- Rendered template variables may contain sensitive beneficiary, claim, provider, or action context and will need redaction before broad operator preview.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -480,8 +495,8 @@ Continue Wave 3 — x-feedback with the next authorized slice.
 Recommended actions:
 
 1. Request approval for the next x-feedback slice before proceeding.
-2. Recommended next slice: Phase 3 — Template Resolution Baseline.
-3. Add template DTOs, registry/resolver contracts, locale/profile-aware resolution tests.
+2. Recommended next slice: Phase 4 — Channel Driver Selection and Delivery Planning Baseline.
+3. Add channel selection policy DTOs/contracts and delivery plan DTOs.
 4. Avoid real provider delivery, persistence, queues, retries, routes, and host coupling until explicitly authorized.
 5. Keep x-feedback communication-only; it must not own lifecycle truth, execute actions, or mutate journal truth.
 
