@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 3 — x-feedback  
-Current status: x-feedback Phase 17 Durable Delivery Records Baseline complete
+Current status: x-feedback Phase 18 In-App Notification Baseline complete
 Last updated: 2026-07-01
 
 | Wave | Workstream | Role | Status | Compass |
@@ -41,7 +41,7 @@ Last updated: 2026-07-01
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
-| 3 | x-feedback | Notification / communication layer | Phase 17 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
+| 3 | x-feedback | Notification / communication layer | Phase 18 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
 | 5 | x-campaign | Program / bulk distribution layer | Not started | Pending |
 
@@ -584,6 +584,19 @@ ExecutionDriverContract
   - no x-journal dependency, routes, controllers, queues, Cockpit pages, campaign orchestration, lifecycle mutation, or audit truth ownership introduced
   - green focused Phase 17 suite: `8 passed, 45 assertions`
   - green x-feedback package suite: `131 passed, 688 assertions`
+- Completed x-feedback Phase 18 In-App Notification Baseline:
+  - in-app notification state columns on `feedback_delivery_records`
+  - `FeedbackInAppNotificationData`
+  - `FeedbackInAppNotificationStateManagerContract`
+  - `FeedbackInAppNotificationStateManager`
+  - package-consumer binding for in-app notification state transitions
+  - default `unread` state for `in_app` delivery records
+  - read, unread, archived, and dismissed states
+  - mark-read, mark-unread, archive, dismiss, bulk mark-read, and recipient notification listing seams
+  - archived and dismissed records hidden from recipient listings by default
+  - no Cockpit pages, frontend components, HTTP routes/controllers, workflow mutation, lifecycle truth ownership, host package dependency, or journal truth mutation introduced
+  - green focused Phase 18 suite: `9 passed, 38 assertions`
+  - green x-feedback package suite: `140 passed, 726 assertions`
 
 ## Current Architectural Decisions
 
@@ -680,6 +693,8 @@ ExecutionDriverContract
 - x-feedback Phase 15 closes the initial feature-profile/template policy baseline; remaining functional specification gaps now begin with action and artifact rendering policy.
 - x-feedback Phase 16 closes the initial action/artifact rendering policy baseline; remaining functional specification gaps now begin with durable delivery records.
 - x-feedback Phase 17 closes the initial durable delivery records baseline; remaining functional specification gaps now begin with in-app notification state.
+- x-feedback Phase 18 closes the initial in-app notification state baseline; remaining functional specification gaps now begin with operational monitoring.
+- x-feedback in-app notification state is recipient presentation state only. It must not be treated as delivery truth, workflow truth, lifecycle truth, or journal truth.
 - x-feedback rendered actions are presentation of upstream CTA/action payloads only. They must not be treated as x-action capability resolution, workflow availability, authorization, or execution.
 - x-feedback rendered artifacts are presentation of upstream artifact references only. They must not become artifact storage, artifact lifecycle, artifact permissioning, or file generation.
 - x-feedback artifact references and action targets can expose sensitive URLs/context. Future API, operator, journal, and UI surfaces must apply redaction and authorization.
@@ -704,12 +719,11 @@ Continue Wave 3 — x-feedback with the next authorized slice.
 Recommended actions:
 
 1. Request approval for the next x-feedback slice before proceeding.
-2. Recommended next slice: Phase 18 — In-App Notification Baseline.
+2. Recommended next slice: Phase 19 — Operational Monitoring Baseline.
 3. Use the x-feedback functional specification as the primary checklist for remaining Wave 3 coverage.
-4. Build in-app notification state on top of the Phase 17 durable store.
-5. Keep Cockpit notification center pages, frontend components, workflow mutation, and lifecycle truth ownership out of Phase 18 unless explicitly authorized.
+4. Build read-only monitoring over channel health, delivery failures, and retry backlog visibility.
+5. Keep monitoring read-only; do not queue retries, call providers, mutate lifecycle state, or add Cockpit pages unless explicitly authorized.
 6. Planned subsequent x-feedback slices:
-   - Phase 19 — Operational Monitoring Baseline
    - Phase 20 — Delivery Console API Baseline
    - Phase 21 — Credential Resolution Baseline
    - Phase 22 — Journal Event Emission / Handoff Integration
