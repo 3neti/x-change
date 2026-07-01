@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 3 — x-feedback  
-Current status: x-feedback Phase 14 Notification Route Baseline complete  
+Current status: x-feedback Phase 15 Feature Profile and Template Policy Baseline complete  
 Last updated: 2026-07-01
 
 | Wave | Workstream | Role | Status | Compass |
@@ -41,7 +41,7 @@ Last updated: 2026-07-01
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
-| 3 | x-feedback | Notification / communication layer | Phase 14 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
+| 3 | x-feedback | Notification / communication layer | Phase 15 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
 | 5 | x-campaign | Program / bulk distribution layer | Not started | Pending |
 
@@ -542,6 +542,19 @@ ExecutionDriverContract
   - no database route book, contact package dependency, package routes, provider delivery changes, host package dependency, workflow execution, lifecycle truth ownership, or journal truth mutation introduced
   - green focused Phase 14 suite: `8 passed, 36 assertions`
   - green x-feedback package suite: `107 passed, 561 assertions`
+- Completed x-feedback Phase 15 Feature Profile and Template Policy Baseline:
+  - `FeedbackFeatureProfileData`
+  - `FeedbackTemplateResolutionPolicyData`
+  - `FeedbackTemplatePolicyResolverContract`
+  - `FeedbackTemplatePolicyResolver`
+  - config seam at `x-feedback.template_policy`
+  - feature-profile variables and fallback candidates
+  - explicit profile and channel fallback policy
+  - fail-closed mismatched profile/channel template selection
+  - resolved message metadata for selected feature profile, template profile, and template channel
+  - no template persistence, template authoring UI, approval/version workflow, host package dependency, workflow execution, lifecycle truth ownership, or journal truth mutation introduced
+  - green focused Phase 15 suite: `8 passed, 31 assertions`
+  - green x-feedback package suite: `115 passed, 592 assertions`
 
 ## Current Architectural Decisions
 
@@ -635,11 +648,14 @@ ExecutionDriverContract
 - x-feedback functional specification gaps after Phase 12 include notification preferences, notification routes, feature-profile hardening, action/artifact rendering policy, durable delivery records, in-app notification state, operational monitoring, delivery console APIs, credential resolution, journal event handoff strengthening, and reusable UI components.
 - x-feedback Phase 13 closes the initial notification preference/suppression baseline; remaining functional specification gaps now begin with notification routes.
 - x-feedback Phase 14 closes the initial notification route baseline; remaining functional specification gaps now begin with feature-profile/template policy hardening.
+- x-feedback Phase 15 closes the initial feature-profile/template policy baseline; remaining functional specification gaps now begin with action and artifact rendering policy.
 - x-feedback durable delivery records must remain communication delivery state. x-journal remains audit/system truth.
 - x-feedback delivery console APIs and UI components must expose communication facts only. Cockpit owns pages and broader operator workflows.
 - x-feedback credential resolution introduces secret-handling risk. Credentials must not leak into rendered messages, logs, delivery records, provider responses, or journal handoff payloads.
 - x-feedback suppression decisions are advisory pre-delivery facts. They must not be treated as workflow authorization, claim status, settlement state, or audit truth.
 - x-feedback notification routes may expose sensitive addresses and verification metadata. Future operator, journal, and UI surfaces must apply redaction.
+- x-feedback feature profiles are institutional presentation context, not languages, lifecycle state, workflow meaning, authorization, or campaign segmentation.
+- x-feedback template fallback policies can leak wrong institutional wording if configured too broadly; hosts must keep fallback chains explicit and narrow.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -653,12 +669,11 @@ Continue Wave 3 — x-feedback with the next authorized slice.
 Recommended actions:
 
 1. Request approval for the next x-feedback slice before proceeding.
-2. Recommended next slice: Phase 15 — Feature Profile and Template Policy Baseline.
+2. Recommended next slice: Phase 16 — Action and Artifact Rendering Policy Baseline.
 3. Use the x-feedback functional specification as the primary checklist for remaining Wave 3 coverage.
-4. Harden feature-profile semantics as institutional experiences and strengthen template resolver fallback behavior.
-5. Avoid template persistence, template authoring UI, approval/version workflow, lifecycle truth ownership, workflow execution, and host package coupling in Phase 15 unless explicitly authorized.
+4. Add action/artifact rendering policy seams and per-channel rendering decisions.
+5. Avoid artifact storage, x-action dependency, file generation, lifecycle truth ownership, workflow execution, and host package coupling in Phase 16 unless explicitly authorized.
 6. Planned subsequent x-feedback slices:
-   - Phase 16 — Action and Artifact Rendering Policy Baseline
    - Phase 17 — Durable Delivery Records Baseline
    - Phase 18 — In-App Notification Baseline
    - Phase 19 — Operational Monitoring Baseline
