@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 3 — x-feedback  
-Current status: x-feedback Phase 15 Feature Profile and Template Policy Baseline complete  
+Current status: x-feedback Phase 16 Action and Artifact Rendering Policy Baseline complete
 Last updated: 2026-07-01
 
 | Wave | Workstream | Role | Status | Compass |
@@ -41,7 +41,7 @@ Last updated: 2026-07-01
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
-| 3 | x-feedback | Notification / communication layer | Phase 15 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
+| 3 | x-feedback | Notification / communication layer | Phase 16 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
 | 5 | x-campaign | Program / bulk distribution layer | Not started | Pending |
 
@@ -555,6 +555,22 @@ ExecutionDriverContract
   - no template persistence, template authoring UI, approval/version workflow, host package dependency, workflow execution, lifecycle truth ownership, or journal truth mutation introduced
   - green focused Phase 15 suite: `8 passed, 31 assertions`
   - green x-feedback package suite: `115 passed, 592 assertions`
+- Completed x-feedback Phase 16 Action and Artifact Rendering Policy Baseline:
+  - `FeedbackActionRenderingPolicyData`
+  - `FeedbackArtifactRenderingPolicyData`
+  - `FeedbackRenderedActionData`
+  - `FeedbackRenderedArtifactData`
+  - `FeedbackRenderingDecisionData`
+  - `FeedbackActionArtifactRendererContract`
+  - `FeedbackActionArtifactRenderer`
+  - config seam at `x-feedback.rendering`
+  - package-consumer binding for supplied action/artifact rendering
+  - per-channel action presentation defaults for SMS links, webhook payloads, metadata-only channels, and rich-channel buttons
+  - per-channel artifact rendering strategies: `preview`, `link`, `hide`, and `attach`
+  - attachments disabled by default unless an explicit rendering policy enables them
+  - no x-action dependency, artifact storage, file generation, workflow execution, lifecycle truth ownership, host package dependency, or journal truth mutation introduced
+  - green focused Phase 16 suite: `8 passed, 51 assertions`
+  - green x-feedback package suite: `123 passed, 643 assertions`
 
 ## Current Architectural Decisions
 
@@ -649,6 +665,10 @@ ExecutionDriverContract
 - x-feedback Phase 13 closes the initial notification preference/suppression baseline; remaining functional specification gaps now begin with notification routes.
 - x-feedback Phase 14 closes the initial notification route baseline; remaining functional specification gaps now begin with feature-profile/template policy hardening.
 - x-feedback Phase 15 closes the initial feature-profile/template policy baseline; remaining functional specification gaps now begin with action and artifact rendering policy.
+- x-feedback Phase 16 closes the initial action/artifact rendering policy baseline; remaining functional specification gaps now begin with durable delivery records.
+- x-feedback rendered actions are presentation of upstream CTA/action payloads only. They must not be treated as x-action capability resolution, workflow availability, authorization, or execution.
+- x-feedback rendered artifacts are presentation of upstream artifact references only. They must not become artifact storage, artifact lifecycle, artifact permissioning, or file generation.
+- x-feedback artifact references and action targets can expose sensitive URLs/context. Future API, operator, journal, and UI surfaces must apply redaction and authorization.
 - x-feedback durable delivery records must remain communication delivery state. x-journal remains audit/system truth.
 - x-feedback delivery console APIs and UI components must expose communication facts only. Cockpit owns pages and broader operator workflows.
 - x-feedback credential resolution introduces secret-handling risk. Credentials must not leak into rendered messages, logs, delivery records, provider responses, or journal handoff payloads.
@@ -669,12 +689,11 @@ Continue Wave 3 — x-feedback with the next authorized slice.
 Recommended actions:
 
 1. Request approval for the next x-feedback slice before proceeding.
-2. Recommended next slice: Phase 16 — Action and Artifact Rendering Policy Baseline.
+2. Recommended next slice: Phase 17 — Durable Delivery Records Baseline.
 3. Use the x-feedback functional specification as the primary checklist for remaining Wave 3 coverage.
-4. Add action/artifact rendering policy seams and per-channel rendering decisions.
-5. Avoid artifact storage, x-action dependency, file generation, lifecycle truth ownership, workflow execution, and host package coupling in Phase 16 unless explicitly authorized.
+4. Define durable communication delivery records without replacing x-journal audit truth.
+5. Keep campaign orchestration, Cockpit pages, business lifecycle mutation, and audit truth ownership out of Phase 17 unless explicitly authorized.
 6. Planned subsequent x-feedback slices:
-   - Phase 17 — Durable Delivery Records Baseline
    - Phase 18 — In-App Notification Baseline
    - Phase 19 — Operational Monitoring Baseline
    - Phase 20 — Delivery Console API Baseline
