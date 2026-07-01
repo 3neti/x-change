@@ -33,15 +33,15 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 3 — x-feedback  
-Current status: x-feedback Phase 13 Preference and Suppression Policy Baseline complete  
-Last updated: 2026-06-30
+Current status: x-feedback Phase 14 Notification Route Baseline complete  
+Last updated: 2026-07-01
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
-| 3 | x-feedback | Notification / communication layer | Phase 13 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
+| 3 | x-feedback | Notification / communication layer | Phase 14 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
 | 4 | x-change Cockpit | Operator shell | Not started | Pending |
 | 5 | x-campaign | Program / bulk distribution layer | Not started | Pending |
 
@@ -529,6 +529,19 @@ ExecutionDriverContract
   - no persistence, routes, host package dependency, workflow execution, lifecycle truth ownership, or journal truth mutation introduced
   - green focused Phase 13 suite: `8 passed, 40 assertions`
   - green x-feedback package suite: `99 passed, 525 assertions`
+- Completed x-feedback Phase 14 Notification Route Baseline:
+  - `FeedbackNotificationRouteData`
+  - `FeedbackNotificationRouteResolverContract`
+  - `FeedbackNotificationRouteResolver`
+  - config seam at `x-feedback.notification_routes`
+  - recipient route data normalization
+  - config-backed route resolution without a database route book
+  - deterministic route ordering by primary flag, verification, priority, and address
+  - delivery planning composition with normalized route metadata
+  - legacy recipient field fallback while hosts migrate to `NotificationRoute`
+  - no database route book, contact package dependency, package routes, provider delivery changes, host package dependency, workflow execution, lifecycle truth ownership, or journal truth mutation introduced
+  - green focused Phase 14 suite: `8 passed, 36 assertions`
+  - green x-feedback package suite: `107 passed, 561 assertions`
 
 ## Current Architectural Decisions
 
@@ -621,10 +634,12 @@ ExecutionDriverContract
 - x-feedback remaining work is now prioritized against `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-feedback/x-feedback_functional_specifications.md`.
 - x-feedback functional specification gaps after Phase 12 include notification preferences, notification routes, feature-profile hardening, action/artifact rendering policy, durable delivery records, in-app notification state, operational monitoring, delivery console APIs, credential resolution, journal event handoff strengthening, and reusable UI components.
 - x-feedback Phase 13 closes the initial notification preference/suppression baseline; remaining functional specification gaps now begin with notification routes.
+- x-feedback Phase 14 closes the initial notification route baseline; remaining functional specification gaps now begin with feature-profile/template policy hardening.
 - x-feedback durable delivery records must remain communication delivery state. x-journal remains audit/system truth.
 - x-feedback delivery console APIs and UI components must expose communication facts only. Cockpit owns pages and broader operator workflows.
 - x-feedback credential resolution introduces secret-handling risk. Credentials must not leak into rendered messages, logs, delivery records, provider responses, or journal handoff payloads.
 - x-feedback suppression decisions are advisory pre-delivery facts. They must not be treated as workflow authorization, claim status, settlement state, or audit truth.
+- x-feedback notification routes may expose sensitive addresses and verification metadata. Future operator, journal, and UI surfaces must apply redaction.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -638,12 +653,11 @@ Continue Wave 3 — x-feedback with the next authorized slice.
 Recommended actions:
 
 1. Request approval for the next x-feedback slice before proceeding.
-2. Recommended next slice: Phase 14 — Notification Route Baseline.
+2. Recommended next slice: Phase 15 — Feature Profile and Template Policy Baseline.
 3. Use the x-feedback functional specification as the primary checklist for remaining Wave 3 coverage.
-4. Add notification route DTOs and a route resolver seam so recipients do not need hardcoded channel fields.
-5. Avoid database route books, contact package dependency, host route synchronization, provider delivery changes, lifecycle truth ownership, workflow execution, and journal truth mutation in Phase 14 unless explicitly authorized.
+4. Harden feature-profile semantics as institutional experiences and strengthen template resolver fallback behavior.
+5. Avoid template persistence, template authoring UI, approval/version workflow, lifecycle truth ownership, workflow execution, and host package coupling in Phase 15 unless explicitly authorized.
 6. Planned subsequent x-feedback slices:
-   - Phase 15 — Feature Profile and Template Policy Baseline
    - Phase 16 — Action and Artifact Rendering Policy Baseline
    - Phase 17 — Durable Delivery Records Baseline
    - Phase 18 — In-App Notification Baseline
