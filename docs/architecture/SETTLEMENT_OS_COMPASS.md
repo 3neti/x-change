@@ -696,6 +696,8 @@ ExecutionDriverContract
 - x-feedback Phase 18 closes the initial in-app notification state baseline; remaining functional specification gaps now begin with operational monitoring.
 - x-feedback Phase 19 closes the initial operational monitoring baseline; remaining functional specification gaps now begin with delivery console APIs.
 - x-feedback operational monitoring is read-only visibility over driver health, delivery failures, and retry backlog. It must not queue retries, call delivery providers, mutate lifecycle state, own Cockpit pages/widgets, or become journal truth.
+- x-feedback Phase 20 closes the initial delivery console API baseline; remaining functional specification gaps now begin with credential resolution.
+- x-feedback delivery console APIs expose communication delivery status, delivery history, redacted provider responses, and retry request handoff facts only. They must not own Cockpit pages, HTTP route exposure, retry execution, workflow authorization, lifecycle truth, or journal truth.
 - x-feedback in-app notification state is recipient presentation state only. It must not be treated as delivery truth, workflow truth, lifecycle truth, or journal truth.
 - x-feedback rendered actions are presentation of upstream CTA/action payloads only. They must not be treated as x-action capability resolution, workflow availability, authorization, or execution.
 - x-feedback rendered artifacts are presentation of upstream artifact references only. They must not become artifact storage, artifact lifecycle, artifact permissioning, or file generation.
@@ -721,13 +723,12 @@ Continue Wave 3 — x-feedback with the next authorized slice.
 Recommended actions:
 
 1. Request approval for the next x-feedback slice before proceeding.
-2. Completed slice: Phase 19 — Operational Monitoring Baseline.
+2. Completed slice: Phase 20 — Delivery Console API Baseline.
 3. Use the x-feedback functional specification as the primary checklist for remaining Wave 3 coverage.
-4. Built read-only monitoring over channel health, delivery failures, and retry backlog visibility.
-5. Kept monitoring read-only; it does not queue retries, call delivery providers, mutate lifecycle state, or add Cockpit pages/widgets.
-6. Recommended next slice: Phase 20 — Delivery Console API Baseline.
+4. Built package-level read/API contracts over delivery status, delivery history, provider responses, and retry request handoff facts.
+5. Kept delivery console surfaces communication-only; they do not queue retries, call delivery providers, mutate lifecycle state, expose HTTP routes, or add Cockpit pages/widgets.
+6. Recommended next slice: Phase 21 — Credential Resolution Baseline.
 7. Planned subsequent x-feedback slices:
-   - Phase 20 — Delivery Console API Baseline
    - Phase 21 — Credential Resolution Baseline
    - Phase 22 — Journal Event Emission / Handoff Integration
    - Phase 23 — UI Component Baseline
