@@ -700,6 +700,8 @@ ExecutionDriverContract
 - x-feedback delivery console APIs expose communication delivery status, delivery history, redacted provider responses, and retry request handoff facts only. They must not own Cockpit pages, HTTP route exposure, retry execution, workflow authorization, lifecycle truth, or journal truth.
 - x-feedback Phase 21 closes the initial credential resolution baseline; remaining functional specification gaps now begin with journal event emission/handoff integration.
 - x-feedback credential resolution is a typed lookup seam over owner/provider/channel context. It must not become credential storage, tenant ownership, encryption-at-rest policy, credential rotation, provider execution, rendered-message content, delivery-record content, provider-response content, or journal payload content.
+- x-feedback Phase 22 closes the initial journal event emission/handoff baseline; remaining functional specification gaps now begin with reusable UI component baseline.
+- x-feedback journal event handoffs expose `feedback.created`, `feedback.sent`, `feedback.failed`, and `feedback.expired` communication facts only. They must not persist to x-journal, dispatch Laravel events/listeners, queue jobs, own audit history, own lifecycle truth, or mutate delivery records.
 - x-feedback in-app notification state is recipient presentation state only. It must not be treated as delivery truth, workflow truth, lifecycle truth, or journal truth.
 - x-feedback rendered actions are presentation of upstream CTA/action payloads only. They must not be treated as x-action capability resolution, workflow availability, authorization, or execution.
 - x-feedback rendered artifacts are presentation of upstream artifact references only. They must not become artifact storage, artifact lifecycle, artifact permissioning, or file generation.
@@ -725,13 +727,12 @@ Continue Wave 3 — x-feedback with the next authorized slice.
 Recommended actions:
 
 1. Request approval for the next x-feedback slice before proceeding.
-2. Completed slice: Phase 21 — Credential Resolution Baseline.
+2. Completed slice: Phase 22 — Journal Event Emission / Handoff Integration.
 3. Use the x-feedback functional specification as the primary checklist for remaining Wave 3 coverage.
-4. Built typed credential request/result/scope DTOs and a config-backed credential resolver seam.
-5. Kept credential resolution lookup-only; it does not store secrets, depend on tenant packages, call providers, render messages, write delivery records, or emit journal payloads.
-6. Recommended next slice: Phase 22 — Journal Event Emission / Handoff Integration.
+4. Built functional journal event handoff facts for `feedback.created`, `feedback.sent`, `feedback.failed`, and `feedback.expired`.
+5. Kept journal event handoff mapper journal-ready only; it does not persist to x-journal, dispatch Laravel events/listeners, queue jobs, own audit history, or mutate delivery records.
+6. Recommended next slice: Phase 23 — UI Component Baseline.
 7. Planned subsequent x-feedback slices:
-   - Phase 22 — Journal Event Emission / Handoff Integration
    - Phase 23 — UI Component Baseline
 8. Keep x-feedback communication-only; it must not own lifecycle truth, execute actions, own Cockpit pages, or mutate journal truth.
 
