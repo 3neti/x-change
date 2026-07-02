@@ -19,6 +19,7 @@ describe('formFlow field type support', () => {
             'number',
             'select',
             'textarea',
+            'slice_selector',
         ]);
     });
 

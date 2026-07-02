@@ -13,6 +13,7 @@ describe('form flow renderer components', () => {
             'DateFieldRenderer',
             'NumberFieldRenderer',
             'SelectFieldRenderer',
+            'SliceSelectorFieldRenderer',
             'TextareaFieldRenderer',
             'UnsupportedFieldRenderer',
         ]);
