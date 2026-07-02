@@ -702,6 +702,8 @@ ExecutionDriverContract
 - x-feedback credential resolution is a typed lookup seam over owner/provider/channel context. It must not become credential storage, tenant ownership, encryption-at-rest policy, credential rotation, provider execution, rendered-message content, delivery-record content, provider-response content, or journal payload content.
 - x-feedback Phase 22 closes the initial journal event emission/handoff baseline; remaining functional specification gaps now begin with reusable UI component baseline.
 - x-feedback journal event handoffs expose `feedback.created`, `feedback.sent`, `feedback.failed`, and `feedback.expired` communication facts only. They must not persist to x-journal, dispatch Laravel events/listeners, queue jobs, own audit history, own lifecycle truth, or mutate delivery records.
+- x-feedback Phase 23 closes the initial reusable UI component baseline; Wave 3 x-feedback baseline coverage is complete through the functional-specification slices currently planned.
+- x-feedback UI component view models expose communication presentation facts only. They must not own Cockpit pages, navigation, authorization, Vue/Inertia/Blade rendering, frontend assets, workflow execution, lifecycle truth, or host package behavior.
 - x-feedback in-app notification state is recipient presentation state only. It must not be treated as delivery truth, workflow truth, lifecycle truth, or journal truth.
 - x-feedback rendered actions are presentation of upstream CTA/action payloads only. They must not be treated as x-action capability resolution, workflow availability, authorization, or execution.
 - x-feedback rendered artifacts are presentation of upstream artifact references only. They must not become artifact storage, artifact lifecycle, artifact permissioning, or file generation.
@@ -722,19 +724,17 @@ ExecutionDriverContract
 
 ## Next Recommended Workstream
 
-Continue Wave 3 — x-feedback with the next authorized slice.
+Review Wave 3 — x-feedback baseline and choose the next authorized workstream.
 
 Recommended actions:
 
-1. Request approval for the next x-feedback slice before proceeding.
-2. Completed slice: Phase 22 — Journal Event Emission / Handoff Integration.
-3. Use the x-feedback functional specification as the primary checklist for remaining Wave 3 coverage.
-4. Built functional journal event handoff facts for `feedback.created`, `feedback.sent`, `feedback.failed`, and `feedback.expired`.
-5. Kept journal event handoff mapper journal-ready only; it does not persist to x-journal, dispatch Laravel events/listeners, queue jobs, own audit history, or mutate delivery records.
-6. Recommended next slice: Phase 23 — UI Component Baseline.
-7. Planned subsequent x-feedback slices:
-   - Phase 23 — UI Component Baseline
-8. Keep x-feedback communication-only; it must not own lifecycle truth, execute actions, own Cockpit pages, or mutate journal truth.
+1. Request approval before proceeding to another slice or workstream.
+2. Completed slice: Phase 23 — UI Component Baseline.
+3. Wave 3 x-feedback planned baseline coverage is complete through Phase 23.
+4. Review x-feedback against the functional specification before deciding whether to add hardening/host integration work.
+5. Decide whether the next authorized work is x-feedback hardening/host integration or transition to Wave 4 — x-change Cockpit.
+6. Do not add Cockpit pages, navigation, authorization, frontend assets, or host integrations without explicit approval.
+7. Keep x-feedback communication-only; it must not own lifecycle truth, execute actions, own Cockpit pages, or mutate journal truth.
 
 ## x-journal Initial Intent
 
