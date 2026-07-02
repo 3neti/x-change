@@ -716,6 +716,10 @@ ExecutionDriverContract
 - x-feedback notification routes may expose sensitive addresses and verification metadata. Future operator, journal, and UI surfaces must apply redaction.
 - x-feedback feature profiles are institutional presentation context, not languages, lifecycle state, workflow meaning, authorization, or campaign segmentation.
 - x-feedback template fallback policies can leak wrong institutional wording if configured too broadly; hosts must keep fallback chains explicit and narrow.
+- x-change Cockpit Slice 0 is complete as a discovery/documentation slice under `packages/x-change/docs/ui-cockpit`.
+- Cockpit starts from the current x-change resources and tests. `redeem-x` is prior art only and must not override the current x-change Claim UX.
+- Cockpit must preserve the Claim Journey, Paynamics OTP approval UX, rider message UX, splash/redirect UX, and existing frontend-tested claim flow.
+- Cockpit can later consume Execution Engine, x-journal, x-action, and x-feedback read-side seams, but it must not invent execution, journal, action, feedback, settlement, or campaign behavior.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -724,17 +728,17 @@ ExecutionDriverContract
 
 ## Next Recommended Workstream
 
-Review Wave 3 — x-feedback baseline and choose the next authorized workstream.
+Continue Wave 4 — x-change Cockpit with the next authorized slice.
 
 Recommended actions:
 
-1. Request approval before proceeding to another slice or workstream.
-2. Completed slice: Phase 23 — UI Component Baseline.
-3. Wave 3 x-feedback planned baseline coverage is complete through Phase 23.
-4. Review x-feedback against the functional specification before deciding whether to add hardening/host integration work.
-5. Decide whether the next authorized work is x-feedback hardening/host integration or transition to Wave 4 — x-change Cockpit.
-6. Do not add Cockpit pages, navigation, authorization, frontend assets, or host integrations without explicit approval.
-7. Keep x-feedback communication-only; it must not own lifecycle truth, execute actions, own Cockpit pages, or mutate journal truth.
+1. Request approval before proceeding to another slice.
+2. Completed slice: Cockpit Slice 0 — Discovery and Compass.
+3. Read the Cockpit compass before continuing: `packages/x-change/docs/ui-cockpit/COMPASS.md`.
+4. Recommended next slice: Cockpit Slice 1 — Cockpit Namespace and Shell.
+5. Slice 1 should add a Cockpit namespace, layout primitives, global header, sidebar navigation, balance HUD placeholder, dashboard placeholder, and Vitest coverage.
+6. Do not add real execution, journal, action, feedback, campaign, provider, or money-movement behavior in the shell slice.
+7. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
 ## x-journal Initial Intent
 
