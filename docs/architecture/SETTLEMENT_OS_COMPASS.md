@@ -722,6 +722,7 @@ ExecutionDriverContract
 - Cockpit can later consume Execution Engine, x-journal, x-action, and x-feedback read-side seams, but it must not invent execution, journal, action, feedback, settlement, or campaign behavior.
 - x-change Cockpit Slice 1 establishes the frontend Cockpit namespace and shell primitives under `resources/js/cockpit` without adding routes, controllers, backend integration, or domain side effects.
 - Cockpit Slice 1 includes a global header, sidebar navigation, balance HUD placeholder, layout, dashboard shell, navigation descriptors, and focused Vitest coverage.
+- x-change Cockpit Slice 2 adds read-only dashboard foundation widgets for liquidity, balance cards, redemption pipeline, risk/expiry, and recent activity without backend integration or domain side effects.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -735,11 +736,11 @@ Continue Wave 4 — x-change Cockpit with the next authorized slice.
 Recommended actions:
 
 1. Request approval before proceeding to another slice.
-2. Completed slice: Cockpit Slice 1 — Cockpit Namespace and Shell.
+2. Completed slice: Cockpit Slice 2 — Dashboard Foundation.
 3. Read the Cockpit compass before continuing: `packages/x-change/docs/ui-cockpit/COMPASS.md`.
-4. Recommended next slice: Cockpit Slice 2 — Dashboard Foundation.
-5. Slice 2 should add read-only dashboard foundation widgets: liquidity hero, balance cards, redemption pipeline placeholder, risk/expiry placeholder, and recent activity placeholder.
-6. Do not add real execution, journal, action, feedback, campaign, provider, or money-movement behavior in the dashboard foundation slice.
+4. Recommended next slice: Cockpit Slice 3 — Quick Generate Foundation.
+5. Slice 3 should add template selector, runtime input, pricing/funding summary, and generate-action placeholders.
+6. Do not add real voucher issuance, execution, journal, action, feedback, campaign, provider, or money-movement behavior in the Quick Generate foundation slice.
 7. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
 ## x-journal Initial Intent

@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Slice 1 — Cockpit Namespace and Shell  
+Current slice: Slice 2 — Dashboard Foundation  
 Status: Complete  
 Last updated: 2026-07-03
 
@@ -30,6 +30,15 @@ Last updated: 2026-07-03
   - `resources/js/cockpit/pages/Dashboard.vue`
 - Added Slice 1 frontend coverage under `tests/frontend/cockpit/`.
 - Preserved existing Claim UI resources and tests.
+- Completed Slice 2 Dashboard Foundation:
+  - `resources/js/cockpit/dashboardDefaults.ts`
+  - `resources/js/cockpit/components/CockpitDashboardMetricCard.vue`
+  - `resources/js/cockpit/components/CockpitLiquidityHero.vue`
+  - `resources/js/cockpit/components/CockpitRedemptionPipeline.vue`
+  - `resources/js/cockpit/components/CockpitRiskExpiryPanel.vue`
+  - `resources/js/cockpit/components/CockpitRecentActivityPanel.vue`
+- Replaced the broad dashboard shell placeholders with read-only dashboard foundation widgets.
+- Added Slice 2 frontend coverage for widget rendering, placeholder/empty read-model states, and no-side-effect boundaries.
 
 ## In Progress
 
@@ -37,16 +46,16 @@ No implementation slice is in progress.
 
 ## Next
 
-Recommended next slice: Slice 2 — Dashboard foundation.
+Recommended next slice: Slice 3 — Quick Generate foundation.
 
 Scope should remain foundation-only:
 
-- liquidity hero placeholder
-- balance cards
-- redemption pipeline placeholder
-- risk/expiry placeholder
-- recent activity placeholder
-- Vitest coverage for rendering, empty states, and no side effects
+- template selector placeholder
+- runtime input area placeholder
+- pricing/funding summary placeholder
+- generate action placeholder
+- no real money movement unless existing services are safely wired in a later approved slice
+- Vitest coverage for rendering and no side effects
 - preserve all existing Claim UI tests
 
 ## Risks
@@ -71,6 +80,7 @@ Scope should remain foundation-only:
 - Cockpit UI tests should live under `tests/frontend/cockpit/`.
 - Slice 1 uses the explicit `resources/js/cockpit/` namespace.
 - Slice 1 does not add Laravel routes/controllers. It creates importable frontend shell primitives only.
+- Slice 2 keeps dashboard data as supplied read-model placeholders only. It does not fetch wallet/provider data, write journal entries, resolve actions, send feedback, call providers, or move money.
 
 ## Open Questions
 
@@ -93,3 +103,5 @@ Scope should remain foundation-only:
 - No Cockpit production code or frontend code was changed in Slice 0.
 - Slice 1 focused frontend result: `3 passed, 7 tests`.
 - Slice 1 full frontend result: `62 passed, 388 tests`.
+- Slice 2 focused frontend result: `4 passed, 12 tests`.
+- Slice 2 full frontend result: `63 passed, 393 tests`.

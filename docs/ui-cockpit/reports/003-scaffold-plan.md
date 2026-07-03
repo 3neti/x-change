@@ -48,7 +48,7 @@ Guardrails:
 
 ## Slice 2 — Dashboard Foundation
 
-Status: recommended next.
+Status: complete.
 
 Goal: create a read-only dashboard composition over placeholders and existing safe summaries.
 
@@ -67,6 +67,8 @@ Tests:
 - no provider calls or money movement
 
 ## Slice 3 — Quick Generate Foundation
+
+Status: recommended next.
 
 Goal: create a template-first operator issuance shell without changing issuance semantics.
 
