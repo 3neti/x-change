@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Slice 8 — Operator Authorization and Redaction Baseline
+Current slice: Slice 9 — Read Model Contract Baselines
 Status: Complete
 Last updated: 2026-07-03
 
@@ -97,6 +97,18 @@ Last updated: 2026-07-03
   - `src/Http/Controllers/Web/Cockpit/CockpitDistributionWorkspacePageController.php`
 - Added Slice 8 PHP coverage for authenticated Cockpit routes exposing explicit read-only authorization props, redaction metadata, voucher route context, and no sensitive payload loading.
 - Added Slice 8 unit coverage for recursive redaction, original-payload immutability, caller-supplied sensitive keys, and redactor contract binding.
+- Completed Slice 9 Read Model Contract Baselines:
+  - `src/Contracts/CockpitReadModelProviderContract.php`
+  - `src/Data/Cockpit/CockpitReadModelQueryData.php`
+  - `src/Data/Cockpit/CockpitReadModelBundleData.php`
+  - `src/Data/Cockpit/CockpitVoucherReadModelData.php`
+  - `src/Data/Cockpit/CockpitExecutionReadModelData.php`
+  - `src/Data/Cockpit/CockpitJournalReadModelData.php`
+  - `src/Data/Cockpit/CockpitActionReadModelData.php`
+  - `src/Data/Cockpit/CockpitFeedbackReadModelData.php`
+  - `src/Services/Cockpit/NullCockpitReadModelProvider.php`
+  - `src/Providers/XChangeServiceProvider.php`
+- Added Slice 9 unit coverage for query DTO shape, empty not-wired bundle defaults, serialized placeholder payloads, provider binding, and direct dependency boundary protection.
 
 ## In Progress
 
@@ -104,13 +116,13 @@ No implementation slice is in progress.
 
 ## Next
 
-Recommended next slice: Slice 9 — Read Model Contract Baselines.
+Recommended next slice: Slice 10 — Read Model Presentation Wiring.
 
 Scope should remain foundation-only:
 
-- execution, journal, action, feedback, and voucher read-model DTO/contract baselines
-- host-facing presentation contracts that require authorization/redaction before payload exposure
-- tests proving read-model contracts are side-effect-free
+- compose the null Cockpit read-model bundle into selected authenticated Inertia page props
+- keep all read models in `not_wired` state until real package adapters are approved
+- prove route responses still avoid broad payload exposure
 - no live cross-package calls unless explicitly approved
 - no broad exposure of journal, action, feedback, provider, or voucher payloads
 - no mutation endpoints, execution, journal writes, feedback delivery, provider calls, campaign behavior, or money movement
@@ -127,6 +139,7 @@ Scope should remain foundation-only:
 - Voucher execution results have `execution_id`, but execution persistence and host wiring remain deferred.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Slice 8 exposes static read-only authorization props only. Real operator roles, permissions, policies, and tenant scoping remain future host integration work.
+- Slice 9 introduces not-wired read-model contracts only. Future adapters must still define authorization, redaction, idempotency, pagination, and package-specific failure semantics before exposing real state.
 
 ## Decisions
 
@@ -146,12 +159,14 @@ Scope should remain foundation-only:
 - Slice 6 keeps Distribution Workspace as a read-only planning shell. It does not dispatch distribution, send feedback, create campaigns, mutate vouchers, execute drivers, write journal entries, call providers, or move money.
 - Slice 7 exposes existing Cockpit pages through authenticated GET-only Inertia routes under `/x/cockpit`. It does not add JSON read APIs, mutation routes, domain read-model calls, execution, journal writes, feedback delivery, provider calls, campaign behavior, or money movement.
 - Slice 8 keeps Cockpit authorization/redaction as a boundary baseline. It exposes explicit read-only `can` props and redaction metadata, adds a default redactor contract, and avoids loading voucher, journal, action, feedback, or provider payloads until authorized read models exist.
+- Slice 9 defines Cockpit read-model DTOs and the provider contract for voucher, execution, journal, action, and feedback views. The default provider is a null/not-wired implementation and does not call voucher, x-journal, x-action, x-feedback, providers, wallets, or persistence.
 
 ## Open Questions
 
 - Which host API/read-model contracts should expose execution, journal, action, and feedback facts to Cockpit without leaking sensitive payloads.
 - How static read-only Cockpit permissions should evolve into real operator roles, policies, tenant scoping, and permission checks.
 - Whether existing `/x/dashboard` should be promoted into Cockpit or left as a compatibility route while Cockpit grows under a new route namespace.
+- Which Cockpit page should receive the first real not-wired read-model bundle: Voucher Detail, Pay Code Explorer, or Dashboard.
 
 ## Test Status
 
@@ -185,3 +200,7 @@ Scope should remain foundation-only:
 - Slice 8 focused PHP route result: `13 passed, 73 assertions`.
 - Slice 8 focused redactor result: `4 passed, 13 assertions`.
 - Slice 8 full package Pest result: `987 passed, 5 skipped, 5077 assertions`.
+- Slice 9 focused read-model result: `5 passed, 22 assertions`.
+- Slice 9 focused route regression result: `13 passed, 73 assertions`.
+- Slice 9 focused redactor regression result: `4 passed, 13 assertions`.
+- Slice 9 full package Pest result: `992 passed, 5 skipped, 5099 assertions`.

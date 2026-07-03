@@ -57,6 +57,7 @@ use LBHurtado\XChange\Contracts\ClaimApprovalWorkflowStoreContract;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
 use LBHurtado\XChange\Contracts\ClaimOtpChallengeContract;
 use LBHurtado\XChange\Contracts\ClaimOtpVerificationContract;
+use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Contracts\CockpitRedactorContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
@@ -115,6 +116,7 @@ use LBHurtado\XChange\Listeners\RecordFailedVoucherDisbursement;
 use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\CacheClaimApprovalWorkflowStore;
+use LBHurtado\XChange\Services\Cockpit\NullCockpitReadModelProvider;
 use LBHurtado\XChange\Services\ConfigProviderTopologyResolver;
 use LBHurtado\XChange\Services\ConfigVendorRegistry;
 use LBHurtado\XChange\Services\DefaultApprovalWorkflowService;
@@ -240,6 +242,7 @@ class XChangeServiceProvider extends ServiceProvider
             return $app->make($service);
         });
 
+        $this->app->singleton(CockpitReadModelProviderContract::class, NullCockpitReadModelProvider::class);
         $this->app->singleton(CockpitRedactorContract::class, DefaultCockpitRedactor::class);
 
         $this->app->bind(WithdrawalValidationContract::class, function ($app) {

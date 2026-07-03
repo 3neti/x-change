@@ -180,15 +180,31 @@ No journal, action, feedback, provider, voucher, or execution payloads are expos
 
 ## Slice 9 — Read Model Contract Baselines
 
+Status: complete.
+
+Implemented:
+
+- `CockpitReadModelProviderContract`
+- `CockpitReadModelQueryData`
+- `CockpitReadModelBundleData`
+- typed placeholder DTOs for voucher, execution, journal, actions, and feedback
+- `NullCockpitReadModelProvider`
+- service-provider binding for the null provider
+- tests proving the default read-model contract is side-effect-free, not wired, and free of direct x-journal/x-action/x-feedback/voucher model dependencies
+
+No live cross-package calls, route/controller read-model wiring, payload exposure, mutation endpoints, execution, journal writes, feedback delivery, provider calls, campaign behavior, or money movement were added.
+
+## Slice 10 — Read Model Presentation Wiring
+
 Status: recommended next.
 
 Candidate scope:
 
-- execution, journal, action, feedback, and voucher read-model DTO/contract baselines
-- host-facing presentation contracts that compose with authorization/redaction
-- tests proving read-model contracts are side-effect-free
+- compose the null Cockpit read-model bundle into selected authenticated Inertia page props
+- keep all read models in `not_wired` state until real adapters are approved
+- prove route responses still avoid broad payload exposure
 - no live cross-package calls unless explicitly approved
-- no broad payload exposure before redaction and authorization are applied
+- no mutation endpoints or domain side effects
 
 ## Verification Plan
 
