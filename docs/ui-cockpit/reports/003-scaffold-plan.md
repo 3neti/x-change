@@ -417,13 +417,26 @@ Slice 24 added a read-only mutation handoff plan model to the Quick Generate rea
 
 ## Slice 25 — Quick Generate Mutation Preconditions Review
 
-Status: recommended next.
+Status: complete.
 
-Candidate scope:
+Implemented:
 
 - review whether the Quick Generate precondition gates should stay blocked or graduate toward real mutation readiness
 - identify the minimum production path required before a Cockpit mutation route can be proposed
 - decide whether the next slice should remain read-only or explicitly request approval for mutation-route scaffolding
+- no mutation endpoints, voucher issuance, request validation execution, payload persistence, execution, journal writes, action execution, feedback delivery, provider calls, wallet access, campaign behavior, or money movement unless explicitly authorized
+
+Slice 25 added a read-only mutation preconditions review model to the Quick Generate read model and a visible mutation preconditions review panel. The review recommendation is `remain-read-only`; authorization, pricing, funding, idempotency, validation/redaction, handoff, and operator response readiness remain blocked.
+
+## Slice 26 — Quick Generate Mutation Authorization Decision Point
+
+Status: recommended next.
+
+Candidate scope:
+
+- request explicit human approval before scaffolding any mutation route
+- if approval is not granted, continue read-only hardening around Quick Generate operator readiness
+- if approval is granted, define the smallest possible mutation-route contract before implementation
 - no mutation endpoints, voucher issuance, request validation execution, payload persistence, execution, journal writes, action execution, feedback delivery, provider calls, wallet access, campaign behavior, or money movement unless explicitly authorized
 
 ## Verification Plan

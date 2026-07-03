@@ -25,6 +25,8 @@ use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateIdempotencyGateCheckData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateIdempotencyGateData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateMutationHandoffPlanData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateMutationHandoffPlanStepData;
+use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateMutationPreconditionsReviewData;
+use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateMutationPreconditionsReviewItemData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGeneratePricingGateCheckData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGeneratePricingGateData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGeneratePricingSummaryData;
@@ -540,6 +542,70 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                         'journal_payload',
                         'action_payload',
                         'feedback_payload',
+                        'side_effect_result',
+                        'raw_payload',
+                    ],
+                ],
+            ),
+            mutation_preconditions_review: new CockpitQuickGenerateMutationPreconditionsReviewData(
+                status: 'blocked',
+                recommendation: 'remain-read-only',
+                items: [
+                    new CockpitQuickGenerateMutationPreconditionsReviewItemData(
+                        key: 'authorization-ready',
+                        label: 'Authorization Ready',
+                        status: 'blocked',
+                        reason: 'Generation, provider, and money movement authorization gates remain blocked.',
+                    ),
+                    new CockpitQuickGenerateMutationPreconditionsReviewItemData(
+                        key: 'pricing-ready',
+                        label: 'Pricing Ready',
+                        status: 'blocked',
+                        reason: 'Amount input, pricing service wiring, funding source selection, reservation, and provider fee quote gates remain blocked.',
+                    ),
+                    new CockpitQuickGenerateMutationPreconditionsReviewItemData(
+                        key: 'funding-ready',
+                        label: 'Funding Ready',
+                        status: 'blocked',
+                        reason: 'Issuer wallet, balance, sufficiency, reservation, and provider funding readiness remain blocked.',
+                    ),
+                    new CockpitQuickGenerateMutationPreconditionsReviewItemData(
+                        key: 'idempotency-ready',
+                        label: 'Idempotency Ready',
+                        status: 'blocked',
+                        reason: 'Idempotency key source, payload fingerprinting, replay lookup, conflict response, and TTL policy remain blocked.',
+                    ),
+                    new CockpitQuickGenerateMutationPreconditionsReviewItemData(
+                        key: 'validation-redaction-ready',
+                        label: 'Validation and Redaction Ready',
+                        status: 'blocked',
+                        reason: 'Required fields, validation rules, submitted-payload redaction, sanitized previews, and validation error contracts remain blocked.',
+                    ),
+                    new CockpitQuickGenerateMutationPreconditionsReviewItemData(
+                        key: 'handoff-ready',
+                        label: 'Handoff Ready',
+                        status: 'blocked',
+                        reason: 'GeneratePayCode action handoff and GeneratePayCodeController handoff remain blocked.',
+                    ),
+                    new CockpitQuickGenerateMutationPreconditionsReviewItemData(
+                        key: 'operator-response-ready',
+                        label: 'Operator Response Ready',
+                        status: 'blocked',
+                        reason: 'Cockpit has no mutation success, failure, validation, rollback, or retry response contract.',
+                    ),
+                ],
+                redactions: [
+                    'payloads' => 'mutation-preconditions-review-only',
+                    'excluded' => [
+                        'request_payload',
+                        'validated_payload',
+                        'precondition_payload',
+                        'mutation_approval',
+                        'mutation_route',
+                        'issued_voucher',
+                        'generated_pay_code',
+                        'provider_payload',
+                        'wallet',
                         'side_effect_result',
                         'raw_payload',
                     ],

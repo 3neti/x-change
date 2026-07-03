@@ -192,6 +192,22 @@ export type CockpitQuickGenerateMutationHandoffPlan = {
     [key: string]: unknown;
 };
 
+export type CockpitQuickGenerateMutationPreconditionsReviewItem = {
+    key?: string | null;
+    label?: string | null;
+    status?: string | null;
+    reason?: string | null;
+    [key: string]: unknown;
+};
+
+export type CockpitQuickGenerateMutationPreconditionsReview = {
+    status?: string | null;
+    recommendation?: string | null;
+    items?: CockpitQuickGenerateMutationPreconditionsReviewItem[];
+    redactions?: CockpitReadModelRedactions;
+    [key: string]: unknown;
+};
+
 export type CockpitQuickGenerateDraftContract = {
     schema?: string | null;
     status?: string | null;
@@ -231,6 +247,7 @@ export type CockpitQuickGenerateReadModel = {
     idempotency_gate?: CockpitQuickGenerateIdempotencyGate;
     validation_redaction_gate?: CockpitQuickGenerateValidationRedactionGate;
     mutation_handoff_plan?: CockpitQuickGenerateMutationHandoffPlan;
+    mutation_preconditions_review?: CockpitQuickGenerateMutationPreconditionsReview;
     draft_contract?: CockpitQuickGenerateDraftContract;
     authorization?: CockpitQuickGenerateAuthorization;
     action?: {

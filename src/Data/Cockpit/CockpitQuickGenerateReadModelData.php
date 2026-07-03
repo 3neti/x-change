@@ -25,6 +25,7 @@ class CockpitQuickGenerateReadModelData extends Data
         public readonly CockpitQuickGenerateIdempotencyGateData $idempotency_gate = new CockpitQuickGenerateIdempotencyGateData,
         public readonly CockpitQuickGenerateValidationRedactionGateData $validation_redaction_gate = new CockpitQuickGenerateValidationRedactionGateData,
         public readonly CockpitQuickGenerateMutationHandoffPlanData $mutation_handoff_plan = new CockpitQuickGenerateMutationHandoffPlanData,
+        public readonly CockpitQuickGenerateMutationPreconditionsReviewData $mutation_preconditions_review = new CockpitQuickGenerateMutationPreconditionsReviewData,
         public readonly CockpitQuickGenerateDraftContractData $draft_contract = new CockpitQuickGenerateDraftContractData,
         public readonly CockpitQuickGenerateAuthorizationData $authorization = new CockpitQuickGenerateAuthorizationData,
         public readonly CockpitQuickGenerateActionData $action = new CockpitQuickGenerateActionData,

@@ -8,6 +8,7 @@ import CockpitQuickGenerateDraftContractPanel from '../components/CockpitQuickGe
 import CockpitQuickGenerateFundingGatePanel from '../components/CockpitQuickGenerateFundingGatePanel.vue';
 import CockpitQuickGenerateIdempotencyGatePanel from '../components/CockpitQuickGenerateIdempotencyGatePanel.vue';
 import CockpitQuickGenerateMutationHandoffPlanPanel from '../components/CockpitQuickGenerateMutationHandoffPlanPanel.vue';
+import CockpitQuickGenerateMutationPreconditionsReviewPanel from '../components/CockpitQuickGenerateMutationPreconditionsReviewPanel.vue';
 import CockpitQuickGeneratePricingGatePanel from '../components/CockpitQuickGeneratePricingGatePanel.vue';
 import CockpitQuickGenerateValidationRedactionGatePanel from '../components/CockpitQuickGenerateValidationRedactionGatePanel.vue';
 import CockpitRuntimeInputPanel from '../components/CockpitRuntimeInputPanel.vue';
@@ -29,6 +30,8 @@ import type {
     CockpitQuickGenerateIdempotencyGateCheck,
     CockpitQuickGenerateMutationHandoffPlan,
     CockpitQuickGenerateMutationHandoffPlanStep,
+    CockpitQuickGenerateMutationPreconditionsReview,
+    CockpitQuickGenerateMutationPreconditionsReviewItem,
     CockpitQuickGeneratePricingGate,
     CockpitQuickGeneratePricingGateCheck,
     CockpitQuickGenerateValidationRedactionGate,
@@ -212,6 +215,29 @@ const mutationHandoffPlan = computed<CockpitQuickGenerateMutationHandoffPlan>(()
         steps: steps.length > 0 ? steps : defaultMutationHandoffPlan().steps,
         redactions: {
             payloads: stringValue(mutationHandoffPlanReadModel.redactions?.payloads) ?? 'mutation-handoff-plan-only',
+        },
+    };
+});
+
+const mutationPreconditionsReview = computed<CockpitQuickGenerateMutationPreconditionsReview>(() => {
+    const mutationPreconditionsReviewReadModel = props.quick_generate_read_model?.mutation_preconditions_review;
+
+    if (!readModelAvailable.value || typeof mutationPreconditionsReviewReadModel !== 'object' || mutationPreconditionsReviewReadModel === null) {
+        return defaultMutationPreconditionsReview();
+    }
+
+    const items = Array.isArray(mutationPreconditionsReviewReadModel.items)
+        ? mutationPreconditionsReviewReadModel.items
+            .map((item): CockpitQuickGenerateMutationPreconditionsReviewItem | null => sanitizeMutationPreconditionsReviewItem(item))
+            .filter((item): item is CockpitQuickGenerateMutationPreconditionsReviewItem => item !== null)
+        : [];
+
+    return {
+        status: stringValue(mutationPreconditionsReviewReadModel.status) ?? 'blocked',
+        recommendation: stringValue(mutationPreconditionsReviewReadModel.recommendation) ?? 'remain-read-only',
+        items: items.length > 0 ? items : defaultMutationPreconditionsReview().items,
+        redactions: {
+            payloads: stringValue(mutationPreconditionsReviewReadModel.redactions?.payloads) ?? 'mutation-preconditions-review-only',
         },
     };
 });
@@ -489,6 +515,60 @@ function defaultMutationHandoffPlan(): CockpitQuickGenerateMutationHandoffPlan {
     };
 }
 
+function defaultMutationPreconditionsReview(): CockpitQuickGenerateMutationPreconditionsReview {
+    return {
+        status: 'blocked',
+        recommendation: 'remain-read-only',
+        items: [
+            {
+                key: 'authorization-ready',
+                label: 'Authorization Ready',
+                status: 'blocked',
+                reason: 'Generation, provider, and money movement authorization gates remain blocked.',
+            },
+            {
+                key: 'pricing-ready',
+                label: 'Pricing Ready',
+                status: 'blocked',
+                reason: 'Amount input, pricing service wiring, funding source selection, reservation, and provider fee quote gates remain blocked.',
+            },
+            {
+                key: 'funding-ready',
+                label: 'Funding Ready',
+                status: 'blocked',
+                reason: 'Issuer wallet, balance, sufficiency, reservation, and provider funding readiness remain blocked.',
+            },
+            {
+                key: 'idempotency-ready',
+                label: 'Idempotency Ready',
+                status: 'blocked',
+                reason: 'Idempotency key source, payload fingerprinting, replay lookup, conflict response, and TTL policy remain blocked.',
+            },
+            {
+                key: 'validation-redaction-ready',
+                label: 'Validation and Redaction Ready',
+                status: 'blocked',
+                reason: 'Required fields, validation rules, submitted-payload redaction, sanitized previews, and validation error contracts remain blocked.',
+            },
+            {
+                key: 'handoff-ready',
+                label: 'Handoff Ready',
+                status: 'blocked',
+                reason: 'GeneratePayCode action handoff and GeneratePayCodeController handoff remain blocked.',
+            },
+            {
+                key: 'operator-response-ready',
+                label: 'Operator Response Ready',
+                status: 'blocked',
+                reason: 'Cockpit has no mutation success, failure, validation, rollback, or retry response contract.',
+            },
+        ],
+        redactions: {
+            payloads: 'mutation-preconditions-review-only',
+        },
+    };
+}
+
 function defaultAuthorization(): CockpitQuickGenerateAuthorization {
     return {
         status: 'blocked',
@@ -591,6 +671,22 @@ function sanitizeMutationHandoffPlanStep(step: CockpitQuickGenerateMutationHando
         label,
         status: stringValue(step.status) ?? 'unknown',
         reason: stringValue(step.reason) ?? 'No mutation handoff diagnostic is available.',
+    };
+}
+
+function sanitizeMutationPreconditionsReviewItem(item: CockpitQuickGenerateMutationPreconditionsReviewItem): CockpitQuickGenerateMutationPreconditionsReviewItem | null {
+    const key = stringValue(item.key);
+    const label = stringValue(item.label);
+
+    if (!key || !label) {
+        return null;
+    }
+
+    return {
+        key,
+        label,
+        status: stringValue(item.status) ?? 'unknown',
+        reason: stringValue(item.reason) ?? 'No mutation precondition diagnostic is available.',
     };
 }
 
@@ -719,6 +815,7 @@ function stringValue(value: unknown): string | null {
                     <CockpitQuickGenerateIdempotencyGatePanel :idempotency-gate="idempotencyGate" />
                     <CockpitQuickGenerateValidationRedactionGatePanel :validation-redaction-gate="validationRedactionGate" />
                     <CockpitQuickGenerateMutationHandoffPlanPanel :mutation-handoff-plan="mutationHandoffPlan" />
+                    <CockpitQuickGenerateMutationPreconditionsReviewPanel :mutation-preconditions-review="mutationPreconditionsReview" />
                     <CockpitGenerateActionPanel :enabled="false" />
                     <CockpitQuickGenerateAuthorizationGatePanel :authorization="authorization" />
                     <CockpitQuickGenerateDraftContractPanel :draft-contract="draftContract" />

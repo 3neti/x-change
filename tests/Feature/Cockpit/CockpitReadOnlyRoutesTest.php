@@ -179,6 +179,17 @@ it('hydrates quick generate with a sanitized quick generate read model prop', fu
         ->assertJsonPath('props.quick_generate_read_model.mutation_handoff_plan.steps.4.key', 'side-effect-boundary-confirmed')
         ->assertJsonPath('props.quick_generate_read_model.mutation_handoff_plan.steps.5.key', 'operator-response-contract-ready')
         ->assertJsonPath('props.quick_generate_read_model.mutation_handoff_plan.redactions.payloads', 'mutation-handoff-plan-only')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_preconditions_review.status', 'blocked')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_preconditions_review.recommendation', 'remain-read-only')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_preconditions_review.items.0.key', 'authorization-ready')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_preconditions_review.items.0.status', 'blocked')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_preconditions_review.items.1.key', 'pricing-ready')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_preconditions_review.items.2.key', 'funding-ready')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_preconditions_review.items.3.key', 'idempotency-ready')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_preconditions_review.items.4.key', 'validation-redaction-ready')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_preconditions_review.items.5.key', 'handoff-ready')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_preconditions_review.items.6.key', 'operator-response-ready')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_preconditions_review.redactions.payloads', 'mutation-preconditions-review-only')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.schema', 'x-change.cockpit.quick-generate-draft.v1')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.status', 'draft_only')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.template_key', 'money-changer')
@@ -220,7 +231,10 @@ it('hydrates quick generate with a sanitized quick generate read model prop', fu
         ->assertJsonMissingPath('props.quick_generate_read_model.mutation_payload')
         ->assertJsonMissingPath('props.quick_generate_read_model.issued_voucher')
         ->assertJsonMissingPath('props.quick_generate_read_model.generated_pay_code')
-        ->assertJsonMissingPath('props.quick_generate_read_model.side_effect_result');
+        ->assertJsonMissingPath('props.quick_generate_read_model.side_effect_result')
+        ->assertJsonMissingPath('props.quick_generate_read_model.precondition_payload')
+        ->assertJsonMissingPath('props.quick_generate_read_model.mutation_approval')
+        ->assertJsonMissingPath('props.quick_generate_read_model.mutation_route');
 });
 
 it('requires authentication for cockpit routes', function (string $route, array $parameters) {
@@ -365,4 +379,20 @@ it('documents the quick generate mutation handoff boundary before mutation wirin
         ->and($report)->toContain('operator-response-contract-ready')
         ->and($report)->toContain('Mutation handoff remains a read-only boundary plan in Slice 24')
         ->and($report)->toContain('No Cockpit mutation route calls GeneratePayCode, GeneratePayCodeController, providers, wallets, journal, action, or feedback in Slice 24');
+});
+
+it('documents the quick generate mutation preconditions review before mutation approval', function () {
+    $report = file_get_contents(__DIR__.'/../../../docs/ui-cockpit/reports/012-quick-generate-mutation-preconditions-review.md');
+
+    expect($report)->toBeString()
+        ->and($report)->toContain('Cockpit Slice 25')
+        ->and($report)->toContain('authorization-ready')
+        ->and($report)->toContain('pricing-ready')
+        ->and($report)->toContain('funding-ready')
+        ->and($report)->toContain('idempotency-ready')
+        ->and($report)->toContain('validation-redaction-ready')
+        ->and($report)->toContain('handoff-ready')
+        ->and($report)->toContain('operator-response-ready')
+        ->and($report)->toContain('Mutation preconditions remain blocked in Slice 25')
+        ->and($report)->toContain('No Cockpit mutation route, mutation approval, request validation execution, voucher issuance, provider call, wallet access, journal write, action run, or feedback delivery is introduced in Slice 25');
 });

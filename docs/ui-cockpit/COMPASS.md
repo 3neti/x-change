@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Slice 24 — Quick Generate Mutation Handoff Boundary Plan
+Current slice: Slice 25 — Quick Generate Mutation Preconditions Review
 Status: Complete
 Last updated: 2026-07-04
 
@@ -351,6 +351,21 @@ Last updated: 2026-07-04
 - Added read-only mutation handoff plan facts to `quick_generate_read_model`.
 - Added a visible mutation handoff boundary panel to Quick Generate.
 - Preserved disabled generation behavior. The mutation handoff plan reports the existing issuance owner as identified while `GeneratePayCode`, `GeneratePayCodeController`, preconditions, side-effect boundary confirmation, and operator response contracts remain blocked.
+- Completed Slice 25 Quick Generate Mutation Preconditions Review:
+  - `src/Data/Cockpit/CockpitQuickGenerateMutationPreconditionsReviewData.php`
+  - `src/Data/Cockpit/CockpitQuickGenerateMutationPreconditionsReviewItemData.php`
+  - `src/Data/Cockpit/CockpitQuickGenerateReadModelData.php`
+  - `src/Services/Cockpit/VoucherLifecycleCockpitReadModelProvider.php`
+  - `resources/js/cockpit/components/CockpitQuickGenerateMutationPreconditionsReviewPanel.vue`
+  - `resources/js/cockpit/pages/QuickGenerate.vue`
+  - `resources/js/cockpit/types.ts`
+  - `docs/ui-cockpit/reports/012-quick-generate-mutation-preconditions-review.md`
+  - `tests/Unit/Cockpit/CockpitReadModelBaselineTest.php`
+  - `tests/Feature/Cockpit/CockpitReadOnlyRoutesTest.php`
+  - `tests/frontend/cockpit/CockpitQuickGenerateFoundation.test.ts`
+- Added read-only mutation precondition review facts to `quick_generate_read_model`.
+- Added a visible mutation preconditions review panel to Quick Generate.
+- Preserved disabled generation behavior. The mutation preconditions review recommends `remain-read-only`; authorization, pricing, funding, idempotency, validation/redaction, handoff, and operator response readiness remain blocked.
 
 ## In Progress
 
@@ -358,13 +373,13 @@ No implementation slice is in progress.
 
 ## Next
 
-Recommended next slice: Slice 25 — Quick Generate Mutation Preconditions Review.
+Recommended next slice: Slice 26 — Quick Generate Mutation Authorization Decision Point.
 
 Scope should remain foundation-only:
 
-- review whether the Quick Generate precondition gates should stay blocked or graduate toward real mutation readiness
-- identify the minimum production path required before a Cockpit mutation route can be proposed
-- decide whether the next slice should remain read-only or explicitly request approval for mutation-route scaffolding
+- request explicit human approval before scaffolding any mutation route
+- if approval is not granted, continue read-only hardening around Quick Generate operator readiness
+- if approval is granted, define the smallest possible mutation-route contract before implementation
 - keep route props read-only and authenticated unless a mutation slice is explicitly approved
 - keep generate controls disabled until authorization, pricing, funding, idempotency, validation/redaction, and existing issuance API/action routing are all designed
 - avoid broad voucher payloads, provider payloads, wallet data, claim payloads, approval metadata, instructions, or raw payloads
@@ -398,6 +413,7 @@ Scope should remain foundation-only:
 - Slice 22 introduces read-only idempotency gate facts and a visible idempotency gate panel. It does not persist keys, hash payloads, read replay records, evaluate conflicts, read TTL policy, register mutation routes, or enable generation.
 - Slice 23 introduces read-only validation/redaction gate facts and a visible validation/redaction gate panel. It does not validate requests, persist payloads, expose submitted PII, build sanitized previews, return validation errors, register mutation routes, or enable generation.
 - Slice 24 introduces a read-only mutation handoff boundary plan and a visible mutation handoff panel. It does not register mutation routes, call `GeneratePayCode`, call `GeneratePayCodeController`, submit payloads, generate vouchers, call providers, access wallets, write journal entries, run actions, send feedback, or move money.
+- Slice 25 introduces a read-only mutation preconditions review and a visible review panel. It does not approve mutation wiring, register mutation routes, validate requests, issue vouchers, call providers, access wallets, write journal entries, run actions, send feedback, or move money.
 
 ## Decisions
 
@@ -433,6 +449,7 @@ Scope should remain foundation-only:
 - Slice 22 adds `CockpitQuickGenerateIdempotencyGateData` and `CockpitQuickGenerateIdempotencyGateCheckData` as read-only gate facts in `quick_generate_read_model`. Generation remains disabled because key source, payload fingerprinting, replay lookup, conflict response, and TTL policy gates remain blocked.
 - Slice 23 adds `CockpitQuickGenerateValidationRedactionGateData` and `CockpitQuickGenerateValidationRedactionGateCheckData` as read-only gate facts in `quick_generate_read_model`. Generation remains disabled because required-field enforcement, validation rules, submitted-payload redaction, sanitized previews, and validation error contracts remain blocked.
 - Slice 24 adds `CockpitQuickGenerateMutationHandoffPlanData` and `CockpitQuickGenerateMutationHandoffPlanStepData` as read-only handoff facts in `quick_generate_read_model`. Generation remains disabled because action handoff, controller handoff, preconditions, side-effect boundary confirmation, and operator response contracts remain blocked.
+- Slice 25 adds `CockpitQuickGenerateMutationPreconditionsReviewData` and `CockpitQuickGenerateMutationPreconditionsReviewItemData` as read-only review facts in `quick_generate_read_model`. Generation remains disabled and the recommendation remains `remain-read-only`.
 
 ## Open Questions
 
@@ -545,3 +562,7 @@ Scope should remain foundation-only:
 - Slice 24 focused PHP Cockpit read-model/route result: `39 passed, 374 assertions`.
 - Slice 24 full frontend result: `72 passed, 442 tests`.
 - Slice 24 full package Pest result: `1013 passed, 5 skipped, 5378 assertions`.
+- Slice 25 focused quick-generate mutation preconditions frontend result: `14 passed`.
+- Slice 25 focused PHP Cockpit read-model/route result: `40 passed, 399 assertions`.
+- Slice 25 full frontend result: `72 passed, 443 tests`.
+- Slice 25 full package Pest result: `1014 passed, 5 skipped, 5403 assertions`.

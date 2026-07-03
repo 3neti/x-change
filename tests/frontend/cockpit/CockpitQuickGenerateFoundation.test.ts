@@ -8,6 +8,7 @@ import CockpitQuickGenerateDraftContractPanel from '../../../resources/js/cockpi
 import CockpitQuickGenerateFundingGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateFundingGatePanel.vue';
 import CockpitQuickGenerateIdempotencyGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateIdempotencyGatePanel.vue';
 import CockpitQuickGenerateMutationHandoffPlanPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateMutationHandoffPlanPanel.vue';
+import CockpitQuickGenerateMutationPreconditionsReviewPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateMutationPreconditionsReviewPanel.vue';
 import CockpitQuickGeneratePricingGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGeneratePricingGatePanel.vue';
 import CockpitQuickGenerateValidationRedactionGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateValidationRedactionGatePanel.vue';
 import CockpitRuntimeInputPanel from '../../../resources/js/cockpit/components/CockpitRuntimeInputPanel.vue';
@@ -361,6 +362,44 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.findAll('[data-testid="cockpit-quick-generate-mutation-handoff-plan-step"]')).toHaveLength(2);
     });
 
+    it('renders mutation preconditions review facts without approving mutation wiring', () => {
+        const wrapper = mount(CockpitQuickGenerateMutationPreconditionsReviewPanel, {
+            props: {
+                mutationPreconditionsReview: {
+                    status: 'blocked',
+                    recommendation: 'remain-read-only',
+                    items: [
+                        {
+                            key: 'authorization-ready',
+                            label: 'Authorization Ready',
+                            status: 'blocked',
+                            reason: 'Generation, provider, and money movement authorization gates remain blocked.',
+                        },
+                        {
+                            key: 'handoff-ready',
+                            label: 'Handoff Ready',
+                            status: 'blocked',
+                            reason: 'GeneratePayCode action handoff and GeneratePayCodeController handoff remain blocked.',
+                        },
+                    ],
+                    redactions: {
+                        payloads: 'mutation-preconditions-review-only',
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Mutation Preconditions Review');
+        expect(wrapper.text()).toContain('remain-read-only');
+        expect(wrapper.text()).toContain('Authorization Ready');
+        expect(wrapper.text()).toContain('Handoff Ready');
+        expect(wrapper.text()).toContain('GeneratePayCode action handoff and GeneratePayCodeController handoff remain blocked.');
+        expect(wrapper.text()).toContain('Mutation preconditions remain blocked in Slice 25.');
+        expect(wrapper.find('form').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-mutation-preconditions-review-panel"]').exists()).toBe(true);
+        expect(wrapper.findAll('[data-testid="cockpit-quick-generate-mutation-preconditions-review-item"]')).toHaveLength(2);
+    });
+
     it('renders the full Quick Generate page with active navigation and no side effects', () => {
         const wrapper = mount(QuickGenerate);
 
@@ -391,5 +430,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('Validation and redaction gates are read-only facts in Slice 23.');
         expect(wrapper.text()).toContain('Mutation Handoff Boundary Plan');
         expect(wrapper.text()).toContain('Mutation handoff remains a read-only boundary plan in Slice 24.');
+        expect(wrapper.text()).toContain('Mutation Preconditions Review');
+        expect(wrapper.text()).toContain('Mutation preconditions remain blocked in Slice 25.');
     });
 });

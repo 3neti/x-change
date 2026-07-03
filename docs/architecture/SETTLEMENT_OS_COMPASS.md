@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 4 — x-change Cockpit
-Current status: Cockpit Slice 24 Quick Generate Mutation Handoff Boundary Plan complete
+Current status: Cockpit Slice 25 Quick Generate Mutation Preconditions Review complete
 Last updated: 2026-07-04
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-04
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Slice 24 complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Slice 25 complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Not started | Pending |
 
 ## Package Map
@@ -736,6 +736,7 @@ ExecutionDriverContract
 - x-change Cockpit Slice 22 adds read-only Quick Generate idempotency gate facts and a visible idempotency gate panel without persisting keys, hashing payloads, reading replay records, evaluating conflicts, reading TTL policy, adding mutation routes, or enabling generation.
 - x-change Cockpit Slice 23 adds read-only Quick Generate validation/redaction gate facts and a visible validation/redaction gate panel without validating requests, persisting payloads, exposing submitted PII, building sanitized previews, returning validation errors, adding mutation routes, or enabling generation.
 - x-change Cockpit Slice 24 adds a read-only Quick Generate mutation handoff boundary plan and visible handoff panel without registering mutation routes, calling `GeneratePayCode`, calling `GeneratePayCodeController`, submitting payloads, generating vouchers, calling providers, accessing wallets, writing journal entries, running actions, sending feedback, or moving money.
+- x-change Cockpit Slice 25 adds a read-only Quick Generate mutation preconditions review and visible review panel without approving mutation wiring, registering mutation routes, validating requests, issuing vouchers, calling providers, accessing wallets, writing journal entries, running actions, sending feedback, or moving money.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -749,10 +750,10 @@ Continue Wave 4 — x-change Cockpit with the next authorized slice.
 Recommended actions:
 
 1. Request approval before proceeding to another slice.
-2. Completed slice: Cockpit Slice 24 — Quick Generate Mutation Handoff Boundary Plan.
+2. Completed slice: Cockpit Slice 25 — Quick Generate Mutation Preconditions Review.
 3. Read the Cockpit compass before continuing: `packages/x-change/docs/ui-cockpit/COMPASS.md`.
-4. Recommended next slice: Cockpit Slice 25 — Quick Generate Mutation Preconditions Review.
-5. Slice 25 should review whether Quick Generate precondition gates remain blocked or whether explicit human approval should be requested for mutation-route scaffolding.
+4. Recommended next slice: Cockpit Slice 26 — Quick Generate Mutation Authorization Decision Point.
+5. Slice 26 should request explicit human approval before scaffolding any mutation route.
 6. Do not add mutation endpoints, request validation execution, payload persistence, execution, journal writes, action execution, feedback delivery, provider calls, campaign behavior, money movement, raw payload exposure, wallet access, or live cross-package calls unless explicitly approved.
 7. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
