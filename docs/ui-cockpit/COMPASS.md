@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Slice 6 — Distribution Workspace Foundation
+Current slice: Slice 7 — Read-Only Route/API Wiring Plan
 Status: Complete
 Last updated: 2026-07-03
 
@@ -71,6 +71,20 @@ Last updated: 2026-07-03
   - `resources/js/cockpit/components/CockpitDistributionAnalyticsPanel.vue`
   - `resources/js/cockpit/pages/DistributionWorkspace.vue`
 - Added Slice 6 frontend coverage for distribution channel planning, print templates, share/QR assets, operational analytics, disabled actions, active Pay Codes navigation, and no-side-effect boundaries.
+- Completed Slice 7 Read-Only Route/API Wiring Plan:
+  - `routes/web.php`
+  - `src/Http/Controllers/Web/Cockpit/CockpitDashboardPageController.php`
+  - `src/Http/Controllers/Web/Cockpit/CockpitQuickGeneratePageController.php`
+  - `src/Http/Controllers/Web/Cockpit/CockpitPayCodeExplorerPageController.php`
+  - `src/Http/Controllers/Web/Cockpit/CockpitVoucherDetailPageController.php`
+  - `src/Http/Controllers/Web/Cockpit/CockpitDistributionWorkspacePageController.php`
+  - `resources/js/pages/x-change/cockpit/Dashboard.vue`
+  - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
+  - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`
+  - `resources/js/pages/x-change/cockpit/VoucherDetail.vue`
+  - `resources/js/pages/x-change/cockpit/DistributionWorkspace.vue`
+- Added Slice 7 PHP route coverage for authenticated GET-only Cockpit routes, Inertia component names, and no Cockpit mutation routes.
+- Added Slice 7 frontend coverage for Inertia page adapters importing the Cockpit namespace pages.
 
 ## In Progress
 
@@ -78,15 +92,15 @@ No implementation slice is in progress.
 
 ## Next
 
-Recommended next step: Cockpit planning checkpoint before Slice 7.
+Recommended next slice: Slice 8 — Operator Authorization and Redaction Baseline.
 
-The initial Cockpit scaffold plan is complete through Slice 6. Before proceeding, define the next authorized slice explicitly. Candidate directions:
+Scope should remain foundation-only:
 
-- route/API wiring plan for existing read-only shell pages
 - operator authorization/redaction model
-- read-model contract baselines for execution, journal, action, and feedback facts
-- mobile/PWA shell refinement
-- exception/operations workspace foundation
+- route middleware and policy documentation/tests where safe
+- redaction view-model contract baselines
+- no broad exposure of journal, action, feedback, provider, or voucher payloads
+- no mutation endpoints, execution, journal writes, feedback delivery, provider calls, campaign behavior, or money movement
 - preserve all existing Claim UI tests
 
 ## Risks
@@ -116,6 +130,7 @@ The initial Cockpit scaffold plan is complete through Slice 6. Before proceeding
 - Slice 4 keeps Pay Code Explorer as a read-only exploration shell. It does not query host APIs, mutate vouchers, execute drivers, approve claims, write journal entries, send feedback, call providers, or move money.
 - Slice 5 keeps Voucher Detail as a read-only single-voucher shell. It does not mutate vouchers, execute drivers, write journal entries, send feedback, call providers, or move money.
 - Slice 6 keeps Distribution Workspace as a read-only planning shell. It does not dispatch distribution, send feedback, create campaigns, mutate vouchers, execute drivers, write journal entries, call providers, or move money.
+- Slice 7 exposes existing Cockpit pages through authenticated GET-only Inertia routes under `/x/cockpit`. It does not add JSON read APIs, mutation routes, domain read-model calls, execution, journal writes, feedback delivery, provider calls, campaign behavior, or money movement.
 
 ## Open Questions
 
@@ -148,3 +163,7 @@ The initial Cockpit scaffold plan is complete through Slice 6. Before proceeding
 - Slice 5 full frontend result: `66 passed, 407 tests`.
 - Slice 6 focused frontend result: `8 passed, 31 tests`.
 - Slice 6 full frontend result: `67 passed, 412 tests`.
+- Slice 7 focused PHP route result: `7 passed, 16 assertions`.
+- Slice 7 focused frontend result: `9 passed, 36 tests`.
+- Slice 7 full frontend result: `68 passed, 417 tests`.
+- Slice 7 full package Pest result: `977 passed, 5 skipped, 5007 assertions`.

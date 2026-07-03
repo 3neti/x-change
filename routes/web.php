@@ -13,6 +13,11 @@ use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimRedirectController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimStartController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSubmitController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSuccessPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDashboardPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDistributionWorkspacePageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeExplorerPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGeneratePageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitVoucherDetailPageController;
 use LBHurtado\XChange\Http\Controllers\Web\DashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\LinkPaynamicsWalletController;
 use LBHurtado\XChange\Http\Controllers\Web\PayCodeCreatePageController;
@@ -25,6 +30,16 @@ $middleware = config('x-change.routes.web_middleware', ['web', 'auth']);
 // Authenticated operator routes
 Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->group(function (): void {
     Route::get('dashboard', DashboardPageController::class)->name('x-change.dashboard');
+
+    Route::prefix('cockpit')->group(function (): void {
+        Route::get('/', CockpitDashboardPageController::class)->name('x-change.cockpit.dashboard');
+        Route::get('quick-generate', CockpitQuickGeneratePageController::class)->name('x-change.cockpit.quick-generate');
+        Route::prefix('pay-codes')->group(function (): void {
+            Route::get('/', CockpitPayCodeExplorerPageController::class)->name('x-change.cockpit.pay-codes.index');
+            Route::get('{code}/distribution', CockpitDistributionWorkspacePageController::class)->name('x-change.cockpit.pay-codes.distribution');
+            Route::get('{code}', CockpitVoucherDetailPageController::class)->name('x-change.cockpit.pay-codes.show');
+        });
+    });
 
     Route::prefix('pay-codes')->group(function (): void {
         Route::get('/', PayCodeIndexPageController::class)->name('x-change.pay-codes.index');

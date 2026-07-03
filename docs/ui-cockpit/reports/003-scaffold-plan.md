@@ -148,17 +148,30 @@ Implemented as read-only frontend placeholders only. No host API wiring, campaig
 
 ## Slice 7 — Planning Checkpoint
 
-Status: requires explicit approval.
+Status: complete.
 
-The initial scaffold plan is complete through the Distribution Workspace foundation. Define the next Cockpit slice before implementation so the workstream does not invent domain behavior or prematurely wire APIs.
+The initial scaffold plan was completed through the Distribution Workspace foundation. Slice 7 was explicitly authorized as a read-only route/API wiring plan before adding more Cockpit features.
 
-Candidate directions:
+Implemented:
 
-- route/API wiring plan for existing read-only shell pages
+- authenticated GET-only web routes under `/x/cockpit`
+- thin invokable Inertia controllers for existing Cockpit pages
+- Inertia page adapters under `resources/js/pages/x-change/cockpit`
+- route tests proving component names and route names
+- mutation-route invariant test proving no Cockpit POST/PUT/PATCH/DELETE routes exist
+
+No separate JSON read APIs were introduced. No host read-model calls, voucher mutation, execution, journal writes, action execution, feedback delivery, provider calls, campaign behavior, or money movement were added.
+
+## Slice 8 — Operator Authorization and Redaction Baseline
+
+Status: recommended next.
+
+Candidate scope:
+
 - operator authorization/redaction model
 - read-model contract baselines for execution, journal, action, and feedback facts
-- mobile/PWA shell refinement
-- exception/operations workspace foundation
+- route middleware and policy documentation/tests where safe
+- no broad exposure of journal, action, feedback, provider, or voucher payloads
 
 ## Verification Plan
 
