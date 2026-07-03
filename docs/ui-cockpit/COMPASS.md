@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Slice 0 — Discovery and Compass  
+Current slice: Slice 1 — Cockpit Namespace and Shell  
 Status: Complete  
 Last updated: 2026-07-03
 
@@ -20,6 +20,16 @@ Last updated: 2026-07-03
   - `reports/002-porting-map.md`
   - `reports/003-scaffold-plan.md`
 - Repaired stale frontend expectations for existing `slice_selector` form-flow support before committing Slice 0.
+- Completed Slice 1 Cockpit namespace and shell:
+  - `resources/js/cockpit/types.ts`
+  - `resources/js/cockpit/navigation.ts`
+  - `resources/js/cockpit/components/CockpitBalanceHud.vue`
+  - `resources/js/cockpit/components/CockpitGlobalHeader.vue`
+  - `resources/js/cockpit/components/CockpitSidebar.vue`
+  - `resources/js/cockpit/layouts/CockpitLayout.vue`
+  - `resources/js/cockpit/pages/Dashboard.vue`
+- Added Slice 1 frontend coverage under `tests/frontend/cockpit/`.
+- Preserved existing Claim UI resources and tests.
 
 ## In Progress
 
@@ -27,16 +37,16 @@ No implementation slice is in progress.
 
 ## Next
 
-Recommended next slice: Slice 1 — Cockpit namespace and shell.
+Recommended next slice: Slice 2 — Dashboard foundation.
 
 Scope should remain foundation-only:
 
-- create `resources/js/cockpit/` or the nearest convention-compatible Cockpit namespace
-- create Cockpit layout primitives
-- create global header and sidebar navigation placeholders
-- create placeholder dashboard shell
-- create balance HUD placeholder
-- add Vitest coverage under `tests/frontend/cockpit/`
+- liquidity hero placeholder
+- balance cards
+- redemption pipeline placeholder
+- risk/expiry placeholder
+- recent activity placeholder
+- Vitest coverage for rendering, empty states, and no side effects
 - preserve all existing Claim UI tests
 
 ## Risks
@@ -59,10 +69,11 @@ Scope should remain foundation-only:
 - Cockpit consumes existing system truth. It must not invent execution, journal, action, or feedback behavior.
 - Cockpit should start desktop-first, with PWA/mobile adaptations later.
 - Cockpit UI tests should live under `tests/frontend/cockpit/`.
+- Slice 1 uses the explicit `resources/js/cockpit/` namespace.
+- Slice 1 does not add Laravel routes/controllers. It creates importable frontend shell primitives only.
 
 ## Open Questions
 
-- Whether the Cockpit namespace should be `resources/js/cockpit/` or `resources/js/components/cockpit` plus `resources/js/pages/cockpit`; Slice 1 should decide after testing import ergonomics.
 - Which host API/read-model contracts should expose execution, journal, action, and feedback facts to Cockpit without leaking sensitive payloads.
 - How operator authorization and redaction should be represented before real Cockpit pages expose journal, action diagnostics, feedback delivery records, or provider payloads.
 - Whether existing `/x/dashboard` should be promoted into Cockpit or left as a compatibility route while Cockpit grows under a new route namespace.
@@ -80,3 +91,5 @@ Scope should remain foundation-only:
 - Updated those expectations to match the existing runtime.
 - Final result: `59 passed, 381 tests`.
 - No Cockpit production code or frontend code was changed in Slice 0.
+- Slice 1 focused frontend result: `3 passed, 7 tests`.
+- Slice 1 full frontend result: `62 passed, 388 tests`.

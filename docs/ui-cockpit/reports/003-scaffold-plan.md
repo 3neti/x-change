@@ -14,6 +14,8 @@ Deliverables:
 
 ## Slice 1 — Cockpit Namespace and Shell
 
+Status: complete.
+
 Goal: introduce the Cockpit shell without changing Claim UI or domain behavior.
 
 Proposed production files:
@@ -45,6 +47,8 @@ Guardrails:
 - no campaign features
 
 ## Slice 2 — Dashboard Foundation
+
+Status: recommended next.
 
 Goal: create a read-only dashboard composition over placeholders and existing safe summaries.
 
@@ -150,4 +154,3 @@ Before committing each slice:
 - run focused tests first where possible
 - run the relevant package suite
 - keep Claim UI tests green
-
