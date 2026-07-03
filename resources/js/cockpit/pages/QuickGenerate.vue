@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import CockpitGenerateActionPanel from '../components/CockpitGenerateActionPanel.vue';
+import CockpitIssuanceBoundaryPanel from '../components/CockpitIssuanceBoundaryPanel.vue';
 import CockpitPricingFundingSummary from '../components/CockpitPricingFundingSummary.vue';
 import CockpitRuntimeInputPanel from '../components/CockpitRuntimeInputPanel.vue';
 import CockpitTemplateSelector from '../components/CockpitTemplateSelector.vue';
@@ -152,6 +153,7 @@ function stringValue(value: unknown): string | null {
                 <div class="space-y-4">
                     <CockpitPricingFundingSummary :summaries="pricingSummaries" />
                     <CockpitGenerateActionPanel :enabled="false" />
+                    <CockpitIssuanceBoundaryPanel />
                 </div>
             </div>
         </section>

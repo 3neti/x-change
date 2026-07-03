@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import CockpitGenerateActionPanel from '../../../resources/js/cockpit/components/CockpitGenerateActionPanel.vue';
+import CockpitIssuanceBoundaryPanel from '../../../resources/js/cockpit/components/CockpitIssuanceBoundaryPanel.vue';
 import CockpitPricingFundingSummary from '../../../resources/js/cockpit/components/CockpitPricingFundingSummary.vue';
 import CockpitRuntimeInputPanel from '../../../resources/js/cockpit/components/CockpitRuntimeInputPanel.vue';
 import CockpitTemplateSelector from '../../../resources/js/cockpit/components/CockpitTemplateSelector.vue';
@@ -77,6 +78,22 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.emitted()).toEqual({});
     });
 
+    it('renders the issuance boundary plan without a mutation form', () => {
+        const wrapper = mount(CockpitIssuanceBoundaryPanel);
+
+        expect(wrapper.text()).toContain('Issuance Boundary Plan');
+        expect(wrapper.text()).toContain('Existing issuance action');
+        expect(wrapper.text()).toContain('GeneratePayCode');
+        expect(wrapper.text()).toContain('Authorization');
+        expect(wrapper.text()).toContain('Pricing');
+        expect(wrapper.text()).toContain('Funding');
+        expect(wrapper.text()).toContain('Idempotency');
+        expect(wrapper.text()).toContain('Redaction');
+        expect(wrapper.text()).toContain('No Cockpit mutation route is registered in Slice 17.');
+        expect(wrapper.find('form').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="cockpit-issuance-boundary-panel"]').exists()).toBe(true);
+    });
+
     it('renders the full Quick Generate page with active navigation and no side effects', () => {
         const wrapper = mount(QuickGenerate);
 
@@ -91,6 +108,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('calculate pricing');
         expect(wrapper.text()).toContain('reserve funds');
         expect(wrapper.text()).toContain('move money');
+        expect(wrapper.text()).toContain('Issuance Boundary Plan');
+        expect(wrapper.text()).toContain('No Cockpit mutation route is registered in Slice 17.');
     });
 });
-

@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Slice 16 — Quick Generate Read Model Adapter Baseline
+Current slice: Slice 17 — Quick Generate Issuance Boundary Plan
 Status: Complete
 Last updated: 2026-07-03
 
@@ -235,6 +235,18 @@ Last updated: 2026-07-03
 - Preserved static Quick Generate defaults when read models are missing, unavailable, or unauthorized.
 - Preserved disabled generate action behavior even if a read model claims an enabled action.
 - Avoided voucher lifecycle reads, pricing service calls, wallet lookup/reservation/debit, provider calls, voucher issuance, journal writes, feedback delivery, action execution, campaign behavior, and money movement.
+- Completed Slice 17 Quick Generate Issuance Boundary Plan:
+  - `docs/ui-cockpit/reports/004-quick-generate-issuance-boundary-plan.md`
+  - `resources/js/cockpit/components/CockpitIssuanceBoundaryPanel.vue`
+  - `resources/js/cockpit/pages/QuickGenerate.vue`
+  - `tests/frontend/cockpit/CockpitQuickGenerateFoundation.test.ts`
+  - `tests/Feature/Cockpit/CockpitReadOnlyRoutesTest.php`
+- Documented the future issuance handoff boundary:
+  - Cockpit Quick Generate remains an operator surface.
+  - Existing issuance owner remains `GeneratePayCode` / `GeneratePayCodeController`.
+  - Required future gates are authorization, pricing, funding, idempotency, and redaction.
+  - Slice 17 registers no Cockpit mutation route.
+- Added a read-only boundary panel to Quick Generate so operators and future implementers see the handoff constraints directly in the page.
 
 ## In Progress
 
@@ -242,11 +254,12 @@ No implementation slice is in progress.
 
 ## Next
 
-Recommended next slice: Slice 17 — Quick Generate Issuance Boundary Plan.
+Recommended next slice: Slice 18 — Quick Generate Request Draft Contract Baseline.
 
 Scope should remain foundation-only:
 
-- define the explicit boundary for a future Quick Generate issuance handoff
+- define the frontend/backend-neutral draft payload shape for a future Quick Generate issuance request
+- keep drafts local/read-only unless an explicit persistence or mutation slice is approved
 - keep route props read-only and authenticated unless a mutation slice is explicitly approved
 - keep generate controls disabled until authorization, pricing, funding, idempotency, and existing issuance API/action routing are all designed
 - avoid broad voucher payloads, provider payloads, wallet data, claim payloads, approval metadata, instructions, or raw payloads
@@ -272,6 +285,7 @@ Scope should remain foundation-only:
 - Slice 14 introduces a backend/list prop adapter for Pay Code Explorer only. It reads sanitized list summaries through `VoucherLifecycleServiceContract::list()`, does not expose issuer IDs as owner labels, does not add query APIs, and does not mutate voucher or provider state.
 - Slice 15 introduces a backend dashboard prop adapter for Cockpit Dashboard only. It reads sanitized aggregate/list facts through `VoucherLifecycleServiceContract::list()`, does not query wallets or providers, and does not treat aggregate counts as execution, journal, action, feedback, settlement, or reconciliation truth.
 - Slice 16 introduces a backend Quick Generate prop adapter for planning/catalog facts only. It does not call voucher lifecycle reads, pricing services, wallets, providers, or generation actions, and it keeps the generate action disabled.
+- Slice 17 introduces an explicit Quick Generate issuance boundary plan and visible boundary panel. It does not register mutation routes or call the existing issuance action/controller.
 
 ## Decisions
 
@@ -299,6 +313,7 @@ Scope should remain foundation-only:
 - Slice 14 extends the Cockpit read-model provider contract with `forPayCodeList()` and exposes `pay_codes_read_model` only to the Pay Code Explorer route. The adapter maps safe list summaries from the existing voucher lifecycle service and preserves redaction metadata for excluded fields.
 - Slice 15 extends the Cockpit read-model provider contract with `forDashboard()` and exposes `dashboard_read_model` only to the Dashboard route. The adapter maps sanitized aggregate dashboard facts from the existing voucher lifecycle list service and preserves static frontend defaults for unavailable states.
 - Slice 16 extends the Cockpit read-model provider contract with `forQuickGenerate()` and exposes `quick_generate_read_model` only to the Quick Generate route. The baseline maps sanitized catalog/runtime/pricing placeholder facts and preserves disabled issuance controls.
+- Slice 17 records that any future Quick Generate mutation must reuse the existing `GeneratePayCode` / `GeneratePayCodeController` path and must first define authorization, pricing, funding, idempotency, and redaction gates.
 
 ## Open Questions
 
@@ -379,3 +394,7 @@ Scope should remain foundation-only:
 - Slice 16 focused quick-generate/route frontend regression result: `10 passed`.
 - Slice 16 full frontend result: `72 passed, 434 tests`.
 - Slice 16 full package Pest result: `1005 passed, 5 skipped, 5213 assertions`.
+- Slice 17 focused quick-generate boundary frontend result: `6 passed`.
+- Slice 17 focused PHP Cockpit route/documentation result: `19 passed, 157 assertions`.
+- Slice 17 full frontend result: `72 passed, 435 tests`.
+- Slice 17 full package Pest result: `1006 passed, 5 skipped, 5224 assertions`.

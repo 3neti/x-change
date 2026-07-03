@@ -312,14 +312,27 @@ The frontend Quick Generate page now hydrates from the optional `quick_generate_
 
 ## Slice 17 — Quick Generate Issuance Boundary Plan
 
-Status: recommended next.
+Status: complete.
 
-Candidate scope:
+Implemented:
 
 - define the explicit boundary for a future Quick Generate issuance handoff
 - identify the existing API/action path that would own actual Pay Code generation
 - document required authorization, pricing, funding, idempotency, and redaction gates
 - keep generate controls disabled unless a mutation slice is explicitly approved
+- no mutation endpoints, voucher issuance, execution, journal writes, action execution, feedback delivery, provider calls, wallet access, campaign behavior, or money movement
+
+Slice 17 added a persisted boundary report and a visible Quick Generate boundary panel. The existing issuance owner remains `GeneratePayCode` / `GeneratePayCodeController`. Cockpit still has no generation mutation route.
+
+## Slice 18 — Quick Generate Request Draft Contract Baseline
+
+Status: recommended next.
+
+Candidate scope:
+
+- define the frontend/backend-neutral draft payload shape for future Quick Generate issuance
+- keep drafts local/read-only unless an explicit persistence or mutation slice is approved
+- identify required fields, optional fields, redacted fields, and idempotency metadata
 - no mutation endpoints, voucher issuance, execution, journal writes, action execution, feedback delivery, provider calls, wallet access, campaign behavior, or money movement
 
 ## Verification Plan

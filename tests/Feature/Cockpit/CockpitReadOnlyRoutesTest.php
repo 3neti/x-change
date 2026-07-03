@@ -161,3 +161,19 @@ it('does not register cockpit mutation routes', function () {
 
     expect($mutatingRoutes)->toHaveCount(0);
 });
+
+it('documents the quick generate issuance boundary before mutation wiring', function () {
+    $report = file_get_contents(__DIR__.'/../../../docs/ui-cockpit/reports/004-quick-generate-issuance-boundary-plan.md');
+
+    expect($report)->toBeString()
+        ->and($report)->toContain('Cockpit Slice 17')
+        ->and($report)->toContain('Existing issuance owner')
+        ->and($report)->toContain('GeneratePayCode')
+        ->and($report)->toContain('GeneratePayCodeController')
+        ->and($report)->toContain('Authorization')
+        ->and($report)->toContain('Pricing')
+        ->and($report)->toContain('Funding')
+        ->and($report)->toContain('Idempotency')
+        ->and($report)->toContain('Redaction')
+        ->and($report)->toContain('No Cockpit mutation route is registered in Slice 17');
+});
