@@ -1,0 +1,96 @@
+import { mount } from '@vue/test-utils';
+import { describe, expect, it } from 'vitest';
+import CockpitGenerateActionPanel from '../../../resources/js/cockpit/components/CockpitGenerateActionPanel.vue';
+import CockpitPricingFundingSummary from '../../../resources/js/cockpit/components/CockpitPricingFundingSummary.vue';
+import CockpitRuntimeInputPanel from '../../../resources/js/cockpit/components/CockpitRuntimeInputPanel.vue';
+import CockpitTemplateSelector from '../../../resources/js/cockpit/components/CockpitTemplateSelector.vue';
+import QuickGenerate from '../../../resources/js/cockpit/pages/QuickGenerate.vue';
+import {
+    cockpitPricingFundingSummary,
+    cockpitQuickGenerateTemplates,
+    cockpitRuntimeInputs,
+} from '../../../resources/js/cockpit/quickGenerateDefaults';
+
+describe('Cockpit Quick Generate foundation', () => {
+    it('renders template selector placeholders as institutional products', () => {
+        const wrapper = mount(CockpitTemplateSelector, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                selectedKey: 'money-changer',
+            },
+        });
+
+        expect(wrapper.text()).toContain('Start from institutional products');
+        expect(wrapper.text()).toContain('Money Changer');
+        expect(wrapper.text()).toContain('OFW Remittance');
+        expect(wrapper.text()).toContain('Settlement Envelope');
+        expect(wrapper.findAll('[data-testid="cockpit-template-option"]')).toHaveLength(3);
+    });
+
+    it('renders runtime inputs as placeholders without a submit form', () => {
+        const wrapper = mount(CockpitRuntimeInputPanel, {
+            props: {
+                inputs: cockpitRuntimeInputs,
+            },
+        });
+
+        expect(wrapper.text()).toContain('Operator input placeholders');
+        expect(wrapper.text()).toContain('Amount');
+        expect(wrapper.text()).toContain('Recipient');
+        expect(wrapper.text()).toContain('Purpose');
+        expect(wrapper.find('form').exists()).toBe(false);
+        expect(wrapper.findAll('[data-testid="cockpit-runtime-input"]')).toHaveLength(3);
+    });
+
+    it('renders pricing and funding summaries without calculating or reserving funds', () => {
+        const wrapper = mount(CockpitPricingFundingSummary, {
+            props: {
+                summaries: cockpitPricingFundingSummary,
+            },
+        });
+
+        expect(wrapper.text()).toContain('Pricing Estimate');
+        expect(wrapper.text()).toContain('Not calculated');
+        expect(wrapper.text()).toContain('Funding Impact');
+        expect(wrapper.text()).toContain('Not reserved');
+        expect(wrapper.text()).toContain('No wallet lookup, reservation, debit, or provider call occurs here.');
+        expect(wrapper.findAll('[data-testid="cockpit-pricing-summary-item"]')).toHaveLength(3);
+    });
+
+    it('keeps the generate action disabled until issuance is explicitly wired', async () => {
+        const wrapper = mount(CockpitGenerateActionPanel, {
+            props: {
+                enabled: false,
+            },
+        });
+
+        const button = wrapper.find('[data-testid="cockpit-generate-button"]');
+
+        expect(button.attributes('disabled')).toBeDefined();
+        expect(wrapper.text()).toContain('No voucher generation');
+        expect(wrapper.text()).toContain('No wallet debit or reservation');
+        expect(wrapper.text()).toContain('No provider call');
+        expect(wrapper.text()).toContain('No journal or feedback side effect');
+
+        await button.trigger('click');
+
+        expect(wrapper.emitted()).toEqual({});
+    });
+
+    it('renders the full Quick Generate page with active navigation and no side effects', () => {
+        const wrapper = mount(QuickGenerate);
+
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-shell"]').exists()).toBe(true);
+        expect(wrapper.text()).toContain('Quick Generate Foundation');
+        expect(wrapper.text()).toContain('Template Selector');
+        expect(wrapper.text()).toContain('Runtime Inputs');
+        expect(wrapper.text()).toContain('Pricing and Funding');
+        expect(wrapper.text()).toContain('Generate Action');
+        expect(wrapper.find('[aria-current="page"]').text()).toContain('Quick Generate');
+        expect(wrapper.text()).toContain('does not generate vouchers');
+        expect(wrapper.text()).toContain('calculate pricing');
+        expect(wrapper.text()).toContain('reserve funds');
+        expect(wrapper.text()).toContain('move money');
+    });
+});
+

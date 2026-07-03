@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Slice 2 — Dashboard Foundation  
+Current slice: Slice 3 — Quick Generate Foundation  
 Status: Complete  
 Last updated: 2026-07-03
 
@@ -39,6 +39,14 @@ Last updated: 2026-07-03
   - `resources/js/cockpit/components/CockpitRecentActivityPanel.vue`
 - Replaced the broad dashboard shell placeholders with read-only dashboard foundation widgets.
 - Added Slice 2 frontend coverage for widget rendering, placeholder/empty read-model states, and no-side-effect boundaries.
+- Completed Slice 3 Quick Generate Foundation:
+  - `resources/js/cockpit/quickGenerateDefaults.ts`
+  - `resources/js/cockpit/components/CockpitTemplateSelector.vue`
+  - `resources/js/cockpit/components/CockpitRuntimeInputPanel.vue`
+  - `resources/js/cockpit/components/CockpitPricingFundingSummary.vue`
+  - `resources/js/cockpit/components/CockpitGenerateActionPanel.vue`
+  - `resources/js/cockpit/pages/QuickGenerate.vue`
+- Added Slice 3 frontend coverage for template selection, runtime input placeholders, pricing/funding summaries, disabled generate action, and no-side-effect boundaries.
 
 ## In Progress
 
@@ -46,15 +54,15 @@ No implementation slice is in progress.
 
 ## Next
 
-Recommended next slice: Slice 3 — Quick Generate foundation.
+Recommended next slice: Slice 4 — Pay Code Explorer foundation.
 
 Scope should remain foundation-only:
 
-- template selector placeholder
-- runtime input area placeholder
-- pricing/funding summary placeholder
-- generate action placeholder
-- no real money movement unless existing services are safely wired in a later approved slice
+- search bar
+- filter builder placeholder
+- results table placeholder
+- row action placeholders
+- no hidden mutations from row actions
 - Vitest coverage for rendering and no side effects
 - preserve all existing Claim UI tests
 
@@ -81,6 +89,7 @@ Scope should remain foundation-only:
 - Slice 1 uses the explicit `resources/js/cockpit/` namespace.
 - Slice 1 does not add Laravel routes/controllers. It creates importable frontend shell primitives only.
 - Slice 2 keeps dashboard data as supplied read-model placeholders only. It does not fetch wallet/provider data, write journal entries, resolve actions, send feedback, call providers, or move money.
+- Slice 3 keeps Quick Generate as a disabled/read-only issuance shell. It does not submit forms, generate vouchers, calculate pricing, reserve funds, call providers, write journal entries, send feedback, or move money.
 
 ## Open Questions
 
@@ -105,3 +114,5 @@ Scope should remain foundation-only:
 - Slice 1 full frontend result: `62 passed, 388 tests`.
 - Slice 2 focused frontend result: `4 passed, 12 tests`.
 - Slice 2 full frontend result: `63 passed, 393 tests`.
+- Slice 3 focused frontend result: `5 passed, 17 tests`.
+- Slice 3 full frontend result: `64 passed, 398 tests`.

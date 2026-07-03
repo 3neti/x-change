@@ -53,3 +53,26 @@ export type CockpitActivityItem = {
     source: 'execution' | 'journal' | 'action' | 'feedback' | 'system';
 };
 
+export type CockpitQuickGenerateTemplate = {
+    key: string;
+    name: string;
+    description: string;
+    profile: string;
+    estimatedTime: string;
+    disabled?: boolean;
+};
+
+export type CockpitRuntimeInput = {
+    key: string;
+    label: string;
+    value: string;
+    helper: string;
+};
+
+export type CockpitPricingFundingSummary = {
+    key: string;
+    label: string;
+    value: string;
+    helper: string;
+};
+

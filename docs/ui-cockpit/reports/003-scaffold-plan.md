@@ -68,7 +68,7 @@ Tests:
 
 ## Slice 3 — Quick Generate Foundation
 
-Status: recommended next.
+Status: complete.
 
 Goal: create a template-first operator issuance shell without changing issuance semantics.
 
@@ -86,6 +86,8 @@ Guardrails:
 - no money movement outside existing services
 
 ## Slice 4 — Pay Code Explorer Foundation
+
+Status: recommended next.
 
 Goal: create operator search/explorer scaffolding.
 
