@@ -76,3 +76,26 @@ export type CockpitPricingFundingSummary = {
     helper: string;
 };
 
+export type CockpitPayCodeExplorerFilter = {
+    key: string;
+    label: string;
+    value: string;
+    helper: string;
+};
+
+export type CockpitPayCodeExplorerRecord = {
+    code: string;
+    template: string;
+    amount: string;
+    status: string;
+    owner: string;
+    lastActivity: string;
+};
+
+export type CockpitPayCodeRowAction = {
+    key: string;
+    label: string;
+    disabled: boolean;
+    reason: string;
+};
+

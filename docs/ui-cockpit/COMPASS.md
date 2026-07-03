@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Slice 3 — Quick Generate Foundation  
+Current slice: Slice 4 — Pay Code Explorer Foundation  
 Status: Complete  
 Last updated: 2026-07-03
 
@@ -47,6 +47,13 @@ Last updated: 2026-07-03
   - `resources/js/cockpit/components/CockpitGenerateActionPanel.vue`
   - `resources/js/cockpit/pages/QuickGenerate.vue`
 - Added Slice 3 frontend coverage for template selection, runtime input placeholders, pricing/funding summaries, disabled generate action, and no-side-effect boundaries.
+- Completed Slice 4 Pay Code Explorer Foundation:
+  - `resources/js/cockpit/payCodeExplorerDefaults.ts`
+  - `resources/js/cockpit/components/CockpitPayCodeSearchBar.vue`
+  - `resources/js/cockpit/components/CockpitPayCodeFilterBuilder.vue`
+  - `resources/js/cockpit/components/CockpitPayCodeResultsTable.vue`
+  - `resources/js/cockpit/pages/PayCodeExplorer.vue`
+- Added Slice 4 frontend coverage for search, filters, read-only result rows, disabled row actions, active navigation, and no-side-effect boundaries.
 
 ## In Progress
 
@@ -54,15 +61,16 @@ No implementation slice is in progress.
 
 ## Next
 
-Recommended next slice: Slice 4 — Pay Code Explorer foundation.
+Recommended next slice: Slice 5 — Voucher Detail foundation.
 
 Scope should remain foundation-only:
 
-- search bar
-- filter builder placeholder
-- results table placeholder
-- row action placeholders
-- no hidden mutations from row actions
+- overview placeholder
+- timeline placeholder
+- evidence tab placeholder
+- distribution tab placeholder
+- audit tab placeholder
+- no voucher mutation, execution, journal writes, or provider calls
 - Vitest coverage for rendering and no side effects
 - preserve all existing Claim UI tests
 
@@ -90,6 +98,7 @@ Scope should remain foundation-only:
 - Slice 1 does not add Laravel routes/controllers. It creates importable frontend shell primitives only.
 - Slice 2 keeps dashboard data as supplied read-model placeholders only. It does not fetch wallet/provider data, write journal entries, resolve actions, send feedback, call providers, or move money.
 - Slice 3 keeps Quick Generate as a disabled/read-only issuance shell. It does not submit forms, generate vouchers, calculate pricing, reserve funds, call providers, write journal entries, send feedback, or move money.
+- Slice 4 keeps Pay Code Explorer as a read-only exploration shell. It does not query host APIs, mutate vouchers, execute drivers, approve claims, write journal entries, send feedback, call providers, or move money.
 
 ## Open Questions
 
@@ -116,3 +125,5 @@ Scope should remain foundation-only:
 - Slice 2 full frontend result: `63 passed, 393 tests`.
 - Slice 3 focused frontend result: `5 passed, 17 tests`.
 - Slice 3 full frontend result: `64 passed, 398 tests`.
+- Slice 4 focused frontend result: `6 passed, 21 tests`.
+- Slice 4 full frontend result: `65 passed, 402 tests`.

@@ -36,6 +36,8 @@ describe('Cockpit navigation baseline', () => {
             expect(item).not.toHaveProperty('campaign');
             expect(item).not.toHaveProperty('issueVoucher');
             expect(item).not.toHaveProperty('moveMoney');
+            expect(item).not.toHaveProperty('mutateVoucher');
+            expect(item).not.toHaveProperty('providerCall');
         }
     });
 });

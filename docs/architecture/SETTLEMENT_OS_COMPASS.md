@@ -724,6 +724,7 @@ ExecutionDriverContract
 - Cockpit Slice 1 includes a global header, sidebar navigation, balance HUD placeholder, layout, dashboard shell, navigation descriptors, and focused Vitest coverage.
 - x-change Cockpit Slice 2 adds read-only dashboard foundation widgets for liquidity, balance cards, redemption pipeline, risk/expiry, and recent activity without backend integration or domain side effects.
 - x-change Cockpit Slice 3 adds a disabled/read-only Quick Generate foundation with template selector, runtime input placeholders, pricing/funding summary placeholders, and generate-action placeholder without issuance or money movement.
+- x-change Cockpit Slice 4 adds a read-only Pay Code Explorer foundation with search, filter, results-table, and disabled row-action placeholders without host queries or domain mutations.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -737,11 +738,11 @@ Continue Wave 4 — x-change Cockpit with the next authorized slice.
 Recommended actions:
 
 1. Request approval before proceeding to another slice.
-2. Completed slice: Cockpit Slice 3 — Quick Generate Foundation.
+2. Completed slice: Cockpit Slice 4 — Pay Code Explorer Foundation.
 3. Read the Cockpit compass before continuing: `packages/x-change/docs/ui-cockpit/COMPASS.md`.
-4. Recommended next slice: Cockpit Slice 4 — Pay Code Explorer Foundation.
-5. Slice 4 should add search bar, filter builder placeholder, results table placeholder, and row action placeholders.
-6. Do not add hidden mutations, real execution, journal, action, feedback, campaign, provider, or money-movement behavior in the Pay Code Explorer foundation slice.
+4. Recommended next slice: Cockpit Slice 5 — Voucher Detail Foundation.
+5. Slice 5 should add overview, timeline, evidence, distribution, and audit tab placeholders.
+6. Do not add voucher mutation, real execution, journal writes, action execution, feedback delivery, campaign, provider, or money-movement behavior in the Voucher Detail foundation slice.
 7. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
 ## x-journal Initial Intent

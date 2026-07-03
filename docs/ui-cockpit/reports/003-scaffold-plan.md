@@ -87,7 +87,7 @@ Guardrails:
 
 ## Slice 4 — Pay Code Explorer Foundation
 
-Status: recommended next.
+Status: complete.
 
 Goal: create operator search/explorer scaffolding.
 
@@ -104,6 +104,8 @@ Guardrails:
 - no hidden mutations from row actions
 
 ## Slice 5 — Voucher Detail Foundation
+
+Status: recommended next.
 
 Goal: display a single Pay Code/Voucher operator view.
 
