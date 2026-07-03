@@ -18,13 +18,48 @@ it('renders cockpit pages as read-only inertia endpoints', function (string $rou
     $this->withHeader('X-Inertia', 'true')
         ->get(route($route, $parameters))
         ->assertOk()
-        ->assertJsonPath('component', $component);
+        ->assertJsonPath('component', $component)
+        ->assertJsonPath('props.can.view_cockpit', true)
+        ->assertJsonPath('props.can.mutate_vouchers', false)
+        ->assertJsonPath('props.can.execute_drivers', false)
+        ->assertJsonPath('props.can.write_journal_entries', false)
+        ->assertJsonPath('props.can.send_feedback', false)
+        ->assertJsonPath('props.can.call_providers', false)
+        ->assertJsonPath('props.can.move_money', false)
+        ->assertJsonPath('props.redaction.policy', 'default-cockpit-redaction')
+        ->assertJsonPath('props.redaction.payloads', 'redacted-until-authorized-read-models-exist');
 })->with([
     'dashboard' => ['x-change.cockpit.dashboard', [], 'x-change/cockpit/Dashboard'],
     'quick generate' => ['x-change.cockpit.quick-generate', [], 'x-change/cockpit/QuickGenerate'],
     'pay code explorer' => ['x-change.cockpit.pay-codes.index', [], 'x-change/cockpit/PayCodeExplorer'],
     'voucher detail' => ['x-change.cockpit.pay-codes.show', ['code' => 'PC-READY-001'], 'x-change/cockpit/VoucherDetail'],
     'distribution workspace' => ['x-change.cockpit.pay-codes.distribution', ['code' => 'PC-READY-001'], 'x-change/cockpit/DistributionWorkspace'],
+]);
+
+it('keeps voucher route context explicit without loading voucher payloads', function () {
+    actingAsTestUser();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.show', ['code' => 'PC-READY-001']))
+        ->assertOk()
+        ->assertJsonPath('props.context.code', 'PC-READY-001')
+        ->assertJsonMissingPath('props.voucher')
+        ->assertJsonMissingPath('props.journal')
+        ->assertJsonMissingPath('props.actions')
+        ->assertJsonMissingPath('props.feedback')
+        ->assertJsonMissingPath('props.provider_payload');
+});
+
+it('requires authentication for cockpit routes', function (string $route, array $parameters) {
+    $this->withHeader('Accept', 'application/json')
+        ->get(route($route, $parameters))
+        ->assertUnauthorized();
+})->with([
+    'dashboard' => ['x-change.cockpit.dashboard', []],
+    'quick generate' => ['x-change.cockpit.quick-generate', []],
+    'pay code explorer' => ['x-change.cockpit.pay-codes.index', []],
+    'voucher detail' => ['x-change.cockpit.pay-codes.show', ['code' => 'PC-READY-001']],
+    'distribution workspace' => ['x-change.cockpit.pay-codes.distribution', ['code' => 'PC-READY-001']],
 ]);
 
 it('does not register cockpit mutation routes', function () {

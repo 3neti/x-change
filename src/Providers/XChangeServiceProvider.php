@@ -57,6 +57,7 @@ use LBHurtado\XChange\Contracts\ClaimApprovalWorkflowStoreContract;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
 use LBHurtado\XChange\Contracts\ClaimOtpChallengeContract;
 use LBHurtado\XChange\Contracts\ClaimOtpVerificationContract;
+use LBHurtado\XChange\Contracts\CockpitRedactorContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationStoreContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusFetcherContract;
@@ -169,6 +170,7 @@ use LBHurtado\XChange\Services\WithdrawalPipeline;
 use LBHurtado\XChange\Services\XChangeWithdrawalIntervalEnforcer;
 use LBHurtado\XChange\Support\Claim\ClaimApprovalPendingOtpStore;
 use LBHurtado\XChange\Support\Claim\DefaultClaimApprovalStatusResolver;
+use LBHurtado\XChange\Support\Cockpit\DefaultCockpitRedactor;
 use LBHurtado\XChange\Support\Logging\CacheEventStore;
 
 class XChangeServiceProvider extends ServiceProvider
@@ -237,6 +239,8 @@ class XChangeServiceProvider extends ServiceProvider
 
             return $app->make($service);
         });
+
+        $this->app->singleton(CockpitRedactorContract::class, DefaultCockpitRedactor::class);
 
         $this->app->bind(WithdrawalValidationContract::class, function ($app) {
             $service = config('x-change.services.withdrawal_validation', DefaultWithdrawalValidationService::class);

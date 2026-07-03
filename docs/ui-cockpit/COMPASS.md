@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Slice 7 — Read-Only Route/API Wiring Plan
+Current slice: Slice 8 — Operator Authorization and Redaction Baseline
 Status: Complete
 Last updated: 2026-07-03
 
@@ -85,6 +85,18 @@ Last updated: 2026-07-03
   - `resources/js/pages/x-change/cockpit/DistributionWorkspace.vue`
 - Added Slice 7 PHP route coverage for authenticated GET-only Cockpit routes, Inertia component names, and no Cockpit mutation routes.
 - Added Slice 7 frontend coverage for Inertia page adapters importing the Cockpit namespace pages.
+- Completed Slice 8 Operator Authorization and Redaction Baseline:
+  - `src/Contracts/CockpitRedactorContract.php`
+  - `src/Support/Cockpit/DefaultCockpitRedactor.php`
+  - `src/Support/Cockpit/CockpitReadOnlyPageProps.php`
+  - `src/Providers/XChangeServiceProvider.php`
+  - `src/Http/Controllers/Web/Cockpit/CockpitDashboardPageController.php`
+  - `src/Http/Controllers/Web/Cockpit/CockpitQuickGeneratePageController.php`
+  - `src/Http/Controllers/Web/Cockpit/CockpitPayCodeExplorerPageController.php`
+  - `src/Http/Controllers/Web/Cockpit/CockpitVoucherDetailPageController.php`
+  - `src/Http/Controllers/Web/Cockpit/CockpitDistributionWorkspacePageController.php`
+- Added Slice 8 PHP coverage for authenticated Cockpit routes exposing explicit read-only authorization props, redaction metadata, voucher route context, and no sensitive payload loading.
+- Added Slice 8 unit coverage for recursive redaction, original-payload immutability, caller-supplied sensitive keys, and redactor contract binding.
 
 ## In Progress
 
@@ -92,13 +104,14 @@ No implementation slice is in progress.
 
 ## Next
 
-Recommended next slice: Slice 8 — Operator Authorization and Redaction Baseline.
+Recommended next slice: Slice 9 — Read Model Contract Baselines.
 
 Scope should remain foundation-only:
 
-- operator authorization/redaction model
-- route middleware and policy documentation/tests where safe
-- redaction view-model contract baselines
+- execution, journal, action, feedback, and voucher read-model DTO/contract baselines
+- host-facing presentation contracts that require authorization/redaction before payload exposure
+- tests proving read-model contracts are side-effect-free
+- no live cross-package calls unless explicitly approved
 - no broad exposure of journal, action, feedback, provider, or voucher payloads
 - no mutation endpoints, execution, journal writes, feedback delivery, provider calls, campaign behavior, or money movement
 - preserve all existing Claim UI tests
@@ -113,6 +126,7 @@ Scope should remain foundation-only:
 - x-feedback UI component view models are presentation facts only; Cockpit owns pages, navigation, authorization, and operator workflows.
 - Voucher execution results have `execution_id`, but execution persistence and host wiring remain deferred.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
+- Slice 8 exposes static read-only authorization props only. Real operator roles, permissions, policies, and tenant scoping remain future host integration work.
 
 ## Decisions
 
@@ -131,11 +145,12 @@ Scope should remain foundation-only:
 - Slice 5 keeps Voucher Detail as a read-only single-voucher shell. It does not mutate vouchers, execute drivers, write journal entries, send feedback, call providers, or move money.
 - Slice 6 keeps Distribution Workspace as a read-only planning shell. It does not dispatch distribution, send feedback, create campaigns, mutate vouchers, execute drivers, write journal entries, call providers, or move money.
 - Slice 7 exposes existing Cockpit pages through authenticated GET-only Inertia routes under `/x/cockpit`. It does not add JSON read APIs, mutation routes, domain read-model calls, execution, journal writes, feedback delivery, provider calls, campaign behavior, or money movement.
+- Slice 8 keeps Cockpit authorization/redaction as a boundary baseline. It exposes explicit read-only `can` props and redaction metadata, adds a default redactor contract, and avoids loading voucher, journal, action, feedback, or provider payloads until authorized read models exist.
 
 ## Open Questions
 
 - Which host API/read-model contracts should expose execution, journal, action, and feedback facts to Cockpit without leaking sensitive payloads.
-- How operator authorization and redaction should be represented before real Cockpit pages expose journal, action diagnostics, feedback delivery records, or provider payloads.
+- How static read-only Cockpit permissions should evolve into real operator roles, policies, tenant scoping, and permission checks.
 - Whether existing `/x/dashboard` should be promoted into Cockpit or left as a compatibility route while Cockpit grows under a new route namespace.
 
 ## Test Status
@@ -167,3 +182,6 @@ Scope should remain foundation-only:
 - Slice 7 focused frontend result: `9 passed, 36 tests`.
 - Slice 7 full frontend result: `68 passed, 417 tests`.
 - Slice 7 full package Pest result: `977 passed, 5 skipped, 5007 assertions`.
+- Slice 8 focused PHP route result: `13 passed, 73 assertions`.
+- Slice 8 focused redactor result: `4 passed, 13 assertions`.
+- Slice 8 full package Pest result: `987 passed, 5 skipped, 5077 assertions`.

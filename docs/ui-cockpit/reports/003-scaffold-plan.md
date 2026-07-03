@@ -164,14 +164,31 @@ No separate JSON read APIs were introduced. No host read-model calls, voucher mu
 
 ## Slice 8 — Operator Authorization and Redaction Baseline
 
+Status: complete.
+
+Implemented:
+
+- authenticated Cockpit route coverage for explicit read-only `can` props
+- shared read-only page props for all Cockpit Inertia endpoints
+- redaction policy metadata for Cockpit pages
+- `CockpitRedactorContract`
+- default recursive redactor with caller-supplied sensitive-key extension
+- service-provider binding for the redactor contract
+- route context propagation for voucher-specific pages without loading voucher payloads
+
+No journal, action, feedback, provider, voucher, or execution payloads are exposed in Slice 8. No mutation endpoints, execution, journal writes, feedback delivery, provider calls, campaign behavior, or money movement were added.
+
+## Slice 9 — Read Model Contract Baselines
+
 Status: recommended next.
 
 Candidate scope:
 
-- operator authorization/redaction model
-- read-model contract baselines for execution, journal, action, and feedback facts
-- route middleware and policy documentation/tests where safe
-- no broad exposure of journal, action, feedback, provider, or voucher payloads
+- execution, journal, action, feedback, and voucher read-model DTO/contract baselines
+- host-facing presentation contracts that compose with authorization/redaction
+- tests proving read-model contracts are side-effect-free
+- no live cross-package calls unless explicitly approved
+- no broad payload exposure before redaction and authorization are applied
 
 ## Verification Plan
 
