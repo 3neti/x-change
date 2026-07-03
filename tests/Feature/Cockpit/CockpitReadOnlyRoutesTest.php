@@ -149,6 +149,16 @@ it('hydrates quick generate with a sanitized quick generate read model prop', fu
         ->assertJsonPath('props.quick_generate_read_model.funding_gate.checks.4.key', 'funds-reservation-ready')
         ->assertJsonPath('props.quick_generate_read_model.funding_gate.checks.5.key', 'provider-funding-ready')
         ->assertJsonPath('props.quick_generate_read_model.funding_gate.redactions.payloads', 'funding-gates-only')
+        ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.status', 'blocked')
+        ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.checks.0.key', 'idempotency-policy-known')
+        ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.checks.0.status', 'passed')
+        ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.checks.1.key', 'idempotency-key-source-defined')
+        ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.checks.1.status', 'blocked')
+        ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.checks.2.key', 'payload-fingerprint-defined')
+        ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.checks.3.key', 'replay-lookup-ready')
+        ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.checks.4.key', 'conflict-response-ready')
+        ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.checks.5.key', 'ttl-policy-ready')
+        ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.redactions.payloads', 'idempotency-gates-only')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.schema', 'x-change.cockpit.quick-generate-draft.v1')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.status', 'draft_only')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.template_key', 'money-changer')
@@ -174,7 +184,12 @@ it('hydrates quick generate with a sanitized quick generate read model prop', fu
         ->assertJsonMissingPath('props.quick_generate_read_model.balance')
         ->assertJsonMissingPath('props.quick_generate_read_model.available_balance')
         ->assertJsonMissingPath('props.quick_generate_read_model.provider_wallet')
-        ->assertJsonMissingPath('props.quick_generate_read_model.funding_source');
+        ->assertJsonMissingPath('props.quick_generate_read_model.funding_source')
+        ->assertJsonMissingPath('props.quick_generate_read_model.idempotency_key')
+        ->assertJsonMissingPath('props.quick_generate_read_model.payload_fingerprint')
+        ->assertJsonMissingPath('props.quick_generate_read_model.stored_response')
+        ->assertJsonMissingPath('props.quick_generate_read_model.replay_payload')
+        ->assertJsonMissingPath('props.quick_generate_read_model.cache_key');
 });
 
 it('requires authentication for cockpit routes', function (string $route, array $parameters) {
@@ -274,4 +289,19 @@ it('documents the quick generate funding gates before wallet access or reservati
         ->and($report)->toContain('provider-funding-ready')
         ->and($report)->toContain('Funding gates are read-only facts in Slice 21')
         ->and($report)->toContain('No funding gate reads wallets, reserves funds, debits balances, or calls providers in Slice 21');
+});
+
+it('documents the quick generate idempotency gates before persistence or mutation wiring', function () {
+    $report = file_get_contents(__DIR__.'/../../../docs/ui-cockpit/reports/009-quick-generate-idempotency-gate-baseline.md');
+
+    expect($report)->toBeString()
+        ->and($report)->toContain('Cockpit Slice 22')
+        ->and($report)->toContain('idempotency-policy-known')
+        ->and($report)->toContain('idempotency-key-source-defined')
+        ->and($report)->toContain('payload-fingerprint-defined')
+        ->and($report)->toContain('replay-lookup-ready')
+        ->and($report)->toContain('conflict-response-ready')
+        ->and($report)->toContain('ttl-policy-ready')
+        ->and($report)->toContain('Idempotency gates are read-only facts in Slice 22')
+        ->and($report)->toContain('No idempotency gate persists keys, fingerprints payloads, reads replay records, or enables mutation routes in Slice 22');
 });

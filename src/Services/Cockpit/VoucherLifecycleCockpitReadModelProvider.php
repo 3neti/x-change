@@ -21,6 +21,8 @@ use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateAuthorizationGateData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateDraftContractData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateFundingGateCheckData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateFundingGateData;
+use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateIdempotencyGateCheckData;
+use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateIdempotencyGateData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGeneratePricingGateCheckData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGeneratePricingGateData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGeneratePricingSummaryData;
@@ -370,6 +372,59 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                         'account_number',
                         'provider_wallet',
                         'provider_payload',
+                        'raw_payload',
+                    ],
+                ],
+            ),
+            idempotency_gate: new CockpitQuickGenerateIdempotencyGateData(
+                status: 'blocked',
+                checks: [
+                    new CockpitQuickGenerateIdempotencyGateCheckData(
+                        key: 'idempotency-policy-known',
+                        label: 'Idempotency Policy Known',
+                        status: 'passed',
+                        reason: 'Idempotency is represented as a read-only Cockpit readiness fact.',
+                    ),
+                    new CockpitQuickGenerateIdempotencyGateCheckData(
+                        key: 'idempotency-key-source-defined',
+                        label: 'Idempotency Key Source Defined',
+                        status: 'blocked',
+                        reason: 'Cockpit does not generate, accept, or persist idempotency keys in Slice 22.',
+                    ),
+                    new CockpitQuickGenerateIdempotencyGateCheckData(
+                        key: 'payload-fingerprint-defined',
+                        label: 'Payload Fingerprint Defined',
+                        status: 'blocked',
+                        reason: 'Cockpit does not hash or fingerprint Quick Generate payloads in Slice 22.',
+                    ),
+                    new CockpitQuickGenerateIdempotencyGateCheckData(
+                        key: 'replay-lookup-ready',
+                        label: 'Replay Lookup Ready',
+                        status: 'blocked',
+                        reason: 'Cockpit does not query idempotency stores or replay records in Slice 22.',
+                    ),
+                    new CockpitQuickGenerateIdempotencyGateCheckData(
+                        key: 'conflict-response-ready',
+                        label: 'Conflict Response Ready',
+                        status: 'blocked',
+                        reason: 'Cockpit does not evaluate idempotency conflicts in Slice 22.',
+                    ),
+                    new CockpitQuickGenerateIdempotencyGateCheckData(
+                        key: 'ttl-policy-ready',
+                        label: 'TTL Policy Ready',
+                        status: 'blocked',
+                        reason: 'Cockpit does not read or enforce idempotency TTL policy in Slice 22.',
+                    ),
+                ],
+                redactions: [
+                    'payloads' => 'idempotency-gates-only',
+                    'excluded' => [
+                        'idempotency_key',
+                        'request_payload',
+                        'payload_fingerprint',
+                        'stored_response',
+                        'replay_payload',
+                        'cache_key',
                         'raw_payload',
                     ],
                 ],

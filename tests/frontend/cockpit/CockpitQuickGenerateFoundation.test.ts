@@ -6,6 +6,7 @@ import CockpitPricingFundingSummary from '../../../resources/js/cockpit/componen
 import CockpitQuickGenerateAuthorizationGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateAuthorizationGatePanel.vue';
 import CockpitQuickGenerateDraftContractPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateDraftContractPanel.vue';
 import CockpitQuickGenerateFundingGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateFundingGatePanel.vue';
+import CockpitQuickGenerateIdempotencyGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateIdempotencyGatePanel.vue';
 import CockpitQuickGeneratePricingGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGeneratePricingGatePanel.vue';
 import CockpitRuntimeInputPanel from '../../../resources/js/cockpit/components/CockpitRuntimeInputPanel.vue';
 import CockpitTemplateSelector from '../../../resources/js/cockpit/components/CockpitTemplateSelector.vue';
@@ -244,6 +245,44 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.findAll('[data-testid="cockpit-quick-generate-funding-gate-check"]')).toHaveLength(2);
     });
 
+    it('renders idempotency gate facts without persistence or replay behavior', () => {
+        const wrapper = mount(CockpitQuickGenerateIdempotencyGatePanel, {
+            props: {
+                idempotencyGate: {
+                    status: 'blocked',
+                    checks: [
+                        {
+                            key: 'idempotency-policy-known',
+                            label: 'Idempotency Policy Known',
+                            status: 'passed',
+                            reason: 'Idempotency is represented as a read-only Cockpit readiness fact.',
+                        },
+                        {
+                            key: 'replay-lookup-ready',
+                            label: 'Replay Lookup Ready',
+                            status: 'blocked',
+                            reason: 'Cockpit does not query idempotency stores or replay records in Slice 22.',
+                        },
+                    ],
+                    redactions: {
+                        payloads: 'idempotency-gates-only',
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Idempotency Gate Baseline');
+        expect(wrapper.text()).toContain('Idempotency Policy Known');
+        expect(wrapper.text()).toContain('passed');
+        expect(wrapper.text()).toContain('Replay Lookup Ready');
+        expect(wrapper.text()).toContain('blocked');
+        expect(wrapper.text()).toContain('Cockpit does not query idempotency stores or replay records in Slice 22.');
+        expect(wrapper.text()).toContain('Idempotency gates are read-only facts in Slice 22.');
+        expect(wrapper.find('form').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-idempotency-gate-panel"]').exists()).toBe(true);
+        expect(wrapper.findAll('[data-testid="cockpit-quick-generate-idempotency-gate-check"]')).toHaveLength(2);
+    });
+
     it('renders the full Quick Generate page with active navigation and no side effects', () => {
         const wrapper = mount(QuickGenerate);
 
@@ -268,5 +307,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('Pricing gates are read-only facts in Slice 20.');
         expect(wrapper.text()).toContain('Funding Gate Baseline');
         expect(wrapper.text()).toContain('Funding gates are read-only facts in Slice 21.');
+        expect(wrapper.text()).toContain('Idempotency Gate Baseline');
+        expect(wrapper.text()).toContain('Idempotency gates are read-only facts in Slice 22.');
     });
 });

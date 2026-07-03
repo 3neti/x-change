@@ -6,6 +6,7 @@ import CockpitPricingFundingSummary from '../components/CockpitPricingFundingSum
 import CockpitQuickGenerateAuthorizationGatePanel from '../components/CockpitQuickGenerateAuthorizationGatePanel.vue';
 import CockpitQuickGenerateDraftContractPanel from '../components/CockpitQuickGenerateDraftContractPanel.vue';
 import CockpitQuickGenerateFundingGatePanel from '../components/CockpitQuickGenerateFundingGatePanel.vue';
+import CockpitQuickGenerateIdempotencyGatePanel from '../components/CockpitQuickGenerateIdempotencyGatePanel.vue';
 import CockpitQuickGeneratePricingGatePanel from '../components/CockpitQuickGeneratePricingGatePanel.vue';
 import CockpitRuntimeInputPanel from '../components/CockpitRuntimeInputPanel.vue';
 import CockpitTemplateSelector from '../components/CockpitTemplateSelector.vue';
@@ -22,6 +23,8 @@ import type {
     CockpitQuickGenerateDraftContract,
     CockpitQuickGenerateFundingGate,
     CockpitQuickGenerateFundingGateCheck,
+    CockpitQuickGenerateIdempotencyGate,
+    CockpitQuickGenerateIdempotencyGateCheck,
     CockpitQuickGeneratePricingGate,
     CockpitQuickGeneratePricingGateCheck,
     CockpitQuickGeneratePageProps,
@@ -137,6 +140,28 @@ const fundingGate = computed<CockpitQuickGenerateFundingGate>(() => {
         checks: checks.length > 0 ? checks : defaultFundingGate().checks,
         redactions: {
             payloads: stringValue(fundingGateReadModel.redactions?.payloads) ?? 'funding-gates-only',
+        },
+    };
+});
+
+const idempotencyGate = computed<CockpitQuickGenerateIdempotencyGate>(() => {
+    const idempotencyGateReadModel = props.quick_generate_read_model?.idempotency_gate;
+
+    if (!readModelAvailable.value || typeof idempotencyGateReadModel !== 'object' || idempotencyGateReadModel === null) {
+        return defaultIdempotencyGate();
+    }
+
+    const checks = Array.isArray(idempotencyGateReadModel.checks)
+        ? idempotencyGateReadModel.checks
+            .map((check): CockpitQuickGenerateIdempotencyGateCheck | null => sanitizeIdempotencyGateCheck(check))
+            .filter((check): check is CockpitQuickGenerateIdempotencyGateCheck => check !== null)
+        : [];
+
+    return {
+        status: stringValue(idempotencyGateReadModel.status) ?? 'blocked',
+        checks: checks.length > 0 ? checks : defaultIdempotencyGate().checks,
+        redactions: {
+            payloads: stringValue(idempotencyGateReadModel.redactions?.payloads) ?? 'idempotency-gates-only',
         },
     };
 });
@@ -273,6 +298,53 @@ function defaultFundingGate(): CockpitQuickGenerateFundingGate {
     };
 }
 
+function defaultIdempotencyGate(): CockpitQuickGenerateIdempotencyGate {
+    return {
+        status: 'blocked',
+        checks: [
+            {
+                key: 'idempotency-policy-known',
+                label: 'Idempotency Policy Known',
+                status: 'passed',
+                reason: 'Idempotency is represented as a read-only Cockpit readiness fact.',
+            },
+            {
+                key: 'idempotency-key-source-defined',
+                label: 'Idempotency Key Source Defined',
+                status: 'blocked',
+                reason: 'Cockpit does not generate, accept, or persist idempotency keys in Slice 22.',
+            },
+            {
+                key: 'payload-fingerprint-defined',
+                label: 'Payload Fingerprint Defined',
+                status: 'blocked',
+                reason: 'Cockpit does not hash or fingerprint Quick Generate payloads in Slice 22.',
+            },
+            {
+                key: 'replay-lookup-ready',
+                label: 'Replay Lookup Ready',
+                status: 'blocked',
+                reason: 'Cockpit does not query idempotency stores or replay records in Slice 22.',
+            },
+            {
+                key: 'conflict-response-ready',
+                label: 'Conflict Response Ready',
+                status: 'blocked',
+                reason: 'Cockpit does not evaluate idempotency conflicts in Slice 22.',
+            },
+            {
+                key: 'ttl-policy-ready',
+                label: 'TTL Policy Ready',
+                status: 'blocked',
+                reason: 'Cockpit does not read or enforce idempotency TTL policy in Slice 22.',
+            },
+        ],
+        redactions: {
+            payloads: 'idempotency-gates-only',
+        },
+    };
+}
+
 function defaultAuthorization(): CockpitQuickGenerateAuthorization {
     return {
         status: 'blocked',
@@ -327,6 +399,22 @@ function sanitizeFundingGateCheck(check: CockpitQuickGenerateFundingGateCheck): 
         label,
         status: stringValue(check.status) ?? 'unknown',
         reason: stringValue(check.reason) ?? 'No funding diagnostic is available.',
+    };
+}
+
+function sanitizeIdempotencyGateCheck(check: CockpitQuickGenerateIdempotencyGateCheck): CockpitQuickGenerateIdempotencyGateCheck | null {
+    const key = stringValue(check.key);
+    const label = stringValue(check.label);
+
+    if (!key || !label) {
+        return null;
+    }
+
+    return {
+        key,
+        label,
+        status: stringValue(check.status) ?? 'unknown',
+        reason: stringValue(check.reason) ?? 'No idempotency diagnostic is available.',
     };
 }
 
@@ -452,6 +540,7 @@ function stringValue(value: unknown): string | null {
                     <CockpitPricingFundingSummary :summaries="pricingSummaries" />
                     <CockpitQuickGeneratePricingGatePanel :pricing-gate="pricingGate" />
                     <CockpitQuickGenerateFundingGatePanel :funding-gate="fundingGate" />
+                    <CockpitQuickGenerateIdempotencyGatePanel :idempotency-gate="idempotencyGate" />
                     <CockpitGenerateActionPanel :enabled="false" />
                     <CockpitQuickGenerateAuthorizationGatePanel :authorization="authorization" />
                     <CockpitQuickGenerateDraftContractPanel :draft-contract="draftContract" />

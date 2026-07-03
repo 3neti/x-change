@@ -147,6 +147,21 @@ export type CockpitQuickGenerateFundingGate = {
     [key: string]: unknown;
 };
 
+export type CockpitQuickGenerateIdempotencyGateCheck = {
+    key?: string | null;
+    label?: string | null;
+    status?: string | null;
+    reason?: string | null;
+    [key: string]: unknown;
+};
+
+export type CockpitQuickGenerateIdempotencyGate = {
+    status?: string | null;
+    checks?: CockpitQuickGenerateIdempotencyGateCheck[];
+    redactions?: CockpitReadModelRedactions;
+    [key: string]: unknown;
+};
+
 export type CockpitQuickGenerateDraftContract = {
     schema?: string | null;
     status?: string | null;
@@ -183,6 +198,7 @@ export type CockpitQuickGenerateReadModel = {
     pricing_summaries?: CockpitQuickGenerateReadModelPricingSummary[];
     pricing_gate?: CockpitQuickGeneratePricingGate;
     funding_gate?: CockpitQuickGenerateFundingGate;
+    idempotency_gate?: CockpitQuickGenerateIdempotencyGate;
     draft_contract?: CockpitQuickGenerateDraftContract;
     authorization?: CockpitQuickGenerateAuthorization;
     action?: {

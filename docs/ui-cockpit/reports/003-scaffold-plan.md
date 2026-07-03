@@ -378,14 +378,27 @@ Slice 21 added a read-only funding gate model to the Quick Generate read model a
 
 ## Slice 22 — Quick Generate Idempotency Gate Baseline
 
-Status: recommended next.
+Status: complete.
 
-Candidate scope:
+Implemented:
 
 - define idempotency readiness facts required before a future Quick Generate mutation can be enabled
 - keep idempotency facts read-only and presentation-safe
 - preserve disabled generate controls unless an explicit mutation slice is approved
 - no idempotency persistence, mutation endpoints, voucher issuance, execution, journal writes, action execution, feedback delivery, provider calls, wallet access, campaign behavior, or money movement
+
+Slice 22 added a read-only idempotency gate model to the Quick Generate read model and a visible idempotency gate panel. The baseline reports idempotency policy as known while idempotency key source definition, payload fingerprinting, replay lookup, conflict response, and TTL policy remain blocked.
+
+## Slice 23 — Quick Generate Request Validation and Redaction Gate Baseline
+
+Status: recommended next.
+
+Candidate scope:
+
+- define request validation and redaction readiness facts required before a future Quick Generate mutation can be enabled
+- keep validation/redaction facts read-only and presentation-safe
+- preserve disabled generate controls unless an explicit mutation slice is approved
+- no request validation execution, payload persistence, mutation endpoints, voucher issuance, execution, journal writes, action execution, feedback delivery, provider calls, wallet access, campaign behavior, or money movement
 
 ## Verification Plan
 
