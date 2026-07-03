@@ -391,14 +391,27 @@ Slice 22 added a read-only idempotency gate model to the Quick Generate read mod
 
 ## Slice 23 — Quick Generate Request Validation and Redaction Gate Baseline
 
-Status: recommended next.
+Status: complete.
 
-Candidate scope:
+Implemented:
 
 - define request validation and redaction readiness facts required before a future Quick Generate mutation can be enabled
 - keep validation/redaction facts read-only and presentation-safe
 - preserve disabled generate controls unless an explicit mutation slice is approved
 - no request validation execution, payload persistence, mutation endpoints, voucher issuance, execution, journal writes, action execution, feedback delivery, provider calls, wallet access, campaign behavior, or money movement
+
+Slice 23 added a read-only validation/redaction gate model to the Quick Generate read model and a visible validation/redaction gate panel. The baseline reports the request schema as known while required-field enforcement, validation rule wiring, sensitive-field redaction, sanitized preview generation, and validation error contracts remain blocked.
+
+## Slice 24 — Quick Generate Mutation Handoff Boundary Plan
+
+Status: recommended next.
+
+Candidate scope:
+
+- document the exact future handoff from Cockpit Quick Generate to the existing `GeneratePayCode` / `GeneratePayCodeController` path
+- define the preconditions that must pass before a mutation route can be considered
+- preserve disabled generate controls unless an explicit mutation slice is approved
+- no mutation endpoints, voucher issuance, request validation execution, payload persistence, execution, journal writes, action execution, feedback delivery, provider calls, wallet access, campaign behavior, or money movement
 
 ## Verification Plan
 

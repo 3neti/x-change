@@ -419,6 +419,11 @@ it('returns an empty not wired quick generate read model by default', function (
             'checks' => [],
             'redactions' => ['payloads' => 'not-loaded'],
         ],
+        'validation_redaction_gate' => [
+            'status' => 'not_wired',
+            'checks' => [],
+            'redactions' => ['payloads' => 'not-loaded'],
+        ],
         'draft_contract' => [
             'schema' => 'x-change.cockpit.quick-generate-draft.v1',
             'status' => 'not_wired',
@@ -880,6 +885,60 @@ it('adapts safe quick generate catalog facts without invoking voucher lifecycle 
                         'stored_response',
                         'replay_payload',
                         'cache_key',
+                        'raw_payload',
+                    ],
+                ],
+            ],
+            'validation_redaction_gate' => [
+                'status' => 'blocked',
+                'checks' => [
+                    [
+                        'key' => 'request-schema-known',
+                        'label' => 'Request Schema Known',
+                        'status' => 'passed',
+                        'reason' => 'The Quick Generate draft contract schema is represented as a read-only Cockpit readiness fact.',
+                    ],
+                    [
+                        'key' => 'required-fields-defined',
+                        'label' => 'Required Fields Defined',
+                        'status' => 'blocked',
+                        'reason' => 'Cockpit does not execute request validation or enforce required fields in Slice 23.',
+                    ],
+                    [
+                        'key' => 'validation-rules-wired',
+                        'label' => 'Validation Rules Wired',
+                        'status' => 'blocked',
+                        'reason' => 'Cockpit does not invoke GeneratePayCodeRequest validation in Slice 23.',
+                    ],
+                    [
+                        'key' => 'sensitive-fields-redacted',
+                        'label' => 'Sensitive Fields Redacted',
+                        'status' => 'blocked',
+                        'reason' => 'Cockpit does not accept, persist, or redact submitted payloads in Slice 23.',
+                    ],
+                    [
+                        'key' => 'sanitized-preview-ready',
+                        'label' => 'Sanitized Preview Ready',
+                        'status' => 'blocked',
+                        'reason' => 'Cockpit does not build sanitized request previews in Slice 23.',
+                    ],
+                    [
+                        'key' => 'validation-error-contract-ready',
+                        'label' => 'Validation Error Contract Ready',
+                        'status' => 'blocked',
+                        'reason' => 'Cockpit does not expose validation error response contracts in Slice 23.',
+                    ],
+                ],
+                'redactions' => [
+                    'payloads' => 'validation-redaction-gates-only',
+                    'excluded' => [
+                        'request_payload',
+                        'validated_payload',
+                        'validation_errors',
+                        'mobile',
+                        'email',
+                        'recipient_reference',
+                        'account_number',
                         'raw_payload',
                     ],
                 ],

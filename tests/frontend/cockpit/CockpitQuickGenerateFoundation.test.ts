@@ -8,6 +8,7 @@ import CockpitQuickGenerateDraftContractPanel from '../../../resources/js/cockpi
 import CockpitQuickGenerateFundingGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateFundingGatePanel.vue';
 import CockpitQuickGenerateIdempotencyGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateIdempotencyGatePanel.vue';
 import CockpitQuickGeneratePricingGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGeneratePricingGatePanel.vue';
+import CockpitQuickGenerateValidationRedactionGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateValidationRedactionGatePanel.vue';
 import CockpitRuntimeInputPanel from '../../../resources/js/cockpit/components/CockpitRuntimeInputPanel.vue';
 import CockpitTemplateSelector from '../../../resources/js/cockpit/components/CockpitTemplateSelector.vue';
 import QuickGenerate from '../../../resources/js/cockpit/pages/QuickGenerate.vue';
@@ -283,6 +284,44 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.findAll('[data-testid="cockpit-quick-generate-idempotency-gate-check"]')).toHaveLength(2);
     });
 
+    it('renders validation and redaction gate facts without request validation or submitted payload exposure', () => {
+        const wrapper = mount(CockpitQuickGenerateValidationRedactionGatePanel, {
+            props: {
+                validationRedactionGate: {
+                    status: 'blocked',
+                    checks: [
+                        {
+                            key: 'request-schema-known',
+                            label: 'Request Schema Known',
+                            status: 'passed',
+                            reason: 'The Quick Generate draft contract schema is represented as a read-only Cockpit readiness fact.',
+                        },
+                        {
+                            key: 'sensitive-fields-redacted',
+                            label: 'Sensitive Fields Redacted',
+                            status: 'blocked',
+                            reason: 'Cockpit does not accept, persist, or redact submitted payloads in Slice 23.',
+                        },
+                    ],
+                    redactions: {
+                        payloads: 'validation-redaction-gates-only',
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Validation and Redaction Gate Baseline');
+        expect(wrapper.text()).toContain('Request Schema Known');
+        expect(wrapper.text()).toContain('passed');
+        expect(wrapper.text()).toContain('Sensitive Fields Redacted');
+        expect(wrapper.text()).toContain('blocked');
+        expect(wrapper.text()).toContain('Cockpit does not accept, persist, or redact submitted payloads in Slice 23.');
+        expect(wrapper.text()).toContain('Validation and redaction gates are read-only facts in Slice 23.');
+        expect(wrapper.find('form').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-validation-redaction-gate-panel"]').exists()).toBe(true);
+        expect(wrapper.findAll('[data-testid="cockpit-quick-generate-validation-redaction-gate-check"]')).toHaveLength(2);
+    });
+
     it('renders the full Quick Generate page with active navigation and no side effects', () => {
         const wrapper = mount(QuickGenerate);
 
@@ -309,5 +348,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('Funding gates are read-only facts in Slice 21.');
         expect(wrapper.text()).toContain('Idempotency Gate Baseline');
         expect(wrapper.text()).toContain('Idempotency gates are read-only facts in Slice 22.');
+        expect(wrapper.text()).toContain('Validation and Redaction Gate Baseline');
+        expect(wrapper.text()).toContain('Validation and redaction gates are read-only facts in Slice 23.');
     });
 });

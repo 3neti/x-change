@@ -8,6 +8,7 @@ import CockpitQuickGenerateDraftContractPanel from '../components/CockpitQuickGe
 import CockpitQuickGenerateFundingGatePanel from '../components/CockpitQuickGenerateFundingGatePanel.vue';
 import CockpitQuickGenerateIdempotencyGatePanel from '../components/CockpitQuickGenerateIdempotencyGatePanel.vue';
 import CockpitQuickGeneratePricingGatePanel from '../components/CockpitQuickGeneratePricingGatePanel.vue';
+import CockpitQuickGenerateValidationRedactionGatePanel from '../components/CockpitQuickGenerateValidationRedactionGatePanel.vue';
 import CockpitRuntimeInputPanel from '../components/CockpitRuntimeInputPanel.vue';
 import CockpitTemplateSelector from '../components/CockpitTemplateSelector.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
@@ -27,6 +28,8 @@ import type {
     CockpitQuickGenerateIdempotencyGateCheck,
     CockpitQuickGeneratePricingGate,
     CockpitQuickGeneratePricingGateCheck,
+    CockpitQuickGenerateValidationRedactionGate,
+    CockpitQuickGenerateValidationRedactionGateCheck,
     CockpitQuickGeneratePageProps,
     CockpitQuickGenerateReadModelPricingSummary,
     CockpitQuickGenerateReadModelRuntimeInput,
@@ -162,6 +165,28 @@ const idempotencyGate = computed<CockpitQuickGenerateIdempotencyGate>(() => {
         checks: checks.length > 0 ? checks : defaultIdempotencyGate().checks,
         redactions: {
             payloads: stringValue(idempotencyGateReadModel.redactions?.payloads) ?? 'idempotency-gates-only',
+        },
+    };
+});
+
+const validationRedactionGate = computed<CockpitQuickGenerateValidationRedactionGate>(() => {
+    const validationRedactionGateReadModel = props.quick_generate_read_model?.validation_redaction_gate;
+
+    if (!readModelAvailable.value || typeof validationRedactionGateReadModel !== 'object' || validationRedactionGateReadModel === null) {
+        return defaultValidationRedactionGate();
+    }
+
+    const checks = Array.isArray(validationRedactionGateReadModel.checks)
+        ? validationRedactionGateReadModel.checks
+            .map((check): CockpitQuickGenerateValidationRedactionGateCheck | null => sanitizeValidationRedactionGateCheck(check))
+            .filter((check): check is CockpitQuickGenerateValidationRedactionGateCheck => check !== null)
+        : [];
+
+    return {
+        status: stringValue(validationRedactionGateReadModel.status) ?? 'blocked',
+        checks: checks.length > 0 ? checks : defaultValidationRedactionGate().checks,
+        redactions: {
+            payloads: stringValue(validationRedactionGateReadModel.redactions?.payloads) ?? 'validation-redaction-gates-only',
         },
     };
 });
@@ -345,6 +370,53 @@ function defaultIdempotencyGate(): CockpitQuickGenerateIdempotencyGate {
     };
 }
 
+function defaultValidationRedactionGate(): CockpitQuickGenerateValidationRedactionGate {
+    return {
+        status: 'blocked',
+        checks: [
+            {
+                key: 'request-schema-known',
+                label: 'Request Schema Known',
+                status: 'passed',
+                reason: 'The Quick Generate draft contract schema is represented as a read-only Cockpit readiness fact.',
+            },
+            {
+                key: 'required-fields-defined',
+                label: 'Required Fields Defined',
+                status: 'blocked',
+                reason: 'Cockpit does not execute request validation or enforce required fields in Slice 23.',
+            },
+            {
+                key: 'validation-rules-wired',
+                label: 'Validation Rules Wired',
+                status: 'blocked',
+                reason: 'Cockpit does not invoke GeneratePayCodeRequest validation in Slice 23.',
+            },
+            {
+                key: 'sensitive-fields-redacted',
+                label: 'Sensitive Fields Redacted',
+                status: 'blocked',
+                reason: 'Cockpit does not accept, persist, or redact submitted payloads in Slice 23.',
+            },
+            {
+                key: 'sanitized-preview-ready',
+                label: 'Sanitized Preview Ready',
+                status: 'blocked',
+                reason: 'Cockpit does not build sanitized request previews in Slice 23.',
+            },
+            {
+                key: 'validation-error-contract-ready',
+                label: 'Validation Error Contract Ready',
+                status: 'blocked',
+                reason: 'Cockpit does not expose validation error response contracts in Slice 23.',
+            },
+        ],
+        redactions: {
+            payloads: 'validation-redaction-gates-only',
+        },
+    };
+}
+
 function defaultAuthorization(): CockpitQuickGenerateAuthorization {
     return {
         status: 'blocked',
@@ -415,6 +487,22 @@ function sanitizeIdempotencyGateCheck(check: CockpitQuickGenerateIdempotencyGate
         label,
         status: stringValue(check.status) ?? 'unknown',
         reason: stringValue(check.reason) ?? 'No idempotency diagnostic is available.',
+    };
+}
+
+function sanitizeValidationRedactionGateCheck(check: CockpitQuickGenerateValidationRedactionGateCheck): CockpitQuickGenerateValidationRedactionGateCheck | null {
+    const key = stringValue(check.key);
+    const label = stringValue(check.label);
+
+    if (!key || !label) {
+        return null;
+    }
+
+    return {
+        key,
+        label,
+        status: stringValue(check.status) ?? 'unknown',
+        reason: stringValue(check.reason) ?? 'No validation or redaction diagnostic is available.',
     };
 }
 
@@ -541,6 +629,7 @@ function stringValue(value: unknown): string | null {
                     <CockpitQuickGeneratePricingGatePanel :pricing-gate="pricingGate" />
                     <CockpitQuickGenerateFundingGatePanel :funding-gate="fundingGate" />
                     <CockpitQuickGenerateIdempotencyGatePanel :idempotency-gate="idempotencyGate" />
+                    <CockpitQuickGenerateValidationRedactionGatePanel :validation-redaction-gate="validationRedactionGate" />
                     <CockpitGenerateActionPanel :enabled="false" />
                     <CockpitQuickGenerateAuthorizationGatePanel :authorization="authorization" />
                     <CockpitQuickGenerateDraftContractPanel :draft-contract="draftContract" />

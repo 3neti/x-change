@@ -159,6 +159,16 @@ it('hydrates quick generate with a sanitized quick generate read model prop', fu
         ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.checks.4.key', 'conflict-response-ready')
         ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.checks.5.key', 'ttl-policy-ready')
         ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.redactions.payloads', 'idempotency-gates-only')
+        ->assertJsonPath('props.quick_generate_read_model.validation_redaction_gate.status', 'blocked')
+        ->assertJsonPath('props.quick_generate_read_model.validation_redaction_gate.checks.0.key', 'request-schema-known')
+        ->assertJsonPath('props.quick_generate_read_model.validation_redaction_gate.checks.0.status', 'passed')
+        ->assertJsonPath('props.quick_generate_read_model.validation_redaction_gate.checks.1.key', 'required-fields-defined')
+        ->assertJsonPath('props.quick_generate_read_model.validation_redaction_gate.checks.1.status', 'blocked')
+        ->assertJsonPath('props.quick_generate_read_model.validation_redaction_gate.checks.2.key', 'validation-rules-wired')
+        ->assertJsonPath('props.quick_generate_read_model.validation_redaction_gate.checks.3.key', 'sensitive-fields-redacted')
+        ->assertJsonPath('props.quick_generate_read_model.validation_redaction_gate.checks.4.key', 'sanitized-preview-ready')
+        ->assertJsonPath('props.quick_generate_read_model.validation_redaction_gate.checks.5.key', 'validation-error-contract-ready')
+        ->assertJsonPath('props.quick_generate_read_model.validation_redaction_gate.redactions.payloads', 'validation-redaction-gates-only')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.schema', 'x-change.cockpit.quick-generate-draft.v1')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.status', 'draft_only')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.template_key', 'money-changer')
@@ -189,7 +199,14 @@ it('hydrates quick generate with a sanitized quick generate read model prop', fu
         ->assertJsonMissingPath('props.quick_generate_read_model.payload_fingerprint')
         ->assertJsonMissingPath('props.quick_generate_read_model.stored_response')
         ->assertJsonMissingPath('props.quick_generate_read_model.replay_payload')
-        ->assertJsonMissingPath('props.quick_generate_read_model.cache_key');
+        ->assertJsonMissingPath('props.quick_generate_read_model.cache_key')
+        ->assertJsonMissingPath('props.quick_generate_read_model.request_payload')
+        ->assertJsonMissingPath('props.quick_generate_read_model.validated_payload')
+        ->assertJsonMissingPath('props.quick_generate_read_model.validation_errors')
+        ->assertJsonMissingPath('props.quick_generate_read_model.mobile')
+        ->assertJsonMissingPath('props.quick_generate_read_model.email')
+        ->assertJsonMissingPath('props.quick_generate_read_model.recipient_reference')
+        ->assertJsonMissingPath('props.quick_generate_read_model.account_number');
 });
 
 it('requires authentication for cockpit routes', function (string $route, array $parameters) {
@@ -304,4 +321,19 @@ it('documents the quick generate idempotency gates before persistence or mutatio
         ->and($report)->toContain('ttl-policy-ready')
         ->and($report)->toContain('Idempotency gates are read-only facts in Slice 22')
         ->and($report)->toContain('No idempotency gate persists keys, fingerprints payloads, reads replay records, or enables mutation routes in Slice 22');
+});
+
+it('documents the quick generate validation and redaction gates before request handling or mutation wiring', function () {
+    $report = file_get_contents(__DIR__.'/../../../docs/ui-cockpit/reports/010-quick-generate-validation-redaction-gate-baseline.md');
+
+    expect($report)->toBeString()
+        ->and($report)->toContain('Cockpit Slice 23')
+        ->and($report)->toContain('request-schema-known')
+        ->and($report)->toContain('required-fields-defined')
+        ->and($report)->toContain('validation-rules-wired')
+        ->and($report)->toContain('sensitive-fields-redacted')
+        ->and($report)->toContain('sanitized-preview-ready')
+        ->and($report)->toContain('validation-error-contract-ready')
+        ->and($report)->toContain('Validation and redaction gates are read-only facts in Slice 23')
+        ->and($report)->toContain('No validation/redaction gate validates requests, persists payloads, exposes submitted PII, or enables mutation routes in Slice 23');
 });

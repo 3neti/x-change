@@ -23,6 +23,7 @@ class CockpitQuickGenerateReadModelData extends Data
         public readonly CockpitQuickGeneratePricingGateData $pricing_gate = new CockpitQuickGeneratePricingGateData,
         public readonly CockpitQuickGenerateFundingGateData $funding_gate = new CockpitQuickGenerateFundingGateData,
         public readonly CockpitQuickGenerateIdempotencyGateData $idempotency_gate = new CockpitQuickGenerateIdempotencyGateData,
+        public readonly CockpitQuickGenerateValidationRedactionGateData $validation_redaction_gate = new CockpitQuickGenerateValidationRedactionGateData,
         public readonly CockpitQuickGenerateDraftContractData $draft_contract = new CockpitQuickGenerateDraftContractData,
         public readonly CockpitQuickGenerateAuthorizationData $authorization = new CockpitQuickGenerateAuthorizationData,
         public readonly CockpitQuickGenerateActionData $action = new CockpitQuickGenerateActionData,

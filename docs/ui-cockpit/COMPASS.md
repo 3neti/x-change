@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Slice 22 — Quick Generate Idempotency Gate Baseline
+Current slice: Slice 23 — Quick Generate Request Validation and Redaction Gate Baseline
 Status: Complete
 Last updated: 2026-07-03
 
@@ -321,6 +321,21 @@ Last updated: 2026-07-03
 - Added read-only idempotency gate facts to `quick_generate_read_model`.
 - Added a visible idempotency gate panel to Quick Generate.
 - Preserved disabled generation behavior. The idempotency gate model reports idempotency policy as known while key source definition, payload fingerprinting, replay lookup, conflict response, and TTL policy remain blocked.
+- Completed Slice 23 Quick Generate Request Validation and Redaction Gate Baseline:
+  - `src/Data/Cockpit/CockpitQuickGenerateValidationRedactionGateData.php`
+  - `src/Data/Cockpit/CockpitQuickGenerateValidationRedactionGateCheckData.php`
+  - `src/Data/Cockpit/CockpitQuickGenerateReadModelData.php`
+  - `src/Services/Cockpit/VoucherLifecycleCockpitReadModelProvider.php`
+  - `resources/js/cockpit/components/CockpitQuickGenerateValidationRedactionGatePanel.vue`
+  - `resources/js/cockpit/pages/QuickGenerate.vue`
+  - `resources/js/cockpit/types.ts`
+  - `docs/ui-cockpit/reports/010-quick-generate-validation-redaction-gate-baseline.md`
+  - `tests/Unit/Cockpit/CockpitReadModelBaselineTest.php`
+  - `tests/Feature/Cockpit/CockpitReadOnlyRoutesTest.php`
+  - `tests/frontend/cockpit/CockpitQuickGenerateFoundation.test.ts`
+- Added read-only validation/redaction gate facts to `quick_generate_read_model`.
+- Added a visible validation/redaction gate panel to Quick Generate.
+- Preserved disabled generation behavior. The validation/redaction gate model reports request schema as known while required-field enforcement, validation rule wiring, sensitive-field redaction, sanitized preview generation, and validation error contracts remain blocked.
 
 ## In Progress
 
@@ -328,16 +343,16 @@ No implementation slice is in progress.
 
 ## Next
 
-Recommended next slice: Slice 23 — Quick Generate Request Validation and Redaction Gate Baseline.
+Recommended next slice: Slice 24 — Quick Generate Mutation Handoff Boundary Plan.
 
 Scope should remain foundation-only:
 
-- define the request validation and redaction readiness facts required before a future Quick Generate mutation can be enabled
-- keep validation/redaction facts read-only and presentation-safe unless a mutation slice is explicitly approved
+- document the exact future handoff from Cockpit Quick Generate to the existing `GeneratePayCode` / `GeneratePayCodeController` path
+- keep handoff facts read-only and presentation-safe unless a mutation slice is explicitly approved
 - keep route props read-only and authenticated unless a mutation slice is explicitly approved
 - keep generate controls disabled until authorization, pricing, funding, idempotency, and existing issuance API/action routing are all designed
 - avoid broad voucher payloads, provider payloads, wallet data, claim payloads, approval metadata, instructions, or raw payloads
-- no request validation execution, payload persistence, mutation endpoints, execution, journal writes, feedback delivery, provider calls, wallet access, campaign behavior, or money movement
+- no mutation endpoints, request validation execution, payload persistence, execution, journal writes, feedback delivery, provider calls, wallet access, campaign behavior, or money movement
 - preserve all existing Claim UI tests
 
 ## Risks
@@ -365,6 +380,7 @@ Scope should remain foundation-only:
 - Slice 20 introduces read-only pricing gate facts and a visible pricing gate panel. It does not calculate prices, expose pricing breakdowns, select funding sources, reserve funds, call providers, register mutation routes, or move money.
 - Slice 21 introduces read-only funding gate facts and a visible funding gate panel. It does not resolve wallets, read balances, evaluate sufficient funds, reserve funds, debit balances, call providers, register mutation routes, or move money.
 - Slice 22 introduces read-only idempotency gate facts and a visible idempotency gate panel. It does not persist keys, hash payloads, read replay records, evaluate conflicts, read TTL policy, register mutation routes, or enable generation.
+- Slice 23 introduces read-only validation/redaction gate facts and a visible validation/redaction gate panel. It does not validate requests, persist payloads, expose submitted PII, build sanitized previews, return validation errors, register mutation routes, or enable generation.
 
 ## Decisions
 
@@ -398,6 +414,7 @@ Scope should remain foundation-only:
 - Slice 20 adds `CockpitQuickGeneratePricingGateData` and `CockpitQuickGeneratePricingGateCheckData` as read-only gate facts in `quick_generate_read_model`. Generation remains disabled because amount, pricing-service, funding-source, reservation, and provider quote gates remain blocked.
 - Slice 21 adds `CockpitQuickGenerateFundingGateData` and `CockpitQuickGenerateFundingGateCheckData` as read-only gate facts in `quick_generate_read_model`. Generation remains disabled because wallet, balance, sufficiency, reservation, and provider funding gates remain blocked.
 - Slice 22 adds `CockpitQuickGenerateIdempotencyGateData` and `CockpitQuickGenerateIdempotencyGateCheckData` as read-only gate facts in `quick_generate_read_model`. Generation remains disabled because key source, payload fingerprinting, replay lookup, conflict response, and TTL policy gates remain blocked.
+- Slice 23 adds `CockpitQuickGenerateValidationRedactionGateData` and `CockpitQuickGenerateValidationRedactionGateCheckData` as read-only gate facts in `quick_generate_read_model`. Generation remains disabled because required-field enforcement, validation rules, submitted-payload redaction, sanitized previews, and validation error contracts remain blocked.
 
 ## Open Questions
 
@@ -502,3 +519,7 @@ Scope should remain foundation-only:
 - Slice 22 focused PHP Cockpit read-model/route result: `37 passed, 323 assertions`.
 - Slice 22 full frontend result: `72 passed, 440 tests`.
 - Slice 22 full package Pest result: `1011 passed, 5 skipped, 5327 assertions`.
+- Slice 23 focused quick-generate validation/redaction frontend result: `1 passed, 12 tests`.
+- Slice 23 focused PHP Cockpit read-model/route result: `38 passed, 350 assertions`.
+- Slice 23 full frontend result: `72 passed, 441 tests`.
+- Slice 23 full package Pest result: `1012 passed, 5 skipped, 5354 assertions`.

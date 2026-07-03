@@ -29,6 +29,8 @@ use LBHurtado\XChange\Data\Cockpit\CockpitQuickGeneratePricingSummaryData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateRuntimeInputData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateTemplateData;
+use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateValidationRedactionGateCheckData;
+use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateValidationRedactionGateData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelBundleData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
 use LBHurtado\XChange\Data\Cockpit\CockpitVoucherReadModelData;
@@ -425,6 +427,60 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                         'stored_response',
                         'replay_payload',
                         'cache_key',
+                        'raw_payload',
+                    ],
+                ],
+            ),
+            validation_redaction_gate: new CockpitQuickGenerateValidationRedactionGateData(
+                status: 'blocked',
+                checks: [
+                    new CockpitQuickGenerateValidationRedactionGateCheckData(
+                        key: 'request-schema-known',
+                        label: 'Request Schema Known',
+                        status: 'passed',
+                        reason: 'The Quick Generate draft contract schema is represented as a read-only Cockpit readiness fact.',
+                    ),
+                    new CockpitQuickGenerateValidationRedactionGateCheckData(
+                        key: 'required-fields-defined',
+                        label: 'Required Fields Defined',
+                        status: 'blocked',
+                        reason: 'Cockpit does not execute request validation or enforce required fields in Slice 23.',
+                    ),
+                    new CockpitQuickGenerateValidationRedactionGateCheckData(
+                        key: 'validation-rules-wired',
+                        label: 'Validation Rules Wired',
+                        status: 'blocked',
+                        reason: 'Cockpit does not invoke GeneratePayCodeRequest validation in Slice 23.',
+                    ),
+                    new CockpitQuickGenerateValidationRedactionGateCheckData(
+                        key: 'sensitive-fields-redacted',
+                        label: 'Sensitive Fields Redacted',
+                        status: 'blocked',
+                        reason: 'Cockpit does not accept, persist, or redact submitted payloads in Slice 23.',
+                    ),
+                    new CockpitQuickGenerateValidationRedactionGateCheckData(
+                        key: 'sanitized-preview-ready',
+                        label: 'Sanitized Preview Ready',
+                        status: 'blocked',
+                        reason: 'Cockpit does not build sanitized request previews in Slice 23.',
+                    ),
+                    new CockpitQuickGenerateValidationRedactionGateCheckData(
+                        key: 'validation-error-contract-ready',
+                        label: 'Validation Error Contract Ready',
+                        status: 'blocked',
+                        reason: 'Cockpit does not expose validation error response contracts in Slice 23.',
+                    ),
+                ],
+                redactions: [
+                    'payloads' => 'validation-redaction-gates-only',
+                    'excluded' => [
+                        'request_payload',
+                        'validated_payload',
+                        'validation_errors',
+                        'mobile',
+                        'email',
+                        'recipient_reference',
+                        'account_number',
                         'raw_payload',
                     ],
                 ],
