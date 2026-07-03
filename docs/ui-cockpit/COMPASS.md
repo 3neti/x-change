@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Slice 11 — Voucher Detail Read Model Adapter Baseline
+Current slice: Slice 12 — Voucher Detail Presentation Hydration Baseline
 Status: Complete
 Last updated: 2026-07-03
 
@@ -134,6 +134,15 @@ Last updated: 2026-07-03
 - Preserved not-wired placeholders for execution, journal, actions, and feedback.
 - Preserved route stability for missing voucher codes by falling back to the null/not-wired bundle.
 - Added coverage proving internal IDs, issuer IDs, instructions, claims, approval metadata, provider payloads, raw payloads, wallets, and provider facts are excluded from the Cockpit voucher read model.
+- Completed Slice 12 Voucher Detail Presentation Hydration Baseline:
+  - `resources/js/cockpit/types.ts`
+  - `resources/js/cockpit/pages/VoucherDetail.vue`
+  - `resources/js/pages/x-change/cockpit/VoucherDetail.vue`
+  - `tests/frontend/cockpit/CockpitVoucherDetailHydration.test.ts`
+- Hydrated the Voucher Detail page from `read_model.voucher.summary` when an authorized sanitized voucher summary is present.
+- Added explicit UI states for execution, journal, action, and feedback read models while keeping them not wired.
+- Preserved route adapter prop forwarding so Inertia props reach the Cockpit namespace page.
+- Added frontend coverage proving unsafe voucher summary keys and payload values are not rendered.
 
 ## In Progress
 
@@ -141,14 +150,14 @@ No implementation slice is in progress.
 
 ## Next
 
-Recommended next slice: Slice 12 — Voucher Detail Presentation Hydration Baseline.
+Recommended next slice: Slice 13 — Pay Code Explorer Read Model Hydration Baseline.
 
 Scope should remain foundation-only:
 
-- hydrate the existing Voucher Detail frontend with the sanitized voucher summary already exposed by the Slice 11 read model
-- render explicit empty/not-wired states for execution, journal, actions, and feedback
-- preserve redaction metadata and read-only authorization flags
-- do not broaden journal, action, feedback, provider, wallet, approval, claim, instruction, or raw payload exposure
+- hydrate the Pay Code Explorer page from safe read-model/list props when available
+- keep search/filter controls local and read-only unless an approved host read API exists
+- preserve empty/loading/not-wired states
+- avoid broad voucher payloads, provider payloads, wallet data, claim payloads, approval metadata, or raw payloads
 - no mutation endpoints, execution, journal writes, feedback delivery, provider calls, campaign behavior, or money movement
 - preserve all existing Claim UI tests
 
@@ -166,6 +175,7 @@ Scope should remain foundation-only:
 - Slice 9 introduces not-wired read-model contracts only. Future adapters must still define authorization, redaction, idempotency, pagination, and package-specific failure semantics before exposing real state.
 - Slice 10 places read-model bundles into Inertia props. Future frontend components must treat `not_wired` as a capability/readiness state, not as lifecycle truth.
 - Slice 11 exposes only sanitized voucher summary facts. It intentionally excludes lifecycle detail arrays that could contain instructions, claims, approval references, provider payloads, raw payloads, wallet data, provider facts, internal IDs, and issuer IDs.
+- Slice 12 hydrates frontend presentation from sanitized voucher summary facts only. It does not expand backend read-model scope and does not render excluded field names or excluded payload values.
 
 ## Decisions
 
@@ -188,6 +198,7 @@ Scope should remain foundation-only:
 - Slice 9 defines Cockpit read-model DTOs and the provider contract for voucher, execution, journal, action, and feedback views. The default provider is a null/not-wired implementation and does not call voucher, x-journal, x-action, x-feedback, providers, wallets, or persistence.
 - Slice 10 composes the null/not-wired Cockpit read-model bundle into authenticated Inertia page props. It does not add live package adapters, JSON APIs, mutations, execution, journal writes, feedback delivery, provider calls, wallet access, raw payload exposure, or money movement.
 - Slice 11 adapts `VoucherLifecycleServiceContract` into the Cockpit read-model provider for voucher summary facts only. Missing vouchers fall back to the null/not-wired bundle. Execution, journal, action, and feedback read models remain not wired.
+- Slice 12 keeps Voucher Detail hydration presentation-only. It forwards existing Inertia props to the Cockpit namespace page and derives overview, timeline, evidence, distribution, and audit display items locally from the sanitized read-model contract.
 
 ## Open Questions
 
@@ -196,6 +207,7 @@ Scope should remain foundation-only:
 - Whether existing `/x/dashboard` should be promoted into Cockpit or left as a compatibility route while Cockpit grows under a new route namespace.
 - Whether the Slice 11 voucher summary whitelist should later include internal voucher IDs or issuer IDs under stricter operator authorization.
 - Whether missing voucher codes should remain indistinguishable from not-wired read models in the UI or gain an explicit redacted/not-found state.
+- Which list/read contract should power the Pay Code Explorer without exposing broad voucher lifecycle detail payloads.
 
 ## Test Status
 
@@ -241,3 +253,8 @@ Scope should remain foundation-only:
 - Slice 11 focused route regression result: `15 passed, 103 assertions`.
 - Slice 11 combined focused Cockpit result: `22 passed, 158 assertions`.
 - Slice 11 full package Pest result: `996 passed, 5 skipped, 5162 assertions`.
+- Slice 12 focused hydration frontend result: `4 passed`.
+- Slice 12 focused Voucher Detail/route adapter frontend regression result: `10 passed`.
+- Slice 12 full frontend result: `69 passed, 421 tests`.
+- Slice 12 focused PHP Cockpit route/read-model regression result: `22 passed, 158 assertions`.
+- Slice 12 full package Pest result: `996 passed, 5 skipped, 5162 assertions`.

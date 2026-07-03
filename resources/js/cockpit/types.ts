@@ -142,6 +142,57 @@ export type CockpitVoucherDetailAction = {
     reason: string;
 };
 
+export type CockpitReadModelRedactions = {
+    payloads?: string;
+    [key: string]: unknown;
+};
+
+export type CockpitVoucherReadModel = {
+    code?: string | null;
+    status: string;
+    summary?: Record<string, unknown>;
+    redactions?: CockpitReadModelRedactions;
+    authorized?: boolean;
+};
+
+export type CockpitDependentReadModel = {
+    status: string;
+    authorized?: boolean;
+    redactions?: CockpitReadModelRedactions;
+    [key: string]: unknown;
+};
+
+export type CockpitReadModelBundle = {
+    code?: string | null;
+    voucher?: CockpitVoucherReadModel;
+    execution?: CockpitDependentReadModel;
+    journal?: CockpitDependentReadModel;
+    actions?: CockpitDependentReadModel;
+    feedback?: CockpitDependentReadModel;
+};
+
+export type CockpitPageAuthorization = {
+    view_cockpit?: boolean;
+    mutate_vouchers?: boolean;
+    execute_drivers?: boolean;
+    write_journal_entries?: boolean;
+    send_feedback?: boolean;
+    call_providers?: boolean;
+    move_money?: boolean;
+    [key: string]: boolean | undefined;
+};
+
+export type CockpitVoucherDetailPageProps = {
+    context?: {
+        code?: string | null;
+    };
+    can?: CockpitPageAuthorization;
+    redaction?: CockpitReadModelRedactions & {
+        policy?: string;
+    };
+    read_model?: CockpitReadModelBundle;
+};
+
 export type CockpitDistributionChannel = {
     key: string;
     label: string;

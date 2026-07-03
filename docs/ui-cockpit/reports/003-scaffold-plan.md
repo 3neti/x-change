@@ -234,14 +234,30 @@ No mutation endpoints, JSON APIs, execution, journal writes, action execution, f
 
 ## Slice 12 — Voucher Detail Presentation Hydration Baseline
 
-Status: recommended next.
+Status: complete.
 
-Candidate scope:
+Implemented:
 
 - hydrate existing Voucher Detail Vue components from the sanitized `read_model.voucher.summary`
 - keep execution, journal, action, and feedback panels in explicit empty/not-wired states
 - preserve redaction metadata and read-only authorization flags in the UI
 - no broad payload exposure, mutations, domain side effects, provider calls, wallet access, or money movement
+
+The route adapter now forwards Inertia props into the Cockpit namespace page, and the page derives display-only overview, timeline, evidence, distribution, and audit items from the sanitized read-model contract.
+
+No new JSON APIs, backend read-model expansion, mutation endpoints, execution, journal writes, action execution, feedback delivery, provider calls, wallet access, claim UX changes, campaign behavior, or money movement were added.
+
+## Slice 13 — Pay Code Explorer Read Model Hydration Baseline
+
+Status: recommended next.
+
+Candidate scope:
+
+- hydrate Pay Code Explorer from safe read-model/list props when available
+- keep search/filter controls local and read-only until an approved read API exists
+- preserve empty/loading/not-wired states
+- avoid broad voucher payloads, provider payloads, wallet data, claim payloads, approval metadata, or raw payloads
+- no mutations or domain side effects
 
 ## Verification Plan
 
