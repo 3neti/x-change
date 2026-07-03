@@ -4,8 +4,15 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Support\Cockpit;
 
+use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
+use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
+
 class CockpitReadOnlyPageProps
 {
+    public function __construct(private readonly CockpitReadModelProviderContract $readModels)
+    {
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -42,6 +49,10 @@ class CockpitReadOnlyPageProps
             'context' => [
                 'code' => $code,
             ],
+            'read_model' => $this->readModels->forVoucher(new CockpitReadModelQueryData(
+                code: $code,
+                include: ['voucher', 'execution', 'journal', 'actions', 'feedback'],
+            ))->toArray(),
         ];
     }
 }

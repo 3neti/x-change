@@ -50,6 +50,31 @@ it('keeps voucher route context explicit without loading voucher payloads', func
         ->assertJsonMissingPath('props.provider_payload');
 });
 
+it('presents not wired cockpit read models on voucher scoped pages', function (string $route) {
+    actingAsTestUser();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route($route, ['code' => 'PC-READY-001']))
+        ->assertOk()
+        ->assertJsonPath('props.read_model.code', 'PC-READY-001')
+        ->assertJsonPath('props.read_model.voucher.status', 'not_wired')
+        ->assertJsonPath('props.read_model.voucher.authorized', false)
+        ->assertJsonPath('props.read_model.execution.status', 'not_wired')
+        ->assertJsonPath('props.read_model.execution.execution_id', null)
+        ->assertJsonPath('props.read_model.journal.status', 'not_wired')
+        ->assertJsonPath('props.read_model.actions.status', 'not_wired')
+        ->assertJsonPath('props.read_model.feedback.status', 'not_wired')
+        ->assertJsonPath('props.read_model.voucher.redactions.payloads', 'not-loaded')
+        ->assertJsonPath('props.read_model.execution.redactions.payloads', 'not-loaded')
+        ->assertJsonMissingPath('props.read_model.provider_payload')
+        ->assertJsonMissingPath('props.read_model.raw_payload')
+        ->assertJsonMissingPath('props.read_model.wallet')
+        ->assertJsonMissingPath('props.read_model.provider');
+})->with([
+    'voucher detail' => 'x-change.cockpit.pay-codes.show',
+    'distribution workspace' => 'x-change.cockpit.pay-codes.distribution',
+]);
+
 it('requires authentication for cockpit routes', function (string $route, array $parameters) {
     $this->withHeader('Accept', 'application/json')
         ->get(route($route, $parameters))

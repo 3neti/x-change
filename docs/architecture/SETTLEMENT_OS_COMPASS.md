@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 4 — x-change Cockpit
-Current status: Cockpit Slice 9 Read Model Contract Baselines complete
+Current status: Cockpit Slice 10 Read Model Presentation Wiring complete
 Last updated: 2026-07-03
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-03
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Slice 9 complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Slice 10 complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Not started | Pending |
 
 ## Package Map
@@ -730,6 +730,7 @@ ExecutionDriverContract
 - x-change Cockpit Slice 7 exposes the existing Cockpit pages through authenticated GET-only Inertia routes under `/x/cockpit` without adding separate JSON read APIs, mutation routes, host read-model calls, execution, journal writes, feedback delivery, provider calls, campaign behavior, or money movement.
 - x-change Cockpit Slice 8 adds an operator authorization/redaction baseline with explicit read-only `can` props, redaction metadata, a default redactor contract, and route context propagation without exposing journal, action, feedback, provider, voucher, or execution payloads.
 - x-change Cockpit Slice 9 adds host-facing read-model DTO and provider contract baselines for voucher, execution, journal, action, and feedback views. The default provider is null/not-wired and does not call voucher, x-journal, x-action, x-feedback, providers, wallets, persistence, or external services.
+- x-change Cockpit Slice 10 composes the null/not-wired read-model bundle into authenticated Inertia page props without adding live package adapters, JSON APIs, mutation endpoints, execution, journal writes, feedback delivery, provider calls, wallet access, raw payload exposure, or money movement.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -743,11 +744,11 @@ Continue Wave 4 — x-change Cockpit with the next authorized slice.
 Recommended actions:
 
 1. Request approval before proceeding to another slice.
-2. Completed slice: Cockpit Slice 9 — Read Model Contract Baselines.
+2. Completed slice: Cockpit Slice 10 — Read Model Presentation Wiring.
 3. Read the Cockpit compass before continuing: `packages/x-change/docs/ui-cockpit/COMPASS.md`.
-4. Recommended next slice: Cockpit Slice 10 — Read Model Presentation Wiring.
-5. Slice 10 should compose the null/not-wired Cockpit read-model bundle into selected authenticated Inertia page props without live package adapters.
-6. Do not add mutation endpoints, execution, journal writes, action execution, feedback delivery, provider calls, campaign behavior, money movement, or live cross-package calls unless explicitly approved.
+4. Recommended next slice: Cockpit Slice 11 — Voucher Detail Read Model Adapter Baseline.
+5. Slice 11 should add a first package-local adapter around existing x-change voucher lifecycle/read services and expose sanitized voucher summary fields only.
+6. Do not add mutation endpoints, execution, journal writes, action execution, feedback delivery, provider calls, campaign behavior, money movement, raw payload exposure, or live cross-package calls unless explicitly approved.
 7. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
 ## x-journal Initial Intent

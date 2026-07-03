@@ -196,14 +196,26 @@ No live cross-package calls, route/controller read-model wiring, payload exposur
 
 ## Slice 10 — Read Model Presentation Wiring
 
+Status: complete.
+
+Implemented:
+
+- composed the null/not-wired Cockpit read-model bundle into authenticated Inertia props through `CockpitReadOnlyPageProps`
+- added route coverage for voucher-scoped Cockpit pages receiving `read_model` facts
+- preserved top-level payload safety: no voucher, journal, actions, feedback, provider payload, wallet, or raw payload props are exposed
+
+No live cross-package calls, JSON read APIs, mutation endpoints, execution, journal writes, feedback delivery, provider calls, campaign behavior, wallet access, raw payload exposure, or money movement were added.
+
+## Slice 11 — Voucher Detail Read Model Adapter Baseline
+
 Status: recommended next.
 
 Candidate scope:
 
-- compose the null Cockpit read-model bundle into selected authenticated Inertia page props
-- keep all read models in `not_wired` state until real adapters are approved
-- prove route responses still avoid broad payload exposure
-- no live cross-package calls unless explicitly approved
+- add a first package-local adapter around existing x-change voucher lifecycle/read services
+- limit real data to sanitized voucher summary fields only
+- preserve redaction metadata and authorization flags
+- keep journal, actions, feedback, execution details, provider payloads, wallets, and raw payloads not wired
 - no mutation endpoints or domain side effects
 
 ## Verification Plan
