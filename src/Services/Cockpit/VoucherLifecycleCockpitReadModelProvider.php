@@ -19,6 +19,8 @@ use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateActionData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateAuthorizationData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateAuthorizationGateData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateDraftContractData;
+use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateFundingGateCheckData;
+use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateFundingGateData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGeneratePricingGateCheckData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGeneratePricingGateData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGeneratePricingSummaryData;
@@ -313,6 +315,60 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                         'wallet',
                         'balance',
                         'account_number',
+                        'provider_payload',
+                        'raw_payload',
+                    ],
+                ],
+            ),
+            funding_gate: new CockpitQuickGenerateFundingGateData(
+                status: 'blocked',
+                checks: [
+                    new CockpitQuickGenerateFundingGateCheckData(
+                        key: 'funding-policy-known',
+                        label: 'Funding Policy Known',
+                        status: 'passed',
+                        reason: 'Funding policy is represented as a read-only Cockpit readiness fact.',
+                    ),
+                    new CockpitQuickGenerateFundingGateCheckData(
+                        key: 'issuer-wallet-identified',
+                        label: 'Issuer Wallet Identified',
+                        status: 'blocked',
+                        reason: 'Cockpit does not resolve issuer wallets in Slice 21.',
+                    ),
+                    new CockpitQuickGenerateFundingGateCheckData(
+                        key: 'wallet-balance-available',
+                        label: 'Wallet Balance Available',
+                        status: 'blocked',
+                        reason: 'Cockpit does not read wallet balances in Slice 21.',
+                    ),
+                    new CockpitQuickGenerateFundingGateCheckData(
+                        key: 'sufficient-funds',
+                        label: 'Sufficient Funds',
+                        status: 'blocked',
+                        reason: 'Cockpit does not evaluate spendable funds in Slice 21.',
+                    ),
+                    new CockpitQuickGenerateFundingGateCheckData(
+                        key: 'funds-reservation-ready',
+                        label: 'Funds Reservation Ready',
+                        status: 'blocked',
+                        reason: 'Cockpit does not reserve, hold, debit, or transfer funds.',
+                    ),
+                    new CockpitQuickGenerateFundingGateCheckData(
+                        key: 'provider-funding-ready',
+                        label: 'Provider Funding Ready',
+                        status: 'blocked',
+                        reason: 'Cockpit does not call provider funding or account-readiness services.',
+                    ),
+                ],
+                redactions: [
+                    'payloads' => 'funding-gates-only',
+                    'excluded' => [
+                        'funding_source',
+                        'wallet',
+                        'balance',
+                        'available_balance',
+                        'account_number',
+                        'provider_wallet',
                         'provider_payload',
                         'raw_payload',
                     ],

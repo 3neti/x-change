@@ -409,6 +409,11 @@ it('returns an empty not wired quick generate read model by default', function (
             'checks' => [],
             'redactions' => ['payloads' => 'not-loaded'],
         ],
+        'funding_gate' => [
+            'status' => 'not_wired',
+            'checks' => [],
+            'redactions' => ['payloads' => 'not-loaded'],
+        ],
         'draft_contract' => [
             'schema' => 'x-change.cockpit.quick-generate-draft.v1',
             'status' => 'not_wired',
@@ -762,6 +767,60 @@ it('adapts safe quick generate catalog facts without invoking voucher lifecycle 
                         'wallet',
                         'balance',
                         'account_number',
+                        'provider_payload',
+                        'raw_payload',
+                    ],
+                ],
+            ],
+            'funding_gate' => [
+                'status' => 'blocked',
+                'checks' => [
+                    [
+                        'key' => 'funding-policy-known',
+                        'label' => 'Funding Policy Known',
+                        'status' => 'passed',
+                        'reason' => 'Funding policy is represented as a read-only Cockpit readiness fact.',
+                    ],
+                    [
+                        'key' => 'issuer-wallet-identified',
+                        'label' => 'Issuer Wallet Identified',
+                        'status' => 'blocked',
+                        'reason' => 'Cockpit does not resolve issuer wallets in Slice 21.',
+                    ],
+                    [
+                        'key' => 'wallet-balance-available',
+                        'label' => 'Wallet Balance Available',
+                        'status' => 'blocked',
+                        'reason' => 'Cockpit does not read wallet balances in Slice 21.',
+                    ],
+                    [
+                        'key' => 'sufficient-funds',
+                        'label' => 'Sufficient Funds',
+                        'status' => 'blocked',
+                        'reason' => 'Cockpit does not evaluate spendable funds in Slice 21.',
+                    ],
+                    [
+                        'key' => 'funds-reservation-ready',
+                        'label' => 'Funds Reservation Ready',
+                        'status' => 'blocked',
+                        'reason' => 'Cockpit does not reserve, hold, debit, or transfer funds.',
+                    ],
+                    [
+                        'key' => 'provider-funding-ready',
+                        'label' => 'Provider Funding Ready',
+                        'status' => 'blocked',
+                        'reason' => 'Cockpit does not call provider funding or account-readiness services.',
+                    ],
+                ],
+                'redactions' => [
+                    'payloads' => 'funding-gates-only',
+                    'excluded' => [
+                        'funding_source',
+                        'wallet',
+                        'balance',
+                        'available_balance',
+                        'account_number',
+                        'provider_wallet',
                         'provider_payload',
                         'raw_payload',
                     ],

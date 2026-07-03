@@ -5,6 +5,7 @@ import CockpitIssuanceBoundaryPanel from '../components/CockpitIssuanceBoundaryP
 import CockpitPricingFundingSummary from '../components/CockpitPricingFundingSummary.vue';
 import CockpitQuickGenerateAuthorizationGatePanel from '../components/CockpitQuickGenerateAuthorizationGatePanel.vue';
 import CockpitQuickGenerateDraftContractPanel from '../components/CockpitQuickGenerateDraftContractPanel.vue';
+import CockpitQuickGenerateFundingGatePanel from '../components/CockpitQuickGenerateFundingGatePanel.vue';
 import CockpitQuickGeneratePricingGatePanel from '../components/CockpitQuickGeneratePricingGatePanel.vue';
 import CockpitRuntimeInputPanel from '../components/CockpitRuntimeInputPanel.vue';
 import CockpitTemplateSelector from '../components/CockpitTemplateSelector.vue';
@@ -19,6 +20,8 @@ import type {
     CockpitQuickGenerateAuthorization,
     CockpitQuickGenerateAuthorizationGate,
     CockpitQuickGenerateDraftContract,
+    CockpitQuickGenerateFundingGate,
+    CockpitQuickGenerateFundingGateCheck,
     CockpitQuickGeneratePricingGate,
     CockpitQuickGeneratePricingGateCheck,
     CockpitQuickGeneratePageProps,
@@ -116,6 +119,28 @@ const pricingGate = computed<CockpitQuickGeneratePricingGate>(() => {
     };
 });
 
+const fundingGate = computed<CockpitQuickGenerateFundingGate>(() => {
+    const fundingGateReadModel = props.quick_generate_read_model?.funding_gate;
+
+    if (!readModelAvailable.value || typeof fundingGateReadModel !== 'object' || fundingGateReadModel === null) {
+        return defaultFundingGate();
+    }
+
+    const checks = Array.isArray(fundingGateReadModel.checks)
+        ? fundingGateReadModel.checks
+            .map((check): CockpitQuickGenerateFundingGateCheck | null => sanitizeFundingGateCheck(check))
+            .filter((check): check is CockpitQuickGenerateFundingGateCheck => check !== null)
+        : [];
+
+    return {
+        status: stringValue(fundingGateReadModel.status) ?? 'blocked',
+        checks: checks.length > 0 ? checks : defaultFundingGate().checks,
+        redactions: {
+            payloads: stringValue(fundingGateReadModel.redactions?.payloads) ?? 'funding-gates-only',
+        },
+    };
+});
+
 const authorization = computed<CockpitQuickGenerateAuthorization>(() => {
     const authorizationReadModel = props.quick_generate_read_model?.authorization;
 
@@ -201,6 +226,53 @@ function defaultPricingGate(): CockpitQuickGeneratePricingGate {
     };
 }
 
+function defaultFundingGate(): CockpitQuickGenerateFundingGate {
+    return {
+        status: 'blocked',
+        checks: [
+            {
+                key: 'funding-policy-known',
+                label: 'Funding Policy Known',
+                status: 'passed',
+                reason: 'Funding policy is represented as a read-only Cockpit readiness fact.',
+            },
+            {
+                key: 'issuer-wallet-identified',
+                label: 'Issuer Wallet Identified',
+                status: 'blocked',
+                reason: 'Cockpit does not resolve issuer wallets in Slice 21.',
+            },
+            {
+                key: 'wallet-balance-available',
+                label: 'Wallet Balance Available',
+                status: 'blocked',
+                reason: 'Cockpit does not read wallet balances in Slice 21.',
+            },
+            {
+                key: 'sufficient-funds',
+                label: 'Sufficient Funds',
+                status: 'blocked',
+                reason: 'Cockpit does not evaluate spendable funds in Slice 21.',
+            },
+            {
+                key: 'funds-reservation-ready',
+                label: 'Funds Reservation Ready',
+                status: 'blocked',
+                reason: 'Cockpit does not reserve, hold, debit, or transfer funds.',
+            },
+            {
+                key: 'provider-funding-ready',
+                label: 'Provider Funding Ready',
+                status: 'blocked',
+                reason: 'Cockpit does not call provider funding or account-readiness services.',
+            },
+        ],
+        redactions: {
+            payloads: 'funding-gates-only',
+        },
+    };
+}
+
 function defaultAuthorization(): CockpitQuickGenerateAuthorization {
     return {
         status: 'blocked',
@@ -239,6 +311,22 @@ function defaultAuthorization(): CockpitQuickGenerateAuthorization {
         redactions: {
             payloads: 'authorization-gates-only',
         },
+    };
+}
+
+function sanitizeFundingGateCheck(check: CockpitQuickGenerateFundingGateCheck): CockpitQuickGenerateFundingGateCheck | null {
+    const key = stringValue(check.key);
+    const label = stringValue(check.label);
+
+    if (!key || !label) {
+        return null;
+    }
+
+    return {
+        key,
+        label,
+        status: stringValue(check.status) ?? 'unknown',
+        reason: stringValue(check.reason) ?? 'No funding diagnostic is available.',
     };
 }
 
@@ -363,6 +451,7 @@ function stringValue(value: unknown): string | null {
                 <div class="space-y-4">
                     <CockpitPricingFundingSummary :summaries="pricingSummaries" />
                     <CockpitQuickGeneratePricingGatePanel :pricing-gate="pricingGate" />
+                    <CockpitQuickGenerateFundingGatePanel :funding-gate="fundingGate" />
                     <CockpitGenerateActionPanel :enabled="false" />
                     <CockpitQuickGenerateAuthorizationGatePanel :authorization="authorization" />
                     <CockpitQuickGenerateDraftContractPanel :draft-contract="draftContract" />

@@ -5,6 +5,7 @@ import CockpitIssuanceBoundaryPanel from '../../../resources/js/cockpit/componen
 import CockpitPricingFundingSummary from '../../../resources/js/cockpit/components/CockpitPricingFundingSummary.vue';
 import CockpitQuickGenerateAuthorizationGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateAuthorizationGatePanel.vue';
 import CockpitQuickGenerateDraftContractPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateDraftContractPanel.vue';
+import CockpitQuickGenerateFundingGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateFundingGatePanel.vue';
 import CockpitQuickGeneratePricingGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGeneratePricingGatePanel.vue';
 import CockpitRuntimeInputPanel from '../../../resources/js/cockpit/components/CockpitRuntimeInputPanel.vue';
 import CockpitTemplateSelector from '../../../resources/js/cockpit/components/CockpitTemplateSelector.vue';
@@ -205,6 +206,44 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.findAll('[data-testid="cockpit-quick-generate-pricing-gate-check"]')).toHaveLength(2);
     });
 
+    it('renders funding gate facts without wallet access or reservation behavior', () => {
+        const wrapper = mount(CockpitQuickGenerateFundingGatePanel, {
+            props: {
+                fundingGate: {
+                    status: 'blocked',
+                    checks: [
+                        {
+                            key: 'funding-policy-known',
+                            label: 'Funding Policy Known',
+                            status: 'passed',
+                            reason: 'Funding policy is represented as a read-only Cockpit readiness fact.',
+                        },
+                        {
+                            key: 'issuer-wallet-identified',
+                            label: 'Issuer Wallet Identified',
+                            status: 'blocked',
+                            reason: 'Cockpit does not resolve issuer wallets in Slice 21.',
+                        },
+                    ],
+                    redactions: {
+                        payloads: 'funding-gates-only',
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Funding Gate Baseline');
+        expect(wrapper.text()).toContain('Funding Policy Known');
+        expect(wrapper.text()).toContain('passed');
+        expect(wrapper.text()).toContain('Issuer Wallet Identified');
+        expect(wrapper.text()).toContain('blocked');
+        expect(wrapper.text()).toContain('Cockpit does not resolve issuer wallets in Slice 21.');
+        expect(wrapper.text()).toContain('Funding gates are read-only facts in Slice 21.');
+        expect(wrapper.find('form').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-funding-gate-panel"]').exists()).toBe(true);
+        expect(wrapper.findAll('[data-testid="cockpit-quick-generate-funding-gate-check"]')).toHaveLength(2);
+    });
+
     it('renders the full Quick Generate page with active navigation and no side effects', () => {
         const wrapper = mount(QuickGenerate);
 
@@ -227,5 +266,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('Authorization gates are read-only facts in Slice 19.');
         expect(wrapper.text()).toContain('Pricing Gate Baseline');
         expect(wrapper.text()).toContain('Pricing gates are read-only facts in Slice 20.');
+        expect(wrapper.text()).toContain('Funding Gate Baseline');
+        expect(wrapper.text()).toContain('Funding gates are read-only facts in Slice 21.');
     });
 });

@@ -365,14 +365,27 @@ Slice 20 added a read-only pricing gate model to the Quick Generate read model a
 
 ## Slice 21 — Quick Generate Funding Gate Baseline
 
-Status: recommended next.
+Status: complete.
 
-Candidate scope:
+Implemented:
 
 - define the funding readiness facts required before a future Quick Generate mutation can reserve or move funds
 - keep funding facts read-only and presentation-safe
 - preserve disabled generate controls unless an explicit mutation slice is approved
 - no wallet lookup, reservation, debit, mutation endpoints, voucher issuance, execution, journal writes, action execution, feedback delivery, provider calls, campaign behavior, or money movement
+
+Slice 21 added a read-only funding gate model to the Quick Generate read model and a visible funding gate panel. The baseline reports funding policy as known while issuer wallet identification, wallet balance availability, sufficient funds, funds reservation readiness, and provider funding readiness remain blocked.
+
+## Slice 22 — Quick Generate Idempotency Gate Baseline
+
+Status: recommended next.
+
+Candidate scope:
+
+- define idempotency readiness facts required before a future Quick Generate mutation can be enabled
+- keep idempotency facts read-only and presentation-safe
+- preserve disabled generate controls unless an explicit mutation slice is approved
+- no idempotency persistence, mutation endpoints, voucher issuance, execution, journal writes, action execution, feedback delivery, provider calls, wallet access, campaign behavior, or money movement
 
 ## Verification Plan
 

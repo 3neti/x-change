@@ -139,6 +139,16 @@ it('hydrates quick generate with a sanitized quick generate read model prop', fu
         ->assertJsonPath('props.quick_generate_read_model.pricing_gate.checks.4.key', 'funds-reservation')
         ->assertJsonPath('props.quick_generate_read_model.pricing_gate.checks.5.key', 'provider-fee-quote')
         ->assertJsonPath('props.quick_generate_read_model.pricing_gate.redactions.payloads', 'pricing-gates-only')
+        ->assertJsonPath('props.quick_generate_read_model.funding_gate.status', 'blocked')
+        ->assertJsonPath('props.quick_generate_read_model.funding_gate.checks.0.key', 'funding-policy-known')
+        ->assertJsonPath('props.quick_generate_read_model.funding_gate.checks.0.status', 'passed')
+        ->assertJsonPath('props.quick_generate_read_model.funding_gate.checks.1.key', 'issuer-wallet-identified')
+        ->assertJsonPath('props.quick_generate_read_model.funding_gate.checks.1.status', 'blocked')
+        ->assertJsonPath('props.quick_generate_read_model.funding_gate.checks.2.key', 'wallet-balance-available')
+        ->assertJsonPath('props.quick_generate_read_model.funding_gate.checks.3.key', 'sufficient-funds')
+        ->assertJsonPath('props.quick_generate_read_model.funding_gate.checks.4.key', 'funds-reservation-ready')
+        ->assertJsonPath('props.quick_generate_read_model.funding_gate.checks.5.key', 'provider-funding-ready')
+        ->assertJsonPath('props.quick_generate_read_model.funding_gate.redactions.payloads', 'funding-gates-only')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.schema', 'x-change.cockpit.quick-generate-draft.v1')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.status', 'draft_only')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.template_key', 'money-changer')
@@ -162,6 +172,8 @@ it('hydrates quick generate with a sanitized quick generate read model prop', fu
         ->assertJsonMissingPath('props.quick_generate_read_model.raw_payload')
         ->assertJsonMissingPath('props.quick_generate_read_model.wallet')
         ->assertJsonMissingPath('props.quick_generate_read_model.balance')
+        ->assertJsonMissingPath('props.quick_generate_read_model.available_balance')
+        ->assertJsonMissingPath('props.quick_generate_read_model.provider_wallet')
         ->assertJsonMissingPath('props.quick_generate_read_model.funding_source');
 });
 
@@ -247,4 +259,19 @@ it('documents the quick generate pricing gates before calculation or reservation
         ->and($report)->toContain('provider-fee-quote')
         ->and($report)->toContain('Pricing gates are read-only facts in Slice 20')
         ->and($report)->toContain('No pricing gate calculates prices, reserves funds, or calls providers in Slice 20');
+});
+
+it('documents the quick generate funding gates before wallet access or reservation wiring', function () {
+    $report = file_get_contents(__DIR__.'/../../../docs/ui-cockpit/reports/008-quick-generate-funding-gate-baseline.md');
+
+    expect($report)->toBeString()
+        ->and($report)->toContain('Cockpit Slice 21')
+        ->and($report)->toContain('funding-policy-known')
+        ->and($report)->toContain('issuer-wallet-identified')
+        ->and($report)->toContain('wallet-balance-available')
+        ->and($report)->toContain('sufficient-funds')
+        ->and($report)->toContain('funds-reservation-ready')
+        ->and($report)->toContain('provider-funding-ready')
+        ->and($report)->toContain('Funding gates are read-only facts in Slice 21')
+        ->and($report)->toContain('No funding gate reads wallets, reserves funds, debits balances, or calls providers in Slice 21');
 });

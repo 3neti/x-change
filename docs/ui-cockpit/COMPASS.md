@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Slice 20 — Quick Generate Pricing Gate Baseline
+Current slice: Slice 21 — Quick Generate Funding Gate Baseline
 Status: Complete
 Last updated: 2026-07-03
 
@@ -291,6 +291,21 @@ Last updated: 2026-07-03
 - Added read-only pricing gate facts to `quick_generate_read_model`.
 - Added a visible pricing gate panel to Quick Generate.
 - Preserved disabled generation behavior. The pricing gate model reports the default template as selected while amount input, pricing service wiring, funding source selection, funds reservation, and provider fee quotes remain blocked.
+- Completed Slice 21 Quick Generate Funding Gate Baseline:
+  - `src/Data/Cockpit/CockpitQuickGenerateFundingGateData.php`
+  - `src/Data/Cockpit/CockpitQuickGenerateFundingGateCheckData.php`
+  - `src/Data/Cockpit/CockpitQuickGenerateReadModelData.php`
+  - `src/Services/Cockpit/VoucherLifecycleCockpitReadModelProvider.php`
+  - `resources/js/cockpit/components/CockpitQuickGenerateFundingGatePanel.vue`
+  - `resources/js/cockpit/pages/QuickGenerate.vue`
+  - `resources/js/cockpit/types.ts`
+  - `docs/ui-cockpit/reports/008-quick-generate-funding-gate-baseline.md`
+  - `tests/Unit/Cockpit/CockpitReadModelBaselineTest.php`
+  - `tests/Feature/Cockpit/CockpitReadOnlyRoutesTest.php`
+  - `tests/frontend/cockpit/CockpitQuickGenerateFoundation.test.ts`
+- Added read-only funding gate facts to `quick_generate_read_model`.
+- Added a visible funding gate panel to Quick Generate.
+- Preserved disabled generation behavior. The funding gate model reports funding policy as known while wallet identification, wallet balance availability, sufficient funds, funds reservation, and provider funding readiness remain blocked.
 
 ## In Progress
 
@@ -298,16 +313,16 @@ No implementation slice is in progress.
 
 ## Next
 
-Recommended next slice: Slice 21 — Quick Generate Funding Gate Baseline.
+Recommended next slice: Slice 22 — Quick Generate Idempotency Gate Baseline.
 
 Scope should remain foundation-only:
 
-- define the funding readiness facts required before a future Quick Generate mutation can reserve or move funds
-- keep funding facts read-only and presentation-safe unless a mutation slice is explicitly approved
+- define the idempotency readiness facts required before a future Quick Generate mutation can be enabled
+- keep idempotency facts read-only and presentation-safe unless a mutation slice is explicitly approved
 - keep route props read-only and authenticated unless a mutation slice is explicitly approved
 - keep generate controls disabled until authorization, pricing, funding, idempotency, and existing issuance API/action routing are all designed
 - avoid broad voucher payloads, provider payloads, wallet data, claim payloads, approval metadata, instructions, or raw payloads
-- no wallet lookup, reservation, debit, mutation endpoints, execution, journal writes, feedback delivery, provider calls, campaign behavior, or money movement
+- no idempotency persistence, mutation endpoints, execution, journal writes, feedback delivery, provider calls, wallet access, campaign behavior, or money movement
 - preserve all existing Claim UI tests
 
 ## Risks
@@ -333,6 +348,7 @@ Scope should remain foundation-only:
 - Slice 18 introduces a frontend/backend-neutral Quick Generate draft contract shape and visible draft contract panel. It does not persist drafts, register mutation routes, call issuance, calculate pricing, reserve funding, call providers, or move money.
 - Slice 19 introduces read-only authorization gate facts and a visible authorization gate panel. It does not authorize generation, expose raw roles/permissions/policy payloads, register mutation routes, call providers, or move money.
 - Slice 20 introduces read-only pricing gate facts and a visible pricing gate panel. It does not calculate prices, expose pricing breakdowns, select funding sources, reserve funds, call providers, register mutation routes, or move money.
+- Slice 21 introduces read-only funding gate facts and a visible funding gate panel. It does not resolve wallets, read balances, evaluate sufficient funds, reserve funds, debit balances, call providers, register mutation routes, or move money.
 
 ## Decisions
 
@@ -364,6 +380,7 @@ Scope should remain foundation-only:
 - Slice 18 adds `CockpitQuickGenerateDraftContractData` as a read-only draft shape in `quick_generate_read_model`. The schema is `x-change.cockpit.quick-generate-draft.v1`, and the baseline draft stays local/read-only with no persistence or mutation route.
 - Slice 19 adds `CockpitQuickGenerateAuthorizationData` and `CockpitQuickGenerateAuthorizationGateData` as read-only gate facts in `quick_generate_read_model`. Generation remains disabled because required mutation/provider/money gates remain blocked.
 - Slice 20 adds `CockpitQuickGeneratePricingGateData` and `CockpitQuickGeneratePricingGateCheckData` as read-only gate facts in `quick_generate_read_model`. Generation remains disabled because amount, pricing-service, funding-source, reservation, and provider quote gates remain blocked.
+- Slice 21 adds `CockpitQuickGenerateFundingGateData` and `CockpitQuickGenerateFundingGateCheckData` as read-only gate facts in `quick_generate_read_model`. Generation remains disabled because wallet, balance, sufficiency, reservation, and provider funding gates remain blocked.
 
 ## Open Questions
 
@@ -460,3 +477,7 @@ Scope should remain foundation-only:
 - Slice 20 focused PHP Cockpit read-model/route result: `35 passed, 276 assertions`.
 - Slice 20 full frontend result: `72 passed, 438 tests`.
 - Slice 20 full package Pest result: `1009 passed, 5 skipped, 5280 assertions`.
+- Slice 21 focused quick-generate funding frontend result: `1 passed, 10 tests`.
+- Slice 21 focused PHP Cockpit read-model/route result: `36 passed, 298 assertions`.
+- Slice 21 full frontend result: `72 passed, 439 tests`.
+- Slice 21 full package Pest result: `1010 passed, 5 skipped, 5302 assertions`.
