@@ -7,6 +7,7 @@ import CockpitQuickGenerateAuthorizationGatePanel from '../components/CockpitQui
 import CockpitQuickGenerateDraftContractPanel from '../components/CockpitQuickGenerateDraftContractPanel.vue';
 import CockpitQuickGenerateFundingGatePanel from '../components/CockpitQuickGenerateFundingGatePanel.vue';
 import CockpitQuickGenerateIdempotencyGatePanel from '../components/CockpitQuickGenerateIdempotencyGatePanel.vue';
+import CockpitQuickGenerateMutationHandoffPlanPanel from '../components/CockpitQuickGenerateMutationHandoffPlanPanel.vue';
 import CockpitQuickGeneratePricingGatePanel from '../components/CockpitQuickGeneratePricingGatePanel.vue';
 import CockpitQuickGenerateValidationRedactionGatePanel from '../components/CockpitQuickGenerateValidationRedactionGatePanel.vue';
 import CockpitRuntimeInputPanel from '../components/CockpitRuntimeInputPanel.vue';
@@ -26,6 +27,8 @@ import type {
     CockpitQuickGenerateFundingGateCheck,
     CockpitQuickGenerateIdempotencyGate,
     CockpitQuickGenerateIdempotencyGateCheck,
+    CockpitQuickGenerateMutationHandoffPlan,
+    CockpitQuickGenerateMutationHandoffPlanStep,
     CockpitQuickGeneratePricingGate,
     CockpitQuickGeneratePricingGateCheck,
     CockpitQuickGenerateValidationRedactionGate,
@@ -187,6 +190,28 @@ const validationRedactionGate = computed<CockpitQuickGenerateValidationRedaction
         checks: checks.length > 0 ? checks : defaultValidationRedactionGate().checks,
         redactions: {
             payloads: stringValue(validationRedactionGateReadModel.redactions?.payloads) ?? 'validation-redaction-gates-only',
+        },
+    };
+});
+
+const mutationHandoffPlan = computed<CockpitQuickGenerateMutationHandoffPlan>(() => {
+    const mutationHandoffPlanReadModel = props.quick_generate_read_model?.mutation_handoff_plan;
+
+    if (!readModelAvailable.value || typeof mutationHandoffPlanReadModel !== 'object' || mutationHandoffPlanReadModel === null) {
+        return defaultMutationHandoffPlan();
+    }
+
+    const steps = Array.isArray(mutationHandoffPlanReadModel.steps)
+        ? mutationHandoffPlanReadModel.steps
+            .map((step): CockpitQuickGenerateMutationHandoffPlanStep | null => sanitizeMutationHandoffPlanStep(step))
+            .filter((step): step is CockpitQuickGenerateMutationHandoffPlanStep => step !== null)
+        : [];
+
+    return {
+        status: stringValue(mutationHandoffPlanReadModel.status) ?? 'blocked',
+        steps: steps.length > 0 ? steps : defaultMutationHandoffPlan().steps,
+        redactions: {
+            payloads: stringValue(mutationHandoffPlanReadModel.redactions?.payloads) ?? 'mutation-handoff-plan-only',
         },
     };
 });
@@ -417,6 +442,53 @@ function defaultValidationRedactionGate(): CockpitQuickGenerateValidationRedacti
     };
 }
 
+function defaultMutationHandoffPlan(): CockpitQuickGenerateMutationHandoffPlan {
+    return {
+        status: 'blocked',
+        steps: [
+            {
+                key: 'existing-issuance-owner-identified',
+                label: 'Existing Issuance Owner Identified',
+                status: 'passed',
+                reason: 'Quick Generate must hand off to the existing x-change issuance owner instead of inventing Cockpit generation behavior.',
+            },
+            {
+                key: 'generate-pay-code-action-handoff',
+                label: 'GeneratePayCode Action Handoff',
+                status: 'blocked',
+                reason: 'Cockpit does not call GeneratePayCode in Slice 24.',
+            },
+            {
+                key: 'generate-pay-code-controller-handoff',
+                label: 'GeneratePayCodeController Handoff',
+                status: 'blocked',
+                reason: 'Cockpit does not register a mutation route or controller handoff in Slice 24.',
+            },
+            {
+                key: 'preconditions-green',
+                label: 'Preconditions Green',
+                status: 'blocked',
+                reason: 'Authorization, pricing, funding, idempotency, validation, and redaction gates remain blocked.',
+            },
+            {
+                key: 'side-effect-boundary-confirmed',
+                label: 'Side Effect Boundary Confirmed',
+                status: 'blocked',
+                reason: 'No voucher generation, wallet movement, provider call, journal write, action run, or feedback delivery is authorized.',
+            },
+            {
+                key: 'operator-response-contract-ready',
+                label: 'Operator Response Contract Ready',
+                status: 'blocked',
+                reason: 'Cockpit does not define a mutation success, failure, or validation response contract in Slice 24.',
+            },
+        ],
+        redactions: {
+            payloads: 'mutation-handoff-plan-only',
+        },
+    };
+}
+
 function defaultAuthorization(): CockpitQuickGenerateAuthorization {
     return {
         status: 'blocked',
@@ -503,6 +575,22 @@ function sanitizeValidationRedactionGateCheck(check: CockpitQuickGenerateValidat
         label,
         status: stringValue(check.status) ?? 'unknown',
         reason: stringValue(check.reason) ?? 'No validation or redaction diagnostic is available.',
+    };
+}
+
+function sanitizeMutationHandoffPlanStep(step: CockpitQuickGenerateMutationHandoffPlanStep): CockpitQuickGenerateMutationHandoffPlanStep | null {
+    const key = stringValue(step.key);
+    const label = stringValue(step.label);
+
+    if (!key || !label) {
+        return null;
+    }
+
+    return {
+        key,
+        label,
+        status: stringValue(step.status) ?? 'unknown',
+        reason: stringValue(step.reason) ?? 'No mutation handoff diagnostic is available.',
     };
 }
 
@@ -630,6 +718,7 @@ function stringValue(value: unknown): string | null {
                     <CockpitQuickGenerateFundingGatePanel :funding-gate="fundingGate" />
                     <CockpitQuickGenerateIdempotencyGatePanel :idempotency-gate="idempotencyGate" />
                     <CockpitQuickGenerateValidationRedactionGatePanel :validation-redaction-gate="validationRedactionGate" />
+                    <CockpitQuickGenerateMutationHandoffPlanPanel :mutation-handoff-plan="mutationHandoffPlan" />
                     <CockpitGenerateActionPanel :enabled="false" />
                     <CockpitQuickGenerateAuthorizationGatePanel :authorization="authorization" />
                     <CockpitQuickGenerateDraftContractPanel :draft-contract="draftContract" />

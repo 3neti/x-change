@@ -7,6 +7,7 @@ import CockpitQuickGenerateAuthorizationGatePanel from '../../../resources/js/co
 import CockpitQuickGenerateDraftContractPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateDraftContractPanel.vue';
 import CockpitQuickGenerateFundingGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateFundingGatePanel.vue';
 import CockpitQuickGenerateIdempotencyGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateIdempotencyGatePanel.vue';
+import CockpitQuickGenerateMutationHandoffPlanPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateMutationHandoffPlanPanel.vue';
 import CockpitQuickGeneratePricingGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGeneratePricingGatePanel.vue';
 import CockpitQuickGenerateValidationRedactionGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateValidationRedactionGatePanel.vue';
 import CockpitRuntimeInputPanel from '../../../resources/js/cockpit/components/CockpitRuntimeInputPanel.vue';
@@ -322,6 +323,44 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.findAll('[data-testid="cockpit-quick-generate-validation-redaction-gate-check"]')).toHaveLength(2);
     });
 
+    it('renders mutation handoff plan facts without mutation routes or generation behavior', () => {
+        const wrapper = mount(CockpitQuickGenerateMutationHandoffPlanPanel, {
+            props: {
+                mutationHandoffPlan: {
+                    status: 'blocked',
+                    steps: [
+                        {
+                            key: 'existing-issuance-owner-identified',
+                            label: 'Existing Issuance Owner Identified',
+                            status: 'passed',
+                            reason: 'Quick Generate must hand off to the existing x-change issuance owner instead of inventing Cockpit generation behavior.',
+                        },
+                        {
+                            key: 'generate-pay-code-action-handoff',
+                            label: 'GeneratePayCode Action Handoff',
+                            status: 'blocked',
+                            reason: 'Cockpit does not call GeneratePayCode in Slice 24.',
+                        },
+                    ],
+                    redactions: {
+                        payloads: 'mutation-handoff-plan-only',
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Mutation Handoff Boundary Plan');
+        expect(wrapper.text()).toContain('Existing Issuance Owner Identified');
+        expect(wrapper.text()).toContain('passed');
+        expect(wrapper.text()).toContain('GeneratePayCode Action Handoff');
+        expect(wrapper.text()).toContain('blocked');
+        expect(wrapper.text()).toContain('Cockpit does not call GeneratePayCode in Slice 24.');
+        expect(wrapper.text()).toContain('Mutation handoff remains a read-only boundary plan in Slice 24.');
+        expect(wrapper.find('form').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-mutation-handoff-plan-panel"]').exists()).toBe(true);
+        expect(wrapper.findAll('[data-testid="cockpit-quick-generate-mutation-handoff-plan-step"]')).toHaveLength(2);
+    });
+
     it('renders the full Quick Generate page with active navigation and no side effects', () => {
         const wrapper = mount(QuickGenerate);
 
@@ -350,5 +389,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('Idempotency gates are read-only facts in Slice 22.');
         expect(wrapper.text()).toContain('Validation and Redaction Gate Baseline');
         expect(wrapper.text()).toContain('Validation and redaction gates are read-only facts in Slice 23.');
+        expect(wrapper.text()).toContain('Mutation Handoff Boundary Plan');
+        expect(wrapper.text()).toContain('Mutation handoff remains a read-only boundary plan in Slice 24.');
     });
 });

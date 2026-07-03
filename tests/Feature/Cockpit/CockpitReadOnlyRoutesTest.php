@@ -169,6 +169,16 @@ it('hydrates quick generate with a sanitized quick generate read model prop', fu
         ->assertJsonPath('props.quick_generate_read_model.validation_redaction_gate.checks.4.key', 'sanitized-preview-ready')
         ->assertJsonPath('props.quick_generate_read_model.validation_redaction_gate.checks.5.key', 'validation-error-contract-ready')
         ->assertJsonPath('props.quick_generate_read_model.validation_redaction_gate.redactions.payloads', 'validation-redaction-gates-only')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_handoff_plan.status', 'blocked')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_handoff_plan.steps.0.key', 'existing-issuance-owner-identified')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_handoff_plan.steps.0.status', 'passed')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_handoff_plan.steps.1.key', 'generate-pay-code-action-handoff')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_handoff_plan.steps.1.status', 'blocked')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_handoff_plan.steps.2.key', 'generate-pay-code-controller-handoff')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_handoff_plan.steps.3.key', 'preconditions-green')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_handoff_plan.steps.4.key', 'side-effect-boundary-confirmed')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_handoff_plan.steps.5.key', 'operator-response-contract-ready')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_handoff_plan.redactions.payloads', 'mutation-handoff-plan-only')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.schema', 'x-change.cockpit.quick-generate-draft.v1')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.status', 'draft_only')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.template_key', 'money-changer')
@@ -206,7 +216,11 @@ it('hydrates quick generate with a sanitized quick generate read model prop', fu
         ->assertJsonMissingPath('props.quick_generate_read_model.mobile')
         ->assertJsonMissingPath('props.quick_generate_read_model.email')
         ->assertJsonMissingPath('props.quick_generate_read_model.recipient_reference')
-        ->assertJsonMissingPath('props.quick_generate_read_model.account_number');
+        ->assertJsonMissingPath('props.quick_generate_read_model.account_number')
+        ->assertJsonMissingPath('props.quick_generate_read_model.mutation_payload')
+        ->assertJsonMissingPath('props.quick_generate_read_model.issued_voucher')
+        ->assertJsonMissingPath('props.quick_generate_read_model.generated_pay_code')
+        ->assertJsonMissingPath('props.quick_generate_read_model.side_effect_result');
 });
 
 it('requires authentication for cockpit routes', function (string $route, array $parameters) {
@@ -336,4 +350,19 @@ it('documents the quick generate validation and redaction gates before request h
         ->and($report)->toContain('validation-error-contract-ready')
         ->and($report)->toContain('Validation and redaction gates are read-only facts in Slice 23')
         ->and($report)->toContain('No validation/redaction gate validates requests, persists payloads, exposes submitted PII, or enables mutation routes in Slice 23');
+});
+
+it('documents the quick generate mutation handoff boundary before mutation wiring', function () {
+    $report = file_get_contents(__DIR__.'/../../../docs/ui-cockpit/reports/011-quick-generate-mutation-handoff-boundary-plan.md');
+
+    expect($report)->toBeString()
+        ->and($report)->toContain('Cockpit Slice 24')
+        ->and($report)->toContain('existing-issuance-owner-identified')
+        ->and($report)->toContain('generate-pay-code-action-handoff')
+        ->and($report)->toContain('generate-pay-code-controller-handoff')
+        ->and($report)->toContain('preconditions-green')
+        ->and($report)->toContain('side-effect-boundary-confirmed')
+        ->and($report)->toContain('operator-response-contract-ready')
+        ->and($report)->toContain('Mutation handoff remains a read-only boundary plan in Slice 24')
+        ->and($report)->toContain('No Cockpit mutation route calls GeneratePayCode, GeneratePayCodeController, providers, wallets, journal, action, or feedback in Slice 24');
 });

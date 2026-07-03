@@ -177,6 +177,21 @@ export type CockpitQuickGenerateValidationRedactionGate = {
     [key: string]: unknown;
 };
 
+export type CockpitQuickGenerateMutationHandoffPlanStep = {
+    key?: string | null;
+    label?: string | null;
+    status?: string | null;
+    reason?: string | null;
+    [key: string]: unknown;
+};
+
+export type CockpitQuickGenerateMutationHandoffPlan = {
+    status?: string | null;
+    steps?: CockpitQuickGenerateMutationHandoffPlanStep[];
+    redactions?: CockpitReadModelRedactions;
+    [key: string]: unknown;
+};
+
 export type CockpitQuickGenerateDraftContract = {
     schema?: string | null;
     status?: string | null;
@@ -215,6 +230,7 @@ export type CockpitQuickGenerateReadModel = {
     funding_gate?: CockpitQuickGenerateFundingGate;
     idempotency_gate?: CockpitQuickGenerateIdempotencyGate;
     validation_redaction_gate?: CockpitQuickGenerateValidationRedactionGate;
+    mutation_handoff_plan?: CockpitQuickGenerateMutationHandoffPlan;
     draft_contract?: CockpitQuickGenerateDraftContract;
     authorization?: CockpitQuickGenerateAuthorization;
     action?: {

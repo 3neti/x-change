@@ -4,9 +4,9 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Slice 23 — Quick Generate Request Validation and Redaction Gate Baseline
+Current slice: Slice 24 — Quick Generate Mutation Handoff Boundary Plan
 Status: Complete
-Last updated: 2026-07-03
+Last updated: 2026-07-04
 
 ## Completed
 
@@ -336,6 +336,21 @@ Last updated: 2026-07-03
 - Added read-only validation/redaction gate facts to `quick_generate_read_model`.
 - Added a visible validation/redaction gate panel to Quick Generate.
 - Preserved disabled generation behavior. The validation/redaction gate model reports request schema as known while required-field enforcement, validation rule wiring, sensitive-field redaction, sanitized preview generation, and validation error contracts remain blocked.
+- Completed Slice 24 Quick Generate Mutation Handoff Boundary Plan:
+  - `src/Data/Cockpit/CockpitQuickGenerateMutationHandoffPlanData.php`
+  - `src/Data/Cockpit/CockpitQuickGenerateMutationHandoffPlanStepData.php`
+  - `src/Data/Cockpit/CockpitQuickGenerateReadModelData.php`
+  - `src/Services/Cockpit/VoucherLifecycleCockpitReadModelProvider.php`
+  - `resources/js/cockpit/components/CockpitQuickGenerateMutationHandoffPlanPanel.vue`
+  - `resources/js/cockpit/pages/QuickGenerate.vue`
+  - `resources/js/cockpit/types.ts`
+  - `docs/ui-cockpit/reports/011-quick-generate-mutation-handoff-boundary-plan.md`
+  - `tests/Unit/Cockpit/CockpitReadModelBaselineTest.php`
+  - `tests/Feature/Cockpit/CockpitReadOnlyRoutesTest.php`
+  - `tests/frontend/cockpit/CockpitQuickGenerateFoundation.test.ts`
+- Added read-only mutation handoff plan facts to `quick_generate_read_model`.
+- Added a visible mutation handoff boundary panel to Quick Generate.
+- Preserved disabled generation behavior. The mutation handoff plan reports the existing issuance owner as identified while `GeneratePayCode`, `GeneratePayCodeController`, preconditions, side-effect boundary confirmation, and operator response contracts remain blocked.
 
 ## In Progress
 
@@ -343,14 +358,15 @@ No implementation slice is in progress.
 
 ## Next
 
-Recommended next slice: Slice 24 — Quick Generate Mutation Handoff Boundary Plan.
+Recommended next slice: Slice 25 — Quick Generate Mutation Preconditions Review.
 
 Scope should remain foundation-only:
 
-- document the exact future handoff from Cockpit Quick Generate to the existing `GeneratePayCode` / `GeneratePayCodeController` path
-- keep handoff facts read-only and presentation-safe unless a mutation slice is explicitly approved
+- review whether the Quick Generate precondition gates should stay blocked or graduate toward real mutation readiness
+- identify the minimum production path required before a Cockpit mutation route can be proposed
+- decide whether the next slice should remain read-only or explicitly request approval for mutation-route scaffolding
 - keep route props read-only and authenticated unless a mutation slice is explicitly approved
-- keep generate controls disabled until authorization, pricing, funding, idempotency, and existing issuance API/action routing are all designed
+- keep generate controls disabled until authorization, pricing, funding, idempotency, validation/redaction, and existing issuance API/action routing are all designed
 - avoid broad voucher payloads, provider payloads, wallet data, claim payloads, approval metadata, instructions, or raw payloads
 - no mutation endpoints, request validation execution, payload persistence, execution, journal writes, feedback delivery, provider calls, wallet access, campaign behavior, or money movement
 - preserve all existing Claim UI tests
@@ -381,6 +397,7 @@ Scope should remain foundation-only:
 - Slice 21 introduces read-only funding gate facts and a visible funding gate panel. It does not resolve wallets, read balances, evaluate sufficient funds, reserve funds, debit balances, call providers, register mutation routes, or move money.
 - Slice 22 introduces read-only idempotency gate facts and a visible idempotency gate panel. It does not persist keys, hash payloads, read replay records, evaluate conflicts, read TTL policy, register mutation routes, or enable generation.
 - Slice 23 introduces read-only validation/redaction gate facts and a visible validation/redaction gate panel. It does not validate requests, persist payloads, expose submitted PII, build sanitized previews, return validation errors, register mutation routes, or enable generation.
+- Slice 24 introduces a read-only mutation handoff boundary plan and a visible mutation handoff panel. It does not register mutation routes, call `GeneratePayCode`, call `GeneratePayCodeController`, submit payloads, generate vouchers, call providers, access wallets, write journal entries, run actions, send feedback, or move money.
 
 ## Decisions
 
@@ -415,6 +432,7 @@ Scope should remain foundation-only:
 - Slice 21 adds `CockpitQuickGenerateFundingGateData` and `CockpitQuickGenerateFundingGateCheckData` as read-only gate facts in `quick_generate_read_model`. Generation remains disabled because wallet, balance, sufficiency, reservation, and provider funding gates remain blocked.
 - Slice 22 adds `CockpitQuickGenerateIdempotencyGateData` and `CockpitQuickGenerateIdempotencyGateCheckData` as read-only gate facts in `quick_generate_read_model`. Generation remains disabled because key source, payload fingerprinting, replay lookup, conflict response, and TTL policy gates remain blocked.
 - Slice 23 adds `CockpitQuickGenerateValidationRedactionGateData` and `CockpitQuickGenerateValidationRedactionGateCheckData` as read-only gate facts in `quick_generate_read_model`. Generation remains disabled because required-field enforcement, validation rules, submitted-payload redaction, sanitized previews, and validation error contracts remain blocked.
+- Slice 24 adds `CockpitQuickGenerateMutationHandoffPlanData` and `CockpitQuickGenerateMutationHandoffPlanStepData` as read-only handoff facts in `quick_generate_read_model`. Generation remains disabled because action handoff, controller handoff, preconditions, side-effect boundary confirmation, and operator response contracts remain blocked.
 
 ## Open Questions
 
@@ -523,3 +541,7 @@ Scope should remain foundation-only:
 - Slice 23 focused PHP Cockpit read-model/route result: `38 passed, 350 assertions`.
 - Slice 23 full frontend result: `72 passed, 441 tests`.
 - Slice 23 full package Pest result: `1012 passed, 5 skipped, 5354 assertions`.
+- Slice 24 focused quick-generate mutation handoff frontend result: `13 passed`.
+- Slice 24 focused PHP Cockpit read-model/route result: `39 passed, 374 assertions`.
+- Slice 24 full frontend result: `72 passed, 442 tests`.
+- Slice 24 full package Pest result: `1013 passed, 5 skipped, 5378 assertions`.

@@ -404,14 +404,27 @@ Slice 23 added a read-only validation/redaction gate model to the Quick Generate
 
 ## Slice 24 — Quick Generate Mutation Handoff Boundary Plan
 
-Status: recommended next.
+Status: complete.
 
-Candidate scope:
+Implemented:
 
 - document the exact future handoff from Cockpit Quick Generate to the existing `GeneratePayCode` / `GeneratePayCodeController` path
 - define the preconditions that must pass before a mutation route can be considered
 - preserve disabled generate controls unless an explicit mutation slice is approved
 - no mutation endpoints, voucher issuance, request validation execution, payload persistence, execution, journal writes, action execution, feedback delivery, provider calls, wallet access, campaign behavior, or money movement
+
+Slice 24 added a read-only mutation handoff plan model to the Quick Generate read model and a visible mutation handoff boundary panel. The baseline reports the existing issuance owner as identified while action handoff, controller handoff, preconditions, side-effect boundary confirmation, and operator response contracts remain blocked.
+
+## Slice 25 — Quick Generate Mutation Preconditions Review
+
+Status: recommended next.
+
+Candidate scope:
+
+- review whether the Quick Generate precondition gates should stay blocked or graduate toward real mutation readiness
+- identify the minimum production path required before a Cockpit mutation route can be proposed
+- decide whether the next slice should remain read-only or explicitly request approval for mutation-route scaffolding
+- no mutation endpoints, voucher issuance, request validation execution, payload persistence, execution, journal writes, action execution, feedback delivery, provider calls, wallet access, campaign behavior, or money movement unless explicitly authorized
 
 ## Verification Plan
 

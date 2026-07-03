@@ -23,6 +23,8 @@ use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateFundingGateCheckData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateFundingGateData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateIdempotencyGateCheckData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateIdempotencyGateData;
+use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateMutationHandoffPlanData;
+use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateMutationHandoffPlanStepData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGeneratePricingGateCheckData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGeneratePricingGateData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGeneratePricingSummaryData;
@@ -481,6 +483,64 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                         'email',
                         'recipient_reference',
                         'account_number',
+                        'raw_payload',
+                    ],
+                ],
+            ),
+            mutation_handoff_plan: new CockpitQuickGenerateMutationHandoffPlanData(
+                status: 'blocked',
+                steps: [
+                    new CockpitQuickGenerateMutationHandoffPlanStepData(
+                        key: 'existing-issuance-owner-identified',
+                        label: 'Existing Issuance Owner Identified',
+                        status: 'passed',
+                        reason: 'Quick Generate must hand off to the existing x-change issuance owner instead of inventing Cockpit generation behavior.',
+                    ),
+                    new CockpitQuickGenerateMutationHandoffPlanStepData(
+                        key: 'generate-pay-code-action-handoff',
+                        label: 'GeneratePayCode Action Handoff',
+                        status: 'blocked',
+                        reason: 'Cockpit does not call GeneratePayCode in Slice 24.',
+                    ),
+                    new CockpitQuickGenerateMutationHandoffPlanStepData(
+                        key: 'generate-pay-code-controller-handoff',
+                        label: 'GeneratePayCodeController Handoff',
+                        status: 'blocked',
+                        reason: 'Cockpit does not register a mutation route or controller handoff in Slice 24.',
+                    ),
+                    new CockpitQuickGenerateMutationHandoffPlanStepData(
+                        key: 'preconditions-green',
+                        label: 'Preconditions Green',
+                        status: 'blocked',
+                        reason: 'Authorization, pricing, funding, idempotency, validation, and redaction gates remain blocked.',
+                    ),
+                    new CockpitQuickGenerateMutationHandoffPlanStepData(
+                        key: 'side-effect-boundary-confirmed',
+                        label: 'Side Effect Boundary Confirmed',
+                        status: 'blocked',
+                        reason: 'No voucher generation, wallet movement, provider call, journal write, action run, or feedback delivery is authorized.',
+                    ),
+                    new CockpitQuickGenerateMutationHandoffPlanStepData(
+                        key: 'operator-response-contract-ready',
+                        label: 'Operator Response Contract Ready',
+                        status: 'blocked',
+                        reason: 'Cockpit does not define a mutation success, failure, or validation response contract in Slice 24.',
+                    ),
+                ],
+                redactions: [
+                    'payloads' => 'mutation-handoff-plan-only',
+                    'excluded' => [
+                        'request_payload',
+                        'validated_payload',
+                        'mutation_payload',
+                        'issued_voucher',
+                        'generated_pay_code',
+                        'provider_payload',
+                        'wallet',
+                        'journal_payload',
+                        'action_payload',
+                        'feedback_payload',
+                        'side_effect_result',
                         'raw_payload',
                     ],
                 ],
