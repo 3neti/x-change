@@ -8,6 +8,11 @@ use Illuminate\Contracts\Support\Arrayable;
 use JsonSerializable;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
+use LBHurtado\XChange\Data\Cockpit\CockpitDashboardActivityData;
+use LBHurtado\XChange\Data\Cockpit\CockpitDashboardMetricData;
+use LBHurtado\XChange\Data\Cockpit\CockpitDashboardPipelineStageData;
+use LBHurtado\XChange\Data\Cockpit\CockpitDashboardReadModelData;
+use LBHurtado\XChange\Data\Cockpit\CockpitDashboardRiskSignalData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeListReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeListRecordData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelBundleData;
@@ -84,6 +89,100 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             journal: $fallback->journal,
             actions: $fallback->actions,
             feedback: $fallback->feedback,
+        );
+    }
+
+    public function forDashboard(CockpitReadModelQueryData $query): CockpitDashboardReadModelData
+    {
+        $rows = collect($this->vouchers->list())
+            ->map(fn (mixed $row): array => $this->toArray($row))
+            ->filter(fn (array $row): bool => $this->summaryCode($row, '') !== '')
+            ->values();
+
+        $issued = $this->countStatus($rows, 'issued');
+        $redeemed = $this->countStatus($rows, 'redeemed');
+        $expired = $this->countStatus($rows, 'expired');
+        $awaitingApproval = $rows
+            ->filter(fn (array $row): bool => $this->stringValue($row['display_status'] ?? null, '') === 'awaiting_approval')
+            ->count();
+        $attention = $expired + $awaitingApproval;
+
+        return new CockpitDashboardReadModelData(
+            status: 'available',
+            authorized: true,
+            metrics: [
+                new CockpitDashboardMetricData(
+                    key: 'pay-codes-visible',
+                    label: 'Pay Codes Visible',
+                    value: (string) $rows->count(),
+                    helper: 'Sanitized voucher lifecycle list rows',
+                ),
+                new CockpitDashboardMetricData(
+                    key: 'issued-pay-codes',
+                    label: 'Issued',
+                    value: (string) $issued,
+                    helper: 'Read-only lifecycle summary',
+                    tone: 'healthy',
+                ),
+                new CockpitDashboardMetricData(
+                    key: 'redeemed-pay-codes',
+                    label: 'Redeemed',
+                    value: (string) $redeemed,
+                    helper: 'Includes awaiting approval display states',
+                    tone: 'healthy',
+                ),
+                new CockpitDashboardMetricData(
+                    key: 'attention-pay-codes',
+                    label: 'Needs Attention',
+                    value: (string) $attention,
+                    helper: 'Expired or awaiting approval summaries only',
+                    tone: 'warning',
+                ),
+            ],
+            pipeline: [
+                new CockpitDashboardPipelineStageData(
+                    key: 'issued',
+                    label: 'Issued',
+                    value: (string) $issued,
+                ),
+                new CockpitDashboardPipelineStageData(
+                    key: 'redeemed',
+                    label: 'Redeemed',
+                    value: (string) $redeemed,
+                    tone: 'healthy',
+                ),
+                new CockpitDashboardPipelineStageData(
+                    key: 'expired',
+                    label: 'Expired',
+                    value: (string) $expired,
+                    tone: 'warning',
+                ),
+                new CockpitDashboardPipelineStageData(
+                    key: 'awaiting-approval',
+                    label: 'Awaiting Approval',
+                    value: (string) $awaitingApproval,
+                    tone: 'warning',
+                ),
+            ],
+            risk_signals: [
+                new CockpitDashboardRiskSignalData(
+                    key: 'expired-pay-codes',
+                    label: 'Expired Pay Codes',
+                    value: $expired.' sanitized summaries',
+                    severity: 'warning',
+                ),
+                new CockpitDashboardRiskSignalData(
+                    key: 'awaiting-approval',
+                    label: 'Awaiting Approval',
+                    value: $awaitingApproval.' sanitized summaries',
+                    severity: 'watch',
+                ),
+            ],
+            activity: $this->dashboardActivity($rows),
+            redactions: [
+                'payloads' => 'sanitized-dashboard-summary-only',
+                'excluded' => $this->excludedPayloadKeys(),
+            ],
         );
     }
 
@@ -247,6 +346,48 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         }
 
         return null;
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, array<string, mixed>>  $rows
+     */
+    private function countStatus($rows, string $status): int
+    {
+        return $rows
+            ->filter(fn (array $row): bool => $this->summaryStatus($row) === $status)
+            ->count();
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, array<string, mixed>>  $rows
+     * @return array<int, CockpitDashboardActivityData>
+     */
+    private function dashboardActivity($rows): array
+    {
+        return $rows
+            ->map(fn (array $row): array => [
+                'code' => $this->summaryCode($row, ''),
+                'display_status' => $this->stringValue($row['display_status'] ?? null, $this->summaryStatus($row)),
+                'timestamp' => $this->nullableString(
+                    $row['updated_at']
+                        ?? $row['redeemed_at']
+                        ?? $row['expires_at']
+                        ?? $row['created_at']
+                        ?? null
+                ),
+            ])
+            ->filter(fn (array $row): bool => $row['code'] !== '' && $row['timestamp'] !== null)
+            ->sortByDesc('timestamp')
+            ->take(3)
+            ->map(fn (array $row): CockpitDashboardActivityData => new CockpitDashboardActivityData(
+                id: $row['code'],
+                label: $row['code'],
+                description: 'Status: '.$row['display_status'],
+                timestamp: $row['timestamp'],
+                source: 'system',
+            ))
+            ->values()
+            ->all();
     }
 
     /**

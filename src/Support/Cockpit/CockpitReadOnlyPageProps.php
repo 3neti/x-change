@@ -68,4 +68,17 @@ class CockpitReadOnlyPageProps
             ))->toArray(),
         ];
     }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toDashboardArray(): array
+    {
+        return [
+            ...$this->toArray(),
+            'dashboard_read_model' => $this->readModels->forDashboard(new CockpitReadModelQueryData(
+                include: ['voucher'],
+            ))->toArray(),
+        ];
+    }
 }

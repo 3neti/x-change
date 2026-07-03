@@ -379,6 +379,190 @@ it('adapts voucher lifecycle list rows into sanitized cockpit pay code rows', fu
         ]);
 });
 
+it('returns an empty not wired dashboard read model by default', function () {
+    $readModel = (new NullCockpitReadModelProvider)
+        ->forDashboard(new CockpitReadModelQueryData);
+
+    expect($readModel->toArray())->toBe([
+        'status' => 'not_wired',
+        'authorized' => false,
+        'metrics' => [],
+        'pipeline' => [],
+        'risk_signals' => [],
+        'activity' => [],
+        'redactions' => ['payloads' => 'not-loaded'],
+    ]);
+});
+
+it('adapts voucher lifecycle list rows into sanitized cockpit dashboard facts', function () {
+    $lifecycle = new class implements VoucherLifecycleServiceContract
+    {
+        public function list(array $filters = []): array
+        {
+            return [
+                [
+                    'id' => 1,
+                    'code' => 'pc-issued-001',
+                    'status' => 'issued',
+                    'display_status' => 'ready',
+                    'amount' => 1000.00,
+                    'currency' => 'PHP',
+                    'created_at' => '2026-07-03T10:00:00+08:00',
+                    'issuer_id' => 10,
+                    'provider_payload' => ['token' => 'must-not-leak'],
+                    'wallet' => ['account_number' => '000123'],
+                ],
+                [
+                    'id' => 2,
+                    'code' => 'pc-redeemed-001',
+                    'status' => 'redeemed',
+                    'display_status' => 'redeemed',
+                    'amount' => 500.00,
+                    'currency' => 'PHP',
+                    'redeemed_at' => '2026-07-03T11:00:00+08:00',
+                    'approval' => ['reference_id' => 'must-not-leak'],
+                ],
+                [
+                    'id' => 3,
+                    'code' => 'pc-expired-001',
+                    'status' => 'expired',
+                    'display_status' => 'expired',
+                    'amount' => 250.00,
+                    'currency' => 'PHP',
+                    'expires_at' => '2026-07-03T12:00:00+08:00',
+                    'raw_payload' => ['secret' => 'must-not-leak'],
+                ],
+                [
+                    'id' => 4,
+                    'code' => 'pc-awaiting-001',
+                    'status' => 'redeemed',
+                    'display_status' => 'awaiting_approval',
+                    'amount' => 200.00,
+                    'currency' => 'PHP',
+                    'updated_at' => '2026-07-03T13:00:00+08:00',
+                    'claims' => [['mobile' => '+639171234567']],
+                ],
+            ];
+        }
+
+        public function show(string $voucher): mixed
+        {
+            return null;
+        }
+
+        public function showByCode(string $code): mixed
+        {
+            return null;
+        }
+
+        public function status(string $voucher): mixed
+        {
+            return null;
+        }
+
+        public function cancel(string $voucher, array $payload = []): mixed
+        {
+            return [];
+        }
+    };
+
+    $readModel = (new VoucherLifecycleCockpitReadModelProvider($lifecycle))
+        ->forDashboard(new CockpitReadModelQueryData(include: ['voucher']));
+
+    expect($readModel->toArray())->toBe([
+        'status' => 'available',
+        'authorized' => true,
+        'metrics' => [
+            [
+                'key' => 'pay-codes-visible',
+                'label' => 'Pay Codes Visible',
+                'value' => '4',
+                'helper' => 'Sanitized voucher lifecycle list rows',
+                'tone' => 'neutral',
+            ],
+            [
+                'key' => 'issued-pay-codes',
+                'label' => 'Issued',
+                'value' => '1',
+                'helper' => 'Read-only lifecycle summary',
+                'tone' => 'healthy',
+            ],
+            [
+                'key' => 'redeemed-pay-codes',
+                'label' => 'Redeemed',
+                'value' => '2',
+                'helper' => 'Includes awaiting approval display states',
+                'tone' => 'healthy',
+            ],
+            [
+                'key' => 'attention-pay-codes',
+                'label' => 'Needs Attention',
+                'value' => '2',
+                'helper' => 'Expired or awaiting approval summaries only',
+                'tone' => 'warning',
+            ],
+        ],
+        'pipeline' => [
+            ['key' => 'issued', 'label' => 'Issued', 'value' => '1', 'tone' => 'neutral'],
+            ['key' => 'redeemed', 'label' => 'Redeemed', 'value' => '2', 'tone' => 'healthy'],
+            ['key' => 'expired', 'label' => 'Expired', 'value' => '1', 'tone' => 'warning'],
+            ['key' => 'awaiting-approval', 'label' => 'Awaiting Approval', 'value' => '1', 'tone' => 'warning'],
+        ],
+        'risk_signals' => [
+            [
+                'key' => 'expired-pay-codes',
+                'label' => 'Expired Pay Codes',
+                'value' => '1 sanitized summaries',
+                'severity' => 'warning',
+            ],
+            [
+                'key' => 'awaiting-approval',
+                'label' => 'Awaiting Approval',
+                'value' => '1 sanitized summaries',
+                'severity' => 'watch',
+            ],
+        ],
+        'activity' => [
+            [
+                'id' => 'PC-AWAITING-001',
+                'label' => 'PC-AWAITING-001',
+                'description' => 'Status: awaiting_approval',
+                'timestamp' => '2026-07-03T13:00:00+08:00',
+                'source' => 'system',
+            ],
+            [
+                'id' => 'PC-EXPIRED-001',
+                'label' => 'PC-EXPIRED-001',
+                'description' => 'Status: expired',
+                'timestamp' => '2026-07-03T12:00:00+08:00',
+                'source' => 'system',
+            ],
+            [
+                'id' => 'PC-REDEEMED-001',
+                'label' => 'PC-REDEEMED-001',
+                'description' => 'Status: redeemed',
+                'timestamp' => '2026-07-03T11:00:00+08:00',
+                'source' => 'system',
+            ],
+        ],
+        'redactions' => [
+            'payloads' => 'sanitized-dashboard-summary-only',
+            'excluded' => [
+                'id',
+                'voucher_id',
+                'issuer_id',
+                'instructions',
+                'claims',
+                'approval',
+                'provider_payload',
+                'raw_payload',
+                'wallet',
+                'provider',
+            ],
+        ],
+    ]);
+});
+
 it('binds the cockpit read model provider contract to the voucher lifecycle adapter baseline', function () {
     expect(app(CockpitReadModelProviderContract::class))
         ->toBeInstanceOf(VoucherLifecycleCockpitReadModelProvider::class);

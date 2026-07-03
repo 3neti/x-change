@@ -281,14 +281,29 @@ No backend query API, search/filter execution, mutation endpoint, execution, jou
 
 ## Slice 15 — Cockpit Dashboard Read Model Adapter Baseline
 
-Status: recommended next.
+Status: complete.
 
-Candidate scope:
+Implemented:
 
 - add package-local backend dashboard summary adapters only if existing x-change lifecycle/read services can provide sanitized facts
 - expose dashboard read-model props without broad payloads or live mutation paths
 - preserve existing dashboard presentation defaults for unavailable/not-wired state
 - no mutation endpoints, execution, journal writes, action execution, feedback delivery, provider calls, wallet access, campaign behavior, or money movement
+
+The backend now extends the Cockpit read-model provider contract with a dashboard method and exposes `dashboard_read_model` only on the Cockpit Dashboard route. The adapter derives aggregate metric cards, lifecycle pipeline counts, risk signals, and recent activity from sanitized voucher lifecycle list rows only.
+
+The frontend Dashboard now hydrates from the optional `dashboard_read_model` prop and keeps static defaults when dashboard read models are missing, unavailable, or unauthorized.
+
+## Slice 16 — Quick Generate Read Model Adapter Baseline
+
+Status: recommended next.
+
+Candidate scope:
+
+- add package-local Quick Generate read-model adapters only if existing x-change template/pricing/read services can provide sanitized facts
+- expose read-only template/pricing/funding planning facts without enabling issuance
+- preserve disabled generate action behavior
+- no mutation endpoints, voucher issuance, execution, journal writes, action execution, feedback delivery, provider calls, wallet access, campaign behavior, or money movement
 
 ## Verification Plan
 

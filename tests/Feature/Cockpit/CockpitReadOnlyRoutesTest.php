@@ -93,6 +93,29 @@ it('hydrates the pay code explorer with a sanitized list read model prop', funct
         ->assertJsonMissingPath('props.pay_codes_read_model.provider');
 });
 
+it('hydrates the dashboard with a sanitized dashboard read model prop', function () {
+    actingAsTestUser();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.dashboard'))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/cockpit/Dashboard')
+        ->assertJsonPath('props.dashboard_read_model.status', 'available')
+        ->assertJsonPath('props.dashboard_read_model.authorized', true)
+        ->assertJsonPath('props.dashboard_read_model.metrics.0.key', 'pay-codes-visible')
+        ->assertJsonPath('props.dashboard_read_model.metrics.0.value', '0')
+        ->assertJsonPath('props.dashboard_read_model.pipeline.0.key', 'issued')
+        ->assertJsonPath('props.dashboard_read_model.pipeline.0.value', '0')
+        ->assertJsonPath('props.dashboard_read_model.risk_signals.0.key', 'expired-pay-codes')
+        ->assertJsonPath('props.dashboard_read_model.risk_signals.0.value', '0 sanitized summaries')
+        ->assertJsonPath('props.dashboard_read_model.activity', [])
+        ->assertJsonPath('props.dashboard_read_model.redactions.payloads', 'sanitized-dashboard-summary-only')
+        ->assertJsonMissingPath('props.dashboard_read_model.provider_payload')
+        ->assertJsonMissingPath('props.dashboard_read_model.raw_payload')
+        ->assertJsonMissingPath('props.dashboard_read_model.wallet')
+        ->assertJsonMissingPath('props.dashboard_read_model.provider');
+});
+
 it('requires authentication for cockpit routes', function (string $route, array $parameters) {
     $this->withHeader('Accept', 'application/json')
         ->get(route($route, $parameters))

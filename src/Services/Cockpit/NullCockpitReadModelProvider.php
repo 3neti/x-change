@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Services\Cockpit;
 
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitActionReadModelData;
+use LBHurtado\XChange\Data\Cockpit\CockpitDashboardReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitExecutionReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitFeedbackReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeListReadModelData;
@@ -46,5 +47,10 @@ class NullCockpitReadModelProvider implements CockpitReadModelProviderContract
             status: 'not_wired',
             query: $query->code,
         );
+    }
+
+    public function forDashboard(CockpitReadModelQueryData $query): CockpitDashboardReadModelData
+    {
+        return new CockpitDashboardReadModelData(status: 'not_wired');
     }
 }

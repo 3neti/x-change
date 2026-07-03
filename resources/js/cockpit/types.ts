@@ -53,6 +53,21 @@ export type CockpitActivityItem = {
     source: 'execution' | 'journal' | 'action' | 'feedback' | 'system';
 };
 
+export type CockpitDashboardReadModel = {
+    status: string;
+    authorized?: boolean;
+    metrics?: CockpitDashboardMetric[];
+    pipeline?: CockpitPipelineStage[];
+    risk_signals?: CockpitRiskSignal[];
+    activity?: CockpitActivityItem[];
+    redactions?: CockpitReadModelRedactions;
+    [key: string]: unknown;
+};
+
+export type CockpitDashboardPageProps = {
+    dashboard_read_model?: CockpitDashboardReadModel;
+};
+
 export type CockpitQuickGenerateTemplate = {
     key: string;
     name: string;

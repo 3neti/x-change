@@ -17,6 +17,6 @@ class CockpitDashboardPageController extends Controller
 
     public function __invoke(): Response
     {
-        return Inertia::render('x-change/cockpit/Dashboard', $this->props->toArray());
+        return Inertia::render('x-change/cockpit/Dashboard', $this->props->toDashboardArray());
     }
 }

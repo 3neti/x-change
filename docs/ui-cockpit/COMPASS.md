@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Slice 14 — Cockpit List Read Model Adapter Baseline
+Current slice: Slice 15 — Cockpit Dashboard Read Model Adapter Baseline
 Status: Complete
 Last updated: 2026-07-03
 
@@ -187,6 +187,32 @@ Last updated: 2026-07-03
 - Preserved not-wired list placeholder behavior in the null Cockpit read-model provider.
 - Skipped malformed list rows without valid Pay Code handles.
 - Preserved redaction metadata excluding internal IDs, issuer IDs, instructions, claims, approval metadata, provider payloads, raw payloads, wallets, and provider facts.
+- Completed Slice 15 Cockpit Dashboard Read Model Adapter Baseline:
+  - `src/Contracts/CockpitReadModelProviderContract.php`
+  - `src/Data/Cockpit/CockpitDashboardReadModelData.php`
+  - `src/Data/Cockpit/CockpitDashboardMetricData.php`
+  - `src/Data/Cockpit/CockpitDashboardPipelineStageData.php`
+  - `src/Data/Cockpit/CockpitDashboardRiskSignalData.php`
+  - `src/Data/Cockpit/CockpitDashboardActivityData.php`
+  - `src/Services/Cockpit/NullCockpitReadModelProvider.php`
+  - `src/Services/Cockpit/VoucherLifecycleCockpitReadModelProvider.php`
+  - `src/Support/Cockpit/CockpitReadOnlyPageProps.php`
+  - `src/Http/Controllers/Web/Cockpit/CockpitDashboardPageController.php`
+  - `resources/js/cockpit/types.ts`
+  - `resources/js/cockpit/pages/Dashboard.vue`
+  - `resources/js/pages/x-change/cockpit/Dashboard.vue`
+  - `tests/Unit/Cockpit/CockpitReadModelBaselineTest.php`
+  - `tests/Feature/Cockpit/CockpitReadOnlyRoutesTest.php`
+  - `tests/frontend/cockpit/CockpitDashboardHydration.test.ts`
+- Added a package-local dashboard adapter over `VoucherLifecycleServiceContract::list()`.
+- Exposed `dashboard_read_model` only on the Cockpit Dashboard page.
+- Derived sanitized dashboard facts for:
+  - aggregate metric cards
+  - lifecycle pipeline counts
+  - risk/attention signals
+  - recent sanitized Pay Code activity
+- Preserved static dashboard defaults when dashboard read models are missing, unavailable, or unauthorized.
+- Preserved redaction metadata excluding internal IDs, issuer IDs, instructions, claims, approval metadata, provider payloads, raw payloads, wallets, and provider facts.
 
 ## In Progress
 
@@ -194,13 +220,13 @@ No implementation slice is in progress.
 
 ## Next
 
-Recommended next slice: Slice 15 — Cockpit Dashboard Read Model Adapter Baseline.
+Recommended next slice: Slice 16 — Quick Generate Read Model Adapter Baseline.
 
 Scope should remain foundation-only:
 
-- add package-local backend dashboard summary adapters only if existing x-change lifecycle/read services can provide sanitized facts
+- add package-local Quick Generate read-model adapters only if existing x-change template/pricing/read services can provide sanitized facts
 - keep route props read-only and authenticated
-- keep search/filter controls local unless an approved host query API is added in a later slice
+- keep generate controls disabled unless an approved issuance API/action path is explicitly authorized
 - avoid broad voucher payloads, provider payloads, wallet data, claim payloads, approval metadata, instructions, or raw payloads
 - no mutation endpoints, execution, journal writes, feedback delivery, provider calls, campaign behavior, or money movement
 - preserve all existing Claim UI tests
@@ -222,6 +248,7 @@ Scope should remain foundation-only:
 - Slice 12 hydrates frontend presentation from sanitized voucher summary facts only. It does not expand backend read-model scope and does not render excluded field names or excluded payload values.
 - Slice 13 introduces only a frontend/list prop contract for Pay Code Explorer hydration. It does not add backend list adapters, JSON APIs, host queries, or lifecycle read expansion.
 - Slice 14 introduces a backend/list prop adapter for Pay Code Explorer only. It reads sanitized list summaries through `VoucherLifecycleServiceContract::list()`, does not expose issuer IDs as owner labels, does not add query APIs, and does not mutate voucher or provider state.
+- Slice 15 introduces a backend dashboard prop adapter for Cockpit Dashboard only. It reads sanitized aggregate/list facts through `VoucherLifecycleServiceContract::list()`, does not query wallets or providers, and does not treat aggregate counts as execution, journal, action, feedback, settlement, or reconciliation truth.
 
 ## Decisions
 
@@ -247,6 +274,7 @@ Scope should remain foundation-only:
 - Slice 12 keeps Voucher Detail hydration presentation-only. It forwards existing Inertia props to the Cockpit namespace page and derives overview, timeline, evidence, distribution, and audit display items locally from the sanitized read-model contract.
 - Slice 13 keeps Pay Code Explorer hydration presentation-only. It accepts an optional `pay_codes_read_model` list prop, sanitizes rows locally, preserves read-only controls, and renders an explicit empty state for authorized empty lists.
 - Slice 14 extends the Cockpit read-model provider contract with `forPayCodeList()` and exposes `pay_codes_read_model` only to the Pay Code Explorer route. The adapter maps safe list summaries from the existing voucher lifecycle service and preserves redaction metadata for excluded fields.
+- Slice 15 extends the Cockpit read-model provider contract with `forDashboard()` and exposes `dashboard_read_model` only to the Dashboard route. The adapter maps sanitized aggregate dashboard facts from the existing voucher lifecycle list service and preserves static frontend defaults for unavailable states.
 
 ## Open Questions
 
@@ -316,3 +344,9 @@ Scope should remain foundation-only:
 - Slice 14 focused PHP Cockpit route result: `16 passed, 114 assertions`.
 - Slice 14 full frontend result: `70 passed, 426 tests`.
 - Slice 14 full package Pest result: `999 passed, 5 skipped, 5176 assertions`.
+- Slice 15 focused read-model result: `11 passed, 60 assertions`.
+- Slice 15 focused PHP Cockpit route result: `17 passed, 130 assertions`.
+- Slice 15 focused dashboard hydration frontend result: `4 passed`.
+- Slice 15 focused dashboard/route frontend regression result: `12 passed`.
+- Slice 15 full frontend result: `71 passed, 430 tests`.
+- Slice 15 full package Pest result: `1002 passed, 5 skipped, 5194 assertions`.
