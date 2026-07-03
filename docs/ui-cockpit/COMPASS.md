@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Slice 13 — Pay Code Explorer Read Model Hydration Baseline
+Current slice: Slice 14 — Cockpit List Read Model Adapter Baseline
 Status: Complete
 Last updated: 2026-07-03
 
@@ -163,6 +163,30 @@ Last updated: 2026-07-03
 - Added explicit empty state for authorized empty list read models.
 - Preserved disabled row actions and no mutation behavior.
 - Added coverage proving provider payloads, raw payloads, wallets, and unsafe payload values are not rendered.
+- Completed Slice 14 Cockpit List Read Model Adapter Baseline:
+  - `src/Contracts/CockpitReadModelProviderContract.php`
+  - `src/Data/Cockpit/CockpitPayCodeListReadModelData.php`
+  - `src/Data/Cockpit/CockpitPayCodeListRecordData.php`
+  - `src/Services/Cockpit/NullCockpitReadModelProvider.php`
+  - `src/Services/Cockpit/VoucherLifecycleCockpitReadModelProvider.php`
+  - `src/Support/Cockpit/CockpitReadOnlyPageProps.php`
+  - `src/Http/Controllers/Web/Cockpit/CockpitPayCodeExplorerPageController.php`
+  - `tests/Unit/Cockpit/CockpitReadModelBaselineTest.php`
+  - `tests/Feature/Cockpit/CockpitReadOnlyRoutesTest.php`
+- Added a package-local backend list adapter over `VoucherLifecycleServiceContract::list()`.
+- Exposed `pay_codes_read_model` only on the Pay Code Explorer page.
+- Limited backend list rows to safe Explorer fields:
+  - `code`
+  - `template`
+  - `amount`
+  - `currency`
+  - `status`
+  - `display_status`
+  - `owner`
+  - `last_activity`
+- Preserved not-wired list placeholder behavior in the null Cockpit read-model provider.
+- Skipped malformed list rows without valid Pay Code handles.
+- Preserved redaction metadata excluding internal IDs, issuer IDs, instructions, claims, approval metadata, provider payloads, raw payloads, wallets, and provider facts.
 
 ## In Progress
 
@@ -170,13 +194,13 @@ No implementation slice is in progress.
 
 ## Next
 
-Recommended next slice: Slice 14 — Cockpit List Read Model Adapter Baseline.
+Recommended next slice: Slice 15 — Cockpit Dashboard Read Model Adapter Baseline.
 
 Scope should remain foundation-only:
 
-- add a package-local backend list adapter for safe Pay Code Explorer rows if an existing x-change lifecycle/list service can provide a sanitized summary
+- add package-local backend dashboard summary adapters only if existing x-change lifecycle/read services can provide sanitized facts
 - keep route props read-only and authenticated
-- keep search/filter controls local unless an approved host query API is added
+- keep search/filter controls local unless an approved host query API is added in a later slice
 - avoid broad voucher payloads, provider payloads, wallet data, claim payloads, approval metadata, instructions, or raw payloads
 - no mutation endpoints, execution, journal writes, feedback delivery, provider calls, campaign behavior, or money movement
 - preserve all existing Claim UI tests
@@ -197,6 +221,7 @@ Scope should remain foundation-only:
 - Slice 11 exposes only sanitized voucher summary facts. It intentionally excludes lifecycle detail arrays that could contain instructions, claims, approval references, provider payloads, raw payloads, wallet data, provider facts, internal IDs, and issuer IDs.
 - Slice 12 hydrates frontend presentation from sanitized voucher summary facts only. It does not expand backend read-model scope and does not render excluded field names or excluded payload values.
 - Slice 13 introduces only a frontend/list prop contract for Pay Code Explorer hydration. It does not add backend list adapters, JSON APIs, host queries, or lifecycle read expansion.
+- Slice 14 introduces a backend/list prop adapter for Pay Code Explorer only. It reads sanitized list summaries through `VoucherLifecycleServiceContract::list()`, does not expose issuer IDs as owner labels, does not add query APIs, and does not mutate voucher or provider state.
 
 ## Decisions
 
@@ -221,6 +246,7 @@ Scope should remain foundation-only:
 - Slice 11 adapts `VoucherLifecycleServiceContract` into the Cockpit read-model provider for voucher summary facts only. Missing vouchers fall back to the null/not-wired bundle. Execution, journal, action, and feedback read models remain not wired.
 - Slice 12 keeps Voucher Detail hydration presentation-only. It forwards existing Inertia props to the Cockpit namespace page and derives overview, timeline, evidence, distribution, and audit display items locally from the sanitized read-model contract.
 - Slice 13 keeps Pay Code Explorer hydration presentation-only. It accepts an optional `pay_codes_read_model` list prop, sanitizes rows locally, preserves read-only controls, and renders an explicit empty state for authorized empty lists.
+- Slice 14 extends the Cockpit read-model provider contract with `forPayCodeList()` and exposes `pay_codes_read_model` only to the Pay Code Explorer route. The adapter maps safe list summaries from the existing voucher lifecycle service and preserves redaction metadata for excluded fields.
 
 ## Open Questions
 
@@ -286,3 +312,7 @@ Scope should remain foundation-only:
 - Slice 13 full frontend result: `70 passed, 426 tests`.
 - Slice 13 focused PHP Cockpit route regression result: `15 passed, 103 assertions`.
 - Slice 13 full package Pest result: `996 passed, 5 skipped, 5162 assertions`.
+- Slice 14 focused read-model result: `9 passed, 58 assertions`.
+- Slice 14 focused PHP Cockpit route result: `16 passed, 114 assertions`.
+- Slice 14 full frontend result: `70 passed, 426 tests`.
+- Slice 14 full package Pest result: `999 passed, 5 skipped, 5176 assertions`.

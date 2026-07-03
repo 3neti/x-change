@@ -75,6 +75,24 @@ it('presents not wired cockpit read models on voucher scoped pages', function (s
     'distribution workspace' => 'x-change.cockpit.pay-codes.distribution',
 ]);
 
+it('hydrates the pay code explorer with a sanitized list read model prop', function () {
+    actingAsTestUser();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.index'))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/cockpit/PayCodeExplorer')
+        ->assertJsonPath('props.pay_codes_read_model.status', 'available')
+        ->assertJsonPath('props.pay_codes_read_model.authorized', true)
+        ->assertJsonPath('props.pay_codes_read_model.query', null)
+        ->assertJsonPath('props.pay_codes_read_model.records', [])
+        ->assertJsonPath('props.pay_codes_read_model.redactions.payloads', 'sanitized-list-summary-only')
+        ->assertJsonMissingPath('props.pay_codes_read_model.provider_payload')
+        ->assertJsonMissingPath('props.pay_codes_read_model.raw_payload')
+        ->assertJsonMissingPath('props.pay_codes_read_model.wallet')
+        ->assertJsonMissingPath('props.pay_codes_read_model.provider');
+});
+
 it('requires authentication for cockpit routes', function (string $route, array $parameters) {
     $this->withHeader('Accept', 'application/json')
         ->get(route($route, $parameters))

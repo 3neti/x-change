@@ -265,15 +265,30 @@ No backend list adapter, JSON API, host query endpoint, mutation endpoint, execu
 
 ## Slice 14 — Cockpit List Read Model Adapter Baseline
 
-Status: recommended next.
+Status: complete.
 
-Candidate scope:
+Implemented:
 
 - add a package-local backend adapter for sanitized Pay Code Explorer list rows
 - prefer existing `VoucherLifecycleServiceContract::list()` if it can supply safe summary facts
 - bind or compose the list adapter into existing read-only page props only if it does not broaden payload exposure
 - keep search/filter controls local unless an approved read API/query contract is added
 - preserve disabled row actions and no mutation behavior
+
+The backend now extends the Cockpit read-model provider contract with a list method and exposes `pay_codes_read_model` only on the Pay Code Explorer route. The adapter maps only safe list-row fields and preserves redaction metadata for internal IDs, issuer IDs, instructions, claims, approval metadata, provider payloads, raw payloads, wallets, and provider facts.
+
+No backend query API, search/filter execution, mutation endpoint, execution, journal write, action execution, feedback delivery, provider call, wallet access, campaign behavior, or money movement was added.
+
+## Slice 15 — Cockpit Dashboard Read Model Adapter Baseline
+
+Status: recommended next.
+
+Candidate scope:
+
+- add package-local backend dashboard summary adapters only if existing x-change lifecycle/read services can provide sanitized facts
+- expose dashboard read-model props without broad payloads or live mutation paths
+- preserve existing dashboard presentation defaults for unavailable/not-wired state
+- no mutation endpoints, execution, journal writes, action execution, feedback delivery, provider calls, wallet access, campaign behavior, or money movement
 
 ## Verification Plan
 

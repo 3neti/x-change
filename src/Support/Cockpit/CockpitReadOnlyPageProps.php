@@ -55,4 +55,17 @@ class CockpitReadOnlyPageProps
             ))->toArray(),
         ];
     }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toPayCodeExplorerArray(): array
+    {
+        return [
+            ...$this->toArray(),
+            'pay_codes_read_model' => $this->readModels->forPayCodeList(new CockpitReadModelQueryData(
+                include: ['voucher'],
+            ))->toArray(),
+        ];
+    }
 }

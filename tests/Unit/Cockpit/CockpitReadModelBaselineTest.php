@@ -250,6 +250,135 @@ it('falls back to the not wired bundle when voucher lifecycle lookup misses', fu
         ->and($bundle->feedback->status)->toBe('not_wired');
 });
 
+it('returns an empty not wired pay code list read model by default', function () {
+    $readModel = (new NullCockpitReadModelProvider)
+        ->forPayCodeList(new CockpitReadModelQueryData);
+
+    expect($readModel->toArray())->toBe([
+        'status' => 'not_wired',
+        'authorized' => false,
+        'query' => null,
+        'records' => [],
+        'redactions' => ['payloads' => 'not-loaded'],
+    ]);
+});
+
+it('adapts voucher lifecycle list rows into sanitized cockpit pay code rows', function () {
+    $lifecycle = new class implements VoucherLifecycleServiceContract
+    {
+        public array $requestedFilters = [];
+
+        public function list(array $filters = []): array
+        {
+            $this->requestedFilters = $filters;
+
+            return [
+                [
+                    'id' => 123,
+                    'voucher_id' => 123,
+                    'code' => ' pc-list-001 ',
+                    'template' => 'Emergency Cash',
+                    'amount' => 2500.5,
+                    'currency' => 'PHP',
+                    'status' => 'issued',
+                    'display_status' => 'ready',
+                    'owner' => 'Operations',
+                    'last_activity' => '2026-07-03T10:00:00+08:00',
+                    'issuer_id' => 45,
+                    'approval' => ['reference_id' => 'approval-reference'],
+                    'provider_payload' => ['token' => 'provider-token'],
+                    'raw_payload' => ['secret' => 'raw-secret'],
+                    'wallet' => ['account_number' => '000123'],
+                    'provider' => 'paynamics',
+                ],
+                [
+                    'code' => 'pc-list-002',
+                    'amount' => '99.95',
+                    'currency' => 'PHP',
+                    'status' => 'redeemed',
+                    'created_at' => '2026-07-02T10:00:00+08:00',
+                    'issuer_id' => 99,
+                ],
+                [
+                    'code' => '',
+                    'status' => 'issued',
+                    'provider_payload' => ['token' => 'must-not-render'],
+                ],
+            ];
+        }
+
+        public function show(string $voucher): mixed
+        {
+            return null;
+        }
+
+        public function showByCode(string $code): mixed
+        {
+            return null;
+        }
+
+        public function status(string $voucher): mixed
+        {
+            return null;
+        }
+
+        public function cancel(string $voucher, array $payload = []): mixed
+        {
+            return [];
+        }
+    };
+
+    $readModel = (new VoucherLifecycleCockpitReadModelProvider($lifecycle))
+        ->forPayCodeList(new CockpitReadModelQueryData(
+            include: ['voucher'],
+            correlationId: 'corr-1',
+        ));
+
+    expect($lifecycle->requestedFilters)->toBe([])
+        ->and($readModel->toArray())->toBe([
+            'status' => 'available',
+            'authorized' => true,
+            'query' => null,
+            'records' => [
+                [
+                    'code' => 'PC-LIST-001',
+                    'template' => 'Emergency Cash',
+                    'amount' => 2500.5,
+                    'currency' => 'PHP',
+                    'status' => 'issued',
+                    'display_status' => 'ready',
+                    'owner' => 'Operations',
+                    'last_activity' => '2026-07-03T10:00:00+08:00',
+                ],
+                [
+                    'code' => 'PC-LIST-002',
+                    'template' => 'Pay Code',
+                    'amount' => '99.95',
+                    'currency' => 'PHP',
+                    'status' => 'redeemed',
+                    'display_status' => 'redeemed',
+                    'owner' => 'Redacted',
+                    'last_activity' => '2026-07-02T10:00:00+08:00',
+                ],
+            ],
+            'redactions' => [
+                'payloads' => 'sanitized-list-summary-only',
+                'excluded' => [
+                    'id',
+                    'voucher_id',
+                    'issuer_id',
+                    'instructions',
+                    'claims',
+                    'approval',
+                    'provider_payload',
+                    'raw_payload',
+                    'wallet',
+                    'provider',
+                ],
+            ],
+        ]);
+});
+
 it('binds the cockpit read model provider contract to the voucher lifecycle adapter baseline', function () {
     expect(app(CockpitReadModelProviderContract::class))
         ->toBeInstanceOf(VoucherLifecycleCockpitReadModelProvider::class);

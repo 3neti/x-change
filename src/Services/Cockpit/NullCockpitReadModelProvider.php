@@ -8,6 +8,7 @@ use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitActionReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitExecutionReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitFeedbackReadModelData;
+use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeListReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitJournalReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelBundleData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
@@ -36,6 +37,14 @@ class NullCockpitReadModelProvider implements CockpitReadModelProviderContract
             feedback: new CockpitFeedbackReadModelData(
                 status: 'not_wired',
             ),
+        );
+    }
+
+    public function forPayCodeList(CockpitReadModelQueryData $query): CockpitPayCodeListReadModelData
+    {
+        return new CockpitPayCodeListReadModelData(
+            status: 'not_wired',
+            query: $query->code,
         );
     }
 }

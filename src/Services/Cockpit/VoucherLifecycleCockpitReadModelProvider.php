@@ -8,6 +8,8 @@ use Illuminate\Contracts\Support\Arrayable;
 use JsonSerializable;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
+use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeListReadModelData;
+use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeListRecordData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelBundleData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
 use LBHurtado\XChange\Data\Cockpit\CockpitVoucherReadModelData;
@@ -85,6 +87,26 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         );
     }
 
+    public function forPayCodeList(CockpitReadModelQueryData $query): CockpitPayCodeListReadModelData
+    {
+        $rows = collect($this->vouchers->list())
+            ->map(fn (mixed $row): ?CockpitPayCodeListRecordData => $this->listRecord($this->toArray($row)))
+            ->filter()
+            ->values()
+            ->all();
+
+        return new CockpitPayCodeListReadModelData(
+            status: 'available',
+            authorized: true,
+            query: $query->code,
+            records: $rows,
+            redactions: [
+                'payloads' => 'sanitized-list-summary-only',
+                'excluded' => $this->excludedPayloadKeys(),
+            ],
+        );
+    }
+
     private function normalizeCode(?string $code): ?string
     {
         $normalized = strtoupper(trim((string) $code));
@@ -138,6 +160,37 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
     }
 
     /**
+     * @param  array<string, mixed>  $row
+     */
+    private function listRecord(array $row): ?CockpitPayCodeListRecordData
+    {
+        $code = $this->summaryCode($row, '');
+
+        if ($code === '') {
+            return null;
+        }
+
+        $status = $this->summaryStatus($row);
+
+        return new CockpitPayCodeListRecordData(
+            code: $code,
+            template: $this->stringValue($row['template'] ?? null, 'Pay Code'),
+            amount: $this->amountValue($row['amount'] ?? null),
+            currency: $this->nullableString($row['currency'] ?? null),
+            status: $status,
+            display_status: $this->stringValue($row['display_status'] ?? null, $status),
+            owner: $this->stringValue($row['owner'] ?? null, 'Redacted'),
+            last_activity: $this->nullableString(
+                $row['last_activity']
+                    ?? $row['updated_at']
+                    ?? $row['redeemed_at']
+                    ?? $row['created_at']
+                    ?? null
+            ),
+        );
+    }
+
+    /**
      * @param  array<string, mixed>  $detail
      */
     private function summaryCode(array $detail, string $fallbackCode): string
@@ -163,5 +216,55 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         }
 
         return 'available';
+    }
+
+    private function stringValue(mixed $value, string $fallback): string
+    {
+        if (is_scalar($value) && trim((string) $value) !== '') {
+            return trim((string) $value);
+        }
+
+        return $fallback;
+    }
+
+    private function nullableString(mixed $value): ?string
+    {
+        if (is_scalar($value) && trim((string) $value) !== '') {
+            return trim((string) $value);
+        }
+
+        return null;
+    }
+
+    private function amountValue(mixed $value): string|int|float|null
+    {
+        if (is_string($value) && trim($value) !== '') {
+            return trim($value);
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return $value;
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function excludedPayloadKeys(): array
+    {
+        return [
+            'id',
+            'voucher_id',
+            'issuer_id',
+            'instructions',
+            'claims',
+            'approval',
+            'provider_payload',
+            'raw_payload',
+            'wallet',
+            'provider',
+        ];
     }
 }

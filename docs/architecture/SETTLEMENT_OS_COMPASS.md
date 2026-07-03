@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 4 — x-change Cockpit
-Current status: Cockpit Slice 13 Pay Code Explorer Read Model Hydration Baseline complete
+Current status: Cockpit Slice 14 Cockpit List Read Model Adapter Baseline complete
 Last updated: 2026-07-03
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-03
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Slice 13 complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Slice 14 complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Not started | Pending |
 
 ## Package Map
@@ -744,10 +744,10 @@ Continue Wave 4 — x-change Cockpit with the next authorized slice.
 Recommended actions:
 
 1. Request approval before proceeding to another slice.
-2. Completed slice: Cockpit Slice 10 — Read Model Presentation Wiring.
+2. Completed slice: Cockpit Slice 14 — Cockpit List Read Model Adapter Baseline.
 3. Read the Cockpit compass before continuing: `packages/x-change/docs/ui-cockpit/COMPASS.md`.
-4. Recommended next slice: Cockpit Slice 11 — Voucher Detail Read Model Adapter Baseline.
-5. Slice 11 should add a first package-local adapter around existing x-change voucher lifecycle/read services and expose sanitized voucher summary fields only.
+4. Recommended next slice: Cockpit Slice 15 — Cockpit Dashboard Read Model Adapter Baseline.
+5. Slice 15 should add package-local dashboard summary adapters only where existing x-change lifecycle/read services can provide sanitized facts.
 6. Do not add mutation endpoints, execution, journal writes, action execution, feedback delivery, provider calls, campaign behavior, money movement, raw payload exposure, or live cross-package calls unless explicitly approved.
 7. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
