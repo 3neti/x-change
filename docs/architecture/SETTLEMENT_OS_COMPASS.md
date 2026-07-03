@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 4 — x-change Cockpit
-Current status: Cockpit Slice 12 Voucher Detail Presentation Hydration Baseline complete
+Current status: Cockpit Slice 13 Pay Code Explorer Read Model Hydration Baseline complete
 Last updated: 2026-07-03
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-03
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Slice 12 complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Slice 13 complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Not started | Pending |
 
 ## Package Map

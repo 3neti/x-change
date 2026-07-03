@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Slice 12 — Voucher Detail Presentation Hydration Baseline
+Current slice: Slice 13 — Pay Code Explorer Read Model Hydration Baseline
 Status: Complete
 Last updated: 2026-07-03
 
@@ -143,6 +143,26 @@ Last updated: 2026-07-03
 - Added explicit UI states for execution, journal, action, and feedback read models while keeping them not wired.
 - Preserved route adapter prop forwarding so Inertia props reach the Cockpit namespace page.
 - Added frontend coverage proving unsafe voucher summary keys and payload values are not rendered.
+- Completed Slice 13 Pay Code Explorer Read Model Hydration Baseline:
+  - `resources/js/cockpit/types.ts`
+  - `resources/js/cockpit/components/CockpitPayCodeResultsTable.vue`
+  - `resources/js/cockpit/pages/PayCodeExplorer.vue`
+  - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`
+  - `tests/frontend/cockpit/CockpitPayCodeExplorerHydration.test.ts`
+- Added optional `pay_codes_read_model` frontend prop support for sanitized list records.
+- Hydrated Pay Code Explorer rows from safe list fields only:
+  - `code`
+  - `template`
+  - `amount`
+  - `currency`
+  - `status`
+  - `display_status`
+  - `owner`
+  - `last_activity`
+- Preserved local/read-only search and filter controls.
+- Added explicit empty state for authorized empty list read models.
+- Preserved disabled row actions and no mutation behavior.
+- Added coverage proving provider payloads, raw payloads, wallets, and unsafe payload values are not rendered.
 
 ## In Progress
 
@@ -150,14 +170,14 @@ No implementation slice is in progress.
 
 ## Next
 
-Recommended next slice: Slice 13 — Pay Code Explorer Read Model Hydration Baseline.
+Recommended next slice: Slice 14 — Cockpit List Read Model Adapter Baseline.
 
 Scope should remain foundation-only:
 
-- hydrate the Pay Code Explorer page from safe read-model/list props when available
-- keep search/filter controls local and read-only unless an approved host read API exists
-- preserve empty/loading/not-wired states
-- avoid broad voucher payloads, provider payloads, wallet data, claim payloads, approval metadata, or raw payloads
+- add a package-local backend list adapter for safe Pay Code Explorer rows if an existing x-change lifecycle/list service can provide a sanitized summary
+- keep route props read-only and authenticated
+- keep search/filter controls local unless an approved host query API is added
+- avoid broad voucher payloads, provider payloads, wallet data, claim payloads, approval metadata, instructions, or raw payloads
 - no mutation endpoints, execution, journal writes, feedback delivery, provider calls, campaign behavior, or money movement
 - preserve all existing Claim UI tests
 
@@ -176,6 +196,7 @@ Scope should remain foundation-only:
 - Slice 10 places read-model bundles into Inertia props. Future frontend components must treat `not_wired` as a capability/readiness state, not as lifecycle truth.
 - Slice 11 exposes only sanitized voucher summary facts. It intentionally excludes lifecycle detail arrays that could contain instructions, claims, approval references, provider payloads, raw payloads, wallet data, provider facts, internal IDs, and issuer IDs.
 - Slice 12 hydrates frontend presentation from sanitized voucher summary facts only. It does not expand backend read-model scope and does not render excluded field names or excluded payload values.
+- Slice 13 introduces only a frontend/list prop contract for Pay Code Explorer hydration. It does not add backend list adapters, JSON APIs, host queries, or lifecycle read expansion.
 
 ## Decisions
 
@@ -199,6 +220,7 @@ Scope should remain foundation-only:
 - Slice 10 composes the null/not-wired Cockpit read-model bundle into authenticated Inertia page props. It does not add live package adapters, JSON APIs, mutations, execution, journal writes, feedback delivery, provider calls, wallet access, raw payload exposure, or money movement.
 - Slice 11 adapts `VoucherLifecycleServiceContract` into the Cockpit read-model provider for voucher summary facts only. Missing vouchers fall back to the null/not-wired bundle. Execution, journal, action, and feedback read models remain not wired.
 - Slice 12 keeps Voucher Detail hydration presentation-only. It forwards existing Inertia props to the Cockpit namespace page and derives overview, timeline, evidence, distribution, and audit display items locally from the sanitized read-model contract.
+- Slice 13 keeps Pay Code Explorer hydration presentation-only. It accepts an optional `pay_codes_read_model` list prop, sanitizes rows locally, preserves read-only controls, and renders an explicit empty state for authorized empty lists.
 
 ## Open Questions
 
@@ -207,7 +229,8 @@ Scope should remain foundation-only:
 - Whether existing `/x/dashboard` should be promoted into Cockpit or left as a compatibility route while Cockpit grows under a new route namespace.
 - Whether the Slice 11 voucher summary whitelist should later include internal voucher IDs or issuer IDs under stricter operator authorization.
 - Whether missing voucher codes should remain indistinguishable from not-wired read models in the UI or gain an explicit redacted/not-found state.
-- Which list/read contract should power the Pay Code Explorer without exposing broad voucher lifecycle detail payloads.
+- Whether the next backend list adapter should reuse `VoucherLifecycleServiceContract::list()` directly or introduce a Cockpit-specific list provider that delegates to it.
+- Whether Pay Code Explorer should expose internal voucher IDs or issuer IDs later under stricter operator authorization.
 
 ## Test Status
 
@@ -258,3 +281,8 @@ Scope should remain foundation-only:
 - Slice 12 full frontend result: `69 passed, 421 tests`.
 - Slice 12 focused PHP Cockpit route/read-model regression result: `22 passed, 158 assertions`.
 - Slice 12 full package Pest result: `996 passed, 5 skipped, 5162 assertions`.
+- Slice 13 focused hydration frontend result: `5 passed`.
+- Slice 13 focused Pay Code Explorer/route adapter frontend regression result: `9 passed`.
+- Slice 13 full frontend result: `70 passed, 426 tests`.
+- Slice 13 focused PHP Cockpit route regression result: `15 passed, 103 assertions`.
+- Slice 13 full package Pest result: `996 passed, 5 skipped, 5162 assertions`.

@@ -193,6 +193,30 @@ export type CockpitVoucherDetailPageProps = {
     read_model?: CockpitReadModelBundle;
 };
 
+export type CockpitPayCodeExplorerReadModelRecord = {
+    code?: string | null;
+    template?: string | null;
+    amount?: string | number | null;
+    currency?: string | null;
+    status?: string | null;
+    display_status?: string | null;
+    owner?: string | null;
+    last_activity?: string | null;
+    [key: string]: unknown;
+};
+
+export type CockpitPayCodeExplorerReadModel = {
+    status: string;
+    authorized?: boolean;
+    query?: string | null;
+    records?: CockpitPayCodeExplorerReadModelRecord[];
+    redactions?: CockpitReadModelRedactions;
+};
+
+export type CockpitPayCodeExplorerPageProps = {
+    pay_codes_read_model?: CockpitPayCodeExplorerReadModel;
+};
+
 export type CockpitDistributionChannel = {
     key: string;
     label: string;

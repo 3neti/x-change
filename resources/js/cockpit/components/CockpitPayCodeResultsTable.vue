@@ -82,6 +82,13 @@ defineProps<{
                 </tbody>
             </table>
         </div>
+
+        <div
+            v-if="records.length === 0"
+            class="border-t border-slate-200 p-5 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400"
+            data-testid="cockpit-pay-code-empty-state"
+        >
+            No Pay Codes available in the sanitized read model.
+        </div>
     </section>
 </template>
-

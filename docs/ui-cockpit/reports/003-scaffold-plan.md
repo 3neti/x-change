@@ -249,15 +249,31 @@ No new JSON APIs, backend read-model expansion, mutation endpoints, execution, j
 
 ## Slice 13 — Pay Code Explorer Read Model Hydration Baseline
 
-Status: recommended next.
+Status: complete.
 
-Candidate scope:
+Implemented:
 
 - hydrate Pay Code Explorer from safe read-model/list props when available
 - keep search/filter controls local and read-only until an approved read API exists
 - preserve empty/loading/not-wired states
 - avoid broad voucher payloads, provider payloads, wallet data, claim payloads, approval metadata, or raw payloads
 - no mutations or domain side effects
+
+The frontend now accepts an optional `pay_codes_read_model` prop and maps only safe list-row fields into the existing read-only results table. The route adapter forwards props into the Cockpit namespace page. Empty authorized list models render an explicit empty state.
+
+No backend list adapter, JSON API, host query endpoint, mutation endpoint, execution, journal write, action execution, feedback delivery, provider call, wallet access, claim UX change, campaign behavior, or money movement was added.
+
+## Slice 14 — Cockpit List Read Model Adapter Baseline
+
+Status: recommended next.
+
+Candidate scope:
+
+- add a package-local backend adapter for sanitized Pay Code Explorer list rows
+- prefer existing `VoucherLifecycleServiceContract::list()` if it can supply safe summary facts
+- bind or compose the list adapter into existing read-only page props only if it does not broaden payload exposure
+- keep search/filter controls local unless an approved read API/query contract is added
+- preserve disabled row actions and no mutation behavior
 
 ## Verification Plan
 
