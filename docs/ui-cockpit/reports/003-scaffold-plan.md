@@ -339,14 +339,27 @@ Slice 18 added a `x-change.cockpit.quick-generate-draft.v1` draft contract shape
 
 ## Slice 19 — Quick Generate Authorization Gate Baseline
 
-Status: recommended next.
+Status: complete.
 
-Candidate scope:
+Implemented:
 
 - define the operator authorization gate facts required before a future Quick Generate mutation can be enabled
 - keep authorization facts read-only and presentation-safe
 - preserve disabled generate controls unless an explicit mutation slice is approved
 - no mutation endpoints, voucher issuance, execution, journal writes, action execution, feedback delivery, provider calls, wallet access, campaign behavior, or money movement
+
+Slice 19 added a read-only authorization gate model to the Quick Generate read model and a visible authorization gate panel. The baseline reports that planning/viewing gates pass while generation, provider calls, and money movement remain blocked.
+
+## Slice 20 — Quick Generate Pricing Gate Baseline
+
+Status: recommended next.
+
+Candidate scope:
+
+- define the pricing readiness facts required before a future Quick Generate mutation can be enabled
+- keep pricing facts read-only and presentation-safe
+- preserve disabled generate controls unless an explicit mutation slice is approved
+- no pricing calculation, mutation endpoints, voucher issuance, execution, journal writes, action execution, feedback delivery, provider calls, wallet access, campaign behavior, or money movement
 
 ## Verification Plan
 

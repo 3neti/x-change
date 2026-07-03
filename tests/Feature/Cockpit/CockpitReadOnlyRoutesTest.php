@@ -137,6 +137,14 @@ it('hydrates quick generate with a sanitized quick generate read model prop', fu
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.recipient_reference', null)
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.idempotency_key', null)
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.redactions.payloads', 'draft-shape-only')
+        ->assertJsonPath('props.quick_generate_read_model.authorization.status', 'blocked')
+        ->assertJsonPath('props.quick_generate_read_model.authorization.gates.0.key', 'operator-authenticated')
+        ->assertJsonPath('props.quick_generate_read_model.authorization.gates.0.status', 'passed')
+        ->assertJsonPath('props.quick_generate_read_model.authorization.gates.2.key', 'can-generate-pay-code')
+        ->assertJsonPath('props.quick_generate_read_model.authorization.gates.2.status', 'blocked')
+        ->assertJsonPath('props.quick_generate_read_model.authorization.gates.3.key', 'can-call-providers')
+        ->assertJsonPath('props.quick_generate_read_model.authorization.gates.4.key', 'can-move-money')
+        ->assertJsonPath('props.quick_generate_read_model.authorization.redactions.payloads', 'authorization-gates-only')
         ->assertJsonPath('props.quick_generate_read_model.action.enabled', false)
         ->assertJsonPath('props.quick_generate_read_model.action.reason', 'issuance-not-wired')
         ->assertJsonPath('props.quick_generate_read_model.redactions.payloads', 'sanitized-quick-generate-catalog-only')
@@ -200,4 +208,18 @@ it('documents the quick generate request draft contract before persistence or mu
         ->and($report)->toContain('idempotency_key')
         ->and($report)->toContain('Drafts are local and read-only in Slice 18')
         ->and($report)->toContain('No draft persistence or mutation route is registered in Slice 18');
+});
+
+it('documents the quick generate authorization gates before mutation wiring', function () {
+    $report = file_get_contents(__DIR__.'/../../../docs/ui-cockpit/reports/006-quick-generate-authorization-gate-baseline.md');
+
+    expect($report)->toBeString()
+        ->and($report)->toContain('Cockpit Slice 19')
+        ->and($report)->toContain('operator-authenticated')
+        ->and($report)->toContain('can-view-cockpit')
+        ->and($report)->toContain('can-generate-pay-code')
+        ->and($report)->toContain('can-call-providers')
+        ->and($report)->toContain('can-move-money')
+        ->and($report)->toContain('Authorization gates are read-only facts in Slice 19')
+        ->and($report)->toContain('No authorization gate enables generation in Slice 19');
 });

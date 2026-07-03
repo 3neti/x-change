@@ -415,6 +415,11 @@ it('returns an empty not wired quick generate read model by default', function (
             'idempotency_key' => null,
             'redactions' => ['payloads' => 'not-loaded'],
         ],
+        'authorization' => [
+            'status' => 'not_wired',
+            'gates' => [],
+            'redactions' => ['payloads' => 'not-loaded'],
+        ],
         'action' => [
             'enabled' => false,
             'reason' => 'not-loaded',
@@ -726,6 +731,52 @@ it('adapts safe quick generate catalog facts without invoking voucher lifecycle 
                         'pricing_breakdown',
                         'funding_source',
                         'issuer_id',
+                    ],
+                ],
+            ],
+            'authorization' => [
+                'status' => 'blocked',
+                'gates' => [
+                    [
+                        'key' => 'operator-authenticated',
+                        'label' => 'Operator Authenticated',
+                        'status' => 'passed',
+                        'reason' => 'Authenticated Cockpit GET route resolved.',
+                    ],
+                    [
+                        'key' => 'can-view-cockpit',
+                        'label' => 'Can View Cockpit',
+                        'status' => 'passed',
+                        'reason' => 'Read-only Cockpit access is available.',
+                    ],
+                    [
+                        'key' => 'can-generate-pay-code',
+                        'label' => 'Can Generate Pay Code',
+                        'status' => 'blocked',
+                        'reason' => 'No Cockpit mutation route is registered.',
+                    ],
+                    [
+                        'key' => 'can-call-providers',
+                        'label' => 'Can Call Providers',
+                        'status' => 'blocked',
+                        'reason' => 'Provider calls are outside the Slice 19 boundary.',
+                    ],
+                    [
+                        'key' => 'can-move-money',
+                        'label' => 'Can Move Money',
+                        'status' => 'blocked',
+                        'reason' => 'Money movement remains disabled in Cockpit.',
+                    ],
+                ],
+                'redactions' => [
+                    'payloads' => 'authorization-gates-only',
+                    'excluded' => [
+                        'roles',
+                        'permissions',
+                        'policy_payload',
+                        'tenant_payload',
+                        'provider_payload',
+                        'raw_payload',
                     ],
                 ],
             ],

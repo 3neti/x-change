@@ -130,6 +130,21 @@ export type CockpitQuickGenerateDraftContract = {
     [key: string]: unknown;
 };
 
+export type CockpitQuickGenerateAuthorizationGate = {
+    key?: string | null;
+    label?: string | null;
+    status?: string | null;
+    reason?: string | null;
+    [key: string]: unknown;
+};
+
+export type CockpitQuickGenerateAuthorization = {
+    status?: string | null;
+    gates?: CockpitQuickGenerateAuthorizationGate[];
+    redactions?: CockpitReadModelRedactions;
+    [key: string]: unknown;
+};
+
 export type CockpitQuickGenerateReadModel = {
     status: string;
     authorized?: boolean;
@@ -137,6 +152,7 @@ export type CockpitQuickGenerateReadModel = {
     runtime_inputs?: CockpitQuickGenerateReadModelRuntimeInput[];
     pricing_summaries?: CockpitQuickGenerateReadModelPricingSummary[];
     draft_contract?: CockpitQuickGenerateDraftContract;
+    authorization?: CockpitQuickGenerateAuthorization;
     action?: {
         enabled?: boolean;
         reason?: string;

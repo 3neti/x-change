@@ -16,6 +16,8 @@ use LBHurtado\XChange\Data\Cockpit\CockpitDashboardRiskSignalData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeListReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeListRecordData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateActionData;
+use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateAuthorizationData;
+use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateAuthorizationGateData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateDraftContractData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGeneratePricingSummaryData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateReadModelData;
@@ -278,6 +280,52 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                         'pricing_breakdown',
                         'funding_source',
                         'issuer_id',
+                    ],
+                ],
+            ),
+            authorization: new CockpitQuickGenerateAuthorizationData(
+                status: 'blocked',
+                gates: [
+                    new CockpitQuickGenerateAuthorizationGateData(
+                        key: 'operator-authenticated',
+                        label: 'Operator Authenticated',
+                        status: 'passed',
+                        reason: 'Authenticated Cockpit GET route resolved.',
+                    ),
+                    new CockpitQuickGenerateAuthorizationGateData(
+                        key: 'can-view-cockpit',
+                        label: 'Can View Cockpit',
+                        status: 'passed',
+                        reason: 'Read-only Cockpit access is available.',
+                    ),
+                    new CockpitQuickGenerateAuthorizationGateData(
+                        key: 'can-generate-pay-code',
+                        label: 'Can Generate Pay Code',
+                        status: 'blocked',
+                        reason: 'No Cockpit mutation route is registered.',
+                    ),
+                    new CockpitQuickGenerateAuthorizationGateData(
+                        key: 'can-call-providers',
+                        label: 'Can Call Providers',
+                        status: 'blocked',
+                        reason: 'Provider calls are outside the Slice 19 boundary.',
+                    ),
+                    new CockpitQuickGenerateAuthorizationGateData(
+                        key: 'can-move-money',
+                        label: 'Can Move Money',
+                        status: 'blocked',
+                        reason: 'Money movement remains disabled in Cockpit.',
+                    ),
+                ],
+                redactions: [
+                    'payloads' => 'authorization-gates-only',
+                    'excluded' => [
+                        'roles',
+                        'permissions',
+                        'policy_payload',
+                        'tenant_payload',
+                        'provider_payload',
+                        'raw_payload',
                     ],
                 ],
             ),

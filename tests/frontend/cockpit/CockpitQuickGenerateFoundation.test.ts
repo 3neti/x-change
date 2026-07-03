@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import CockpitGenerateActionPanel from '../../../resources/js/cockpit/components/CockpitGenerateActionPanel.vue';
 import CockpitIssuanceBoundaryPanel from '../../../resources/js/cockpit/components/CockpitIssuanceBoundaryPanel.vue';
 import CockpitPricingFundingSummary from '../../../resources/js/cockpit/components/CockpitPricingFundingSummary.vue';
+import CockpitQuickGenerateAuthorizationGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateAuthorizationGatePanel.vue';
 import CockpitQuickGenerateDraftContractPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateDraftContractPanel.vue';
 import CockpitRuntimeInputPanel from '../../../resources/js/cockpit/components/CockpitRuntimeInputPanel.vue';
 import CockpitTemplateSelector from '../../../resources/js/cockpit/components/CockpitTemplateSelector.vue';
@@ -127,6 +128,44 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.find('[data-testid="cockpit-quick-generate-draft-contract-panel"]').exists()).toBe(true);
     });
 
+    it('renders authorization gate facts without enabling generation', () => {
+        const wrapper = mount(CockpitQuickGenerateAuthorizationGatePanel, {
+            props: {
+                authorization: {
+                    status: 'blocked',
+                    gates: [
+                        {
+                            key: 'operator-authenticated',
+                            label: 'Operator Authenticated',
+                            status: 'passed',
+                            reason: 'Authenticated Cockpit GET route resolved.',
+                        },
+                        {
+                            key: 'can-generate-pay-code',
+                            label: 'Can Generate Pay Code',
+                            status: 'blocked',
+                            reason: 'No Cockpit mutation route is registered.',
+                        },
+                    ],
+                    redactions: {
+                        payloads: 'authorization-gates-only',
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Authorization Gate Baseline');
+        expect(wrapper.text()).toContain('Operator Authenticated');
+        expect(wrapper.text()).toContain('passed');
+        expect(wrapper.text()).toContain('Can Generate Pay Code');
+        expect(wrapper.text()).toContain('blocked');
+        expect(wrapper.text()).toContain('No Cockpit mutation route is registered.');
+        expect(wrapper.text()).toContain('Authorization gates are read-only facts in Slice 19.');
+        expect(wrapper.find('form').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-authorization-gate-panel"]').exists()).toBe(true);
+        expect(wrapper.findAll('[data-testid="cockpit-quick-generate-authorization-gate"]')).toHaveLength(2);
+    });
+
     it('renders the full Quick Generate page with active navigation and no side effects', () => {
         const wrapper = mount(QuickGenerate);
 
@@ -145,5 +184,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('No Cockpit mutation route is registered in Slice 17.');
         expect(wrapper.text()).toContain('Request Draft Contract');
         expect(wrapper.text()).toContain('Drafts are local and read-only in Slice 18.');
+        expect(wrapper.text()).toContain('Authorization Gate Baseline');
+        expect(wrapper.text()).toContain('Authorization gates are read-only facts in Slice 19.');
     });
 });

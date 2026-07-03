@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import CockpitGenerateActionPanel from '../components/CockpitGenerateActionPanel.vue';
 import CockpitIssuanceBoundaryPanel from '../components/CockpitIssuanceBoundaryPanel.vue';
 import CockpitPricingFundingSummary from '../components/CockpitPricingFundingSummary.vue';
+import CockpitQuickGenerateAuthorizationGatePanel from '../components/CockpitQuickGenerateAuthorizationGatePanel.vue';
 import CockpitQuickGenerateDraftContractPanel from '../components/CockpitQuickGenerateDraftContractPanel.vue';
 import CockpitRuntimeInputPanel from '../components/CockpitRuntimeInputPanel.vue';
 import CockpitTemplateSelector from '../components/CockpitTemplateSelector.vue';
@@ -14,6 +15,8 @@ import {
 } from '../quickGenerateDefaults';
 import type {
     CockpitPricingFundingSummary as CockpitPricingFundingSummaryType,
+    CockpitQuickGenerateAuthorization,
+    CockpitQuickGenerateAuthorizationGate,
     CockpitQuickGenerateDraftContract,
     CockpitQuickGeneratePageProps,
     CockpitQuickGenerateReadModelPricingSummary,
@@ -88,6 +91,28 @@ const draftContract = computed<CockpitQuickGenerateDraftContract>(() => {
     };
 });
 
+const authorization = computed<CockpitQuickGenerateAuthorization>(() => {
+    const authorizationReadModel = props.quick_generate_read_model?.authorization;
+
+    if (!readModelAvailable.value || typeof authorizationReadModel !== 'object' || authorizationReadModel === null) {
+        return defaultAuthorization();
+    }
+
+    const gates = Array.isArray(authorizationReadModel.gates)
+        ? authorizationReadModel.gates
+            .map((gate): CockpitQuickGenerateAuthorizationGate | null => sanitizeAuthorizationGate(gate))
+            .filter((gate): gate is CockpitQuickGenerateAuthorizationGate => gate !== null)
+        : [];
+
+    return {
+        status: stringValue(authorizationReadModel.status) ?? 'blocked',
+        gates: gates.length > 0 ? gates : defaultAuthorization().gates,
+        redactions: {
+            payloads: stringValue(authorizationReadModel.redactions?.payloads) ?? 'authorization-gates-only',
+        },
+    };
+});
+
 function defaultDraftContract(): CockpitQuickGenerateDraftContract {
     return {
         schema: 'x-change.cockpit.quick-generate-draft.v1',
@@ -101,6 +126,63 @@ function defaultDraftContract(): CockpitQuickGenerateDraftContract {
         redactions: {
             payloads: 'draft-shape-only',
         },
+    };
+}
+
+function defaultAuthorization(): CockpitQuickGenerateAuthorization {
+    return {
+        status: 'blocked',
+        gates: [
+            {
+                key: 'operator-authenticated',
+                label: 'Operator Authenticated',
+                status: 'passed',
+                reason: 'Authenticated Cockpit GET route resolved.',
+            },
+            {
+                key: 'can-view-cockpit',
+                label: 'Can View Cockpit',
+                status: 'passed',
+                reason: 'Read-only Cockpit access is available.',
+            },
+            {
+                key: 'can-generate-pay-code',
+                label: 'Can Generate Pay Code',
+                status: 'blocked',
+                reason: 'No Cockpit mutation route is registered.',
+            },
+            {
+                key: 'can-call-providers',
+                label: 'Can Call Providers',
+                status: 'blocked',
+                reason: 'Provider calls are outside the Slice 19 boundary.',
+            },
+            {
+                key: 'can-move-money',
+                label: 'Can Move Money',
+                status: 'blocked',
+                reason: 'Money movement remains disabled in Cockpit.',
+            },
+        ],
+        redactions: {
+            payloads: 'authorization-gates-only',
+        },
+    };
+}
+
+function sanitizeAuthorizationGate(gate: CockpitQuickGenerateAuthorizationGate): CockpitQuickGenerateAuthorizationGate | null {
+    const key = stringValue(gate.key);
+    const label = stringValue(gate.label);
+
+    if (!key || !label) {
+        return null;
+    }
+
+    return {
+        key,
+        label,
+        status: stringValue(gate.status) ?? 'unknown',
+        reason: stringValue(gate.reason) ?? 'No authorization diagnostic is available.',
     };
 }
 
@@ -193,6 +275,7 @@ function stringValue(value: unknown): string | null {
                 <div class="space-y-4">
                     <CockpitPricingFundingSummary :summaries="pricingSummaries" />
                     <CockpitGenerateActionPanel :enabled="false" />
+                    <CockpitQuickGenerateAuthorizationGatePanel :authorization="authorization" />
                     <CockpitQuickGenerateDraftContractPanel :draft-contract="draftContract" />
                     <CockpitIssuanceBoundaryPanel />
                 </div>

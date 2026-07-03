@@ -21,6 +21,7 @@ class CockpitQuickGenerateReadModelData extends Data
         public readonly array $runtime_inputs = [],
         public readonly array $pricing_summaries = [],
         public readonly CockpitQuickGenerateDraftContractData $draft_contract = new CockpitQuickGenerateDraftContractData,
+        public readonly CockpitQuickGenerateAuthorizationData $authorization = new CockpitQuickGenerateAuthorizationData,
         public readonly CockpitQuickGenerateActionData $action = new CockpitQuickGenerateActionData,
         public readonly array $redactions = ['payloads' => 'not-loaded'],
     ) {}
