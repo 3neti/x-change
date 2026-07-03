@@ -19,6 +19,8 @@ use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateActionData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateAuthorizationData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateAuthorizationGateData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateDraftContractData;
+use LBHurtado\XChange\Data\Cockpit\CockpitQuickGeneratePricingGateCheckData;
+use LBHurtado\XChange\Data\Cockpit\CockpitQuickGeneratePricingGateData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGeneratePricingSummaryData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateRuntimeInputData;
@@ -263,6 +265,59 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                     helper: 'Execution semantics stay voucher-owned and are not inferred in Cockpit.',
                 ),
             ],
+            pricing_gate: new CockpitQuickGeneratePricingGateData(
+                status: 'blocked',
+                checks: [
+                    new CockpitQuickGeneratePricingGateCheckData(
+                        key: 'template-selected',
+                        label: 'Template Selected',
+                        status: 'passed',
+                        reason: 'The default Quick Generate template is visible as a read-only fact.',
+                    ),
+                    new CockpitQuickGeneratePricingGateCheckData(
+                        key: 'amount-input-present',
+                        label: 'Amount Input Present',
+                        status: 'blocked',
+                        reason: 'No operator amount input is accepted by Cockpit in Slice 20.',
+                    ),
+                    new CockpitQuickGeneratePricingGateCheckData(
+                        key: 'pricing-service-wired',
+                        label: 'Pricing Service Wired',
+                        status: 'blocked',
+                        reason: 'Cockpit does not call pricing services in Slice 20.',
+                    ),
+                    new CockpitQuickGeneratePricingGateCheckData(
+                        key: 'funding-source-selected',
+                        label: 'Funding Source Selected',
+                        status: 'blocked',
+                        reason: 'No wallet or funding source lookup is performed.',
+                    ),
+                    new CockpitQuickGeneratePricingGateCheckData(
+                        key: 'funds-reservation',
+                        label: 'Funds Reservation',
+                        status: 'blocked',
+                        reason: 'Cockpit does not reserve, debit, or hold funds.',
+                    ),
+                    new CockpitQuickGeneratePricingGateCheckData(
+                        key: 'provider-fee-quote',
+                        label: 'Provider Fee Quote',
+                        status: 'blocked',
+                        reason: 'No provider quote or fee call is performed.',
+                    ),
+                ],
+                redactions: [
+                    'payloads' => 'pricing-gates-only',
+                    'excluded' => [
+                        'pricing_breakdown',
+                        'funding_source',
+                        'wallet',
+                        'balance',
+                        'account_number',
+                        'provider_payload',
+                        'raw_payload',
+                    ],
+                ],
+            ),
             draft_contract: new CockpitQuickGenerateDraftContractData(
                 status: 'draft_only',
                 template_key: 'money-changer',

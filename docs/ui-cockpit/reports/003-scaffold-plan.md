@@ -352,14 +352,27 @@ Slice 19 added a read-only authorization gate model to the Quick Generate read m
 
 ## Slice 20 — Quick Generate Pricing Gate Baseline
 
-Status: recommended next.
+Status: complete.
 
-Candidate scope:
+Implemented:
 
 - define the pricing readiness facts required before a future Quick Generate mutation can be enabled
 - keep pricing facts read-only and presentation-safe
 - preserve disabled generate controls unless an explicit mutation slice is approved
 - no pricing calculation, mutation endpoints, voucher issuance, execution, journal writes, action execution, feedback delivery, provider calls, wallet access, campaign behavior, or money movement
+
+Slice 20 added a read-only pricing gate model to the Quick Generate read model and a visible pricing gate panel. The baseline reports the default template as selected while amount input, pricing service wiring, funding source selection, funds reservation, and provider fee quotes remain blocked.
+
+## Slice 21 — Quick Generate Funding Gate Baseline
+
+Status: recommended next.
+
+Candidate scope:
+
+- define the funding readiness facts required before a future Quick Generate mutation can reserve or move funds
+- keep funding facts read-only and presentation-safe
+- preserve disabled generate controls unless an explicit mutation slice is approved
+- no wallet lookup, reservation, debit, mutation endpoints, voucher issuance, execution, journal writes, action execution, feedback delivery, provider calls, campaign behavior, or money movement
 
 ## Verification Plan
 

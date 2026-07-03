@@ -5,6 +5,7 @@ import CockpitIssuanceBoundaryPanel from '../components/CockpitIssuanceBoundaryP
 import CockpitPricingFundingSummary from '../components/CockpitPricingFundingSummary.vue';
 import CockpitQuickGenerateAuthorizationGatePanel from '../components/CockpitQuickGenerateAuthorizationGatePanel.vue';
 import CockpitQuickGenerateDraftContractPanel from '../components/CockpitQuickGenerateDraftContractPanel.vue';
+import CockpitQuickGeneratePricingGatePanel from '../components/CockpitQuickGeneratePricingGatePanel.vue';
 import CockpitRuntimeInputPanel from '../components/CockpitRuntimeInputPanel.vue';
 import CockpitTemplateSelector from '../components/CockpitTemplateSelector.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
@@ -18,6 +19,8 @@ import type {
     CockpitQuickGenerateAuthorization,
     CockpitQuickGenerateAuthorizationGate,
     CockpitQuickGenerateDraftContract,
+    CockpitQuickGeneratePricingGate,
+    CockpitQuickGeneratePricingGateCheck,
     CockpitQuickGeneratePageProps,
     CockpitQuickGenerateReadModelPricingSummary,
     CockpitQuickGenerateReadModelRuntimeInput,
@@ -91,6 +94,28 @@ const draftContract = computed<CockpitQuickGenerateDraftContract>(() => {
     };
 });
 
+const pricingGate = computed<CockpitQuickGeneratePricingGate>(() => {
+    const pricingGateReadModel = props.quick_generate_read_model?.pricing_gate;
+
+    if (!readModelAvailable.value || typeof pricingGateReadModel !== 'object' || pricingGateReadModel === null) {
+        return defaultPricingGate();
+    }
+
+    const checks = Array.isArray(pricingGateReadModel.checks)
+        ? pricingGateReadModel.checks
+            .map((check): CockpitQuickGeneratePricingGateCheck | null => sanitizePricingGateCheck(check))
+            .filter((check): check is CockpitQuickGeneratePricingGateCheck => check !== null)
+        : [];
+
+    return {
+        status: stringValue(pricingGateReadModel.status) ?? 'blocked',
+        checks: checks.length > 0 ? checks : defaultPricingGate().checks,
+        redactions: {
+            payloads: stringValue(pricingGateReadModel.redactions?.payloads) ?? 'pricing-gates-only',
+        },
+    };
+});
+
 const authorization = computed<CockpitQuickGenerateAuthorization>(() => {
     const authorizationReadModel = props.quick_generate_read_model?.authorization;
 
@@ -125,6 +150,53 @@ function defaultDraftContract(): CockpitQuickGenerateDraftContract {
         idempotency_key: null,
         redactions: {
             payloads: 'draft-shape-only',
+        },
+    };
+}
+
+function defaultPricingGate(): CockpitQuickGeneratePricingGate {
+    return {
+        status: 'blocked',
+        checks: [
+            {
+                key: 'template-selected',
+                label: 'Template Selected',
+                status: 'passed',
+                reason: 'The default Quick Generate template is visible as a read-only fact.',
+            },
+            {
+                key: 'amount-input-present',
+                label: 'Amount Input Present',
+                status: 'blocked',
+                reason: 'No operator amount input is accepted by Cockpit in Slice 20.',
+            },
+            {
+                key: 'pricing-service-wired',
+                label: 'Pricing Service Wired',
+                status: 'blocked',
+                reason: 'Cockpit does not call pricing services in Slice 20.',
+            },
+            {
+                key: 'funding-source-selected',
+                label: 'Funding Source Selected',
+                status: 'blocked',
+                reason: 'No wallet or funding source lookup is performed.',
+            },
+            {
+                key: 'funds-reservation',
+                label: 'Funds Reservation',
+                status: 'blocked',
+                reason: 'Cockpit does not reserve, debit, or hold funds.',
+            },
+            {
+                key: 'provider-fee-quote',
+                label: 'Provider Fee Quote',
+                status: 'blocked',
+                reason: 'No provider quote or fee call is performed.',
+            },
+        ],
+        redactions: {
+            payloads: 'pricing-gates-only',
         },
     };
 }
@@ -167,6 +239,22 @@ function defaultAuthorization(): CockpitQuickGenerateAuthorization {
         redactions: {
             payloads: 'authorization-gates-only',
         },
+    };
+}
+
+function sanitizePricingGateCheck(check: CockpitQuickGeneratePricingGateCheck): CockpitQuickGeneratePricingGateCheck | null {
+    const key = stringValue(check.key);
+    const label = stringValue(check.label);
+
+    if (!key || !label) {
+        return null;
+    }
+
+    return {
+        key,
+        label,
+        status: stringValue(check.status) ?? 'unknown',
+        reason: stringValue(check.reason) ?? 'No pricing diagnostic is available.',
     };
 }
 
@@ -274,6 +362,7 @@ function stringValue(value: unknown): string | null {
 
                 <div class="space-y-4">
                     <CockpitPricingFundingSummary :summaries="pricingSummaries" />
+                    <CockpitQuickGeneratePricingGatePanel :pricing-gate="pricingGate" />
                     <CockpitGenerateActionPanel :enabled="false" />
                     <CockpitQuickGenerateAuthorizationGatePanel :authorization="authorization" />
                     <CockpitQuickGenerateDraftContractPanel :draft-contract="draftContract" />

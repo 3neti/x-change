@@ -404,6 +404,11 @@ it('returns an empty not wired quick generate read model by default', function (
         'templates' => [],
         'runtime_inputs' => [],
         'pricing_summaries' => [],
+        'pricing_gate' => [
+            'status' => 'not_wired',
+            'checks' => [],
+            'redactions' => ['payloads' => 'not-loaded'],
+        ],
         'draft_contract' => [
             'schema' => 'x-change.cockpit.quick-generate-draft.v1',
             'status' => 'not_wired',
@@ -707,6 +712,59 @@ it('adapts safe quick generate catalog facts without invoking voucher lifecycle 
                     'label' => 'Execution Summary',
                     'value' => 'Template pending',
                     'helper' => 'Execution semantics stay voucher-owned and are not inferred in Cockpit.',
+                ],
+            ],
+            'pricing_gate' => [
+                'status' => 'blocked',
+                'checks' => [
+                    [
+                        'key' => 'template-selected',
+                        'label' => 'Template Selected',
+                        'status' => 'passed',
+                        'reason' => 'The default Quick Generate template is visible as a read-only fact.',
+                    ],
+                    [
+                        'key' => 'amount-input-present',
+                        'label' => 'Amount Input Present',
+                        'status' => 'blocked',
+                        'reason' => 'No operator amount input is accepted by Cockpit in Slice 20.',
+                    ],
+                    [
+                        'key' => 'pricing-service-wired',
+                        'label' => 'Pricing Service Wired',
+                        'status' => 'blocked',
+                        'reason' => 'Cockpit does not call pricing services in Slice 20.',
+                    ],
+                    [
+                        'key' => 'funding-source-selected',
+                        'label' => 'Funding Source Selected',
+                        'status' => 'blocked',
+                        'reason' => 'No wallet or funding source lookup is performed.',
+                    ],
+                    [
+                        'key' => 'funds-reservation',
+                        'label' => 'Funds Reservation',
+                        'status' => 'blocked',
+                        'reason' => 'Cockpit does not reserve, debit, or hold funds.',
+                    ],
+                    [
+                        'key' => 'provider-fee-quote',
+                        'label' => 'Provider Fee Quote',
+                        'status' => 'blocked',
+                        'reason' => 'No provider quote or fee call is performed.',
+                    ],
+                ],
+                'redactions' => [
+                    'payloads' => 'pricing-gates-only',
+                    'excluded' => [
+                        'pricing_breakdown',
+                        'funding_source',
+                        'wallet',
+                        'balance',
+                        'account_number',
+                        'provider_payload',
+                        'raw_payload',
+                    ],
                 ],
             ],
             'draft_contract' => [

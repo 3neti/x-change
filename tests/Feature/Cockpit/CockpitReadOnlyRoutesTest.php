@@ -129,6 +129,16 @@ it('hydrates quick generate with a sanitized quick generate read model prop', fu
         ->assertJsonPath('props.quick_generate_read_model.templates.0.disabled', false)
         ->assertJsonPath('props.quick_generate_read_model.runtime_inputs.0.key', 'amount')
         ->assertJsonPath('props.quick_generate_read_model.pricing_summaries.0.key', 'pricing')
+        ->assertJsonPath('props.quick_generate_read_model.pricing_gate.status', 'blocked')
+        ->assertJsonPath('props.quick_generate_read_model.pricing_gate.checks.0.key', 'template-selected')
+        ->assertJsonPath('props.quick_generate_read_model.pricing_gate.checks.0.status', 'passed')
+        ->assertJsonPath('props.quick_generate_read_model.pricing_gate.checks.1.key', 'amount-input-present')
+        ->assertJsonPath('props.quick_generate_read_model.pricing_gate.checks.1.status', 'blocked')
+        ->assertJsonPath('props.quick_generate_read_model.pricing_gate.checks.2.key', 'pricing-service-wired')
+        ->assertJsonPath('props.quick_generate_read_model.pricing_gate.checks.3.key', 'funding-source-selected')
+        ->assertJsonPath('props.quick_generate_read_model.pricing_gate.checks.4.key', 'funds-reservation')
+        ->assertJsonPath('props.quick_generate_read_model.pricing_gate.checks.5.key', 'provider-fee-quote')
+        ->assertJsonPath('props.quick_generate_read_model.pricing_gate.redactions.payloads', 'pricing-gates-only')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.schema', 'x-change.cockpit.quick-generate-draft.v1')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.status', 'draft_only')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.template_key', 'money-changer')
@@ -222,4 +232,19 @@ it('documents the quick generate authorization gates before mutation wiring', fu
         ->and($report)->toContain('can-move-money')
         ->and($report)->toContain('Authorization gates are read-only facts in Slice 19')
         ->and($report)->toContain('No authorization gate enables generation in Slice 19');
+});
+
+it('documents the quick generate pricing gates before calculation or reservation wiring', function () {
+    $report = file_get_contents(__DIR__.'/../../../docs/ui-cockpit/reports/007-quick-generate-pricing-gate-baseline.md');
+
+    expect($report)->toBeString()
+        ->and($report)->toContain('Cockpit Slice 20')
+        ->and($report)->toContain('template-selected')
+        ->and($report)->toContain('amount-input-present')
+        ->and($report)->toContain('pricing-service-wired')
+        ->and($report)->toContain('funding-source-selected')
+        ->and($report)->toContain('funds-reservation')
+        ->and($report)->toContain('provider-fee-quote')
+        ->and($report)->toContain('Pricing gates are read-only facts in Slice 20')
+        ->and($report)->toContain('No pricing gate calculates prices, reserves funds, or calls providers in Slice 20');
 });

@@ -5,6 +5,7 @@ import CockpitIssuanceBoundaryPanel from '../../../resources/js/cockpit/componen
 import CockpitPricingFundingSummary from '../../../resources/js/cockpit/components/CockpitPricingFundingSummary.vue';
 import CockpitQuickGenerateAuthorizationGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateAuthorizationGatePanel.vue';
 import CockpitQuickGenerateDraftContractPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateDraftContractPanel.vue';
+import CockpitQuickGeneratePricingGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGeneratePricingGatePanel.vue';
 import CockpitRuntimeInputPanel from '../../../resources/js/cockpit/components/CockpitRuntimeInputPanel.vue';
 import CockpitTemplateSelector from '../../../resources/js/cockpit/components/CockpitTemplateSelector.vue';
 import QuickGenerate from '../../../resources/js/cockpit/pages/QuickGenerate.vue';
@@ -166,6 +167,44 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.findAll('[data-testid="cockpit-quick-generate-authorization-gate"]')).toHaveLength(2);
     });
 
+    it('renders pricing gate facts without calculating or reserving funds', () => {
+        const wrapper = mount(CockpitQuickGeneratePricingGatePanel, {
+            props: {
+                pricingGate: {
+                    status: 'blocked',
+                    checks: [
+                        {
+                            key: 'template-selected',
+                            label: 'Template Selected',
+                            status: 'passed',
+                            reason: 'The default Quick Generate template is visible as a read-only fact.',
+                        },
+                        {
+                            key: 'pricing-service-wired',
+                            label: 'Pricing Service Wired',
+                            status: 'blocked',
+                            reason: 'Cockpit does not call pricing services in Slice 20.',
+                        },
+                    ],
+                    redactions: {
+                        payloads: 'pricing-gates-only',
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Pricing Gate Baseline');
+        expect(wrapper.text()).toContain('Template Selected');
+        expect(wrapper.text()).toContain('passed');
+        expect(wrapper.text()).toContain('Pricing Service Wired');
+        expect(wrapper.text()).toContain('blocked');
+        expect(wrapper.text()).toContain('Cockpit does not call pricing services in Slice 20.');
+        expect(wrapper.text()).toContain('Pricing gates are read-only facts in Slice 20.');
+        expect(wrapper.find('form').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-pricing-gate-panel"]').exists()).toBe(true);
+        expect(wrapper.findAll('[data-testid="cockpit-quick-generate-pricing-gate-check"]')).toHaveLength(2);
+    });
+
     it('renders the full Quick Generate page with active navigation and no side effects', () => {
         const wrapper = mount(QuickGenerate);
 
@@ -186,5 +225,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('Drafts are local and read-only in Slice 18.');
         expect(wrapper.text()).toContain('Authorization Gate Baseline');
         expect(wrapper.text()).toContain('Authorization gates are read-only facts in Slice 19.');
+        expect(wrapper.text()).toContain('Pricing Gate Baseline');
+        expect(wrapper.text()).toContain('Pricing gates are read-only facts in Slice 20.');
     });
 });
