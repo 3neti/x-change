@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Slice 25 — Quick Generate Mutation Preconditions Review
+Current slice: Slice 26 — Quick Generate Mutation Authorization Decision Point
 Status: Complete
 Last updated: 2026-07-04
 
@@ -366,6 +366,20 @@ Last updated: 2026-07-04
 - Added read-only mutation precondition review facts to `quick_generate_read_model`.
 - Added a visible mutation preconditions review panel to Quick Generate.
 - Preserved disabled generation behavior. The mutation preconditions review recommends `remain-read-only`; authorization, pricing, funding, idempotency, validation/redaction, handoff, and operator response readiness remain blocked.
+- Completed Slice 26 Quick Generate Mutation Authorization Decision Point:
+  - `src/Data/Cockpit/CockpitQuickGenerateMutationAuthorizationDecisionData.php`
+  - `src/Data/Cockpit/CockpitQuickGenerateReadModelData.php`
+  - `src/Services/Cockpit/VoucherLifecycleCockpitReadModelProvider.php`
+  - `resources/js/cockpit/components/CockpitQuickGenerateMutationAuthorizationDecisionPanel.vue`
+  - `resources/js/cockpit/pages/QuickGenerate.vue`
+  - `resources/js/cockpit/types.ts`
+  - `docs/ui-cockpit/reports/013-quick-generate-mutation-authorization-decision-point.md`
+  - `tests/Unit/Cockpit/CockpitReadModelBaselineTest.php`
+  - `tests/Feature/Cockpit/CockpitReadOnlyRoutesTest.php`
+  - `tests/frontend/cockpit/CockpitQuickGenerateFoundation.test.ts`
+- Added read-only mutation authorization decision facts to `quick_generate_read_model`.
+- Added a visible mutation authorization decision point panel to Quick Generate.
+- Preserved disabled generation behavior. The mutation authorization decision is `not_authorized`; any mutation route requires explicit human approval and a smaller mutation contract before implementation.
 
 ## In Progress
 
@@ -373,15 +387,14 @@ No implementation slice is in progress.
 
 ## Next
 
-Recommended next slice: Slice 26 — Quick Generate Mutation Authorization Decision Point.
+Recommended next decision: choose whether Cockpit remains read-only for now or receives a separately approved Quick Generate mutation mini-roadmap.
 
-Scope should remain foundation-only:
+Current boundary:
 
-- request explicit human approval before scaffolding any mutation route
-- if approval is not granted, continue read-only hardening around Quick Generate operator readiness
-- if approval is granted, define the smallest possible mutation-route contract before implementation
-- keep route props read-only and authenticated unless a mutation slice is explicitly approved
-- keep generate controls disabled until authorization, pricing, funding, idempotency, validation/redaction, and existing issuance API/action routing are all designed
+- the Cockpit foundation roadmap stops at the mutation authorization boundary
+- Quick Generate mutation is not authorized
+- keep route props read-only and authenticated unless a mutation mini-roadmap is explicitly approved
+- keep generate controls disabled until authorization, pricing, funding, idempotency, validation/redaction, existing issuance API/action routing, and operator response contracts are all designed
 - avoid broad voucher payloads, provider payloads, wallet data, claim payloads, approval metadata, instructions, or raw payloads
 - no mutation endpoints, request validation execution, payload persistence, execution, journal writes, feedback delivery, provider calls, wallet access, campaign behavior, or money movement
 - preserve all existing Claim UI tests
@@ -414,6 +427,7 @@ Scope should remain foundation-only:
 - Slice 23 introduces read-only validation/redaction gate facts and a visible validation/redaction gate panel. It does not validate requests, persist payloads, expose submitted PII, build sanitized previews, return validation errors, register mutation routes, or enable generation.
 - Slice 24 introduces a read-only mutation handoff boundary plan and a visible mutation handoff panel. It does not register mutation routes, call `GeneratePayCode`, call `GeneratePayCodeController`, submit payloads, generate vouchers, call providers, access wallets, write journal entries, run actions, send feedback, or move money.
 - Slice 25 introduces a read-only mutation preconditions review and a visible review panel. It does not approve mutation wiring, register mutation routes, validate requests, issue vouchers, call providers, access wallets, write journal entries, run actions, send feedback, or move money.
+- Slice 26 introduces a read-only mutation authorization decision point and a visible decision panel. It records `not_authorized` and does not approve mutation wiring, register mutation routes, validate requests, persist payloads, issue vouchers, call providers, access wallets, write journal entries, run actions, send feedback, create campaigns, or move money.
 
 ## Decisions
 
@@ -450,6 +464,7 @@ Scope should remain foundation-only:
 - Slice 23 adds `CockpitQuickGenerateValidationRedactionGateData` and `CockpitQuickGenerateValidationRedactionGateCheckData` as read-only gate facts in `quick_generate_read_model`. Generation remains disabled because required-field enforcement, validation rules, submitted-payload redaction, sanitized previews, and validation error contracts remain blocked.
 - Slice 24 adds `CockpitQuickGenerateMutationHandoffPlanData` and `CockpitQuickGenerateMutationHandoffPlanStepData` as read-only handoff facts in `quick_generate_read_model`. Generation remains disabled because action handoff, controller handoff, preconditions, side-effect boundary confirmation, and operator response contracts remain blocked.
 - Slice 25 adds `CockpitQuickGenerateMutationPreconditionsReviewData` and `CockpitQuickGenerateMutationPreconditionsReviewItemData` as read-only review facts in `quick_generate_read_model`. Generation remains disabled and the recommendation remains `remain-read-only`.
+- Slice 26 adds `CockpitQuickGenerateMutationAuthorizationDecisionData` as a read-only decision fact in `quick_generate_read_model`. Generation remains disabled, the decision is `not_authorized`, and mutation-route scaffolding requires explicit human approval plus a smaller mutation contract.
 
 ## Open Questions
 
@@ -566,3 +581,7 @@ Scope should remain foundation-only:
 - Slice 25 focused PHP Cockpit read-model/route result: `40 passed, 399 assertions`.
 - Slice 25 full frontend result: `72 passed, 443 tests`.
 - Slice 25 full package Pest result: `1014 passed, 5 skipped, 5403 assertions`.
+- Slice 26 focused quick-generate mutation authorization decision frontend result: `15 passed`.
+- Slice 26 focused PHP Cockpit read-model/route result: `41 passed, 415 assertions`.
+- Slice 26 full frontend result: `72 passed, 444 tests`.
+- Slice 26 full package Pest result: `1015 passed, 5 skipped, 5419 assertions`.

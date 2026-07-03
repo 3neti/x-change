@@ -23,6 +23,7 @@ use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateFundingGateCheckData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateFundingGateData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateIdempotencyGateCheckData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateIdempotencyGateData;
+use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateMutationAuthorizationDecisionData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateMutationHandoffPlanData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateMutationHandoffPlanStepData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateMutationPreconditionsReviewData;
@@ -602,6 +603,29 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                         'precondition_payload',
                         'mutation_approval',
                         'mutation_route',
+                        'issued_voucher',
+                        'generated_pay_code',
+                        'provider_payload',
+                        'wallet',
+                        'side_effect_result',
+                        'raw_payload',
+                    ],
+                ],
+            ),
+            mutation_authorization_decision: new CockpitQuickGenerateMutationAuthorizationDecisionData(
+                status: 'blocked',
+                decision: 'not_authorized',
+                required_approval: 'human-approval-required-before-route-scaffold',
+                rationale: 'Mutation preconditions remain blocked; Cockpit must not register a write route until explicit human approval and a smaller mutation contract exist.',
+                next_step: 'request-explicit-approval-or-continue-read-only-hardening',
+                redactions: [
+                    'payloads' => 'mutation-authorization-decision-only',
+                    'excluded' => [
+                        'request_payload',
+                        'validated_payload',
+                        'mutation_payload',
+                        'approval_payload',
+                        'route_definition',
                         'issued_voucher',
                         'generated_pay_code',
                         'provider_payload',

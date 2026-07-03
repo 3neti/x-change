@@ -8,6 +8,7 @@ import CockpitQuickGenerateDraftContractPanel from '../../../resources/js/cockpi
 import CockpitQuickGenerateFundingGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateFundingGatePanel.vue';
 import CockpitQuickGenerateIdempotencyGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateIdempotencyGatePanel.vue';
 import CockpitQuickGenerateMutationHandoffPlanPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateMutationHandoffPlanPanel.vue';
+import CockpitQuickGenerateMutationAuthorizationDecisionPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateMutationAuthorizationDecisionPanel.vue';
 import CockpitQuickGenerateMutationPreconditionsReviewPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateMutationPreconditionsReviewPanel.vue';
 import CockpitQuickGeneratePricingGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGeneratePricingGatePanel.vue';
 import CockpitQuickGenerateValidationRedactionGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateValidationRedactionGatePanel.vue';
@@ -400,6 +401,32 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.findAll('[data-testid="cockpit-quick-generate-mutation-preconditions-review-item"]')).toHaveLength(2);
     });
 
+    it('renders the mutation authorization decision point without registering mutation behavior', () => {
+        const wrapper = mount(CockpitQuickGenerateMutationAuthorizationDecisionPanel, {
+            props: {
+                mutationAuthorizationDecision: {
+                    status: 'blocked',
+                    decision: 'not_authorized',
+                    required_approval: 'human-approval-required-before-route-scaffold',
+                    rationale: 'Mutation preconditions remain blocked; Cockpit must not register a write route until explicit human approval and a smaller mutation contract exist.',
+                    next_step: 'request-explicit-approval-or-continue-read-only-hardening',
+                    redactions: {
+                        payloads: 'mutation-authorization-decision-only',
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Mutation Authorization Decision Point');
+        expect(wrapper.text()).toContain('not_authorized');
+        expect(wrapper.text()).toContain('human-approval-required-before-route-scaffold');
+        expect(wrapper.text()).toContain('explicit human approval');
+        expect(wrapper.text()).toContain('request-explicit-approval-or-continue-read-only-hardening');
+        expect(wrapper.text()).toContain('No Cockpit mutation route is authorized in Slice 26.');
+        expect(wrapper.find('form').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-mutation-authorization-decision-panel"]').exists()).toBe(true);
+    });
+
     it('renders the full Quick Generate page with active navigation and no side effects', () => {
         const wrapper = mount(QuickGenerate);
 
@@ -432,5 +459,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('Mutation handoff remains a read-only boundary plan in Slice 24.');
         expect(wrapper.text()).toContain('Mutation Preconditions Review');
         expect(wrapper.text()).toContain('Mutation preconditions remain blocked in Slice 25.');
+        expect(wrapper.text()).toContain('Mutation Authorization Decision Point');
+        expect(wrapper.text()).toContain('No Cockpit mutation route is authorized in Slice 26.');
     });
 });

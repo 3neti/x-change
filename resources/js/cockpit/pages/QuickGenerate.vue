@@ -7,6 +7,7 @@ import CockpitQuickGenerateAuthorizationGatePanel from '../components/CockpitQui
 import CockpitQuickGenerateDraftContractPanel from '../components/CockpitQuickGenerateDraftContractPanel.vue';
 import CockpitQuickGenerateFundingGatePanel from '../components/CockpitQuickGenerateFundingGatePanel.vue';
 import CockpitQuickGenerateIdempotencyGatePanel from '../components/CockpitQuickGenerateIdempotencyGatePanel.vue';
+import CockpitQuickGenerateMutationAuthorizationDecisionPanel from '../components/CockpitQuickGenerateMutationAuthorizationDecisionPanel.vue';
 import CockpitQuickGenerateMutationHandoffPlanPanel from '../components/CockpitQuickGenerateMutationHandoffPlanPanel.vue';
 import CockpitQuickGenerateMutationPreconditionsReviewPanel from '../components/CockpitQuickGenerateMutationPreconditionsReviewPanel.vue';
 import CockpitQuickGeneratePricingGatePanel from '../components/CockpitQuickGeneratePricingGatePanel.vue';
@@ -28,6 +29,7 @@ import type {
     CockpitQuickGenerateFundingGateCheck,
     CockpitQuickGenerateIdempotencyGate,
     CockpitQuickGenerateIdempotencyGateCheck,
+    CockpitQuickGenerateMutationAuthorizationDecision,
     CockpitQuickGenerateMutationHandoffPlan,
     CockpitQuickGenerateMutationHandoffPlanStep,
     CockpitQuickGenerateMutationPreconditionsReview,
@@ -238,6 +240,25 @@ const mutationPreconditionsReview = computed<CockpitQuickGenerateMutationPrecond
         items: items.length > 0 ? items : defaultMutationPreconditionsReview().items,
         redactions: {
             payloads: stringValue(mutationPreconditionsReviewReadModel.redactions?.payloads) ?? 'mutation-preconditions-review-only',
+        },
+    };
+});
+
+const mutationAuthorizationDecision = computed<CockpitQuickGenerateMutationAuthorizationDecision>(() => {
+    const mutationAuthorizationDecisionReadModel = props.quick_generate_read_model?.mutation_authorization_decision;
+
+    if (!readModelAvailable.value || typeof mutationAuthorizationDecisionReadModel !== 'object' || mutationAuthorizationDecisionReadModel === null) {
+        return defaultMutationAuthorizationDecision();
+    }
+
+    return {
+        status: stringValue(mutationAuthorizationDecisionReadModel.status) ?? 'blocked',
+        decision: stringValue(mutationAuthorizationDecisionReadModel.decision) ?? 'not_authorized',
+        required_approval: stringValue(mutationAuthorizationDecisionReadModel.required_approval) ?? 'human-approval-required-before-route-scaffold',
+        rationale: stringValue(mutationAuthorizationDecisionReadModel.rationale) ?? 'Mutation preconditions remain blocked; Cockpit must not register a write route until explicit human approval and a smaller mutation contract exist.',
+        next_step: stringValue(mutationAuthorizationDecisionReadModel.next_step) ?? 'request-explicit-approval-or-continue-read-only-hardening',
+        redactions: {
+            payloads: stringValue(mutationAuthorizationDecisionReadModel.redactions?.payloads) ?? 'mutation-authorization-decision-only',
         },
     };
 });
@@ -569,6 +590,19 @@ function defaultMutationPreconditionsReview(): CockpitQuickGenerateMutationPreco
     };
 }
 
+function defaultMutationAuthorizationDecision(): CockpitQuickGenerateMutationAuthorizationDecision {
+    return {
+        status: 'blocked',
+        decision: 'not_authorized',
+        required_approval: 'human-approval-required-before-route-scaffold',
+        rationale: 'Mutation preconditions remain blocked; Cockpit must not register a write route until explicit human approval and a smaller mutation contract exist.',
+        next_step: 'request-explicit-approval-or-continue-read-only-hardening',
+        redactions: {
+            payloads: 'mutation-authorization-decision-only',
+        },
+    };
+}
+
 function defaultAuthorization(): CockpitQuickGenerateAuthorization {
     return {
         status: 'blocked',
@@ -816,6 +850,7 @@ function stringValue(value: unknown): string | null {
                     <CockpitQuickGenerateValidationRedactionGatePanel :validation-redaction-gate="validationRedactionGate" />
                     <CockpitQuickGenerateMutationHandoffPlanPanel :mutation-handoff-plan="mutationHandoffPlan" />
                     <CockpitQuickGenerateMutationPreconditionsReviewPanel :mutation-preconditions-review="mutationPreconditionsReview" />
+                    <CockpitQuickGenerateMutationAuthorizationDecisionPanel :mutation-authorization-decision="mutationAuthorizationDecision" />
                     <CockpitGenerateActionPanel :enabled="false" />
                     <CockpitQuickGenerateAuthorizationGatePanel :authorization="authorization" />
                     <CockpitQuickGenerateDraftContractPanel :draft-contract="draftContract" />

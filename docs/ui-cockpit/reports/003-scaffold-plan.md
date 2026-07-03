@@ -430,14 +430,27 @@ Slice 25 added a read-only mutation preconditions review model to the Quick Gene
 
 ## Slice 26 — Quick Generate Mutation Authorization Decision Point
 
-Status: recommended next.
+Status: complete.
 
-Candidate scope:
+Implemented:
 
 - request explicit human approval before scaffolding any mutation route
-- if approval is not granted, continue read-only hardening around Quick Generate operator readiness
-- if approval is granted, define the smallest possible mutation-route contract before implementation
-- no mutation endpoints, voucher issuance, request validation execution, payload persistence, execution, journal writes, action execution, feedback delivery, provider calls, wallet access, campaign behavior, or money movement unless explicitly authorized
+- record that approval is not currently granted
+- continue read-only hardening around Quick Generate operator readiness
+- define the smallest future decision boundary before any mutation route can be considered
+- no mutation endpoints, voucher issuance, request validation execution, payload persistence, execution, journal writes, action execution, feedback delivery, provider calls, wallet access, campaign behavior, or money movement
+
+Slice 26 added a read-only mutation authorization decision point model to the Quick Generate read model and a visible decision panel. The decision is `not_authorized`; any mutation route requires explicit human approval and a smaller mutation contract before implementation.
+
+## Next Decision
+
+The Cockpit foundation roadmap now stops at the authorization boundary.
+
+Available next moves:
+
+- approve a new Quick Generate mutation mini-roadmap before any write route is scaffolded
+- continue Cockpit read-only hardening if more operator surfaces are needed
+- move to the next Settlement OS workstream if the read-only Cockpit foundation is sufficient for now
 
 ## Verification Plan
 

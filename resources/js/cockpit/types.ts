@@ -208,6 +208,16 @@ export type CockpitQuickGenerateMutationPreconditionsReview = {
     [key: string]: unknown;
 };
 
+export type CockpitQuickGenerateMutationAuthorizationDecision = {
+    status?: string | null;
+    decision?: string | null;
+    required_approval?: string | null;
+    rationale?: string | null;
+    next_step?: string | null;
+    redactions?: CockpitReadModelRedactions;
+    [key: string]: unknown;
+};
+
 export type CockpitQuickGenerateDraftContract = {
     schema?: string | null;
     status?: string | null;
@@ -248,6 +258,7 @@ export type CockpitQuickGenerateReadModel = {
     validation_redaction_gate?: CockpitQuickGenerateValidationRedactionGate;
     mutation_handoff_plan?: CockpitQuickGenerateMutationHandoffPlan;
     mutation_preconditions_review?: CockpitQuickGenerateMutationPreconditionsReview;
+    mutation_authorization_decision?: CockpitQuickGenerateMutationAuthorizationDecision;
     draft_contract?: CockpitQuickGenerateDraftContract;
     authorization?: CockpitQuickGenerateAuthorization;
     action?: {

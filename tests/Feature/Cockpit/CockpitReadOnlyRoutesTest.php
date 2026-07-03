@@ -190,6 +190,12 @@ it('hydrates quick generate with a sanitized quick generate read model prop', fu
         ->assertJsonPath('props.quick_generate_read_model.mutation_preconditions_review.items.5.key', 'handoff-ready')
         ->assertJsonPath('props.quick_generate_read_model.mutation_preconditions_review.items.6.key', 'operator-response-ready')
         ->assertJsonPath('props.quick_generate_read_model.mutation_preconditions_review.redactions.payloads', 'mutation-preconditions-review-only')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_authorization_decision.status', 'blocked')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_authorization_decision.decision', 'not_authorized')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_authorization_decision.required_approval', 'human-approval-required-before-route-scaffold')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_authorization_decision.rationale', 'Mutation preconditions remain blocked; Cockpit must not register a write route until explicit human approval and a smaller mutation contract exist.')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_authorization_decision.next_step', 'request-explicit-approval-or-continue-read-only-hardening')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_authorization_decision.redactions.payloads', 'mutation-authorization-decision-only')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.schema', 'x-change.cockpit.quick-generate-draft.v1')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.status', 'draft_only')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.template_key', 'money-changer')
@@ -234,6 +240,8 @@ it('hydrates quick generate with a sanitized quick generate read model prop', fu
         ->assertJsonMissingPath('props.quick_generate_read_model.side_effect_result')
         ->assertJsonMissingPath('props.quick_generate_read_model.precondition_payload')
         ->assertJsonMissingPath('props.quick_generate_read_model.mutation_approval')
+        ->assertJsonMissingPath('props.quick_generate_read_model.approval_payload')
+        ->assertJsonMissingPath('props.quick_generate_read_model.route_definition')
         ->assertJsonMissingPath('props.quick_generate_read_model.mutation_route');
 });
 
@@ -395,4 +403,17 @@ it('documents the quick generate mutation preconditions review before mutation a
         ->and($report)->toContain('operator-response-ready')
         ->and($report)->toContain('Mutation preconditions remain blocked in Slice 25')
         ->and($report)->toContain('No Cockpit mutation route, mutation approval, request validation execution, voucher issuance, provider call, wallet access, journal write, action run, or feedback delivery is introduced in Slice 25');
+});
+
+it('documents the quick generate mutation authorization decision point before mutation route scaffolding', function () {
+    $report = file_get_contents(__DIR__.'/../../../docs/ui-cockpit/reports/013-quick-generate-mutation-authorization-decision-point.md');
+
+    expect($report)->toBeString()
+        ->and($report)->toContain('Cockpit Slice 26')
+        ->and($report)->toContain('Mutation Authorization Decision Point')
+        ->and($report)->toContain('not_authorized')
+        ->and($report)->toContain('human-approval-required-before-route-scaffold')
+        ->and($report)->toContain('request-explicit-approval-or-continue-read-only-hardening')
+        ->and($report)->toContain('No Cockpit mutation route is authorized in Slice 26')
+        ->and($report)->toContain('No mutation endpoints, voucher issuance, request validation execution, payload persistence, provider call, wallet access, journal write, action run, feedback delivery, campaign behavior, or money movement is introduced in Slice 26');
 });
