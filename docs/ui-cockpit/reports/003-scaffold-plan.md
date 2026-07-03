@@ -296,13 +296,30 @@ The frontend Dashboard now hydrates from the optional `dashboard_read_model` pro
 
 ## Slice 16 — Quick Generate Read Model Adapter Baseline
 
+Status: complete.
+
+Implemented:
+
+- added package-local Quick Generate read-model DTOs for sanitized template, runtime input, pricing summary, and disabled action facts
+- exposed `quick_generate_read_model` only on the Quick Generate route
+- hydrated the Quick Generate page from sanitized read-model props while preserving static defaults for unavailable states
+- preserved disabled generate action behavior even when read-model props suggest an enabled action
+- no mutation endpoints, voucher issuance, execution, journal writes, action execution, feedback delivery, provider calls, wallet access, campaign behavior, or money movement
+
+The backend now extends the Cockpit read-model provider contract with a Quick Generate method and exposes `quick_generate_read_model` only on the Cockpit Quick Generate route. The baseline deliberately avoids voucher lifecycle reads, pricing service calls, wallet lookup/reservation/debit, provider calls, voucher issuance, journal writes, feedback delivery, and action execution.
+
+The frontend Quick Generate page now hydrates from the optional `quick_generate_read_model` prop and keeps static defaults when read models are missing, unavailable, or unauthorized.
+
+## Slice 17 — Quick Generate Issuance Boundary Plan
+
 Status: recommended next.
 
 Candidate scope:
 
-- add package-local Quick Generate read-model adapters only if existing x-change template/pricing/read services can provide sanitized facts
-- expose read-only template/pricing/funding planning facts without enabling issuance
-- preserve disabled generate action behavior
+- define the explicit boundary for a future Quick Generate issuance handoff
+- identify the existing API/action path that would own actual Pay Code generation
+- document required authorization, pricing, funding, idempotency, and redaction gates
+- keep generate controls disabled unless a mutation slice is explicitly approved
 - no mutation endpoints, voucher issuance, execution, journal writes, action execution, feedback delivery, provider calls, wallet access, campaign behavior, or money movement
 
 ## Verification Plan

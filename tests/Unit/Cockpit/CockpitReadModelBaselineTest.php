@@ -394,6 +394,24 @@ it('returns an empty not wired dashboard read model by default', function () {
     ]);
 });
 
+it('returns an empty not wired quick generate read model by default', function () {
+    $readModel = (new NullCockpitReadModelProvider)
+        ->forQuickGenerate(new CockpitReadModelQueryData);
+
+    expect($readModel->toArray())->toBe([
+        'status' => 'not_wired',
+        'authorized' => false,
+        'templates' => [],
+        'runtime_inputs' => [],
+        'pricing_summaries' => [],
+        'action' => [
+            'enabled' => false,
+            'reason' => 'not-loaded',
+        ],
+        'redactions' => ['payloads' => 'not-loaded'],
+    ]);
+});
+
 it('adapts voucher lifecycle list rows into sanitized cockpit dashboard facts', function () {
     $lifecycle = new class implements VoucherLifecycleServiceContract
     {
@@ -561,6 +579,138 @@ it('adapts voucher lifecycle list rows into sanitized cockpit dashboard facts', 
             ],
         ],
     ]);
+});
+
+it('adapts safe quick generate catalog facts without invoking voucher lifecycle reads', function () {
+    $lifecycle = new class implements VoucherLifecycleServiceContract
+    {
+        public int $readCalls = 0;
+
+        public function list(array $filters = []): array
+        {
+            $this->readCalls++;
+
+            return [];
+        }
+
+        public function show(string $voucher): mixed
+        {
+            $this->readCalls++;
+
+            return null;
+        }
+
+        public function showByCode(string $code): mixed
+        {
+            $this->readCalls++;
+
+            return null;
+        }
+
+        public function status(string $voucher): mixed
+        {
+            $this->readCalls++;
+
+            return null;
+        }
+
+        public function cancel(string $voucher, array $payload = []): mixed
+        {
+            return [];
+        }
+    };
+
+    $readModel = (new VoucherLifecycleCockpitReadModelProvider($lifecycle))
+        ->forQuickGenerate(new CockpitReadModelQueryData(include: ['templates', 'pricing']));
+
+    expect($lifecycle->readCalls)->toBe(0)
+        ->and($readModel->toArray())->toBe([
+            'status' => 'available',
+            'authorized' => true,
+            'templates' => [
+                [
+                    'key' => 'money-changer',
+                    'name' => 'Money Changer',
+                    'description' => 'Fast cash-out Pay Code for branch counter operations.',
+                    'profile' => 'branch',
+                    'estimated_time' => 'Under 5 seconds',
+                    'disabled' => false,
+                ],
+                [
+                    'key' => 'ofw-remittance',
+                    'name' => 'OFW Remittance',
+                    'description' => 'Template-first remittance issuance with recipient details.',
+                    'profile' => 'operations',
+                    'estimated_time' => 'Pending runtime inputs',
+                    'disabled' => false,
+                ],
+                [
+                    'key' => 'settlement-envelope',
+                    'name' => 'Settlement Envelope',
+                    'description' => 'Complex settlement issuance remains deferred to later slices.',
+                    'profile' => 'settlement',
+                    'estimated_time' => 'Deferred',
+                    'disabled' => true,
+                ],
+            ],
+            'runtime_inputs' => [
+                [
+                    'key' => 'amount',
+                    'label' => 'Amount',
+                    'value' => 'Pending operator input',
+                    'helper' => 'No pricing or funding calculation is executed in Slice 16.',
+                ],
+                [
+                    'key' => 'recipient',
+                    'label' => 'Recipient',
+                    'value' => 'Pending recipient selection',
+                    'helper' => 'Contact/package integration remains deferred.',
+                ],
+                [
+                    'key' => 'purpose',
+                    'label' => 'Purpose',
+                    'value' => 'Pending purpose note',
+                    'helper' => 'Purpose is presentation context only in this baseline.',
+                ],
+            ],
+            'pricing_summaries' => [
+                [
+                    'key' => 'pricing',
+                    'label' => 'Pricing Estimate',
+                    'value' => 'Not calculated',
+                    'helper' => 'Will use existing pricing services only when explicitly wired.',
+                ],
+                [
+                    'key' => 'funding',
+                    'label' => 'Funding Impact',
+                    'value' => 'Not reserved',
+                    'helper' => 'No wallet lookup, reservation, debit, or provider call occurs here.',
+                ],
+                [
+                    'key' => 'execution',
+                    'label' => 'Execution Summary',
+                    'value' => 'Template pending',
+                    'helper' => 'Execution semantics stay voucher-owned and are not inferred in Cockpit.',
+                ],
+            ],
+            'action' => [
+                'enabled' => false,
+                'reason' => 'issuance-not-wired',
+            ],
+            'redactions' => [
+                'payloads' => 'sanitized-quick-generate-catalog-only',
+                'excluded' => [
+                    'wallet',
+                    'balance',
+                    'provider_payload',
+                    'raw_payload',
+                    'account_number',
+                    'pricing_breakdown',
+                    'funding_source',
+                    'issuer_id',
+                ],
+            ],
+        ]);
 });
 
 it('binds the cockpit read model provider contract to the voucher lifecycle adapter baseline', function () {

@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Slice 15 — Cockpit Dashboard Read Model Adapter Baseline
+Current slice: Slice 16 — Quick Generate Read Model Adapter Baseline
 Status: Complete
 Last updated: 2026-07-03
 
@@ -213,6 +213,28 @@ Last updated: 2026-07-03
   - recent sanitized Pay Code activity
 - Preserved static dashboard defaults when dashboard read models are missing, unavailable, or unauthorized.
 - Preserved redaction metadata excluding internal IDs, issuer IDs, instructions, claims, approval metadata, provider payloads, raw payloads, wallets, and provider facts.
+- Completed Slice 16 Quick Generate Read Model Adapter Baseline:
+  - `src/Contracts/CockpitReadModelProviderContract.php`
+  - `src/Data/Cockpit/CockpitQuickGenerateActionData.php`
+  - `src/Data/Cockpit/CockpitQuickGeneratePricingSummaryData.php`
+  - `src/Data/Cockpit/CockpitQuickGenerateReadModelData.php`
+  - `src/Data/Cockpit/CockpitQuickGenerateRuntimeInputData.php`
+  - `src/Data/Cockpit/CockpitQuickGenerateTemplateData.php`
+  - `src/Services/Cockpit/NullCockpitReadModelProvider.php`
+  - `src/Services/Cockpit/VoucherLifecycleCockpitReadModelProvider.php`
+  - `src/Support/Cockpit/CockpitReadOnlyPageProps.php`
+  - `src/Http/Controllers/Web/Cockpit/CockpitQuickGeneratePageController.php`
+  - `resources/js/cockpit/types.ts`
+  - `resources/js/cockpit/pages/QuickGenerate.vue`
+  - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
+  - `tests/Unit/Cockpit/CockpitReadModelBaselineTest.php`
+  - `tests/Feature/Cockpit/CockpitReadOnlyRoutesTest.php`
+  - `tests/frontend/cockpit/CockpitQuickGenerateHydration.test.ts`
+- Added a package-local Quick Generate read model for sanitized catalog/runtime/pricing planning facts.
+- Exposed `quick_generate_read_model` only on the Cockpit Quick Generate page.
+- Preserved static Quick Generate defaults when read models are missing, unavailable, or unauthorized.
+- Preserved disabled generate action behavior even if a read model claims an enabled action.
+- Avoided voucher lifecycle reads, pricing service calls, wallet lookup/reservation/debit, provider calls, voucher issuance, journal writes, feedback delivery, action execution, campaign behavior, and money movement.
 
 ## In Progress
 
@@ -220,13 +242,13 @@ No implementation slice is in progress.
 
 ## Next
 
-Recommended next slice: Slice 16 — Quick Generate Read Model Adapter Baseline.
+Recommended next slice: Slice 17 — Quick Generate Issuance Boundary Plan.
 
 Scope should remain foundation-only:
 
-- add package-local Quick Generate read-model adapters only if existing x-change template/pricing/read services can provide sanitized facts
-- keep route props read-only and authenticated
-- keep generate controls disabled unless an approved issuance API/action path is explicitly authorized
+- define the explicit boundary for a future Quick Generate issuance handoff
+- keep route props read-only and authenticated unless a mutation slice is explicitly approved
+- keep generate controls disabled until authorization, pricing, funding, idempotency, and existing issuance API/action routing are all designed
 - avoid broad voucher payloads, provider payloads, wallet data, claim payloads, approval metadata, instructions, or raw payloads
 - no mutation endpoints, execution, journal writes, feedback delivery, provider calls, campaign behavior, or money movement
 - preserve all existing Claim UI tests
@@ -249,6 +271,7 @@ Scope should remain foundation-only:
 - Slice 13 introduces only a frontend/list prop contract for Pay Code Explorer hydration. It does not add backend list adapters, JSON APIs, host queries, or lifecycle read expansion.
 - Slice 14 introduces a backend/list prop adapter for Pay Code Explorer only. It reads sanitized list summaries through `VoucherLifecycleServiceContract::list()`, does not expose issuer IDs as owner labels, does not add query APIs, and does not mutate voucher or provider state.
 - Slice 15 introduces a backend dashboard prop adapter for Cockpit Dashboard only. It reads sanitized aggregate/list facts through `VoucherLifecycleServiceContract::list()`, does not query wallets or providers, and does not treat aggregate counts as execution, journal, action, feedback, settlement, or reconciliation truth.
+- Slice 16 introduces a backend Quick Generate prop adapter for planning/catalog facts only. It does not call voucher lifecycle reads, pricing services, wallets, providers, or generation actions, and it keeps the generate action disabled.
 
 ## Decisions
 
@@ -275,6 +298,7 @@ Scope should remain foundation-only:
 - Slice 13 keeps Pay Code Explorer hydration presentation-only. It accepts an optional `pay_codes_read_model` list prop, sanitizes rows locally, preserves read-only controls, and renders an explicit empty state for authorized empty lists.
 - Slice 14 extends the Cockpit read-model provider contract with `forPayCodeList()` and exposes `pay_codes_read_model` only to the Pay Code Explorer route. The adapter maps safe list summaries from the existing voucher lifecycle service and preserves redaction metadata for excluded fields.
 - Slice 15 extends the Cockpit read-model provider contract with `forDashboard()` and exposes `dashboard_read_model` only to the Dashboard route. The adapter maps sanitized aggregate dashboard facts from the existing voucher lifecycle list service and preserves static frontend defaults for unavailable states.
+- Slice 16 extends the Cockpit read-model provider contract with `forQuickGenerate()` and exposes `quick_generate_read_model` only to the Quick Generate route. The baseline maps sanitized catalog/runtime/pricing placeholder facts and preserves disabled issuance controls.
 
 ## Open Questions
 
@@ -350,3 +374,8 @@ Scope should remain foundation-only:
 - Slice 15 focused dashboard/route frontend regression result: `12 passed`.
 - Slice 15 full frontend result: `71 passed, 430 tests`.
 - Slice 15 full package Pest result: `1002 passed, 5 skipped, 5194 assertions`.
+- Slice 16 focused PHP Cockpit read-model/route result: `31 passed, 209 assertions`.
+- Slice 16 focused quick-generate hydration frontend result: `4 passed`.
+- Slice 16 focused quick-generate/route frontend regression result: `10 passed`.
+- Slice 16 full frontend result: `72 passed, 434 tests`.
+- Slice 16 full package Pest result: `1005 passed, 5 skipped, 5213 assertions`.

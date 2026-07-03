@@ -81,4 +81,17 @@ class CockpitReadOnlyPageProps
             ))->toArray(),
         ];
     }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toQuickGenerateArray(): array
+    {
+        return [
+            ...$this->toArray(),
+            'quick_generate_read_model' => $this->readModels->forQuickGenerate(new CockpitReadModelQueryData(
+                include: ['templates', 'pricing'],
+            ))->toArray(),
+        ];
+    }
 }

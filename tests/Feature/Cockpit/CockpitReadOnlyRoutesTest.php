@@ -116,6 +116,29 @@ it('hydrates the dashboard with a sanitized dashboard read model prop', function
         ->assertJsonMissingPath('props.dashboard_read_model.provider');
 });
 
+it('hydrates quick generate with a sanitized quick generate read model prop', function () {
+    actingAsTestUser();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.quick-generate'))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/cockpit/QuickGenerate')
+        ->assertJsonPath('props.quick_generate_read_model.status', 'available')
+        ->assertJsonPath('props.quick_generate_read_model.authorized', true)
+        ->assertJsonPath('props.quick_generate_read_model.templates.0.key', 'money-changer')
+        ->assertJsonPath('props.quick_generate_read_model.templates.0.disabled', false)
+        ->assertJsonPath('props.quick_generate_read_model.runtime_inputs.0.key', 'amount')
+        ->assertJsonPath('props.quick_generate_read_model.pricing_summaries.0.key', 'pricing')
+        ->assertJsonPath('props.quick_generate_read_model.action.enabled', false)
+        ->assertJsonPath('props.quick_generate_read_model.action.reason', 'issuance-not-wired')
+        ->assertJsonPath('props.quick_generate_read_model.redactions.payloads', 'sanitized-quick-generate-catalog-only')
+        ->assertJsonMissingPath('props.quick_generate_read_model.provider_payload')
+        ->assertJsonMissingPath('props.quick_generate_read_model.raw_payload')
+        ->assertJsonMissingPath('props.quick_generate_read_model.wallet')
+        ->assertJsonMissingPath('props.quick_generate_read_model.balance')
+        ->assertJsonMissingPath('props.quick_generate_read_model.funding_source');
+});
+
 it('requires authentication for cockpit routes', function (string $route, array $parameters) {
     $this->withHeader('Accept', 'application/json')
         ->get(route($route, $parameters))

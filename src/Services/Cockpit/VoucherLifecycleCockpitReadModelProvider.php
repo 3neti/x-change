@@ -15,6 +15,11 @@ use LBHurtado\XChange\Data\Cockpit\CockpitDashboardReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitDashboardRiskSignalData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeListReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeListRecordData;
+use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateActionData;
+use LBHurtado\XChange\Data\Cockpit\CockpitQuickGeneratePricingSummaryData;
+use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateReadModelData;
+use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateRuntimeInputData;
+use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateTemplateData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelBundleData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
 use LBHurtado\XChange\Data\Cockpit\CockpitVoucherReadModelData;
@@ -182,6 +187,95 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             redactions: [
                 'payloads' => 'sanitized-dashboard-summary-only',
                 'excluded' => $this->excludedPayloadKeys(),
+            ],
+        );
+    }
+
+    public function forQuickGenerate(CockpitReadModelQueryData $query): CockpitQuickGenerateReadModelData
+    {
+        return new CockpitQuickGenerateReadModelData(
+            status: 'available',
+            authorized: true,
+            templates: [
+                new CockpitQuickGenerateTemplateData(
+                    key: 'money-changer',
+                    name: 'Money Changer',
+                    description: 'Fast cash-out Pay Code for branch counter operations.',
+                    profile: 'branch',
+                    estimated_time: 'Under 5 seconds',
+                ),
+                new CockpitQuickGenerateTemplateData(
+                    key: 'ofw-remittance',
+                    name: 'OFW Remittance',
+                    description: 'Template-first remittance issuance with recipient details.',
+                    profile: 'operations',
+                    estimated_time: 'Pending runtime inputs',
+                ),
+                new CockpitQuickGenerateTemplateData(
+                    key: 'settlement-envelope',
+                    name: 'Settlement Envelope',
+                    description: 'Complex settlement issuance remains deferred to later slices.',
+                    profile: 'settlement',
+                    estimated_time: 'Deferred',
+                    disabled: true,
+                ),
+            ],
+            runtime_inputs: [
+                new CockpitQuickGenerateRuntimeInputData(
+                    key: 'amount',
+                    label: 'Amount',
+                    value: 'Pending operator input',
+                    helper: 'No pricing or funding calculation is executed in Slice 16.',
+                ),
+                new CockpitQuickGenerateRuntimeInputData(
+                    key: 'recipient',
+                    label: 'Recipient',
+                    value: 'Pending recipient selection',
+                    helper: 'Contact/package integration remains deferred.',
+                ),
+                new CockpitQuickGenerateRuntimeInputData(
+                    key: 'purpose',
+                    label: 'Purpose',
+                    value: 'Pending purpose note',
+                    helper: 'Purpose is presentation context only in this baseline.',
+                ),
+            ],
+            pricing_summaries: [
+                new CockpitQuickGeneratePricingSummaryData(
+                    key: 'pricing',
+                    label: 'Pricing Estimate',
+                    value: 'Not calculated',
+                    helper: 'Will use existing pricing services only when explicitly wired.',
+                ),
+                new CockpitQuickGeneratePricingSummaryData(
+                    key: 'funding',
+                    label: 'Funding Impact',
+                    value: 'Not reserved',
+                    helper: 'No wallet lookup, reservation, debit, or provider call occurs here.',
+                ),
+                new CockpitQuickGeneratePricingSummaryData(
+                    key: 'execution',
+                    label: 'Execution Summary',
+                    value: 'Template pending',
+                    helper: 'Execution semantics stay voucher-owned and are not inferred in Cockpit.',
+                ),
+            ],
+            action: new CockpitQuickGenerateActionData(
+                enabled: false,
+                reason: 'issuance-not-wired',
+            ),
+            redactions: [
+                'payloads' => 'sanitized-quick-generate-catalog-only',
+                'excluded' => [
+                    'wallet',
+                    'balance',
+                    'provider_payload',
+                    'raw_payload',
+                    'account_number',
+                    'pricing_breakdown',
+                    'funding_source',
+                    'issuer_id',
+                ],
             ],
         );
     }

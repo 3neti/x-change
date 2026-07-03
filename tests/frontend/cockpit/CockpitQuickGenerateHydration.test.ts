@@ -1,0 +1,108 @@
+import { mount } from '@vue/test-utils';
+import { describe, expect, it } from 'vitest';
+import QuickGenerate from '../../../resources/js/cockpit/pages/QuickGenerate.vue';
+import RouteQuickGenerate from '../../../resources/js/pages/x-change/cockpit/QuickGenerate.vue';
+
+const quickGenerateReadModel = {
+    status: 'available',
+    authorized: true,
+    templates: [
+        {
+            key: 'institutional-cash',
+            name: 'Institutional Cash',
+            description: 'Sanitized operator-facing template.',
+            profile: 'branch',
+            estimated_time: 'Under 10 seconds',
+            disabled: false,
+            provider_payload: 'must-not-render',
+        },
+    ],
+    runtime_inputs: [
+        {
+            key: 'amount',
+            label: 'Amount',
+            value: 'Pending amount',
+            helper: 'No calculation executed.',
+            wallet: 'must-not-render',
+        },
+    ],
+    pricing_summaries: [
+        {
+            key: 'pricing',
+            label: 'Pricing Estimate',
+            value: 'Not calculated',
+            helper: 'Existing pricing service not called.',
+            funding_source: 'must-not-render',
+        },
+    ],
+    action: {
+        enabled: true,
+        reason: 'must-remain-disabled-in-ui',
+    },
+    redactions: {
+        payloads: 'sanitized-quick-generate-catalog-only',
+    },
+};
+
+describe('Cockpit Quick Generate hydration', () => {
+    it('hydrates template, runtime, and pricing panels from sanitized read model props', () => {
+        const wrapper = mount(QuickGenerate, {
+            props: {
+                quick_generate_read_model: quickGenerateReadModel,
+            },
+        });
+
+        expect(wrapper.text()).toContain('Institutional Cash');
+        expect(wrapper.text()).toContain('Sanitized operator-facing template.');
+        expect(wrapper.text()).toContain('Pending amount');
+        expect(wrapper.text()).toContain('Existing pricing service not called.');
+    });
+
+    it('does not render unsafe quick generate payload fields or enable generation from read model props', () => {
+        const wrapper = mount(QuickGenerate, {
+            props: {
+                quick_generate_read_model: quickGenerateReadModel,
+            },
+        });
+
+        const text = wrapper.text();
+        const button = wrapper.find('[data-testid="cockpit-generate-button"]');
+
+        expect(text).not.toContain('must-not-render');
+        expect(text).not.toContain('funding_source');
+        expect(button.attributes('disabled')).toBeDefined();
+    });
+
+    it('keeps static defaults when the read model is missing or unauthorized', () => {
+        const wrapper = mount(QuickGenerate, {
+            props: {
+                quick_generate_read_model: {
+                    status: 'not_wired',
+                    authorized: false,
+                    templates: [],
+                    runtime_inputs: [],
+                    pricing_summaries: [],
+                    action: {
+                        enabled: false,
+                        reason: 'not-loaded',
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Money Changer');
+        expect(wrapper.text()).toContain('Pending operator input');
+        expect(wrapper.text()).toContain('Not calculated');
+    });
+
+    it('forwards route adapter props into the cockpit quick generate page', () => {
+        const wrapper = mount(RouteQuickGenerate, {
+            props: {
+                quick_generate_read_model: quickGenerateReadModel,
+            },
+        });
+
+        expect(wrapper.text()).toContain('Institutional Cash');
+        expect(wrapper.text()).toContain('Pending amount');
+    });
+});

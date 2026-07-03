@@ -77,6 +77,16 @@ export type CockpitQuickGenerateTemplate = {
     disabled?: boolean;
 };
 
+export type CockpitQuickGenerateReadModelTemplate = {
+    key?: string | null;
+    name?: string | null;
+    description?: string | null;
+    profile?: string | null;
+    estimated_time?: string | null;
+    disabled?: boolean | null;
+    [key: string]: unknown;
+};
+
 export type CockpitRuntimeInput = {
     key: string;
     label: string;
@@ -84,11 +94,46 @@ export type CockpitRuntimeInput = {
     helper: string;
 };
 
+export type CockpitQuickGenerateReadModelRuntimeInput = {
+    key?: string | null;
+    label?: string | null;
+    value?: string | null;
+    helper?: string | null;
+    [key: string]: unknown;
+};
+
 export type CockpitPricingFundingSummary = {
     key: string;
     label: string;
     value: string;
     helper: string;
+};
+
+export type CockpitQuickGenerateReadModelPricingSummary = {
+    key?: string | null;
+    label?: string | null;
+    value?: string | null;
+    helper?: string | null;
+    [key: string]: unknown;
+};
+
+export type CockpitQuickGenerateReadModel = {
+    status: string;
+    authorized?: boolean;
+    templates?: CockpitQuickGenerateReadModelTemplate[];
+    runtime_inputs?: CockpitQuickGenerateReadModelRuntimeInput[];
+    pricing_summaries?: CockpitQuickGenerateReadModelPricingSummary[];
+    action?: {
+        enabled?: boolean;
+        reason?: string;
+        [key: string]: unknown;
+    };
+    redactions?: CockpitReadModelRedactions;
+    [key: string]: unknown;
+};
+
+export type CockpitQuickGeneratePageProps = {
+    quick_generate_read_model?: CockpitQuickGenerateReadModel;
 };
 
 export type CockpitPayCodeExplorerFilter = {

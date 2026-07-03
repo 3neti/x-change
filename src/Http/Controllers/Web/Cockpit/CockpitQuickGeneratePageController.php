@@ -17,6 +17,6 @@ class CockpitQuickGeneratePageController extends Controller
 
     public function __invoke(): Response
     {
-        return Inertia::render('x-change/cockpit/QuickGenerate', $this->props->toArray());
+        return Inertia::render('x-change/cockpit/QuickGenerate', $this->props->toQuickGenerateArray());
     }
 }
