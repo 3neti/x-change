@@ -208,15 +208,40 @@ No live cross-package calls, JSON read APIs, mutation endpoints, execution, jour
 
 ## Slice 11 — Voucher Detail Read Model Adapter Baseline
 
+Status: complete.
+
+Implemented:
+
+- package-local adapter around `VoucherLifecycleServiceContract`
+- default `CockpitReadModelProviderContract` binding now resolves the voucher lifecycle adapter
+- sanitized voucher summary whitelist:
+  - `code`
+  - `status`
+  - `display_status`
+  - `amount`
+  - `currency`
+  - `claimed`
+  - `fully_claimed`
+  - `created_at`
+  - `starts_at`
+  - `expires_at`
+  - `redeemed_at`
+- explicit redaction metadata for excluded voucher lifecycle detail fields
+- null/not-wired fallback for missing voucher codes
+- tests proving no instructions, claims, approval metadata, provider payloads, raw payloads, wallets, provider facts, internal IDs, issuer IDs, execution details, journal entries, action bundles, or feedback deliveries are exposed
+
+No mutation endpoints, JSON APIs, execution, journal writes, action execution, feedback delivery, provider calls, wallet access, claim UX changes, campaign behavior, or money movement were added.
+
+## Slice 12 — Voucher Detail Presentation Hydration Baseline
+
 Status: recommended next.
 
 Candidate scope:
 
-- add a first package-local adapter around existing x-change voucher lifecycle/read services
-- limit real data to sanitized voucher summary fields only
-- preserve redaction metadata and authorization flags
-- keep journal, actions, feedback, execution details, provider payloads, wallets, and raw payloads not wired
-- no mutation endpoints or domain side effects
+- hydrate existing Voucher Detail Vue components from the sanitized `read_model.voucher.summary`
+- keep execution, journal, action, and feedback panels in explicit empty/not-wired states
+- preserve redaction metadata and read-only authorization flags in the UI
+- no broad payload exposure, mutations, domain side effects, provider calls, wallet access, or money movement
 
 ## Verification Plan
 

@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Slice 10 — Read Model Presentation Wiring
+Current slice: Slice 11 — Voucher Detail Read Model Adapter Baseline
 Status: Complete
 Last updated: 2026-07-03
 
@@ -114,6 +114,26 @@ Last updated: 2026-07-03
   - `tests/Feature/Cockpit/CockpitReadOnlyRoutesTest.php`
 - Added the null/not-wired Cockpit read-model bundle to authenticated Cockpit Inertia props.
 - Added route coverage proving voucher-scoped pages receive `read_model` facts while still avoiding broad provider, wallet, raw payload, voucher, journal, action, and feedback top-level payload exposure.
+- Completed Slice 11 Voucher Detail Read Model Adapter Baseline:
+  - `src/Services/Cockpit/VoucherLifecycleCockpitReadModelProvider.php`
+  - `src/Providers/XChangeServiceProvider.php`
+  - `tests/Unit/Cockpit/CockpitReadModelBaselineTest.php`
+- Replaced the default Cockpit read-model provider binding with a package-local adapter over `VoucherLifecycleServiceContract`.
+- Limited real voucher detail exposure to a whitelisted sanitized summary:
+  - `code`
+  - `status`
+  - `display_status`
+  - `amount`
+  - `currency`
+  - `claimed`
+  - `fully_claimed`
+  - `created_at`
+  - `starts_at`
+  - `expires_at`
+  - `redeemed_at`
+- Preserved not-wired placeholders for execution, journal, actions, and feedback.
+- Preserved route stability for missing voucher codes by falling back to the null/not-wired bundle.
+- Added coverage proving internal IDs, issuer IDs, instructions, claims, approval metadata, provider payloads, raw payloads, wallets, and provider facts are excluded from the Cockpit voucher read model.
 
 ## In Progress
 
@@ -121,15 +141,14 @@ No implementation slice is in progress.
 
 ## Next
 
-Recommended next slice: Slice 11 — Voucher Detail Read Model Adapter Baseline.
+Recommended next slice: Slice 12 — Voucher Detail Presentation Hydration Baseline.
 
 Scope should remain foundation-only:
 
-- add a first package-local adapter around existing x-change voucher lifecycle/read services
-- limit real data to sanitized voucher summary fields only
-- preserve redaction metadata and authorization flags
-- keep journal, actions, feedback, execution details, provider payloads, wallets, and raw payloads not wired
-- no broad exposure of journal, action, feedback, provider, or voucher payloads
+- hydrate the existing Voucher Detail frontend with the sanitized voucher summary already exposed by the Slice 11 read model
+- render explicit empty/not-wired states for execution, journal, actions, and feedback
+- preserve redaction metadata and read-only authorization flags
+- do not broaden journal, action, feedback, provider, wallet, approval, claim, instruction, or raw payload exposure
 - no mutation endpoints, execution, journal writes, feedback delivery, provider calls, campaign behavior, or money movement
 - preserve all existing Claim UI tests
 
@@ -146,6 +165,7 @@ Scope should remain foundation-only:
 - Slice 8 exposes static read-only authorization props only. Real operator roles, permissions, policies, and tenant scoping remain future host integration work.
 - Slice 9 introduces not-wired read-model contracts only. Future adapters must still define authorization, redaction, idempotency, pagination, and package-specific failure semantics before exposing real state.
 - Slice 10 places read-model bundles into Inertia props. Future frontend components must treat `not_wired` as a capability/readiness state, not as lifecycle truth.
+- Slice 11 exposes only sanitized voucher summary facts. It intentionally excludes lifecycle detail arrays that could contain instructions, claims, approval references, provider payloads, raw payloads, wallet data, provider facts, internal IDs, and issuer IDs.
 
 ## Decisions
 
@@ -167,13 +187,15 @@ Scope should remain foundation-only:
 - Slice 8 keeps Cockpit authorization/redaction as a boundary baseline. It exposes explicit read-only `can` props and redaction metadata, adds a default redactor contract, and avoids loading voucher, journal, action, feedback, or provider payloads until authorized read models exist.
 - Slice 9 defines Cockpit read-model DTOs and the provider contract for voucher, execution, journal, action, and feedback views. The default provider is a null/not-wired implementation and does not call voucher, x-journal, x-action, x-feedback, providers, wallets, or persistence.
 - Slice 10 composes the null/not-wired Cockpit read-model bundle into authenticated Inertia page props. It does not add live package adapters, JSON APIs, mutations, execution, journal writes, feedback delivery, provider calls, wallet access, raw payload exposure, or money movement.
+- Slice 11 adapts `VoucherLifecycleServiceContract` into the Cockpit read-model provider for voucher summary facts only. Missing vouchers fall back to the null/not-wired bundle. Execution, journal, action, and feedback read models remain not wired.
 
 ## Open Questions
 
 - Which host API/read-model contracts should expose execution, journal, action, and feedback facts to Cockpit without leaking sensitive payloads.
 - How static read-only Cockpit permissions should evolve into real operator roles, policies, tenant scoping, and permission checks.
 - Whether existing `/x/dashboard` should be promoted into Cockpit or left as a compatibility route while Cockpit grows under a new route namespace.
-- Which sanitized voucher summary fields are safe for the first real Voucher Detail read-model adapter.
+- Whether the Slice 11 voucher summary whitelist should later include internal voucher IDs or issuer IDs under stricter operator authorization.
+- Whether missing voucher codes should remain indistinguishable from not-wired read models in the UI or gain an explicit redacted/not-found state.
 
 ## Test Status
 
@@ -215,3 +237,7 @@ Scope should remain foundation-only:
 - Slice 10 focused read-model regression result: `5 passed, 22 assertions`.
 - Slice 10 focused redactor regression result: `4 passed, 13 assertions`.
 - Slice 10 full package Pest result: `994 passed, 5 skipped, 5129 assertions`.
+- Slice 11 focused read-model result: `7 passed, 55 assertions`.
+- Slice 11 focused route regression result: `15 passed, 103 assertions`.
+- Slice 11 combined focused Cockpit result: `22 passed, 158 assertions`.
+- Slice 11 full package Pest result: `996 passed, 5 skipped, 5162 assertions`.
