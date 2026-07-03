@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Slice 17 — Quick Generate Issuance Boundary Plan
+Current slice: Slice 18 — Quick Generate Request Draft Contract Baseline
 Status: Complete
 Last updated: 2026-07-03
 
@@ -247,6 +247,20 @@ Last updated: 2026-07-03
   - Required future gates are authorization, pricing, funding, idempotency, and redaction.
   - Slice 17 registers no Cockpit mutation route.
 - Added a read-only boundary panel to Quick Generate so operators and future implementers see the handoff constraints directly in the page.
+- Completed Slice 18 Quick Generate Request Draft Contract Baseline:
+  - `src/Data/Cockpit/CockpitQuickGenerateDraftContractData.php`
+  - `src/Data/Cockpit/CockpitQuickGenerateReadModelData.php`
+  - `src/Services/Cockpit/VoucherLifecycleCockpitReadModelProvider.php`
+  - `resources/js/cockpit/components/CockpitQuickGenerateDraftContractPanel.vue`
+  - `resources/js/cockpit/pages/QuickGenerate.vue`
+  - `resources/js/cockpit/types.ts`
+  - `docs/ui-cockpit/reports/005-quick-generate-request-draft-contract-baseline.md`
+  - `tests/Unit/Cockpit/CockpitReadModelBaselineTest.php`
+  - `tests/Feature/Cockpit/CockpitReadOnlyRoutesTest.php`
+  - `tests/frontend/cockpit/CockpitQuickGenerateFoundation.test.ts`
+- Added the `x-change.cockpit.quick-generate-draft.v1` draft contract shape to the Quick Generate read model.
+- Added a read-only draft contract panel to the Quick Generate page.
+- Preserved local/read-only draft behavior with no persistence, mutation route, issuance, pricing calculation, funding reservation, provider call, journal write, action execution, feedback delivery, campaign behavior, claim UX change, or money movement.
 
 ## In Progress
 
@@ -254,12 +268,12 @@ No implementation slice is in progress.
 
 ## Next
 
-Recommended next slice: Slice 18 — Quick Generate Request Draft Contract Baseline.
+Recommended next slice: Slice 19 — Quick Generate Authorization Gate Baseline.
 
 Scope should remain foundation-only:
 
-- define the frontend/backend-neutral draft payload shape for a future Quick Generate issuance request
-- keep drafts local/read-only unless an explicit persistence or mutation slice is approved
+- define the operator authorization gate facts required before a future Quick Generate mutation can be enabled
+- keep authorization facts read-only and presentation-safe unless a mutation slice is explicitly approved
 - keep route props read-only and authenticated unless a mutation slice is explicitly approved
 - keep generate controls disabled until authorization, pricing, funding, idempotency, and existing issuance API/action routing are all designed
 - avoid broad voucher payloads, provider payloads, wallet data, claim payloads, approval metadata, instructions, or raw payloads
@@ -286,6 +300,7 @@ Scope should remain foundation-only:
 - Slice 15 introduces a backend dashboard prop adapter for Cockpit Dashboard only. It reads sanitized aggregate/list facts through `VoucherLifecycleServiceContract::list()`, does not query wallets or providers, and does not treat aggregate counts as execution, journal, action, feedback, settlement, or reconciliation truth.
 - Slice 16 introduces a backend Quick Generate prop adapter for planning/catalog facts only. It does not call voucher lifecycle reads, pricing services, wallets, providers, or generation actions, and it keeps the generate action disabled.
 - Slice 17 introduces an explicit Quick Generate issuance boundary plan and visible boundary panel. It does not register mutation routes or call the existing issuance action/controller.
+- Slice 18 introduces a frontend/backend-neutral Quick Generate draft contract shape and visible draft contract panel. It does not persist drafts, register mutation routes, call issuance, calculate pricing, reserve funding, call providers, or move money.
 
 ## Decisions
 
@@ -314,6 +329,7 @@ Scope should remain foundation-only:
 - Slice 15 extends the Cockpit read-model provider contract with `forDashboard()` and exposes `dashboard_read_model` only to the Dashboard route. The adapter maps sanitized aggregate dashboard facts from the existing voucher lifecycle list service and preserves static frontend defaults for unavailable states.
 - Slice 16 extends the Cockpit read-model provider contract with `forQuickGenerate()` and exposes `quick_generate_read_model` only to the Quick Generate route. The baseline maps sanitized catalog/runtime/pricing placeholder facts and preserves disabled issuance controls.
 - Slice 17 records that any future Quick Generate mutation must reuse the existing `GeneratePayCode` / `GeneratePayCodeController` path and must first define authorization, pricing, funding, idempotency, and redaction gates.
+- Slice 18 adds `CockpitQuickGenerateDraftContractData` as a read-only draft shape in `quick_generate_read_model`. The schema is `x-change.cockpit.quick-generate-draft.v1`, and the baseline draft stays local/read-only with no persistence or mutation route.
 
 ## Open Questions
 
@@ -398,3 +414,7 @@ Scope should remain foundation-only:
 - Slice 17 focused PHP Cockpit route/documentation result: `19 passed, 157 assertions`.
 - Slice 17 full frontend result: `72 passed, 435 tests`.
 - Slice 17 full package Pest result: `1006 passed, 5 skipped, 5224 assertions`.
+- Slice 18 focused quick-generate draft frontend result: `7 passed`.
+- Slice 18 focused PHP Cockpit read-model/route result: `33 passed, 239 assertions`.
+- Slice 18 full frontend result: `72 passed, 436 tests`.
+- Slice 18 full package Pest result: `1007 passed, 5 skipped, 5243 assertions`.

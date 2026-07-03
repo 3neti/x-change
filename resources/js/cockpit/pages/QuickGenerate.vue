@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import CockpitGenerateActionPanel from '../components/CockpitGenerateActionPanel.vue';
 import CockpitIssuanceBoundaryPanel from '../components/CockpitIssuanceBoundaryPanel.vue';
 import CockpitPricingFundingSummary from '../components/CockpitPricingFundingSummary.vue';
+import CockpitQuickGenerateDraftContractPanel from '../components/CockpitQuickGenerateDraftContractPanel.vue';
 import CockpitRuntimeInputPanel from '../components/CockpitRuntimeInputPanel.vue';
 import CockpitTemplateSelector from '../components/CockpitTemplateSelector.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
@@ -13,6 +14,7 @@ import {
 } from '../quickGenerateDefaults';
 import type {
     CockpitPricingFundingSummary as CockpitPricingFundingSummaryType,
+    CockpitQuickGenerateDraftContract,
     CockpitQuickGeneratePageProps,
     CockpitQuickGenerateReadModelPricingSummary,
     CockpitQuickGenerateReadModelRuntimeInput,
@@ -63,6 +65,44 @@ const pricingSummaries = computed<CockpitPricingFundingSummaryType[]>(() => {
 
     return mapped.length > 0 ? mapped : cockpitPricingFundingSummary;
 });
+
+const draftContract = computed<CockpitQuickGenerateDraftContract>(() => {
+    const draft = props.quick_generate_read_model?.draft_contract;
+
+    if (!readModelAvailable.value || typeof draft !== 'object' || draft === null) {
+        return defaultDraftContract();
+    }
+
+    return {
+        schema: stringValue(draft.schema) ?? 'x-change.cockpit.quick-generate-draft.v1',
+        status: stringValue(draft.status) ?? 'draft_only',
+        template_key: stringValue(draft.template_key),
+        amount: stringValue(draft.amount),
+        currency: stringValue(draft.currency),
+        recipient_reference: stringValue(draft.recipient_reference),
+        purpose: stringValue(draft.purpose),
+        idempotency_key: stringValue(draft.idempotency_key),
+        redactions: {
+            payloads: stringValue(draft.redactions?.payloads) ?? 'draft-shape-only',
+        },
+    };
+});
+
+function defaultDraftContract(): CockpitQuickGenerateDraftContract {
+    return {
+        schema: 'x-change.cockpit.quick-generate-draft.v1',
+        status: 'draft_only',
+        template_key: 'money-changer',
+        amount: null,
+        currency: 'PHP',
+        recipient_reference: null,
+        purpose: null,
+        idempotency_key: null,
+        redactions: {
+            payloads: 'draft-shape-only',
+        },
+    };
+}
 
 function sanitizeTemplate(template: CockpitQuickGenerateReadModelTemplate): CockpitQuickGenerateTemplate | null {
     const key = stringValue(template.key);
@@ -153,6 +193,7 @@ function stringValue(value: unknown): string | null {
                 <div class="space-y-4">
                     <CockpitPricingFundingSummary :summaries="pricingSummaries" />
                     <CockpitGenerateActionPanel :enabled="false" />
+                    <CockpitQuickGenerateDraftContractPanel :draft-contract="draftContract" />
                     <CockpitIssuanceBoundaryPanel />
                 </div>
             </div>

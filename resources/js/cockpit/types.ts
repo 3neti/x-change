@@ -117,12 +117,26 @@ export type CockpitQuickGenerateReadModelPricingSummary = {
     [key: string]: unknown;
 };
 
+export type CockpitQuickGenerateDraftContract = {
+    schema?: string | null;
+    status?: string | null;
+    template_key?: string | null;
+    amount?: string | number | null;
+    currency?: string | null;
+    recipient_reference?: string | null;
+    purpose?: string | null;
+    idempotency_key?: string | null;
+    redactions?: CockpitReadModelRedactions;
+    [key: string]: unknown;
+};
+
 export type CockpitQuickGenerateReadModel = {
     status: string;
     authorized?: boolean;
     templates?: CockpitQuickGenerateReadModelTemplate[];
     runtime_inputs?: CockpitQuickGenerateReadModelRuntimeInput[];
     pricing_summaries?: CockpitQuickGenerateReadModelPricingSummary[];
+    draft_contract?: CockpitQuickGenerateDraftContract;
     action?: {
         enabled?: boolean;
         reason?: string;

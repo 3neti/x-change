@@ -326,13 +326,26 @@ Slice 17 added a persisted boundary report and a visible Quick Generate boundary
 
 ## Slice 18 — Quick Generate Request Draft Contract Baseline
 
-Status: recommended next.
+Status: complete.
 
-Candidate scope:
+Implemented:
 
 - define the frontend/backend-neutral draft payload shape for future Quick Generate issuance
 - keep drafts local/read-only unless an explicit persistence or mutation slice is approved
 - identify required fields, optional fields, redacted fields, and idempotency metadata
+- no mutation endpoints, voucher issuance, execution, journal writes, action execution, feedback delivery, provider calls, wallet access, campaign behavior, or money movement
+
+Slice 18 added a `x-change.cockpit.quick-generate-draft.v1` draft contract shape to the Quick Generate read model and a visible read-only draft contract panel. Drafts remain local and read-only; no draft persistence or mutation route was registered.
+
+## Slice 19 — Quick Generate Authorization Gate Baseline
+
+Status: recommended next.
+
+Candidate scope:
+
+- define the operator authorization gate facts required before a future Quick Generate mutation can be enabled
+- keep authorization facts read-only and presentation-safe
+- preserve disabled generate controls unless an explicit mutation slice is approved
 - no mutation endpoints, voucher issuance, execution, journal writes, action execution, feedback delivery, provider calls, wallet access, campaign behavior, or money movement
 
 ## Verification Plan

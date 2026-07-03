@@ -129,6 +129,14 @@ it('hydrates quick generate with a sanitized quick generate read model prop', fu
         ->assertJsonPath('props.quick_generate_read_model.templates.0.disabled', false)
         ->assertJsonPath('props.quick_generate_read_model.runtime_inputs.0.key', 'amount')
         ->assertJsonPath('props.quick_generate_read_model.pricing_summaries.0.key', 'pricing')
+        ->assertJsonPath('props.quick_generate_read_model.draft_contract.schema', 'x-change.cockpit.quick-generate-draft.v1')
+        ->assertJsonPath('props.quick_generate_read_model.draft_contract.status', 'draft_only')
+        ->assertJsonPath('props.quick_generate_read_model.draft_contract.template_key', 'money-changer')
+        ->assertJsonPath('props.quick_generate_read_model.draft_contract.amount', null)
+        ->assertJsonPath('props.quick_generate_read_model.draft_contract.currency', 'PHP')
+        ->assertJsonPath('props.quick_generate_read_model.draft_contract.recipient_reference', null)
+        ->assertJsonPath('props.quick_generate_read_model.draft_contract.idempotency_key', null)
+        ->assertJsonPath('props.quick_generate_read_model.draft_contract.redactions.payloads', 'draft-shape-only')
         ->assertJsonPath('props.quick_generate_read_model.action.enabled', false)
         ->assertJsonPath('props.quick_generate_read_model.action.reason', 'issuance-not-wired')
         ->assertJsonPath('props.quick_generate_read_model.redactions.payloads', 'sanitized-quick-generate-catalog-only')
@@ -176,4 +184,20 @@ it('documents the quick generate issuance boundary before mutation wiring', func
         ->and($report)->toContain('Idempotency')
         ->and($report)->toContain('Redaction')
         ->and($report)->toContain('No Cockpit mutation route is registered in Slice 17');
+});
+
+it('documents the quick generate request draft contract before persistence or mutation wiring', function () {
+    $report = file_get_contents(__DIR__.'/../../../docs/ui-cockpit/reports/005-quick-generate-request-draft-contract-baseline.md');
+
+    expect($report)->toBeString()
+        ->and($report)->toContain('Cockpit Slice 18')
+        ->and($report)->toContain('x-change.cockpit.quick-generate-draft.v1')
+        ->and($report)->toContain('template_key')
+        ->and($report)->toContain('amount')
+        ->and($report)->toContain('currency')
+        ->and($report)->toContain('recipient_reference')
+        ->and($report)->toContain('purpose')
+        ->and($report)->toContain('idempotency_key')
+        ->and($report)->toContain('Drafts are local and read-only in Slice 18')
+        ->and($report)->toContain('No draft persistence or mutation route is registered in Slice 18');
 });

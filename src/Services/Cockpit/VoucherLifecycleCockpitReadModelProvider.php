@@ -16,6 +16,7 @@ use LBHurtado\XChange\Data\Cockpit\CockpitDashboardRiskSignalData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeListReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeListRecordData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateActionData;
+use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateDraftContractData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGeneratePricingSummaryData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateRuntimeInputData;
@@ -260,6 +261,26 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                     helper: 'Execution semantics stay voucher-owned and are not inferred in Cockpit.',
                 ),
             ],
+            draft_contract: new CockpitQuickGenerateDraftContractData(
+                status: 'draft_only',
+                template_key: 'money-changer',
+                currency: 'PHP',
+                redactions: [
+                    'payloads' => 'draft-shape-only',
+                    'excluded' => [
+                        'mobile',
+                        'email',
+                        'wallet',
+                        'balance',
+                        'provider_payload',
+                        'raw_payload',
+                        'account_number',
+                        'pricing_breakdown',
+                        'funding_source',
+                        'issuer_id',
+                    ],
+                ],
+            ),
             action: new CockpitQuickGenerateActionData(
                 enabled: false,
                 reason: 'issuance-not-wired',

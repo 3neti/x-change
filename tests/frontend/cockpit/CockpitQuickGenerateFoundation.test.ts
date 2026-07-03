@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import CockpitGenerateActionPanel from '../../../resources/js/cockpit/components/CockpitGenerateActionPanel.vue';
 import CockpitIssuanceBoundaryPanel from '../../../resources/js/cockpit/components/CockpitIssuanceBoundaryPanel.vue';
 import CockpitPricingFundingSummary from '../../../resources/js/cockpit/components/CockpitPricingFundingSummary.vue';
+import CockpitQuickGenerateDraftContractPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateDraftContractPanel.vue';
 import CockpitRuntimeInputPanel from '../../../resources/js/cockpit/components/CockpitRuntimeInputPanel.vue';
 import CockpitTemplateSelector from '../../../resources/js/cockpit/components/CockpitTemplateSelector.vue';
 import QuickGenerate from '../../../resources/js/cockpit/pages/QuickGenerate.vue';
@@ -94,6 +95,38 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.find('[data-testid="cockpit-issuance-boundary-panel"]').exists()).toBe(true);
     });
 
+    it('renders the request draft contract without persistence or submission behavior', () => {
+        const wrapper = mount(CockpitQuickGenerateDraftContractPanel, {
+            props: {
+                draftContract: {
+                    schema: 'x-change.cockpit.quick-generate-draft.v1',
+                    status: 'draft_only',
+                    template_key: 'money-changer',
+                    amount: null,
+                    currency: 'PHP',
+                    recipient_reference: null,
+                    purpose: null,
+                    idempotency_key: null,
+                    redactions: {
+                        payloads: 'draft-shape-only',
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Request Draft Contract');
+        expect(wrapper.text()).toContain('x-change.cockpit.quick-generate-draft.v1');
+        expect(wrapper.text()).toContain('template_key');
+        expect(wrapper.text()).toContain('money-changer');
+        expect(wrapper.text()).toContain('currency');
+        expect(wrapper.text()).toContain('PHP');
+        expect(wrapper.text()).toContain('idempotency_key');
+        expect(wrapper.text()).toContain('Pending');
+        expect(wrapper.text()).toContain('Drafts are local and read-only in Slice 18.');
+        expect(wrapper.find('form').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-draft-contract-panel"]').exists()).toBe(true);
+    });
+
     it('renders the full Quick Generate page with active navigation and no side effects', () => {
         const wrapper = mount(QuickGenerate);
 
@@ -110,5 +143,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('move money');
         expect(wrapper.text()).toContain('Issuance Boundary Plan');
         expect(wrapper.text()).toContain('No Cockpit mutation route is registered in Slice 17.');
+        expect(wrapper.text()).toContain('Request Draft Contract');
+        expect(wrapper.text()).toContain('Drafts are local and read-only in Slice 18.');
     });
 });
