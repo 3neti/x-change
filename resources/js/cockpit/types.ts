@@ -141,3 +141,38 @@ export type CockpitVoucherDetailAction = {
     disabled: boolean;
     reason: string;
 };
+
+export type CockpitDistributionChannel = {
+    key: string;
+    label: string;
+    status: string;
+    helper: string;
+};
+
+export type CockpitPrintTemplate = {
+    key: string;
+    label: string;
+    format: string;
+    helper: string;
+};
+
+export type CockpitShareAsset = {
+    key: string;
+    label: string;
+    value: string;
+    helper: string;
+};
+
+export type CockpitDistributionMetric = {
+    key: string;
+    label: string;
+    value: string;
+    helper: string;
+};
+
+export type CockpitDistributionAction = {
+    key: string;
+    label: string;
+    disabled: boolean;
+    reason: string;
+};

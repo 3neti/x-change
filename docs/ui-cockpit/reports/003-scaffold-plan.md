@@ -128,7 +128,7 @@ Implemented as read-only frontend placeholders only. No host API wiring, voucher
 
 ## Slice 6 — Distribution Workspace Foundation
 
-Status: recommended next.
+Status: complete.
 
 Goal: scaffold distribution operators around existing and prior-art sharing concepts.
 
@@ -143,6 +143,22 @@ Guardrails:
 
 - distribution analytics are operational, not marketing automation
 - no x-campaign behavior before Wave 5
+
+Implemented as read-only frontend placeholders only. No host API wiring, campaign behavior, distribution dispatch, feedback delivery, voucher mutation, execution, journal writes, provider calls, or money movement were added in Slice 6.
+
+## Slice 7 — Planning Checkpoint
+
+Status: requires explicit approval.
+
+The initial scaffold plan is complete through the Distribution Workspace foundation. Define the next Cockpit slice before implementation so the workstream does not invent domain behavior or prematurely wire APIs.
+
+Candidate directions:
+
+- route/API wiring plan for existing read-only shell pages
+- operator authorization/redaction model
+- read-model contract baselines for execution, journal, action, and feedback facts
+- mobile/PWA shell refinement
+- exception/operations workspace foundation
 
 ## Verification Plan
 
