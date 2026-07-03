@@ -32,17 +32,17 @@ This Compass is the program-level memory. Future workstream compasses should be 
 
 ## Current Position
 
-Current wave: Wave 3 — x-feedback  
-Current status: x-feedback Phase 18 In-App Notification Baseline complete
-Last updated: 2026-07-01
+Current wave: Wave 4 — x-change Cockpit
+Current status: Cockpit Slice 5 Voucher Detail Foundation complete
+Last updated: 2026-07-03
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
 | 1 | Execution Engine | Kernel / runtime | Completed through Slice 9 scaffold | [execution-engine/EXECUTION_ENGINE_COMPASS.md](execution-engine/EXECUTION_ENGINE_COMPASS.md) |
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
-| 3 | x-feedback | Notification / communication layer | Phase 18 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Not started | Pending |
+| 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
+| 4 | x-change Cockpit | Operator shell | Slice 5 complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Not started | Pending |
 
 ## Package Map
@@ -725,6 +725,7 @@ ExecutionDriverContract
 - x-change Cockpit Slice 2 adds read-only dashboard foundation widgets for liquidity, balance cards, redemption pipeline, risk/expiry, and recent activity without backend integration or domain side effects.
 - x-change Cockpit Slice 3 adds a disabled/read-only Quick Generate foundation with template selector, runtime input placeholders, pricing/funding summary placeholders, and generate-action placeholder without issuance or money movement.
 - x-change Cockpit Slice 4 adds a read-only Pay Code Explorer foundation with search, filter, results-table, and disabled row-action placeholders without host queries or domain mutations.
+- x-change Cockpit Slice 5 adds a read-only Voucher Detail foundation with overview, timeline, evidence, distribution, audit, and disabled operator-action placeholders without voucher mutation, execution, journal writes, feedback delivery, provider calls, or money movement.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -738,11 +739,11 @@ Continue Wave 4 — x-change Cockpit with the next authorized slice.
 Recommended actions:
 
 1. Request approval before proceeding to another slice.
-2. Completed slice: Cockpit Slice 4 — Pay Code Explorer Foundation.
+2. Completed slice: Cockpit Slice 5 — Voucher Detail Foundation.
 3. Read the Cockpit compass before continuing: `packages/x-change/docs/ui-cockpit/COMPASS.md`.
-4. Recommended next slice: Cockpit Slice 5 — Voucher Detail Foundation.
-5. Slice 5 should add overview, timeline, evidence, distribution, and audit tab placeholders.
-6. Do not add voucher mutation, real execution, journal writes, action execution, feedback delivery, campaign, provider, or money-movement behavior in the Voucher Detail foundation slice.
+4. Recommended next slice: Cockpit Slice 6 — Distribution Workspace Foundation.
+5. Slice 6 should add digital distribution, print template, share/QR, and operational analytics placeholders.
+6. Do not add campaign behavior, distribution dispatch, voucher mutation, real execution, journal writes, action execution, feedback delivery, provider, or money-movement behavior in the Distribution Workspace foundation slice.
 7. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
 ## x-journal Initial Intent

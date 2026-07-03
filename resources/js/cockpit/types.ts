@@ -99,3 +99,45 @@ export type CockpitPayCodeRowAction = {
     reason: string;
 };
 
+export type CockpitVoucherOverviewItem = {
+    key: string;
+    label: string;
+    value: string;
+    helper?: string;
+};
+
+export type CockpitVoucherTimelineItem = {
+    id: string;
+    label: string;
+    description: string;
+    timestamp: string;
+    source: 'execution' | 'journal' | 'feedback' | 'system';
+};
+
+export type CockpitVoucherEvidenceItem = {
+    id: string;
+    label: string;
+    status: string;
+    helper: string;
+};
+
+export type CockpitVoucherDistributionItem = {
+    id: string;
+    channel: string;
+    status: string;
+    helper: string;
+};
+
+export type CockpitVoucherAuditItem = {
+    id: string;
+    label: string;
+    status: string;
+    helper: string;
+};
+
+export type CockpitVoucherDetailAction = {
+    key: string;
+    label: string;
+    disabled: boolean;
+    reason: string;
+};

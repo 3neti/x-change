@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Slice 4 — Pay Code Explorer Foundation  
-Status: Complete  
+Current slice: Slice 5 — Voucher Detail Foundation
+Status: Complete
 Last updated: 2026-07-03
 
 ## Completed
@@ -54,6 +54,15 @@ Last updated: 2026-07-03
   - `resources/js/cockpit/components/CockpitPayCodeResultsTable.vue`
   - `resources/js/cockpit/pages/PayCodeExplorer.vue`
 - Added Slice 4 frontend coverage for search, filters, read-only result rows, disabled row actions, active navigation, and no-side-effect boundaries.
+- Completed Slice 5 Voucher Detail Foundation:
+  - `resources/js/cockpit/voucherDetailDefaults.ts`
+  - `resources/js/cockpit/components/CockpitVoucherOverviewPanel.vue`
+  - `resources/js/cockpit/components/CockpitVoucherTimelinePanel.vue`
+  - `resources/js/cockpit/components/CockpitVoucherEvidencePanel.vue`
+  - `resources/js/cockpit/components/CockpitVoucherDistributionPanel.vue`
+  - `resources/js/cockpit/components/CockpitVoucherAuditPanel.vue`
+  - `resources/js/cockpit/pages/VoucherDetail.vue`
+- Added Slice 5 frontend coverage for overview, timeline, evidence, distribution, audit, disabled operator actions, active Pay Codes navigation, and no-side-effect boundaries.
 
 ## In Progress
 
@@ -61,16 +70,15 @@ No implementation slice is in progress.
 
 ## Next
 
-Recommended next slice: Slice 5 — Voucher Detail foundation.
+Recommended next slice: Slice 6 — Distribution Workspace Foundation.
 
 Scope should remain foundation-only:
 
-- overview placeholder
-- timeline placeholder
-- evidence tab placeholder
-- distribution tab placeholder
-- audit tab placeholder
-- no voucher mutation, execution, journal writes, or provider calls
+- digital distribution placeholder
+- print template placeholder
+- share/QR placeholder
+- operational analytics placeholder
+- no campaign behavior, distribution dispatch, feedback delivery, voucher mutation, execution, journal writes, or provider calls
 - Vitest coverage for rendering and no side effects
 - preserve all existing Claim UI tests
 
@@ -99,6 +107,7 @@ Scope should remain foundation-only:
 - Slice 2 keeps dashboard data as supplied read-model placeholders only. It does not fetch wallet/provider data, write journal entries, resolve actions, send feedback, call providers, or move money.
 - Slice 3 keeps Quick Generate as a disabled/read-only issuance shell. It does not submit forms, generate vouchers, calculate pricing, reserve funds, call providers, write journal entries, send feedback, or move money.
 - Slice 4 keeps Pay Code Explorer as a read-only exploration shell. It does not query host APIs, mutate vouchers, execute drivers, approve claims, write journal entries, send feedback, call providers, or move money.
+- Slice 5 keeps Voucher Detail as a read-only single-voucher shell. It does not mutate vouchers, execute drivers, write journal entries, send feedback, call providers, or move money.
 
 ## Open Questions
 
@@ -127,3 +136,5 @@ Scope should remain foundation-only:
 - Slice 3 full frontend result: `64 passed, 398 tests`.
 - Slice 4 focused frontend result: `6 passed, 21 tests`.
 - Slice 4 full frontend result: `65 passed, 402 tests`.
+- Slice 5 focused frontend result: `7 passed, 26 tests`.
+- Slice 5 full frontend result: `66 passed, 407 tests`.

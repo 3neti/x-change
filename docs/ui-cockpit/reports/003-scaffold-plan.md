@@ -105,7 +105,7 @@ Guardrails:
 
 ## Slice 5 — Voucher Detail Foundation
 
-Status: recommended next.
+Status: complete.
 
 Goal: display a single Pay Code/Voucher operator view.
 
@@ -124,7 +124,11 @@ Sources:
 - x-feedback delivery read models
 - x-action CTA bundles
 
+Implemented as read-only frontend placeholders only. No host API wiring, voucher mutation, execution, journal writes, action execution, feedback delivery, provider calls, or money movement were added in Slice 5.
+
 ## Slice 6 — Distribution Workspace Foundation
+
+Status: recommended next.
 
 Goal: scaffold distribution operators around existing and prior-art sharing concepts.
 
