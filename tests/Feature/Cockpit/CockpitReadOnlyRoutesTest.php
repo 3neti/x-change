@@ -417,3 +417,17 @@ it('documents the quick generate mutation authorization decision point before mu
         ->and($report)->toContain('No Cockpit mutation route is authorized in Slice 26')
         ->and($report)->toContain('No mutation endpoints, voucher issuance, request validation execution, payload persistence, provider call, wallet access, journal write, action run, feedback delivery, campaign behavior, or money movement is introduced in Slice 26');
 });
+
+it('documents the cross package read model integration baseline before mutations', function () {
+    $report = file_get_contents(__DIR__.'/../../../docs/ui-cockpit/reports/014-cross-package-read-model-integration-baseline.md');
+
+    expect($report)->toBeString()
+        ->and($report)->toContain('Cockpit Slice 27')
+        ->and($report)->toContain('x-journal evidence summaries')
+        ->and($report)->toContain('x-action safe CTA/action summaries')
+        ->and($report)->toContain('x-feedback communication delivery summaries')
+        ->and($report)->toContain('not hard Composer dependencies')
+        ->and($report)->toContain('do not write journal entries')
+        ->and($report)->toContain('do not execute or authorize actions')
+        ->and($report)->toContain('do not send, retry, or call providers');
+});

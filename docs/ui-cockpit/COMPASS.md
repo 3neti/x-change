@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Slice 26 — Quick Generate Mutation Authorization Decision Point
+Current slice: Slice 27 — Cross-Package Read Model Integration Baseline
 Status: Complete
 Last updated: 2026-07-04
 
@@ -380,6 +380,17 @@ Last updated: 2026-07-04
 - Added read-only mutation authorization decision facts to `quick_generate_read_model`.
 - Added a visible mutation authorization decision point panel to Quick Generate.
 - Preserved disabled generation behavior. The mutation authorization decision is `not_authorized`; any mutation route requires explicit human approval and a smaller mutation contract before implementation.
+- Completed Slice 27 Cross-Package Read Model Integration Baseline:
+  - `src/Services/Cockpit/OptionalCockpitIntegrationReadModels.php`
+  - `src/Services/Cockpit/VoucherLifecycleCockpitReadModelProvider.php`
+  - `config/x-change.php`
+  - `docs/ui-cockpit/reports/014-cross-package-read-model-integration-baseline.md`
+  - `tests/Unit/Cockpit/CockpitReadModelBaselineTest.php`
+- Added optional journal/action/feedback summaries into voucher-scoped Cockpit read-model bundles.
+- Added `x-change.cockpit.integrations.*` config seams for optional service IDs.
+- Kept x-journal, x-action, and x-feedback as optional integrations rather than hard Composer dependencies.
+- Optional integration construction failures degrade to unavailable read-model summaries instead of breaking Cockpit page hydration.
+- Preserved read-only behavior: no journal writes, action execution, feedback delivery, provider calls, wallet access, voucher mutation, retry execution, or money movement.
 
 ## In Progress
 
@@ -465,6 +476,7 @@ Current boundary:
 - Slice 24 adds `CockpitQuickGenerateMutationHandoffPlanData` and `CockpitQuickGenerateMutationHandoffPlanStepData` as read-only handoff facts in `quick_generate_read_model`. Generation remains disabled because action handoff, controller handoff, preconditions, side-effect boundary confirmation, and operator response contracts remain blocked.
 - Slice 25 adds `CockpitQuickGenerateMutationPreconditionsReviewData` and `CockpitQuickGenerateMutationPreconditionsReviewItemData` as read-only review facts in `quick_generate_read_model`. Generation remains disabled and the recommendation remains `remain-read-only`.
 - Slice 26 adds `CockpitQuickGenerateMutationAuthorizationDecisionData` as a read-only decision fact in `quick_generate_read_model`. Generation remains disabled, the decision is `not_authorized`, and mutation-route scaffolding requires explicit human approval plus a smaller mutation contract.
+- Slice 27 introduces optional read-only cross-package read-model adapters for x-journal, x-action, and x-feedback. These adapters are optional service-ID seams, not hard Composer dependencies, and failures resolve to unavailable summaries with no exception message exposure.
 
 ## Open Questions
 
@@ -585,3 +597,8 @@ Current boundary:
 - Slice 26 focused PHP Cockpit read-model/route result: `41 passed, 415 assertions`.
 - Slice 26 full frontend result: `72 passed, 444 tests`.
 - Slice 26 full package Pest result: `1015 passed, 5 skipped, 5419 assertions`.
+- Slice 27 focused Cockpit read-model result: `16 passed, 116 assertions`.
+- Slice 27 focused PHP Cockpit route/documentation result: `29 passed, 361 assertions`.
+- Slice 27 modified PHP syntax checks passed.
+- Slice 27 full package Pest result: `1019 passed, 5 skipped, 5481 assertions`.
+- Slice 27 formatter note: `vendor/bin/pint --dirty --format agent` is unavailable because `vendor/bin/pint` does not exist in this package.

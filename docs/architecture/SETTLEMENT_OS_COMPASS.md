@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Wave 4 — x-change Cockpit
-Current status: Cockpit Slice 26 Quick Generate Mutation Authorization Decision Point complete
+Current status: Cockpit Slice 27 Cross-Package Read Model Integration Baseline complete
 Last updated: 2026-07-04
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-04
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Slice 26 complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Slice 27 complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Not started | Pending |
 
 ## Package Map
@@ -738,6 +738,7 @@ ExecutionDriverContract
 - x-change Cockpit Slice 24 adds a read-only Quick Generate mutation handoff boundary plan and visible handoff panel without registering mutation routes, calling `GeneratePayCode`, calling `GeneratePayCodeController`, submitting payloads, generating vouchers, calling providers, accessing wallets, writing journal entries, running actions, sending feedback, or moving money.
 - x-change Cockpit Slice 25 adds a read-only Quick Generate mutation preconditions review and visible review panel without approving mutation wiring, registering mutation routes, validating requests, issuing vouchers, calling providers, accessing wallets, writing journal entries, running actions, sending feedback, or moving money.
 - x-change Cockpit Slice 26 adds a read-only Quick Generate mutation authorization decision point and visible decision panel. The decision is `not_authorized`; it does not approve mutation wiring, register mutation routes, validate requests, persist payloads, issue vouchers, call providers, access wallets, write journal entries, run actions, send feedback, create campaigns, or move money.
+- x-change Cockpit Slice 27 adds optional read-only cross-package read-model adapters for x-journal evidence summaries, x-action safe CTA summaries, and x-feedback communication delivery summaries. The adapters are optional service-ID seams, not hard Composer dependencies, and degrade safely when unavailable or throwing. They do not write journal entries, execute actions, send feedback, retry deliveries, call providers, mutate vouchers, access wallets, or move money.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -751,7 +752,7 @@ Choose whether to close the current read-only Wave 4 Cockpit foundation and proc
 Recommended actions:
 
 1. Request approval before proceeding to another slice or workstream.
-2. Completed slice: Cockpit Slice 26 — Quick Generate Mutation Authorization Decision Point.
+2. Completed slice: Cockpit Slice 27 — Cross-Package Read Model Integration Baseline.
 3. Read the Cockpit compass before continuing: `packages/x-change/docs/ui-cockpit/COMPASS.md`.
 4. Mutation route scaffolding is not authorized.
 5. If mutation is approved later, define a smaller Quick Generate mutation contract before implementation.

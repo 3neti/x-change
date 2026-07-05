@@ -46,6 +46,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
     public function __construct(
         private readonly VoucherLifecycleServiceContract $vouchers,
         private readonly NullCockpitReadModelProvider $fallback = new NullCockpitReadModelProvider,
+        private readonly ?OptionalCockpitIntegrationReadModels $integrations = null,
     ) {}
 
     public function forVoucher(CockpitReadModelQueryData $query): CockpitReadModelBundleData
@@ -107,9 +108,9 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 authorized: true,
             ),
             execution: $fallback->execution,
-            journal: $fallback->journal,
-            actions: $fallback->actions,
-            feedback: $fallback->feedback,
+            journal: $this->integrations?->journal($query) ?? $fallback->journal,
+            actions: $this->integrations?->actions($query) ?? $fallback->actions,
+            feedback: $this->integrations?->feedback($query) ?? $fallback->feedback,
         );
     }
 

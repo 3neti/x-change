@@ -113,6 +113,20 @@ return [
         'logo_dark' => env('XCHANGE_LOGO_DARK', '/vendor/x-change/images/logo-silver.png'),
     ],
 
+    'cockpit' => [
+        'integrations' => [
+            'journal' => [
+                'reader' => env('XCHANGE_COCKPIT_JOURNAL_READER'),
+            ],
+            'action' => [
+                'composer' => env('XCHANGE_COCKPIT_ACTION_COMPOSER'),
+            ],
+            'feedback' => [
+                'console' => env('XCHANGE_COCKPIT_FEEDBACK_CONSOLE'),
+            ],
+        ],
+    ],
+
     'terminology' => [
         'voucher' => env('XCHANGE_TERM_VOUCHER', 'Pay Code'),
         'voucher_code' => env('XCHANGE_TERM_VOUCHER_CODE', 'Pay Code'),

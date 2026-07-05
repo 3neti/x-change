@@ -7,7 +7,9 @@ use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
 use LBHurtado\XChange\Exceptions\VoucherNotFound;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitReadModelProvider;
+use LBHurtado\XChange\Services\Cockpit\OptionalCockpitIntegrationReadModels;
 use LBHurtado\XChange\Services\Cockpit\VoucherLifecycleCockpitReadModelProvider;
+use LBHurtado\XChange\Support\Cockpit\DefaultCockpitRedactor;
 
 it('builds a cockpit read model query without implying side effects', function () {
     $query = new CockpitReadModelQueryData(
@@ -248,6 +250,280 @@ it('falls back to the not wired bundle when voucher lifecycle lookup misses', fu
         ->and($bundle->journal->status)->toBe('not_wired')
         ->and($bundle->actions->status)->toBe('not_wired')
         ->and($bundle->feedback->status)->toBe('not_wired');
+});
+
+it('hydrates optional journal action and feedback read models when integration services are bound', function () {
+    config()->set('x-change.cockpit.integrations.journal.reader', 'fake.cockpit.journal');
+    config()->set('x-change.cockpit.integrations.action.composer', 'fake.cockpit.actions');
+    config()->set('x-change.cockpit.integrations.feedback.console', 'fake.cockpit.feedback');
+
+    app()->instance('fake.cockpit.journal', new class
+    {
+        public function read(mixed $query): array
+        {
+            return [
+                'entries' => [
+                    [
+                        'reference_number' => 'ERN-000000001',
+                        'event_type' => 'execution.completed',
+                        'payload' => [
+                            'status' => 'completed',
+                            'secret' => 'journal-secret',
+                        ],
+                    ],
+                ],
+                'metadata' => [
+                    'pagination' => [
+                        'limit_semantics' => 'visible_entries',
+                    ],
+                ],
+                'query_type' => is_array($query) ? 'array' : $query::class,
+            ];
+        }
+    });
+
+    app()->instance('fake.cockpit.actions', new class
+    {
+        public function compose(
+            string $eventOrState,
+            mixed $subject,
+            mixed $context,
+            ?string $correlationId = null,
+            ?string $causationId = null,
+            bool $includeDiagnostics = false,
+        ): array {
+            return [
+                'event_or_state' => $eventOrState,
+                'actions' => [
+                    [
+                        'action' => ['key' => 'voucher.inspect'],
+                        'run' => [
+                            'run_id' => 'presentation-run-1',
+                            'secret' => 'action-secret',
+                        ],
+                        'meta' => [
+                            'run_semantics' => [
+                                'presentation_run' => true,
+                                'durable' => false,
+                            ],
+                        ],
+                    ],
+                ],
+                'diagnostics' => [
+                    [
+                        'provider' => 'Internal\\Provider',
+                        'details' => ['secret' => 'raw-diagnostic-secret'],
+                    ],
+                ],
+                'meta' => [
+                    'safe_diagnostics' => [
+                        [
+                            'action_key' => 'voucher.inspect',
+                            'status' => 'included',
+                            'reason' => 'included',
+                        ],
+                    ],
+                ],
+            ];
+        }
+    });
+
+    app()->instance('fake.cockpit.feedback', new class
+    {
+        public function history(array $filters = []): array
+        {
+            return [
+                'total' => 1,
+                'records' => [
+                    [
+                        'delivery_id' => 'delivery-1',
+                        'status' => 'delivered',
+                        'channel' => 'sms',
+                        'provider_response' => ['token' => 'feedback-secret'],
+                    ],
+                ],
+                'filters' => $filters,
+            ];
+        }
+    });
+
+    $lifecycle = new class implements VoucherLifecycleServiceContract
+    {
+        public function list(array $filters = []): array
+        {
+            return [];
+        }
+
+        public function show(string $voucher): mixed
+        {
+            return null;
+        }
+
+        public function showByCode(string $code): mixed
+        {
+            return [
+                'code' => $code,
+                'status' => 'issued',
+                'display_status' => 'ready',
+            ];
+        }
+
+        public function status(string $voucher): mixed
+        {
+            return null;
+        }
+
+        public function cancel(string $voucher, array $payload = []): mixed
+        {
+            return [];
+        }
+    };
+
+    $bundle = (new VoucherLifecycleCockpitReadModelProvider(
+        vouchers: $lifecycle,
+        integrations: new OptionalCockpitIntegrationReadModels(app(), new DefaultCockpitRedactor),
+    ))->forVoucher(new CockpitReadModelQueryData(
+        code: 'PC-READY-001',
+        operatorId: 'operator-1',
+        include: ['voucher', 'journal', 'actions', 'feedback'],
+        correlationId: 'corr-1',
+    ));
+
+    expect($bundle->journal->status)->toBe('available')
+        ->and($bundle->journal->authorized)->toBeTrue()
+        ->and($bundle->journal->entries[0]['payload']['secret'])->toBe('[redacted]')
+        ->and($bundle->journal->redactions['source'])->toBe('x-journal')
+        ->and($bundle->journal->redactions['evidence_only'])->toBeTrue()
+        ->and($bundle->journal->redactions['writes_journal_entries'])->toBeFalse()
+        ->and($bundle->actions->status)->toBe('available')
+        ->and($bundle->actions->actions[0]['run']['secret'])->toBe('[redacted]')
+        ->and($bundle->actions->diagnostics)->toBe([[
+            'action_key' => 'voucher.inspect',
+            'status' => 'included',
+            'reason' => 'included',
+        ]])
+        ->and($bundle->actions->redactions['presentation_only'])->toBeTrue()
+        ->and($bundle->actions->redactions['executes_action'])->toBeFalse()
+        ->and($bundle->actions->redactions['raw_diagnostics_exposed'])->toBeFalse()
+        ->and($bundle->feedback->status)->toBe('available')
+        ->and($bundle->feedback->deliveries[0]['provider_response'])->toBe('[redacted]')
+        ->and($bundle->feedback->redactions['source'])->toBe('x-feedback')
+        ->and($bundle->feedback->redactions['sends_feedback'])->toBeFalse()
+        ->and($bundle->feedback->redactions['calls_providers'])->toBeFalse();
+});
+
+it('degrades optional cockpit integrations safely when services throw', function () {
+    config()->set('x-change.cockpit.integrations.journal.reader', 'fake.throwing.journal');
+    config()->set('x-change.cockpit.integrations.action.composer', 'fake.throwing.actions');
+    config()->set('x-change.cockpit.integrations.feedback.console', 'fake.throwing.feedback');
+
+    app()->instance('fake.throwing.journal', new class
+    {
+        public function read(mixed $query): array
+        {
+            throw new RuntimeException('journal secret details');
+        }
+    });
+
+    app()->instance('fake.throwing.actions', new class
+    {
+        public function compose(): array
+        {
+            throw new RuntimeException('action secret details');
+        }
+    });
+
+    app()->instance('fake.throwing.feedback', new class
+    {
+        public function history(array $filters = []): array
+        {
+            throw new RuntimeException('feedback secret details');
+        }
+    });
+
+    $integrations = new OptionalCockpitIntegrationReadModels(app(), new DefaultCockpitRedactor);
+    $query = new CockpitReadModelQueryData(code: 'PC-READY-001');
+
+    expect($integrations->journal($query)->toArray())->toMatchArray([
+        'status' => 'unavailable',
+        'authorized' => false,
+        'redactions' => [
+            'payloads' => 'not-loaded',
+            'source' => 'x-journal',
+            'reason' => 'read-model-unavailable',
+            'exception' => 'RuntimeException',
+            'exception_message_exposed' => false,
+        ],
+    ])
+        ->and($integrations->actions($query)->toArray())->toMatchArray([
+            'status' => 'unavailable',
+            'authorized' => false,
+            'redactions' => [
+                'payloads' => 'not-loaded',
+                'source' => 'x-action',
+                'reason' => 'read-model-unavailable',
+                'exception' => 'RuntimeException',
+                'exception_message_exposed' => false,
+            ],
+        ])
+        ->and($integrations->feedback($query)->toArray())->toMatchArray([
+            'status' => 'unavailable',
+            'authorized' => false,
+            'redactions' => [
+                'payloads' => 'not-loaded',
+                'source' => 'x-feedback',
+                'reason' => 'read-model-unavailable',
+                'exception' => 'RuntimeException',
+                'exception_message_exposed' => false,
+            ],
+        ]);
+});
+
+it('degrades optional cockpit integrations safely when service resolution fails', function () {
+    config()->set('x-change.cockpit.integrations.journal.reader', 'fake.unresolvable.journal');
+    config()->set('x-change.cockpit.integrations.action.composer', 'fake.unresolvable.actions');
+    config()->set('x-change.cockpit.integrations.feedback.console', 'fake.unresolvable.feedback');
+
+    app()->bind('fake.unresolvable.journal', fn (): never => throw new RuntimeException('journal construction secret'));
+    app()->bind('fake.unresolvable.actions', fn (): never => throw new RuntimeException('action construction secret'));
+    app()->bind('fake.unresolvable.feedback', fn (): never => throw new RuntimeException('feedback construction secret'));
+
+    $integrations = new OptionalCockpitIntegrationReadModels(app(), new DefaultCockpitRedactor);
+    $query = new CockpitReadModelQueryData(code: 'PC-READY-001');
+
+    expect($integrations->journal($query)->toArray())->toMatchArray([
+        'status' => 'unavailable',
+        'authorized' => false,
+        'redactions' => [
+            'payloads' => 'not-loaded',
+            'source' => 'x-journal',
+            'reason' => 'package-not-installed',
+            'exception' => null,
+            'exception_message_exposed' => false,
+        ],
+    ])
+        ->and($integrations->actions($query)->toArray())->toMatchArray([
+            'status' => 'unavailable',
+            'authorized' => false,
+            'redactions' => [
+                'payloads' => 'not-loaded',
+                'source' => 'x-action',
+                'reason' => 'package-not-installed',
+                'exception' => null,
+                'exception_message_exposed' => false,
+            ],
+        ])
+        ->and($integrations->feedback($query)->toArray())->toMatchArray([
+            'status' => 'unavailable',
+            'authorized' => false,
+            'redactions' => [
+                'payloads' => 'not-loaded',
+                'source' => 'x-feedback',
+                'reason' => 'package-not-installed',
+                'exception' => null,
+                'exception_message_exposed' => false,
+            ],
+        ]);
 });
 
 it('returns an empty not wired pay code list read model by default', function () {
