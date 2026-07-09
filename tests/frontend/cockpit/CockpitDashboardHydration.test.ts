@@ -49,6 +49,75 @@ const dashboardReadModel = {
     wallet: 'must-not-render',
 };
 
+const campaignReadModel = {
+    schema: 'x-change.cockpit.campaign-adoption.v1',
+    status: 'available',
+    authorized: true,
+    source: 'x-campaign',
+    surfaces: [
+        {
+            key: 'campaign_dashboard',
+            status: 'available',
+            enabled: true,
+            read_only: true,
+            reason: 'x-campaign-read-model-available',
+        },
+        {
+            key: 'attachment_operator_workspace',
+            status: 'available',
+            enabled: true,
+            read_only: true,
+            reason: 'x-campaign-read-model-available',
+        },
+    ],
+    facts: {
+        planning_key: 'campaign-plan-1',
+        execution_id: 'execution-1',
+        cards: {
+            campaign: {
+                name: 'Food Aid July',
+                recipient_count: 250,
+                secret: 'must-not-render',
+            },
+        },
+        panels: {
+            audience_import_workspace: {
+                status: 'ready',
+            },
+        },
+        actions: {
+            review_campaign: {
+                enabled: true,
+            },
+            generate_pay_codes: {
+                enabled: false,
+            },
+        },
+        metadata: {
+            token: 'must-not-render',
+        },
+    },
+    mutation: {
+        enabled: false,
+        status: 'blocked',
+        reason: 'campaign-mutations-not-authorized',
+    },
+    redactions: {
+        payloads: 'campaign-cockpit-summary-only',
+        routes_registered: false,
+        controllers_registered: false,
+        mutates_campaigns: false,
+        issues_pay_codes: false,
+        sends_feedback: false,
+        writes_journal: false,
+        moves_money: false,
+    },
+    provider_payload: 'must-not-render',
+    raw_payload: 'must-not-render',
+    wallet: 'must-not-render',
+    mutation_route: '/must-not-render',
+};
+
 describe('Cockpit dashboard read model hydration', () => {
     it('hydrates dashboard panels from sanitized dashboard read model props', () => {
         const wrapper = mount(CockpitDashboard, {
@@ -113,6 +182,85 @@ describe('Cockpit dashboard read model hydration', () => {
 
         expect(wrapper.text()).toContain('Pay Codes Visible');
         expect(wrapper.text()).toContain('PC-AWAITING-001');
+        expect(wrapper.text()).not.toContain('must-not-render');
+    });
+
+    it('hydrates read-only campaign cockpit presentation from campaign read model props', () => {
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                dashboard_read_model: dashboardReadModel,
+                campaign_read_model: campaignReadModel,
+            },
+        });
+
+        expect(wrapper.text()).toContain('Campaign Cockpit Adoption');
+        expect(wrapper.text()).toContain('Food Aid July');
+        expect(wrapper.text()).toContain('250 recipients');
+        expect(wrapper.text()).toContain('campaign-plan-1');
+        expect(wrapper.text()).toContain('execution-1');
+        expect(wrapper.text()).toContain('campaign_dashboard');
+        expect(wrapper.text()).toContain('attachment_operator_workspace');
+        expect(wrapper.text()).toContain('audience_import_workspace: ready');
+        expect(wrapper.text()).toContain('review_campaign: available');
+        expect(wrapper.text()).toContain('generate_pay_codes: blocked');
+        expect(wrapper.text()).toContain('campaign-mutations-not-authorized');
+        expect(wrapper.find('[data-testid="cockpit-campaign-adoption-panel"]').exists()).toBe(true);
+        expect(wrapper.findAll('[data-testid="cockpit-campaign-surface"]')).toHaveLength(2);
+    });
+
+    it('does not render unsafe campaign cockpit payload values or mutation affordances', () => {
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                dashboard_read_model: dashboardReadModel,
+                campaign_read_model: campaignReadModel,
+            },
+        });
+
+        expect(wrapper.text()).not.toContain('must-not-render');
+        expect(wrapper.text()).not.toContain('provider_payload');
+        expect(wrapper.text()).not.toContain('raw_payload');
+        expect(wrapper.text()).not.toContain('/must-not-render');
+        expect(wrapper.find('[data-testid="cockpit-campaign-mutation-button"]').exists()).toBe(false);
+    });
+
+    it('renders unavailable campaign cockpit presentation as read-only disabled state', () => {
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                campaign_read_model: {
+                    schema: 'x-change.cockpit.campaign-adoption.v1',
+                    status: 'unavailable',
+                    authorized: false,
+                    source: 'x-campaign',
+                    facts: [],
+                    mutation: {
+                        enabled: false,
+                        status: 'blocked',
+                        reason: 'campaign-mutations-not-authorized',
+                    },
+                    redactions: {
+                        payloads: 'not-loaded',
+                        reason: 'package-not-installed',
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Campaign Cockpit Adoption');
+        expect(wrapper.text()).toContain('Campaign read model unavailable');
+        expect(wrapper.text()).toContain('package-not-installed');
+        expect(wrapper.text()).toContain('Read-only boundary');
+    });
+
+    it('forwards campaign route adapter props into the cockpit dashboard page', () => {
+        const wrapper = mount(DashboardRouteAdapter, {
+            props: {
+                dashboard_read_model: dashboardReadModel,
+                campaign_read_model: campaignReadModel,
+            },
+        });
+
+        expect(wrapper.text()).toContain('Food Aid July');
+        expect(wrapper.text()).toContain('campaign-plan-1');
         expect(wrapper.text()).not.toContain('must-not-render');
     });
 });

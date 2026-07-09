@@ -76,6 +76,24 @@ export type CockpitCampaignReadModel = {
     [key: string]: unknown;
 };
 
+export type CockpitCampaignSurface = {
+    key: string;
+    status: string;
+    enabled: boolean;
+    read_only: boolean;
+    reason?: string;
+};
+
+export type CockpitCampaignPanelStatus = {
+    key: string;
+    status: string;
+};
+
+export type CockpitCampaignActionStatus = {
+    key: string;
+    status: 'available' | 'blocked';
+};
+
 export type CockpitDashboardPageProps = {
     dashboard_read_model?: CockpitDashboardReadModel;
     campaign_read_model?: CockpitCampaignReadModel;

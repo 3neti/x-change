@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import CockpitCampaignAdoptionPanel from '../components/CockpitCampaignAdoptionPanel.vue';
 import CockpitLiquidityHero from '../components/CockpitLiquidityHero.vue';
 import CockpitRecentActivityPanel from '../components/CockpitRecentActivityPanel.vue';
 import CockpitRedemptionPipeline from '../components/CockpitRedemptionPipeline.vue';
@@ -180,6 +181,8 @@ function sourceValue(value: unknown): CockpitActivityItem['source'] | undefined 
             </div>
 
             <CockpitLiquidityHero :metrics="metrics" />
+
+            <CockpitCampaignAdoptionPanel :read-model="props.campaign_read_model" />
 
             <div class="grid gap-4 xl:grid-cols-3">
                 <CockpitRedemptionPipeline
