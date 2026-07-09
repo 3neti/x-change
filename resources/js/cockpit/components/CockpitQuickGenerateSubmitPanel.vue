@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import type {
     CockpitQuickGenerateDraftContract,
@@ -26,6 +27,7 @@ const purpose = ref(stringValue(props.draftContract?.purpose) ?? '');
 const processing = ref(false);
 const lastStatus = ref('ready');
 const lastMessage = ref('Submit will call the existing x-change issuance handoff route.');
+const lastResponse = ref<Record<string, unknown> | null>(null);
 
 const routeUrl = computed<string | null>(() => stringValue(props.mutationContract?.route_url));
 const routeName = computed<string>(() => stringValue(props.mutationContract?.route) ?? 'not-loaded');
@@ -43,6 +45,18 @@ const canSubmit = computed<boolean>(() => {
     return props.mutationContract?.runtime_enabled === true
         && routeUrl.value !== null
         && allowedMethods.value.includes('POST');
+});
+
+const resultCode = computed<string | null>(() => {
+    return stringValue(dataGet(lastResponse.value, ['result', 'code']));
+});
+
+const cockpitDetailUrl = computed<string | null>(() => {
+    return stringValue(dataGet(lastResponse.value, ['result', 'links', 'cockpit_detail']));
+});
+
+const canRefreshReadModel = computed<boolean>(() => {
+    return lastResponse.value !== null && !processing.value;
 });
 
 async function submit(): Promise<void> {
@@ -87,6 +101,7 @@ async function submit(): Promise<void> {
         lastMessage.value = body.status === 'replayed'
             ? 'Idempotent replay returned the existing operator-safe result.'
             : 'Pay Code issued through the existing x-change issuance handoff.';
+        lastResponse.value = body;
         emit('submitSuccess', body);
     } catch (error) {
         const body = {
@@ -99,6 +114,17 @@ async function submit(): Promise<void> {
     } finally {
         processing.value = false;
     }
+}
+
+function refreshReadModel(): void {
+    if (!canRefreshReadModel.value) {
+        return;
+    }
+
+    router.reload({
+        only: ['quick_generate_read_model'],
+        preserveScroll: true,
+    });
 }
 
 function buildPayload(): Record<string, unknown> {
@@ -167,6 +193,16 @@ function stringValue(value: unknown): string | null {
     const normalized = String(value).trim();
 
     return normalized === '' ? null : normalized;
+}
+
+function dataGet(source: unknown, path: string[]): unknown {
+    return path.reduce<unknown>((value, key) => {
+        if (typeof value !== 'object' || value === null || !(key in value)) {
+            return null;
+        }
+
+        return (value as Record<string, unknown>)[key];
+    }, source);
 }
 </script>
 
@@ -270,5 +306,37 @@ function stringValue(value: unknown): string | null {
         <p class="mt-3 text-xs leading-5 text-slate-600 dark:text-slate-300">
             {{ lastMessage }}
         </p>
+
+        <div
+            v-if="lastResponse"
+            class="mt-4 rounded-xl border border-emerald-200 bg-white p-3 text-xs text-slate-700 dark:border-emerald-900 dark:bg-slate-950 dark:text-slate-300"
+            data-testid="cockpit-quick-generate-result-panel"
+        >
+            <p class="font-semibold text-slate-950 dark:text-slate-50">
+                Generated Pay Code: {{ resultCode ?? 'operator-safe result received' }}
+            </p>
+            <div class="mt-3 flex flex-wrap gap-2">
+                <a
+                    v-if="cockpitDetailUrl"
+                    :href="cockpitDetailUrl"
+                    class="rounded-lg bg-slate-950 px-3 py-2 font-semibold text-white dark:bg-slate-100 dark:text-slate-950"
+                    data-testid="cockpit-quick-generate-result-link"
+                >
+                    Open Cockpit detail
+                </a>
+                <button
+                    type="button"
+                    class="rounded-lg border border-slate-200 px-3 py-2 font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-800 dark:text-slate-200"
+                    data-testid="cockpit-quick-generate-refresh-button"
+                    :disabled="!canRefreshReadModel"
+                    @click="refreshReadModel"
+                >
+                    Refresh read model
+                </button>
+            </div>
+            <p class="mt-3 leading-5 text-slate-500 dark:text-slate-400">
+                No automatic redirect is performed. The operator chooses whether to refresh Cockpit data or open the generated Pay Code detail.
+            </p>
+        </div>
     </form>
 </template>

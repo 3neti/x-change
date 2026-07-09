@@ -566,6 +566,7 @@ it('hands quick generate mutation requests to the existing issuance action with 
         ->assertJsonPath('result.amount', 25)
         ->assertJsonPath('result.currency', 'PHP')
         ->assertJsonPath('result.links.redeem_path', '/r/PC-COCKPIT-001')
+        ->assertJsonPath('result.links.cockpit_detail', '/x/cockpit/pay-codes/PC-COCKPIT-001')
         ->assertJsonPath('redactions.payloads', 'operator-safe-generated-facts-only')
         ->assertJsonMissingPath('request_payload')
         ->assertJsonMissingPath('validated_payload')

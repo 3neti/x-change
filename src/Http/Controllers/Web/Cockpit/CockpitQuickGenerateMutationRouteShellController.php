@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Http\Controllers\Web\Cockpit;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Route;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Http\Requests\GeneratePayCodeRequest;
@@ -100,7 +101,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                 'cost' => 'excluded',
                 'raw_payload' => 'excluded',
             ],
-            'next_step' => 'Cockpit Mutation Wave 1E — UI Submit Enablement',
+            'next_step' => 'Draft next Cockpit mutation wave before adding more write behavior.',
         ];
     }
 
@@ -116,6 +117,9 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
             'links' => [
                 'redeem' => $result->links->redeem,
                 'redeem_path' => $result->links->redeem_path,
+                'cockpit_detail' => Route::has('x-change.cockpit.pay-codes.show')
+                    ? route('x-change.cockpit.pay-codes.show', ['code' => $result->code], false)
+                    : null,
             ],
         ];
     }

@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 1E — UI Submit Enablement
-Status: UI submit scaffolded; refresh and navigation remain deferred
+Current slice: Cockpit Mutation Wave 1F — Read Model Refresh / Navigation Closure
+Status: Manual post-submit refresh and generated Pay Code navigation scaffolded
 Last updated: 2026-07-09
 
 ## Completed
@@ -283,6 +283,12 @@ Last updated: 2026-07-09
   - Post-submit refresh, optimistic UI, Pay Code Explorer navigation, and Voucher Detail navigation remain deferred.
   - Cockpit still does not invent issuance, journal, action, feedback, campaign, provider, wallet, or money-movement behavior outside the existing issuance handoff.
   - Report: `reports/047-quick-generate-ui-submit-enablement.md`.
+- Cockpit Mutation Wave 1F — Read Model Refresh / Navigation Closure:
+  - The Cockpit issuance response now includes an operator-safe `result.links.cockpit_detail` URL for the generated Pay Code.
+  - The Quick Generate submit panel now shows the generated code, a Cockpit detail link, and a manual read-model refresh button after a successful response.
+  - Refresh uses Inertia `router.reload()` for `quick_generate_read_model` only and is never triggered automatically.
+  - No optimistic read-model mutation, automatic redirect, Pay Code Explorer mutation, Voucher Detail mutation, journal write, action execution, feedback delivery, campaign mutation, direct provider call, direct wallet access, or direct money movement was added.
+  - Report: `reports/048-quick-generate-read-model-refresh-navigation-closure.md`.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
   - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`
@@ -875,3 +881,10 @@ Current boundary:
 - Host Integration Slice 1I focused red baseline: `1 failed, 1 assertion`.
 - Host Integration Slice 1I focused real-adapter result: `1 passed, 31 assertions`.
 - Host Integration Slice 1I related Cockpit/architecture regression result: `29 passed, 325 assertions`.
+- Cockpit Mutation Wave 1F focused red baseline: frontend `2 failed, 17 passed`; route guard `1 failed`.
+- Cockpit Mutation Wave 1F focused frontend result: `1 passed, 19 tests`.
+- Cockpit Mutation Wave 1F focused route result: `1 passed, 51 assertions`.
+- Cockpit Mutation Wave 1F focused architecture result: `2 passed, 27 assertions`.
+- Cockpit Mutation Wave 1F formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
+- Cockpit Mutation Wave 1F frontend result: `74 passed, 472 tests`.
+- Cockpit Mutation Wave 1F full package Pest result: `1085 passed, 5 skipped, 6439 assertions`.

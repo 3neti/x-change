@@ -1,4 +1,5 @@
 import { mount } from '@vue/test-utils';
+import { router } from '@inertiajs/vue3';
 import { describe, expect, it, vi } from 'vitest';
 import CockpitGenerateActionPanel from '../../../resources/js/cockpit/components/CockpitGenerateActionPanel.vue';
 import CockpitIssuanceBoundaryPanel from '../../../resources/js/cockpit/components/CockpitIssuanceBoundaryPanel.vue';
@@ -21,6 +22,12 @@ import {
     cockpitQuickGenerateTemplates,
     cockpitRuntimeInputs,
 } from '../../../resources/js/cockpit/quickGenerateDefaults';
+
+vi.mock('@inertiajs/vue3', () => ({
+    router: {
+        reload: vi.fn(),
+    },
+}));
 
 describe('Cockpit Quick Generate foundation', () => {
     it('renders template selector placeholders as institutional products', () => {
@@ -143,6 +150,9 @@ describe('Cockpit Quick Generate foundation', () => {
                 status: 'issued',
                 result: {
                     code: 'PC-UI-001',
+                    links: {
+                        cockpit_detail: '/x/cockpit/pay-codes/PC-UI-001',
+                    },
                 },
             }),
         });
@@ -175,6 +185,9 @@ describe('Cockpit Quick Generate foundation', () => {
         await wrapper.find('[data-testid="cockpit-quick-generate-submit-recipient"]').setValue('09173011987');
         await wrapper.find('[data-testid="cockpit-quick-generate-submit-purpose"]').setValue('Operator test issuance');
         await wrapper.find('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
+        await Promise.resolve();
+        await Promise.resolve();
+        await wrapper.vm.$nextTick();
 
         expect(fetchMock).toHaveBeenCalledTimes(1);
 
@@ -204,6 +217,56 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(JSON.stringify(payload)).not.toContain('wallet');
         expect(JSON.stringify(payload)).not.toContain('provider_payload');
         expect(wrapper.emitted('submitSuccess')).toHaveLength(1);
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-result-link"]').attributes('href')).toBe('/x/cockpit/pay-codes/PC-UI-001');
+
+        vi.unstubAllGlobals();
+    });
+
+    it('refreshes the quick generate read model only when the operator clicks refresh after success', async () => {
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: true,
+            json: vi.fn().mockResolvedValue({
+                status: 'issued',
+                result: {
+                    code: 'PC-UI-REFRESH',
+                    links: {
+                        cockpit_detail: '/x/cockpit/pay-codes/PC-UI-REFRESH',
+                    },
+                },
+            }),
+        });
+
+        vi.stubGlobal('fetch', fetchMock);
+        vi.stubGlobal('crypto', {
+            randomUUID: () => 'cockpit-ui-idempotency-refresh',
+        });
+        vi.mocked(router.reload).mockClear();
+
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                mutationContract: {
+                    runtime_enabled: true,
+                    route: 'x-change.cockpit.quick-generate.store',
+                    route_url: '/x/cockpit/quick-generate',
+                    allowed_methods: ['POST'],
+                },
+            },
+        });
+
+        await wrapper.find('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
+        await Promise.resolve();
+        await Promise.resolve();
+        await wrapper.vm.$nextTick();
+
+        expect(router.reload).not.toHaveBeenCalled();
+
+        await wrapper.find('[data-testid="cockpit-quick-generate-refresh-button"]').trigger('click');
+
+        expect(router.reload).toHaveBeenCalledWith({
+            only: ['quick_generate_read_model'],
+            preserveScroll: true,
+        });
 
         vi.unstubAllGlobals();
     });
