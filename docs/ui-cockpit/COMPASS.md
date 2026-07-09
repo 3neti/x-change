@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Host Validation Checkpoint 4 — Browser Log Preflight Record
-Status: Browser-log preflight recorded; human visual browser confirmation still pending
+Current slice: Host Validation Checkpoint 5 — Human Visual Confirmation Handoff Packet
+Status: Handoff scaffolded; human visual browser confirmation still pending
 Last updated: 2026-07-09
 
 ## Completed
@@ -208,6 +208,14 @@ Last updated: 2026-07-09
   - Human visual browser confirmation remains pending.
   - No browser automation dependencies, browser snapshots, routes, mutation endpoints, lifecycle scenario execution, claim submission, provider calls, journal writes, action execution, feedback delivery, wallet access, or money movement were added.
   - Report: `reports/036-browser-log-preflight-record.md`.
+- Host Validation Checkpoint 5 — Human Visual Confirmation Handoff Packet:
+  - Added the exact pass/fail/blocked handoff form for completing human visual browser confirmation.
+  - The handoff covers Dashboard, Quick Generate, Pay Code Explorer, Voucher Detail, Distribution Workspace, and planned navigation.
+  - The handoff defines prerequisites, required evidence, pass criteria, blocked criteria, fail criteria, and after-completion updates.
+  - Human visual browser confirmation remains pending and is explicitly not claimed as complete.
+  - Do not proceed to mutation-capable Cockpit planning until the visual confirmation is pass or explicitly accepted as blocked.
+  - No browser automation dependencies, browser snapshots, routes, mutation endpoints, lifecycle scenario execution, claim submission, provider calls, journal writes, action execution, feedback delivery, wallet access, or money movement were added.
+  - Report: `reports/037-human-visual-confirmation-handoff.md`.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
   - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`

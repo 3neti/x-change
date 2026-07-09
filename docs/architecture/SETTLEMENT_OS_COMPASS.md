@@ -827,6 +827,13 @@ ExecutionDriverContract
   - Recent `/x/balances` Vue warnings are documented as outside the Cockpit route and not treated as Cockpit validation failures.
   - Human visual browser confirmation remains pending.
   - No browser automation dependencies, browser snapshots, routes, mutation endpoints, lifecycle scenario execution, claim submission, provider calls, journal writes, action execution, feedback delivery, wallet access, or money movement were added.
+- x-change Host Validation Checkpoint 5 — Human Visual Confirmation Handoff Packet:
+  - Added the exact pass/fail/blocked handoff form for completing human visual browser confirmation.
+  - The handoff covers Dashboard, Quick Generate, Pay Code Explorer, Voucher Detail, Distribution Workspace, and planned navigation.
+  - The handoff defines prerequisites, required evidence, pass criteria, blocked criteria, fail criteria, and after-completion updates.
+  - Human visual browser confirmation remains pending and is explicitly not claimed as complete.
+  - Do not proceed to mutation-capable Cockpit planning until the visual confirmation is pass or explicitly accepted as blocked.
+  - No browser automation dependencies, browser snapshots, routes, mutation endpoints, lifecycle scenario execution, claim submission, provider calls, journal writes, action execution, feedback delivery, wallet access, or money movement were added.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -847,7 +854,7 @@ Completed through Host Integration Slice 2I.
 Recommended next checkpoint:
 
 ```text
-Complete human visual browser confirmation for read-only Cockpit
+Perform human visual browser confirmation and update the handoff packet
 ```
 
 Recommended actions:
@@ -858,10 +865,11 @@ Recommended actions:
 4. Compare the browser output against `reports/033-read-only-ui-ux-scenario-validation.md`.
 5. Record findings against `reports/034-manual-browser-ui-ux-pass-checklist.md`.
 6. Update `reports/035-manual-browser-ui-ux-pass-execution-record.md` with human visual results.
-7. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
-8. Mutation route scaffolding remains unauthorized.
-9. Do not add campaign mutation endpoints, request validation execution, payload persistence, Pay Code generation, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls, campaign state mutation, money movement, raw payload exposure, or wallet access unless explicitly approved.
-10. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
+7. Update `reports/037-human-visual-confirmation-handoff.md` with pass/fail/blocked findings.
+8. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
+9. Mutation route scaffolding remains unauthorized.
+10. Do not add campaign mutation endpoints, request validation execution, payload persistence, Pay Code generation, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls, campaign state mutation, money movement, raw payload exposure, or wallet access unless explicitly approved.
+11. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
 ## x-journal Initial Intent
 
