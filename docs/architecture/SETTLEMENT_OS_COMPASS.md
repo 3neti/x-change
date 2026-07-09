@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; x-change Host Integration Slice 1 read-only Campaign Cockpit adoption complete through Slice 1H
+Current status: Wave 5 — x-campaign complete through Phase 15; x-change Host Integration Slice 1 read-only Campaign Cockpit adoption complete through Slice 1I; Cockpit navigation hardening complete
 Last updated: 2026-07-09
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-09
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Slice 27 complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Slice 27 + navigation hardening complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -822,14 +822,23 @@ It must not enforce business policy or decide workflow outcomes.
 
 ## Open Questions
 
-- Should the new x-journal package be wired into the host app path repositories now, or only after Phase 1 core behavior exists?
-- Should the empty `x-journal_codex_instructions.md` remain empty, or should the addendum be promoted/merged into the primary instruction file?
-- Should Phase 1 use `spatie/laravel-data` DTOs immediately or plain immutable PHP data objects first?
-- What is the initial ERN format and uniqueness scope?
-- Should execution results be journaled by x-change adapters, voucher event listeners, or a future integration package?
-- What is the canonical correlation mapping from voucher `execution_id` to journal correlation/causation IDs?
-- Should provider callbacks and reconciliation events use the same journal entry schema as execution events?
+- What is the production correlation mapping from voucher `execution_id` to journal correlation/causation IDs once write-side journaling is authorized?
+- Should future execution results be journaled by x-change adapters, voucher event listeners, or a dedicated integration package once write-side journaling is authorized?
+- Which visibility-aware pagination strategy should production Cockpit use for x-journal retrieval when redaction/visibility filtering removes records after the retrieval window?
+- Which host API/read-model contracts should expose execution, journal, action, and feedback facts to Cockpit without leaking sensitive payloads?
+- How should static read-only Cockpit permissions evolve into real operator roles, policies, tenant scoping, and permission checks?
+- Should provider callback, reconciliation, and campaign events share the same journal entry schema in production, or use specialized event families mapped into a shared Cockpit read model?
 - How should program-level campaign events later connect to journal entries without making x-campaign depend on journal internals?
+- When mutation work becomes authorized, which Cockpit actions should remain presentation-only and which should hand off to existing x-change action/service/API paths?
+
+## Resolved Compass Questions
+
+- x-journal exists as an independent package at `/Users/rli/PhpstormProjects/packages/x-journal` and is complete through Phase 15 baseline.
+- x-journal uses `spatie/laravel-data` for DTOs.
+- x-journal is wired into x-change as a package-owned optional read-only dependency, not as host-app duplicate wiring.
+- x-action, x-feedback, and x-campaign are also wired into x-change as package-owned optional read-only dependencies.
+- Host apps should remain dumb and should not duplicate Cockpit integration wiring.
+- The empty `x-journal_codex_instructions.md` is historical planning context only; the current package compass and parity report carry current implementation guidance.
 
 ## Update Rules
 
