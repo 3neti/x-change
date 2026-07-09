@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Console\Commands;
 
 use Illuminate\Console\Command;
+use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
 
 class InstallXChangeCommand extends Command
 {
@@ -22,7 +23,7 @@ class InstallXChangeCommand extends Command
 
     protected $description = 'Install the X-Change package UI, assets, and run migrations';
 
-    public function handle(): int
+    public function handle(PublishedAssetDriftDetector $publishedAssets): int
     {
         $this->components->info('Installing X-Change...');
 
@@ -39,6 +40,10 @@ class InstallXChangeCommand extends Command
                 '--tag' => 'x-change-ui',
                 '--force' => $force,
             ]);
+        });
+
+        $this->components->task('Stamping Cockpit published asset warnings', function () use ($publishedAssets): void {
+            $publishedAssets->applyGeneratedHeaders();
         });
 
         $this->publishOnboardingAssets($force);

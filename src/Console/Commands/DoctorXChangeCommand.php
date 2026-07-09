@@ -8,31 +8,36 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Schema;
 use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Contracts\XChangeProviderTopologyResolverContract;
+use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
 use Throwable;
 
 class DoctorXChangeCommand extends Command
 {
     protected $signature = 'x-change:doctor
-        {--json : Output JSON}';
+        {--json : Output JSON}
+        {--assets : Inspect published x-change frontend asset drift only}';
 
     protected $description = 'Inspect X-Change turnkey installation readiness.';
 
     public function handle(
         XChangeProviderTopologyResolverContract $topologies,
         ProviderRuntimeSettingsResolverContract $settings,
+        PublishedAssetDriftDetector $publishedAssets,
     ): int {
-        $checks = [
-            $this->check('x-change config', config('x-change') !== [], 'config(x-change) is loaded'),
-            $this->check('onboarding package', class_exists('LBHurtado\\Onboarding\\OnboardingServiceProvider'), '3neti/onboarding is installed'),
-            $this->check('onboarding config', config('onboarding') !== [], 'config(onboarding) is loaded'),
-            $this->check('onboarding sessions table', $this->hasTable('onboarding_sessions'), 'onboarding_sessions table exists'),
-            $this->check('users.mobile column', $this->hasColumn('users', 'mobile'), 'users.mobile exists'),
-            $this->check('users.mobile_verified_at column', $this->hasColumn('users', 'mobile_verified_at'), 'users.mobile_verified_at exists'),
-            $this->check('users.identity_level column', $this->hasColumn('users', 'identity_level'), 'users.identity_level exists'),
-            $this->check('Fortify mobile username', config('fortify.username') === 'mobile', 'fortify.username is mobile'),
-            $this->providerTopologyCheck($topologies),
-            $this->providerRuntimeSettingsCheck($settings),
-        ];
+        $checks = $this->option('assets')
+            ? [$this->publishedAssetCheck($publishedAssets)]
+            : [
+                $this->check('x-change config', config('x-change') !== [], 'config(x-change) is loaded'),
+                $this->check('onboarding package', class_exists('LBHurtado\\Onboarding\\OnboardingServiceProvider'), '3neti/onboarding is installed'),
+                $this->check('onboarding config', config('onboarding') !== [], 'config(onboarding) is loaded'),
+                $this->check('onboarding sessions table', $this->hasTable('onboarding_sessions'), 'onboarding_sessions table exists'),
+                $this->check('users.mobile column', $this->hasColumn('users', 'mobile'), 'users.mobile exists'),
+                $this->check('users.mobile_verified_at column', $this->hasColumn('users', 'mobile_verified_at'), 'users.mobile_verified_at exists'),
+                $this->check('users.identity_level column', $this->hasColumn('users', 'identity_level'), 'users.identity_level exists'),
+                $this->check('Fortify mobile username', config('fortify.username') === 'mobile', 'fortify.username is mobile'),
+                $this->providerTopologyCheck($topologies),
+                $this->providerRuntimeSettingsCheck($settings),
+            ];
 
         if ($this->option('json')) {
             $this->line(json_encode([
@@ -58,6 +63,19 @@ class DoctorXChangeCommand extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
+     */
+    protected function publishedAssetCheck(PublishedAssetDriftDetector $publishedAssets): array
+    {
+        $result = $publishedAssets->inspect();
+
+        return $this->check($result['name'], $result['passed'], $result['message'], [
+            'summary' => $result['summary'],
+            'files' => $result['files'],
+        ]);
     }
 
     /**

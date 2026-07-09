@@ -4,12 +4,19 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 2 — Operator-visible Issuance Activity and Audit Handoff Plan
-Status: Plan drafted; Wave 2A read-model contract is the next recommended slice
-Last updated: 2026-07-09
+Current slice: Cockpit Published Asset Drift Guard
+Status: Guard implemented; package-owned Cockpit assets now have doctor drift detection and install-time published-copy warnings
+Last updated: 2026-07-10
 
 ## Completed
 
+- Completed Cockpit Published Asset Drift Guard:
+  - Added `PublishedAssetDriftDetector` to compare package Cockpit source assets with host-published mirrors.
+  - Added `x-change:doctor --assets --json` for stale/missing/extra published Cockpit asset reporting.
+  - Added install-time generated warning headers for Cockpit host-published assets after `x-change:install`.
+  - The guard strips generated headers before comparison so warnings do not create false drift.
+  - Current host Cockpit mirrors checked clean: 54 files, 0 stale, 0 missing, 0 extra.
+  - Report: `reports/050-cockpit-published-asset-drift-guard.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.

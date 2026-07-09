@@ -31,7 +31,7 @@ it('updates the overall Settlement OS compass with the next host integration sli
     expect($compass)->toContain('Current wave: Host Integration Readiness')
         ->and($compass)->toContain('Wave 5 — x-campaign complete through Phase 15')
         ->and($compass)->toContain('x-change Cockpit navigation hardening adds route-aware sidebar availability')
-        ->and($compass)->toContain('Slice 27 + navigation hardening complete')
+        ->and($compass)->toContain('published asset drift guard complete')
         ->and($compass)->toContain('x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption')
         ->and($compass)->toContain('Completed through Host Integration Slice 1I')
         ->and($compass)->toContain('host applications should remain dumb and should not duplicate Cockpit integration wiring')
