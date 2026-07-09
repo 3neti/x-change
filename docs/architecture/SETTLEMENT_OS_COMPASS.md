@@ -798,6 +798,11 @@ ExecutionDriverContract
   - Exception classes, exception messages, raw payloads, provider payloads, recipient addresses, action target URLs, non-durable run IDs, credentials, and internal routes remain hidden.
   - Payload policies and safe reasons remain visible.
   - No mutation routes, authorization policy execution, role/permission persistence, action execution, feedback delivery, feedback retry execution, journal writes, provider calls, voucher mutation, wallet access, or money movement were added.
+- x-change Host Integration Slice 2I — Read-Only Journal / Action / Feedback Cockpit Closure:
+  - The read-only Journal / Action / Feedback Cockpit hydration branch is closed through Slice 2I.
+  - Cockpit now consumes package-owned read-only facts from x-journal, x-action, and x-feedback on Voucher Detail, Dashboard, and Pay Code Explorer surfaces.
+  - UI/UX validation against real local scenarios is now the next practical checkpoint before a new implementation plan.
+  - No mutation routes, journal writes, action execution, workflow authorization, feedback delivery, feedback retry execution, provider calls, voucher mutation, campaign mutation, wallet access, money movement, or raw payload exposure were added.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -806,25 +811,26 @@ ExecutionDriverContract
 
 ## Next Recommended Workstream
 
-The first read-only host adoption branch is closed:
+The first two read-only host adoption branches are closed:
 
 ```text
 x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
+x-change Host Integration Slice 2 — Journal/action/feedback read-model hydration into Cockpit surfaces
 ```
 
-Completed through Host Integration Slice 1I.
+Completed through Host Integration Slice 2I.
 
-Recommended next branch:
+Recommended next checkpoint:
 
 ```text
-x-change Host Integration Slice 2 — Journal/action/feedback read-model hydration into Cockpit surfaces
+Read-only Cockpit UI/UX validation against real local scenarios
 ```
 
 Recommended actions:
 
 1. Read [INTEGRATION_READINESS_REPORT.md](INTEGRATION_READINESS_REPORT.md).
 2. Read the Cockpit compass before implementation: `packages/x-change/docs/ui-cockpit/COMPASS.md`.
-3. Read the x-campaign parity report before implementation: `/Users/rli/PhpstormProjects/packages/x-campaign/docs/PARITY_REPORT.md`.
+3. Exercise `/x/cockpit`, Voucher Detail, Pay Code Explorer, and Campaign Cockpit read-only surfaces in the host app.
 4. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
 5. Mutation route scaffolding remains unauthorized.
 6. Do not add campaign mutation endpoints, request validation execution, payload persistence, Pay Code generation, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls, campaign state mutation, money movement, raw payload exposure, or wallet access unless explicitly approved.

@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Host Integration Slice 2H — Authorization / Redaction Review
+Current slice: Host Integration Slice 2I — Read-Only Journal / Action / Feedback Cockpit Closure
 Status: Complete
 Last updated: 2026-07-09
 
@@ -175,6 +175,12 @@ Last updated: 2026-07-09
   - Payload policies and safe reasons remain visible.
   - No mutation routes, authorization policy execution, role/permission persistence, action execution, feedback delivery, feedback retry execution, journal writes, provider calls, voucher mutation, wallet access, or money movement were added.
   - Report: `reports/031-authorization-redaction-review.md`.
+- Completed Host Integration Slice 2I — Read-Only Journal / Action / Feedback Cockpit Closure:
+  - The read-only Journal / Action / Feedback Cockpit hydration branch is closed through Slice 2I.
+  - Cockpit now consumes package-owned read-only facts from x-journal, x-action, and x-feedback on Voucher Detail, Dashboard, and Pay Code Explorer surfaces.
+  - UI/UX validation against real local scenarios is now the next practical checkpoint before a new implementation plan.
+  - No mutation routes, journal writes, action execution, workflow authorization, feedback delivery, feedback retry execution, provider calls, voucher mutation, campaign mutation, wallet access, money movement, or raw payload exposure were added.
+  - Report: `reports/032-host-integration-slice-2-closure.md`.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
   - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`
