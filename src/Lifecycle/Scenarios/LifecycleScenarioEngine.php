@@ -32,6 +32,7 @@ final class LifecycleScenarioEngine
         private readonly WalletTransactionSnapshot $walletTransactions,
         private readonly Container $container,
         private readonly ProviderRuntimeSettingsResolverContract $settings,
+        private readonly LifecycleIntegrationReportBuilder $integrationReports,
     ) {}
 
     public function run(
@@ -45,7 +46,7 @@ final class LifecycleScenarioEngine
         try {
             $scenario = $this->scenarioRepository->findOrFail($scenarioKey);
         } catch (InvalidArgumentException $e) {
-            return new LifecycleScenarioEngineResult(
+            return $this->result(
                 exitCode: Command::FAILURE,
                 payload: [
                     'success' => false,
@@ -63,7 +64,7 @@ final class LifecycleScenarioEngine
         try {
             $resolvedProvider = $this->resolveProvider($options, $scenario, $output);
         } catch (InvalidArgumentException $e) {
-            return new LifecycleScenarioEngineResult(
+            return $this->result(
                 exitCode: Command::FAILURE,
                 payload: [
                     'success' => false,
@@ -76,7 +77,7 @@ final class LifecycleScenarioEngine
         try {
             $resolution = $this->resolver->resolve($scenario);
         } catch (RuntimeException $e) {
-            return new LifecycleScenarioEngineResult(
+            return $this->result(
                 exitCode: Command::FAILURE,
                 payload: [
                     'success' => false,
@@ -110,7 +111,7 @@ final class LifecycleScenarioEngine
             && ! $options->approvalPipeline
             && $this->requiresInteractiveOtp()
         ) {
-            return new LifecycleScenarioEngineResult(
+            return $this->result(
                 exitCode: Command::FAILURE,
                 payload: [
                     'success' => false,
@@ -129,7 +130,7 @@ final class LifecycleScenarioEngine
                     selectedAttempt: $options->onlyAttempt,
                 );
         } catch (InvalidArgumentException $e) {
-            return new LifecycleScenarioEngineResult(
+            return $this->result(
                 exitCode: Command::FAILURE,
                 payload: [
                     'success' => false,
@@ -185,7 +186,7 @@ final class LifecycleScenarioEngine
                 limit: 10,
             );
 
-            return new LifecycleScenarioEngineResult(
+            return $this->result(
                 exitCode: Command::SUCCESS,
                 payload: [
                     'scenario' => $scenarioKey,
@@ -237,7 +238,7 @@ final class LifecycleScenarioEngine
             $payload['provider'] = $resolvedProvider;
         }
 
-        return new LifecycleScenarioEngineResult(
+        return $this->result(
             exitCode: $result->exitCode,
             payload: $payload,
         );
@@ -294,7 +295,7 @@ final class LifecycleScenarioEngine
             $payload['provider'] = $resolvedProvider;
         }
 
-        return new LifecycleScenarioEngineResult(
+        return $this->result(
             exitCode: $result->exitCode,
             payload: $payload,
         );
@@ -362,7 +363,7 @@ final class LifecycleScenarioEngine
 
     private function liveProviderRefusal(string $scenarioKey, string $message): LifecycleScenarioEngineResult
     {
-        return new LifecycleScenarioEngineResult(
+        return $this->result(
             exitCode: Command::FAILURE,
             payload: [
                 'success' => false,
@@ -370,6 +371,17 @@ final class LifecycleScenarioEngine
                 'mode' => 'live_provider_verification',
                 'message' => $message,
             ],
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function result(int $exitCode, array $payload): LifecycleScenarioEngineResult
+    {
+        return new LifecycleScenarioEngineResult(
+            exitCode: $exitCode,
+            payload: $this->integrationReports->enrich($payload),
         );
     }
 }

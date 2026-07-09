@@ -137,6 +137,22 @@ it('renders lifecycle results as json', function () {
     expect($payload['attempts'][0]['name'])->toBe('wrong_secret_fails');
     expect($payload['attempts'][0]['status'])->toBe('failed');
     expect(data_get($payload, 'attempts.0.evaluation.summary'))->toBe('FAILED as expected');
+    expect(data_get($payload, 'integrations.summary.read_only'))->toBeTrue();
+    expect(data_get($payload, 'integrations.summary.mutates_state'))->toBeFalse();
+    expect($payload['integrations'])->toHaveKeys(['journal', 'actions', 'feedback', 'campaigns', 'summary']);
+});
+
+it('renders lifecycle integration report in human output by default', function () {
+    $this->artisan('xchange:lifecycle:run', [
+        'scenario' => 'secret_required',
+        '--only-attempt' => 'wrong_secret_fails',
+    ])
+        ->expectsOutputToContain('Integrations:')
+        ->expectsOutputToContain('Journal:')
+        ->expectsOutputToContain('Actions:')
+        ->expectsOutputToContain('Feedback:')
+        ->expectsOutputToContain('Campaigns:')
+        ->assertExitCode(0);
 });
 
 it('rebinds the payout provider when --provider is specified', function () {

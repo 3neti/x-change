@@ -53,10 +53,19 @@ it('runs a lifecycle scenario through the lifecycle API (no-claim fast path)', f
                 'code',
             ],
             'wallet_transactions',
+            'integrations' => [
+                'journal',
+                'actions',
+                'feedback',
+                'campaigns',
+                'summary',
+            ],
         ]);
 
     expect($response->json('scenario'))->toBe('secret_required')
-        ->and(is_string($response->json('generated.code')))->toBeTrue();
+        ->and(is_string($response->json('generated.code')))->toBeTrue()
+        ->and($response->json('integrations.summary.read_only'))->toBeTrue()
+        ->and($response->json('integrations.summary.mutates_state'))->toBeFalse();
 });
 
 it('returns validation error when scenario is missing', function () {

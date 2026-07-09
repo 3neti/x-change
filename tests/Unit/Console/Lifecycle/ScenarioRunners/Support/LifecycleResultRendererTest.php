@@ -159,3 +159,54 @@ it('renders phase summary reconciliation and wallet transactions when present', 
         ->and(collect($command->capturedOutput)->contains(fn (string $line): bool => str_contains($line, 'provider-123')))->toBeTrue()
         ->and(collect($command->capturedOutput)->contains(fn (string $line): bool => str_contains($line, 'deposit')))->toBeTrue();
 });
+
+it('renders integration reports for failed human lifecycle payloads', function () {
+    $command = new class extends Command
+    {
+        public array $capturedOutput = [];
+
+        public function option($key = null): mixed
+        {
+            return false;
+        }
+
+        public function error($string, $verbosity = null): void
+        {
+            $this->capturedOutput[] = $string;
+        }
+
+        public function line($string, $style = null, $verbosity = null): void
+        {
+            $this->capturedOutput[] = $string;
+        }
+
+        public function newLine($count = 1): void
+        {
+            $this->capturedOutput[] = '';
+        }
+    };
+
+    app(LifecycleResultRenderer::class)->render(
+        command: $command,
+        payload: [
+            'success' => false,
+            'message' => 'Unknown lifecycle scenario',
+            'integrations' => [
+                'journal' => ['status' => 'unavailable', 'redactions' => ['reason' => 'missing-code']],
+                'actions' => ['status' => 'available'],
+                'feedback' => ['status' => 'available'],
+                'campaigns' => ['status' => 'unavailable', 'redactions' => ['reason' => 'missing-campaign-context']],
+                'summary' => [
+                    'read_only' => true,
+                    'mutates_state' => false,
+                ],
+            ],
+        ],
+        exitCode: 1,
+    );
+
+    expect($command->capturedOutput)->toContain('Unknown lifecycle scenario')
+        ->and($command->capturedOutput)->toContain('Integrations:')
+        ->and($command->capturedOutput)->toContain('  Journal: unavailable (missing-code)')
+        ->and($command->capturedOutput)->toContain('  Campaigns: unavailable (missing-campaign-context)');
+});

@@ -37,6 +37,10 @@ final class LifecycleResultRenderer
         if (($payload['success'] ?? null) === false && isset($payload['message'])) {
             $command->error((string) $payload['message']);
 
+            if (isset($payload['integrations']) && is_array($payload['integrations'])) {
+                $this->renderIntegrations($command, $payload['integrations']);
+            }
+
             return;
         }
 
@@ -120,6 +124,10 @@ final class LifecycleResultRenderer
         if (! empty($payload['disbursement_check']['timed_out'])) {
             $command->warn('Polling stopped before a terminal status was reached.');
         }
+
+        if (isset($payload['integrations']) && is_array($payload['integrations'])) {
+            $this->renderIntegrations($command, $payload['integrations']);
+        }
     }
 
     private function lineIfPresent(Command $command, string $label, mixed $value): void
@@ -192,6 +200,36 @@ final class LifecycleResultRenderer
             ['ID', 'Type', 'Amount', 'Reason', 'Voucher', 'Idempotency Key', 'Created At'],
             $rows
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $integrations
+     */
+    private function renderIntegrations(Command $command, array $integrations): void
+    {
+        $command->newLine();
+        $command->line('Integrations:');
+
+        foreach ([
+            'journal' => 'Journal',
+            'actions' => 'Actions',
+            'feedback' => 'Feedback',
+            'campaigns' => 'Campaigns',
+        ] as $key => $label) {
+            $status = (string) data_get($integrations, "{$key}.status", 'unavailable');
+            $reason = data_get($integrations, "{$key}.redactions.reason");
+
+            $command->line(sprintf(
+                '  %s: %s%s',
+                $label,
+                $status,
+                is_scalar($reason) && trim((string) $reason) !== '' ? ' ('.trim((string) $reason).')' : '',
+            ));
+        }
+
+        if (data_get($integrations, 'summary.read_only') === true) {
+            $command->line('  Mode: read-only; no journal writes, action execution, feedback delivery, campaign mutation, or money movement.');
+        }
     }
 
     /**
