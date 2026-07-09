@@ -726,7 +726,11 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
 
     public function forCampaignAdoption(CockpitReadModelQueryData $query): CockpitCampaignReadModelData
     {
-        return $this->fallback->forCampaignAdoption($query);
+        if ($this->integrations === null) {
+            return $this->fallback->forCampaignAdoption($query);
+        }
+
+        return $this->integrations->campaignAdoption($query);
     }
 
     public function forPayCodeList(CockpitReadModelQueryData $query): CockpitPayCodeListReadModelData

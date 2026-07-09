@@ -9,6 +9,7 @@ use Illuminate\Contracts\Support\Arrayable;
 use JsonSerializable;
 use LBHurtado\XChange\Contracts\CockpitRedactorContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitActionReadModelData;
+use LBHurtado\XChange\Data\Cockpit\CockpitCampaignReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitFeedbackReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitJournalReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
@@ -122,6 +123,77 @@ class OptionalCockpitIntegrationReadModels
         }
     }
 
+    public function campaignAdoption(CockpitReadModelQueryData $query): CockpitCampaignReadModelData
+    {
+        $service = $this->resolveOptionalService('campaign.cockpit');
+
+        if ($service === null || ! method_exists($service, 'summary')) {
+            return $this->campaignUnavailable('package-not-installed');
+        }
+
+        $planningKey = $this->nonEmptyString($query->code);
+        $operatorId = $this->nonEmptyString($query->operatorId);
+
+        if ($planningKey === null || $operatorId === null) {
+            return $this->campaignUnavailable('missing-campaign-context');
+        }
+
+        $executionId = $this->nonEmptyString($query->correlationId) ?? $planningKey;
+
+        try {
+            $result = $service->summary(
+                planningKey: $planningKey,
+                executionId: $executionId,
+                operatorId: $operatorId,
+                channel: 'cockpit',
+                correlationId: $query->correlationId,
+                metadata: [
+                    'source' => 'x-change.cockpit',
+                    'read_only' => true,
+                    'integration' => 'campaign.cockpit',
+                ],
+            );
+            $payload = $this->redact($this->arrayValue($result));
+            $effects = $this->arrayValue($payload['effects'] ?? []);
+
+            return new CockpitCampaignReadModelData(
+                status: 'available',
+                authorized: true,
+                source: 'x-campaign',
+                surfaces: $this->campaignSurfaces('available', true, 'x-campaign-read-model-available'),
+                facts: [
+                    'planning_key' => $payload['planning_key'] ?? $planningKey,
+                    'execution_id' => $payload['execution_id'] ?? $executionId,
+                    'operator_id' => $payload['operator_id'] ?? $operatorId,
+                    'cards' => $this->arrayValue($payload['cards'] ?? []),
+                    'panels' => $this->arrayValue($payload['panels'] ?? []),
+                    'actions' => $this->arrayValue($payload['actions'] ?? []),
+                    'blockers' => array_values(array_filter(
+                        (array) ($payload['blockers'] ?? []),
+                        fn (mixed $blocker): bool => is_string($blocker) && trim($blocker) !== '',
+                    )),
+                    'metadata' => $this->arrayValue($payload['metadata'] ?? []),
+                ],
+                mutation: $this->campaignMutation(),
+                redactions: [
+                    'payloads' => 'campaign-cockpit-summary-only',
+                    'source' => 'x-campaign',
+                    'read_only' => true,
+                    'routes_registered' => false,
+                    'controllers_registered' => false,
+                    'mutates_campaigns' => false,
+                    'issues_pay_codes' => false,
+                    'sends_feedback' => false,
+                    'writes_journal' => false,
+                    'moves_money' => false,
+                    'effects' => $effects,
+                ],
+            );
+        } catch (Throwable $exception) {
+            return $this->campaignUnavailable('read-model-unavailable', $exception);
+        }
+    }
+
     private function resolveOptionalService(string $key): ?object
     {
         $serviceId = $this->serviceId($key);
@@ -149,6 +221,7 @@ class OptionalCockpitIntegrationReadModels
             'journal.reader' => $this->fqcn('XJournal', 'Services\\CockpitJournalReader'),
             'action.composer' => $this->fqcn('XAction', 'Contracts\\ActionHostComposerContract'),
             'feedback.console' => $this->fqcn('XFeedback', 'Contracts\\FeedbackDeliveryConsoleContract'),
+            'campaign.cockpit' => $this->fqcn('XCampaign', 'Contracts\\CampaignCockpitWorkspace'),
         ];
 
         $configured = config('x-change.cockpit.integrations.'.$key);
@@ -301,6 +374,53 @@ class OptionalCockpitIntegrationReadModels
         );
     }
 
+    private function campaignUnavailable(string $reason, ?Throwable $exception = null): CockpitCampaignReadModelData
+    {
+        return new CockpitCampaignReadModelData(
+            status: 'unavailable',
+            authorized: false,
+            source: 'x-campaign',
+            surfaces: $this->campaignSurfaces('unavailable', false, $reason),
+            mutation: $this->campaignMutation(),
+            redactions: $this->unavailableRedactions('x-campaign', $reason, $exception),
+        );
+    }
+
+    /**
+     * @return array<int, array{key: string, status: string, enabled: bool, read_only: bool, reason: string}>
+     */
+    private function campaignSurfaces(string $status, bool $enabled, string $reason): array
+    {
+        return array_map(
+            fn (string $key): array => [
+                'key' => $key,
+                'status' => $status,
+                'enabled' => $enabled,
+                'read_only' => true,
+                'reason' => $reason,
+            ],
+            [
+                'campaign_dashboard',
+                'campaign_explorer',
+                'audience_import_workspace',
+                'attachment_operator_workspace',
+                'campaign_api_descriptors',
+            ],
+        );
+    }
+
+    /**
+     * @return array{enabled: bool, status: string, reason: string}
+     */
+    private function campaignMutation(): array
+    {
+        return [
+            'enabled' => false,
+            'status' => 'blocked',
+            'reason' => 'campaign-mutations-not-authorized',
+        ];
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -339,6 +459,13 @@ class OptionalCockpitIntegrationReadModels
         }
 
         return [];
+    }
+
+    private function nonEmptyString(?string $value): ?string
+    {
+        $normalized = trim((string) $value);
+
+        return $normalized !== '' ? $normalized : null;
     }
 
     /**

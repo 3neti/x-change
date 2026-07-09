@@ -26,7 +26,7 @@ it('documents the campaign cockpit read model contract slice', function () {
 it('updates the cockpit compass for host integration slice 1B', function () {
     $compass = file_get_contents(dirname(__DIR__, 3).'/docs/ui-cockpit/COMPASS.md');
 
-    expect($compass)->toContain('Current slice: Host Integration Slice 1B — Campaign Cockpit Read Model Contract')
+    expect($compass)->toContain('Completed Host Integration Slice 1B — Campaign Cockpit Read Model Contract')
         ->and($compass)->toContain('Status: Complete')
         ->and($compass)->toContain('Campaign Cockpit read model contract exists in x-change')
         ->and($compass)->toContain('Default campaign adoption read model is null/not-wired')

@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Host Integration Slice 1B — Campaign Cockpit Read Model Contract
+Current slice: Host Integration Slice 1C — Campaign Cockpit Read Model Optional Adapter Boundary
 Status: Complete
 Last updated: 2026-07-09
 
@@ -84,6 +84,12 @@ Last updated: 2026-07-09
   - Optional x-campaign adapter remains deferred.
   - Mutation route scaffolding remains unauthorized.
   - No campaign mutation endpoints, Pay Code generation, delivery dispatch, journal writes, feedback sends/retries, wallet reads/writes, or money movement were added.
+- Completed Host Integration Slice 1C — Campaign Cockpit Read Model Optional Adapter Boundary:
+  - Optional campaign Cockpit adapter boundary exists.
+  - Campaign adapter resolution remains string-configured and fail-safe.
+  - Campaign mutation route scaffolding remains unauthorized.
+  - Optional adapter reads `CampaignCockpitWorkspace::summary`-compatible services only when configured/available.
+  - No x-campaign imports, hard Composer dependency, routes, controllers, frontend pages, campaign mutation endpoints, Pay Code generation, delivery dispatch, journal writes, feedback sends/retries, wallet reads/writes, or money movement were added.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
   - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`
@@ -626,3 +632,8 @@ Current boundary:
 - Host Integration Slice 1B `composer validate --strict` passed.
 - Host Integration Slice 1B formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
 - Host Integration Slice 1B full package Pest result: `1026 passed, 5 skipped, 5546 assertions`.
+- Host Integration Slice 1C focused red baseline: `2 failed, 1 assertion`.
+- Host Integration Slice 1C focused Cockpit read-model/documentation result: `25 passed, 266 assertions`.
+- Host Integration Slice 1C `composer validate --strict` passed.
+- Host Integration Slice 1C formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
+- Host Integration Slice 1C full package Pest result: `1030 passed, 5 skipped, 5644 assertions`.

@@ -10,6 +10,7 @@ class CockpitCampaignReadModelData extends Data
 {
     /**
      * @param  array<int, array{key: string, status: string, enabled: bool, read_only: bool, reason: string}>  $surfaces
+     * @param  array<string, mixed>  $facts
      * @param  array{enabled: bool, status: string, reason: string}  $mutation
      * @param  array<string, mixed>  $redactions
      */
@@ -55,6 +56,7 @@ class CockpitCampaignReadModelData extends Data
                 'reason' => 'x-campaign-adapter-not-configured',
             ],
         ],
+        public readonly array $facts = [],
         public readonly array $mutation = [
             'enabled' => false,
             'status' => 'blocked',

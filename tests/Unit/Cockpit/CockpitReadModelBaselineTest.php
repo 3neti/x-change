@@ -192,6 +192,7 @@ it('returns a not wired campaign cockpit read model contract by default', functi
                     'reason' => 'x-campaign-adapter-not-configured',
                 ],
             ],
+            'facts' => [],
             'mutation' => [
                 'enabled' => false,
                 'status' => 'blocked',
@@ -206,6 +207,233 @@ it('returns a not wired campaign cockpit read model contract by default', functi
             'campaign_mutation_endpoint',
             'pay_code_generation_payload',
             'delivery_dispatch_payload',
+        ]);
+});
+
+it('hydrates optional campaign cockpit adoption facts through a configured read-only adapter seam', function () {
+    $service = new class
+    {
+        /**
+         * @var array<string, mixed>
+         */
+        public array $received = [];
+
+        /**
+         * @param  array<string, mixed>  $metadata
+         * @return array<string, mixed>
+         */
+        public function summary(
+            string $planningKey,
+            string $executionId,
+            string $operatorId,
+            string $channel = 'sms',
+            ?string $correlationId = null,
+            array $metadata = [],
+        ): array {
+            $this->received = compact('planningKey', 'executionId', 'operatorId', 'channel', 'correlationId', 'metadata');
+
+            return [
+                'status' => 'ready',
+                'planning_key' => $planningKey,
+                'execution_id' => $executionId,
+                'operator_id' => $operatorId,
+                'cards' => [
+                    'campaign' => [
+                        'name' => 'Food Aid July',
+                        'recipient_count' => 250,
+                        'secret' => 'do-not-show',
+                    ],
+                ],
+                'panels' => [
+                    'audience_import_workspace' => ['status' => 'ready'],
+                    'attachment_operator_workspace' => ['status' => 'ready'],
+                ],
+                'actions' => [
+                    'review_campaign' => ['enabled' => true],
+                    'generate_pay_codes' => ['enabled' => false],
+                ],
+                'blockers' => [],
+                'effects' => [
+                    'persists' => false,
+                    'uses_database' => false,
+                    'queues_jobs' => false,
+                    'issues_pay_codes' => false,
+                    'sends_feedback' => false,
+                    'writes_journal' => false,
+                    'moves_money' => false,
+                ],
+                'metadata' => [
+                    'source' => 'fake-x-campaign',
+                    'read_only' => true,
+                    'token' => 'sensitive-token',
+                ],
+            ];
+        }
+    };
+
+    config(['x-change.cockpit.integrations.campaign.cockpit' => 'fake.campaign.cockpit']);
+    app()->instance('fake.campaign.cockpit', $service);
+
+    $readModel = (new VoucherLifecycleCockpitReadModelProvider(
+        vouchers: new class implements VoucherLifecycleServiceContract
+        {
+            public function list(array $filters = []): array
+            {
+                return [];
+            }
+
+            public function show(string $voucher): mixed
+            {
+                return null;
+            }
+
+            public function showByCode(string $code): mixed
+            {
+                return null;
+            }
+
+            public function status(string $voucher): mixed
+            {
+                return null;
+            }
+
+            public function cancel(string $voucher, array $payload = []): mixed
+            {
+                return [];
+            }
+        },
+        integrations: app(OptionalCockpitIntegrationReadModels::class),
+    ))->forCampaignAdoption(new CockpitReadModelQueryData(
+        code: 'campaign-plan-1',
+        operatorId: 'operator-1',
+        include: ['campaigns', 'audiences', 'imports', 'attachments'],
+        correlationId: 'execution-1',
+    ));
+
+    expect($service->received)->toMatchArray([
+        'planningKey' => 'campaign-plan-1',
+        'executionId' => 'execution-1',
+        'operatorId' => 'operator-1',
+        'channel' => 'cockpit',
+        'correlationId' => 'execution-1',
+        'metadata' => [
+            'source' => 'x-change.cockpit',
+            'read_only' => true,
+            'integration' => 'campaign.cockpit',
+        ],
+    ])
+        ->and($readModel->status)->toBe('available')
+        ->and($readModel->authorized)->toBeTrue()
+        ->and($readModel->source)->toBe('x-campaign')
+        ->and($readModel->facts)->toBe([
+            'planning_key' => 'campaign-plan-1',
+            'execution_id' => 'execution-1',
+            'operator_id' => 'operator-1',
+            'cards' => [
+                'campaign' => [
+                    'name' => 'Food Aid July',
+                    'recipient_count' => 250,
+                    'secret' => '[redacted]',
+                ],
+            ],
+            'panels' => [
+                'audience_import_workspace' => ['status' => 'ready'],
+                'attachment_operator_workspace' => ['status' => 'ready'],
+            ],
+            'actions' => [
+                'review_campaign' => ['enabled' => true],
+                'generate_pay_codes' => ['enabled' => false],
+            ],
+            'blockers' => [],
+            'metadata' => [
+                'source' => 'fake-x-campaign',
+                'read_only' => true,
+                'token' => '[redacted]',
+            ],
+        ])
+        ->and($readModel->surfaces)->each->toMatchArray([
+            'status' => 'available',
+            'enabled' => true,
+            'read_only' => true,
+            'reason' => 'x-campaign-read-model-available',
+        ])
+        ->and($readModel->mutation)->toBe([
+            'enabled' => false,
+            'status' => 'blocked',
+            'reason' => 'campaign-mutations-not-authorized',
+        ])
+        ->and($readModel->redactions)->toBe([
+            'payloads' => 'campaign-cockpit-summary-only',
+            'source' => 'x-campaign',
+            'read_only' => true,
+            'routes_registered' => false,
+            'controllers_registered' => false,
+            'mutates_campaigns' => false,
+            'issues_pay_codes' => false,
+            'sends_feedback' => false,
+            'writes_journal' => false,
+            'moves_money' => false,
+            'effects' => [
+                'persists' => false,
+                'uses_database' => false,
+                'queues_jobs' => false,
+                'issues_pay_codes' => false,
+                'sends_feedback' => false,
+                'writes_journal' => false,
+                'moves_money' => false,
+            ],
+        ])
+        ->and($readModel->toArray())->not->toHaveKeys([
+            'provider_payload',
+            'raw_payload',
+            'wallet',
+            'campaign_mutation_endpoint',
+            'pay_code_generation_payload',
+            'delivery_dispatch_payload',
+        ]);
+});
+
+it('degrades optional campaign cockpit adoption safely when the configured adapter fails', function () {
+    config(['x-change.cockpit.integrations.campaign.cockpit' => 'fake.failing.campaign.cockpit']);
+    app()->instance('fake.failing.campaign.cockpit', new class
+    {
+        /**
+         * @param  array<string, mixed>  $metadata
+         */
+        public function summary(
+            string $planningKey,
+            string $executionId,
+            string $operatorId,
+            string $channel = 'sms',
+            ?string $correlationId = null,
+            array $metadata = [],
+        ): never {
+            throw new RuntimeException('Package failure should not leak.');
+        }
+    });
+
+    $readModel = app(OptionalCockpitIntegrationReadModels::class)
+        ->campaignAdoption(new CockpitReadModelQueryData(
+            code: 'campaign-plan-1',
+            operatorId: 'operator-1',
+            correlationId: 'execution-1',
+        ));
+
+    expect($readModel->status)->toBe('unavailable')
+        ->and($readModel->authorized)->toBeFalse()
+        ->and($readModel->source)->toBe('x-campaign')
+        ->and($readModel->facts)->toBe([])
+        ->and($readModel->mutation)->toBe([
+            'enabled' => false,
+            'status' => 'blocked',
+            'reason' => 'campaign-mutations-not-authorized',
+        ])
+        ->and($readModel->redactions)->toMatchArray([
+            'payloads' => 'not-loaded',
+            'source' => 'x-campaign',
+            'reason' => 'read-model-unavailable',
+            'exception' => 'RuntimeException',
+            'exception_message_exposed' => false,
         ]);
 });
 
@@ -1611,5 +1839,6 @@ it('keeps the cockpit read model baseline free of direct integration package dep
         ->not->toContain('LBHurtado\\XJournal')
         ->not->toContain('LBHurtado\\XAction')
         ->not->toContain('LBHurtado\\XFeedback')
+        ->not->toContain('LBHurtado\\XCampaign')
         ->not->toContain('FrittenKeeZ\\Vouchers\\Models\\Voucher');
 });
