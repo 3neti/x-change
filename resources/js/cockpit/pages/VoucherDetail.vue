@@ -130,24 +130,7 @@ const evidenceItems = computed<CockpitVoucherEvidenceItem[]>(() => [
 ]);
 
 const distributionItems = computed<CockpitVoucherDistributionItem[]>(() => [
-    {
-        id: 'sms',
-        channel: 'SMS',
-        status: readModelStatus(props.read_model?.feedback),
-        helper: 'SMS delivery status remains owned by x-feedback read models.',
-    },
-    {
-        id: 'email',
-        channel: 'Email',
-        status: readModelStatus(props.read_model?.feedback),
-        helper: 'Email delivery status remains owned by x-feedback read models.',
-    },
-    {
-        id: 'in-app',
-        channel: 'In-app',
-        status: readModelStatus(props.read_model?.feedback),
-        helper: 'In-app notification state remains x-feedback presentation state.',
-    },
+    ...feedbackDistributionItems(props.read_model?.feedback),
 ]);
 
 const auditItems = computed<CockpitVoucherAuditItem[]>(() => [
@@ -325,6 +308,61 @@ function actionDetailItem(
         disabled: true,
         reason: `${status} · ${payloadPolicy} · Action execution remains disabled from Cockpit.`,
     };
+}
+
+function feedbackDistributionItems(model?: CockpitDependentReadModel): CockpitVoucherDistributionItem[] {
+    const deliveries = Array.isArray(model?.deliveries) ? model.deliveries : [];
+
+    if (readModelStatus(model) !== 'available' || deliveries.length === 0) {
+        return ['sms', 'email', 'in-app'].map((channel) => ({
+            id: channel,
+            channel: channelLabel(channel),
+            status: readModelStatus(model),
+            helper: `${channelLabel(channel)} delivery status remains owned by x-feedback read models.`,
+        }));
+    }
+
+    return deliveries
+        .map((delivery, index) => feedbackDistributionItem(delivery, index, model?.redactions))
+        .filter((item): item is CockpitVoucherDistributionItem => item !== null)
+        .slice(0, 5);
+}
+
+function feedbackDistributionItem(
+    delivery: unknown,
+    index: number,
+    feedbackRedactions?: CockpitReadModelRedactions,
+): CockpitVoucherDistributionItem | null {
+    const deliveryItem = objectValue(delivery);
+
+    if (deliveryItem === null) {
+        return null;
+    }
+
+    const channel = stringValue(deliveryItem.channel)
+        ?? stringValue(deliveryItem.type)
+        ?? 'feedback';
+    const status = stringValue(deliveryItem.status) ?? 'available';
+    const payloadPolicy = stringValue(feedbackRedactions?.payloads) ?? 'communication-delivery-summary-only';
+
+    return {
+        id: stringValue(deliveryItem.id) ?? `feedback-${index + 1}`,
+        channel: channelLabel(channel),
+        status,
+        helper: `${payloadPolicy} · Feedback delivery remains read-only from Cockpit.`,
+    };
+}
+
+function channelLabel(channel: string): string {
+    if (channel.toLowerCase() === 'sms') {
+        return 'SMS';
+    }
+
+    if (channel.toLowerCase() === 'in-app') {
+        return 'In-app';
+    }
+
+    return channel.charAt(0).toUpperCase() + channel.slice(1);
 }
 </script>
 

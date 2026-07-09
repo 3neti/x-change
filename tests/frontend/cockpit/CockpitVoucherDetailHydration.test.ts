@@ -189,6 +189,46 @@ describe('Cockpit Voucher Detail hydration', () => {
         expect(wrapper.text()).not.toContain('must-not-render');
     });
 
+    it('hydrates feedback delivery summaries without enabling delivery or exposing payloads', () => {
+        const wrapper = mount(VoucherDetail, {
+            props: {
+                read_model: {
+                    ...readModel,
+                    feedback: {
+                        status: 'available',
+                        authorized: true,
+                        deliveries: [
+                            {
+                                id: 'delivery-1',
+                                channel: 'sms',
+                                status: 'delivered',
+                                recipient: '+639170000000',
+                                provider_payload: 'must-not-render',
+                                raw_payload: 'must-not-render',
+                                secret: 'must-not-render',
+                            },
+                        ],
+                        redactions: {
+                            payloads: 'communication-delivery-summary-only',
+                            source: 'x-feedback',
+                            sends_feedback: false,
+                            calls_providers: false,
+                        },
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('SMS');
+        expect(wrapper.text()).toContain('delivered');
+        expect(wrapper.text()).toContain('communication-delivery-summary-only');
+        expect(wrapper.text()).toContain('Feedback delivery remains read-only from Cockpit.');
+        expect(wrapper.text()).not.toContain('+639170000000');
+        expect(wrapper.text()).not.toContain('must-not-render');
+        expect(wrapper.text()).not.toContain('provider_payload');
+        expect(wrapper.text()).not.toContain('raw_payload');
+    });
+
     it('does not render unsafe voucher payload fields from the read model summary', () => {
         const wrapper = mount(VoucherDetail, {
             props: {

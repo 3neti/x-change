@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Host Integration Slice 2B — Action Cockpit Hydration
+Current slice: Host Integration Slice 2C — Feedback Cockpit Hydration
 Status: Complete
 Last updated: 2026-07-09
 
@@ -142,6 +142,12 @@ Last updated: 2026-07-09
   - Static fallback actions remain when x-action read models are unavailable or empty.
   - No action execution, workflow authorization, raw diagnostics exposure, target URL exposure, journal writes, feedback delivery, provider calls, voucher mutation, wallet access, or money movement were added.
   - Report: `reports/025-action-cockpit-hydration.md`.
+- Completed Host Integration Slice 2C — Feedback Cockpit Hydration:
+  - Voucher Detail maps available x-feedback delivery summaries into read-only distribution rows.
+  - Delivery status and channel render as communication facts.
+  - Static fallback channel rows remain when x-feedback read models are unavailable or empty.
+  - No feedback delivery, retry execution, recipient address exposure, provider payload exposure, raw payload exposure, journal writes, action execution, provider calls, voucher mutation, wallet access, or money movement were added.
+  - Report: `reports/026-feedback-cockpit-hydration.md`.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
   - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`
