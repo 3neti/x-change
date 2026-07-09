@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Host Validation Checkpoint 3 — Manual Browser UI/UX Pass Execution Record
-Status: Programmatic route/read-model record complete; human visual browser confirmation pending
+Current slice: Host Validation Checkpoint 4 — Browser Log Preflight Record
+Status: Browser-log preflight recorded; human visual browser confirmation still pending
 Last updated: 2026-07-09
 
 ## Completed
@@ -201,6 +201,13 @@ Last updated: 2026-07-09
   - The record preserves stop conditions for JavaScript errors, dead navigation, unsafe payload exposure, mutation controls, provider calls, journal writes, action execution, feedback delivery, voucher mutation, wallet access, and money movement.
   - No browser automation dependencies, browser snapshots, routes, mutation endpoints, lifecycle scenario execution, claim submission, provider calls, journal writes, action execution, feedback delivery, wallet access, or money movement were added.
   - Report: `reports/035-manual-browser-ui-ux-pass-execution-record.md`.
+- Host Validation Checkpoint 4 — Browser Log Preflight Record:
+  - Added a browser-log preflight record before human visual confirmation.
+  - Recent browser logs include `/x/cockpit` Vite debug entries for `server connection lost. Polling for restart...`.
+  - Recent `/x/balances` Vue warnings are documented as outside the Cockpit route and not treated as Cockpit validation failures.
+  - Human visual browser confirmation remains pending.
+  - No browser automation dependencies, browser snapshots, routes, mutation endpoints, lifecycle scenario execution, claim submission, provider calls, journal writes, action execution, feedback delivery, wallet access, or money movement were added.
+  - Report: `reports/036-browser-log-preflight-record.md`.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
   - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`

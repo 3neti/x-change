@@ -821,6 +821,12 @@ ExecutionDriverContract
   - Human visual browser confirmation remains pending and is explicitly not claimed as complete.
   - The record preserves stop conditions for JavaScript errors, dead navigation, unsafe payload exposure, mutation controls, provider calls, journal writes, action execution, feedback delivery, voucher mutation, wallet access, and money movement.
   - No browser automation dependencies, browser snapshots, routes, mutation endpoints, lifecycle scenario execution, claim submission, provider calls, journal writes, action execution, feedback delivery, wallet access, or money movement were added.
+- x-change Host Validation Checkpoint 4 — Browser Log Preflight Record:
+  - Added a browser-log preflight record before human visual confirmation.
+  - Recent browser logs include `/x/cockpit` Vite debug entries for `server connection lost. Polling for restart...`.
+  - Recent `/x/balances` Vue warnings are documented as outside the Cockpit route and not treated as Cockpit validation failures.
+  - Human visual browser confirmation remains pending.
+  - No browser automation dependencies, browser snapshots, routes, mutation endpoints, lifecycle scenario execution, claim submission, provider calls, journal writes, action execution, feedback delivery, wallet access, or money movement were added.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
