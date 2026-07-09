@@ -803,6 +803,12 @@ ExecutionDriverContract
   - Cockpit now consumes package-owned read-only facts from x-journal, x-action, and x-feedback on Voucher Detail, Dashboard, and Pay Code Explorer surfaces.
   - UI/UX validation against real local scenarios is now the next practical checkpoint before a new implementation plan.
   - No mutation routes, journal writes, action execution, workflow authorization, feedback delivery, feedback retry execution, provider calls, voucher mutation, campaign mutation, wallet access, money movement, or raw payload exposure were added.
+- x-change Host Validation Checkpoint 1 — Read-Only Cockpit UI/UX Scenario Validation:
+  - Added a frontend scenario validation harness for `basic_cash` and `divisible_open_three_slices_enforced_interval` shaped read-model payloads.
+  - The validation harness covers Dashboard, Pay Code Explorer, and Voucher Detail.
+  - Scenario names, sanitized Pay Codes, status/amount/timestamp facts, journal summaries, disabled action labels, feedback status, and payload policies render as operator-safe UI facts.
+  - Raw payloads, provider payloads, recipient addresses, OTP/approval secrets, wallet-private fields, exception internals, action target URLs, and provider credentials remain hidden.
+  - This checkpoint did not run lifecycle scenarios, submit claims, call providers, issue vouchers, mutate vouchers, write journal entries, execute actions, send feedback, retry deliveries, access wallets, or move money.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -823,7 +829,7 @@ Completed through Host Integration Slice 2I.
 Recommended next checkpoint:
 
 ```text
-Read-only Cockpit UI/UX validation against real local scenarios
+Manual browser UI/UX pass for read-only Cockpit against local scenario data
 ```
 
 Recommended actions:
@@ -831,10 +837,11 @@ Recommended actions:
 1. Read [INTEGRATION_READINESS_REPORT.md](INTEGRATION_READINESS_REPORT.md).
 2. Read the Cockpit compass before implementation: `packages/x-change/docs/ui-cockpit/COMPASS.md`.
 3. Exercise `/x/cockpit`, Voucher Detail, Pay Code Explorer, and Campaign Cockpit read-only surfaces in the host app.
-4. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
-5. Mutation route scaffolding remains unauthorized.
-6. Do not add campaign mutation endpoints, request validation execution, payload persistence, Pay Code generation, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls, campaign state mutation, money movement, raw payload exposure, or wallet access unless explicitly approved.
-7. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
+4. Compare the browser output against `reports/033-read-only-ui-ux-scenario-validation.md`.
+5. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
+6. Mutation route scaffolding remains unauthorized.
+7. Do not add campaign mutation endpoints, request validation execution, payload persistence, Pay Code generation, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls, campaign state mutation, money movement, raw payload exposure, or wallet access unless explicitly approved.
+8. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
 ## x-journal Initial Intent
 

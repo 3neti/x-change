@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Host Integration Slice 2I — Read-Only Journal / Action / Feedback Cockpit Closure
+Current slice: Host Validation Checkpoint 1 — Read-Only Cockpit UI/UX Scenario Validation
 Status: Complete
 Last updated: 2026-07-09
 
@@ -181,6 +181,13 @@ Last updated: 2026-07-09
   - UI/UX validation against real local scenarios is now the next practical checkpoint before a new implementation plan.
   - No mutation routes, journal writes, action execution, workflow authorization, feedback delivery, feedback retry execution, provider calls, voucher mutation, campaign mutation, wallet access, money movement, or raw payload exposure were added.
   - Report: `reports/032-host-integration-slice-2-closure.md`.
+- Completed Host Validation Checkpoint 1 — Read-Only Cockpit UI/UX Scenario Validation:
+  - Added a frontend scenario validation harness for `basic_cash` and `divisible_open_three_slices_enforced_interval` shaped read-model payloads.
+  - The validation harness covers Dashboard, Pay Code Explorer, and Voucher Detail.
+  - Scenario names, sanitized Pay Codes, status/amount/timestamp facts, journal summaries, disabled action labels, feedback status, and payload policies render as operator-safe UI facts.
+  - Raw payloads, provider payloads, recipient addresses, OTP/approval secrets, wallet-private fields, exception internals, action target URLs, and provider credentials remain hidden.
+  - This checkpoint did not run lifecycle scenarios, submit claims, call providers, issue vouchers, mutate vouchers, write journal entries, execute actions, send feedback, retry deliveries, access wallets, or move money.
+  - Report: `reports/033-read-only-ui-ux-scenario-validation.md`.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
   - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`
