@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import CockpitCampaignAdoptionPanel from '../components/CockpitCampaignAdoptionPanel.vue';
 import CockpitLiquidityHero from '../components/CockpitLiquidityHero.vue';
+import CockpitOperatorIssuanceActivityPanel from '../components/CockpitOperatorIssuanceActivityPanel.vue';
 import CockpitRecentActivityPanel from '../components/CockpitRecentActivityPanel.vue';
 import CockpitRedemptionPipeline from '../components/CockpitRedemptionPipeline.vue';
 import CockpitRiskExpiryPanel from '../components/CockpitRiskExpiryPanel.vue';
@@ -239,6 +240,8 @@ function integrationSummary(
             <CockpitLiquidityHero :metrics="metrics" />
 
             <CockpitCampaignAdoptionPanel :read-model="props.campaign_read_model" />
+
+            <CockpitOperatorIssuanceActivityPanel :read-model="props.operator_issuance_activity_read_model" />
 
             <section
                 class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"

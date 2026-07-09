@@ -118,6 +118,67 @@ const campaignReadModel = {
     mutation_route: '/must-not-render',
 };
 
+const operatorIssuanceActivityReadModel = {
+    schema: 'x-change.cockpit.operator-issuance-activity.v1',
+    status: 'available',
+    authorized: true,
+    source: 'x-change.cockpit.operator-issuance-activity.presenter',
+    items: [
+        {
+            id: 'activity-1',
+            code: 'PC-1234',
+            amount: '100.00',
+            currency: 'PHP',
+            status: 'issued',
+            issued_at: '2026-07-10T09:00:00+08:00',
+            route: 'cockpit.quick-generate',
+            provider_payload: 'must-not-render',
+        },
+    ],
+    presentations: [
+        {
+            schema: 'x-change.cockpit.operator-issuance-activity-presentation.v1',
+            id: 'activity-1',
+            code: 'PC-1234',
+            title: 'Pay Code PC-1234 issued',
+            subtitle: 'PHP 100.00 issued through Quick Generate',
+            status: 'issued',
+            detail_href: '/x/cockpit/pay-codes/PC-1234',
+            correlation_id: 'corr-1',
+            handoffs: {
+                journal: 'not_wired',
+                action: 'not_wired',
+                feedback: 'not_wired',
+            },
+            safety: {
+                presentation_only: true,
+                writes_journal: false,
+                executes_actions: false,
+                sends_feedback: false,
+                moves_money: false,
+                owns_lifecycle_truth: false,
+            },
+            metadata: {
+                provider_payload: 'must-not-render',
+                raw_payload: 'must-not-render',
+                wallet: 'must-not-render',
+                recipient_secret: 'must-not-render',
+            },
+        },
+    ],
+    redactions: {
+        payloads: 'activity-summary-only',
+        lifecycle_truth: false,
+        writes_journal: false,
+        executes_actions: false,
+        sends_feedback: false,
+        moves_money: false,
+    },
+    provider_payload: 'must-not-render',
+    raw_payload: 'must-not-render',
+    wallet: 'must-not-render',
+};
+
 describe('Cockpit dashboard read model hydration', () => {
     it('hydrates dashboard panels from sanitized dashboard read model props', () => {
         const wrapper = mount(CockpitDashboard, {
@@ -437,5 +498,81 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).not.toContain('/unsafe-action-route');
         expect(wrapper.text()).not.toContain('non-durable-run-id');
         expect(wrapper.text()).not.toContain('+639170000000');
+    });
+
+    it('renders operator issuance activity presentations as read-only dashboard evidence', () => {
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                dashboard_read_model: dashboardReadModel,
+                operator_issuance_activity_read_model: operatorIssuanceActivityReadModel,
+            },
+        });
+
+        expect(wrapper.text()).toContain('Operator Issuance Activity');
+        expect(wrapper.text()).toContain('Pay Code PC-1234 issued');
+        expect(wrapper.text()).toContain('PHP 100.00 issued through Quick Generate');
+        expect(wrapper.text()).toContain('corr-1');
+        expect(wrapper.text()).toContain('journal: not_wired');
+        expect(wrapper.text()).toContain('action: not_wired');
+        expect(wrapper.text()).toContain('feedback: not_wired');
+        expect(wrapper.text()).toContain('presentation-only');
+        expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-card"]')).toHaveLength(1);
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-link"]').attributes('href')).toBe('/x/cockpit/pay-codes/PC-1234');
+    });
+
+    it('does not render unsafe operator issuance activity payloads or side-effect affordances', () => {
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                dashboard_read_model: dashboardReadModel,
+                operator_issuance_activity_read_model: operatorIssuanceActivityReadModel,
+            },
+        });
+
+        expect(wrapper.text()).not.toContain('must-not-render');
+        expect(wrapper.text()).not.toContain('provider_payload');
+        expect(wrapper.text()).not.toContain('raw_payload');
+        expect(wrapper.text()).not.toContain('recipient_secret');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-mutation"]').exists()).toBe(false);
+    });
+
+    it('renders unavailable operator issuance activity as a read-only empty state', () => {
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                dashboard_read_model: dashboardReadModel,
+                operator_issuance_activity_read_model: {
+                    schema: 'x-change.cockpit.operator-issuance-activity.v1',
+                    status: 'not_wired',
+                    authorized: false,
+                    source: 'null-operator-issuance-activity-read-model',
+                    items: [],
+                    presentations: [],
+                    empty_state: {
+                        title: 'No operator issuance activity available',
+                        description: 'Activity recording is not wired yet.',
+                    },
+                    redactions: {
+                        payloads: 'activity-summary-only',
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Operator Issuance Activity');
+        expect(wrapper.text()).toContain('No operator issuance activity available');
+        expect(wrapper.text()).toContain('Activity recording is not wired yet.');
+        expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-card"]')).toHaveLength(0);
+    });
+
+    it('forwards operator issuance activity props through the dashboard route adapter', () => {
+        const wrapper = mount(DashboardRouteAdapter, {
+            props: {
+                dashboard_read_model: dashboardReadModel,
+                operator_issuance_activity_read_model: operatorIssuanceActivityReadModel,
+            },
+        });
+
+        expect(wrapper.text()).toContain('Pay Code PC-1234 issued');
+        expect(wrapper.text()).toContain('PHP 100.00 issued through Quick Generate');
+        expect(wrapper.text()).not.toContain('must-not-render');
     });
 });

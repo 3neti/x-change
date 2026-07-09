@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 2G — Activity Read Model Presentation Adoption
-Status: Implemented; operator issuance activity presentation DTOs are now adopted into dashboard read-model props
+Current slice: Cockpit Mutation Wave 2H — Activity UI Rendering Boundary
+Status: Implemented; operator issuance activity presentations now render in the package Cockpit dashboard as read-only evidence
 Last updated: 2026-07-10
 
 ## Completed
@@ -66,6 +66,13 @@ Last updated: 2026-07-10
   - Kept the default dashboard response safe and not-wired until durable activity storage or a host adapter is explicitly added.
   - No handoff invocation, journal writes, action execution, feedback delivery, frontend UI rendering, persistence, migrations, queues, retry handling, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload exposure, or money movement were added.
   - Report: `reports/057-operator-issuance-activity-read-model-presentation-adoption.md`.
+- Completed Cockpit Mutation Wave 2H — Activity UI Rendering Boundary:
+  - Added `CockpitOperatorIssuanceActivityPanel`.
+  - Added Cockpit TypeScript contracts for operator issuance activity read-model and presentation props.
+  - Rendered `operator_issuance_activity_read_model.presentations` on the package Cockpit dashboard as read-only evidence.
+  - The UI renders handoff status facts but does not invoke journal, action, or feedback handoffs.
+  - No mutation controls, handoff invocation, journal writes, action execution, feedback delivery, persistence, migrations, queues, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload exposure, or money movement were added.
+  - Report: `reports/058-operator-issuance-activity-ui-rendering-boundary.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -985,3 +992,10 @@ Current boundary:
 - Cockpit Mutation Wave 2G formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
 - Cockpit Mutation Wave 2G focused boundary/readiness result: `7 passed, 101 assertions`.
 - Cockpit Mutation Wave 2G full package Pest result: `1119 passed, 5 skipped, 6726 assertions`.
+- Cockpit Mutation Wave 2H focused frontend red baseline: `3 failed, 13 passed`.
+- Cockpit Mutation Wave 2H focused frontend result: `16 passed`.
+- Cockpit Mutation Wave 2H full frontend result: `74 passed, 476 tests`.
+- Cockpit Mutation Wave 2H formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
+- Cockpit Mutation Wave 2H focused PHP boundary result: `42 passed, 655 assertions`.
+- Cockpit Mutation Wave 2H full package Pest result: `1120 passed, 5 skipped, 6741 assertions`.
+- Cockpit Mutation Wave 2H build check: `npm run build` is not defined in the x-change package.

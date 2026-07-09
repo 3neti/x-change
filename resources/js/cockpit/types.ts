@@ -67,6 +67,47 @@ export type CockpitDashboardReadModel = {
     [key: string]: unknown;
 };
 
+export type CockpitOperatorIssuanceActivityPresentation = {
+    id?: string | null;
+    code?: string | null;
+    title?: string | null;
+    subtitle?: string | null;
+    status?: string | null;
+    detail_href?: string | null;
+    correlation_id?: string | null;
+    handoffs?: {
+        journal?: string | null;
+        action?: string | null;
+        feedback?: string | null;
+        [key: string]: unknown;
+    };
+    safety?: {
+        presentation_only?: boolean | null;
+        writes_journal?: boolean | null;
+        executes_actions?: boolean | null;
+        sends_feedback?: boolean | null;
+        moves_money?: boolean | null;
+        owns_lifecycle_truth?: boolean | null;
+        [key: string]: unknown;
+    };
+    [key: string]: unknown;
+};
+
+export type CockpitOperatorIssuanceActivityReadModel = {
+    schema?: string;
+    status: string;
+    authorized?: boolean;
+    source?: string;
+    presentations?: CockpitOperatorIssuanceActivityPresentation[];
+    empty_state?: {
+        title?: string | null;
+        description?: string | null;
+        [key: string]: unknown;
+    };
+    redactions?: CockpitReadModelRedactions;
+    [key: string]: unknown;
+};
+
 export type CockpitCampaignReadModel = {
     schema?: string;
     status: string;
@@ -114,6 +155,7 @@ export type CockpitCampaignNavigationContext = {
 export type CockpitDashboardPageProps = {
     dashboard_read_model?: CockpitDashboardReadModel;
     campaign_read_model?: CockpitCampaignReadModel;
+    operator_issuance_activity_read_model?: CockpitOperatorIssuanceActivityReadModel;
     read_model?: CockpitReadModelBundle;
 };
 
