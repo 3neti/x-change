@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-Status: ready for the first host-side, read-only integration slice.
+Status: first host-side, read-only Campaign Cockpit adoption slice is complete.
 
 The package scaffolds now cover the full Settlement Operating System stack:
 
@@ -20,13 +20,15 @@ x-change Cockpit
 x-campaign
 ```
 
-The recommended first real host integration slice is:
+The first real host integration slice was:
 
 ```text
 x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 ```
 
-This slice should consume `x-campaign` Phase 15 outputs from the host side and expose campaign intelligence inside the existing x-change Cockpit shell. It must not enable campaign mutations, Pay Code generation, delivery dispatch, journal writes, action execution, provider calls, wallet access, or money movement.
+Completed through Host Integration Slice 1H.
+
+This slice consumes `x-campaign` Phase 15 outputs from the host side and exposes campaign intelligence inside the existing x-change Cockpit shell. It does not enable campaign mutations, Pay Code generation, delivery dispatch, journal writes, action execution, provider calls, wallet access, or money movement.
 
 ## Cross-Package Readiness Matrix
 
@@ -36,7 +38,7 @@ This slice should consume `x-campaign` Phase 15 outputs from the host side and e
 | x-journal | `/Users/rli/PhpstormProjects/packages/x-journal` | Production readiness/stabilization complete; Cockpit reader and verification seams are safe read-side evidence sources | Read journal evidence summaries through host-composed adapters with visibility/redaction | Writing journal entries from Cockpit, bypassing visibility, recovery orchestration |
 | x-action | `/Users/rli/PhpstormProjects/packages/x-action` | Host integration seams and safe diagnostics are available | Read action availability/diagnostics as presentation-only CTA facts | Executing actions, treating presentation run IDs as durable execution, bypassing host authorization |
 | x-feedback | `/Users/rli/PhpstormProjects/packages/x-feedback` | Delivery console, UI component, journal handoff, transport/policy baselines complete; stabilized for read-only Cockpit integration | Read communication delivery status, delivery history, redacted provider responses, UI component data | Cockpit-triggered resend/retry mutations, lifecycle truth ownership, provider delivery from Cockpit |
-| x-change Cockpit | `/Users/rli/PhpstormProjects/x-change-sandbox/packages/x-change` | Read-only shell, dashboard, explorer, voucher detail, distribution workspace, gate panels, and optional cross-package adapters exist | Host-owned Inertia routes can present read-only package facts through existing Cockpit shell | Mutation routes, raw payload exposure, provider calls, wallet access, money movement |
+| x-change Cockpit | `/Users/rli/PhpstormProjects/x-change-sandbox/packages/x-change` | Read-only shell, dashboard, explorer, voucher detail, distribution workspace, gate panels, optional cross-package adapters, and Campaign Cockpit read-only adoption through Slice 1H exist | Host-owned Inertia routes can present read-only package facts through existing Cockpit shell; Dashboard campaign adoption panel and Pay Code Explorer campaign navigation context are safe for read-only operator use | Mutation routes, raw payload exposure, provider calls, wallet access, money movement |
 | x-campaign | `/Users/rli/PhpstormProjects/packages/x-campaign` | Complete through Phase 15 host adoption / parity report | Consume Cockpit consumption map, endpoint recommendation matrix, public API descriptors, and mutation authorization checklist | Package-owned routes/controllers, real campaign execution, Pay Code generation, feedback sending, journal writing |
 
 ## Readiness Inputs
@@ -63,9 +65,9 @@ The first host integration slice should use these package-side documents as inpu
   - `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md`
   - `/Users/rli/PhpstormProjects/packages/x-campaign/docs/phase-15-host-adoption-boundary.md`
 
-## First Host Integration Slice Decision
+## First Host Integration Slice Result
 
-Selected next slice:
+Selected slice:
 
 ```text
 x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
@@ -75,21 +77,33 @@ x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 
 Expose campaign/package readiness inside the existing x-change Cockpit shell as read-only operator intelligence.
 
-### Initial Scope
+### Completed Scope
 
-- Add a host-side campaign Cockpit adoption plan.
-- Add host-side read model contracts or adapters for campaign Cockpit consumption.
-- Consume only safe `x-campaign` Phase 15 surfaces:
+- Added a host-side campaign Cockpit adoption plan.
+- Added host-side read model contracts and optional adapter boundary for campaign Cockpit consumption.
+- Consumed only safe `x-campaign` Phase 15 surfaces:
   - Cockpit consumption map
   - endpoint recommendation matrix
   - public API descriptors
   - host mutation authorization checklist
   - parity report facts
-- Render campaign adoption/readiness in Cockpit as disabled/read-only state.
-- Preserve x-change ownership of routes, controllers, authorization, redaction, and operator identity.
+- Rendered campaign adoption/readiness in Cockpit as disabled/read-only state.
+- Added Dashboard campaign adoption panel.
+- Added Pay Code Explorer campaign navigation context.
+- Deferred dedicated Campaign Cockpit workspace route.
+- Preserved x-change ownership of routes, controllers, authorization, redaction, and operator identity.
+
+### Safe Operator Surfaces
+
+- Dashboard campaign adoption panel
+- Pay Code Explorer campaign navigation context
+- unavailable/not-installed campaign read-model state
+- optional adapter failure state
+- presentation-only `campaign_navigation_context`
 
 ### Explicit Non-Scope
 
+- Campaign mutation route scaffolding remains unauthorized.
 - No campaign mutation endpoints.
 - No Pay Code generation through campaign.
 - No delivery dispatch.
@@ -100,8 +114,9 @@ Expose campaign/package readiness inside the existing x-change Cockpit shell as 
 - No wallet reads/writes.
 - No money movement.
 - No replacement of current Claim UX or redemption workflows.
+- No dedicated campaign workspace route.
 
-## Recommended Slice Breakdown
+## Completed Slice Breakdown
 
 ### Host Integration Slice 1A — Campaign Cockpit Adoption Boundary Plan
 
@@ -115,13 +130,25 @@ Add x-change-side contracts/DTOs for campaign readiness/adoption facts. Defaults
 
 Add an optional adapter that resolves x-campaign services only when installed/bound. It must degrade safely when unavailable.
 
-### Host Integration Slice 1D — Cockpit Distribution Workspace Hydration
+### Host Integration Slice 1D — Campaign Cockpit Read Model Route Prop Boundary
 
-Hydrate the existing Distribution Workspace with read-only campaign adoption facts. Do not add mutation actions.
+Dashboard route exposes `campaign_read_model` as a read-only Inertia prop.
 
-### Host Integration Slice 1E — Parity and Boundary Report
+### Host Integration Slice 1E — Campaign Cockpit Dashboard Presentation Hydration
 
-Document the as-built host integration, test coverage, and remaining mutation gates.
+Dashboard renders a read-only campaign adoption panel.
+
+### Host Integration Slice 1F — Campaign Cockpit Workspace / Explorer Read-Only Navigation Boundary
+
+Dashboard campaign context links to the existing Pay Code Explorer route using presentation-only campaign navigation context.
+
+### Host Integration Slice 1G — Campaign Cockpit Dedicated Read-Only Workspace Decision Point
+
+Dedicated Campaign Cockpit workspace route is deferred.
+
+### Host Integration Slice 1H — Campaign Cockpit Read-Only Adoption Closure / Integration Readiness Update
+
+Read-only Campaign Cockpit adoption is closed through Slice 1G and this readiness report reflects that closure.
 
 ## Risk Register
 
@@ -136,10 +163,12 @@ Document the as-built host integration, test coverage, and remaining mutation ga
 
 ## Final Recommendation
 
-Proceed with:
+Read-only Campaign Cockpit adoption is complete for now:
 
 ```text
-x-change Host Integration Slice 1A — Campaign Cockpit Adoption Boundary Plan
+x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 ```
 
-Do not begin mutation wiring until the read-only host adoption path is green and reviewed.
+Completed through Host Integration Slice 1H.
+
+Do not begin mutation wiring until a separate mutation mini-roadmap is explicitly approved.

@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Host Integration Slice 1G — Campaign Cockpit Dedicated Read-Only Workspace Decision Point
+Current slice: Host Integration Slice 1H — Campaign Cockpit Read-Only Adoption Closure / Integration Readiness Update
 Status: Complete
 Last updated: 2026-07-09
 
@@ -113,6 +113,13 @@ Last updated: 2026-07-09
   - Dedicated Campaign Cockpit workspace route is deferred.
   - Existing Pay Code Explorer remains the read-only campaign navigation surface.
   - Future dedicated campaign workspace work requires a smaller route/read-model/redaction plan before implementation.
+  - Campaign mutation route scaffolding remains unauthorized.
+  - No x-campaign imports, hard Composer dependency, campaign route namespace, campaign workspace route, campaign workspace controller, campaign workspace page, campaign mutation endpoints, Pay Code generation, delivery dispatch, journal writes, feedback sends/retries, wallet reads/writes, provider calls, or money movement were added.
+- Completed Host Integration Slice 1H — Campaign Cockpit Read-Only Adoption Closure / Integration Readiness Update:
+  - Read-only Campaign Cockpit adoption is closed through Slice 1G.
+  - Dashboard campaign adoption panel is safe for read-only operator use.
+  - Pay Code Explorer campaign navigation context is safe for read-only operator orientation.
+  - Overall Settlement OS integration readiness documentation now reflects the completed 1A–1H host adoption path.
   - Campaign mutation route scaffolding remains unauthorized.
   - No x-campaign imports, hard Composer dependency, campaign route namespace, campaign workspace route, campaign workspace controller, campaign workspace page, campaign mutation endpoints, Pay Code generation, delivery dispatch, journal writes, feedback sends/retries, wallet reads/writes, provider calls, or money movement were added.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
@@ -450,6 +457,7 @@ Current boundary:
 - render campaign adoption facts only through whitelisted presentation fields; never render generic campaign payloads
 - keep `campaign_navigation_context` presentation-only when linking from campaign dashboard context into existing Cockpit explorer surfaces
 - defer a dedicated Campaign Cockpit workspace route until a smaller read-only route/read-model/redaction plan is explicitly approved
+- treat read-only Campaign Cockpit adoption as closed through Slice 1G; choose the next branch explicitly before adding new capabilities
 - keep generate controls disabled until authorization, pricing, funding, idempotency, validation/redaction, existing issuance API/action routing, and operator response contracts are all designed
 - avoid broad voucher payloads, provider payloads, wallet data, claim payloads, approval metadata, instructions, or raw payloads
 - no mutation endpoints, request validation execution, payload persistence, execution, journal writes, feedback delivery, provider calls, wallet access, campaign mutation, campaign execution, or money movement
@@ -486,6 +494,7 @@ Current boundary:
 - Host Integration Slice 1E hydrates campaign adoption facts into dashboard presentation only. It must not add mutation buttons, campaign routes, route navigation to write endpoints, provider calls, queue dispatch, persistence, generic payload rendering, wallet access, or money movement.
 - Host Integration Slice 1F links campaign adoption context into existing read-only Cockpit explorer surfaces only. It must not add a campaign route namespace, campaign mutation controller, Pay Code generation path, delivery dispatch path, journal writer, feedback retry path, provider call, wallet reader/writer, or money movement boundary.
 - Host Integration Slice 1G defers a dedicated Campaign Cockpit workspace route. It must not add a campaign route namespace, campaign workspace controller, campaign workspace page, campaign mutation controller, Pay Code generation path, delivery dispatch path, journal writer, feedback retry path, provider call, wallet reader/writer, or money movement boundary.
+- Host Integration Slice 1H closes the current read-only Campaign Cockpit adoption branch. It must not add a campaign route namespace, campaign workspace controller, campaign workspace page, campaign mutation controller, Pay Code generation path, delivery dispatch path, journal writer, feedback retry path, provider call, wallet reader/writer, or money movement boundary.
 - Slice 25 introduces a read-only mutation preconditions review and a visible review panel. It does not approve mutation wiring, register mutation routes, validate requests, issue vouchers, call providers, access wallets, write journal entries, run actions, send feedback, or move money.
 - Slice 26 introduces a read-only mutation authorization decision point and a visible decision panel. It records `not_authorized` and does not approve mutation wiring, register mutation routes, validate requests, persist payloads, issue vouchers, call providers, access wallets, write journal entries, run actions, send feedback, create campaigns, or move money.
 
@@ -697,3 +706,8 @@ Current boundary:
 - Host Integration Slice 1G `composer validate --strict` passed.
 - Host Integration Slice 1G formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
 - Host Integration Slice 1G full package Pest result: `1043 passed, 5 skipped, 5806 assertions`.
+- Host Integration Slice 1H focused red baseline: `4 failed, 5 passed, 39 assertions`.
+- Host Integration Slice 1H focused architecture result: `9 passed, 63 assertions`.
+- Host Integration Slice 1H `composer validate --strict` passed.
+- Host Integration Slice 1H formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
+- Host Integration Slice 1H full package Pest result: `1046 passed, 5 skipped, 5834 assertions`.

@@ -16,7 +16,12 @@ it('documents cross-package Settlement OS integration readiness', function () {
         ->and($report)->toContain('x-feedback')
         ->and($report)->toContain('x-change Cockpit')
         ->and($report)->toContain('x-campaign')
-        ->and($report)->toContain('x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption');
+        ->and($report)->toContain('x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption')
+        ->and($report)->toContain('Completed through Host Integration Slice 1H')
+        ->and($report)->toContain('Dashboard campaign adoption panel')
+        ->and($report)->toContain('Pay Code Explorer campaign navigation context')
+        ->and($report)->toContain('No dedicated campaign workspace route')
+        ->and($report)->toContain('Campaign mutation route scaffolding remains unauthorized');
 });
 
 it('updates the overall Settlement OS compass with the next host integration slice', function () {
@@ -25,5 +30,6 @@ it('updates the overall Settlement OS compass with the next host integration sli
     expect($compass)->toContain('Current wave: Host Integration Readiness')
         ->and($compass)->toContain('Wave 5 — x-campaign complete through Phase 15')
         ->and($compass)->toContain('x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption')
+        ->and($compass)->toContain('Completed through Host Integration Slice 1H')
         ->and($compass)->toContain('Mutation route scaffolding remains unauthorized');
 });

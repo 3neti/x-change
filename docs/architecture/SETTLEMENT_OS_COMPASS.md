@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; ready for first host-side read-only integration slice
+Current status: Wave 5 — x-campaign complete through Phase 15; x-change Host Integration Slice 1 read-only Campaign Cockpit adoption complete through Slice 1H
 Last updated: 2026-07-09
 
 | Wave | Workstream | Role | Status | Compass |
@@ -750,7 +750,13 @@ ExecutionDriverContract
   - x-campaign remains non-mutating for host adoption: it does not own host routes, controllers, requests, resources, middleware, policies, Pay Code generation semantics, provider delivery, journal storage, wallet mutation, or money movement
 - Settlement OS integration readiness report added:
   - [INTEGRATION_READINESS_REPORT.md](INTEGRATION_READINESS_REPORT.md)
-  - selected next slice: x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
+- x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption:
+  - Completed through Host Integration Slice 1H
+  - Dashboard campaign adoption panel is safe for read-only operator use
+  - Pay Code Explorer campaign navigation context is safe for read-only operator orientation
+  - No dedicated campaign workspace route was added
+  - Mutation route scaffolding remains unauthorized
+  - No campaign mutation endpoints, Pay Code generation through campaign, delivery dispatch, journal writes, feedback sends/retries, wallet reads/writes, provider calls, campaign execution, or money movement were added
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -759,16 +765,22 @@ ExecutionDriverContract
 
 ## Next Recommended Workstream
 
-Proceed with:
+The first read-only host adoption branch is closed:
 
 ```text
 x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 ```
 
-Recommended first slice:
+Completed through Host Integration Slice 1H.
+
+Recommended next branch:
 
 ```text
-x-change Host Integration Slice 1A — Campaign Cockpit Adoption Boundary Plan
+Choose explicitly before implementation:
+1. Quick Generate mutation mini-roadmap
+2. Dedicated Campaign Cockpit workspace route plan
+3. Journal/action/feedback read-model hydration into Cockpit surfaces
+4. Execution-result persistence and x-journal handoff planning
 ```
 
 Recommended actions:
@@ -776,11 +788,10 @@ Recommended actions:
 1. Read [INTEGRATION_READINESS_REPORT.md](INTEGRATION_READINESS_REPORT.md).
 2. Read the Cockpit compass before implementation: `packages/x-change/docs/ui-cockpit/COMPASS.md`.
 3. Read the x-campaign parity report before implementation: `/Users/rli/PhpstormProjects/packages/x-campaign/docs/PARITY_REPORT.md`.
-4. Add host-side documentation and tests proving campaign Cockpit adoption is read-only and host-owned.
-5. Keep any x-campaign package access optional and adapter-driven.
-6. Mutation route scaffolding remains unauthorized.
-7. Do not add campaign mutation endpoints, request validation execution, payload persistence, Pay Code generation, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls, campaign state mutation, money movement, raw payload exposure, wallet access, or live hard package calls unless explicitly approved.
-8. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
+4. Keep any x-campaign package access optional and adapter-driven.
+5. Mutation route scaffolding remains unauthorized.
+6. Do not add campaign mutation endpoints, request validation execution, payload persistence, Pay Code generation, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls, campaign state mutation, money movement, raw payload exposure, wallet access, or live hard package calls unless explicitly approved.
+7. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
 ## x-journal Initial Intent
 
