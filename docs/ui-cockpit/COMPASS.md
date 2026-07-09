@@ -4,9 +4,9 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Slice 27 — Cross-Package Read Model Integration Baseline
+Current slice: Host Integration Slice 1A — Campaign Cockpit Adoption Boundary Plan
 Status: Complete
-Last updated: 2026-07-04
+Last updated: 2026-07-09
 
 ## Completed
 
@@ -398,16 +398,20 @@ No implementation slice is in progress.
 
 ## Next
 
-Recommended next decision: choose whether Cockpit remains read-only for now or receives a separately approved Quick Generate mutation mini-roadmap.
+Completed host integration boundary:
 
 Current boundary:
 
-- the Cockpit foundation roadmap stops at the mutation authorization boundary
+- Host Integration Slice 1A records the Campaign Cockpit adoption boundary
+- x-campaign Phase 15 host adoption surfaces are inputs only
+- Campaign Cockpit adoption remains read-only and host-owned
+- Mutation route scaffolding remains unauthorized
+- the Cockpit foundation roadmap still stops at the mutation authorization boundary
 - Quick Generate mutation is not authorized
 - keep route props read-only and authenticated unless a mutation mini-roadmap is explicitly approved
 - keep generate controls disabled until authorization, pricing, funding, idempotency, validation/redaction, existing issuance API/action routing, and operator response contracts are all designed
 - avoid broad voucher payloads, provider payloads, wallet data, claim payloads, approval metadata, instructions, or raw payloads
-- no mutation endpoints, request validation execution, payload persistence, execution, journal writes, feedback delivery, provider calls, wallet access, campaign behavior, or money movement
+- no mutation endpoints, request validation execution, payload persistence, execution, journal writes, feedback delivery, provider calls, wallet access, campaign mutation, campaign execution, or money movement
 - preserve all existing Claim UI tests
 
 ## Risks
@@ -477,6 +481,7 @@ Current boundary:
 - Slice 25 adds `CockpitQuickGenerateMutationPreconditionsReviewData` and `CockpitQuickGenerateMutationPreconditionsReviewItemData` as read-only review facts in `quick_generate_read_model`. Generation remains disabled and the recommendation remains `remain-read-only`.
 - Slice 26 adds `CockpitQuickGenerateMutationAuthorizationDecisionData` as a read-only decision fact in `quick_generate_read_model`. Generation remains disabled, the decision is `not_authorized`, and mutation-route scaffolding requires explicit human approval plus a smaller mutation contract.
 - Slice 27 introduces optional read-only cross-package read-model adapters for x-journal, x-action, and x-feedback. These adapters are optional service-ID seams, not hard Composer dependencies, and failures resolve to unavailable summaries with no exception message exposure.
+- Host Integration Slice 1A is documentation and boundary protection only. It treats x-campaign Phase 15 host adoption surfaces as inputs for future host-side read models. It does not add production x-campaign adapters, hard Composer dependencies, routes, controllers, frontend UI, campaign mutation endpoints, Pay Code generation through campaign, delivery dispatch, journal writes, action execution, feedback sends or retries, provider calls, wallet reads/writes, Claim UX changes, or money movement.
 
 ## Open Questions
 
@@ -487,6 +492,8 @@ Current boundary:
 - Whether missing voucher codes should remain indistinguishable from not-wired read models in the UI or gain an explicit redacted/not-found state.
 - Whether the next backend list adapter should reuse `VoucherLifecycleServiceContract::list()` directly or introduce a Cockpit-specific list provider that delegates to it.
 - Whether Pay Code Explorer should expose internal voucher IDs or issuer IDs later under stricter operator authorization.
+- Which x-change-side DTO names should represent read-only campaign Cockpit adoption facts in Host Integration Slice 1B.
+- Whether the optional x-campaign adapter should resolve package services by service ID, contract class, or host-configured bridge in a later slice.
 
 ## Test Status
 
@@ -602,3 +609,8 @@ Current boundary:
 - Slice 27 modified PHP syntax checks passed.
 - Slice 27 full package Pest result: `1019 passed, 5 skipped, 5481 assertions`.
 - Slice 27 formatter note: `vendor/bin/pint --dirty --format agent` is unavailable because `vendor/bin/pint` does not exist in this package.
+- Host Integration Slice 1A focused documentation guard red baseline: `2 failed, 2 assertions`.
+- Host Integration Slice 1A focused documentation guard result: `2 passed, 19 assertions`.
+- Host Integration Slice 1A architecture test subset result: `8 passed, 37 assertions`.
+- Host Integration Slice 1A `composer validate --strict` passed.
+- Host Integration Slice 1A formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
