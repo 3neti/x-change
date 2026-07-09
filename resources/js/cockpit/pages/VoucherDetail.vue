@@ -170,6 +170,12 @@ const detailActions = computed<CockpitVoucherDetailAction[]>(() => {
         .slice(0, 5);
 });
 
+const integrationSummaries = computed(() => [
+    integrationSummary('journal', 'Journal Evidence', props.read_model?.journal, 'entries', 'entries'),
+    integrationSummary('actions', 'Action CTAs', props.read_model?.actions, 'actions', 'actions'),
+    integrationSummary('feedback', 'Feedback Deliveries', props.read_model?.feedback, 'deliveries', 'deliveries'),
+]);
+
 function stringValue(value: unknown): string | null {
     if (typeof value === 'string' && value.trim() !== '') {
         return value.trim();
@@ -364,6 +370,30 @@ function channelLabel(channel: string): string {
 
     return channel.charAt(0).toUpperCase() + channel.slice(1);
 }
+
+function integrationSummary(
+    key: string,
+    label: string,
+    model: CockpitDependentReadModel | undefined,
+    collectionKey: 'entries' | 'actions' | 'deliveries',
+    noun: string,
+): {
+    key: string;
+    label: string;
+    status: string;
+    count: string;
+    policy: string;
+} {
+    const collection = Array.isArray(model?.[collectionKey]) ? model[collectionKey] : [];
+
+    return {
+        key,
+        label,
+        status: readModelStatus(model),
+        count: `${collection.length} ${noun}`,
+        policy: stringValue(model?.redactions?.payloads) ?? 'not-loaded',
+    };
+}
 </script>
 
 <template>
@@ -410,6 +440,41 @@ function channelLabel(channel: string): string {
             </div>
 
             <CockpitVoucherOverviewPanel :items="overviewItems" />
+
+            <section
+                class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-voucher-integration-summary-panel"
+            >
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                    Voucher Integration Summary
+                </p>
+                <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
+                    Journal · Action · Feedback
+                </h3>
+                <div class="mt-5 grid gap-3 md:grid-cols-3">
+                    <article
+                        v-for="summary in integrationSummaries"
+                        :key="summary.key"
+                        class="rounded-lg border border-slate-200 p-4 dark:border-slate-800"
+                        data-testid="cockpit-voucher-integration-summary-card"
+                    >
+                        <div class="flex items-center justify-between gap-3">
+                            <p class="font-semibold text-slate-950 dark:text-slate-50">
+                                {{ summary.label }}
+                            </p>
+                            <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                                {{ summary.status }}
+                            </span>
+                        </div>
+                        <p class="mt-3 text-2xl font-semibold text-slate-950 dark:text-slate-50">
+                            {{ summary.count }}
+                        </p>
+                        <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                            {{ summary.policy }}
+                        </p>
+                    </article>
+                </div>
+            </section>
 
             <div class="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
                 <CockpitVoucherTimelinePanel :items="timelineItems" />

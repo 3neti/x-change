@@ -780,6 +780,10 @@ ExecutionDriverContract
   - Dashboard renders read-only Journal / Action / Feedback integration summary cards from the existing `read_model` bundle.
   - Cards show status, count, and payload policy only.
   - No new routes, frontend package queries, journal writes, action execution, feedback delivery, retry execution, provider calls, raw payload exposure, voucher mutation, wallet access, or money movement were added.
+- x-change Host Integration Slice 2E — Voucher Detail Integration Summary:
+  - Voucher Detail renders read-only Journal / Action / Feedback integration summary cards from the existing `read_model` bundle.
+  - Cards show status, count, and payload policy only.
+  - No new routes, journal writes, action execution, feedback delivery, retry execution, provider calls, raw payload exposure, voucher mutation, wallet access, or money movement were added.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.

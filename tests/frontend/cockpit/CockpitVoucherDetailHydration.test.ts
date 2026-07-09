@@ -229,6 +229,40 @@ describe('Cockpit Voucher Detail hydration', () => {
         expect(wrapper.text()).not.toContain('raw_payload');
     });
 
+    it('renders a voucher-level integration summary across journal actions and feedback', () => {
+        const wrapper = mount(VoucherDetail, {
+            props: {
+                read_model: {
+                    ...readModel,
+                    journal: {
+                        status: 'available',
+                        authorized: true,
+                        entries: [{ id: 'journal-1' }, { id: 'journal-2' }],
+                        redactions: { payloads: 'journal-evidence-summary-only' },
+                    },
+                    actions: {
+                        status: 'available',
+                        authorized: true,
+                        actions: [{ key: 'review' }],
+                        redactions: { payloads: 'safe-action-host-summary-only' },
+                    },
+                    feedback: {
+                        status: 'available',
+                        authorized: true,
+                        deliveries: [{ id: 'delivery-1' }],
+                        redactions: { payloads: 'communication-delivery-summary-only' },
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Voucher Integration Summary');
+        expect(wrapper.text()).toContain('2 entries');
+        expect(wrapper.text()).toContain('1 actions');
+        expect(wrapper.text()).toContain('1 deliveries');
+        expect(wrapper.findAll('[data-testid="cockpit-voucher-integration-summary-card"]')).toHaveLength(3);
+    });
+
     it('does not render unsafe voucher payload fields from the read model summary', () => {
         const wrapper = mount(VoucherDetail, {
             props: {

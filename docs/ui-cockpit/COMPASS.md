@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Host Integration Slice 2D — Dashboard Integration Summary
+Current slice: Host Integration Slice 2E — Voucher Detail Integration Summary
 Status: Complete
 Last updated: 2026-07-09
 
@@ -153,6 +153,11 @@ Last updated: 2026-07-09
   - Cards show status, count, and payload policy only.
   - No new routes, frontend package queries, journal writes, action execution, feedback delivery, retry execution, provider calls, raw payload exposure, voucher mutation, wallet access, or money movement were added.
   - Report: `reports/027-dashboard-integration-summary.md`.
+- Completed Host Integration Slice 2E — Voucher Detail Integration Summary:
+  - Voucher Detail renders read-only Journal / Action / Feedback integration summary cards from the existing `read_model` bundle.
+  - Cards show status, count, and payload policy only.
+  - No new routes, journal writes, action execution, feedback delivery, retry execution, provider calls, raw payload exposure, voucher mutation, wallet access, or money movement were added.
+  - Report: `reports/028-voucher-detail-integration-summary.md`.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
   - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`
