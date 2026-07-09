@@ -136,6 +136,7 @@ function buildPayload(): Record<string, unknown> {
         cash: {
             amount: Number.isFinite(normalizedAmount) ? normalizedAmount : amount.value,
             currency: currency.value.trim() || 'PHP',
+            validation: {},
         },
         inputs: {
             fields: [],

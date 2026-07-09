@@ -20,6 +20,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         IdempotencyService $idempotency,
     ): JsonResponse {
         $payload = $request->validated();
+        $payload = $this->normalizePayloadForIssuance($payload);
         $key = $idempotency->extractKey($request);
         $correlationId = $request->header((string) config('x-change.api.correlation.header', 'X-Correlation-ID'));
         $issuerId = $request->user()?->getAuthIdentifier();
@@ -53,6 +54,19 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         }
 
         return response()->json($response, 201);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    protected function normalizePayloadForIssuance(array $payload): array
+    {
+        if (data_get($payload, 'cash.validation') === null) {
+            data_set($payload, 'cash.validation', []);
+        }
+
+        return $payload;
     }
 
     /**

@@ -200,6 +200,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(payload.cash).toEqual({
             amount: 99.5,
             currency: 'PHP',
+            validation: {},
         });
         expect(payload.inputs).toEqual({
             fields: [],
