@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Host Validation Checkpoint 2 — Manual Browser UI/UX Pass Checklist
-Status: Complete
+Current slice: Host Validation Checkpoint 3 — Manual Browser UI/UX Pass Execution Record
+Status: Programmatic route/read-model record complete; human visual browser confirmation pending
 Last updated: 2026-07-09
 
 ## Completed
@@ -194,6 +194,13 @@ Last updated: 2026-07-09
   - The manual pass is scoped to `basic_cash` and `divisible_open_three_slices_enforced_interval` local scenario data.
   - No browser automation dependencies, browser snapshots, routes, mutation endpoints, lifecycle scenario execution, claim submission, provider calls, journal writes, action execution, feedback delivery, wallet access, or money movement were added.
   - Report: `reports/034-manual-browser-ui-ux-pass-checklist.md`.
+- Host Validation Checkpoint 3 — Manual Browser UI/UX Pass Execution Record:
+  - Added a route/read-model execution record for the read-only Cockpit browser UI/UX pass.
+  - Programmatic route/read-model verification is recorded for Dashboard, Quick Generate, Pay Code Explorer, Voucher Detail, and Distribution Workspace.
+  - Human visual browser confirmation remains pending and is explicitly not claimed as complete.
+  - The record preserves stop conditions for JavaScript errors, dead navigation, unsafe payload exposure, mutation controls, provider calls, journal writes, action execution, feedback delivery, voucher mutation, wallet access, and money movement.
+  - No browser automation dependencies, browser snapshots, routes, mutation endpoints, lifecycle scenario execution, claim submission, provider calls, journal writes, action execution, feedback delivery, wallet access, or money movement were added.
+  - Report: `reports/035-manual-browser-ui-ux-pass-execution-record.md`.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
   - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`

@@ -815,6 +815,12 @@ ExecutionDriverContract
   - The checklist defines scenario context, acceptance criteria, stop conditions, and no-side-effect boundaries for browser validation.
   - The manual pass is scoped to `basic_cash` and `divisible_open_three_slices_enforced_interval` local scenario data.
   - No browser automation dependencies, browser snapshots, routes, mutation endpoints, lifecycle scenario execution, claim submission, provider calls, journal writes, action execution, feedback delivery, wallet access, or money movement were added.
+- x-change Host Validation Checkpoint 3 — Manual Browser UI/UX Pass Execution Record:
+  - Added a route/read-model execution record for the read-only Cockpit browser UI/UX pass.
+  - Programmatic route/read-model verification is recorded for Dashboard, Quick Generate, Pay Code Explorer, Voucher Detail, and Distribution Workspace.
+  - Human visual browser confirmation remains pending and is explicitly not claimed as complete.
+  - The record preserves stop conditions for JavaScript errors, dead navigation, unsafe payload exposure, mutation controls, provider calls, journal writes, action execution, feedback delivery, voucher mutation, wallet access, and money movement.
+  - No browser automation dependencies, browser snapshots, routes, mutation endpoints, lifecycle scenario execution, claim submission, provider calls, journal writes, action execution, feedback delivery, wallet access, or money movement were added.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -835,7 +841,7 @@ Completed through Host Integration Slice 2I.
 Recommended next checkpoint:
 
 ```text
-Execute and record the manual browser UI/UX pass for read-only Cockpit
+Complete human visual browser confirmation for read-only Cockpit
 ```
 
 Recommended actions:
@@ -845,10 +851,11 @@ Recommended actions:
 3. Exercise `/x/cockpit`, Voucher Detail, Pay Code Explorer, and Campaign Cockpit read-only surfaces in the host app.
 4. Compare the browser output against `reports/033-read-only-ui-ux-scenario-validation.md`.
 5. Record findings against `reports/034-manual-browser-ui-ux-pass-checklist.md`.
-6. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
-7. Mutation route scaffolding remains unauthorized.
-8. Do not add campaign mutation endpoints, request validation execution, payload persistence, Pay Code generation, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls, campaign state mutation, money movement, raw payload exposure, or wallet access unless explicitly approved.
-9. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
+6. Update `reports/035-manual-browser-ui-ux-pass-execution-record.md` with human visual results.
+7. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
+8. Mutation route scaffolding remains unauthorized.
+9. Do not add campaign mutation endpoints, request validation execution, payload persistence, Pay Code generation, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls, campaign state mutation, money movement, raw payload exposure, or wallet access unless explicitly approved.
+10. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
 ## x-journal Initial Intent
 
