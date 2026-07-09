@@ -25,7 +25,7 @@ it('documents the campaign cockpit workspace explorer navigation boundary slice'
 it('updates the cockpit compass for host integration slice 1F', function () {
     $compass = file_get_contents(dirname(__DIR__, 3).'/docs/ui-cockpit/COMPASS.md');
 
-    expect($compass)->toContain('Current slice: Host Integration Slice 1F — Campaign Cockpit Workspace / Explorer Read-Only Navigation Boundary')
+    expect($compass)->toContain('Completed Host Integration Slice 1F — Campaign Cockpit Workspace / Explorer Read-Only Navigation Boundary')
         ->and($compass)->toContain('Status: Complete')
         ->and($compass)->toContain('Dashboard campaign panel links to existing read-only Cockpit explorer context')
         ->and($compass)->toContain('Pay Code Explorer renders `campaign_navigation_context` as presentation-only context')
