@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 2C — Journal Handoff Boundary
-Status: Implemented; operator issuance activity now has a no-write journal handoff boundary
+Current slice: Cockpit Mutation Wave 2D — Action Handoff Boundary
+Status: Implemented; operator issuance activity now has a no-execution action handoff boundary
 Last updated: 2026-07-10
 
 ## Completed
@@ -39,6 +39,13 @@ Last updated: 2026-07-10
   - The null handoff returns `not_wired` with `writes_journal: false`.
   - No journal writes, x-journal runtime calls, migrations, queues, retries, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload persistence, or money movement were added.
   - Report: `reports/053-operator-issuance-activity-journal-handoff-boundary.md`.
+- Completed Cockpit Mutation Wave 2D — Action Handoff Boundary:
+  - Added `CockpitOperatorIssuanceActivityActionHandoffContract`.
+  - Added `CockpitOperatorIssuanceActivityActionHandoffResultData`.
+  - Added `NullCockpitOperatorIssuanceActivityActionHandoff` as the default no-execution boundary.
+  - The null handoff returns `not_wired` with `executes_action: false`.
+  - No action execution, x-action runtime calls, action run persistence, action routing mutations, action analytics storage, journal writes, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload persistence, or money movement were added.
+  - Report: `reports/054-operator-issuance-activity-action-handoff-boundary.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -938,3 +945,8 @@ Current boundary:
 - Cockpit Mutation Wave 2C focused journal handoff result: `3 passed, 8 assertions`.
 - Cockpit Mutation Wave 2C focused boundary/readiness result: `6 passed, 50 assertions`.
 - Cockpit Mutation Wave 2C full package Pest result: `1104 passed, 5 skipped, 6607 assertions`.
+- Cockpit Mutation Wave 2D focused red baseline: `3 failed`.
+- Cockpit Mutation Wave 2D focused action handoff result: `4 passed, 25 assertions`.
+- Cockpit Mutation Wave 2D formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
+- Cockpit Mutation Wave 2D focused boundary/readiness result: `7 passed, 67 assertions`.
+- Cockpit Mutation Wave 2D full package Pest result: `1108 passed, 5 skipped, 6632 assertions`.
