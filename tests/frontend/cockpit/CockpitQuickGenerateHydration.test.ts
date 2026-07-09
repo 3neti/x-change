@@ -39,6 +39,12 @@ const quickGenerateReadModel = {
         enabled: true,
         reason: 'must-remain-disabled-in-ui',
     },
+    mutation_contract: {
+        runtime_enabled: true,
+        route: 'x-change.cockpit.quick-generate.store',
+        route_url: '/x/cockpit/quick-generate',
+        allowed_methods: ['GET', 'POST'],
+    },
     redactions: {
         payloads: 'sanitized-quick-generate-catalog-only',
     },
@@ -67,10 +73,12 @@ describe('Cockpit Quick Generate hydration', () => {
 
         const text = wrapper.text();
         const button = wrapper.find('[data-testid="cockpit-generate-button"]');
+        const submitButton = wrapper.find('[data-testid="cockpit-quick-generate-submit-button"]');
 
         expect(text).not.toContain('must-not-render');
         expect(text).not.toContain('funding_source');
         expect(button.attributes('disabled')).toBeDefined();
+        expect(submitButton.attributes('disabled')).toBeUndefined();
     });
 
     it('keeps static defaults when the read model is missing or unauthorized', () => {

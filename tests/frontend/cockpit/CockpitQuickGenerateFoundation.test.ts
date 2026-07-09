@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import CockpitGenerateActionPanel from '../../../resources/js/cockpit/components/CockpitGenerateActionPanel.vue';
 import CockpitIssuanceBoundaryPanel from '../../../resources/js/cockpit/components/CockpitIssuanceBoundaryPanel.vue';
 import CockpitPricingFundingSummary from '../../../resources/js/cockpit/components/CockpitPricingFundingSummary.vue';
@@ -11,6 +11,7 @@ import CockpitQuickGenerateMutationHandoffPlanPanel from '../../../resources/js/
 import CockpitQuickGenerateMutationAuthorizationDecisionPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateMutationAuthorizationDecisionPanel.vue';
 import CockpitQuickGenerateMutationPreconditionsReviewPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateMutationPreconditionsReviewPanel.vue';
 import CockpitQuickGeneratePricingGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGeneratePricingGatePanel.vue';
+import CockpitQuickGenerateSubmitPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateSubmitPanel.vue';
 import CockpitQuickGenerateValidationRedactionGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateValidationRedactionGatePanel.vue';
 import CockpitRuntimeInputPanel from '../../../resources/js/cockpit/components/CockpitRuntimeInputPanel.vue';
 import CockpitTemplateSelector from '../../../resources/js/cockpit/components/CockpitTemplateSelector.vue';
@@ -133,6 +134,147 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('Drafts are local and read-only in Slice 18.');
         expect(wrapper.find('form').exists()).toBe(false);
         expect(wrapper.find('[data-testid="cockpit-quick-generate-draft-contract-panel"]').exists()).toBe(true);
+    });
+
+    it('submits a sanitized quick generate payload through the mutation contract route', async () => {
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: true,
+            json: vi.fn().mockResolvedValue({
+                status: 'issued',
+                result: {
+                    code: 'PC-UI-001',
+                },
+            }),
+        });
+
+        vi.stubGlobal('fetch', fetchMock);
+        vi.stubGlobal('crypto', {
+            randomUUID: () => 'cockpit-ui-idempotency-1',
+        });
+
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                draftContract: {
+                    template_key: 'money-changer',
+                    amount: '25',
+                    currency: 'PHP',
+                    recipient_reference: '',
+                    purpose: '',
+                },
+                mutationContract: {
+                    runtime_enabled: true,
+                    route: 'x-change.cockpit.quick-generate.store',
+                    route_url: '/x/cockpit/quick-generate',
+                    allowed_methods: ['GET', 'POST'],
+                },
+            },
+        });
+
+        await wrapper.find('[data-testid="cockpit-quick-generate-submit-amount"]').setValue('99.50');
+        await wrapper.find('[data-testid="cockpit-quick-generate-submit-recipient"]').setValue('09173011987');
+        await wrapper.find('[data-testid="cockpit-quick-generate-submit-purpose"]').setValue('Operator test issuance');
+        await wrapper.find('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
+
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+
+        const [url, options] = fetchMock.mock.calls[0];
+        const payload = JSON.parse(options.body);
+
+        expect(url).toBe('/x/cockpit/quick-generate');
+        expect(options.method).toBe('POST');
+        expect(options.headers['Idempotency-Key']).toBe('cockpit-ui-idempotency-1');
+        expect(payload.cash).toEqual({
+            amount: 99.5,
+            currency: 'PHP',
+        });
+        expect(payload.inputs).toEqual({
+            fields: [],
+        });
+        expect(payload.feedback).toEqual({
+            mobile: '09173011987',
+        });
+        expect(payload.rider).toEqual({
+            message: 'Operator test issuance',
+        });
+        expect(payload.metadata.custom.cockpit).toEqual({
+            template_key: 'money-changer',
+            source: 'cockpit.quick-generate',
+        });
+        expect(JSON.stringify(payload)).not.toContain('wallet');
+        expect(JSON.stringify(payload)).not.toContain('provider_payload');
+        expect(wrapper.emitted('submitSuccess')).toHaveLength(1);
+
+        vi.unstubAllGlobals();
+    });
+
+    it('keeps quick generate submit disabled until a post route url is available', async () => {
+        const fetchMock = vi.fn();
+
+        vi.stubGlobal('fetch', fetchMock);
+
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                mutationContract: {
+                    runtime_enabled: true,
+                    route: 'x-change.cockpit.quick-generate.store',
+                    route_url: null,
+                    allowed_methods: ['GET', 'POST'],
+                },
+            },
+        });
+
+        const button = wrapper.find('[data-testid="cockpit-quick-generate-submit-button"]');
+
+        expect(button.attributes('disabled')).toBeDefined();
+
+        await wrapper.find('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
+
+        expect(fetchMock).not.toHaveBeenCalled();
+
+        vi.unstubAllGlobals();
+    });
+
+    it('prevents duplicate in-flight quick generate submit requests', async () => {
+        let resolveFetch: ((value: unknown) => void) | null = null;
+        const fetchMock = vi.fn().mockReturnValue(new Promise((resolve) => {
+            resolveFetch = resolve;
+        }));
+
+        vi.stubGlobal('fetch', fetchMock);
+        vi.stubGlobal('crypto', {
+            randomUUID: () => 'cockpit-ui-idempotency-duplicate',
+        });
+
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                mutationContract: {
+                    runtime_enabled: true,
+                    route: 'x-change.cockpit.quick-generate.store',
+                    route_url: '/x/cockpit/quick-generate',
+                    allowed_methods: ['POST'],
+                },
+            },
+        });
+
+        await wrapper.find('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
+        await wrapper.find('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
+
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-submit-button"]').attributes('disabled')).toBeDefined();
+
+        resolveFetch?.({
+            ok: true,
+            json: vi.fn().mockResolvedValue({
+                status: 'issued',
+            }),
+        });
+        await Promise.resolve();
+        await Promise.resolve();
+
+        vi.unstubAllGlobals();
     });
 
     it('renders authorization gate facts without enabling generation', () => {

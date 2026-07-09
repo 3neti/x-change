@@ -11,6 +11,7 @@ import CockpitQuickGenerateMutationAuthorizationDecisionPanel from '../component
 import CockpitQuickGenerateMutationHandoffPlanPanel from '../components/CockpitQuickGenerateMutationHandoffPlanPanel.vue';
 import CockpitQuickGenerateMutationPreconditionsReviewPanel from '../components/CockpitQuickGenerateMutationPreconditionsReviewPanel.vue';
 import CockpitQuickGeneratePricingGatePanel from '../components/CockpitQuickGeneratePricingGatePanel.vue';
+import CockpitQuickGenerateSubmitPanel from '../components/CockpitQuickGenerateSubmitPanel.vue';
 import CockpitQuickGenerateValidationRedactionGatePanel from '../components/CockpitQuickGenerateValidationRedactionGatePanel.vue';
 import CockpitRuntimeInputPanel from '../components/CockpitRuntimeInputPanel.vue';
 import CockpitTemplateSelector from '../components/CockpitTemplateSelector.vue';
@@ -30,6 +31,7 @@ import type {
     CockpitQuickGenerateIdempotencyGate,
     CockpitQuickGenerateIdempotencyGateCheck,
     CockpitQuickGenerateMutationAuthorizationDecision,
+    CockpitQuickGenerateMutationContract,
     CockpitQuickGenerateMutationHandoffPlan,
     CockpitQuickGenerateMutationHandoffPlanStep,
     CockpitQuickGenerateMutationPreconditionsReview,
@@ -281,6 +283,33 @@ const authorization = computed<CockpitQuickGenerateAuthorization>(() => {
         gates: gates.length > 0 ? gates : defaultAuthorization().gates,
         redactions: {
             payloads: stringValue(authorizationReadModel.redactions?.payloads) ?? 'authorization-gates-only',
+        },
+    };
+});
+
+const mutationContract = computed<CockpitQuickGenerateMutationContract>(() => {
+    const contract = props.quick_generate_read_model?.mutation_contract;
+
+    if (!readModelAvailable.value || typeof contract !== 'object' || contract === null) {
+        return defaultMutationContract();
+    }
+
+    return {
+        schema: stringValue(contract.schema) ?? 'x-change.cockpit.quick-generate-mutation.v1',
+        status: stringValue(contract.status) ?? 'not_wired',
+        authorization: stringValue(contract.authorization) ?? 'not-loaded',
+        route: stringValue(contract.route) ?? 'not-loaded',
+        route_url: stringValue(contract.route_url),
+        request_adapter: stringValue(contract.request_adapter) ?? 'not-loaded',
+        issuance_owner: stringValue(contract.issuance_owner) ?? 'not-loaded',
+        idempotency: stringValue(contract.idempotency) ?? 'not-loaded',
+        response_contract: stringValue(contract.response_contract) ?? 'not-loaded',
+        runtime_enabled: contract.runtime_enabled === true,
+        allowed_methods: Array.isArray(contract.allowed_methods)
+            ? contract.allowed_methods.map((method) => String(method))
+            : ['GET'],
+        redactions: {
+            payloads: stringValue(contract.redactions?.payloads) ?? 'mutation-contract-only',
         },
     };
 });
@@ -644,6 +673,25 @@ function defaultAuthorization(): CockpitQuickGenerateAuthorization {
     };
 }
 
+function defaultMutationContract(): CockpitQuickGenerateMutationContract {
+    return {
+        schema: 'x-change.cockpit.quick-generate-mutation.v1',
+        status: 'not_wired',
+        authorization: 'not-loaded',
+        route: 'not-loaded',
+        route_url: null,
+        request_adapter: 'not-loaded',
+        issuance_owner: 'not-loaded',
+        idempotency: 'not-loaded',
+        response_contract: 'not-loaded',
+        runtime_enabled: false,
+        allowed_methods: ['GET'],
+        redactions: {
+            payloads: 'not-loaded',
+        },
+    };
+}
+
 function sanitizeFundingGateCheck(check: CockpitQuickGenerateFundingGateCheck): CockpitQuickGenerateFundingGateCheck | null {
     const key = stringValue(check.key);
     const label = stringValue(check.label);
@@ -851,6 +899,11 @@ function stringValue(value: unknown): string | null {
                     <CockpitQuickGenerateMutationHandoffPlanPanel :mutation-handoff-plan="mutationHandoffPlan" />
                     <CockpitQuickGenerateMutationPreconditionsReviewPanel :mutation-preconditions-review="mutationPreconditionsReview" />
                     <CockpitQuickGenerateMutationAuthorizationDecisionPanel :mutation-authorization-decision="mutationAuthorizationDecision" />
+                    <CockpitQuickGenerateSubmitPanel
+                        :mutation-contract="mutationContract"
+                        :draft-contract="draftContract"
+                        :templates="templates"
+                    />
                     <CockpitGenerateActionPanel :enabled="false" />
                     <CockpitQuickGenerateAuthorizationGatePanel :authorization="authorization" />
                     <CockpitQuickGenerateDraftContractPanel :draft-contract="draftContract" />

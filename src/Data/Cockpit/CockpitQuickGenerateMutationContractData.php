@@ -18,6 +18,7 @@ class CockpitQuickGenerateMutationContractData extends Data
         public readonly string $status = 'not_wired',
         public readonly string $authorization = 'not-loaded',
         public readonly string $route = 'not-loaded',
+        public readonly ?string $route_url = null,
         public readonly string $request_adapter = 'not-loaded',
         public readonly string $issuance_owner = 'not-loaded',
         public readonly string $idempotency = 'not-loaded',

@@ -21,7 +21,7 @@ it('documents the quick generate idempotency and replay contract boundary', func
         ->and($cockpitCompass)->toContain('Cockpit Mutation Wave 1D — Idempotency and Replay Contract')
         ->and($cockpitCompass)->toContain('reports/046-quick-generate-idempotency-replay-contract.md')
         ->and($settlementCompass)->toContain('Cockpit Mutation Wave 1D — Idempotency and Replay Contract')
-        ->and($settlementCompass)->toContain('Approve or revise Cockpit Mutation Wave 1E — UI Submit Enablement')
+        ->and($settlementCompass)->toContain('../ui-cockpit/reports/046-quick-generate-idempotency-replay-contract.md')
         ->and($controller)->toContain('use LBHurtado\\XChange\\Services\\IdempotencyService;')
         ->and($controller)->toContain('recallOrValidate')
         ->and($controller)->toContain('remember')

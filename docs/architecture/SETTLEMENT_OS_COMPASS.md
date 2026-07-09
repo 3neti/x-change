@@ -890,6 +890,14 @@ ExecutionDriverContract
   - UI submit enablement, optimistic UI, post-issuance refresh, Pay Code Explorer navigation, and Voucher Detail navigation remain deferred.
   - Cockpit does not call providers, wallets, journal, action, feedback, campaign behavior, or money movement directly.
   - Report: `../ui-cockpit/reports/046-quick-generate-idempotency-replay-contract.md`.
+- x-change Cockpit Mutation Wave 1E — UI Submit Enablement:
+  - The Quick Generate page now renders a guarded submit panel.
+  - The panel enables only from the server read-model contract: `runtime_enabled`, `route_url`, and `POST`.
+  - The panel sends a `GeneratePayCodeRequest`-compatible payload and an `Idempotency-Key` header to the existing Cockpit route.
+  - Duplicate in-flight submits are blocked client-side.
+  - Post-submit refresh, optimistic UI, Pay Code Explorer navigation, and Voucher Detail navigation remain deferred.
+  - Cockpit does not invent issuance, journal, action, feedback, campaign, provider, wallet, or money-movement behavior outside the existing issuance handoff.
+  - Report: `../ui-cockpit/reports/047-quick-generate-ui-submit-enablement.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -910,7 +918,7 @@ Completed through Host Integration Slice 2I.
 Recommended next checkpoint:
 
 ```text
-Approve or revise Cockpit Mutation Wave 1E — UI Submit Enablement
+Approve or revise Cockpit Mutation Wave 1F — Read Model Refresh / Navigation Closure
 ```
 
 Recommended actions:
@@ -922,11 +930,12 @@ Recommended actions:
 5. Read `packages/x-change/docs/ui-cockpit/reports/044-quick-generate-mutation-route-shell.md`.
 6. Read `packages/x-change/docs/ui-cockpit/reports/045-quick-generate-existing-issuance-handoff.md`.
 7. Read `packages/x-change/docs/ui-cockpit/reports/046-quick-generate-idempotency-replay-contract.md`.
-8. Approve, revise, or reject Wave 1E before Cockpit UI submit behavior is scaffolded.
-9. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
-10. Existing issuance handoff and idempotency/replay are wired, but UI submit enablement remains deferred until frontend state, refresh, and navigation behavior are protected.
-11. Do not add campaign mutation endpoints, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls outside `GeneratePayCode`, campaign state mutation, direct money movement, raw payload exposure, or direct wallet access unless explicitly approved.
-12. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
+8. Read `packages/x-change/docs/ui-cockpit/reports/047-quick-generate-ui-submit-enablement.md`.
+9. Approve, revise, or reject Wave 1F before Cockpit post-submit refresh/navigation behavior is scaffolded.
+10. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
+11. Existing issuance handoff, idempotency/replay, and UI submit are wired, but refresh/navigation closure remains deferred.
+12. Do not add campaign mutation endpoints, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls outside `GeneratePayCode`, campaign state mutation, direct money movement, raw payload exposure, or direct wallet access unless explicitly approved.
+13. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
 ## x-journal Initial Intent
 

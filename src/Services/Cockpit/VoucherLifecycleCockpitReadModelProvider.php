@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Services\Cockpit;
 
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Route;
 use JsonSerializable;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
@@ -644,6 +645,9 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 status: 'existing_issuance_handoff_registered',
                 authorization: 'operator-authenticated-handoff-route',
                 route: 'x-change.cockpit.quick-generate.store',
+                route_url: Route::has('x-change.cockpit.quick-generate.store')
+                    ? route('x-change.cockpit.quick-generate.store', [], false)
+                    : null,
                 request_adapter: 'GeneratePayCodeRequest-compatible-adapter',
                 issuance_owner: 'GeneratePayCode',
                 idempotency: 'replay-safe-route-registered',
@@ -687,10 +691,10 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                     ),
                     new CockpitQuickGenerateMutationContractGateData(
                         key: 'ui-submit-disabled',
-                        label: 'UI Submit Disabled',
-                        status: 'blocked',
-                        decision: 'Backend handoff exists, but Cockpit UI submit remains disabled.',
-                        reason: 'UI submit state and read-model refresh contracts remain deferred to later slices.',
+                        label: 'UI Submit Enabled',
+                        status: 'passed',
+                        decision: 'Cockpit UI may submit only to the idempotency-protected route URL from the read model.',
+                        reason: 'Wave 1E enables a guarded submit control while keeping refresh, redirect, and optimistic UI deferred.',
                     ),
                 ],
                 allowed_methods: ['GET', 'POST'],

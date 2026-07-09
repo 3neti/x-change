@@ -267,6 +267,32 @@ export type CockpitQuickGenerateMutationAuthorizationDecision = {
     [key: string]: unknown;
 };
 
+export type CockpitQuickGenerateMutationContractGate = {
+    key?: string | null;
+    label?: string | null;
+    status?: string | null;
+    decision?: string | null;
+    reason?: string | null;
+    [key: string]: unknown;
+};
+
+export type CockpitQuickGenerateMutationContract = {
+    schema?: string | null;
+    status?: string | null;
+    authorization?: string | null;
+    route?: string | null;
+    route_url?: string | null;
+    request_adapter?: string | null;
+    issuance_owner?: string | null;
+    idempotency?: string | null;
+    response_contract?: string | null;
+    runtime_enabled?: boolean | null;
+    gates?: CockpitQuickGenerateMutationContractGate[];
+    allowed_methods?: string[];
+    redactions?: CockpitReadModelRedactions;
+    [key: string]: unknown;
+};
+
 export type CockpitQuickGenerateDraftContract = {
     schema?: string | null;
     status?: string | null;
@@ -308,6 +334,7 @@ export type CockpitQuickGenerateReadModel = {
     mutation_handoff_plan?: CockpitQuickGenerateMutationHandoffPlan;
     mutation_preconditions_review?: CockpitQuickGenerateMutationPreconditionsReview;
     mutation_authorization_decision?: CockpitQuickGenerateMutationAuthorizationDecision;
+    mutation_contract?: CockpitQuickGenerateMutationContract;
     draft_contract?: CockpitQuickGenerateDraftContract;
     authorization?: CockpitQuickGenerateAuthorization;
     action?: {
