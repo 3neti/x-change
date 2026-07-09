@@ -8,9 +8,12 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Route;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
+use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityRecorderContract;
+use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityItemData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Http\Requests\GeneratePayCodeRequest;
 use LBHurtado\XChange\Services\IdempotencyService;
+use Throwable;
 
 class CockpitQuickGenerateMutationRouteShellController extends Controller
 {
@@ -18,6 +21,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         GeneratePayCodeRequest $request,
         GeneratePayCode $generatePayCode,
         IdempotencyService $idempotency,
+        CockpitOperatorIssuanceActivityRecorderContract $activityRecorder,
     ): JsonResponse {
         $payload = $request->validated();
         $payload = $this->normalizePayloadForIssuance($payload);
@@ -48,6 +52,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
 
         $result = $generatePayCode->handle($payload);
         $response = $this->responsePayload($request, $result, $key, false);
+        $this->recordOperatorIssuanceActivity($request, $response, $key, $activityRecorder);
 
         if (is_string($key)) {
             $idempotency->remember($key, $payload, $response);
@@ -140,5 +145,55 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                     : null,
             ],
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $response
+     */
+    protected function recordOperatorIssuanceActivity(
+        GeneratePayCodeRequest $request,
+        array $response,
+        ?string $key,
+        CockpitOperatorIssuanceActivityRecorderContract $activityRecorder,
+    ): void {
+        $code = data_get($response, 'result.code');
+
+        if (! is_string($code) || trim($code) === '') {
+            return;
+        }
+
+        $correlationHeader = (string) config('x-change.api.correlation.header', 'X-Correlation-ID');
+        $correlationId = $request->header($correlationHeader);
+        $operatorId = $request->user()?->getAuthIdentifier();
+        $detailHref = data_get($response, 'result.links.cockpit_detail');
+
+        try {
+            $activityRecorder->record(new CockpitOperatorIssuanceActivityItemData(
+                id: hash('sha256', implode('|', [
+                    'cockpit.quick-generate',
+                    $code,
+                    (string) $key,
+                    is_string($correlationId) ? $correlationId : '',
+                    $operatorId !== null ? (string) $operatorId : '',
+                ])),
+                code: $code,
+                amount: (string) data_get($response, 'result.amount'),
+                currency: (string) data_get($response, 'result.currency'),
+                status: (string) data_get($response, 'status', 'issued'),
+                issued_at: now()->toIso8601String(),
+                route: (string) data_get($response, 'route', 'x-change.cockpit.quick-generate.store'),
+                correlation_id: is_string($correlationId) ? $correlationId : null,
+                idempotency_key: $key,
+                operator_id: $operatorId !== null ? (string) $operatorId : null,
+                detail_href: is_string($detailHref) ? $detailHref : null,
+                metadata: [
+                    'source' => 'x-change.cockpit',
+                    'presentation_only' => true,
+                    'recorder' => 'cockpit.operator-issuance-activity.v1',
+                ],
+            ));
+        } catch (Throwable) {
+            //
+        }
     }
 }

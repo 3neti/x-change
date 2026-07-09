@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 2A — Operator Issuance Activity Read Model Contract
-Status: Implemented; operator issuance activity now has an operator-safe read-model contract and null provider boundary
+Current slice: Cockpit Mutation Wave 2B — Issuance Activity Recorder Boundary
+Status: Implemented; Quick Generate now hands fresh operator-safe issuance activity DTOs to a no-op recorder boundary
 Last updated: 2026-07-10
 
 ## Completed
@@ -24,6 +24,14 @@ Last updated: 2026-07-10
   - Wired the lifecycle provider to the safe fallback until a recorder boundary is explicitly introduced.
   - No persistence, migrations, queues, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, raw payload persistence, automatic retry, or money movement were added.
   - Report: `reports/051-operator-issuance-activity-read-model-contract.md`.
+- Completed Cockpit Mutation Wave 2B — Issuance Activity Recorder Boundary:
+  - Added `CockpitOperatorIssuanceActivityRecorderContract`.
+  - Added `NullCockpitOperatorIssuanceActivityRecorder` as the default no-op recorder.
+  - Quick Generate fresh issuance responses now hand only `CockpitOperatorIssuanceActivityItemData` to the recorder.
+  - Idempotency replays do not record duplicate operator activity.
+  - Recorder failures are non-blocking.
+  - No persistence, migrations, queues, journal writes, action execution, feedback delivery, campaign mutation, provider calls beyond the existing `GeneratePayCode` handoff, direct wallet access, voucher execution changes, raw payload persistence, automatic retry, or money movement outside the existing issuance path were added.
+  - Report: `reports/052-operator-issuance-activity-recorder-boundary.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -916,3 +924,6 @@ Current boundary:
 - Cockpit Mutation Wave 2A focused red baseline: `3 failed`.
 - Cockpit Mutation Wave 2A focused read-model result: `3 passed, 25 assertions`.
 - Cockpit Mutation Wave 2A full package Pest result: `1096 passed, 5 skipped, 6524 assertions`.
+- Cockpit Mutation Wave 2B focused red baseline: `3 failed`.
+- Cockpit Mutation Wave 2B focused recorder result: `3 passed, 45 assertions`.
+- Cockpit Mutation Wave 2B full package Pest result: `1100 passed, 5 skipped, 6584 assertions`.
