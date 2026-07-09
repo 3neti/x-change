@@ -205,6 +205,7 @@ function integrationSummary(
     status: string;
     count: string;
     policy: string;
+    reason: string;
 } {
     const collection = Array.isArray(model?.[collectionKey]) ? model[collectionKey] : [];
 
@@ -214,6 +215,7 @@ function integrationSummary(
         status: stringValue(model?.status) ?? 'not_wired',
         count: `${collection.length} ${noun}`,
         policy: stringValue((model?.redactions as CockpitReadModelRedactions | undefined)?.payloads) ?? fallbackPolicy,
+        reason: stringValue((model?.redactions as CockpitReadModelRedactions | undefined)?.reason) ?? 'read-model-ready',
     };
 }
 </script>
@@ -268,6 +270,9 @@ function integrationSummary(
                         </p>
                         <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
                             {{ summary.policy }}
+                        </p>
+                        <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                            {{ summary.reason }}
                         </p>
                     </article>
                 </div>

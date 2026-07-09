@@ -383,6 +383,7 @@ function integrationSummary(
     status: string;
     count: string;
     policy: string;
+    reason: string;
 } {
     const collection = Array.isArray(model?.[collectionKey]) ? model[collectionKey] : [];
 
@@ -392,6 +393,7 @@ function integrationSummary(
         status: readModelStatus(model),
         count: `${collection.length} ${noun}`,
         policy: stringValue(model?.redactions?.payloads) ?? 'not-loaded',
+        reason: stringValue(model?.redactions?.reason) ?? 'read-model-ready',
     };
 }
 </script>
@@ -471,6 +473,9 @@ function integrationSummary(
                         </p>
                         <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
                             {{ summary.policy }}
+                        </p>
+                        <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                            {{ summary.reason }}
                         </p>
                     </article>
                 </div>

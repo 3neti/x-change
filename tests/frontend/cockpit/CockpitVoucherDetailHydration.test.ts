@@ -263,6 +263,33 @@ describe('Cockpit Voucher Detail hydration', () => {
         expect(wrapper.findAll('[data-testid="cockpit-voucher-integration-summary-card"]')).toHaveLength(3);
     });
 
+    it('renders voucher integration unavailable reasons without exception messages', () => {
+        const wrapper = mount(VoucherDetail, {
+            props: {
+                read_model: {
+                    ...readModel,
+                    journal: {
+                        status: 'unavailable',
+                        authorized: false,
+                        entries: [],
+                        redactions: {
+                            payloads: 'not-loaded',
+                            reason: 'read-model-unavailable',
+                            exception: 'RuntimeException',
+                            exception_message: 'must-not-render',
+                            exception_message_exposed: false,
+                        },
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Voucher Integration Summary');
+        expect(wrapper.text()).toContain('read-model-unavailable');
+        expect(wrapper.text()).not.toContain('RuntimeException');
+        expect(wrapper.text()).not.toContain('must-not-render');
+    });
+
     it('does not render unsafe voucher payload fields from the read model summary', () => {
         const wrapper = mount(VoucherDetail, {
             props: {

@@ -336,4 +336,32 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).not.toContain('must-not-render');
         expect(wrapper.findAll('[data-testid="cockpit-integration-summary-card"]')).toHaveLength(3);
     });
+
+    it('renders integration unavailable reasons without exception messages', () => {
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                dashboard_read_model: dashboardReadModel,
+                read_model: {
+                    journal: {
+                        status: 'unavailable',
+                        authorized: false,
+                        entries: [],
+                        redactions: {
+                            payloads: 'not-loaded',
+                            reason: 'read-model-unavailable',
+                            exception: 'RuntimeException',
+                            exception_message: 'must-not-render',
+                            exception_message_exposed: false,
+                        },
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Journal Evidence');
+        expect(wrapper.text()).toContain('unavailable');
+        expect(wrapper.text()).toContain('read-model-unavailable');
+        expect(wrapper.text()).not.toContain('RuntimeException');
+        expect(wrapper.text()).not.toContain('must-not-render');
+    });
 });

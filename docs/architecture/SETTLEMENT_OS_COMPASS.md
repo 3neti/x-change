@@ -789,6 +789,10 @@ ExecutionDriverContract
   - Badges show status and payload policy only.
   - Per-row integration facts remain deferred because they are not part of the list read-model contract.
   - No per-row integration payloads, query APIs, list-read scope expansion, journal writes, action execution, feedback delivery, retry execution, provider calls, raw payload exposure, voucher mutation, wallet access, or money movement were added.
+- x-change Host Integration Slice 2G — Integration Error / Unavailable States:
+  - Dashboard and Voucher Detail integration summary cards display safe unavailable reasons from `redactions.reason`.
+  - Exception classes and exception messages remain hidden from operator UI.
+  - No exception messages, exception classes, adapter retries, queues, observability exporters, journal writes, action execution, feedback delivery, provider calls, voucher mutation, wallet access, or money movement were added.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
