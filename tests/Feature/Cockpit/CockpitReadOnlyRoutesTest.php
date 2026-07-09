@@ -116,6 +116,145 @@ it('hydrates the dashboard with a sanitized dashboard read model prop', function
         ->assertJsonMissingPath('props.dashboard_read_model.provider');
 });
 
+it('exposes a read-only campaign cockpit read model prop on the dashboard route', function () {
+    actingAsTestUser();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.dashboard'))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/cockpit/Dashboard')
+        ->assertJsonPath('props.campaign_read_model.schema', 'x-change.cockpit.campaign-adoption.v1')
+        ->assertJsonPath('props.campaign_read_model.status', 'unavailable')
+        ->assertJsonPath('props.campaign_read_model.authorized', false)
+        ->assertJsonPath('props.campaign_read_model.source', 'x-campaign')
+        ->assertJsonPath('props.campaign_read_model.facts', [])
+        ->assertJsonPath('props.campaign_read_model.mutation.enabled', false)
+        ->assertJsonPath('props.campaign_read_model.mutation.status', 'blocked')
+        ->assertJsonPath('props.campaign_read_model.mutation.reason', 'campaign-mutations-not-authorized')
+        ->assertJsonPath('props.campaign_read_model.redactions.payloads', 'not-loaded')
+        ->assertJsonPath('props.campaign_read_model.redactions.source', 'x-campaign')
+        ->assertJsonPath('props.campaign_read_model.redactions.reason', 'package-not-installed')
+        ->assertJsonMissingPath('props.campaign_read_model.provider_payload')
+        ->assertJsonMissingPath('props.campaign_read_model.raw_payload')
+        ->assertJsonMissingPath('props.campaign_read_model.wallet')
+        ->assertJsonMissingPath('props.campaign_read_model.campaign_mutation_endpoint')
+        ->assertJsonMissingPath('props.campaign_read_model.pay_code_generation_payload')
+        ->assertJsonMissingPath('props.campaign_read_model.delivery_dispatch_payload')
+        ->assertJsonMissingPath('props.campaign_read_model.mutation_route');
+});
+
+it('passes optional campaign context from the dashboard route to the read-only campaign adapter', function () {
+    $operator = actingAsTestUser();
+
+    $service = new class
+    {
+        /**
+         * @var array<string, mixed>
+         */
+        public array $received = [];
+
+        /**
+         * @param  array<string, mixed>  $metadata
+         * @return array<string, mixed>
+         */
+        public function summary(
+            string $planningKey,
+            string $executionId,
+            string $operatorId,
+            string $channel = 'sms',
+            ?string $correlationId = null,
+            array $metadata = [],
+        ): array {
+            $this->received = compact('planningKey', 'executionId', 'operatorId', 'channel', 'correlationId', 'metadata');
+
+            return [
+                'status' => 'ready',
+                'planning_key' => $planningKey,
+                'execution_id' => $executionId,
+                'operator_id' => $operatorId,
+                'cards' => [
+                    'campaign' => [
+                        'name' => 'Food Aid July',
+                        'recipient_count' => 250,
+                        'secret' => 'do-not-show',
+                    ],
+                ],
+                'panels' => [
+                    'audience_import_workspace' => ['status' => 'ready'],
+                ],
+                'actions' => [
+                    'review_campaign' => ['enabled' => true],
+                    'generate_pay_codes' => ['enabled' => false],
+                ],
+                'effects' => [
+                    'persists' => false,
+                    'uses_database' => false,
+                    'queues_jobs' => false,
+                    'issues_pay_codes' => false,
+                    'sends_feedback' => false,
+                    'writes_journal' => false,
+                    'moves_money' => false,
+                ],
+                'metadata' => [
+                    'source' => 'fake-x-campaign',
+                    'read_only' => true,
+                    'token' => 'sensitive-token',
+                ],
+            ];
+        }
+    };
+
+    config(['x-change.cockpit.integrations.campaign.cockpit' => 'fake.route.campaign.cockpit']);
+    app()->instance('fake.route.campaign.cockpit', $service);
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.dashboard', [
+            'campaign_planning_key' => ' campaign-plan-1 ',
+            'campaign_execution_id' => ' execution-1 ',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/cockpit/Dashboard')
+        ->assertJsonPath('props.campaign_read_model.status', 'available')
+        ->assertJsonPath('props.campaign_read_model.authorized', true)
+        ->assertJsonPath('props.campaign_read_model.source', 'x-campaign')
+        ->assertJsonPath('props.campaign_read_model.facts.planning_key', 'campaign-plan-1')
+        ->assertJsonPath('props.campaign_read_model.facts.execution_id', 'execution-1')
+        ->assertJsonPath('props.campaign_read_model.facts.operator_id', (string) $operator->getAuthIdentifier())
+        ->assertJsonPath('props.campaign_read_model.facts.cards.campaign.name', 'Food Aid July')
+        ->assertJsonPath('props.campaign_read_model.facts.cards.campaign.recipient_count', 250)
+        ->assertJsonPath('props.campaign_read_model.facts.cards.campaign.secret', '[redacted]')
+        ->assertJsonPath('props.campaign_read_model.facts.metadata.token', '[redacted]')
+        ->assertJsonPath('props.campaign_read_model.mutation.enabled', false)
+        ->assertJsonPath('props.campaign_read_model.redactions.payloads', 'campaign-cockpit-summary-only')
+        ->assertJsonPath('props.campaign_read_model.redactions.routes_registered', false)
+        ->assertJsonPath('props.campaign_read_model.redactions.controllers_registered', false)
+        ->assertJsonPath('props.campaign_read_model.redactions.mutates_campaigns', false)
+        ->assertJsonPath('props.campaign_read_model.redactions.issues_pay_codes', false)
+        ->assertJsonPath('props.campaign_read_model.redactions.sends_feedback', false)
+        ->assertJsonPath('props.campaign_read_model.redactions.writes_journal', false)
+        ->assertJsonPath('props.campaign_read_model.redactions.moves_money', false)
+        ->assertJsonMissingPath('props.campaign_read_model.provider_payload')
+        ->assertJsonMissingPath('props.campaign_read_model.raw_payload')
+        ->assertJsonMissingPath('props.campaign_read_model.wallet')
+        ->assertJsonMissingPath('props.campaign_read_model.campaign_mutation_endpoint')
+        ->assertJsonMissingPath('props.campaign_read_model.pay_code_generation_payload')
+        ->assertJsonMissingPath('props.campaign_read_model.delivery_dispatch_payload')
+        ->assertJsonMissingPath('props.campaign_read_model.mutation_route');
+
+    expect($service->received)->toMatchArray([
+        'planningKey' => 'campaign-plan-1',
+        'executionId' => 'execution-1',
+        'operatorId' => (string) $operator->getAuthIdentifier(),
+        'channel' => 'cockpit',
+        'correlationId' => 'execution-1',
+        'metadata' => [
+            'source' => 'x-change.cockpit',
+            'read_only' => true,
+            'integration' => 'campaign.cockpit',
+        ],
+    ]);
+});
+
 it('hydrates quick generate with a sanitized quick generate read model prop', function () {
     actingAsTestUser();
 

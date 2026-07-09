@@ -9,9 +9,7 @@ use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
 
 class CockpitReadOnlyPageProps
 {
-    public function __construct(private readonly CockpitReadModelProviderContract $readModels)
-    {
-    }
+    public function __construct(private readonly CockpitReadModelProviderContract $readModels) {}
 
     /**
      * @return array<string, mixed>
@@ -72,12 +70,21 @@ class CockpitReadOnlyPageProps
     /**
      * @return array<string, mixed>
      */
-    public function toDashboardArray(): array
-    {
+    public function toDashboardArray(
+        ?string $campaignPlanningKey = null,
+        ?string $campaignExecutionId = null,
+        ?string $operatorId = null,
+    ): array {
         return [
             ...$this->toArray(),
             'dashboard_read_model' => $this->readModels->forDashboard(new CockpitReadModelQueryData(
                 include: ['voucher'],
+            ))->toArray(),
+            'campaign_read_model' => $this->readModels->forCampaignAdoption(new CockpitReadModelQueryData(
+                code: $campaignPlanningKey,
+                operatorId: $operatorId,
+                include: ['campaigns', 'audiences', 'imports', 'attachments', 'api_descriptors'],
+                correlationId: $campaignExecutionId,
             ))->toArray(),
         ];
     }

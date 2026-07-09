@@ -64,8 +64,21 @@ export type CockpitDashboardReadModel = {
     [key: string]: unknown;
 };
 
+export type CockpitCampaignReadModel = {
+    schema?: string;
+    status: string;
+    authorized?: boolean;
+    source?: string;
+    surfaces?: Array<Record<string, unknown>>;
+    facts?: Record<string, unknown>;
+    mutation?: Record<string, unknown>;
+    redactions?: CockpitReadModelRedactions;
+    [key: string]: unknown;
+};
+
 export type CockpitDashboardPageProps = {
     dashboard_read_model?: CockpitDashboardReadModel;
+    campaign_read_model?: CockpitCampaignReadModel;
 };
 
 export type CockpitQuickGenerateTemplate = {
