@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Host Integration Slice 1E — Campaign Cockpit Dashboard Presentation Hydration
+Current slice: Host Integration Slice 1F — Campaign Cockpit Workspace / Explorer Read-Only Navigation Boundary
 Status: Complete
 Last updated: 2026-07-09
 
@@ -103,6 +103,12 @@ Last updated: 2026-07-09
   - Campaign unavailable/not-authorized state renders as a disabled read-only boundary.
   - Campaign mutation route scaffolding remains unauthorized.
   - No x-campaign imports, hard Composer dependency, new campaign routes, campaign mutation endpoints, Pay Code generation, delivery dispatch, journal writes, feedback sends/retries, wallet reads/writes, or money movement were added.
+- Completed Host Integration Slice 1F — Campaign Cockpit Workspace / Explorer Read-Only Navigation Boundary:
+  - Dashboard campaign panel links to existing read-only Cockpit explorer context.
+  - Pay Code Explorer renders `campaign_navigation_context` as presentation-only context.
+  - Campaign workspace navigation remains disabled until an explicit read-only workspace route is authorized.
+  - Campaign mutation route scaffolding remains unauthorized.
+  - No x-campaign imports, hard Composer dependency, new campaign route namespace, campaign mutation endpoints, Pay Code generation, delivery dispatch, journal writes, feedback sends/retries, wallet reads/writes, provider calls, or money movement were added.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
   - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`
@@ -436,6 +442,7 @@ Current boundary:
 - keep route props read-only and authenticated unless a mutation mini-roadmap is explicitly approved
 - keep `campaign_read_model` read-only, optional, and safe-unavailable when x-campaign is not installed/configured
 - render campaign adoption facts only through whitelisted presentation fields; never render generic campaign payloads
+- keep `campaign_navigation_context` presentation-only when linking from campaign dashboard context into existing Cockpit explorer surfaces
 - keep generate controls disabled until authorization, pricing, funding, idempotency, validation/redaction, existing issuance API/action routing, and operator response contracts are all designed
 - avoid broad voucher payloads, provider payloads, wallet data, claim payloads, approval metadata, instructions, or raw payloads
 - no mutation endpoints, request validation execution, payload persistence, execution, journal writes, feedback delivery, provider calls, wallet access, campaign mutation, campaign execution, or money movement
@@ -470,6 +477,7 @@ Current boundary:
 - Slice 24 introduces a read-only mutation handoff boundary plan and a visible mutation handoff panel. It does not register mutation routes, call `GeneratePayCode`, call `GeneratePayCodeController`, submit payloads, generate vouchers, call providers, access wallets, write journal entries, run actions, send feedback, or move money.
 - Host Integration Slice 1D exposes campaign adoption facts as a read-only dashboard route prop only. It must not become a campaign route namespace, campaign mutation controller, Pay Code generation path, delivery dispatch path, journal writer, feedback retry path, wallet reader/writer, or money movement boundary.
 - Host Integration Slice 1E hydrates campaign adoption facts into dashboard presentation only. It must not add mutation buttons, campaign routes, route navigation to write endpoints, provider calls, queue dispatch, persistence, generic payload rendering, wallet access, or money movement.
+- Host Integration Slice 1F links campaign adoption context into existing read-only Cockpit explorer surfaces only. It must not add a campaign route namespace, campaign mutation controller, Pay Code generation path, delivery dispatch path, journal writer, feedback retry path, provider call, wallet reader/writer, or money movement boundary.
 - Slice 25 introduces a read-only mutation preconditions review and a visible review panel. It does not approve mutation wiring, register mutation routes, validate requests, issue vouchers, call providers, access wallets, write journal entries, run actions, send feedback, or move money.
 - Slice 26 introduces a read-only mutation authorization decision point and a visible decision panel. It records `not_authorized` and does not approve mutation wiring, register mutation routes, validate requests, persist payloads, issue vouchers, call providers, access wallets, write journal entries, run actions, send feedback, create campaigns, or move money.
 
@@ -668,3 +676,11 @@ Current boundary:
 - Host Integration Slice 1E formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
 - Host Integration Slice 1E frontend result: `72 passed, 448 tests`.
 - Host Integration Slice 1E full package Pest result: `1036 passed, 5 skipped, 5738 assertions`.
+- Host Integration Slice 1F focused red baseline: frontend `3 failed, 9 passed`; route guard `1 failed, 1 passed`.
+- Host Integration Slice 1F focused frontend result: `2 passed, 12 tests`.
+- Host Integration Slice 1F focused route result: `2 passed, 30 assertions`.
+- Host Integration Slice 1F focused architecture result: `4 passed, 33 assertions`.
+- Host Integration Slice 1F `composer validate --strict` passed.
+- Host Integration Slice 1F formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
+- Host Integration Slice 1F frontend result: `73 passed, 452 tests`.
+- Host Integration Slice 1F full package Pest result: `1039 passed, 5 skipped, 5784 assertions`.

@@ -263,4 +263,25 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('campaign-plan-1');
         expect(wrapper.text()).not.toContain('must-not-render');
     });
+
+    it('renders read-only campaign cockpit navigation links to existing explorer surfaces', () => {
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                dashboard_read_model: dashboardReadModel,
+                campaign_read_model: campaignReadModel,
+            },
+        });
+
+        const explorerLink = wrapper.find('[data-testid="cockpit-campaign-explorer-link"]');
+
+        expect(explorerLink.exists()).toBe(true);
+        expect(explorerLink.attributes('href')).toBe('/x/cockpit/pay-codes?campaign_planning_key=campaign-plan-1&campaign_execution_id=execution-1&campaign_source=campaign_cockpit');
+        expect(explorerLink.text()).toContain('Open Pay Code Explorer');
+        expect(wrapper.text()).toContain('Existing read-only Cockpit route');
+        expect(wrapper.find('[data-testid="cockpit-campaign-workspace-link"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="cockpit-campaign-workspace-link"]').attributes('aria-disabled')).toBe('true');
+        expect(wrapper.find('[data-testid="cockpit-campaign-mutation-button"]').exists()).toBe(false);
+        expect(wrapper.text()).not.toContain('/campaigns/');
+        expect(wrapper.text()).not.toContain('/must-not-render');
+    });
 });

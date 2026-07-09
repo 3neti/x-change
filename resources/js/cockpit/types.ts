@@ -94,6 +94,20 @@ export type CockpitCampaignActionStatus = {
     status: 'available' | 'blocked';
 };
 
+export type CockpitCampaignNavigationContext = {
+    schema?: string;
+    status: string;
+    authorized?: boolean;
+    source?: string;
+    planning_key?: string | null;
+    execution_id?: string | null;
+    destination?: string;
+    read_only?: boolean;
+    mutation?: Record<string, unknown>;
+    redactions?: CockpitReadModelRedactions;
+    [key: string]: unknown;
+};
+
 export type CockpitDashboardPageProps = {
     dashboard_read_model?: CockpitDashboardReadModel;
     campaign_read_model?: CockpitCampaignReadModel;
@@ -444,6 +458,7 @@ export type CockpitPayCodeExplorerReadModel = {
 
 export type CockpitPayCodeExplorerPageProps = {
     pay_codes_read_model?: CockpitPayCodeExplorerReadModel;
+    campaign_navigation_context?: CockpitCampaignNavigationContext;
 };
 
 export type CockpitDistributionChannel = {

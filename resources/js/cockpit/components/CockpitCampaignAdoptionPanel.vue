@@ -33,6 +33,22 @@ const planningKey = computed(() => stringValue(facts.value.planning_key) ?? 'No 
 const executionId = computed(() => stringValue(facts.value.execution_id) ?? 'No execution id');
 const mutationReason = computed(() => stringValue(objectValue(model.value?.mutation).reason) ?? 'campaign-mutations-not-authorized');
 const unavailableReason = computed(() => stringValue(objectValue(model.value?.redactions).reason) ?? 'read-model-not-available');
+const explorerHref = computed(() => {
+    const normalizedPlanningKey = stringValue(facts.value.planning_key);
+    const normalizedExecutionId = stringValue(facts.value.execution_id);
+
+    if (!isAvailable.value || !normalizedPlanningKey || !normalizedExecutionId) {
+        return null;
+    }
+
+    const query = new URLSearchParams({
+        campaign_planning_key: normalizedPlanningKey,
+        campaign_execution_id: normalizedExecutionId,
+        campaign_source: 'campaign_cockpit',
+    });
+
+    return `/x/cockpit/pay-codes?${query.toString()}`;
+});
 
 const surfaces = computed<CockpitCampaignSurface[]>(() => {
     if (!Array.isArray(model.value?.surfaces)) {
@@ -194,6 +210,30 @@ function stringValue(value: unknown): string | undefined {
             <p class="mt-1">
                 {{ mutationReason }}
             </p>
+        </div>
+
+        <div class="mt-5 grid gap-3 md:grid-cols-2">
+            <a
+                v-if="explorerHref"
+                :href="explorerHref"
+                class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-3 text-sm text-sky-950 transition hover:border-sky-300 hover:bg-sky-100 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100"
+                data-testid="cockpit-campaign-explorer-link"
+            >
+                <span class="block font-semibold">Open Pay Code Explorer</span>
+                <span class="mt-1 block text-sky-800 dark:text-sky-200">
+                    Existing read-only Cockpit route
+                </span>
+            </a>
+            <span
+                class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400"
+                aria-disabled="true"
+                data-testid="cockpit-campaign-workspace-link"
+            >
+                <span class="block font-semibold">Campaign workspace</span>
+                <span class="mt-1 block">
+                    Deferred until an explicit read-only workspace route is authorized.
+                </span>
+            </span>
         </div>
     </section>
 </template>

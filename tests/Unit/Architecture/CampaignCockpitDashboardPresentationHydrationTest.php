@@ -24,7 +24,7 @@ it('documents the campaign cockpit dashboard presentation hydration slice', func
 it('updates the cockpit compass for host integration slice 1E', function () {
     $compass = file_get_contents(dirname(__DIR__, 3).'/docs/ui-cockpit/COMPASS.md');
 
-    expect($compass)->toContain('Current slice: Host Integration Slice 1E — Campaign Cockpit Dashboard Presentation Hydration')
+    expect($compass)->toContain('Completed Host Integration Slice 1E — Campaign Cockpit Dashboard Presentation Hydration')
         ->and($compass)->toContain('Status: Complete')
         ->and($compass)->toContain('Dashboard renders `campaign_read_model` through a read-only presentation panel')
         ->and($compass)->toContain('Campaign presentation sanitizes facts before display')

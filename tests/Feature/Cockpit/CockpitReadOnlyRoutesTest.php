@@ -93,6 +93,50 @@ it('hydrates the pay code explorer with a sanitized list read model prop', funct
         ->assertJsonMissingPath('props.pay_codes_read_model.provider');
 });
 
+it('passes optional campaign navigation context to the pay code explorer without registering campaign routes', function () {
+    actingAsTestUser();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.index', [
+            'campaign_planning_key' => ' campaign-plan-1 ',
+            'campaign_execution_id' => ' execution-1 ',
+            'campaign_source' => ' campaign_cockpit ',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/cockpit/PayCodeExplorer')
+        ->assertJsonPath('props.campaign_navigation_context.schema', 'x-change.cockpit.campaign-navigation.v1')
+        ->assertJsonPath('props.campaign_navigation_context.status', 'available')
+        ->assertJsonPath('props.campaign_navigation_context.authorized', true)
+        ->assertJsonPath('props.campaign_navigation_context.source', 'campaign_cockpit')
+        ->assertJsonPath('props.campaign_navigation_context.planning_key', 'campaign-plan-1')
+        ->assertJsonPath('props.campaign_navigation_context.execution_id', 'execution-1')
+        ->assertJsonPath('props.campaign_navigation_context.destination', 'pay_code_explorer')
+        ->assertJsonPath('props.campaign_navigation_context.read_only', true)
+        ->assertJsonPath('props.campaign_navigation_context.mutation.enabled', false)
+        ->assertJsonPath('props.campaign_navigation_context.mutation.status', 'blocked')
+        ->assertJsonPath('props.campaign_navigation_context.mutation.reason', 'campaign-navigation-read-only')
+        ->assertJsonPath('props.campaign_navigation_context.redactions.payloads', 'navigation-context-only')
+        ->assertJsonPath('props.campaign_navigation_context.redactions.routes_registered', false)
+        ->assertJsonPath('props.campaign_navigation_context.redactions.controllers_registered', false)
+        ->assertJsonPath('props.campaign_navigation_context.redactions.mutates_campaigns', false)
+        ->assertJsonPath('props.campaign_navigation_context.redactions.issues_pay_codes', false)
+        ->assertJsonPath('props.campaign_navigation_context.redactions.sends_feedback', false)
+        ->assertJsonPath('props.campaign_navigation_context.redactions.writes_journal', false)
+        ->assertJsonPath('props.campaign_navigation_context.redactions.moves_money', false)
+        ->assertJsonMissingPath('props.campaign_navigation_context.provider_payload')
+        ->assertJsonMissingPath('props.campaign_navigation_context.raw_payload')
+        ->assertJsonMissingPath('props.campaign_navigation_context.wallet')
+        ->assertJsonMissingPath('props.campaign_navigation_context.campaign_route')
+        ->assertJsonMissingPath('props.campaign_navigation_context.mutation_route')
+        ->assertJsonMissingPath('props.campaign_navigation_context.campaign_mutation_endpoint')
+        ->assertJsonMissingPath('props.campaign_navigation_context.pay_code_generation_payload');
+
+    $campaignRoutes = collect(Route::getRoutes())
+        ->filter(fn ($route): bool => str_starts_with((string) $route->getName(), 'x-change.cockpit.campaign'));
+
+    expect($campaignRoutes)->toHaveCount(0);
+});
+
 it('hydrates the dashboard with a sanitized dashboard read model prop', function () {
     actingAsTestUser();
 
