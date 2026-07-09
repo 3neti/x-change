@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Host Validation Checkpoint 5 — Human Visual Confirmation Handoff Packet
-Status: Handoff scaffolded; human visual browser confirmation still pending
+Current slice: Host Validation Checkpoint 6 — Read-Only Validation Gate Status
+Status: Gate blocked pending human visual browser confirmation
 Last updated: 2026-07-09
 
 ## Completed
@@ -216,6 +216,13 @@ Last updated: 2026-07-09
   - Do not proceed to mutation-capable Cockpit planning until the visual confirmation is pass or explicitly accepted as blocked.
   - No browser automation dependencies, browser snapshots, routes, mutation endpoints, lifecycle scenario execution, claim submission, provider calls, journal writes, action execution, feedback delivery, wallet access, or money movement were added.
   - Report: `reports/037-human-visual-confirmation-handoff.md`.
+- Host Validation Checkpoint 6 — Read-Only Validation Gate Status:
+  - Read-only Cockpit validation remains blocked pending human visual browser confirmation.
+  - The gate may be unblocked only by recording `Pass` or `Blocked — accepted by human` in the visual confirmation handoff and execution record.
+  - Mutation-capable Cockpit planning remains unauthorized while this gate is blocked.
+  - Allowed work is limited to read-only documentation updates, test-only guard hardening, visual validation evidence capture, browser-log review, route/read-model smoke tests, and no-side-effect UI copy clarification.
+  - No browser automation dependencies, browser snapshots, routes, mutation endpoints, lifecycle scenario execution, claim submission, provider calls, journal writes, action execution, feedback delivery, wallet access, or money movement were added.
+  - Report: `reports/038-read-only-validation-gate-status.md`.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
   - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`
