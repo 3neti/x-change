@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-Status: first host-side, read-only Campaign Cockpit adoption slice is complete.
+Status: first x-change-owned, read-only Campaign Cockpit adoption branch is complete.
 
 The package scaffolds now cover the full Settlement Operating System stack:
 
@@ -26,9 +26,9 @@ The first real host integration slice was:
 x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 ```
 
-Completed through Host Integration Slice 1H.
+Completed through Host Integration Slice 1I.
 
-This slice consumes `x-campaign` Phase 15 outputs from the host side and exposes campaign intelligence inside the existing x-change Cockpit shell. It does not enable campaign mutations, Pay Code generation, delivery dispatch, journal writes, action execution, provider calls, wallet access, or money movement.
+This slice consumes `x-campaign` Phase 15 outputs through x-change-owned read-only adapters and exposes campaign intelligence inside the existing x-change Cockpit shell. It does not enable campaign mutations, Pay Code generation, delivery dispatch, journal writes, action execution, feedback delivery, provider calls, wallet access, or money movement.
 
 ## Cross-Package Readiness Matrix
 
@@ -38,7 +38,7 @@ This slice consumes `x-campaign` Phase 15 outputs from the host side and exposes
 | x-journal | `/Users/rli/PhpstormProjects/packages/x-journal` | Production readiness/stabilization complete; Cockpit reader and verification seams are safe read-side evidence sources | Read journal evidence summaries through host-composed adapters with visibility/redaction | Writing journal entries from Cockpit, bypassing visibility, recovery orchestration |
 | x-action | `/Users/rli/PhpstormProjects/packages/x-action` | Host integration seams and safe diagnostics are available | Read action availability/diagnostics as presentation-only CTA facts | Executing actions, treating presentation run IDs as durable execution, bypassing host authorization |
 | x-feedback | `/Users/rli/PhpstormProjects/packages/x-feedback` | Delivery console, UI component, journal handoff, transport/policy baselines complete; stabilized for read-only Cockpit integration | Read communication delivery status, delivery history, redacted provider responses, UI component data | Cockpit-triggered resend/retry mutations, lifecycle truth ownership, provider delivery from Cockpit |
-| x-change Cockpit | `/Users/rli/PhpstormProjects/x-change-sandbox/packages/x-change` | Read-only shell, dashboard, explorer, voucher detail, distribution workspace, gate panels, optional cross-package adapters, and Campaign Cockpit read-only adoption through Slice 1H exist | Host-owned Inertia routes can present read-only package facts through existing Cockpit shell; Dashboard campaign adoption panel and Pay Code Explorer campaign navigation context are safe for read-only operator use | Mutation routes, raw payload exposure, provider calls, wallet access, money movement |
+| x-change Cockpit | `/Users/rli/PhpstormProjects/x-change-sandbox/packages/x-change` | Read-only shell, dashboard, explorer, voucher detail, distribution workspace, gate panels, package-owned read-only cross-package adapters, and Campaign Cockpit read-only adoption through Slice 1I exist | x-change-owned Inertia routes can present read-only package facts through existing Cockpit shell; Dashboard campaign adoption panel and Pay Code Explorer campaign navigation context are safe for read-only operator use | Mutation routes, raw payload exposure, provider calls, wallet access, money movement |
 | x-campaign | `/Users/rli/PhpstormProjects/packages/x-campaign` | Complete through Phase 15 host adoption / parity report | Consume Cockpit consumption map, endpoint recommendation matrix, public API descriptors, and mutation authorization checklist | Package-owned routes/controllers, real campaign execution, Pay Code generation, feedback sending, journal writing |
 
 ## Readiness Inputs
@@ -79,8 +79,8 @@ Expose campaign/package readiness inside the existing x-change Cockpit shell as 
 
 ### Completed Scope
 
-- Added a host-side campaign Cockpit adoption plan.
-- Added host-side read model contracts and optional adapter boundary for campaign Cockpit consumption.
+- Added an x-change-side campaign Cockpit adoption plan.
+- Added x-change-side read model contracts and adapter boundaries for campaign Cockpit consumption.
 - Consumed only safe `x-campaign` Phase 15 surfaces:
   - Cockpit consumption map
   - endpoint recommendation matrix
@@ -90,6 +90,7 @@ Expose campaign/package readiness inside the existing x-change Cockpit shell as 
 - Rendered campaign adoption/readiness in Cockpit as disabled/read-only state.
 - Added Dashboard campaign adoption panel.
 - Added Pay Code Explorer campaign navigation context.
+- Added Package-owned read-only dependency wiring for x-journal, x-action, x-feedback, and x-campaign.
 - Deferred dedicated Campaign Cockpit workspace route.
 - Preserved x-change ownership of routes, controllers, authorization, redaction, and operator identity.
 
@@ -120,7 +121,7 @@ Expose campaign/package readiness inside the existing x-change Cockpit shell as 
 
 ### Host Integration Slice 1A — Campaign Cockpit Adoption Boundary Plan
 
-Add host-side documentation and tests proving campaign Cockpit adoption is read-only and host-owned.
+Add x-change-side documentation and tests proving campaign Cockpit adoption is read-only and x-change-owned.
 
 ### Host Integration Slice 1B — Campaign Cockpit Read Model Contract
 
@@ -150,6 +151,14 @@ Dedicated Campaign Cockpit workspace route is deferred.
 
 Read-only Campaign Cockpit adoption is closed through Slice 1G and this readiness report reflects that closure.
 
+### Host Integration Slice 1I — Package-Owned Read-Only Integration Wiring
+
+x-change now owns Composer dependency wiring for `3neti/x-journal`, `3neti/x-action`, `3neti/x-feedback`, and `3neti/x-campaign`.
+
+The host app remains dumb and should not duplicate this integration wiring.
+
+Real package adapters are now exercised in the x-change package test environment while preserving read-only and no-mutation boundaries.
+
 ## Risk Register
 
 | Risk | Mitigation |
@@ -159,7 +168,7 @@ Read-only Campaign Cockpit adoption is closed through Slice 1G and this readines
 | Treating x-feedback delivery records as lifecycle truth | Present communication facts only; lifecycle truth remains domain/execution/journal |
 | Treating x-action run IDs as durable execution | Present action diagnostics only; no action execution |
 | Treating x-journal visibility as optional | Use read-side visibility/redaction before Cockpit display |
-| Coupling x-change hard to optional packages | Use optional adapters and safe null providers first |
+| Read-only package dependencies accidentally enabling transport/mutation behavior | Keep Cockpit adapter calls read-only; preserve no-delivery, no-action-execution, no-journal-write, no-money-movement assertions |
 
 ## Final Recommendation
 
@@ -169,6 +178,6 @@ Read-only Campaign Cockpit adoption is complete for now:
 x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 ```
 
-Completed through Host Integration Slice 1H.
+Completed through Host Integration Slice 1I.
 
 Do not begin mutation wiring until a separate mutation mini-roadmap is explicitly approved.

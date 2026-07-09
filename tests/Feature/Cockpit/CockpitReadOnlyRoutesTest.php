@@ -177,7 +177,7 @@ it('exposes a read-only campaign cockpit read model prop on the dashboard route'
         ->assertJsonPath('props.campaign_read_model.mutation.reason', 'campaign-mutations-not-authorized')
         ->assertJsonPath('props.campaign_read_model.redactions.payloads', 'not-loaded')
         ->assertJsonPath('props.campaign_read_model.redactions.source', 'x-campaign')
-        ->assertJsonPath('props.campaign_read_model.redactions.reason', 'package-not-installed')
+        ->assertJsonPath('props.campaign_read_model.redactions.reason', 'missing-campaign-context')
         ->assertJsonMissingPath('props.campaign_read_model.provider_payload')
         ->assertJsonMissingPath('props.campaign_read_model.raw_payload')
         ->assertJsonMissingPath('props.campaign_read_model.wallet')

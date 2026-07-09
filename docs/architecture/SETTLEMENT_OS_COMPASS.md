@@ -751,9 +751,12 @@ ExecutionDriverContract
 - Settlement OS integration readiness report added:
   - [INTEGRATION_READINESS_REPORT.md](INTEGRATION_READINESS_REPORT.md)
 - x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption:
-  - Completed through Host Integration Slice 1H
+  - Completed through Host Integration Slice 1I
   - Dashboard campaign adoption panel is safe for read-only operator use
   - Pay Code Explorer campaign navigation context is safe for read-only operator orientation
+  - x-change now owns Composer dependency wiring for `3neti/x-journal`, `3neti/x-action`, `3neti/x-feedback`, and `3neti/x-campaign`
+  - host applications should remain dumb and should not duplicate Cockpit integration wiring
+  - package-local x-change tests now exercise real read-only adapters instead of only fake/fallback unavailable models
   - No dedicated campaign workspace route was added
   - Mutation route scaffolding remains unauthorized
   - No campaign mutation endpoints, Pay Code generation through campaign, delivery dispatch, journal writes, feedback sends/retries, wallet reads/writes, provider calls, campaign execution, or money movement were added
@@ -771,16 +774,12 @@ The first read-only host adoption branch is closed:
 x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 ```
 
-Completed through Host Integration Slice 1H.
+Completed through Host Integration Slice 1I.
 
 Recommended next branch:
 
 ```text
-Choose explicitly before implementation:
-1. Quick Generate mutation mini-roadmap
-2. Dedicated Campaign Cockpit workspace route plan
-3. Journal/action/feedback read-model hydration into Cockpit surfaces
-4. Execution-result persistence and x-journal handoff planning
+x-change Host Integration Slice 2 — Journal/action/feedback read-model hydration into Cockpit surfaces
 ```
 
 Recommended actions:
@@ -788,9 +787,9 @@ Recommended actions:
 1. Read [INTEGRATION_READINESS_REPORT.md](INTEGRATION_READINESS_REPORT.md).
 2. Read the Cockpit compass before implementation: `packages/x-change/docs/ui-cockpit/COMPASS.md`.
 3. Read the x-campaign parity report before implementation: `/Users/rli/PhpstormProjects/packages/x-campaign/docs/PARITY_REPORT.md`.
-4. Keep any x-campaign package access optional and adapter-driven.
+4. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
 5. Mutation route scaffolding remains unauthorized.
-6. Do not add campaign mutation endpoints, request validation execution, payload persistence, Pay Code generation, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls, campaign state mutation, money movement, raw payload exposure, wallet access, or live hard package calls unless explicitly approved.
+6. Do not add campaign mutation endpoints, request validation execution, payload persistence, Pay Code generation, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls, campaign state mutation, money movement, raw payload exposure, or wallet access unless explicitly approved.
 7. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
 ## x-journal Initial Intent

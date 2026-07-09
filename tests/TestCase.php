@@ -65,7 +65,7 @@ abstract class TestCase extends Orchestra
 
     protected function getPackageProviders($app): array
     {
-        return [
+        return array_values(array_filter([
             LaravelDataServiceProvider::class,
             SchemalessAttributesServiceProvider::class,
             CookieServiceProvider::class,
@@ -79,11 +79,15 @@ abstract class TestCase extends Orchestra
             VoucherServiceProvider::class,
             InstructionServiceProvider::class,
             EmiCoreServiceProvider::class,
+            $this->optionalProvider('LBHurtado\\XJournal\\XJournalServiceProvider'),
+            $this->optionalProvider('LBHurtado\\XAction\\XActionServiceProvider'),
+            $this->optionalProvider('LBHurtado\\XFeedback\\XFeedbackServiceProvider'),
+            $this->optionalProvider('LBHurtado\\XCampaign\\XCampaignServiceProvider'),
             XChangeServiceProvider::class,
             PurifierServiceProvider::class,
             XRiderServiceProvider::class,
             XRayServiceProvider::class,
-        ];
+        ]));
     }
 
     protected function defineEnvironment($app): void
@@ -190,6 +194,9 @@ abstract class TestCase extends Orchestra
         // Onboarding package migrations.
         $this->loadOnboardingPackageMigrations();
 
+        // Optional Settlement OS read-only integration package migrations.
+        $this->loadOptionalCockpitIntegrationMigrations();
+
         // Extra voucher-support tables used by voucher package tests/flows.
         $this->runVoucherSupportMigrations();
 
@@ -212,6 +219,26 @@ abstract class TestCase extends Orchestra
         if (is_dir($path) && (glob($path.'/*.php') ?: []) !== []) {
             $this->loadMigrationsFrom($path);
         }
+    }
+
+    protected function loadOptionalCockpitIntegrationMigrations(): void
+    {
+        foreach ([
+            'LBHurtado\\XJournal\\XJournalServiceProvider',
+            'LBHurtado\\XFeedback\\XFeedbackServiceProvider',
+            'LBHurtado\\XCampaign\\XCampaignServiceProvider',
+        ] as $providerClass) {
+            if (! class_exists($providerClass)) {
+                continue;
+            }
+
+            $this->runMigrationFilesFromCandidates($this->packageMigrationPaths($providerClass));
+        }
+    }
+
+    protected function optionalProvider(string $providerClass): ?string
+    {
+        return class_exists($providerClass) ? $providerClass : null;
     }
 
     protected function runBaseWalletTablesMigrations(): void

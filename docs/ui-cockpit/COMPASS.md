@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Host Integration Slice 1H — Campaign Cockpit Read-Only Adoption Closure / Integration Readiness Update
+Current slice: Host Integration Slice 1I — Package-Owned Read-Only Integration Wiring
 Status: Complete
 Last updated: 2026-07-09
 
@@ -122,6 +122,14 @@ Last updated: 2026-07-09
   - Overall Settlement OS integration readiness documentation now reflects the completed 1A–1H host adoption path.
   - Campaign mutation route scaffolding remains unauthorized.
   - No x-campaign imports, hard Composer dependency, campaign route namespace, campaign workspace route, campaign workspace controller, campaign workspace page, campaign mutation endpoints, Pay Code generation, delivery dispatch, journal writes, feedback sends/retries, wallet reads/writes, provider calls, or money movement were added.
+- Completed Host Integration Slice 1I — Package-Owned Read-Only Integration Wiring:
+  - x-change now owns Composer dependency wiring for `3neti/x-journal`, `3neti/x-action`, `3neti/x-feedback`, and `3neti/x-campaign`.
+  - The host app remains dumb; it should not duplicate Cockpit integration wiring.
+  - x-change package tests now exercise real read-only package adapters instead of only fake/fallback unavailable models.
+  - Testbench registers the integration package providers and read-side migrations when installed.
+  - This supersedes the earlier no-hard-Composer-dependency assumption for the read-only integration packages.
+  - Campaign mutation route scaffolding remains unauthorized.
+  - No host routes/controllers, campaign mutation endpoints, Pay Code generation through campaign, delivery dispatch, journal writes, action execution, feedback sends/retries, wallet reads/writes, provider calls, or money movement were added.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
   - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`
@@ -711,3 +719,6 @@ Current boundary:
 - Host Integration Slice 1H `composer validate --strict` passed.
 - Host Integration Slice 1H formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
 - Host Integration Slice 1H full package Pest result: `1046 passed, 5 skipped, 5834 assertions`.
+- Host Integration Slice 1I focused red baseline: `1 failed, 1 assertion`.
+- Host Integration Slice 1I focused real-adapter result: `1 passed, 31 assertions`.
+- Host Integration Slice 1I related Cockpit/architecture regression result: `29 passed, 325 assertions`.

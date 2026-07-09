@@ -3,10 +3,11 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Date;
+use LBHurtado\Contact\Models\Contact;
 use LBHurtado\Voucher\Exceptions\RedemptionException;
+use LBHurtado\Voucher\Exceptions\VoucherRedemptionContractViolationException;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Actions\Redemption\SubmitPayCodeClaim;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
@@ -14,11 +15,20 @@ use LBHurtado\XChange\Tests\Fakes\User;
 
 beforeEach(function () {
     Config::set('x-change.onboarding.issuer_model', User::class);
+    Config::set('app.timezone', 'Asia/Manila');
+    date_default_timezone_set('Asia/Manila');
+    Date::setTestNow();
+    CarbonImmutable::setTestNow();
 
     $this->issuer = actingAsTestUser();
     $this->vouchers = app(VoucherAccessContract::class);
     $this->generatePayCode = app(GeneratePayCode::class);
     $this->submitPayCodeClaim = app(SubmitPayCodeClaim::class);
+});
+
+afterEach(function () {
+    Date::setTestNow();
+    CarbonImmutable::setTestNow();
 });
 
 function makeClaimPayload(array $overrides = []): array
@@ -258,7 +268,7 @@ it('requires otp when configured', function () {
         $voucher,
         makeClaimPayload()
     ))->toThrow(
-        \LBHurtado\Voucher\Exceptions\RedemptionException ::class,
+        RedemptionException::class,
         'Missing required fields: Otp.'
     );
 });
@@ -302,7 +312,7 @@ it('requires signature when configured', function () {
         $voucher,
         makeClaimPayload()
     ))->toThrow(
-        \LBHurtado\Voucher\Exceptions\VoucherRedemptionContractViolationException::class,
+        VoucherRedemptionContractViolationException::class,
         'Voucher redemption contract validation failed.'
     );
 });
@@ -339,7 +349,7 @@ it('requires selfie when configured', function () {
         $voucher,
         makeClaimPayload()
     ))->toThrow(
-        \LBHurtado\Voucher\Exceptions\VoucherRedemptionContractViolationException::class,
+        VoucherRedemptionContractViolationException::class,
         'Voucher redemption contract validation failed.'
     );
 });
@@ -376,7 +386,7 @@ it('requires location when configured', function () {
         $voucher,
         makeClaimPayload()
     ))->toThrow(
-        \LBHurtado\Voucher\Exceptions\RedemptionException::class,
+        RedemptionException::class,
         'Location data is required for this voucher.'
     );
 });
@@ -430,7 +440,7 @@ it('blocks redemption when location validation is configured and claimant is out
             ],
         ])
     ))->toThrow(
-        \LBHurtado\Voucher\Exceptions\VoucherRedemptionContractViolationException::class,
+        VoucherRedemptionContractViolationException::class,
         'Voucher redemption contract validation failed.'
     );
 });
@@ -477,7 +487,7 @@ it('requires kyc when configured', function () {
         $voucher,
         makeClaimPayload()
     ))->toThrow(
-        \LBHurtado\Voucher\Exceptions\RedemptionException::class,
+        RedemptionException::class,
         'KYC verification is required but not approved. Please complete identity verification.'
     );
 });
@@ -509,7 +519,7 @@ it('blocks redemption when contact is not kyc approved even if kyc payload is pr
     );
 });
 
-function approveContactKyc(\LBHurtado\Contact\Models\Contact $contact): void
+function approveContactKyc(Contact $contact): void
 {
     $contact->meta->set('kyc_status', 'approved');
     $contact->save();
@@ -535,8 +545,8 @@ it('accepts kyc when configured and provided for a kyc-approved contact', functi
         ],
     ]);
 
-    /** @var \LBHurtado\Contact\Models\Contact $contact */
-    $contact = \LBHurtado\Contact\Models\Contact::query()->firstOrCreate([
+    /** @var Contact $contact */
+    $contact = Contact::query()->firstOrCreate([
         'mobile' => $claim['mobile'],
     ]);
 
