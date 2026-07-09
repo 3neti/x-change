@@ -32,9 +32,9 @@ This Compass is the program-level memory. Future workstream compasses should be 
 
 ## Current Position
 
-Current wave: Wave 4 — x-change Cockpit
-Current status: Cockpit Slice 27 Cross-Package Read Model Integration Baseline complete
-Last updated: 2026-07-04
+Current wave: Host Integration Readiness
+Current status: Wave 5 — x-campaign complete through Phase 15; ready for first host-side read-only integration slice
+Last updated: 2026-07-09
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
@@ -43,7 +43,7 @@ Last updated: 2026-07-04
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
 | 4 | x-change Cockpit | Operator shell | Slice 27 complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
-| 5 | x-campaign | Program / bulk distribution layer | Not started | Pending |
+| 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
 
@@ -739,6 +739,18 @@ ExecutionDriverContract
 - x-change Cockpit Slice 25 adds a read-only Quick Generate mutation preconditions review and visible review panel without approving mutation wiring, registering mutation routes, validating requests, issuing vouchers, calling providers, accessing wallets, writing journal entries, running actions, sending feedback, or moving money.
 - x-change Cockpit Slice 26 adds a read-only Quick Generate mutation authorization decision point and visible decision panel. The decision is `not_authorized`; it does not approve mutation wiring, register mutation routes, validate requests, persist payloads, issue vouchers, call providers, access wallets, write journal entries, run actions, send feedback, create campaigns, or move money.
 - x-change Cockpit Slice 27 adds optional read-only cross-package read-model adapters for x-journal evidence summaries, x-action safe CTA summaries, and x-feedback communication delivery summaries. The adapters are optional service-ID seams, not hard Composer dependencies, and degrade safely when unavailable or throwing. They do not write journal entries, execute actions, send feedback, retry deliveries, call providers, mutate vouchers, access wallets, or move money.
+- Wave 5 — x-campaign complete through Phase 15:
+  - independent package at `/Users/rli/PhpstormProjects/packages/x-campaign`
+  - package identity: `3neti/x-campaign`
+  - namespace: `LBHurtado\XCampaign`
+  - core campaign planning, audience planning, recipient import planning, execution planning, handoff planning, analytics/read-models, operational readiness, public API descriptors, and host adoption seams are scaffolded
+  - `x-campaign` parity report exists at `/Users/rli/PhpstormProjects/packages/x-campaign/docs/PARITY_REPORT.md`
+  - host adoption compass exists at `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md`
+  - final known x-campaign package suite: `429 passed, 4434 assertions`
+  - x-campaign remains non-mutating for host adoption: it does not own host routes, controllers, requests, resources, middleware, policies, Pay Code generation semantics, provider delivery, journal storage, wallet mutation, or money movement
+- Settlement OS integration readiness report added:
+  - [INTEGRATION_READINESS_REPORT.md](INTEGRATION_READINESS_REPORT.md)
+  - selected next slice: x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -747,17 +759,28 @@ ExecutionDriverContract
 
 ## Next Recommended Workstream
 
-Choose whether to close the current read-only Wave 4 Cockpit foundation and proceed to Wave 5 — x-campaign, or explicitly approve a separate Quick Generate mutation mini-roadmap.
+Proceed with:
+
+```text
+x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
+```
+
+Recommended first slice:
+
+```text
+x-change Host Integration Slice 1A — Campaign Cockpit Adoption Boundary Plan
+```
 
 Recommended actions:
 
-1. Request approval before proceeding to another slice or workstream.
-2. Completed slice: Cockpit Slice 27 — Cross-Package Read Model Integration Baseline.
-3. Read the Cockpit compass before continuing: `packages/x-change/docs/ui-cockpit/COMPASS.md`.
-4. Mutation route scaffolding is not authorized.
-5. If mutation is approved later, define a smaller Quick Generate mutation contract before implementation.
-6. Do not add mutation endpoints, request validation execution, payload persistence, execution, journal writes, action execution, feedback delivery, provider calls, campaign behavior, money movement, raw payload exposure, wallet access, or live cross-package calls unless explicitly approved.
-7. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
+1. Read [INTEGRATION_READINESS_REPORT.md](INTEGRATION_READINESS_REPORT.md).
+2. Read the Cockpit compass before implementation: `packages/x-change/docs/ui-cockpit/COMPASS.md`.
+3. Read the x-campaign parity report before implementation: `/Users/rli/PhpstormProjects/packages/x-campaign/docs/PARITY_REPORT.md`.
+4. Add host-side documentation and tests proving campaign Cockpit adoption is read-only and host-owned.
+5. Keep any x-campaign package access optional and adapter-driven.
+6. Mutation route scaffolding remains unauthorized.
+7. Do not add campaign mutation endpoints, request validation execution, payload persistence, Pay Code generation, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls, campaign state mutation, money movement, raw payload exposure, wallet access, or live hard package calls unless explicitly approved.
+8. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
 ## x-journal Initial Intent
 
