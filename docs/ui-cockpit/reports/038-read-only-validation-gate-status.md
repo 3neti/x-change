@@ -1,37 +1,37 @@
 # Host Validation Checkpoint 6 — Read-Only Validation Gate Status
 
-Status: Gate blocked pending human visual browser confirmation
+Status: Gate passed based on human visual browser confirmation
 
 ## Purpose
 
-Record the current gate state after the visual confirmation handoff was scaffolded.
+Record the current gate state after the human reviewer manually opened and tested the read-only Cockpit browser surfaces.
 
-This checkpoint exists to prevent accidental progression into mutation-capable Cockpit planning while the read-only browser validation is still unresolved.
+This checkpoint now records the read-only browser validation as resolved.
 
 ## Current Gate
 
 ```text
-Read-only Cockpit validation gate: BLOCKED
-Reason: Human visual browser confirmation has not been recorded.
+Read-only Cockpit validation gate: PASS
+Reason: Human reviewer manually opened and tested the required Cockpit routes with no issues reported.
 ```
 
-## Required Unblock Condition
+## Unblock Evidence
 
-The gate may be unblocked only when a human updates:
+The gate was unblocked after a human reviewer reported opening and testing:
 
-- `reports/037-human-visual-confirmation-handoff.md`
-- `reports/035-manual-browser-ui-ux-pass-execution-record.md`
-- `COMPASS.md`
-- `../architecture/SETTLEMENT_OS_COMPASS.md`
+- `http://x-change-sandbox.test/x/cockpit`
+- `/x/cockpit/quick-generate`
+- `/x/cockpit/pay-codes`
+- `/x/cockpit/pay-codes/{code}`
+- `/x/cockpit/pay-codes/{code}/distribution`
 
-with one of:
+The decision is recorded as:
 
 - `Pass`
-- `Blocked — accepted by human`
 
-## Explicitly Not Authorized
+## Still Not Authorized Without Separate Approval
 
-Until the gate is unblocked, do not scaffold or implement:
+Passing this read-only validation gate does not itself authorize mutation-capable implementation. Do not scaffold or implement the following without a separate explicit plan and approval:
 
 - Cockpit mutation routes
 - Quick Generate issuance mutation
@@ -46,7 +46,7 @@ Until the gate is unblocked, do not scaffold or implement:
 - wallet access
 - money movement
 
-## Work Still Allowed
+## Work Now Allowed
 
 The following remain allowed:
 
@@ -56,6 +56,7 @@ The following remain allowed:
 - browser-log review
 - route/read-model smoke tests
 - no-side-effect UI copy clarification
+- mutation-capable Cockpit planning, if explicitly requested
 
 ## Source Checkpoints
 
@@ -91,4 +92,3 @@ Command:
 ```bash
 php -d memory_limit=1G vendor/bin/pest tests/Unit/Architecture/CockpitReadOnlyValidationGateStatusTest.php
 ```
-

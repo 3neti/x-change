@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 
-it('documents the manual browser ui ux execution record without claiming visual confirmation', function () {
+it('documents the manual browser ui ux execution record with human visual confirmation', function () {
     $reportPath = dirname(__DIR__, 3).'/docs/ui-cockpit/reports/035-manual-browser-ui-ux-pass-execution-record.md';
 
     expect(file_exists($reportPath))->toBeTrue();
@@ -28,8 +28,9 @@ it('documents the manual browser ui ux execution record without claiming visual 
 
     expect($report)->toContain('Host Validation Checkpoint 3 — Manual Browser UI/UX Pass Execution Record')
         ->and($report)->toContain('http://x-change-sandbox.test/x/cockpit')
-        ->and($report)->toContain('Programmatic route/read-model record complete; human visual browser confirmation pending')
-        ->and($report)->toContain('Human visual confirmation is pending')
+        ->and($report)->toContain('Programmatic route/read-model record complete; human visual browser confirmation passed')
+        ->and($report)->toContain('Human visual confirmation is recorded as `Pass`')
+        ->and($report)->toContain('Human reviewer confirmed `/x/cockpit`')
         ->and($report)->toContain('can.mutate_vouchers = false')
         ->and($report)->toContain('can.move_money = false')
         ->and($report)->toContain('basic_cash')
@@ -37,8 +38,8 @@ it('documents the manual browser ui ux execution record without claiming visual 
         ->and($report)->toContain('This checkpoint did not add:')
         ->and($report)->toContain('money movement')
         ->and($cockpitCompass)->toContain('Host Validation Checkpoint 3 — Manual Browser UI/UX Pass Execution Record')
-        ->and($cockpitCompass)->toContain('human visual browser confirmation pending')
+        ->and($cockpitCompass)->toContain('Human visual browser confirmation is now recorded as `Pass`')
         ->and($cockpitCompass)->toContain('reports/035-manual-browser-ui-ux-pass-execution-record.md')
         ->and($settlementCompass)->toContain('x-change Host Validation Checkpoint 3 — Manual Browser UI/UX Pass Execution Record')
-        ->and($settlementCompass)->toContain('Human visual browser confirmation remains pending');
+        ->and($settlementCompass)->toContain('Human visual browser confirmation is recorded as `Pass`');
 });

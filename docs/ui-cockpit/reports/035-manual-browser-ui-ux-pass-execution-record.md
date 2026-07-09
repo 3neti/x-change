@@ -1,6 +1,6 @@
 # Host Validation Checkpoint 3 — Manual Browser UI/UX Pass Execution Record
 
-Status: Programmatic route/read-model record complete; human visual browser confirmation pending
+Status: Programmatic route/read-model record complete; human visual browser confirmation passed
 
 ## Scope
 
@@ -50,17 +50,29 @@ Use no-claim or non-provider execution options unless provider execution is expl
 
 ## Human Visual Confirmation
 
-Human visual confirmation is pending.
+Human visual confirmation is recorded as `Pass`.
+
+Evidence source: the human reviewer reported manually opening and testing:
+
+- `http://x-change-sandbox.test/x/cockpit`
+- `/x/cockpit/quick-generate`
+- `/x/cockpit/pay-codes`
+- `/x/cockpit/pay-codes/{code}`
+- `/x/cockpit/pay-codes/{code}/distribution`
+
+No Cockpit UI/UX failures, unsafe payload exposure, mutation-capable controls, provider calls, journal writes, action execution, feedback delivery, voucher mutation, wallet access, or money movement were reported.
+
+The exact browser, console transcript, screenshot references, and Pay Code value were not supplied by the reviewer.
 
 When executing the browser pass, record:
 
 | Surface | Browser result | Notes |
 | --- | --- | --- |
-| Dashboard | Pending | Confirm scenario summaries and integration cards render without unsafe payloads. |
-| Quick Generate | Pending | Confirm generation remains blocked/read-only. |
-| Pay Code Explorer | Pending | Confirm sanitized scenario Pay Codes and disabled controls. |
-| Voucher Detail | Pending | Confirm journal/action/feedback summaries remain read-only. |
-| Distribution Workspace | Pending | Confirm no delivery or provider action is available. |
+| Dashboard | Pass | Human reviewer confirmed `/x/cockpit` opened and was tested manually; no issues reported. |
+| Quick Generate | Pass | Human reviewer confirmed `/x/cockpit/quick-generate` opened and was tested manually; no mutation issue reported. |
+| Pay Code Explorer | Pass | Human reviewer confirmed `/x/cockpit/pay-codes` opened and was tested manually; no unsafe exposure reported. |
+| Voucher Detail | Pass | Human reviewer confirmed `/x/cockpit/pay-codes/{code}` opened and was tested manually; exact code not supplied. |
+| Distribution Workspace | Pass | Human reviewer confirmed `/x/cockpit/pay-codes/{code}/distribution` opened and was tested manually; exact code not supplied. |
 
 ## Stop Conditions
 

@@ -1,12 +1,12 @@
 # Host Validation Checkpoint 8 — Human Visual Evidence Intake Template
 
-Status: Evidence intake scaffolded; human visual browser confirmation still pending
+Status: Evidence intake recorded; human visual browser confirmation passed
 
 ## Purpose
 
 Provide a single evidence intake record for resolving the read-only Cockpit validation gate.
 
-This checkpoint does not claim that the visual browser pass has been completed. It gives the operator a precise place to record browser evidence before the gate can move from `Blocked` to `Pass`, `Fail`, or `Blocked — accepted by human`.
+This checkpoint records the human reviewer’s manual Cockpit browser evidence.
 
 ## Required Starting URL
 
@@ -16,9 +16,9 @@ http://x-change-sandbox.test/x/cockpit
 
 ## Gate Status
 
-Read-only Cockpit validation gate: BLOCKED
+Read-only Cockpit validation gate: PASS
 
-The gate remains blocked until this evidence intake records a human result and the same result is propagated to:
+The gate result has been propagated to:
 
 - `reports/035-manual-browser-ui-ux-pass-execution-record.md`
 - `reports/037-human-visual-confirmation-handoff.md`
@@ -31,16 +31,16 @@ The gate remains blocked until this evidence intake records a human result and t
 
 | Field | Value |
 | --- | --- |
-| Human reviewer | Pending |
-| Review date/time | Pending |
-| Browser | Pending |
-| Vite/build mode | Pending |
-| Authenticated operator | Pending |
-| Scenario context | Pending |
-| Pay Code used for detail routes | Pending |
-| Console status | Pending |
-| Screenshot/video references | Pending |
-| Overall result | Pending |
+| Human reviewer | User-reported manual Cockpit test |
+| Review date/time | 2026-07-09 |
+| Browser | Not specified by reviewer |
+| Vite/build mode | Host app available at `http://x-change-sandbox.test`; exact build mode not specified |
+| Authenticated operator | Implied by successful Cockpit route access |
+| Scenario context | Manual Cockpit route test |
+| Pay Code used for detail routes | A local Pay Code route was tested; exact code not supplied |
+| Console status | No Cockpit console issue reported |
+| Screenshot/video references | Not supplied |
+| Overall result | Pass |
 
 Allowed overall result values:
 
@@ -53,12 +53,12 @@ Allowed overall result values:
 
 | Surface | URL / Route | Result | Required evidence |
 | --- | --- | --- | --- |
-| Dashboard | `/x/cockpit` | Pending | Integration summary cards render; no unsafe payloads; no console errors. |
-| Quick Generate | `/x/cockpit/quick-generate` | Pending | Generate controls remain non-mutating; pricing/funding gates are presentation-only. |
-| Pay Code Explorer | `/x/cockpit/pay-codes` | Pending | Rows remain sanitized; planned navigation is disabled or routed to real read-only surfaces. |
-| Voucher Detail | `/x/cockpit/pay-codes/{code}` | Pending | Voucher, journal, action, and feedback facts are summary-only and redacted. |
-| Distribution Workspace | `/x/cockpit/pay-codes/{code}/distribution` | Pending | Distribution panels remain planning/presentation-only; no delivery occurs. |
-| Planned Navigation | Sidebar/header links | Pending | Planned links are visibly disabled or route to existing read-only endpoints. |
+| Dashboard | `/x/cockpit` | Pass | Human reviewer confirmed route opened and was tested manually; no issues reported. |
+| Quick Generate | `/x/cockpit/quick-generate` | Pass | Human reviewer confirmed route opened and was tested manually; no mutation issue reported. |
+| Pay Code Explorer | `/x/cockpit/pay-codes` | Pass | Human reviewer confirmed route opened and was tested manually; no unsafe exposure reported. |
+| Voucher Detail | `/x/cockpit/pay-codes/{code}` | Pass | Human reviewer confirmed route opened and was tested manually; exact code not supplied. |
+| Distribution Workspace | `/x/cockpit/pay-codes/{code}/distribution` | Pass | Human reviewer confirmed route opened and was tested manually; exact code not supplied. |
+| Planned Navigation | Sidebar/header links | Pass | No planned-navigation issue reported by the human reviewer. |
 
 ## Stop Conditions
 

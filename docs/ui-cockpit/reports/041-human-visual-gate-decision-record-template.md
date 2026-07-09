@@ -1,12 +1,12 @@
 # Host Validation Checkpoint 9 — Human Visual Gate Decision Record Template
 
-Status: Decision record scaffolded; gate decision still pending
+Status: Final gate decision recorded as Pass
 
 ## Purpose
 
 Provide the final decision record that must be completed after the human visual evidence intake.
 
-This checkpoint does not claim a pass, fail, or accepted-blocked result. It defines the decision record required to close the currently blocked read-only Cockpit validation gate.
+This checkpoint records the decision required to close the previously blocked read-only Cockpit validation gate.
 
 ## Inputs Required Before Decision
 
@@ -21,14 +21,14 @@ The decision must be based on completed evidence from:
 
 | Field | Value |
 | --- | --- |
-| Decision maker | Pending |
-| Decision date/time | Pending |
-| Evidence intake reviewed | Pending |
-| Browser console reviewed | Pending |
-| Scenario context reviewed | Pending |
-| Unsafe exposure review | Pending |
-| No-side-effect review | Pending |
-| Final gate decision | Pending |
+| Decision maker | User-reported manual Cockpit test |
+| Decision date/time | 2026-07-09 |
+| Evidence intake reviewed | Yes |
+| Browser console reviewed | No Cockpit console issue reported |
+| Scenario context reviewed | Manual Cockpit route test |
+| Unsafe exposure review | No unsafe exposure reported |
+| No-side-effect review | No provider calls, journal writes, action execution, feedback delivery, voucher mutation, wallet access, or money movement reported |
+| Final gate decision | Pass |
 
 Allowed final gate decisions:
 

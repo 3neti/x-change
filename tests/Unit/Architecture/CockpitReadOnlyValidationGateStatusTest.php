@@ -12,17 +12,17 @@ it('documents the read-only cockpit validation gate status', function () {
     $settlementCompass = file_get_contents(dirname(__DIR__, 3).'/docs/architecture/SETTLEMENT_OS_COMPASS.md');
 
     expect($report)->toContain('Host Validation Checkpoint 6 — Read-Only Validation Gate Status')
-        ->and($report)->toContain('Status: Gate blocked pending human visual browser confirmation')
-        ->and($report)->toContain('Read-only Cockpit validation gate: BLOCKED')
-        ->and($report)->toContain('Human visual browser confirmation has not been recorded')
-        ->and($report)->toContain('Explicitly Not Authorized')
+        ->and($report)->toContain('Status: Gate passed based on human visual browser confirmation')
+        ->and($report)->toContain('Read-only Cockpit validation gate: PASS')
+        ->and($report)->toContain('Human reviewer manually opened and tested the required Cockpit routes with no issues reported')
+        ->and($report)->toContain('Still Not Authorized Without Separate Approval')
         ->and($report)->toContain('Cockpit mutation routes')
         ->and($report)->toContain('money movement')
-        ->and($report)->toContain('Work Still Allowed')
-        ->and($report)->toContain('visual validation evidence capture')
+        ->and($report)->toContain('Work Now Allowed')
+        ->and($report)->toContain('mutation-capable Cockpit planning, if explicitly requested')
         ->and($cockpitCompass)->toContain('Host Validation Checkpoint 6 — Read-Only Validation Gate Status')
-        ->and($cockpitCompass)->toContain('Gate blocked pending human visual browser confirmation')
+        ->and($cockpitCompass)->toContain('Read-only Cockpit validation gate is recorded as `Pass`')
         ->and($cockpitCompass)->toContain('reports/038-read-only-validation-gate-status.md')
         ->and($settlementCompass)->toContain('x-change Host Validation Checkpoint 6 — Read-Only Validation Gate Status')
-        ->and($settlementCompass)->toContain('Read-only Cockpit validation remains blocked pending human visual browser confirmation');
+        ->and($settlementCompass)->toContain('Read-only Cockpit validation gate is recorded as `Pass`');
 });

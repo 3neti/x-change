@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Host Validation Checkpoint 9 — Human Visual Gate Decision Record Template
-Status: Decision record scaffolded; gate decision still pending
+Current slice: Host Validation Gate Closure — Read-Only Cockpit Browser Validation
+Status: Read-only Cockpit visual validation passed; mutation-capable work requires a separate plan and approval
 Last updated: 2026-07-09
 
 ## Completed
@@ -197,7 +197,9 @@ Last updated: 2026-07-09
 - Host Validation Checkpoint 3 — Manual Browser UI/UX Pass Execution Record:
   - Added a route/read-model execution record for the read-only Cockpit browser UI/UX pass.
   - Programmatic route/read-model verification is recorded for Dashboard, Quick Generate, Pay Code Explorer, Voucher Detail, and Distribution Workspace.
-  - Human visual browser confirmation remains pending and is explicitly not claimed as complete.
+  - Human visual browser confirmation is now recorded as `Pass`.
+  - Human reviewer confirmed `/x/cockpit`, `/x/cockpit/quick-generate`, `/x/cockpit/pay-codes`, `/x/cockpit/pay-codes/{code}`, and `/x/cockpit/pay-codes/{code}/distribution` opened and were tested manually.
+  - Exact browser, console transcript, screenshot references, and Pay Code value were not supplied.
   - The record preserves stop conditions for JavaScript errors, dead navigation, unsafe payload exposure, mutation controls, provider calls, journal writes, action execution, feedback delivery, voucher mutation, wallet access, and money movement.
   - No browser automation dependencies, browser snapshots, routes, mutation endpoints, lifecycle scenario execution, claim submission, provider calls, journal writes, action execution, feedback delivery, wallet access, or money movement were added.
   - Report: `reports/035-manual-browser-ui-ux-pass-execution-record.md`.
@@ -212,34 +214,30 @@ Last updated: 2026-07-09
   - Added the exact pass/fail/blocked handoff form for completing human visual browser confirmation.
   - The handoff covers Dashboard, Quick Generate, Pay Code Explorer, Voucher Detail, Distribution Workspace, and planned navigation.
   - The handoff defines prerequisites, required evidence, pass criteria, blocked criteria, fail criteria, and after-completion updates.
-  - Human visual browser confirmation remains pending and is explicitly not claimed as complete.
-  - Do not proceed to mutation-capable Cockpit planning until the visual confirmation is pass or explicitly accepted as blocked.
+  - Human visual browser confirmation is recorded as `Pass`.
+  - Mutation-capable Cockpit implementation still requires a separate explicit plan and approval.
   - No browser automation dependencies, browser snapshots, routes, mutation endpoints, lifecycle scenario execution, claim submission, provider calls, journal writes, action execution, feedback delivery, wallet access, or money movement were added.
   - Report: `reports/037-human-visual-confirmation-handoff.md`.
 - Host Validation Checkpoint 6 — Read-Only Validation Gate Status:
-  - Read-only Cockpit validation remains blocked pending human visual browser confirmation.
-  - The gate may be unblocked only by recording `Pass` or `Blocked — accepted by human` in the visual confirmation handoff and execution record.
-  - Mutation-capable Cockpit planning remains unauthorized while this gate is blocked.
-  - Allowed work is limited to read-only documentation updates, test-only guard hardening, visual validation evidence capture, browser-log review, route/read-model smoke tests, and no-side-effect UI copy clarification.
+  - Read-only Cockpit validation gate is recorded as `Pass`.
+  - Human reviewer manually opened and tested the required Cockpit routes with no issues reported.
+  - Passing this read-only validation gate does not itself authorize mutation-capable implementation.
+  - Mutation-capable Cockpit planning may now be proposed if explicitly requested.
   - No browser automation dependencies, browser snapshots, routes, mutation endpoints, lifecycle scenario execution, claim submission, provider calls, journal writes, action execution, feedback delivery, wallet access, or money movement were added.
   - Report: `reports/038-read-only-validation-gate-status.md`.
 - Host Validation Checkpoint 7 — Blocked Gate Audit / Allowed Work Boundary:
-  - The read-only validation gate was re-audited and remains blocked pending human visual browser confirmation.
-  - No human pass/fail/blocked result has been supplied.
-  - Allowed work remains limited to docs, test-only guards, visual evidence capture, browser-log review, route/read-model smoke tests, and no-side-effect UI copy clarification.
-  - Prohibited work remains: mutation routes, issuance mutation, campaign mutation routes, request validation execution, payload persistence, Pay Code generation from Cockpit, provider calls, journal writes, action execution, feedback delivery, wallet access, and money movement.
+  - The read-only validation gate was re-audited and human visual confirmation is recorded as `Pass`.
+  - Mutation-capable Cockpit implementation remains prohibited without a separate explicit plan and approval.
   - Report: `reports/039-blocked-gate-audit-allowed-work-boundary.md`.
 - Host Validation Checkpoint 8 — Human Visual Evidence Intake Template:
-  - Added a single evidence intake record for resolving the read-only Cockpit validation gate.
-  - Human visual browser confirmation remains pending and is explicitly not claimed as complete.
-  - The intake requires reviewer, browser, auth, scenario, Pay Code, console, evidence references, per-surface results, and overall result.
+  - Evidence intake records the read-only Cockpit visual validation as `Pass`.
+  - The intake records reviewer, browser/build limitations, auth, scenario, Pay Code limitation, console status, evidence references, per-surface results, and overall result.
   - Stop conditions remain JavaScript errors, enabled dead navigation, mutation-capable controls, unsafe payload exposure, provider calls, journal writes, action execution, feedback delivery, voucher mutation, wallet access, and money movement.
   - Report: `reports/040-human-visual-evidence-intake-template.md`.
 - Host Validation Checkpoint 9 — Human Visual Gate Decision Record Template:
-  - Added the final decision record template for closing the currently blocked read-only Cockpit validation gate.
+  - Final gate decision is recorded as `Pass`.
   - The template requires completed evidence from the browser checklist, execution record, handoff packet, and visual evidence intake.
-  - Allowed final decisions are `Pass`, `Fail`, and `Blocked — accepted by human`.
-  - Human visual browser confirmation remains pending and no final gate decision is claimed.
+  - Mutation-capable Cockpit implementation still requires a separate explicit plan and approval.
   - Report: `reports/041-human-visual-gate-decision-record-template.md`.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`

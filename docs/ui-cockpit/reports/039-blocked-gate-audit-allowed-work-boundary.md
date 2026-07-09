@@ -1,29 +1,26 @@
 # Host Validation Checkpoint 7 — Blocked Gate Audit / Allowed Work Boundary
 
-Status: Gate re-audited; still blocked pending human visual browser confirmation
+Status: Gate re-audited; human visual confirmation recorded as Pass
 
 ## Purpose
 
 Re-audit the read-only Cockpit validation gate after Checkpoint 6 and preserve the allowed-work boundary.
 
-This checkpoint exists because the previous checkpoint intentionally blocked mutation-capable Cockpit planning until human visual browser confirmation is recorded.
+This checkpoint now records that human visual browser confirmation was supplied after the prior blocked-gate audit.
 
 ## Gate Decision
 
-Read-only Cockpit validation gate: BLOCKED
+Read-only Cockpit validation gate: PASS
 
-Reason: human visual browser confirmation has not been recorded in:
+Reason: human visual browser confirmation has now been recorded in:
 
 - `reports/035-manual-browser-ui-ux-pass-execution-record.md`
 - `reports/037-human-visual-confirmation-handoff.md`
 - `reports/038-read-only-validation-gate-status.md`
+- `reports/040-human-visual-evidence-intake-template.md`
+- `reports/041-human-visual-gate-decision-record-template.md`
 
-The gate may be unblocked only by recording one of:
-
-- `Pass`
-- `Blocked — accepted by human`
-
-## Allowed Work While Blocked
+## Allowed Work After Gate Pass
 
 The following work remains allowed:
 
@@ -33,8 +30,9 @@ The following work remains allowed:
 - browser-log review
 - route/read-model smoke tests
 - no-side-effect UI copy clarification
+- mutation-capable Cockpit planning, if explicitly requested
 
-## Prohibited Work While Blocked
+## Still Prohibited Without Separate Approval
 
 The following work remains prohibited:
 
@@ -53,11 +51,11 @@ The following work remains prohibited:
 
 ## Audit Result
 
-No human pass/fail/blocked result has been supplied.
+Human visual confirmation has been supplied and recorded as `Pass`.
 
-No authorization to move into mutation-capable Cockpit work exists.
+No authorization to implement mutation-capable Cockpit work exists from this gate pass alone.
 
-The next required action remains human visual browser confirmation or explicit human acceptance of blocked status.
+The next required action is a separate implementation plan if mutation-capable Cockpit work is requested.
 
 ## Boundary
 

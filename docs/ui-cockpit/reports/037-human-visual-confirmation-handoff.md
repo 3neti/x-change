@@ -1,12 +1,12 @@
 # Host Validation Checkpoint 5 — Human Visual Confirmation Handoff Packet
 
-Status: Handoff scaffolded; human visual browser confirmation still pending
+Status: Human visual browser confirmation recorded as Pass
 
 ## Purpose
 
 Provide the exact handoff packet for completing human visual browser confirmation of the read-only Cockpit.
 
-This checkpoint does not claim visual confirmation. It defines the pass/fail form that must be filled after a person inspects the host app in a browser.
+This checkpoint records visual confirmation based on the human reviewer’s manual Cockpit browser test.
 
 ## Required URL
 
@@ -32,12 +32,12 @@ Fill this table after browser inspection.
 
 | Surface | URL / Route | Result | Evidence / Notes |
 | --- | --- | --- | --- |
-| Dashboard | `/x/cockpit` | Pending | Confirm summary cards, integration cards, no console errors, no unsafe payloads. |
-| Quick Generate | `/x/cockpit/quick-generate` | Pending | Confirm read-only drafting, no generate mutation, no wallet/provider access. |
-| Pay Code Explorer | `/x/cockpit/pay-codes` | Pending | Confirm sanitized rows, disabled controls, integration badges. |
-| Voucher Detail | `/x/cockpit/pay-codes/{code}` | Pending | Confirm sanitized voucher facts, journal/action/feedback summaries only. |
-| Distribution Workspace | `/x/cockpit/pay-codes/{code}/distribution` | Pending | Confirm distribution planning only, no send/delivery/provider action. |
-| Planned Navigation | Cockpit sidebar/header | Pending | Confirm planned IA links are disabled/coming soon unless real routes exist. |
+| Dashboard | `/x/cockpit` | Pass | Human reviewer confirmed route opened and was tested manually; no issues reported. |
+| Quick Generate | `/x/cockpit/quick-generate` | Pass | Human reviewer confirmed route opened and was tested manually; no mutation issue reported. |
+| Pay Code Explorer | `/x/cockpit/pay-codes` | Pass | Human reviewer confirmed route opened and was tested manually; no unsafe exposure reported. |
+| Voucher Detail | `/x/cockpit/pay-codes/{code}` | Pass | Human reviewer confirmed route opened and was tested manually; exact code not supplied. |
+| Distribution Workspace | `/x/cockpit/pay-codes/{code}/distribution` | Pass | Human reviewer confirmed route opened and was tested manually; exact code not supplied. |
+| Planned Navigation | Cockpit sidebar/header | Pass | No dead-navigation issue reported by the human reviewer. |
 
 Allowed result values:
 
@@ -47,14 +47,14 @@ Allowed result values:
 
 ## Required Evidence
 
-Record:
+Recorded:
 
-- browser URL
-- scenario or Pay Code used
-- console status
-- visible error status
-- screenshot reference if available
-- any deviation from the checklist
+- browser URL: listed in the Visual Confirmation Form
+- scenario or Pay Code used: local Cockpit/manual route context; exact Pay Code not supplied
+- console status: no Cockpit console issue reported
+- visible error status: no visible error reported
+- screenshot reference: not supplied
+- checklist deviation: none reported
 
 ## Pass Criteria
 
@@ -110,7 +110,7 @@ This checkpoint did not add:
 
 ## After Completion
 
-When the visual pass is performed, update:
+Completion updates recorded:
 
 - this report’s `Status`
 - the Visual Confirmation Form
@@ -118,7 +118,7 @@ When the visual pass is performed, update:
 - `COMPASS.md`
 - `../architecture/SETTLEMENT_OS_COMPASS.md`
 
-Do not proceed to mutation-capable Cockpit planning until this visual confirmation is either `Pass` or explicitly accepted as `Blocked` by a human.
+This visual confirmation is recorded as `Pass`. Mutation-capable Cockpit work still requires a separate explicit implementation plan and approval.
 
 ## Verification
 
@@ -127,4 +127,3 @@ Command:
 ```bash
 php -d memory_limit=1G vendor/bin/pest tests/Unit/Architecture/CockpitHumanVisualConfirmationHandoffTest.php
 ```
-

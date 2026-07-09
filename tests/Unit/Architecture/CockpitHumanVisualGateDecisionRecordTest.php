@@ -12,16 +12,17 @@ it('documents the human visual gate decision record template', function () {
     $settlementCompass = file_get_contents(dirname(__DIR__, 3).'/docs/architecture/SETTLEMENT_OS_COMPASS.md');
 
     expect($report)->toContain('Host Validation Checkpoint 9 — Human Visual Gate Decision Record Template')
-        ->and($report)->toContain('Decision record scaffolded; gate decision still pending')
+        ->and($report)->toContain('Final gate decision recorded as Pass')
         ->and($report)->toContain('Inputs Required Before Decision')
         ->and($report)->toContain('reports/040-human-visual-evidence-intake-template.md')
         ->and($report)->toContain('Allowed final gate decisions')
         ->and($report)->toContain('Blocked — accepted by human')
+        ->and($report)->toContain('| Final gate decision | Pass |')
         ->and($report)->toContain('Required Propagation After Decision')
         ->and($report)->toContain('money movement')
         ->and($cockpitCompass)->toContain('Host Validation Checkpoint 9 — Human Visual Gate Decision Record Template')
-        ->and($cockpitCompass)->toContain('Decision record scaffolded; gate decision still pending')
+        ->and($cockpitCompass)->toContain('Final gate decision is recorded as `Pass`')
         ->and($cockpitCompass)->toContain('reports/041-human-visual-gate-decision-record-template.md')
         ->and($settlementCompass)->toContain('x-change Host Validation Checkpoint 9 — Human Visual Gate Decision Record Template')
-        ->and($settlementCompass)->toContain('Added the final decision record template for closing the currently blocked read-only Cockpit validation gate');
+        ->and($settlementCompass)->toContain('Final gate decision is recorded as `Pass`');
 });
