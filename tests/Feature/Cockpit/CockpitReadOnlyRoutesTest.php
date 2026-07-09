@@ -589,6 +589,7 @@ it('hands quick generate mutation requests to the existing issuance action with 
     expect($fakeGeneratePayCode->payloads)->toHaveCount(1)
         ->and($fakeGeneratePayCode->payloads[0])->not->toHaveKey('secret')
         ->and(data_get($fakeGeneratePayCode->payloads[0], 'cash.validation'))->toBe([])
+        ->and(data_get($fakeGeneratePayCode->payloads[0], 'count'))->toBe(1)
         ->and($fakeGeneratePayCode->payloads[0]['_meta'])->toMatchArray([
             'idempotency_key' => null,
             'correlation_id' => 'correlation-cockpit-1',

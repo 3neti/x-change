@@ -205,6 +205,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(payload.inputs).toEqual({
             fields: [],
         });
+        expect(payload.count).toBe(1);
         expect(payload.feedback).toEqual({
             mobile: '09173011987',
         });

@@ -141,6 +141,7 @@ function buildPayload(): Record<string, unknown> {
         inputs: {
             fields: [],
         },
+        count: 1,
         feedback: {
             mobile: mobile === '' ? null : mobile,
         },

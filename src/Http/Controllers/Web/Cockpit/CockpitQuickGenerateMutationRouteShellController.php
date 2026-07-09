@@ -66,6 +66,10 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
             data_set($payload, 'cash.validation', []);
         }
 
+        if (data_get($payload, 'count') === null) {
+            data_set($payload, 'count', 1);
+        }
+
         return $payload;
     }
 
