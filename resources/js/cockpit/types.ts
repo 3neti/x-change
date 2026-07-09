@@ -463,6 +463,7 @@ export type CockpitPayCodeExplorerReadModel = {
 export type CockpitPayCodeExplorerPageProps = {
     pay_codes_read_model?: CockpitPayCodeExplorerReadModel;
     campaign_navigation_context?: CockpitCampaignNavigationContext;
+    read_model?: CockpitReadModelBundle;
 };
 
 export type CockpitDistributionChannel = {

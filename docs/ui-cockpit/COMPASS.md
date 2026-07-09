@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Host Integration Slice 2E — Voucher Detail Integration Summary
+Current slice: Host Integration Slice 2F — Pay Code Explorer Integration Summary
 Status: Complete
 Last updated: 2026-07-09
 
@@ -158,6 +158,12 @@ Last updated: 2026-07-09
   - Cards show status, count, and payload policy only.
   - No new routes, journal writes, action execution, feedback delivery, retry execution, provider calls, raw payload exposure, voucher mutation, wallet access, or money movement were added.
   - Report: `reports/028-voucher-detail-integration-summary.md`.
+- Completed Host Integration Slice 2F — Pay Code Explorer Integration Summary:
+  - Pay Code Explorer renders page-level Journal / Action / Feedback integration badges from the existing `read_model` bundle.
+  - Badges show status and payload policy only.
+  - Per-row integration facts remain deferred because they are not part of the list read-model contract.
+  - No per-row integration payloads, query APIs, list-read scope expansion, journal writes, action execution, feedback delivery, retry execution, provider calls, raw payload exposure, voucher mutation, wallet access, or money movement were added.
+  - Report: `reports/029-pay-code-explorer-integration-summary.md`.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
   - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`

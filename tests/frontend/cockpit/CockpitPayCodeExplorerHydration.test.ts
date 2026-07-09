@@ -112,4 +112,41 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(wrapper.text()).toContain('₱1,500.75');
         expect(wrapper.find('[data-testid="cockpit-pay-code-explorer-shell"]').exists()).toBe(true);
     });
+
+    it('renders read-only integration status badges from the read model bundle', () => {
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: payCodesReadModel,
+                read_model: {
+                    journal: {
+                        status: 'available',
+                        authorized: true,
+                        entries: [{ id: 'journal-1' }],
+                        redactions: { payloads: 'journal-evidence-summary-only' },
+                    },
+                    actions: {
+                        status: 'available',
+                        authorized: true,
+                        actions: [{ key: 'review' }],
+                        redactions: { payloads: 'safe-action-host-summary-only' },
+                    },
+                    feedback: {
+                        status: 'available',
+                        authorized: true,
+                        deliveries: [{ id: 'delivery-1' }],
+                        redactions: { payloads: 'communication-delivery-summary-only' },
+                    },
+                    raw_payload: 'must-not-render',
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Integration badges');
+        expect(wrapper.text()).toContain('Journal: available');
+        expect(wrapper.text()).toContain('Actions: available');
+        expect(wrapper.text()).toContain('Feedback: available');
+        expect(wrapper.text()).toContain('journal-evidence-summary-only');
+        expect(wrapper.text()).not.toContain('must-not-render');
+        expect(wrapper.findAll('[data-testid="cockpit-pay-code-integration-badge"]')).toHaveLength(3);
+    });
 });

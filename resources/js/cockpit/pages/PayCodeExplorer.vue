@@ -7,6 +7,7 @@ import CockpitLayout from '../layouts/CockpitLayout.vue';
 import type {
     CockpitPayCodeExplorerFilter,
     CockpitCampaignNavigationContext,
+    CockpitDependentReadModel,
     CockpitPayCodeExplorerPageProps,
     CockpitPayCodeExplorerRecord,
     CockpitPayCodeExplorerReadModelRecord,
@@ -96,6 +97,12 @@ const records = computed<CockpitPayCodeExplorerRecord[]>(() => {
         .filter((record): record is CockpitPayCodeExplorerRecord => record !== null);
 });
 
+const integrationBadges = computed(() => [
+    integrationBadge('journal', 'Journal', props.read_model?.journal),
+    integrationBadge('actions', 'Actions', props.read_model?.actions),
+    integrationBadge('feedback', 'Feedback', props.read_model?.feedback),
+]);
+
 function sanitizeRecord(record: CockpitPayCodeExplorerReadModelRecord): CockpitPayCodeExplorerRecord | null {
     const code = stringValue(record.code);
 
@@ -145,6 +152,24 @@ function moneyValue(value: unknown, currency: string | null = 'PHP'): string {
         currency: currency ?? 'PHP',
     }).format(amount);
 }
+
+function integrationBadge(
+    key: string,
+    label: string,
+    model: CockpitDependentReadModel | undefined,
+): {
+    key: string;
+    label: string;
+    status: string;
+    policy: string;
+} {
+    return {
+        key,
+        label,
+        status: stringValue(model?.status) ?? 'not_wired',
+        policy: stringValue(model?.redactions?.payloads) ?? 'not-loaded',
+    };
+}
 </script>
 
 <template>
@@ -189,6 +214,26 @@ function moneyValue(value: unknown, currency: string | null = 'PHP'): string {
                     </div>
                 </dl>
             </div>
+
+            <section
+                class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-pay-code-integration-badges"
+            >
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                    Integration badges
+                </p>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <span
+                        v-for="badge in integrationBadges"
+                        :key="badge.key"
+                        class="rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200"
+                        data-testid="cockpit-pay-code-integration-badge"
+                    >
+                        {{ badge.label }}: {{ badge.status }}
+                        <span class="ml-1 font-normal opacity-70">{{ badge.policy }}</span>
+                    </span>
+                </div>
+            </section>
 
             <div
                 v-if="campaignNavigationContext"

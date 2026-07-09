@@ -784,6 +784,11 @@ ExecutionDriverContract
   - Voucher Detail renders read-only Journal / Action / Feedback integration summary cards from the existing `read_model` bundle.
   - Cards show status, count, and payload policy only.
   - No new routes, journal writes, action execution, feedback delivery, retry execution, provider calls, raw payload exposure, voucher mutation, wallet access, or money movement were added.
+- x-change Host Integration Slice 2F — Pay Code Explorer Integration Summary:
+  - Pay Code Explorer renders page-level Journal / Action / Feedback integration badges from the existing `read_model` bundle.
+  - Badges show status and payload policy only.
+  - Per-row integration facts remain deferred because they are not part of the list read-model contract.
+  - No per-row integration payloads, query APIs, list-read scope expansion, journal writes, action execution, feedback delivery, retry execution, provider calls, raw payload exposure, voucher mutation, wallet access, or money movement were added.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
