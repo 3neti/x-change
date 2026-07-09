@@ -7,6 +7,9 @@ export type CockpitNavigationItem = {
     group: CockpitNavigationGroup;
     badge?: string;
     description?: string;
+    enabled?: boolean;
+    disabledLabel?: string;
+    disabledReason?: string;
 };
 
 export type CockpitBalanceMetric = {

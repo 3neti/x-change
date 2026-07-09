@@ -116,9 +116,9 @@ use LBHurtado\XChange\Listeners\RecordFailedVoucherDisbursement;
 use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\CacheClaimApprovalWorkflowStore;
-use LBHurtado\XChange\Services\Cockpit\VoucherLifecycleCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\OptionalCockpitIntegrationReadModels;
+use LBHurtado\XChange\Services\Cockpit\VoucherLifecycleCockpitReadModelProvider;
 use LBHurtado\XChange\Services\ConfigProviderTopologyResolver;
 use LBHurtado\XChange\Services\ConfigVendorRegistry;
 use LBHurtado\XChange\Services\DefaultApprovalWorkflowService;
@@ -702,6 +702,7 @@ class XChangeServiceProvider extends ServiceProvider
 
         $this->publishes([
             // x-change pages, components, layouts, composables
+            $this->packagePath('resources/js/cockpit') => resource_path('js/cockpit'),
             $this->packagePath('resources/js/pages/x-change') => resource_path('js/pages/x-change'),
             $this->packagePath('resources/js/components/x-change') => resource_path('js/components/x-change'),
             $this->packagePath('resources/js/layouts/x-change') => resource_path('js/layouts/x-change'),

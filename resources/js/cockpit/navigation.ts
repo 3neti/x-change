@@ -21,6 +21,9 @@ export const cockpitNavigationItems: CockpitNavigationItem[] = [
         href: '/x/cockpit/funding',
         group: 'primary',
         description: 'Liquidity and funding state',
+        enabled: false,
+        disabledLabel: 'Coming soon',
+        disabledReason: 'Funding Cockpit route has not been implemented yet.',
     },
     {
         key: 'pay-codes',
@@ -35,6 +38,9 @@ export const cockpitNavigationItems: CockpitNavigationItem[] = [
         href: '/x/cockpit/templates',
         group: 'primary',
         description: 'Institutional products',
+        enabled: false,
+        disabledLabel: 'Coming soon',
+        disabledReason: 'Template Cockpit route has not been implemented yet.',
     },
     {
         key: 'contacts',
@@ -42,14 +48,19 @@ export const cockpitNavigationItems: CockpitNavigationItem[] = [
         href: '/x/cockpit/contacts',
         group: 'primary',
         description: 'People and counterparties',
+        enabled: false,
+        disabledLabel: 'Coming soon',
+        disabledReason: 'Contacts Cockpit route has not been implemented yet.',
     },
     {
         key: 'operations',
         label: 'Operations',
         href: '/x/cockpit/operations',
         group: 'primary',
-        badge: 'Monitor',
         description: 'Execution and exceptions',
+        enabled: false,
+        disabledLabel: 'Coming soon',
+        disabledReason: 'Operations Cockpit route has not been implemented yet.',
     },
     {
         key: 'reports',
@@ -57,14 +68,19 @@ export const cockpitNavigationItems: CockpitNavigationItem[] = [
         href: '/x/cockpit/reports',
         group: 'primary',
         description: 'Operational reporting',
+        enabled: false,
+        disabledLabel: 'Coming soon',
+        disabledReason: 'Reports Cockpit route has not been implemented yet.',
     },
     {
         key: 'approvals',
         label: 'Approvals',
         href: '/x/cockpit/approvals',
         group: 'secondary',
-        badge: 'CTA',
         description: 'Human approval queues',
+        enabled: false,
+        disabledLabel: 'Coming soon',
+        disabledReason: 'Approvals Cockpit route has not been implemented yet.',
     },
     {
         key: 'administration',
@@ -72,6 +88,9 @@ export const cockpitNavigationItems: CockpitNavigationItem[] = [
         href: '/x/cockpit/administration',
         group: 'secondary',
         description: 'Configuration and controls',
+        enabled: false,
+        disabledLabel: 'Coming soon',
+        disabledReason: 'Administration Cockpit route has not been implemented yet.',
     },
 ];
 
@@ -82,4 +101,3 @@ export const cockpitPrimaryNavigation = cockpitNavigationItems.filter(
 export const cockpitSecondaryNavigation = cockpitNavigationItems.filter(
     (item) => item.group === 'secondary',
 );
-

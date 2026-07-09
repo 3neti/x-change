@@ -26,6 +26,32 @@ describe('Cockpit navigation baseline', () => {
         expect(cockpitNavigationItems).toHaveLength(10);
     });
 
+    it('marks only implemented Cockpit routes as enabled navigation links', () => {
+        const enabledItems = cockpitNavigationItems.filter((item) => item.enabled !== false);
+        const disabledItems = cockpitNavigationItems.filter((item) => item.enabled === false);
+
+        expect(enabledItems.map((item) => item.key)).toEqual([
+            'dashboard',
+            'quick-generate',
+            'pay-codes',
+        ]);
+
+        expect(disabledItems.map((item) => item.key)).toEqual([
+            'funding',
+            'templates',
+            'contacts',
+            'operations',
+            'reports',
+            'approvals',
+            'administration',
+        ]);
+
+        for (const item of disabledItems) {
+            expect(item.disabledLabel).toBe('Coming soon');
+            expect(item.disabledReason).toContain('Cockpit route has not been implemented yet.');
+        }
+    });
+
     it('keeps navigation as shell descriptors without domain behavior', () => {
         for (const item of cockpitNavigationItems) {
             expect(item.href).toMatch(/^\/x\/cockpit/);

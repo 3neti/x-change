@@ -5,7 +5,7 @@ import {
 } from '../navigation';
 import type { CockpitNavigationItem } from '../types';
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
     activeKey?: string;
     primaryItems?: CockpitNavigationItem[];
     secondaryItems?: CockpitNavigationItem[];
@@ -14,6 +14,18 @@ withDefaults(defineProps<{
     primaryItems: () => cockpitPrimaryNavigation,
     secondaryItems: () => cockpitSecondaryNavigation,
 });
+
+const isEnabled = (item: CockpitNavigationItem): boolean => item.enabled !== false;
+
+const navItemClass = (item: CockpitNavigationItem, activeKey?: string): string[] => [
+    'group flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm transition',
+    item.key === activeKey && isEnabled(item)
+        ? 'bg-white text-slate-950 shadow-sm'
+        : isEnabled(item)
+            ? 'text-slate-300 hover:bg-white/10 hover:text-white'
+            : 'cursor-not-allowed text-slate-500 opacity-75',
+];
+
 </script>
 
 <template>
@@ -32,59 +44,89 @@ withDefaults(defineProps<{
 
         <nav class="flex flex-1 flex-col gap-6 overflow-y-auto px-3 py-4" aria-label="Cockpit navigation">
             <div class="space-y-1">
-                <a
+                <template
                     v-for="item in primaryItems"
                     :key="item.key"
-                    :href="item.href"
-                    :aria-current="item.key === activeKey ? 'page' : undefined"
-                    :class="[
-                        'group flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm transition',
-                        item.key === activeKey
-                            ? 'bg-white text-slate-950 shadow-sm'
-                            : 'text-slate-300 hover:bg-white/10 hover:text-white',
-                    ]"
-                    data-testid="cockpit-nav-item"
                 >
-                    <span>
-                        <span class="block font-medium">{{ item.label }}</span>
-                        <span class="block text-xs opacity-70">{{ item.description }}</span>
-                    </span>
-                    <span
-                        v-if="item.badge"
-                        class="rounded-full bg-amber-300 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-amber-950"
+                    <a
+                        v-if="isEnabled(item)"
+                        :href="item.href"
+                        :aria-current="item.key === activeKey ? 'page' : undefined"
+                        :class="navItemClass(item, activeKey)"
+                        data-testid="cockpit-nav-item"
                     >
-                        {{ item.badge }}
+                        <span>
+                            <span class="block font-medium">{{ item.label }}</span>
+                            <span class="block text-xs opacity-70">{{ item.description }}</span>
+                        </span>
+                        <span
+                            v-if="item.badge"
+                            class="rounded-full bg-amber-300 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-amber-950"
+                        >
+                            {{ item.badge }}
+                        </span>
+                    </a>
+                    <span
+                        v-else
+                        role="link"
+                        aria-disabled="true"
+                        :title="item.disabledReason"
+                        :class="navItemClass(item, activeKey)"
+                        data-testid="cockpit-nav-item-disabled"
+                    >
+                        <span>
+                            <span class="block font-medium">{{ item.label }}</span>
+                            <span class="block text-xs opacity-70">{{ item.description }}</span>
+                        </span>
+                        <span
+                            class="rounded-full bg-slate-700 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-slate-300"
+                        >
+                            {{ item.disabledLabel ?? 'Coming soon' }}
+                        </span>
                     </span>
-                </a>
+                </template>
             </div>
 
             <div class="mt-auto space-y-1 border-t border-white/10 pt-4">
                 <p class="px-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                     Controls
                 </p>
-                <a
+                <template
                     v-for="item in secondaryItems"
                     :key="item.key"
-                    :href="item.href"
-                    :aria-current="item.key === activeKey ? 'page' : undefined"
-                    :class="[
-                        'flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm transition',
-                        item.key === activeKey
-                            ? 'bg-white text-slate-950 shadow-sm'
-                            : 'text-slate-300 hover:bg-white/10 hover:text-white',
-                    ]"
-                    data-testid="cockpit-nav-item"
                 >
-                    <span class="font-medium">{{ item.label }}</span>
-                    <span
-                        v-if="item.badge"
-                        class="rounded-full bg-sky-300 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-sky-950"
+                    <a
+                        v-if="isEnabled(item)"
+                        :href="item.href"
+                        :aria-current="item.key === activeKey ? 'page' : undefined"
+                        :class="navItemClass(item, activeKey)"
+                        data-testid="cockpit-nav-item"
                     >
-                        {{ item.badge }}
+                        <span class="font-medium">{{ item.label }}</span>
+                        <span
+                            v-if="item.badge"
+                            class="rounded-full bg-sky-300 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-sky-950"
+                        >
+                            {{ item.badge }}
+                        </span>
+                    </a>
+                    <span
+                        v-else
+                        role="link"
+                        aria-disabled="true"
+                        :title="item.disabledReason"
+                        :class="navItemClass(item, activeKey)"
+                        data-testid="cockpit-nav-item-disabled"
+                    >
+                        <span class="font-medium">{{ item.label }}</span>
+                        <span
+                            class="rounded-full bg-slate-700 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-slate-300"
+                        >
+                            {{ item.disabledLabel ?? 'Coming soon' }}
+                        </span>
                     </span>
-                </a>
+                </template>
             </div>
         </nav>
     </aside>
 </template>
-
