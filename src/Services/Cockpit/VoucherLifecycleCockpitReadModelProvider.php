@@ -16,6 +16,7 @@ use LBHurtado\XChange\Data\Cockpit\CockpitDashboardMetricData;
 use LBHurtado\XChange\Data\Cockpit\CockpitDashboardPipelineStageData;
 use LBHurtado\XChange\Data\Cockpit\CockpitDashboardReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitDashboardRiskSignalData;
+use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeListReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeListRecordData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateActionData;
@@ -811,6 +812,11 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         }
 
         return $this->integrations->campaignAdoption($query);
+    }
+
+    public function forOperatorIssuanceActivity(CockpitReadModelQueryData $query): CockpitOperatorIssuanceActivityReadModelData
+    {
+        return $this->fallback->forOperatorIssuanceActivity($query);
     }
 
     public function forPayCodeList(CockpitReadModelQueryData $query): CockpitPayCodeListReadModelData

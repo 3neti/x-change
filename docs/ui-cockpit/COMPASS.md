@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Published Asset Drift Guard
-Status: Guard implemented; package-owned Cockpit assets now have doctor drift detection and install-time published-copy warnings
+Current slice: Cockpit Mutation Wave 2A — Operator Issuance Activity Read Model Contract
+Status: Implemented; operator issuance activity now has an operator-safe read-model contract and null provider boundary
 Last updated: 2026-07-10
 
 ## Completed
@@ -17,6 +17,13 @@ Last updated: 2026-07-10
   - The guard strips generated headers before comparison so warnings do not create false drift.
   - Current host Cockpit mirrors checked clean: 54 files, 0 stale, 0 missing, 0 extra.
   - Report: `reports/050-cockpit-published-asset-drift-guard.md`.
+- Completed Cockpit Mutation Wave 2A — Operator Issuance Activity Read Model Contract:
+  - Added operator-safe issuance activity item and read-model DTOs.
+  - Added `CockpitReadModelProviderContract::forOperatorIssuanceActivity()`.
+  - Added a safe null/not-wired provider response with empty state and explicit redaction flags.
+  - Wired the lifecycle provider to the safe fallback until a recorder boundary is explicitly introduced.
+  - No persistence, migrations, queues, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, raw payload persistence, automatic retry, or money movement were added.
+  - Report: `reports/051-operator-issuance-activity-read-model-contract.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -906,3 +913,6 @@ Current boundary:
 - Cockpit Mutation Wave 2 `composer validate --strict` passed.
 - Cockpit Mutation Wave 2 formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
 - Cockpit Mutation Wave 2 full package Pest result: `1086 passed, 5 skipped, 6455 assertions`.
+- Cockpit Mutation Wave 2A focused red baseline: `3 failed`.
+- Cockpit Mutation Wave 2A focused read-model result: `3 passed, 25 assertions`.
+- Cockpit Mutation Wave 2A full package Pest result: `1096 passed, 5 skipped, 6524 assertions`.
