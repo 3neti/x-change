@@ -793,6 +793,11 @@ ExecutionDriverContract
   - Dashboard and Voucher Detail integration summary cards display safe unavailable reasons from `redactions.reason`.
   - Exception classes and exception messages remain hidden from operator UI.
   - No exception messages, exception classes, adapter retries, queues, observability exporters, journal writes, action execution, feedback delivery, provider calls, voucher mutation, wallet access, or money movement were added.
+- x-change Host Integration Slice 2H — Authorization / Redaction Review:
+  - Dashboard, Voucher Detail, and Pay Code Explorer integration surfaces were reviewed against operator-safe authorization/redaction expectations.
+  - Exception classes, exception messages, raw payloads, provider payloads, recipient addresses, action target URLs, non-durable run IDs, credentials, and internal routes remain hidden.
+  - Payload policies and safe reasons remain visible.
+  - No mutation routes, authorization policy execution, role/permission persistence, action execution, feedback delivery, feedback retry execution, journal writes, provider calls, voucher mutation, wallet access, or money movement were added.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.

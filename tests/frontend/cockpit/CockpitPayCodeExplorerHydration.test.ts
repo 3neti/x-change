@@ -149,4 +149,71 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(wrapper.text()).not.toContain('must-not-render');
         expect(wrapper.findAll('[data-testid="cockpit-pay-code-integration-badge"]')).toHaveLength(3);
     });
+
+    it('keeps explorer integration badges authorization and redaction safe', () => {
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: payCodesReadModel,
+                read_model: {
+                    journal: {
+                        status: 'available',
+                        authorized: true,
+                        entries: [
+                            {
+                                id: 'journal-1',
+                                raw_payload: 'SECRET-DO-NOT-RENDER',
+                            },
+                        ],
+                        redactions: {
+                            payloads: 'journal-evidence-summary-only',
+                            reason: 'read-model-ready',
+                            exception: 'RuntimeException',
+                            exception_message: 'Stack trace must stay hidden',
+                        },
+                    },
+                    actions: {
+                        status: 'available',
+                        authorized: true,
+                        actions: [
+                            {
+                                key: 'review',
+                                target_url: '/unsafe-action-route',
+                                raw_diagnostics: 'SECRET-DO-NOT-RENDER',
+                            },
+                        ],
+                        redactions: {
+                            payloads: 'safe-action-host-summary-only',
+                            reason: 'presentation-only',
+                        },
+                    },
+                    feedback: {
+                        status: 'available',
+                        authorized: true,
+                        deliveries: [
+                            {
+                                id: 'delivery-1',
+                                recipient: '+639170000000',
+                                provider_payload: 'SECRET-DO-NOT-RENDER',
+                            },
+                        ],
+                        redactions: {
+                            payloads: 'communication-delivery-summary-only',
+                            reason: 'read-model-ready',
+                        },
+                    },
+                    raw_payload: 'SECRET-DO-NOT-RENDER',
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Integration badges');
+        expect(wrapper.text()).toContain('journal-evidence-summary-only');
+        expect(wrapper.text()).toContain('safe-action-host-summary-only');
+        expect(wrapper.text()).toContain('communication-delivery-summary-only');
+        expect(wrapper.text()).not.toContain('SECRET-DO-NOT-RENDER');
+        expect(wrapper.text()).not.toContain('RuntimeException');
+        expect(wrapper.text()).not.toContain('Stack trace must stay hidden');
+        expect(wrapper.text()).not.toContain('/unsafe-action-route');
+        expect(wrapper.text()).not.toContain('+639170000000');
+    });
 });

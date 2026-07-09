@@ -364,4 +364,78 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).not.toContain('RuntimeException');
         expect(wrapper.text()).not.toContain('must-not-render');
     });
+
+    it('keeps operator integration summaries authorization and redaction safe', () => {
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                dashboard_read_model: dashboardReadModel,
+                read_model: {
+                    journal: {
+                        status: 'available',
+                        authorized: true,
+                        entries: [
+                            {
+                                id: 'journal-1',
+                                event_type: 'voucher.redeemed',
+                                raw_payload: 'SECRET-DO-NOT-RENDER',
+                                exception_message: 'Stack trace must stay hidden',
+                            },
+                        ],
+                        redactions: {
+                            payloads: 'journal-evidence-summary-only',
+                            reason: 'read-model-ready',
+                            exception: 'RuntimeException',
+                            exception_message: 'Stack trace must stay hidden',
+                            internal_route: '/unsafe-journal-route',
+                        },
+                    },
+                    actions: {
+                        status: 'available',
+                        authorized: true,
+                        actions: [
+                            {
+                                key: 'approve',
+                                target_url: '/unsafe-action-route',
+                                run_id: 'non-durable-run-id',
+                                raw_diagnostics: 'SECRET-DO-NOT-RENDER',
+                            },
+                        ],
+                        redactions: {
+                            payloads: 'safe-action-host-summary-only',
+                            reason: 'presentation-only',
+                            executes_action: false,
+                        },
+                    },
+                    feedback: {
+                        status: 'available',
+                        authorized: true,
+                        deliveries: [
+                            {
+                                id: 'delivery-1',
+                                recipient: '+639170000000',
+                                provider_payload: 'SECRET-DO-NOT-RENDER',
+                            },
+                        ],
+                        redactions: {
+                            payloads: 'communication-delivery-summary-only',
+                            reason: 'read-model-ready',
+                            credential: 'SECRET-DO-NOT-RENDER',
+                        },
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Integration Summary');
+        expect(wrapper.text()).toContain('journal-evidence-summary-only');
+        expect(wrapper.text()).toContain('safe-action-host-summary-only');
+        expect(wrapper.text()).toContain('communication-delivery-summary-only');
+        expect(wrapper.text()).not.toContain('SECRET-DO-NOT-RENDER');
+        expect(wrapper.text()).not.toContain('RuntimeException');
+        expect(wrapper.text()).not.toContain('Stack trace must stay hidden');
+        expect(wrapper.text()).not.toContain('/unsafe-journal-route');
+        expect(wrapper.text()).not.toContain('/unsafe-action-route');
+        expect(wrapper.text()).not.toContain('non-durable-run-id');
+        expect(wrapper.text()).not.toContain('+639170000000');
+    });
 });

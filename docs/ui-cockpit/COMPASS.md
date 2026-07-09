@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Host Integration Slice 2G — Integration Error / Unavailable States
+Current slice: Host Integration Slice 2H — Authorization / Redaction Review
 Status: Complete
 Last updated: 2026-07-09
 
@@ -169,6 +169,12 @@ Last updated: 2026-07-09
   - Exception classes and exception messages remain hidden from operator UI.
   - No exception messages, exception classes, adapter retries, queues, observability exporters, journal writes, action execution, feedback delivery, provider calls, voucher mutation, wallet access, or money movement were added.
   - Report: `reports/030-integration-unavailable-state-hardening.md`.
+- Completed Host Integration Slice 2H — Authorization / Redaction Review:
+  - Dashboard, Voucher Detail, and Pay Code Explorer integration surfaces were reviewed against operator-safe authorization/redaction expectations.
+  - Exception classes, exception messages, raw payloads, provider payloads, recipient addresses, action target URLs, non-durable run IDs, credentials, and internal routes remain hidden.
+  - Payload policies and safe reasons remain visible.
+  - No mutation routes, authorization policy execution, role/permission persistence, action execution, feedback delivery, feedback retry execution, journal writes, provider calls, voucher mutation, wallet access, or money movement were added.
+  - Report: `reports/031-authorization-redaction-review.md`.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
   - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`
