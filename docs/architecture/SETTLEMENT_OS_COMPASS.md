@@ -876,6 +876,13 @@ ExecutionDriverContract
   - Runtime remains disabled; UI submit enablement remains deferred.
   - No `GeneratePayCode` invocation, `GeneratePayCodeController` invocation, `GeneratePayCodeRequest` validation execution, request payload persistence, idempotency persistence, voucher issuance, provider calls, wallet access, journal writes, action execution, feedback delivery, campaign behavior, or money movement were added.
   - Report: `../ui-cockpit/reports/044-quick-generate-mutation-route-shell.md`.
+- x-change Cockpit Mutation Wave 1C — Existing Issuance Handoff:
+  - The authenticated Cockpit Quick Generate POST route now validates through `GeneratePayCodeRequest`.
+  - The route calls the existing `GeneratePayCode` action directly and returns an operator-redacted issuance result.
+  - The existing public API generation route remains owned by `GeneratePayCodeController`.
+  - UI submit enablement, idempotency persistence, payload fingerprinting, replay lookup, conflict behavior, and refresh/navigation remain deferred.
+  - Cockpit does not call providers, wallets, journal, action, feedback, campaign behavior, or money movement directly.
+  - Report: `../ui-cockpit/reports/045-quick-generate-existing-issuance-handoff.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -896,7 +903,7 @@ Completed through Host Integration Slice 2I.
 Recommended next checkpoint:
 
 ```text
-Approve or revise Cockpit Mutation Wave 1C — Existing Issuance Handoff
+Approve or revise Cockpit Mutation Wave 1D — Idempotency and Replay Contract
 ```
 
 Recommended actions:
@@ -906,11 +913,12 @@ Recommended actions:
 3. Read `packages/x-change/docs/ui-cockpit/reports/042-quick-generate-mutation-plan-safety-contract.md`.
 4. Read `packages/x-change/docs/ui-cockpit/reports/043-quick-generate-mutation-contract-safety-gates.md`.
 5. Read `packages/x-change/docs/ui-cockpit/reports/044-quick-generate-mutation-route-shell.md`.
-6. Approve, revise, or reject Wave 1C before any existing issuance handoff is scaffolded.
+6. Read `packages/x-change/docs/ui-cockpit/reports/045-quick-generate-existing-issuance-handoff.md`.
+7. Approve, revise, or reject Wave 1D before Cockpit idempotency and replay behavior is scaffolded.
 6. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
-7. Existing issuance handoff remains unauthorized until Wave 1C is explicitly approved.
-8. Do not add campaign mutation endpoints, request validation execution, payload persistence, Pay Code generation, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls, campaign state mutation, money movement, raw payload exposure, or wallet access unless explicitly approved.
-9. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
+8. Existing issuance handoff is wired, but UI submit enablement remains deferred until idempotency and replay behavior are protected.
+9. Do not add campaign mutation endpoints, idempotency persistence, payload fingerprinting, replay lookup, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls, campaign state mutation, direct money movement, raw payload exposure, or direct wallet access unless explicitly approved.
+10. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
 ## x-journal Initial Intent
 

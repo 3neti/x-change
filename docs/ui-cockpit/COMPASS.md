@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 1B — Quick Generate Mutation Route Shell
-Status: Route shell scaffolded; mutation runtime remains disabled
+Current slice: Cockpit Mutation Wave 1C — Existing Issuance Handoff
+Status: Backend handoff scaffolded; UI submit and idempotent replay remain deferred
 Last updated: 2026-07-09
 
 ## Completed
@@ -259,6 +259,14 @@ Last updated: 2026-07-09
   - Runtime remains disabled; UI submit enablement remains deferred.
   - No `GeneratePayCode` invocation, `GeneratePayCodeController` invocation, `GeneratePayCodeRequest` validation execution, request payload persistence, idempotency persistence, voucher issuance, provider calls, wallet access, journal writes, action execution, feedback delivery, campaign behavior, or money movement were added.
   - Report: `reports/044-quick-generate-mutation-route-shell.md`.
+- Cockpit Mutation Wave 1C — Existing Issuance Handoff:
+  - The authenticated `POST /x/cockpit/quick-generate` route now validates through `GeneratePayCodeRequest`.
+  - The route calls the existing `GeneratePayCode` action directly and does not invent a Cockpit-specific issuance workflow.
+  - The public API route remains owned by `GeneratePayCodeController`.
+  - The operator response is redacted to code, amount, currency, redeem link, and redeem path.
+  - UI submit enablement, idempotency persistence, replay lookup, payload fingerprinting, refresh behavior, and duplicate-submit protection remain deferred.
+  - Cockpit still does not call providers, wallets, journal, action, feedback, or campaign behavior directly.
+  - Report: `reports/045-quick-generate-existing-issuance-handoff.md`.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
   - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`
