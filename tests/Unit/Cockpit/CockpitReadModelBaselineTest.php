@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
+use LBHurtado\XChange\Data\Cockpit\CockpitCampaignReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
 use LBHurtado\XChange\Exceptions\VoucherNotFound;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitReadModelProvider;
@@ -90,6 +91,122 @@ it('serializes cockpit read model placeholders without broad payload exposure', 
             'authorized' => false,
         ],
     ]);
+});
+
+it('returns a not wired campaign cockpit read model contract by default', function () {
+    $readModel = (new NullCockpitReadModelProvider)
+        ->forCampaignAdoption(new CockpitReadModelQueryData(
+            operatorId: 'operator-1',
+            include: ['campaigns', 'audiences', 'imports', 'attachments'],
+            correlationId: 'corr-1',
+        ));
+
+    expect($readModel)
+        ->toBeInstanceOf(CockpitCampaignReadModelData::class)
+        ->and($readModel->schema)->toBe('x-change.cockpit.campaign-adoption.v1')
+        ->and($readModel->status)->toBe('not_wired')
+        ->and($readModel->authorized)->toBeFalse()
+        ->and($readModel->source)->toBe('null-campaign-cockpit-read-model-provider')
+        ->and($readModel->surfaces)->toBe([
+            [
+                'key' => 'campaign_dashboard',
+                'status' => 'not_wired',
+                'enabled' => false,
+                'read_only' => true,
+                'reason' => 'x-campaign-adapter-not-configured',
+            ],
+            [
+                'key' => 'campaign_explorer',
+                'status' => 'not_wired',
+                'enabled' => false,
+                'read_only' => true,
+                'reason' => 'x-campaign-adapter-not-configured',
+            ],
+            [
+                'key' => 'audience_import_workspace',
+                'status' => 'not_wired',
+                'enabled' => false,
+                'read_only' => true,
+                'reason' => 'x-campaign-adapter-not-configured',
+            ],
+            [
+                'key' => 'attachment_operator_workspace',
+                'status' => 'not_wired',
+                'enabled' => false,
+                'read_only' => true,
+                'reason' => 'x-campaign-adapter-not-configured',
+            ],
+            [
+                'key' => 'campaign_api_descriptors',
+                'status' => 'not_wired',
+                'enabled' => false,
+                'read_only' => true,
+                'reason' => 'x-campaign-adapter-not-configured',
+            ],
+        ])
+        ->and($readModel->mutation)->toBe([
+            'enabled' => false,
+            'status' => 'blocked',
+            'reason' => 'campaign-mutations-not-authorized',
+        ])
+        ->and($readModel->redactions)->toBe(['payloads' => 'not-loaded'])
+        ->and($readModel->toArray())->toBe([
+            'schema' => 'x-change.cockpit.campaign-adoption.v1',
+            'status' => 'not_wired',
+            'authorized' => false,
+            'source' => 'null-campaign-cockpit-read-model-provider',
+            'surfaces' => [
+                [
+                    'key' => 'campaign_dashboard',
+                    'status' => 'not_wired',
+                    'enabled' => false,
+                    'read_only' => true,
+                    'reason' => 'x-campaign-adapter-not-configured',
+                ],
+                [
+                    'key' => 'campaign_explorer',
+                    'status' => 'not_wired',
+                    'enabled' => false,
+                    'read_only' => true,
+                    'reason' => 'x-campaign-adapter-not-configured',
+                ],
+                [
+                    'key' => 'audience_import_workspace',
+                    'status' => 'not_wired',
+                    'enabled' => false,
+                    'read_only' => true,
+                    'reason' => 'x-campaign-adapter-not-configured',
+                ],
+                [
+                    'key' => 'attachment_operator_workspace',
+                    'status' => 'not_wired',
+                    'enabled' => false,
+                    'read_only' => true,
+                    'reason' => 'x-campaign-adapter-not-configured',
+                ],
+                [
+                    'key' => 'campaign_api_descriptors',
+                    'status' => 'not_wired',
+                    'enabled' => false,
+                    'read_only' => true,
+                    'reason' => 'x-campaign-adapter-not-configured',
+                ],
+            ],
+            'mutation' => [
+                'enabled' => false,
+                'status' => 'blocked',
+                'reason' => 'campaign-mutations-not-authorized',
+            ],
+            'redactions' => ['payloads' => 'not-loaded'],
+        ])
+        ->and($readModel->toArray())->not->toHaveKeys([
+            'provider_payload',
+            'raw_payload',
+            'wallet',
+            'campaign_mutation_endpoint',
+            'pay_code_generation_payload',
+            'delivery_dispatch_payload',
+        ]);
 });
 
 it('adapts voucher lifecycle details into a sanitized cockpit voucher summary', function () {

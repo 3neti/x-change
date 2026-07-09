@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Cockpit;
 
 use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Support\Collection;
 use JsonSerializable;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
+use LBHurtado\XChange\Data\Cockpit\CockpitCampaignReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitDashboardActivityData;
 use LBHurtado\XChange\Data\Cockpit\CockpitDashboardMetricData;
 use LBHurtado\XChange\Data\Cockpit\CockpitDashboardPipelineStageData;
@@ -722,6 +724,11 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         );
     }
 
+    public function forCampaignAdoption(CockpitReadModelQueryData $query): CockpitCampaignReadModelData
+    {
+        return $this->fallback->forCampaignAdoption($query);
+    }
+
     public function forPayCodeList(CockpitReadModelQueryData $query): CockpitPayCodeListReadModelData
     {
         $rows = collect($this->vouchers->list())
@@ -885,7 +892,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, array<string, mixed>>  $rows
+     * @param  Collection<int, array<string, mixed>>  $rows
      */
     private function countStatus($rows, string $status): int
     {
@@ -895,7 +902,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, array<string, mixed>>  $rows
+     * @param  Collection<int, array<string, mixed>>  $rows
      * @return array<int, CockpitDashboardActivityData>
      */
     private function dashboardActivity($rows): array

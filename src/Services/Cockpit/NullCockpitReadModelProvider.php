@@ -6,11 +6,12 @@ namespace LBHurtado\XChange\Services\Cockpit;
 
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitActionReadModelData;
+use LBHurtado\XChange\Data\Cockpit\CockpitCampaignReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitDashboardReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitExecutionReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitFeedbackReadModelData;
-use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeListReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitJournalReadModelData;
+use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeListReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelBundleData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
@@ -58,5 +59,10 @@ class NullCockpitReadModelProvider implements CockpitReadModelProviderContract
     public function forQuickGenerate(CockpitReadModelQueryData $query): CockpitQuickGenerateReadModelData
     {
         return new CockpitQuickGenerateReadModelData(status: 'not_wired');
+    }
+
+    public function forCampaignAdoption(CockpitReadModelQueryData $query): CockpitCampaignReadModelData
+    {
+        return new CockpitCampaignReadModelData;
     }
 }
