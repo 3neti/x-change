@@ -60,6 +60,7 @@ use LBHurtado\XChange\Contracts\ClaimOtpVerificationContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityActionHandoffContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityFeedbackHandoffContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityJournalHandoffContract;
+use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityPresenterContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityRecorderContract;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Contracts\CockpitRedactorContract;
@@ -120,6 +121,7 @@ use LBHurtado\XChange\Listeners\RecordFailedVoucherDisbursement;
 use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\CacheClaimApprovalWorkflowStore;
+use LBHurtado\XChange\Services\Cockpit\DefaultCockpitOperatorIssuanceActivityPresenter;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityActionHandoff;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityFeedbackHandoff;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityJournalHandoff;
@@ -276,6 +278,10 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->bind(
             CockpitOperatorIssuanceActivityFeedbackHandoffContract::class,
             NullCockpitOperatorIssuanceActivityFeedbackHandoff::class,
+        );
+        $this->app->bind(
+            CockpitOperatorIssuanceActivityPresenterContract::class,
+            DefaultCockpitOperatorIssuanceActivityPresenter::class,
         );
 
         $this->app->bind(WithdrawalValidationContract::class, function ($app) {

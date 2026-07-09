@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 2E — Feedback Handoff Boundary
-Status: Implemented; operator issuance activity now has a no-delivery feedback handoff boundary
+Current slice: Cockpit Mutation Wave 2F — Activity Presentation Closure
+Status: Implemented; operator issuance activity now has a presentation-only closure DTO and presenter
 Last updated: 2026-07-10
 
 ## Completed
@@ -53,6 +53,13 @@ Last updated: 2026-07-10
   - The null handoff returns `not_wired` with `sends_feedback: false`.
   - No feedback delivery, x-feedback runtime calls, notification dispatch, delivery attempts, delivery records, retry handling, journal writes, action execution, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload persistence, or money movement were added.
   - Report: `reports/055-operator-issuance-activity-feedback-handoff-boundary.md`.
+- Completed Cockpit Mutation Wave 2F — Activity Presentation Closure:
+  - Added `CockpitOperatorIssuanceActivityPresentationData`.
+  - Added `CockpitOperatorIssuanceActivityPresenterContract`.
+  - Added `DefaultCockpitOperatorIssuanceActivityPresenter`.
+  - The presenter composes already-supplied activity and handoff result DTOs into a presentation-only operator summary.
+  - No journal writes, action execution, feedback delivery, handoff invocation, HTTP routes, frontend UI changes, persistence, migrations, queues, retry handling, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload persistence, or money movement were added.
+  - Report: `reports/056-operator-issuance-activity-presentation-closure.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -962,3 +969,8 @@ Current boundary:
 - Cockpit Mutation Wave 2E formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
 - Cockpit Mutation Wave 2E focused boundary/readiness result: `8 passed, 83 assertions`.
 - Cockpit Mutation Wave 2E full package Pest result: `1112 passed, 5 skipped, 6658 assertions`.
+- Cockpit Mutation Wave 2F focused red baseline: `3 failed`.
+- Cockpit Mutation Wave 2F focused presentation result: `4 passed, 25 assertions`.
+- Cockpit Mutation Wave 2F formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
+- Cockpit Mutation Wave 2F focused boundary/readiness result: `9 passed, 97 assertions`.
+- Cockpit Mutation Wave 2F full package Pest result: `1116 passed, 5 skipped, 6683 assertions`.
