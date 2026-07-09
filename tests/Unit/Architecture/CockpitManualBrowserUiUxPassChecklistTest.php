@@ -28,7 +28,7 @@ it('documents the manual browser ui ux pass checklist for read-only cockpit rout
     }
 
     $cockpitRoutes = collect(Route::getRoutes())
-        ->filter(fn ($route): bool => str_starts_with((string) $route->getName(), 'x-change.cockpit.'));
+        ->filter(fn ($route): bool => array_key_exists((string) $route->getName(), $expectedRoutes));
 
     $cockpitRoutes->each(fn ($route) => expect($route->methods())->toContain('GET'));
 

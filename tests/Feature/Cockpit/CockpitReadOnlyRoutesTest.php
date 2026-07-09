@@ -380,8 +380,8 @@ it('hydrates quick generate with a sanitized quick generate read model prop', fu
         ->assertJsonPath('props.quick_generate_read_model.mutation_authorization_decision.next_step', 'request-explicit-approval-or-continue-read-only-hardening')
         ->assertJsonPath('props.quick_generate_read_model.mutation_authorization_decision.redactions.payloads', 'mutation-authorization-decision-only')
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.schema', 'x-change.cockpit.quick-generate-mutation.v1')
-        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.status', 'approved_plan')
-        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.authorization', 'operator-authorization-required-before-route-shell')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.status', 'route_shell_registered')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.authorization', 'operator-authenticated-route-shell')
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.route', 'x-change.cockpit.quick-generate.store')
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.request_adapter', 'GeneratePayCodeRequest-compatible-adapter')
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.issuance_owner', 'GeneratePayCode')
@@ -389,12 +389,13 @@ it('hydrates quick generate with a sanitized quick generate read model prop', fu
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.response_contract', 'operator-safe-redacted-result')
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.runtime_enabled', false)
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.gates.0.key', 'route-contract-defined')
-        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.gates.0.status', 'planned')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.gates.0.status', 'passed')
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.gates.2.key', 'issuance-owner-confirmed')
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.gates.2.status', 'passed')
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.gates.5.key', 'runtime-disabled')
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.gates.5.status', 'blocked')
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.allowed_methods.0', 'GET')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.allowed_methods.1', 'POST')
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.redactions.payloads', 'mutation-contract-only')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.schema', 'x-change.cockpit.quick-generate-draft.v1')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.status', 'draft_only')
@@ -454,14 +455,40 @@ it('hydrates quick generate with a sanitized quick generate read model prop', fu
         ->assertJsonMissingPath('props.quick_generate_read_model.mutation_contract.raw_payload');
 });
 
-it('does not register the planned quick generate mutation contract route in wave 1a', function () {
-    expect(Route::has('x-change.cockpit.quick-generate.store'))->toBeFalse();
+it('registers the quick generate mutation route shell with runtime disabled', function () {
+    expect(Route::has('x-change.cockpit.quick-generate.store'))->toBeTrue();
 
     actingAsTestUser();
 
-    $this->withHeader('X-Inertia', 'true')
-        ->post('/x/cockpit/quick-generate')
-        ->assertMethodNotAllowed();
+    $this->withHeader('Accept', 'application/json')
+        ->post(route('x-change.cockpit.quick-generate.store'), [
+            'cash' => [
+                'amount' => 25,
+                'currency' => 'PHP',
+            ],
+            'secret' => 'must-not-leak',
+        ])
+        ->assertConflict()
+        ->assertJsonPath('schema', 'x-change.cockpit.quick-generate-mutation-route-shell.v1')
+        ->assertJsonPath('status', 'route_shell_registered')
+        ->assertJsonPath('authorized', true)
+        ->assertJsonPath('mutation_enabled', false)
+        ->assertJsonPath('runtime_enabled', false)
+        ->assertJsonPath('route', 'x-change.cockpit.quick-generate.store')
+        ->assertJsonPath('validation.executed', false)
+        ->assertJsonPath('handoff.executed', false)
+        ->assertJsonPath('idempotency.persisted', false)
+        ->assertJsonPath('idempotency.fingerprinted', false)
+        ->assertJsonPath('idempotency.replay_checked', false)
+        ->assertJsonPath('redactions.payloads', 'route-shell-only')
+        ->assertJsonMissingPath('request_payload')
+        ->assertJsonMissingPath('validated_payload')
+        ->assertJsonMissingPath('issued_voucher')
+        ->assertJsonMissingPath('generated_pay_code')
+        ->assertJsonMissingPath('provider_payload')
+        ->assertJsonMissingPath('wallet')
+        ->assertJsonMissingPath('raw_payload')
+        ->assertJsonMissing(['must-not-leak']);
 });
 
 it('requires authentication for cockpit routes', function (string $route, array $parameters) {
@@ -476,7 +503,7 @@ it('requires authentication for cockpit routes', function (string $route, array 
     'distribution workspace' => ['x-change.cockpit.pay-codes.distribution', ['code' => 'PC-READY-001']],
 ]);
 
-it('does not register cockpit mutation routes', function () {
+it('registers only the disabled quick generate cockpit mutation route shell', function () {
     $mutatingRoutes = collect(Route::getRoutes())
         ->filter(fn ($route): bool => str_starts_with((string) $route->getName(), 'x-change.cockpit.'))
         ->filter(fn ($route): bool => collect($route->methods())
@@ -484,7 +511,9 @@ it('does not register cockpit mutation routes', function () {
             ->isNotEmpty()
         );
 
-    expect($mutatingRoutes)->toHaveCount(0);
+    expect($mutatingRoutes->pluck('action.as')->values()->all())->toBe([
+        'x-change.cockpit.quick-generate.store',
+    ]);
 });
 
 it('documents the quick generate issuance boundary before mutation wiring', function () {

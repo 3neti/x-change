@@ -2,6 +2,8 @@
 
 Status: Contract scaffolded; mutation runtime remains disabled
 
+Superseded by Wave 1B for route registration only. Runtime remains disabled.
+
 ## Purpose
 
 Scaffold the first approved mutation-capable Cockpit contract without implementing the mutation route or invoking issuance.
@@ -75,15 +77,15 @@ Wave 1A does not add:
 
 ## Next Authorized Slice
 
-The next slice is not automatically authorized.
+The next slice was later authorized and scaffolded as a route shell only.
 
-Recommended next slice:
+Completed next slice:
 
 ```text
 Cockpit Mutation Wave 1B — Quick Generate Mutation Route Shell
 ```
 
-Wave 1B should add only a route shell with authorization/validation boundaries and fake issuance handoff tests. It should not enable the UI submit button until a later slice.
+Wave 1B adds only a route shell with authorization/validation boundaries. It does not enable the UI submit button, run request validation, call issuance, call providers, access wallets, write journal entries, execute actions, send feedback, or move money.
 
 ## Verification
 

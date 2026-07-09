@@ -1744,8 +1744,8 @@ it('adapts safe quick generate catalog facts without invoking voucher lifecycle 
             ],
             'mutation_contract' => [
                 'schema' => 'x-change.cockpit.quick-generate-mutation.v1',
-                'status' => 'approved_plan',
-                'authorization' => 'operator-authorization-required-before-route-shell',
+                'status' => 'route_shell_registered',
+                'authorization' => 'operator-authenticated-route-shell',
                 'route' => 'x-change.cockpit.quick-generate.store',
                 'request_adapter' => 'GeneratePayCodeRequest-compatible-adapter',
                 'issuance_owner' => 'GeneratePayCode',
@@ -1756,9 +1756,9 @@ it('adapts safe quick generate catalog facts without invoking voucher lifecycle 
                     [
                         'key' => 'route-contract-defined',
                         'label' => 'Route Contract Defined',
-                        'status' => 'planned',
-                        'decision' => 'POST route name reserved; route not registered in Wave 1A.',
-                        'reason' => 'Wave 1A defines the route contract before any mutation route shell is scaffolded.',
+                        'status' => 'passed',
+                        'decision' => 'POST route shell is registered under the reserved route name.',
+                        'reason' => 'Wave 1B registers the route shell without enabling issuance runtime.',
                     ],
                     [
                         'key' => 'request-adapter-defined',
@@ -1792,11 +1792,11 @@ it('adapts safe quick generate catalog facts without invoking voucher lifecycle 
                         'key' => 'runtime-disabled',
                         'label' => 'Runtime Disabled',
                         'status' => 'blocked',
-                        'decision' => 'No mutation route or submit behavior is enabled in Wave 1A.',
-                        'reason' => 'Wave 1A is a contract and safety-gate scaffold only.',
+                        'decision' => 'Route shell returns a disabled-runtime response and does not issue Pay Codes.',
+                        'reason' => 'Wave 1B establishes the route boundary before the existing issuance handoff slice.',
                     ],
                 ],
-                'allowed_methods' => ['GET'],
+                'allowed_methods' => ['GET', 'POST'],
                 'redactions' => [
                     'payloads' => 'mutation-contract-only',
                     'excluded' => [

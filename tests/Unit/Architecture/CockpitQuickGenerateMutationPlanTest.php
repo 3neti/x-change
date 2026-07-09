@@ -11,7 +11,6 @@ it('documents the quick generate mutation plan without implementing runtime beha
     $report = file_get_contents($reportPath);
     $cockpitCompass = file_get_contents($packageRoot.'/docs/ui-cockpit/COMPASS.md');
     $settlementCompass = file_get_contents($packageRoot.'/docs/architecture/SETTLEMENT_OS_COMPASS.md');
-    $webRoutes = file_get_contents($packageRoot.'/routes/web.php');
 
     expect($report)->toContain('Cockpit Mutation Wave 1 — Quick Generate Draft-to-Issuance Boundary Plan')
         ->and($report)->toContain('Status: Plan drafted; no implementation authorized in this slice')
@@ -28,7 +27,5 @@ it('documents the quick generate mutation plan without implementing runtime beha
         ->and($cockpitCompass)->toContain('without implementing it')
         ->and($cockpitCompass)->toContain('reports/042-quick-generate-mutation-plan-safety-contract.md')
         ->and($settlementCompass)->toContain('x-change Cockpit Mutation Wave 1 — Quick Generate Draft-to-Issuance Boundary Plan')
-        ->and($settlementCompass)->toContain('Drafted the first post-validation mutation-capable Cockpit implementation plan without implementing it')
-        ->and($webRoutes)->not->toContain("Route::post('quick-generate'")
-        ->and($webRoutes)->not->toContain('quick-generate.store');
+        ->and($settlementCompass)->toContain('Drafted the first post-validation mutation-capable Cockpit implementation plan without implementing it');
 });

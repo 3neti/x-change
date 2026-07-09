@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 1A — Quick Generate Mutation Contract and Safety Gates
-Status: Contract scaffolded; mutation runtime remains disabled
+Current slice: Cockpit Mutation Wave 1B — Quick Generate Mutation Route Shell
+Status: Route shell scaffolded; mutation runtime remains disabled
 Last updated: 2026-07-09
 
 ## Completed
@@ -252,6 +252,13 @@ Last updated: 2026-07-09
   - Runtime remains disabled and allowed Cockpit methods remain `GET` only.
   - No Cockpit mutation routes, `GeneratePayCode` invocation, `GeneratePayCodeController` invocation, request validation execution, payload persistence, idempotency persistence, voucher issuance, provider calls, wallet access, journal writes, action execution, feedback delivery, campaign behavior, or money movement were added.
   - Report: `reports/043-quick-generate-mutation-contract-safety-gates.md`.
+- Cockpit Mutation Wave 1B — Quick Generate Mutation Route Shell:
+  - Registered the authenticated `POST /x/cockpit/quick-generate` route shell as `x-change.cockpit.quick-generate.store`.
+  - The route shell returns a disabled-runtime, operator-safe JSON response.
+  - The route shell records the intended `GeneratePayCodeRequest` / `GeneratePayCodeController` / `GeneratePayCode` handoff boundary without executing it.
+  - Runtime remains disabled; UI submit enablement remains deferred.
+  - No `GeneratePayCode` invocation, `GeneratePayCodeController` invocation, `GeneratePayCodeRequest` validation execution, request payload persistence, idempotency persistence, voucher issuance, provider calls, wallet access, journal writes, action execution, feedback delivery, campaign behavior, or money movement were added.
+  - Report: `reports/044-quick-generate-mutation-route-shell.md`.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
   - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`

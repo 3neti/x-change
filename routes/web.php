@@ -16,6 +16,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSuccessPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDistributionWorkspacePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeExplorerPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateMutationRouteShellController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGeneratePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitVoucherDetailPageController;
 use LBHurtado\XChange\Http\Controllers\Web\DashboardPageController;
@@ -34,6 +35,7 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
     Route::prefix('cockpit')->group(function (): void {
         Route::get('/', CockpitDashboardPageController::class)->name('x-change.cockpit.dashboard');
         Route::get('quick-generate', CockpitQuickGeneratePageController::class)->name('x-change.cockpit.quick-generate');
+        Route::post('quick-generate', CockpitQuickGenerateMutationRouteShellController::class)->name('x-change.cockpit.quick-generate.store');
         Route::prefix('pay-codes')->group(function (): void {
             Route::get('/', CockpitPayCodeExplorerPageController::class)->name('x-change.cockpit.pay-codes.index');
             Route::get('{code}/distribution', CockpitDistributionWorkspacePageController::class)->name('x-change.cockpit.pay-codes.distribution');
