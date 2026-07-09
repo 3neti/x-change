@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; mutation-capable work requires a separate plan and approval
+Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; first Quick Generate mutation implementation plan drafted without runtime changes
 Last updated: 2026-07-09
 
 | Wave | Workstream | Role | Status | Compass |
@@ -856,6 +856,12 @@ ExecutionDriverContract
   - The template requires completed evidence from the browser checklist, execution record, handoff packet, and visual evidence intake.
   - Mutation-capable Cockpit implementation still requires a separate explicit plan and approval.
   - Report: `../ui-cockpit/reports/041-human-visual-gate-decision-record-template.md`.
+- x-change Cockpit Mutation Wave 1 — Quick Generate Draft-to-Issuance Boundary Plan:
+  - Drafted the first post-validation mutation-capable Cockpit implementation plan without implementing it.
+  - The planned mutation must hand off to the existing `GeneratePayCodeRequest` / `GeneratePayCodeController` / `GeneratePayCode` path.
+  - Proposed sequence: Wave 1A contract and safety gates, 1B route shell, 1C existing issuance handoff, 1D idempotency/replay, 1E UI submit enablement, and 1F read-model refresh/closure.
+  - This planning slice added no Cockpit mutation routes, request validation execution, payload persistence, idempotency persistence, issuance invocation, provider calls, wallet access, journal writes, action execution, feedback delivery, campaign behavior, or money movement.
+  - Report: `../ui-cockpit/reports/042-quick-generate-mutation-plan-safety-contract.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -876,17 +882,19 @@ Completed through Host Integration Slice 2I.
 Recommended next checkpoint:
 
 ```text
-Draft the next Cockpit implementation plan if mutation-capable work is explicitly requested
+Approve or revise Cockpit Mutation Wave 1A — Quick Generate Mutation Contract and Safety Gates
 ```
 
 Recommended actions:
 
 1. Read [INTEGRATION_READINESS_REPORT.md](INTEGRATION_READINESS_REPORT.md).
 2. Read the Cockpit compass before implementation: `packages/x-change/docs/ui-cockpit/COMPASS.md`.
-3. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
-4. Mutation route scaffolding remains unauthorized until a separate implementation plan is explicitly requested and approved.
-5. Do not add campaign mutation endpoints, request validation execution, payload persistence, Pay Code generation, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls, campaign state mutation, money movement, raw payload exposure, or wallet access unless explicitly approved.
-6. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
+3. Read `packages/x-change/docs/ui-cockpit/reports/042-quick-generate-mutation-plan-safety-contract.md`.
+4. Approve, revise, or reject Wave 1A before any mutation route shell is scaffolded.
+5. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
+6. Mutation route scaffolding remains unauthorized until Wave 1A is explicitly approved.
+7. Do not add campaign mutation endpoints, request validation execution, payload persistence, Pay Code generation, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls, campaign state mutation, money movement, raw payload exposure, or wallet access unless explicitly approved.
+8. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
 ## x-journal Initial Intent
 

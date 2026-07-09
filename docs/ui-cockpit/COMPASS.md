@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Host Validation Gate Closure — Read-Only Cockpit Browser Validation
-Status: Read-only Cockpit visual validation passed; mutation-capable work requires a separate plan and approval
+Current slice: Cockpit Mutation Wave 1 — Quick Generate Draft-to-Issuance Boundary Plan
+Status: Mutation implementation plan drafted; no mutation route or runtime behavior implemented
 Last updated: 2026-07-09
 
 ## Completed
@@ -239,6 +239,12 @@ Last updated: 2026-07-09
   - The template requires completed evidence from the browser checklist, execution record, handoff packet, and visual evidence intake.
   - Mutation-capable Cockpit implementation still requires a separate explicit plan and approval.
   - Report: `reports/041-human-visual-gate-decision-record-template.md`.
+- Cockpit Mutation Wave 1 — Quick Generate Draft-to-Issuance Boundary Plan:
+  - Drafted the first post-validation mutation-capable Cockpit implementation plan without implementing it.
+  - The planned mutation must hand off to the existing `GeneratePayCodeRequest` / `GeneratePayCodeController` / `GeneratePayCode` path.
+  - Proposed sequence: Wave 1A contract and safety gates, 1B route shell, 1C existing issuance handoff, 1D idempotency/replay, 1E UI submit enablement, and 1F read-model refresh/closure.
+  - This planning slice added no Cockpit mutation routes, request validation execution, payload persistence, idempotency persistence, issuance invocation, provider calls, wallet access, journal writes, action execution, feedback delivery, campaign behavior, or money movement.
+  - Report: `reports/042-quick-generate-mutation-plan-safety-contract.md`.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
   - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`
