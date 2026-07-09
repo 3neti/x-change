@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 2B recorder boundary implemented
+Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 2C journal handoff boundary implemented
 Last updated: 2026-07-10
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-10
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Mutation Wave 2B recorder boundary implemented | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Mutation Wave 2C journal handoff boundary implemented | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -926,6 +926,13 @@ ExecutionDriverContract
   - Recorder failures are non-blocking and do not change issuance lifecycle truth.
   - No persistence, migrations, queues, journal writes, action execution, feedback delivery, campaign mutation, direct provider calls beyond the existing issuance handoff, direct wallet access, voucher execution changes, raw payload persistence, automatic retry, or direct money movement were added.
   - Report: `../ui-cockpit/reports/052-operator-issuance-activity-recorder-boundary.md`.
+- x-change Cockpit Mutation Wave 2C — Journal Handoff Boundary:
+  - Added a future x-journal handoff contract and result DTO for operator issuance activity.
+  - Added a null default implementation that returns `not_wired` and `writes_journal: false`.
+  - Cockpit activity remains operational evidence, not lifecycle or audit truth.
+  - No journal writes, x-journal runtime calls, migrations, queues, retries, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload persistence, or money movement were added.
+  - Green x-change package suite: `1104 passed, 5 skipped, 6607 assertions`.
+  - Report: `../ui-cockpit/reports/053-operator-issuance-activity-journal-handoff-boundary.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -946,7 +953,7 @@ Completed through Host Integration Slice 2I.
 Recommended next checkpoint:
 
 ```text
-Approve or revise Cockpit Mutation Wave 2C — Journal Handoff Boundary.
+Approve or revise Cockpit Mutation Wave 2D — Action Handoff Boundary.
 ```
 
 Recommended actions:
@@ -963,10 +970,11 @@ Recommended actions:
 10. Read `packages/x-change/docs/ui-cockpit/reports/049-operator-visible-issuance-activity-audit-handoff-plan.md`.
 11. Read `packages/x-change/docs/ui-cockpit/reports/051-operator-issuance-activity-read-model-contract.md`.
 12. Read `packages/x-change/docs/ui-cockpit/reports/052-operator-issuance-activity-recorder-boundary.md`.
-13. Approve, revise, or reject Wave 2C before a journal handoff boundary is scaffolded.
-14. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
-15. Existing issuance handoff, idempotency/replay, UI submit, manual refresh, and generated Pay Code detail navigation are wired.
-16. Do not add campaign mutation endpoints, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls outside `GeneratePayCode`, campaign state mutation, direct money movement, raw payload exposure, or direct wallet access unless explicitly approved.
+13. Read `packages/x-change/docs/ui-cockpit/reports/053-operator-issuance-activity-journal-handoff-boundary.md`.
+14. Approve, revise, or reject Wave 2D before an action handoff boundary is scaffolded.
+15. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
+16. Existing issuance handoff, idempotency/replay, UI submit, manual refresh, and generated Pay Code detail navigation are wired.
+17. Do not add campaign mutation endpoints, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls outside `GeneratePayCode`, campaign state mutation, direct money movement, raw payload exposure, or direct wallet access unless explicitly approved.
 15. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
 ## x-journal Initial Intent
