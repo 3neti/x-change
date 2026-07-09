@@ -379,6 +379,23 @@ it('hydrates quick generate with a sanitized quick generate read model prop', fu
         ->assertJsonPath('props.quick_generate_read_model.mutation_authorization_decision.rationale', 'Mutation preconditions remain blocked; Cockpit must not register a write route until explicit human approval and a smaller mutation contract exist.')
         ->assertJsonPath('props.quick_generate_read_model.mutation_authorization_decision.next_step', 'request-explicit-approval-or-continue-read-only-hardening')
         ->assertJsonPath('props.quick_generate_read_model.mutation_authorization_decision.redactions.payloads', 'mutation-authorization-decision-only')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.schema', 'x-change.cockpit.quick-generate-mutation.v1')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.status', 'approved_plan')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.authorization', 'operator-authorization-required-before-route-shell')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.route', 'x-change.cockpit.quick-generate.store')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.request_adapter', 'GeneratePayCodeRequest-compatible-adapter')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.issuance_owner', 'GeneratePayCode')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.idempotency', 'required-before-submit-enabled')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.response_contract', 'operator-safe-redacted-result')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.runtime_enabled', false)
+        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.gates.0.key', 'route-contract-defined')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.gates.0.status', 'planned')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.gates.2.key', 'issuance-owner-confirmed')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.gates.2.status', 'passed')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.gates.5.key', 'runtime-disabled')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.gates.5.status', 'blocked')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.allowed_methods.0', 'GET')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.redactions.payloads', 'mutation-contract-only')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.schema', 'x-change.cockpit.quick-generate-draft.v1')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.status', 'draft_only')
         ->assertJsonPath('props.quick_generate_read_model.draft_contract.template_key', 'money-changer')
@@ -425,7 +442,26 @@ it('hydrates quick generate with a sanitized quick generate read model prop', fu
         ->assertJsonMissingPath('props.quick_generate_read_model.mutation_approval')
         ->assertJsonMissingPath('props.quick_generate_read_model.approval_payload')
         ->assertJsonMissingPath('props.quick_generate_read_model.route_definition')
-        ->assertJsonMissingPath('props.quick_generate_read_model.mutation_route');
+        ->assertJsonMissingPath('props.quick_generate_read_model.mutation_route')
+        ->assertJsonMissingPath('props.quick_generate_read_model.mutation_contract.request_payload')
+        ->assertJsonMissingPath('props.quick_generate_read_model.mutation_contract.validated_payload')
+        ->assertJsonMissingPath('props.quick_generate_read_model.mutation_contract.idempotency_key')
+        ->assertJsonMissingPath('props.quick_generate_read_model.mutation_contract.payload_fingerprint')
+        ->assertJsonMissingPath('props.quick_generate_read_model.mutation_contract.issued_voucher')
+        ->assertJsonMissingPath('props.quick_generate_read_model.mutation_contract.generated_pay_code')
+        ->assertJsonMissingPath('props.quick_generate_read_model.mutation_contract.provider_payload')
+        ->assertJsonMissingPath('props.quick_generate_read_model.mutation_contract.wallet')
+        ->assertJsonMissingPath('props.quick_generate_read_model.mutation_contract.raw_payload');
+});
+
+it('does not register the planned quick generate mutation contract route in wave 1a', function () {
+    expect(Route::has('x-change.cockpit.quick-generate.store'))->toBeFalse();
+
+    actingAsTestUser();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->post('/x/cockpit/quick-generate')
+        ->assertMethodNotAllowed();
 });
 
 it('requires authentication for cockpit routes', function (string $route, array $parameters) {

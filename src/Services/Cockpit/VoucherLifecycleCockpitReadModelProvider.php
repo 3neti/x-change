@@ -26,6 +26,8 @@ use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateFundingGateData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateIdempotencyGateCheckData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateIdempotencyGateData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateMutationAuthorizationDecisionData;
+use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateMutationContractData;
+use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateMutationContractGateData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateMutationHandoffPlanData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateMutationHandoffPlanStepData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateMutationPreconditionsReviewData;
@@ -634,6 +636,80 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                         'provider_payload',
                         'wallet',
                         'side_effect_result',
+                        'raw_payload',
+                    ],
+                ],
+            ),
+            mutation_contract: new CockpitQuickGenerateMutationContractData(
+                status: 'approved_plan',
+                authorization: 'operator-authorization-required-before-route-shell',
+                route: 'x-change.cockpit.quick-generate.store',
+                request_adapter: 'GeneratePayCodeRequest-compatible-adapter',
+                issuance_owner: 'GeneratePayCode',
+                idempotency: 'required-before-submit-enabled',
+                response_contract: 'operator-safe-redacted-result',
+                runtime_enabled: false,
+                gates: [
+                    new CockpitQuickGenerateMutationContractGateData(
+                        key: 'route-contract-defined',
+                        label: 'Route Contract Defined',
+                        status: 'planned',
+                        decision: 'POST route name reserved; route not registered in Wave 1A.',
+                        reason: 'Wave 1A defines the route contract before any mutation route shell is scaffolded.',
+                    ),
+                    new CockpitQuickGenerateMutationContractGateData(
+                        key: 'request-adapter-defined',
+                        label: 'Request Adapter Defined',
+                        status: 'planned',
+                        decision: 'Adapter must remain compatible with GeneratePayCodeRequest.',
+                        reason: 'Cockpit must not invent a second issuance validation language.',
+                    ),
+                    new CockpitQuickGenerateMutationContractGateData(
+                        key: 'issuance-owner-confirmed',
+                        label: 'Issuance Owner Confirmed',
+                        status: 'passed',
+                        decision: 'GeneratePayCode remains the issuance owner.',
+                        reason: 'Cockpit is an operator shell and must hand off to existing x-change issuance behavior.',
+                    ),
+                    new CockpitQuickGenerateMutationContractGateData(
+                        key: 'idempotency-required',
+                        label: 'Idempotency Required',
+                        status: 'planned',
+                        decision: 'Idempotency key is required before UI submit can be enabled.',
+                        reason: 'Repeated operator submits must not duplicate issuance.',
+                    ),
+                    new CockpitQuickGenerateMutationContractGateData(
+                        key: 'operator-response-redacted',
+                        label: 'Operator Response Redacted',
+                        status: 'planned',
+                        decision: 'Response must expose operator-safe generated facts only.',
+                        reason: 'Provider payloads, wallet data, raw voucher payloads, secrets, and internal IDs remain excluded.',
+                    ),
+                    new CockpitQuickGenerateMutationContractGateData(
+                        key: 'runtime-disabled',
+                        label: 'Runtime Disabled',
+                        status: 'blocked',
+                        decision: 'No mutation route or submit behavior is enabled in Wave 1A.',
+                        reason: 'Wave 1A is a contract and safety-gate scaffold only.',
+                    ),
+                ],
+                allowed_methods: ['GET'],
+                redactions: [
+                    'payloads' => 'mutation-contract-only',
+                    'excluded' => [
+                        'request_payload',
+                        'validated_payload',
+                        'idempotency_key',
+                        'payload_fingerprint',
+                        'issued_voucher',
+                        'generated_pay_code',
+                        'provider_payload',
+                        'wallet',
+                        'balance',
+                        'funding_source',
+                        'journal_payload',
+                        'action_payload',
+                        'feedback_payload',
                         'raw_payload',
                     ],
                 ],

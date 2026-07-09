@@ -28,7 +28,6 @@ it('updates the cockpit compass for host integration slice 1A', function () {
     $compass = file_get_contents(dirname(__DIR__, 3).'/docs/ui-cockpit/COMPASS.md');
 
     expect($compass)->toContain('Host Integration Slice 1A records the Campaign Cockpit adoption boundary')
-        ->and($compass)->toContain('Status: Complete')
         ->and($compass)->toContain('x-campaign Phase 15 host adoption surfaces are inputs only')
         ->and($compass)->toContain('Campaign Cockpit adoption remains read-only and host-owned')
         ->and($compass)->toContain('Mutation route scaffolding remains unauthorized');

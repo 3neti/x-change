@@ -27,7 +27,6 @@ it('updates the cockpit compass for host integration slice 1D', function () {
     $compass = file_get_contents(dirname(__DIR__, 3).'/docs/ui-cockpit/COMPASS.md');
 
     expect($compass)->toContain('Completed Host Integration Slice 1D — Campaign Cockpit Read Model Route Prop Boundary')
-        ->and($compass)->toContain('Status: Complete')
         ->and($compass)->toContain('Dashboard route exposes `campaign_read_model` as a read-only Inertia prop')
         ->and($compass)->toContain('Campaign context is optional and query-derived')
         ->and($compass)->toContain('Campaign mutation route scaffolding remains unauthorized');

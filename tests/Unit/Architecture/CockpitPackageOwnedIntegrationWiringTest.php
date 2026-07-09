@@ -26,7 +26,7 @@ it('keeps the package-owned integration decision in the cockpit and settlement c
     $cockpitCompass = file_get_contents(dirname(__DIR__, 3).'/docs/ui-cockpit/COMPASS.md');
     $settlementCompass = file_get_contents(dirname(__DIR__, 3).'/docs/architecture/SETTLEMENT_OS_COMPASS.md');
 
-    expect($cockpitCompass)->toContain('Current slice: Host Integration Slice 1I — Package-Owned Read-Only Integration Wiring')
+    expect($cockpitCompass)->toContain('Completed Host Integration Slice 1I — Package-Owned Read-Only Integration Wiring')
         ->and($cockpitCompass)->toContain('x-change now owns Composer dependency wiring for `3neti/x-journal`, `3neti/x-action`, `3neti/x-feedback`, and `3neti/x-campaign`')
         ->and($cockpitCompass)->toContain('The host app remains dumb')
         ->and($settlementCompass)->toContain('Completed through Host Integration Slice 1I')

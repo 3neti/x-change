@@ -29,7 +29,6 @@ it('updates the cockpit compass for host integration slice 1G', function () {
     $compass = file_get_contents(dirname(__DIR__, 3).'/docs/ui-cockpit/COMPASS.md');
 
     expect($compass)->toContain('Completed Host Integration Slice 1G — Campaign Cockpit Dedicated Read-Only Workspace Decision Point')
-        ->and($compass)->toContain('Status: Complete')
         ->and($compass)->toContain('Dedicated Campaign Cockpit workspace route is deferred')
         ->and($compass)->toContain('Existing Pay Code Explorer remains the read-only campaign navigation surface')
         ->and($compass)->toContain('Campaign mutation route scaffolding remains unauthorized');

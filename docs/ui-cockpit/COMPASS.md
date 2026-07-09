@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 1 — Quick Generate Draft-to-Issuance Boundary Plan
-Status: Mutation implementation plan drafted; no mutation route or runtime behavior implemented
+Current slice: Cockpit Mutation Wave 1A — Quick Generate Mutation Contract and Safety Gates
+Status: Contract scaffolded; mutation runtime remains disabled
 Last updated: 2026-07-09
 
 ## Completed
@@ -245,6 +245,13 @@ Last updated: 2026-07-09
   - Proposed sequence: Wave 1A contract and safety gates, 1B route shell, 1C existing issuance handoff, 1D idempotency/replay, 1E UI submit enablement, and 1F read-model refresh/closure.
   - This planning slice added no Cockpit mutation routes, request validation execution, payload persistence, idempotency persistence, issuance invocation, provider calls, wallet access, journal writes, action execution, feedback delivery, campaign behavior, or money movement.
   - Report: `reports/042-quick-generate-mutation-plan-safety-contract.md`.
+- Cockpit Mutation Wave 1A — Quick Generate Mutation Contract and Safety Gates:
+  - Added the `quick_generate_read_model.mutation_contract` read-model section for the approved mutation contract.
+  - The contract reserves the planned `x-change.cockpit.quick-generate.store` route name but does not register it.
+  - The contract confirms `GeneratePayCode` remains the issuance owner and records `GeneratePayCodeRequest` compatibility, idempotency, redacted operator responses, and runtime-disabled gates.
+  - Runtime remains disabled and allowed Cockpit methods remain `GET` only.
+  - No Cockpit mutation routes, `GeneratePayCode` invocation, `GeneratePayCodeController` invocation, request validation execution, payload persistence, idempotency persistence, voucher issuance, provider calls, wallet access, journal writes, action execution, feedback delivery, campaign behavior, or money movement were added.
+  - Report: `reports/043-quick-generate-mutation-contract-safety-gates.md`.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
   - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`

@@ -200,13 +200,15 @@ This planning slice does not add:
 
 ## Authorization State
 
-This document authorizes planning only.
+This document authorizes Wave 1A contract scaffolding only.
 
-Implementation remains blocked until a future instruction explicitly authorizes:
+The approved next scaffold is:
 
 ```text
 Cockpit Mutation Wave 1A — Quick Generate Mutation Contract and Safety Gates
 ```
+
+Wave 1A may add read-model contract DTOs, reports, and tests. It must not register a Cockpit mutation route, invoke issuance, validate submitted payloads, persist idempotency keys, enable UI submit, or perform side effects.
 
 ## Verification
 

@@ -25,10 +25,10 @@ it('documents the quick generate mutation plan without implementing runtime beha
         ->and($report)->toContain('Cockpit `POST`, `PUT`, `PATCH`, or `DELETE` routes')
         ->and($report)->toContain('money movement')
         ->and($cockpitCompass)->toContain('Cockpit Mutation Wave 1 — Quick Generate Draft-to-Issuance Boundary Plan')
-        ->and($cockpitCompass)->toContain('no mutation route or runtime behavior implemented')
+        ->and($cockpitCompass)->toContain('without implementing it')
         ->and($cockpitCompass)->toContain('reports/042-quick-generate-mutation-plan-safety-contract.md')
         ->and($settlementCompass)->toContain('x-change Cockpit Mutation Wave 1 — Quick Generate Draft-to-Issuance Boundary Plan')
-        ->and($settlementCompass)->toContain('first Quick Generate mutation implementation plan drafted without runtime changes')
+        ->and($settlementCompass)->toContain('Drafted the first post-validation mutation-capable Cockpit implementation plan without implementing it')
         ->and($webRoutes)->not->toContain("Route::post('quick-generate'")
         ->and($webRoutes)->not->toContain('quick-generate.store');
 });

@@ -31,8 +31,6 @@ it('updates the cockpit compass for host integration slice 1H closure', function
     $compass = file_get_contents(dirname(__DIR__, 3).'/docs/ui-cockpit/COMPASS.md');
 
     expect($compass)->toContain('Completed Host Integration Slice 1H — Campaign Cockpit Read-Only Adoption Closure / Integration Readiness Update')
-        ->and($compass)->toContain('Current slice: Host Integration Slice 1I — Package-Owned Read-Only Integration Wiring')
-        ->and($compass)->toContain('Status: Complete')
         ->and($compass)->toContain('Read-only Campaign Cockpit adoption is closed through Slice 1G')
         ->and($compass)->toContain('Dashboard campaign adoption panel is safe for read-only operator use')
         ->and($compass)->toContain('Pay Code Explorer campaign navigation context is safe for read-only operator orientation')

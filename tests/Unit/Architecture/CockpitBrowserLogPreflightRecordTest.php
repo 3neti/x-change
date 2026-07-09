@@ -21,7 +21,7 @@ it('documents the cockpit browser log preflight record before human visual confi
         ->and($report)->toContain('This checkpoint did not add:')
         ->and($report)->toContain('money movement')
         ->and($cockpitCompass)->toContain('Host Validation Checkpoint 4 — Browser Log Preflight Record')
-        ->and($cockpitCompass)->toContain('Browser-log preflight recorded; human visual browser confirmation still pending')
+        ->and($cockpitCompass)->toContain('Human visual browser confirmation remains pending')
         ->and($cockpitCompass)->toContain('reports/036-browser-log-preflight-record.md')
         ->and($settlementCompass)->toContain('x-change Host Validation Checkpoint 4 — Browser Log Preflight Record')
         ->and($settlementCompass)->toContain('Recent browser logs include `/x/cockpit` Vite debug entries');

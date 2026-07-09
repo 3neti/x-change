@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; first Quick Generate mutation implementation plan drafted without runtime changes
+Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1A contract scaffolded with runtime disabled
 Last updated: 2026-07-09
 
 | Wave | Workstream | Role | Status | Compass |
@@ -862,6 +862,13 @@ ExecutionDriverContract
   - Proposed sequence: Wave 1A contract and safety gates, 1B route shell, 1C existing issuance handoff, 1D idempotency/replay, 1E UI submit enablement, and 1F read-model refresh/closure.
   - This planning slice added no Cockpit mutation routes, request validation execution, payload persistence, idempotency persistence, issuance invocation, provider calls, wallet access, journal writes, action execution, feedback delivery, campaign behavior, or money movement.
   - Report: `../ui-cockpit/reports/042-quick-generate-mutation-plan-safety-contract.md`.
+- x-change Cockpit Mutation Wave 1A — Quick Generate Mutation Contract and Safety Gates:
+  - Added the `quick_generate_read_model.mutation_contract` read-model section for the approved mutation contract.
+  - The contract reserves the planned `x-change.cockpit.quick-generate.store` route name but does not register it.
+  - The contract confirms `GeneratePayCode` remains the issuance owner and records `GeneratePayCodeRequest` compatibility, idempotency, redacted operator responses, and runtime-disabled gates.
+  - Runtime remains disabled and allowed Cockpit methods remain `GET` only.
+  - No Cockpit mutation routes, `GeneratePayCode` invocation, `GeneratePayCodeController` invocation, request validation execution, payload persistence, idempotency persistence, voucher issuance, provider calls, wallet access, journal writes, action execution, feedback delivery, campaign behavior, or money movement were added.
+  - Report: `../ui-cockpit/reports/043-quick-generate-mutation-contract-safety-gates.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -882,7 +889,7 @@ Completed through Host Integration Slice 2I.
 Recommended next checkpoint:
 
 ```text
-Approve or revise Cockpit Mutation Wave 1A — Quick Generate Mutation Contract and Safety Gates
+Approve or revise Cockpit Mutation Wave 1B — Quick Generate Mutation Route Shell
 ```
 
 Recommended actions:
@@ -890,11 +897,12 @@ Recommended actions:
 1. Read [INTEGRATION_READINESS_REPORT.md](INTEGRATION_READINESS_REPORT.md).
 2. Read the Cockpit compass before implementation: `packages/x-change/docs/ui-cockpit/COMPASS.md`.
 3. Read `packages/x-change/docs/ui-cockpit/reports/042-quick-generate-mutation-plan-safety-contract.md`.
-4. Approve, revise, or reject Wave 1A before any mutation route shell is scaffolded.
-5. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
-6. Mutation route scaffolding remains unauthorized until Wave 1A is explicitly approved.
-7. Do not add campaign mutation endpoints, request validation execution, payload persistence, Pay Code generation, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls, campaign state mutation, money movement, raw payload exposure, or wallet access unless explicitly approved.
-8. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
+4. Read `packages/x-change/docs/ui-cockpit/reports/043-quick-generate-mutation-contract-safety-gates.md`.
+5. Approve, revise, or reject Wave 1B before any mutation route shell is scaffolded.
+6. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
+7. Mutation route scaffolding remains unauthorized until Wave 1B is explicitly approved.
+8. Do not add campaign mutation endpoints, request validation execution, payload persistence, Pay Code generation, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls, campaign state mutation, money movement, raw payload exposure, or wallet access unless explicitly approved.
+9. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
 ## x-journal Initial Intent
 
