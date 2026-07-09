@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Host Validation Checkpoint 8 — Human Visual Evidence Intake Template
-Status: Evidence intake scaffolded; human visual browser confirmation still pending
+Current slice: Host Validation Checkpoint 9 — Human Visual Gate Decision Record Template
+Status: Decision record scaffolded; gate decision still pending
 Last updated: 2026-07-09
 
 ## Completed
@@ -235,6 +235,12 @@ Last updated: 2026-07-09
   - The intake requires reviewer, browser, auth, scenario, Pay Code, console, evidence references, per-surface results, and overall result.
   - Stop conditions remain JavaScript errors, enabled dead navigation, mutation-capable controls, unsafe payload exposure, provider calls, journal writes, action execution, feedback delivery, voucher mutation, wallet access, and money movement.
   - Report: `reports/040-human-visual-evidence-intake-template.md`.
+- Host Validation Checkpoint 9 — Human Visual Gate Decision Record Template:
+  - Added the final decision record template for closing the currently blocked read-only Cockpit validation gate.
+  - The template requires completed evidence from the browser checklist, execution record, handoff packet, and visual evidence intake.
+  - Allowed final decisions are `Pass`, `Fail`, and `Blocked — accepted by human`.
+  - Human visual browser confirmation remains pending and no final gate decision is claimed.
+  - Report: `reports/041-human-visual-gate-decision-record-template.md`.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
   - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`
