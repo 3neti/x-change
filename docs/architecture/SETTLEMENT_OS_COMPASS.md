@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 2H activity UI rendering boundary implemented
+Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 2I published asset drift validation implemented
 Last updated: 2026-07-10
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-10
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Mutation Wave 2H activity UI rendering boundary implemented | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Mutation Wave 2I published asset drift validation implemented | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -968,6 +968,12 @@ ExecutionDriverContract
   - Green frontend suite: `74 passed, 476 tests`.
   - Green x-change package suite: `1120 passed, 5 skipped, 6741 assertions`.
   - Report: `../ui-cockpit/reports/058-operator-issuance-activity-ui-rendering-boundary.md`.
+- x-change Cockpit Mutation Wave 2I — Published Asset Sync / Drift Guard Validation:
+  - Ran `php artisan x-change:doctor --assets --json` from the host app root.
+  - Confirmed the guard reports expected drift after package-owned UI changes: checked 55, ok 52, stale 2, missing 1, extra 0.
+  - Host mirror drift is limited to the new activity panel plus dashboard/types updates.
+  - No host mirror files were staged, committed, or manually edited.
+  - Report: `../ui-cockpit/reports/059-published-asset-sync-drift-validation.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -988,7 +994,7 @@ Completed through Host Integration Slice 2I.
 Recommended next checkpoint:
 
 ```text
-Approve or revise Cockpit Mutation Wave 2I — Published Asset Sync / Drift Guard Validation.
+Approve or revise Cockpit Mutation Wave 2J — Activity UI Host Publish Verification.
 ```
 
 Recommended actions:
@@ -1011,11 +1017,12 @@ Recommended actions:
 16. Read `packages/x-change/docs/ui-cockpit/reports/056-operator-issuance-activity-presentation-closure.md`.
 17. Read `packages/x-change/docs/ui-cockpit/reports/057-operator-issuance-activity-read-model-presentation-adoption.md`.
 18. Read `packages/x-change/docs/ui-cockpit/reports/058-operator-issuance-activity-ui-rendering-boundary.md`.
-19. Approve, revise, or reject Wave 2I before published asset sync/drift validation is scaffolded.
-20. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
-21. Existing issuance handoff, idempotency/replay, UI submit, manual refresh, generated Pay Code detail navigation, operator issuance activity read-model props, and operator issuance activity dashboard rendering are wired.
-22. Do not add campaign mutation endpoints, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls outside `GeneratePayCode`, campaign state mutation, direct money movement, raw payload exposure, or direct wallet access unless explicitly approved.
-23. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
+19. Read `packages/x-change/docs/ui-cockpit/reports/059-published-asset-sync-drift-validation.md`.
+20. Approve, revise, or reject Wave 2J before host publish verification is scaffolded.
+21. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
+22. Existing issuance handoff, idempotency/replay, UI submit, manual refresh, generated Pay Code detail navigation, operator issuance activity read-model props, operator issuance activity dashboard rendering, and drift detection are wired.
+23. Do not add campaign mutation endpoints, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls outside `GeneratePayCode`, campaign state mutation, direct money movement, raw payload exposure, or direct wallet access unless explicitly approved.
+24. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
 ## x-journal Initial Intent
 

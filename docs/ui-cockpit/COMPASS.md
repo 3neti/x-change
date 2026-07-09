@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 2H — Activity UI Rendering Boundary
-Status: Implemented; operator issuance activity presentations now render in the package Cockpit dashboard as read-only evidence
+Current slice: Cockpit Mutation Wave 2I — Published Asset Sync / Drift Guard Validation
+Status: Implemented; published asset drift guard correctly reports stale/missing host mirrors after package UI changes
 Last updated: 2026-07-10
 
 ## Completed
@@ -73,6 +73,12 @@ Last updated: 2026-07-10
   - The UI renders handoff status facts but does not invoke journal, action, or feedback handoffs.
   - No mutation controls, handoff invocation, journal writes, action execution, feedback delivery, persistence, migrations, queues, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload exposure, or money movement were added.
   - Report: `reports/058-operator-issuance-activity-ui-rendering-boundary.md`.
+- Completed Cockpit Mutation Wave 2I — Published Asset Sync / Drift Guard Validation:
+  - Ran `php artisan x-change:doctor --assets --json` from the host app root.
+  - Confirmed the guard reports expected drift after package UI changes: checked 55, ok 52, stale 2, missing 1, extra 0.
+  - Detected missing `components/CockpitOperatorIssuanceActivityPanel.vue` and stale `pages/Dashboard.vue` / `types.ts` host mirrors.
+  - No host mirror files were staged, committed, or manually edited.
+  - Report: `reports/059-published-asset-sync-drift-validation.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -999,3 +1005,6 @@ Current boundary:
 - Cockpit Mutation Wave 2H focused PHP boundary result: `42 passed, 655 assertions`.
 - Cockpit Mutation Wave 2H full package Pest result: `1120 passed, 5 skipped, 6741 assertions`.
 - Cockpit Mutation Wave 2H build check: `npm run build` is not defined in the x-change package.
+- Cockpit Mutation Wave 2I host drift guard result: `checked 55, ok 52, stale 2, missing 1, extra 0`.
+- Cockpit Mutation Wave 2I focused documentation/readiness result: `3 passed, 43 assertions`.
+- Cockpit Mutation Wave 2I formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
