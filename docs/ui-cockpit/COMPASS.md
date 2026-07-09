@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 1F — Read Model Refresh / Navigation Closure
-Status: Manual post-submit refresh and generated Pay Code navigation scaffolded
+Current slice: Cockpit Mutation Wave 2 — Operator-visible Issuance Activity and Audit Handoff Plan
+Status: Plan drafted; Wave 2A read-model contract is the next recommended slice
 Last updated: 2026-07-09
 
 ## Completed
@@ -289,6 +289,12 @@ Last updated: 2026-07-09
   - Refresh uses Inertia `router.reload()` for `quick_generate_read_model` only and is never triggered automatically.
   - No optimistic read-model mutation, automatic redirect, Pay Code Explorer mutation, Voucher Detail mutation, journal write, action execution, feedback delivery, campaign mutation, direct provider call, direct wallet access, or direct money movement was added.
   - Report: `reports/048-quick-generate-read-model-refresh-navigation-closure.md`.
+- Cockpit Mutation Wave 2 — Operator-visible Issuance Activity and Audit Handoff Plan:
+  - Drafted the next mutation wave before adding more write behavior.
+  - Wave 2 should make operator issuance activity visible and audit-handoff-ready without making Cockpit the lifecycle truth owner.
+  - Proposed sequence: 2A operator issuance activity read-model contract, 2B recorder boundary, 2C journal handoff boundary, 2D action handoff boundary, 2E feedback handoff boundary, and 2F activity presentation closure.
+  - This planning slice adds no persistence, migrations, queues, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet access, voucher execution changes, raw payload persistence, automatic retry, or money movement.
+  - Report: `reports/049-operator-visible-issuance-activity-audit-handoff-plan.md`.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
   - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`
@@ -888,3 +894,8 @@ Current boundary:
 - Cockpit Mutation Wave 1F formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
 - Cockpit Mutation Wave 1F frontend result: `74 passed, 472 tests`.
 - Cockpit Mutation Wave 1F full package Pest result: `1085 passed, 5 skipped, 6439 assertions`.
+- Cockpit Mutation Wave 2 focused architecture result: `1 passed, 16 assertions`.
+- Cockpit Mutation Wave 2 focused closure regression result: `2 passed, 29 assertions`.
+- Cockpit Mutation Wave 2 `composer validate --strict` passed.
+- Cockpit Mutation Wave 2 formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
+- Cockpit Mutation Wave 2 full package Pest result: `1086 passed, 5 skipped, 6455 assertions`.

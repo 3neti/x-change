@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1A contract scaffolded with runtime disabled
+Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; Cockpit Mutation Wave 2 operator-visible issuance activity plan drafted
 Last updated: 2026-07-09
 
 | Wave | Workstream | Role | Status | Compass |
@@ -905,6 +905,13 @@ ExecutionDriverContract
   - Refresh/navigation is operator-controlled; no automatic redirect or optimistic read-model mutation was added.
   - Cockpit still does not invent issuance, journal, action, feedback, campaign, provider, wallet, or money-movement behavior outside the existing issuance handoff.
   - Report: `../ui-cockpit/reports/048-quick-generate-read-model-refresh-navigation-closure.md`.
+- x-change Cockpit Mutation Wave 2 — Operator-visible Issuance Activity and Audit Handoff Plan:
+  - Drafted the next mutation wave before adding additional write behavior.
+  - Wave 2 focuses on operator-visible issuance activity and future audit/journal/action/feedback handoff boundaries.
+  - Cockpit activity remains presentation/operation evidence, not lifecycle truth.
+  - Proposed next implementation slice is Wave 2A — Operator Issuance Activity Read Model Contract.
+  - This planning slice adds no persistence, migrations, queues, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet access, voucher execution changes, raw payload persistence, automatic retry, or money movement.
+  - Report: `../ui-cockpit/reports/049-operator-visible-issuance-activity-audit-handoff-plan.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -925,7 +932,7 @@ Completed through Host Integration Slice 2I.
 Recommended next checkpoint:
 
 ```text
-Draft or approve the next Cockpit mutation plan before adding more write behavior.
+Approve or revise Cockpit Mutation Wave 2A — Operator Issuance Activity Read Model Contract.
 ```
 
 Recommended actions:
@@ -939,11 +946,12 @@ Recommended actions:
 7. Read `packages/x-change/docs/ui-cockpit/reports/046-quick-generate-idempotency-replay-contract.md`.
 8. Read `packages/x-change/docs/ui-cockpit/reports/047-quick-generate-ui-submit-enablement.md`.
 9. Read `packages/x-change/docs/ui-cockpit/reports/048-quick-generate-read-model-refresh-navigation-closure.md`.
-10. Draft, approve, revise, or reject the next Cockpit mutation wave before adding more write behavior.
-11. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
-12. Existing issuance handoff, idempotency/replay, UI submit, manual refresh, and generated Pay Code detail navigation are wired.
-13. Do not add campaign mutation endpoints, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls outside `GeneratePayCode`, campaign state mutation, direct money movement, raw payload exposure, or direct wallet access unless explicitly approved.
-14. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
+10. Read `packages/x-change/docs/ui-cockpit/reports/049-operator-visible-issuance-activity-audit-handoff-plan.md`.
+11. Approve, revise, or reject Wave 2A before operator issuance activity read-model contracts are scaffolded.
+12. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
+13. Existing issuance handoff, idempotency/replay, UI submit, manual refresh, and generated Pay Code detail navigation are wired.
+14. Do not add campaign mutation endpoints, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls outside `GeneratePayCode`, campaign state mutation, direct money movement, raw payload exposure, or direct wallet access unless explicitly approved.
+15. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
 ## x-journal Initial Intent
 
