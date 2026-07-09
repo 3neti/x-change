@@ -21,7 +21,7 @@ it('documents the quick generate existing issuance handoff boundary', function (
         ->and($cockpitCompass)->toContain('Cockpit Mutation Wave 1C — Existing Issuance Handoff')
         ->and($cockpitCompass)->toContain('reports/045-quick-generate-existing-issuance-handoff.md')
         ->and($settlementCompass)->toContain('Cockpit Mutation Wave 1C — Existing Issuance Handoff')
-        ->and($settlementCompass)->toContain('Approve or revise Cockpit Mutation Wave 1D — Idempotency and Replay Contract')
+        ->and($settlementCompass)->toContain('../ui-cockpit/reports/045-quick-generate-existing-issuance-handoff.md')
         ->and($controller)->toContain('use LBHurtado\\XChange\\Actions\\PayCode\\GeneratePayCode;')
         ->and($controller)->toContain('use LBHurtado\\XChange\\Http\\Requests\\GeneratePayCodeRequest;')
         ->and($controller)->toContain('operator-safe-generated-facts-only')

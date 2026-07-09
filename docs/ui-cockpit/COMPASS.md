@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 1C — Existing Issuance Handoff
-Status: Backend handoff scaffolded; UI submit and idempotent replay remain deferred
+Current slice: Cockpit Mutation Wave 1D — Idempotency and Replay Contract
+Status: Backend idempotency and replay scaffolded; UI submit remains deferred
 Last updated: 2026-07-09
 
 ## Completed
@@ -267,6 +267,14 @@ Last updated: 2026-07-09
   - UI submit enablement, idempotency persistence, replay lookup, payload fingerprinting, refresh behavior, and duplicate-submit protection remain deferred.
   - Cockpit still does not call providers, wallets, journal, action, feedback, or campaign behavior directly.
   - Report: `reports/045-quick-generate-existing-issuance-handoff.md`.
+- Cockpit Mutation Wave 1D — Idempotency and Replay Contract:
+  - The Cockpit Quick Generate POST route now extracts the configured `Idempotency-Key` through the existing `IdempotencyService`.
+  - The route stores the operator-redacted Cockpit response, not raw issuance payloads.
+  - Matching key and matching payload requests replay with `200 OK` and `idempotency.replayed: true`.
+  - Matching key and different payload requests fail with `409 IDEMPOTENCY_CONFLICT` before a second `GeneratePayCode` call.
+  - UI submit enablement, optimistic UI, post-issuance refresh, Pay Code Explorer navigation, and Voucher Detail navigation remain deferred.
+  - Cockpit still does not call providers, wallets, journal, action, feedback, or campaign behavior directly.
+  - Report: `reports/046-quick-generate-idempotency-replay-contract.md`.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
   - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`

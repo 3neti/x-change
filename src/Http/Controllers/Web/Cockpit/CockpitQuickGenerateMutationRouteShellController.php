@@ -9,16 +9,22 @@ use Illuminate\Routing\Controller;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Http\Requests\GeneratePayCodeRequest;
+use LBHurtado\XChange\Services\IdempotencyService;
 
 class CockpitQuickGenerateMutationRouteShellController extends Controller
 {
-    public function __invoke(GeneratePayCodeRequest $request, GeneratePayCode $generatePayCode): JsonResponse
-    {
+    public function __invoke(
+        GeneratePayCodeRequest $request,
+        GeneratePayCode $generatePayCode,
+        IdempotencyService $idempotency,
+    ): JsonResponse {
         $payload = $request->validated();
+        $key = $idempotency->extractKey($request);
         $correlationId = $request->header((string) config('x-change.api.correlation.header', 'X-Correlation-ID'));
         $issuerId = $request->user()?->getAuthIdentifier();
 
         $payload['_meta'] = [
+            'idempotency_key' => $key,
             'correlation_id' => is_string($correlationId) ? $correlationId : null,
             'source' => 'cockpit.quick-generate',
         ];
@@ -27,9 +33,33 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
             data_set($payload, 'metadata.issuer_id', (string) $issuerId);
         }
 
-        $result = $generatePayCode->handle($payload);
+        if (is_string($key)) {
+            $recalled = $idempotency->recallOrValidate($key, $payload);
 
-        return response()->json([
+            if (is_array($recalled)) {
+                data_set($recalled, 'idempotency.replayed', true);
+                data_set($recalled, 'status', 'replayed');
+
+                return response()->json($recalled, 200);
+            }
+        }
+
+        $result = $generatePayCode->handle($payload);
+        $response = $this->responsePayload($request, $result, $key, false);
+
+        if (is_string($key)) {
+            $idempotency->remember($key, $payload, $response);
+        }
+
+        return response()->json($response, 201);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function responsePayload(GeneratePayCodeRequest $request, GeneratePayCodeResultData $result, ?string $key, bool $replayed): array
+    {
+        return [
             'schema' => 'x-change.cockpit.quick-generate-existing-issuance-handoff.v1',
             'status' => 'issued',
             'authorized' => $request->user() !== null,
@@ -51,10 +81,12 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                 'controller_invoked' => false,
             ],
             'idempotency' => [
-                'status' => 'deferred-to-wave-1d',
-                'persisted' => false,
-                'fingerprinted' => false,
-                'replay_checked' => false,
+                'status' => is_string($key) ? 'replay-safe' : 'key-not-provided',
+                'key' => $key,
+                'persisted' => is_string($key),
+                'fingerprinted' => is_string($key),
+                'replay_checked' => is_string($key),
+                'replayed' => $replayed,
             ],
             'result' => $this->redactedResult($result),
             'redactions' => [
@@ -68,8 +100,8 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                 'cost' => 'excluded',
                 'raw_payload' => 'excluded',
             ],
-            'next_step' => 'Cockpit Mutation Wave 1D — Idempotency and Replay Contract',
-        ], 201);
+            'next_step' => 'Cockpit Mutation Wave 1E — UI Submit Enablement',
+        ];
     }
 
     /**

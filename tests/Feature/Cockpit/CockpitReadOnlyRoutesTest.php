@@ -339,15 +339,19 @@ it('hydrates quick generate with a sanitized quick generate read model prop', fu
         ->assertJsonPath('props.quick_generate_read_model.funding_gate.checks.4.key', 'funds-reservation-ready')
         ->assertJsonPath('props.quick_generate_read_model.funding_gate.checks.5.key', 'provider-funding-ready')
         ->assertJsonPath('props.quick_generate_read_model.funding_gate.redactions.payloads', 'funding-gates-only')
-        ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.status', 'blocked')
+        ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.status', 'backend-ready')
         ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.checks.0.key', 'idempotency-policy-known')
         ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.checks.0.status', 'passed')
         ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.checks.1.key', 'idempotency-key-source-defined')
-        ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.checks.1.status', 'blocked')
+        ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.checks.1.status', 'passed')
         ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.checks.2.key', 'payload-fingerprint-defined')
+        ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.checks.2.status', 'passed')
         ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.checks.3.key', 'replay-lookup-ready')
+        ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.checks.3.status', 'passed')
         ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.checks.4.key', 'conflict-response-ready')
+        ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.checks.4.status', 'passed')
         ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.checks.5.key', 'ttl-policy-ready')
+        ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.checks.5.status', 'passed')
         ->assertJsonPath('props.quick_generate_read_model.idempotency_gate.redactions.payloads', 'idempotency-gates-only')
         ->assertJsonPath('props.quick_generate_read_model.validation_redaction_gate.status', 'blocked')
         ->assertJsonPath('props.quick_generate_read_model.validation_redaction_gate.checks.0.key', 'request-schema-known')
@@ -379,6 +383,7 @@ it('hydrates quick generate with a sanitized quick generate read model prop', fu
         ->assertJsonPath('props.quick_generate_read_model.mutation_preconditions_review.items.1.key', 'pricing-ready')
         ->assertJsonPath('props.quick_generate_read_model.mutation_preconditions_review.items.2.key', 'funding-ready')
         ->assertJsonPath('props.quick_generate_read_model.mutation_preconditions_review.items.3.key', 'idempotency-ready')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_preconditions_review.items.3.status', 'passed')
         ->assertJsonPath('props.quick_generate_read_model.mutation_preconditions_review.items.4.key', 'validation-redaction-ready')
         ->assertJsonPath('props.quick_generate_read_model.mutation_preconditions_review.items.5.key', 'handoff-ready')
         ->assertJsonPath('props.quick_generate_read_model.mutation_preconditions_review.items.5.status', 'passed')
@@ -396,7 +401,7 @@ it('hydrates quick generate with a sanitized quick generate read model prop', fu
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.route', 'x-change.cockpit.quick-generate.store')
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.request_adapter', 'GeneratePayCodeRequest-compatible-adapter')
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.issuance_owner', 'GeneratePayCode')
-        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.idempotency', 'deferred-to-wave-1d')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.idempotency', 'replay-safe-route-registered')
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.response_contract', 'operator-safe-redacted-result')
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.runtime_enabled', true)
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.gates.0.key', 'route-contract-defined')
@@ -405,6 +410,8 @@ it('hydrates quick generate with a sanitized quick generate read model prop', fu
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.gates.1.status', 'passed')
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.gates.2.key', 'issuance-owner-confirmed')
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.gates.2.status', 'passed')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.gates.3.key', 'idempotency-required')
+        ->assertJsonPath('props.quick_generate_read_model.mutation_contract.gates.3.status', 'passed')
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.gates.4.key', 'operator-response-redacted')
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.gates.4.status', 'passed')
         ->assertJsonPath('props.quick_generate_read_model.mutation_contract.gates.5.key', 'ui-submit-disabled')
@@ -548,10 +555,12 @@ it('hands quick generate mutation requests to the existing issuance action with 
         ->assertJsonPath('handoff.controller', 'GeneratePayCodeController')
         ->assertJsonPath('handoff.executed', true)
         ->assertJsonPath('handoff.controller_invoked', false)
-        ->assertJsonPath('idempotency.status', 'deferred-to-wave-1d')
+        ->assertJsonPath('idempotency.status', 'key-not-provided')
+        ->assertJsonPath('idempotency.key', null)
         ->assertJsonPath('idempotency.persisted', false)
         ->assertJsonPath('idempotency.fingerprinted', false)
         ->assertJsonPath('idempotency.replay_checked', false)
+        ->assertJsonPath('idempotency.replayed', false)
         ->assertJsonPath('result.code', 'PC-COCKPIT-001')
         ->assertJsonPath('result.amount', 25)
         ->assertJsonPath('result.currency', 'PHP')
@@ -578,10 +587,177 @@ it('hands quick generate mutation requests to the existing issuance action with 
     expect($fakeGeneratePayCode->payloads)->toHaveCount(1)
         ->and($fakeGeneratePayCode->payloads[0])->not->toHaveKey('secret')
         ->and($fakeGeneratePayCode->payloads[0]['_meta'])->toMatchArray([
+            'idempotency_key' => null,
             'correlation_id' => 'correlation-cockpit-1',
             'source' => 'cockpit.quick-generate',
         ])
         ->and(data_get($fakeGeneratePayCode->payloads[0], 'metadata.issuer_id'))->not->toBeNull();
+});
+
+it('replays quick generate mutation responses for the same idempotency key and payload', function () {
+    $fakeGeneratePayCode = new class extends GeneratePayCode
+    {
+        public int $calls = 0;
+
+        public function __construct() {}
+
+        /**
+         * @param  array<string, mixed>  $input
+         */
+        public function handle(array $input): GeneratePayCodeResultData
+        {
+            $this->calls++;
+
+            return new GeneratePayCodeResultData(
+                voucher_id: 12345,
+                code: 'PC-COCKPIT-IDEM',
+                amount: $input['cash']['amount'],
+                currency: $input['cash']['currency'],
+                issuer: new IssuerData(id: data_get($input, 'metadata.issuer_id')),
+                cost: new PricingEstimateData(currency: 'PHP', total: 1.25),
+                wallet: [
+                    'balance_before' => 100000,
+                    'balance_after' => 99975,
+                ],
+                debit: new DebitData(id: 987, amount: 25),
+                links: new PayCodeLinksData(
+                    redeem: 'https://example.test/r/PC-COCKPIT-IDEM',
+                    redeem_path: '/r/PC-COCKPIT-IDEM',
+                ),
+                allocations: [
+                    ['internal' => 'must-not-leak'],
+                ],
+            );
+        }
+    };
+
+    app()->instance(GeneratePayCode::class, $fakeGeneratePayCode);
+
+    actingAsTestUser();
+
+    $payload = [
+        'cash' => [
+            'amount' => 25,
+            'currency' => 'PHP',
+        ],
+        'inputs' => [
+            'fields' => [],
+        ],
+        'feedback' => [
+            'mobile' => null,
+        ],
+        'rider' => [
+            'message' => null,
+        ],
+    ];
+
+    $headers = [
+        'Accept' => 'application/json',
+        'Idempotency-Key' => 'cockpit-idem-1',
+        'X-Correlation-ID' => 'correlation-cockpit-idem-1',
+    ];
+
+    $first = $this->withHeaders($headers)
+        ->post(route('x-change.cockpit.quick-generate.store'), $payload)
+        ->assertCreated()
+        ->assertJsonPath('status', 'issued')
+        ->assertJsonPath('idempotency.status', 'replay-safe')
+        ->assertJsonPath('idempotency.key', 'cockpit-idem-1')
+        ->assertJsonPath('idempotency.persisted', true)
+        ->assertJsonPath('idempotency.fingerprinted', true)
+        ->assertJsonPath('idempotency.replay_checked', true)
+        ->assertJsonPath('idempotency.replayed', false)
+        ->assertJsonPath('result.code', 'PC-COCKPIT-IDEM')
+        ->assertJsonMissingPath('result.voucher_id')
+        ->assertJsonMissingPath('result.wallet');
+
+    $second = $this->withHeaders($headers)
+        ->post(route('x-change.cockpit.quick-generate.store'), $payload)
+        ->assertOk()
+        ->assertJsonPath('status', 'replayed')
+        ->assertJsonPath('idempotency.status', 'replay-safe')
+        ->assertJsonPath('idempotency.key', 'cockpit-idem-1')
+        ->assertJsonPath('idempotency.persisted', true)
+        ->assertJsonPath('idempotency.fingerprinted', true)
+        ->assertJsonPath('idempotency.replay_checked', true)
+        ->assertJsonPath('idempotency.replayed', true)
+        ->assertJsonPath('result.code', 'PC-COCKPIT-IDEM')
+        ->assertJsonMissingPath('result.voucher_id')
+        ->assertJsonMissingPath('result.wallet')
+        ->assertJsonMissing(['must-not-leak']);
+
+    expect($fakeGeneratePayCode->calls)->toBe(1)
+        ->and($second->json('result'))->toBe($first->json('result'));
+});
+
+it('returns conflict for quick generate idempotency key reuse with a different payload', function () {
+    $fakeGeneratePayCode = new class extends GeneratePayCode
+    {
+        public int $calls = 0;
+
+        public function __construct() {}
+
+        /**
+         * @param  array<string, mixed>  $input
+         */
+        public function handle(array $input): GeneratePayCodeResultData
+        {
+            $this->calls++;
+
+            return new GeneratePayCodeResultData(
+                voucher_id: 12345,
+                code: 'PC-COCKPIT-CONFLICT',
+                amount: $input['cash']['amount'],
+                currency: $input['cash']['currency'],
+                issuer: new IssuerData(id: data_get($input, 'metadata.issuer_id')),
+                cost: new PricingEstimateData,
+                wallet: [],
+                debit: new DebitData,
+                links: new PayCodeLinksData(
+                    redeem: 'https://example.test/r/PC-COCKPIT-CONFLICT',
+                    redeem_path: '/r/PC-COCKPIT-CONFLICT',
+                ),
+            );
+        }
+    };
+
+    app()->instance(GeneratePayCode::class, $fakeGeneratePayCode);
+
+    actingAsTestUser();
+
+    $payload = [
+        'cash' => [
+            'amount' => 25,
+            'currency' => 'PHP',
+        ],
+        'inputs' => [
+            'fields' => [],
+        ],
+        'feedback' => [
+            'mobile' => null,
+        ],
+        'rider' => [
+            'message' => null,
+        ],
+    ];
+
+    $headers = [
+        'Accept' => 'application/json',
+        'Idempotency-Key' => 'cockpit-idem-conflict-1',
+    ];
+
+    $this->withHeaders($headers)
+        ->post(route('x-change.cockpit.quick-generate.store'), $payload)
+        ->assertCreated();
+
+    data_set($payload, 'cash.amount', 26);
+
+    $this->withHeaders($headers)
+        ->post(route('x-change.cockpit.quick-generate.store'), $payload)
+        ->assertConflict()
+        ->assertJsonPath('code', 'IDEMPOTENCY_CONFLICT');
+
+    expect($fakeGeneratePayCode->calls)->toBe(1);
 });
 
 it('validates quick generate mutation requests with the existing issuance request contract', function () {

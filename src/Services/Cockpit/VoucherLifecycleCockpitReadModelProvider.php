@@ -389,43 +389,43 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 ],
             ),
             idempotency_gate: new CockpitQuickGenerateIdempotencyGateData(
-                status: 'blocked',
+                status: 'backend-ready',
                 checks: [
                     new CockpitQuickGenerateIdempotencyGateCheckData(
                         key: 'idempotency-policy-known',
                         label: 'Idempotency Policy Known',
                         status: 'passed',
-                        reason: 'Idempotency is represented as a read-only Cockpit readiness fact.',
+                        reason: 'Cockpit uses the existing x-change idempotency policy for Quick Generate mutation requests.',
                     ),
                     new CockpitQuickGenerateIdempotencyGateCheckData(
                         key: 'idempotency-key-source-defined',
                         label: 'Idempotency Key Source Defined',
-                        status: 'blocked',
-                        reason: 'Cockpit does not generate, accept, or persist idempotency keys in Slice 22.',
+                        status: 'passed',
+                        reason: 'Cockpit accepts the configured Idempotency-Key header on the Quick Generate mutation route.',
                     ),
                     new CockpitQuickGenerateIdempotencyGateCheckData(
                         key: 'payload-fingerprint-defined',
                         label: 'Payload Fingerprint Defined',
-                        status: 'blocked',
-                        reason: 'Cockpit does not hash or fingerprint Quick Generate payloads in Slice 22.',
+                        status: 'passed',
+                        reason: 'Cockpit delegates payload fingerprinting to the existing IdempotencyService.',
                     ),
                     new CockpitQuickGenerateIdempotencyGateCheckData(
                         key: 'replay-lookup-ready',
                         label: 'Replay Lookup Ready',
-                        status: 'blocked',
-                        reason: 'Cockpit does not query idempotency stores or replay records in Slice 22.',
+                        status: 'passed',
+                        reason: 'Cockpit replays stored redacted operator responses for matching keys and payloads.',
                     ),
                     new CockpitQuickGenerateIdempotencyGateCheckData(
                         key: 'conflict-response-ready',
                         label: 'Conflict Response Ready',
-                        status: 'blocked',
-                        reason: 'Cockpit does not evaluate idempotency conflicts in Slice 22.',
+                        status: 'passed',
+                        reason: 'Cockpit returns the existing idempotency conflict response before a second issuance action call.',
                     ),
                     new CockpitQuickGenerateIdempotencyGateCheckData(
                         key: 'ttl-policy-ready',
                         label: 'TTL Policy Ready',
-                        status: 'blocked',
-                        reason: 'Cockpit does not read or enforce idempotency TTL policy in Slice 22.',
+                        status: 'passed',
+                        reason: 'Cockpit uses the existing IdempotencyService TTL configuration.',
                     ),
                 ],
                 redactions: [
@@ -578,8 +578,8 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                     new CockpitQuickGenerateMutationPreconditionsReviewItemData(
                         key: 'idempotency-ready',
                         label: 'Idempotency Ready',
-                        status: 'blocked',
-                        reason: 'Idempotency key source, payload fingerprinting, replay lookup, conflict response, and TTL policy remain blocked.',
+                        status: 'passed',
+                        reason: 'Wave 1D wires idempotency key extraction, payload fingerprinting, replay lookup, conflict response, and TTL policy through the existing IdempotencyService.',
                     ),
                     new CockpitQuickGenerateMutationPreconditionsReviewItemData(
                         key: 'validation-redaction-ready',
@@ -646,7 +646,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 route: 'x-change.cockpit.quick-generate.store',
                 request_adapter: 'GeneratePayCodeRequest-compatible-adapter',
                 issuance_owner: 'GeneratePayCode',
-                idempotency: 'deferred-to-wave-1d',
+                idempotency: 'replay-safe-route-registered',
                 response_contract: 'operator-safe-redacted-result',
                 runtime_enabled: true,
                 gates: [
@@ -674,9 +674,9 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                     new CockpitQuickGenerateMutationContractGateData(
                         key: 'idempotency-required',
                         label: 'Idempotency Required',
-                        status: 'planned',
-                        decision: 'Idempotency key and replay handling are deferred to Wave 1D.',
-                        reason: 'Repeated operator submits must not duplicate issuance before UI submit is enabled.',
+                        status: 'passed',
+                        decision: 'Idempotency key and replay handling are wired through the existing IdempotencyService.',
+                        reason: 'Repeated operator submits with the same key and payload replay the stored operator response without duplicate issuance.',
                     ),
                     new CockpitQuickGenerateMutationContractGateData(
                         key: 'operator-response-redacted',
@@ -690,7 +690,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                         label: 'UI Submit Disabled',
                         status: 'blocked',
                         decision: 'Backend handoff exists, but Cockpit UI submit remains disabled.',
-                        reason: 'Idempotency, replay behavior, and UI refresh contracts remain deferred to later slices.',
+                        reason: 'UI submit state and read-model refresh contracts remain deferred to later slices.',
                     ),
                 ],
                 allowed_methods: ['GET', 'POST'],
