@@ -766,6 +766,11 @@ ExecutionDriverContract
   - Journal presentation remains summary-only and payload-policy aware.
   - Missing/unavailable journal read models still degrade to the existing unavailable audit row.
   - No journal writes, raw payload exposure, provider calls, action execution, feedback delivery, voucher mutation, wallet access, or money movement were added.
+- x-change Host Integration Slice 2B — Action Cockpit Hydration:
+  - Voucher Detail maps available x-action read-model CTA summaries into disabled operator action controls.
+  - Disabled reasons are visible and include the action redaction policy.
+  - Static fallback actions remain when x-action read models are unavailable or empty.
+  - No action execution, workflow authorization, raw diagnostics exposure, target URL exposure, journal writes, feedback delivery, provider calls, voucher mutation, wallet access, or money movement were added.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.

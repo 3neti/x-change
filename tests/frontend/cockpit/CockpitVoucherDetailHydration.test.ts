@@ -145,6 +145,50 @@ describe('Cockpit Voucher Detail hydration', () => {
         expect(wrapper.text()).not.toContain('raw_payload');
     });
 
+    it('hydrates action read-model CTAs as disabled operator actions without unsafe payloads', () => {
+        const wrapper = mount(VoucherDetail, {
+            props: {
+                read_model: {
+                    ...readModel,
+                    actions: {
+                        status: 'available',
+                        authorized: true,
+                        actions: [
+                            {
+                                key: 'approve-redemption',
+                                label: 'Approve redemption',
+                                status: 'available',
+                                target_url: '/must-not-render',
+                                raw_diagnostics: 'must-not-render',
+                                provider_payload: 'must-not-render',
+                            },
+                        ],
+                        diagnostics: [
+                            {
+                                code: 'operator-eligible',
+                                message: 'Operator may view this CTA.',
+                                raw_payload: 'must-not-render',
+                            },
+                        ],
+                        redactions: {
+                            payloads: 'safe-action-host-summary-only',
+                            source: 'x-action',
+                            presentation_only: true,
+                            executes_action: false,
+                        },
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Approve redemption');
+        expect(wrapper.text()).toContain('Action execution remains disabled from Cockpit.');
+        expect(wrapper.text()).toContain('safe-action-host-summary-only');
+        expect(wrapper.text()).not.toContain('/must-not-render');
+        expect(wrapper.text()).not.toContain('raw_diagnostics');
+        expect(wrapper.text()).not.toContain('must-not-render');
+    });
+
     it('does not render unsafe voucher payload fields from the read model summary', () => {
         const wrapper = mount(VoucherDetail, {
             props: {

@@ -47,18 +47,25 @@ defineProps<{
             <p class="text-sm font-semibold text-slate-950 dark:text-slate-50">
                 Operator actions are disabled in Slice 5.
             </p>
-            <div class="mt-3 flex flex-wrap gap-2">
-                <button
+            <div class="mt-3 grid gap-2">
+                <div
                     v-for="action in actions"
                     :key="action.key"
-                    :disabled="action.disabled"
-                    :title="action.reason"
-                    type="button"
-                    class="rounded-md border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:text-slate-300"
-                    data-testid="cockpit-voucher-detail-action"
+                    class="rounded-md border border-slate-200 p-3 dark:border-slate-700"
                 >
-                    {{ action.label }}
-                </button>
+                    <button
+                        :disabled="action.disabled"
+                        :title="action.reason"
+                        type="button"
+                        class="rounded-md border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:text-slate-300"
+                        data-testid="cockpit-voucher-detail-action"
+                    >
+                        {{ action.label }}
+                    </button>
+                    <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                        {{ action.reason }}
+                    </p>
+                </div>
             </div>
         </div>
     </section>

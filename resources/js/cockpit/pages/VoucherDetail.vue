@@ -10,6 +10,7 @@ import type {
     CockpitDependentReadModel,
     CockpitReadModelRedactions,
     CockpitVoucherAuditItem,
+    CockpitVoucherDetailAction,
     CockpitVoucherDetailPageProps,
     CockpitVoucherDistributionItem,
     CockpitVoucherEvidenceItem,
@@ -171,6 +172,21 @@ const auditItems = computed<CockpitVoucherAuditItem[]>(() => [
     },
 ]);
 
+const detailActions = computed<CockpitVoucherDetailAction[]>(() => {
+    const actions = Array.isArray(props.read_model?.actions?.actions)
+        ? props.read_model.actions.actions
+        : [];
+
+    if (readModelStatus(props.read_model?.actions) !== 'available' || actions.length === 0) {
+        return cockpitVoucherDetailActions;
+    }
+
+    return actions
+        .map((action, index) => actionDetailItem(action, index, props.read_model?.actions?.redactions))
+        .filter((action): action is CockpitVoucherDetailAction => action !== null)
+        .slice(0, 5);
+});
+
 function stringValue(value: unknown): string | null {
     if (typeof value === 'string' && value.trim() !== '') {
         return value.trim();
@@ -282,6 +298,34 @@ function objectValue(value: unknown): Record<string, unknown> | null {
 
     return null;
 }
+
+function actionDetailItem(
+    action: unknown,
+    index: number,
+    actionRedactions?: CockpitReadModelRedactions,
+): CockpitVoucherDetailAction | null {
+    const actionItem = objectValue(action);
+
+    if (actionItem === null) {
+        return null;
+    }
+
+    const key = stringValue(actionItem.key)
+        ?? stringValue(actionItem.id)
+        ?? `action-${index + 1}`;
+    const label = stringValue(actionItem.label)
+        ?? stringValue(actionItem.name)
+        ?? key;
+    const status = stringValue(actionItem.status) ?? 'available';
+    const payloadPolicy = stringValue(actionRedactions?.payloads) ?? 'safe-action-host-summary-only';
+
+    return {
+        key,
+        label,
+        disabled: true,
+        reason: `${status} · ${payloadPolicy} · Action execution remains disabled from Cockpit.`,
+    };
+}
 </script>
 
 <template>
@@ -336,7 +380,7 @@ function objectValue(value: unknown): Record<string, unknown> | null {
                     <CockpitVoucherDistributionPanel :items="distributionItems" />
                     <CockpitVoucherAuditPanel
                         :audits="auditItems"
-                        :actions="cockpitVoucherDetailActions"
+                        :actions="detailActions"
                     />
                 </div>
             </div>

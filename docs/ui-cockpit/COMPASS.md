@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Host Integration Slice 2A — Journal Cockpit Hydration
+Current slice: Host Integration Slice 2B — Action Cockpit Hydration
 Status: Complete
 Last updated: 2026-07-09
 
@@ -136,6 +136,12 @@ Last updated: 2026-07-09
   - Journal presentation is summary-only and payload-policy aware.
   - No journal writes, raw payload exposure, provider calls, action execution, feedback delivery, voucher mutation, wallet access, or money movement were added.
   - Report: `reports/024-journal-cockpit-hydration.md`.
+- Completed Host Integration Slice 2B — Action Cockpit Hydration:
+  - Voucher Detail maps available x-action read-model CTA summaries into disabled operator action controls.
+  - Disabled reasons are visible and include the action redaction policy.
+  - Static fallback actions remain when x-action read models are unavailable or empty.
+  - No action execution, workflow authorization, raw diagnostics exposure, target URL exposure, journal writes, feedback delivery, provider calls, voucher mutation, wallet access, or money movement were added.
+  - Report: `reports/025-action-cockpit-hydration.md`.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
   - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`
