@@ -114,6 +114,7 @@ export type CockpitCampaignNavigationContext = {
 export type CockpitDashboardPageProps = {
     dashboard_read_model?: CockpitDashboardReadModel;
     campaign_read_model?: CockpitCampaignReadModel;
+    read_model?: CockpitReadModelBundle;
 };
 
 export type CockpitQuickGenerateTemplate = {

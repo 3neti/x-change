@@ -16,7 +16,9 @@ import type {
     CockpitActivityItem,
     CockpitDashboardMetric,
     CockpitDashboardPageProps,
+    CockpitDependentReadModel,
     CockpitPipelineStage,
+    CockpitReadModelRedactions,
     CockpitRiskSignal,
 } from '../types';
 
@@ -63,6 +65,33 @@ const activity = computed<CockpitActivityItem[]>(() => {
         .map((item) => sanitizeActivityItem(item))
         .filter((item): item is CockpitActivityItem => item !== null);
 });
+
+const integrationSummaries = computed(() => [
+    integrationSummary(
+        'journal',
+        'Journal Evidence',
+        props.read_model?.journal,
+        'entries',
+        'entries',
+        'journal-evidence-summary-only',
+    ),
+    integrationSummary(
+        'actions',
+        'Action CTAs',
+        props.read_model?.actions,
+        'actions',
+        'actions',
+        'safe-action-host-summary-only',
+    ),
+    integrationSummary(
+        'feedback',
+        'Feedback Deliveries',
+        props.read_model?.feedback,
+        'deliveries',
+        'deliveries',
+        'communication-delivery-summary-only',
+    ),
+]);
 
 function sanitizeMetric(metric: CockpitDashboardMetric): CockpitDashboardMetric | null {
     const key = stringValue(metric.key);
@@ -162,6 +191,31 @@ function sourceValue(value: unknown): CockpitActivityItem['source'] | undefined 
         ? value
         : undefined;
 }
+
+function integrationSummary(
+    key: string,
+    label: string,
+    model: CockpitDependentReadModel | undefined,
+    collectionKey: 'entries' | 'actions' | 'deliveries',
+    noun: string,
+    fallbackPolicy: string,
+): {
+    key: string;
+    label: string;
+    status: string;
+    count: string;
+    policy: string;
+} {
+    const collection = Array.isArray(model?.[collectionKey]) ? model[collectionKey] : [];
+
+    return {
+        key,
+        label,
+        status: stringValue(model?.status) ?? 'not_wired',
+        count: `${collection.length} ${noun}`,
+        policy: stringValue((model?.redactions as CockpitReadModelRedactions | undefined)?.payloads) ?? fallbackPolicy,
+    };
+}
 </script>
 
 <template>
@@ -183,6 +237,41 @@ function sourceValue(value: unknown): CockpitActivityItem['source'] | undefined 
             <CockpitLiquidityHero :metrics="metrics" />
 
             <CockpitCampaignAdoptionPanel :read-model="props.campaign_read_model" />
+
+            <section
+                class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-integration-summary-panel"
+            >
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                    Integration Summary
+                </p>
+                <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
+                    Journal · Action · Feedback
+                </h3>
+                <div class="mt-5 grid gap-3 md:grid-cols-3">
+                    <article
+                        v-for="summary in integrationSummaries"
+                        :key="summary.key"
+                        class="rounded-lg border border-slate-200 p-4 dark:border-slate-800"
+                        data-testid="cockpit-integration-summary-card"
+                    >
+                        <div class="flex items-center justify-between gap-3">
+                            <p class="font-semibold text-slate-950 dark:text-slate-50">
+                                {{ summary.label }}
+                            </p>
+                            <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                                {{ summary.status }}
+                            </span>
+                        </div>
+                        <p class="mt-3 text-2xl font-semibold text-slate-950 dark:text-slate-50">
+                            {{ summary.count }}
+                        </p>
+                        <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                            {{ summary.policy }}
+                        </p>
+                    </article>
+                </div>
+            </section>
 
             <div class="grid gap-4 xl:grid-cols-3">
                 <CockpitRedemptionPipeline

@@ -284,4 +284,56 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).not.toContain('/campaigns/');
         expect(wrapper.text()).not.toContain('/must-not-render');
     });
+
+    it('renders journal action and feedback integration summary cards from the read model bundle', () => {
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                dashboard_read_model: dashboardReadModel,
+                read_model: {
+                    journal: {
+                        status: 'available',
+                        authorized: true,
+                        entries: [{ id: 'journal-1' }],
+                        redactions: {
+                            payloads: 'journal-evidence-summary-only',
+                            source: 'x-journal',
+                        },
+                    },
+                    actions: {
+                        status: 'available',
+                        authorized: true,
+                        actions: [{ key: 'review' }],
+                        redactions: {
+                            payloads: 'safe-action-host-summary-only',
+                            source: 'x-action',
+                        },
+                    },
+                    feedback: {
+                        status: 'available',
+                        authorized: true,
+                        deliveries: [{ id: 'delivery-1' }],
+                        redactions: {
+                            payloads: 'communication-delivery-summary-only',
+                            source: 'x-feedback',
+                        },
+                    },
+                    raw_payload: 'must-not-render',
+                    provider_payload: 'must-not-render',
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Integration Summary');
+        expect(wrapper.text()).toContain('Journal Evidence');
+        expect(wrapper.text()).toContain('1 entries');
+        expect(wrapper.text()).toContain('Action CTAs');
+        expect(wrapper.text()).toContain('1 actions');
+        expect(wrapper.text()).toContain('Feedback Deliveries');
+        expect(wrapper.text()).toContain('1 deliveries');
+        expect(wrapper.text()).toContain('journal-evidence-summary-only');
+        expect(wrapper.text()).toContain('safe-action-host-summary-only');
+        expect(wrapper.text()).toContain('communication-delivery-summary-only');
+        expect(wrapper.text()).not.toContain('must-not-render');
+        expect(wrapper.findAll('[data-testid="cockpit-integration-summary-card"]')).toHaveLength(3);
+    });
 });
