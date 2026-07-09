@@ -156,12 +156,7 @@ const auditItems = computed<CockpitVoucherAuditItem[]>(() => [
         status: readModelStatus(props.read_model?.execution),
         helper: 'Execution results remain not wired; Cockpit does not invoke drivers.',
     },
-    {
-        id: 'journal',
-        label: 'Journal read model',
-        status: readModelStatus(props.read_model?.journal),
-        helper: 'Journal entries remain unavailable until an authorized journal read model is wired.',
-    },
+    ...journalAuditItems(props.read_model?.journal),
     {
         id: 'actions',
         label: 'Action handoff',
@@ -226,6 +221,66 @@ function availabilityWindow(startsAt: unknown, expiresAt: unknown): string {
 
 function readModelStatus(model?: CockpitDependentReadModel): string {
     return stringValue(model?.status) ?? 'not_wired';
+}
+
+function journalAuditItems(model?: CockpitDependentReadModel): CockpitVoucherAuditItem[] {
+    const entries = Array.isArray(model?.entries) ? model.entries : [];
+
+    if (readModelStatus(model) !== 'available' || entries.length === 0) {
+        return [
+            {
+                id: 'journal',
+                label: 'Journal read model',
+                status: readModelStatus(model),
+                helper: 'Journal entries remain unavailable until an authorized journal read model is wired.',
+            },
+        ];
+    }
+
+    return entries
+        .map((entry, index) => journalAuditItem(entry, index, model?.redactions))
+        .filter((item): item is CockpitVoucherAuditItem => item !== null)
+        .slice(0, 5);
+}
+
+function journalAuditItem(
+    entry: unknown,
+    index: number,
+    journalRedactions?: CockpitReadModelRedactions,
+): CockpitVoucherAuditItem | null {
+    const journalEntry = objectValue(entry);
+
+    if (journalEntry === null) {
+        return null;
+    }
+
+    const event = stringValue(journalEntry.event_type)
+        ?? stringValue(journalEntry.type)
+        ?? stringValue(journalEntry.event)
+        ?? 'journal.entry';
+    const summary = stringValue(journalEntry.summary)
+        ?? stringValue(journalEntry.description)
+        ?? 'Journal evidence summary available.';
+    const occurredAt = stringValue(journalEntry.occurred_at)
+        ?? stringValue(journalEntry.timestamp)
+        ?? stringValue(journalEntry.created_at)
+        ?? 'timestamp redacted';
+    const payloadPolicy = stringValue(journalRedactions?.payloads) ?? 'journal-evidence-summary-only';
+
+    return {
+        id: stringValue(journalEntry.id) ?? `journal-${index + 1}`,
+        label: `Journal: ${event}`,
+        status: 'available',
+        helper: `${summary} · ${occurredAt} · ${payloadPolicy}`,
+    };
+}
+
+function objectValue(value: unknown): Record<string, unknown> | null {
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        return value as Record<string, unknown>;
+    }
+
+    return null;
 }
 </script>
 

@@ -106,6 +106,45 @@ describe('Cockpit Voucher Detail hydration', () => {
         expect(wrapper.text()).toContain('Journal entries remain unavailable until an authorized journal read model is wired.');
     });
 
+    it('hydrates journal evidence entries without rendering unsafe journal payloads', () => {
+        const wrapper = mount(VoucherDetail, {
+            props: {
+                read_model: {
+                    ...readModel,
+                    journal: {
+                        status: 'available',
+                        authorized: true,
+                        entries: [
+                            {
+                                id: 'journal-entry-1',
+                                event_type: 'voucher.redeemed',
+                                summary: 'Voucher redemption recorded',
+                                occurred_at: '2026-07-03T12:00:00+08:00',
+                                provider_payload: 'must-not-render',
+                                raw_payload: 'must-not-render',
+                                secret: 'must-not-render',
+                            },
+                        ],
+                        redactions: {
+                            payloads: 'journal-evidence-summary-only',
+                            source: 'x-journal',
+                            evidence_only: true,
+                            writes_journal_entries: false,
+                        },
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Journal: voucher.redeemed');
+        expect(wrapper.text()).toContain('Voucher redemption recorded');
+        expect(wrapper.text()).toContain('2026-07-03T12:00:00+08:00');
+        expect(wrapper.text()).toContain('journal-evidence-summary-only');
+        expect(wrapper.text()).not.toContain('must-not-render');
+        expect(wrapper.text()).not.toContain('provider_payload');
+        expect(wrapper.text()).not.toContain('raw_payload');
+    });
+
     it('does not render unsafe voucher payload fields from the read model summary', () => {
         const wrapper = mount(VoucherDetail, {
             props: {

@@ -761,6 +761,11 @@ ExecutionDriverContract
   - No dedicated campaign workspace route was added
   - Mutation route scaffolding remains unauthorized
   - No campaign mutation endpoints, Pay Code generation through campaign, delivery dispatch, journal writes, feedback sends/retries, wallet reads/writes, provider calls, campaign execution, or money movement were added
+- x-change Host Integration Slice 2A — Journal Cockpit Hydration:
+  - Voucher Detail renders available x-journal read-model evidence summaries in the existing audit panel.
+  - Journal presentation remains summary-only and payload-policy aware.
+  - Missing/unavailable journal read models still degrade to the existing unavailable audit row.
+  - No journal writes, raw payload exposure, provider calls, action execution, feedback delivery, voucher mutation, wallet access, or money movement were added.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.

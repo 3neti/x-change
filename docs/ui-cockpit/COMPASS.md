@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Host Integration Slice 1I — Package-Owned Read-Only Integration Wiring
+Current slice: Host Integration Slice 2A — Journal Cockpit Hydration
 Status: Complete
 Last updated: 2026-07-09
 
@@ -130,6 +130,12 @@ Last updated: 2026-07-09
   - This supersedes the earlier no-hard-Composer-dependency assumption for the read-only integration packages.
   - Campaign mutation route scaffolding remains unauthorized.
   - No host routes/controllers, campaign mutation endpoints, Pay Code generation through campaign, delivery dispatch, journal writes, action execution, feedback sends/retries, wallet reads/writes, provider calls, or money movement were added.
+- Completed Host Integration Slice 2A — Journal Cockpit Hydration:
+  - Voucher Detail renders x-journal read-model evidence summaries in the existing audit panel when `read_model.journal.status` is `available`.
+  - Missing/unavailable journal read models keep the existing unavailable audit row.
+  - Journal presentation is summary-only and payload-policy aware.
+  - No journal writes, raw payload exposure, provider calls, action execution, feedback delivery, voucher mutation, wallet access, or money movement were added.
+  - Report: `reports/024-journal-cockpit-hydration.md`.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
   - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`
