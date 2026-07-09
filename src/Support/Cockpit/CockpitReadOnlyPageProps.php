@@ -94,6 +94,10 @@ class CockpitReadOnlyPageProps
                 include: ['campaigns', 'audiences', 'imports', 'attachments', 'api_descriptors'],
                 correlationId: $campaignExecutionId,
             ))->toArray(),
+            'operator_issuance_activity_read_model' => $this->readModels->forOperatorIssuanceActivity(new CockpitReadModelQueryData(
+                operatorId: $operatorId,
+                include: ['operator_issuance_activity', 'presentations'],
+            ))->toArray(),
         ];
     }
 

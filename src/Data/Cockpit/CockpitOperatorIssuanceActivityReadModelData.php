@@ -10,6 +10,7 @@ class CockpitOperatorIssuanceActivityReadModelData extends Data
 {
     /**
      * @param  array<int, CockpitOperatorIssuanceActivityItemData>  $items
+     * @param  array<int, CockpitOperatorIssuanceActivityPresentationData>  $presentations
      * @param  array<string, mixed>  $empty_state
      * @param  array<string, mixed>  $redactions
      */
@@ -19,6 +20,7 @@ class CockpitOperatorIssuanceActivityReadModelData extends Data
         public readonly bool $authorized = false,
         public readonly string $source = 'null-operator-issuance-activity-read-model',
         public readonly array $items = [],
+        public readonly array $presentations = [],
         public readonly array $empty_state = [
             'title' => 'No operator issuance activity available',
             'description' => 'Activity recording is not wired yet. Quick Generate can still use the existing issuance path.',

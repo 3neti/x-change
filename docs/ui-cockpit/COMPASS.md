@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 2F — Activity Presentation Closure
-Status: Implemented; operator issuance activity now has a presentation-only closure DTO and presenter
+Current slice: Cockpit Mutation Wave 2G — Activity Read Model Presentation Adoption
+Status: Implemented; operator issuance activity presentation DTOs are now adopted into dashboard read-model props
 Last updated: 2026-07-10
 
 ## Completed
@@ -60,6 +60,12 @@ Last updated: 2026-07-10
   - The presenter composes already-supplied activity and handoff result DTOs into a presentation-only operator summary.
   - No journal writes, action execution, feedback delivery, handoff invocation, HTTP routes, frontend UI changes, persistence, migrations, queues, retry handling, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload persistence, or money movement were added.
   - Report: `reports/056-operator-issuance-activity-presentation-closure.md`.
+- Completed Cockpit Mutation Wave 2G — Activity Read Model Presentation Adoption:
+  - Added `presentations` to `CockpitOperatorIssuanceActivityReadModelData`.
+  - Added `operator_issuance_activity_read_model` to dashboard page props.
+  - Kept the default dashboard response safe and not-wired until durable activity storage or a host adapter is explicitly added.
+  - No handoff invocation, journal writes, action execution, feedback delivery, frontend UI rendering, persistence, migrations, queues, retry handling, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload exposure, or money movement were added.
+  - Report: `reports/057-operator-issuance-activity-read-model-presentation-adoption.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -974,3 +980,8 @@ Current boundary:
 - Cockpit Mutation Wave 2F formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
 - Cockpit Mutation Wave 2F focused boundary/readiness result: `9 passed, 97 assertions`.
 - Cockpit Mutation Wave 2F full package Pest result: `1116 passed, 5 skipped, 6683 assertions`.
+- Cockpit Mutation Wave 2G focused red baseline: `4 failed, 39 passed`.
+- Cockpit Mutation Wave 2G focused read-model/route/docs result: `43 passed, 649 assertions`.
+- Cockpit Mutation Wave 2G formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
+- Cockpit Mutation Wave 2G focused boundary/readiness result: `7 passed, 101 assertions`.
+- Cockpit Mutation Wave 2G full package Pest result: `1119 passed, 5 skipped, 6726 assertions`.

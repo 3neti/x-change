@@ -194,6 +194,30 @@ it('exposes a read-only campaign cockpit read model prop on the dashboard route'
         ->assertJsonMissingPath('props.campaign_read_model.mutation_route');
 });
 
+it('exposes operator issuance activity presentation read models on the dashboard route', function () {
+    actingAsTestUser();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.dashboard'))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/cockpit/Dashboard')
+        ->assertJsonPath('props.operator_issuance_activity_read_model.schema', 'x-change.cockpit.operator-issuance-activity.v1')
+        ->assertJsonPath('props.operator_issuance_activity_read_model.status', 'not_wired')
+        ->assertJsonPath('props.operator_issuance_activity_read_model.authorized', false)
+        ->assertJsonPath('props.operator_issuance_activity_read_model.items', [])
+        ->assertJsonPath('props.operator_issuance_activity_read_model.presentations', [])
+        ->assertJsonPath('props.operator_issuance_activity_read_model.redactions.payloads', 'activity-summary-only')
+        ->assertJsonPath('props.operator_issuance_activity_read_model.redactions.lifecycle_truth', false)
+        ->assertJsonPath('props.operator_issuance_activity_read_model.redactions.writes_journal', false)
+        ->assertJsonPath('props.operator_issuance_activity_read_model.redactions.executes_actions', false)
+        ->assertJsonPath('props.operator_issuance_activity_read_model.redactions.sends_feedback', false)
+        ->assertJsonPath('props.operator_issuance_activity_read_model.redactions.moves_money', false)
+        ->assertJsonMissingPath('props.operator_issuance_activity_read_model.provider_payload')
+        ->assertJsonMissingPath('props.operator_issuance_activity_read_model.raw_payload')
+        ->assertJsonMissingPath('props.operator_issuance_activity_read_model.wallet')
+        ->assertJsonMissingPath('props.operator_issuance_activity_read_model.provider');
+});
+
 it('passes optional campaign context from the dashboard route to the read-only campaign adapter', function () {
     $operator = actingAsTestUser();
 
