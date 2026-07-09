@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Host Validation Checkpoint 1 — Read-Only Cockpit UI/UX Scenario Validation
+Current slice: Host Validation Checkpoint 2 — Manual Browser UI/UX Pass Checklist
 Status: Complete
 Last updated: 2026-07-09
 
@@ -188,6 +188,12 @@ Last updated: 2026-07-09
   - Raw payloads, provider payloads, recipient addresses, OTP/approval secrets, wallet-private fields, exception internals, action target URLs, and provider credentials remain hidden.
   - This checkpoint did not run lifecycle scenarios, submit claims, call providers, issue vouchers, mutate vouchers, write journal entries, execute actions, send feedback, retry deliveries, access wallets, or move money.
   - Report: `reports/033-read-only-ui-ux-scenario-validation.md`.
+- Completed Host Validation Checkpoint 2 — Manual Browser UI/UX Pass Checklist:
+  - Added a route-aware manual browser checklist for `/x/cockpit`, Quick Generate, Pay Code Explorer, Voucher Detail, and Distribution Workspace.
+  - The checklist defines scenario context, acceptance criteria, stop conditions, and no-side-effect boundaries for browser validation.
+  - The manual pass is scoped to `basic_cash` and `divisible_open_three_slices_enforced_interval` local scenario data.
+  - No browser automation dependencies, browser snapshots, routes, mutation endpoints, lifecycle scenario execution, claim submission, provider calls, journal writes, action execution, feedback delivery, wallet access, or money movement were added.
+  - Report: `reports/034-manual-browser-ui-ux-pass-checklist.md`.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
   - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`
