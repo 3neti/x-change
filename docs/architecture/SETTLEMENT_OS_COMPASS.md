@@ -846,6 +846,12 @@ ExecutionDriverContract
   - Allowed work remains limited to docs, test-only guards, visual evidence capture, browser-log review, route/read-model smoke tests, and no-side-effect UI copy clarification.
   - Prohibited work remains: mutation routes, issuance mutation, campaign mutation routes, request validation execution, payload persistence, Pay Code generation from Cockpit, provider calls, journal writes, action execution, feedback delivery, wallet access, and money movement.
   - Report: `../ui-cockpit/reports/039-blocked-gate-audit-allowed-work-boundary.md`.
+- x-change Host Validation Checkpoint 8 — Human Visual Evidence Intake Template:
+  - Added a single evidence intake record for resolving the read-only Cockpit validation gate.
+  - Human visual browser confirmation remains pending and is explicitly not claimed as complete.
+  - The intake requires reviewer, browser, auth, scenario, Pay Code, console, evidence references, per-surface results, and overall result.
+  - Stop conditions remain JavaScript errors, enabled dead navigation, mutation-capable controls, unsafe payload exposure, provider calls, journal writes, action execution, feedback delivery, voucher mutation, wallet access, and money movement.
+  - Report: `../ui-cockpit/reports/040-human-visual-evidence-intake-template.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -878,11 +884,12 @@ Recommended actions:
 5. Record findings against `reports/034-manual-browser-ui-ux-pass-checklist.md`.
 6. Update `reports/035-manual-browser-ui-ux-pass-execution-record.md` with human visual results.
 7. Update `reports/037-human-visual-confirmation-handoff.md` with pass/fail/blocked findings.
-8. If visual confirmation is pass or accepted blocked, update `reports/038-read-only-validation-gate-status.md` and `reports/039-blocked-gate-audit-allowed-work-boundary.md`.
-9. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
-10. Mutation route scaffolding remains unauthorized.
-11. Do not add campaign mutation endpoints, request validation execution, payload persistence, Pay Code generation, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls, campaign state mutation, money movement, raw payload exposure, or wallet access unless explicitly approved.
-12. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
+8. Record evidence in `reports/040-human-visual-evidence-intake-template.md`.
+9. If visual confirmation is pass or accepted blocked, update `reports/038-read-only-validation-gate-status.md` and `reports/039-blocked-gate-audit-allowed-work-boundary.md`.
+10. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
+11. Mutation route scaffolding remains unauthorized.
+12. Do not add campaign mutation endpoints, request validation execution, payload persistence, Pay Code generation, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls, campaign state mutation, money movement, raw payload exposure, or wallet access unless explicitly approved.
+13. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
 ## x-journal Initial Intent
 

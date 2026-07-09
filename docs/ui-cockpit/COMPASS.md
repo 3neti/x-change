@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Host Validation Checkpoint 7 — Blocked Gate Audit / Allowed Work Boundary
-Status: Gate re-audited; still blocked pending human visual browser confirmation
+Current slice: Host Validation Checkpoint 8 — Human Visual Evidence Intake Template
+Status: Evidence intake scaffolded; human visual browser confirmation still pending
 Last updated: 2026-07-09
 
 ## Completed
@@ -229,6 +229,12 @@ Last updated: 2026-07-09
   - Allowed work remains limited to docs, test-only guards, visual evidence capture, browser-log review, route/read-model smoke tests, and no-side-effect UI copy clarification.
   - Prohibited work remains: mutation routes, issuance mutation, campaign mutation routes, request validation execution, payload persistence, Pay Code generation from Cockpit, provider calls, journal writes, action execution, feedback delivery, wallet access, and money movement.
   - Report: `reports/039-blocked-gate-audit-allowed-work-boundary.md`.
+- Host Validation Checkpoint 8 — Human Visual Evidence Intake Template:
+  - Added a single evidence intake record for resolving the read-only Cockpit validation gate.
+  - Human visual browser confirmation remains pending and is explicitly not claimed as complete.
+  - The intake requires reviewer, browser, auth, scenario, Pay Code, console, evidence references, per-surface results, and overall result.
+  - Stop conditions remain JavaScript errors, enabled dead navigation, mutation-capable controls, unsafe payload exposure, provider calls, journal writes, action execution, feedback delivery, voucher mutation, wallet access, and money movement.
+  - Report: `reports/040-human-visual-evidence-intake-template.md`.
   - `resources/js/pages/x-change/cockpit/Dashboard.vue`
   - `resources/js/pages/x-change/cockpit/QuickGenerate.vue`
   - `resources/js/pages/x-change/cockpit/PayCodeExplorer.vue`
