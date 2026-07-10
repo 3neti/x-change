@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 3H — Durable Activity Database Repository Baseline
-Status: Implemented; opt-in database repository exists behind the activity repository contract while default runtime binding remains null
+Current slice: Cockpit Mutation Wave 3I — Durable Activity Recorder Opt-In Boundary
+Status: Implemented; opt-in database recorder exists while default Quick Generate activity recording remains null/non-persistent
 Last updated: 2026-07-10
 
 ## Completed
@@ -175,6 +175,16 @@ Last updated: 2026-07-10
   - No provider binding changes, recorder-to-database wiring, automatic Cockpit persistence, queue jobs, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, raw payload persistence, UI changes, mutation controls, or money movement were added.
   - No UI was changed in this slice.
   - Report: `reports/070-durable-activity-database-repository-baseline.md`.
+- Completed Cockpit Mutation Wave 3I — Durable Activity Recorder Opt-In Boundary:
+  - Added `DatabaseCockpitOperatorIssuanceActivityRecorder`.
+  - Implemented `CockpitOperatorIssuanceActivityRecorderContract` by converting `CockpitOperatorIssuanceActivityItemData` into `CockpitOperatorIssuanceActivityRecordData`.
+  - The recorder writes through `CockpitOperatorIssuanceActivityRepositoryContract`.
+  - The recorder hashes raw idempotency keys before repository handoff.
+  - Metadata still passes through the repository redaction boundary.
+  - Kept the default recorder binding on `NullCockpitOperatorIssuanceActivityRecorder`.
+  - No provider binding changes, default persistent recorder/repository binding, automatic Cockpit persistence, config opt-in, queue jobs, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, raw payload persistence, UI changes, mutation controls, or money movement were added.
+  - No UI was changed in this slice.
+  - Report: `reports/071-durable-activity-recorder-opt-in-boundary.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -783,14 +793,14 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 3I — Durable Activity Recorder Opt-In Boundary
+Cockpit Mutation Wave 3J — Durable Activity Runtime Opt-In Configuration
 ```
 
 Purpose:
 
-- add an opt-in recorder implementation that writes through `CockpitOperatorIssuanceActivityRepositoryContract`
-- keep the default recorder binding null unless explicitly configured
-- keep Quick Generate behavior unchanged by default
+- add config-driven opt-in seams for database repository and recorder
+- keep defaults null/non-persistent
+- prove Quick Generate can persist activity only when explicitly configured
 - preserve the current Cockpit UI unless a separate presentation-only UI slice is approved
 
 Completed host integration boundary:
@@ -1160,3 +1170,7 @@ Current boundary:
 - Cockpit Mutation Wave 3H focused repository result: `5 passed, 15 assertions`.
 - Cockpit Mutation Wave 3H related repository/model/schema/architecture result: `12 passed, 64 assertions`.
 - Cockpit Mutation Wave 3H scope result: opt-in repository only; no UI changed.
+- Cockpit Mutation Wave 3I focused red baseline: `1 failed, 1 passed, 1 assertion`.
+- Cockpit Mutation Wave 3I focused recorder result: `2 passed, 8 assertions`.
+- Cockpit Mutation Wave 3I related recorder/repository/model/schema/architecture result: `14 passed, 67 assertions`.
+- Cockpit Mutation Wave 3I scope result: opt-in recorder only; no UI changed.
