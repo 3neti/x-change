@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 3G — Durable Activity Model Baseline
-Status: Implemented; durable activity model exists with safe fillable attributes and casts while repository writes remain unwired
+Current slice: Cockpit Mutation Wave 3H — Durable Activity Database Repository Baseline
+Status: Implemented; opt-in database repository exists behind the activity repository contract while default runtime binding remains null
 Last updated: 2026-07-10
 
 ## Completed
@@ -165,6 +165,16 @@ Last updated: 2026-07-10
   - No database repositories, repository binding changes, database writes, queue jobs, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, raw payload persistence, UI changes, mutation controls, or money movement were added.
   - No UI was changed in this slice.
   - Report: `reports/069-durable-activity-model-baseline.md`.
+- Completed Cockpit Mutation Wave 3H — Durable Activity Database Repository Baseline:
+  - Added `DatabaseCockpitOperatorIssuanceActivityRepository`.
+  - Implemented `CockpitOperatorIssuanceActivityRepositoryContract` against `CockpitOperatorIssuanceActivity`.
+  - Applied `CockpitOperatorIssuanceActivityRedactionPolicyContract` and `CockpitOperatorIssuanceActivityRetentionPolicyContract` before persistence.
+  - Upserts duplicate `activity_id` records, retrieves by activity ID, and returns recent records newest-first with operator/correlation/code filters.
+  - Refuses to persist non-retainable activity records.
+  - Kept the default repository binding on `NullCockpitOperatorIssuanceActivityRepository`.
+  - No provider binding changes, recorder-to-database wiring, automatic Cockpit persistence, queue jobs, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, raw payload persistence, UI changes, mutation controls, or money movement were added.
+  - No UI was changed in this slice.
+  - Report: `reports/070-durable-activity-database-repository-baseline.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -773,14 +783,14 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 3H — Durable Activity Database Repository Baseline
+Cockpit Mutation Wave 3I — Durable Activity Recorder Opt-In Boundary
 ```
 
 Purpose:
 
-- add a database-backed repository implementation behind `CockpitOperatorIssuanceActivityRepositoryContract`
-- apply redaction and retention policies before persistence
-- keep the default binding on the null repository unless an explicit host/test binding opts in
+- add an opt-in recorder implementation that writes through `CockpitOperatorIssuanceActivityRepositoryContract`
+- keep the default recorder binding null unless explicitly configured
+- keep Quick Generate behavior unchanged by default
 - preserve the current Cockpit UI unless a separate presentation-only UI slice is approved
 
 Completed host integration boundary:
@@ -1146,3 +1156,7 @@ Current boundary:
 - Cockpit Mutation Wave 3G focused model result: `3 passed, 8 assertions`.
 - Cockpit Mutation Wave 3G related model/schema/architecture result: `7 passed, 53 assertions`.
 - Cockpit Mutation Wave 3G scope result: model only; no UI changed.
+- Cockpit Mutation Wave 3H focused red baseline: `4 failed, 1 passed, 1 assertion`.
+- Cockpit Mutation Wave 3H focused repository result: `5 passed, 15 assertions`.
+- Cockpit Mutation Wave 3H related repository/model/schema/architecture result: `12 passed, 64 assertions`.
+- Cockpit Mutation Wave 3H scope result: opt-in repository only; no UI changed.
