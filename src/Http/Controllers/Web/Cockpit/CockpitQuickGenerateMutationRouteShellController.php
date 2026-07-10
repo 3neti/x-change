@@ -8,10 +8,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Route;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
-use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityRecorderContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityItemData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Http\Requests\GeneratePayCodeRequest;
+use LBHurtado\XChange\Services\Cockpit\CockpitOperatorIssuanceActivityHandoffPipeline;
 use LBHurtado\XChange\Services\IdempotencyService;
 use Throwable;
 
@@ -21,7 +21,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         GeneratePayCodeRequest $request,
         GeneratePayCode $generatePayCode,
         IdempotencyService $idempotency,
-        CockpitOperatorIssuanceActivityRecorderContract $activityRecorder,
+        CockpitOperatorIssuanceActivityHandoffPipeline $operatorIssuanceActivityHandoffPipeline,
     ): JsonResponse {
         $payload = $request->validated();
         $payload = $this->normalizePayloadForIssuance($payload);
@@ -52,7 +52,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
 
         $result = $generatePayCode->handle($payload);
         $response = $this->responsePayload($request, $result, $key, false);
-        $this->recordOperatorIssuanceActivity($request, $response, $key, $activityRecorder);
+        $this->processOperatorIssuanceActivity($request, $response, $key, $operatorIssuanceActivityHandoffPipeline);
 
         if (is_string($key)) {
             $idempotency->remember($key, $payload, $response);
@@ -150,11 +150,11 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
     /**
      * @param  array<string, mixed>  $response
      */
-    protected function recordOperatorIssuanceActivity(
+    protected function processOperatorIssuanceActivity(
         GeneratePayCodeRequest $request,
         array $response,
         ?string $key,
-        CockpitOperatorIssuanceActivityRecorderContract $activityRecorder,
+        CockpitOperatorIssuanceActivityHandoffPipeline $operatorIssuanceActivityHandoffPipeline,
     ): void {
         $code = data_get($response, 'result.code');
 
@@ -168,7 +168,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         $detailHref = data_get($response, 'result.links.cockpit_detail');
 
         try {
-            $activityRecorder->record(new CockpitOperatorIssuanceActivityItemData(
+            $operatorIssuanceActivityHandoffPipeline->process(new CockpitOperatorIssuanceActivityItemData(
                 id: hash('sha256', implode('|', [
                     'cockpit.quick-generate',
                     $code,

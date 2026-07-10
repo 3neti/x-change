@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 4G — Durable Activity Journal Handoff Status Persistence Adapter
-Status: Implemented; an opt-in database status projector can persist journal handoff status while the default remains null/not-wired
+Current slice: Cockpit Mutation Wave 4H — Durable Activity Journal Handoff Invocation Pipeline
+Status: Implemented; Quick Generate fresh issuance can invoke the configured activity handoff pipeline while defaults remain null/not-wired
 Last updated: 2026-07-10
 
 ## Completed
@@ -302,6 +302,17 @@ Last updated: 2026-07-10
   - No default durable status persistence, invocation pipeline, queue job, retry orchestration, x-journal runtime call, journal write, UI changes, action execution, feedback delivery, provider call, wallet access, voucher execution change, lifecycle truth ownership, raw payload exposure, mutation controls, or money movement were added.
   - No UI was changed in this slice.
   - Report: `reports/083-durable-activity-journal-handoff-status-persistence-adapter.md`.
+- Completed Cockpit Mutation Wave 4H — Durable Activity Journal Handoff Invocation Pipeline:
+  - Added `CockpitOperatorIssuanceActivityHandoffPipeline`.
+  - Updated Quick Generate mutation processing to call `processOperatorIssuanceActivity`.
+  - The pipeline records durable activity first, invokes the configured journal handoff, and projects journal handoff status.
+  - Handoff invocation failures become `failed_non_blocking` projection results.
+  - Status projector failures remain non-blocking.
+  - Idempotency replays do not invoke handoff again.
+  - Default runtime remains null/not-wired unless hosts explicitly configure recorder, journal handoff, and status projector implementations.
+  - No default journal writes, default durable status persistence, queue job, retry orchestration, UI changes, action execution, feedback delivery, provider call, wallet access, voucher execution change, lifecycle truth ownership, raw payload exposure, new mutation controls, or new money movement were added.
+  - No UI was changed in this slice.
+  - Report: `reports/084-durable-activity-journal-handoff-invocation-pipeline.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -1333,3 +1344,10 @@ Current boundary:
 - Cockpit Mutation Wave 4G formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
 - Cockpit Mutation Wave 4G full package Pest result: `1192 passed, 5 skipped, 7458 assertions`.
 - Cockpit Mutation Wave 4G scope result: opt-in database status projector only; default runtime and UI unchanged.
+- Cockpit Mutation Wave 4H focused red baseline: `4 failed, 11 assertions`.
+- Cockpit Mutation Wave 4H focused pipeline result: `3 passed, 36 assertions`.
+- Cockpit Mutation Wave 4H focused pipeline/architecture result: `4 passed, 60 assertions`.
+- Cockpit Mutation Wave 4H related Wave 4 result: `31 passed, 317 assertions`.
+- Cockpit Mutation Wave 4H formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
+- Cockpit Mutation Wave 4H full package Pest result: `1196 passed, 5 skipped, 7518 assertions`.
+- Cockpit Mutation Wave 4H scope result: invocation pipeline only; default runtime and UI unchanged.
