@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 3B — Durable Activity DTO and Repository Contract
-Status: Implemented; durable activity DTO, repository contract, and null non-persistent repository binding exist without UI or persistence changes
+Current slice: Cockpit Mutation Wave 3C — In-Memory Durable Activity Repository Baseline
+Status: Implemented; in-memory repository exists for tests/explicit host wiring while default runtime binding remains null and non-persistent
 Last updated: 2026-07-10
 
 ## Completed
@@ -118,6 +118,14 @@ Last updated: 2026-07-10
   - No migrations, Eloquent models, database writes, queue jobs, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, raw payload persistence, UI changes, mutation controls, or money movement were added.
   - No UI was changed in this slice.
   - Report: `reports/064-durable-activity-dto-repository-contract.md`.
+- Completed Cockpit Mutation Wave 3C — In-Memory Durable Activity Repository Baseline:
+  - Added `InMemoryCockpitOperatorIssuanceActivityRepository`.
+  - The in-memory repository stores records in process memory, indexes by `activity_id`, overwrites duplicate activity IDs, retrieves by activity ID, and returns recent records newest-first by `occurred_at`.
+  - Recent queries support filtering by operator ID, correlation ID, and code, with requested limit caps.
+  - The default service-provider binding remains the null repository, so Cockpit runtime storage is still not durable unless explicitly wired by a host/test.
+  - No migrations, Eloquent models, database writes, queue jobs, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, raw payload persistence, UI changes, mutation controls, or money movement were added.
+  - No UI was changed in this slice.
+  - Report: `reports/065-in-memory-durable-activity-repository-baseline.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -726,13 +734,13 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 3C — In-Memory Durable Activity Repository Baseline
+Cockpit Mutation Wave 3D — Activity Redaction and Retention Policy Contracts
 ```
 
 Purpose:
 
-- add an in-memory repository implementation
-- test capped recent query behavior and lookup by activity ID
+- add redaction policy and retention policy contracts
+- add safe default/null policy implementations
 - do not add migrations, models, queues, or database writes
 - preserve the current Cockpit UI unless a separate presentation-only UI slice is approved
 
@@ -1078,3 +1086,7 @@ Current boundary:
 - Cockpit Mutation Wave 3B focused DTO/contract result: `3 passed, 14 assertions`.
 - Cockpit Mutation Wave 3B focused DTO/architecture result: `5 passed, 65 assertions`.
 - Cockpit Mutation Wave 3B scope result: no UI changed.
+- Cockpit Mutation Wave 3C focused red baseline: `3 failed`.
+- Cockpit Mutation Wave 3C focused repository result: `6 passed, 24 assertions`.
+- Cockpit Mutation Wave 3C focused repository/architecture result: `8 passed, 75 assertions`.
+- Cockpit Mutation Wave 3C scope result: no UI changed.
