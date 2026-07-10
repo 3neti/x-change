@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
+use LBHurtado\XChange\Data\DebitData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 
@@ -51,7 +52,7 @@ it('generates a pay code end to end and debits the issuer wallet', function () {
     expect((float) $result->wallet['balance_after'])->toBeLessThan($balanceBefore);
     expect((float) $wallet->balance)->toBe((float) $result->wallet['balance_after']);
 
-    expect($result->debit)->toBeInstanceOf(\LBHurtado\XChange\Data\DebitData::class);
+    expect($result->debit)->toBeInstanceOf(DebitData::class);
     expect($result->debit)->toHaveKey('id');
 
     $voucher = Voucher::query()->find($result->voucher_id);
@@ -60,6 +61,49 @@ it('generates a pay code end to end and debits the issuer wallet', function () {
     expect($voucher?->code)->toBe($result->code);
     expect($voucher?->instructions)->not->toBeNull();
     expect(data_get($voucher?->instructions, 'cash.amount'))->toBe(100.0);
+});
+
+it('characterizes the brick math float deprecation during voucher cash persistence', function () {
+    $user = actingAsTestUser(1_000_000);
+
+    $payload = array_merge(validPayCodePayload(25.0), [
+        'issuer_id' => $user->id,
+    ]);
+
+    $deprecations = [];
+
+    set_error_handler(function (int $severity, string $message, string $file, int $line) use (&$deprecations): bool {
+        if (! str_contains($message, 'Passing floats to BigNumber::of()')) {
+            return false;
+        }
+
+        $deprecations[] = [
+            'severity' => $severity,
+            'message' => $message,
+            'file' => $file,
+            'line' => $line,
+            'trace_files' => collect(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS))
+                ->pluck('file')
+                ->filter()
+                ->values()
+                ->all(),
+        ];
+
+        return true;
+    });
+
+    try {
+        $result = app(GeneratePayCode::class)->handle($payload);
+    } finally {
+        restore_error_handler();
+    }
+
+    expect($result)->toBeInstanceOf(GeneratePayCodeResultData::class)
+        ->and($result->amount)->toBe(25.0)
+        ->and($deprecations)->not->toBeEmpty()
+        ->and($deprecations[0]['message'])->toContain('Passing floats to BigNumber::of()')
+        ->and($deprecations[0]['trace_files'])->toContain('/Users/rli/PhpstormProjects/packages/cash/src/Models/Cash.php')
+        ->and($deprecations[0]['trace_files'])->toContain('/Users/rli/PhpstormProjects/packages/voucher/src/Pipelines/Voucher/PersistCash.php');
 });
 
 it('fails end to end when issuer wallet cannot afford pay code generation', function () {

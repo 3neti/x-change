@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 5E fixture cleanup decision and BrickMath cleanup planning recorded
+Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 5F BrickMath monetary normalization characterized
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Mutation Wave 5E fixture cleanup decision and BrickMath cleanup planning recorded | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Mutation Wave 5F BrickMath monetary normalization characterized | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1355,6 +1355,16 @@ ExecutionDriverContract
   - Identified candidate areas for characterization: `GeneratePayCode::requiredIssuanceAmount()`, `EstimatePayCodeCost::handle()`, `InstructionRevenueAllocatorService::allocate()`, `InstructionRevenueAllocatorService::buildTransferMeta()`, and `VoucherIssuancePayloadNormalizer`.
   - No committed `.env` changes, database writes, database deletes, source behavior, frontend behavior, host-published assets, routes, controllers, APIs, migrations, models, repository changes, recorder changes, production defaults, Quick Generate semantics, voucher execution changes, journal writes, action execution, feedback delivery, provider calls, wallet access, lifecycle truth ownership, raw payload exposure, retry controls, new mutation controls, campaign mutation, or money movement were added.
   - Report: `../ui-cockpit/reports/099-synthetic-fixture-local-cleanup-decision-brickmath-cleanup-planning.md`.
+- x-change Cockpit Mutation Wave 5F — BrickMath Monetary Normalization Characterization:
+  - Reproduced and characterized the existing Brick\Math warning during real `GeneratePayCode` voucher cash persistence.
+  - Confirmed the warning is `Passing floats to BigNumber::of()` and is emitted after x-change hands off to voucher.
+  - Identified the cross-package trace through `/Users/rli/PhpstormProjects/packages/voucher/src/Pipelines/Voucher/PersistCash.php` and `/Users/rli/PhpstormProjects/packages/cash/src/Models/Cash.php`.
+  - Confirmed x-change cannot fully eliminate the warning at its boundary because `LBHurtado\Voucher\Data\CashInstructionData::$amount` is typed as `float`.
+  - Added characterization coverage in `tests/Feature/Actions/GeneratePayCodeIntegrationTest.php`.
+  - Decided not to implement the Brick\Math fix inside x-change in this checkpoint.
+  - Recommended upstream coordination with cash and/or voucher before flipping the x-change characterization test to assert no deprecation.
+  - No committed `.env` changes, database deletes, source behavior changes beyond test coverage, frontend behavior, host-published assets, routes, controllers, APIs, migrations, models, repository changes, recorder changes, production defaults, Quick Generate semantics, voucher execution changes, journal writes, action execution, feedback delivery, provider calls, direct wallet access changes, lifecycle truth ownership, raw payload exposure, retry controls, new mutation controls, campaign mutation, or money movement were added.
+  - Report: `../ui-cockpit/reports/100-brickmath-monetary-normalization-characterization.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -1370,24 +1380,25 @@ x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 x-change Host Integration Slice 2 — Journal/action/feedback read-model hydration into Cockpit surfaces
 ```
 
-Completed through Host Integration Slice 2I and Cockpit Mutation Wave 5E.
+Completed through Host Integration Slice 2I and Cockpit Mutation Wave 5F.
 
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 5F — BrickMath Monetary Normalization Characterization.
+Cockpit Mutation Wave 5G — Cross-Package BrickMath Fix Instruction / Upstream Coordination.
 ```
 
 Recommended actions:
 
-1. Add failing/characterization coverage around the observed Brick\Math deprecation.
-2. Identify the exact call path emitting the warning.
-3. Fix monetary normalization only if the test proves the safe boundary.
-4. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
-5. Preserve Quick Generate behavior, voucher behavior, wallet behavior, durable activity behavior, and redaction behavior.
-6. Keep durable activity production default enablement deferred.
-7. Do not add campaign mutation endpoints, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls outside `GeneratePayCode`, campaign state mutation, direct money movement, raw payload exposure, direct wallet access, retry controls, or new mutation controls unless explicitly approved.
-8. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
+1. Draft exact instructions for the cash and voucher package agents.
+2. Require failing tests before any upstream production change.
+3. Require the relevant cash and voucher package suites to pass after the upstream fix.
+4. Return to x-change after the upstream fix and update the characterization test to assert no Brick\Math deprecation.
+5. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
+6. Preserve Quick Generate behavior, voucher behavior, wallet behavior, durable activity behavior, redaction behavior, and money movement semantics.
+7. Keep durable activity production default enablement deferred.
+8. Do not add campaign mutation endpoints, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls outside `GeneratePayCode`, campaign state mutation, direct money movement, raw payload exposure, direct wallet access, retry controls, or new mutation controls unless explicitly approved.
+9. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
 ## x-journal Initial Intent
 
