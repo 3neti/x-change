@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 5C — Real Durable Activity Human Visual Confirmation
-Status: Pass — accepted by human
+Current slice: Cockpit Mutation Wave 5D — Durable Activity Local Opt-In Closure / Cleanup Decision
+Status: Decision recorded
 Last updated: 2026-07-11
 
 ## Completed
@@ -452,6 +452,15 @@ Last updated: 2026-07-11
   - Confirmed no unsafe payloads, retry controls, or new mutation controls were reported visible.
   - No source behavior, frontend behavior, host-published assets, routes, controllers, APIs, migrations, models, repository changes, recorder changes, production default durable activity recording, new Quick Generate semantics, voucher execution changes, journal writes, action execution, feedback delivery, provider calls outside existing issuance, direct wallet access, direct wallet mutation, lifecycle truth ownership, raw payload exposure, retry controls, new mutation controls, campaign mutation, or money movement were added.
   - Report: `reports/097-real-durable-activity-human-visual-confirmation.md`.
+- Completed Cockpit Mutation Wave 5D — Durable Activity Local Opt-In Closure / Cleanup Decision:
+  - Decided to keep the local database repository and recorder enabled for continued manual Cockpit testing.
+  - Reaffirmed durable activity recording must not be enabled by default in production yet.
+  - Decided the synthetic `PC-LOCAL-DIAGNOSTIC` fixture is no longer required for the primary real-activity proof, but should not be removed inside the decision checkpoint.
+  - Decided to keep the real `MCPC` durable activity row for continued local visual verification.
+  - Decided to track the Brick\Math float deprecation as a separate cleanup slice.
+  - Documented rollback guidance for unsetting the local recorder and repository config values.
+  - No committed `.env` changes, database writes, database deletes, source behavior, frontend behavior, host-published assets, routes, controllers, APIs, migrations, models, repository changes, recorder changes, production defaults, Quick Generate semantics, voucher execution changes, journal writes, action execution, feedback delivery, provider calls, wallet access, lifecycle truth ownership, raw payload exposure, retry controls, new mutation controls, campaign mutation, or money movement were added.
+  - Report: `reports/098-durable-activity-local-opt-in-closure-cleanup-decision.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -1060,16 +1069,15 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 5D — Durable Activity Local Opt-In Closure / Cleanup Decision
+Cockpit Mutation Wave 5E — Synthetic Fixture Local Cleanup Decision / BrickMath Cleanup Planning
 ```
 
 Purpose:
 
-- decide whether to keep the local recorder enabled for continued manual testing
-- decide whether to remove the synthetic diagnostic fixture from the local database after visual verification
-- decide whether to create a separate cleanup slice for the Brick\Math float deprecation
-- do not production-enable durable activity recording by default yet
-- do not add journal writes, action execution, feedback delivery, retry controls, provider changes, wallet changes, or new mutation controls
+- decide whether to remove the `PC-LOCAL-DIAGNOSTIC` local fixture row now that real activity is visible
+- if approved, remove only the synthetic fixture row from the local database and document the command/query used
+- draft a separate tested cleanup plan for the Brick\Math float deprecation
+- keep durable activity production default enablement deferred
 
 Completed host integration boundary:
 
@@ -1571,3 +1579,10 @@ Current boundary:
 - Cockpit Mutation Wave 5C fixture comparison result: `Pay Code PC-LOCAL-DIAGNOSTIC issued` remains visible with synthetic recorded journal metadata.
 - Cockpit Mutation Wave 5C next checkpoint result: `Cockpit Mutation Wave 5D — Durable Activity Local Opt-In Closure / Cleanup Decision`.
 - Cockpit Mutation Wave 5C scope result: confirmation-only; no source behavior or UI changed.
+- Cockpit Mutation Wave 5D decision result: keep local repository and recorder enabled for continued manual Cockpit testing.
+- Cockpit Mutation Wave 5D production decision result: durable activity recording remains not enabled by default in production.
+- Cockpit Mutation Wave 5D fixture decision result: `PC-LOCAL-DIAGNOSTIC` is no longer required for the primary proof, but removal requires a separate explicit local cleanup checkpoint.
+- Cockpit Mutation Wave 5D real activity decision result: keep `MCPC` locally for continued visual verification.
+- Cockpit Mutation Wave 5D cleanup decision result: track the Brick\Math float deprecation as a separate cleanup slice.
+- Cockpit Mutation Wave 5D next checkpoint result: `Cockpit Mutation Wave 5E — Synthetic Fixture Local Cleanup Decision / BrickMath Cleanup Planning`.
+- Cockpit Mutation Wave 5D scope result: decision-only; no source behavior, UI, local config, or database state changed.
