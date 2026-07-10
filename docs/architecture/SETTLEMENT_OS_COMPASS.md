@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; cash/voucher upstream BrickMath fix complete
+Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; BrickMath warning resolved through x-change characterization flip
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cash/voucher upstream BrickMath fix complete; x-change characterization flip next | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | BrickMath warning resolved through x-change characterization flip | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1394,6 +1394,12 @@ ExecutionDriverContract
   - Voucher full suite result: `387 passed, 28 skipped, 1159 assertions`.
   - No x-change production behavior, Cockpit UI, host-published assets, routes, controllers, APIs, durable activity defaults, journal writes, action execution, feedback delivery, provider calls, direct wallet mutation, voucher execution behavior, campaign mutation, or money movement behavior was changed.
   - Report: `../ui-cockpit/reports/103-cash-voucher-upstream-brickmath-fix-execution.md`.
+- Retry Wave 5H — x-change Characterization Flip:
+  - Confirmed the old x-change characterization expectation failed after the upstream cash fix because the deprecation array was empty.
+  - Updated `GeneratePayCodeIntegrationTest` to assert no `Passing floats to BigNumber::of()` warning during real `GeneratePayCode`.
+  - Preserved the real issuance path and result amount assertion.
+  - No x-change production behavior, Cockpit UI, host-published assets, routes, controllers, APIs, durable activity defaults, journal writes, action execution, feedback delivery, provider calls, direct wallet mutation, voucher execution behavior, campaign mutation, or money movement behavior was changed.
+  - Report: `../ui-cockpit/reports/104-x-change-brickmath-characterization-flip.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -1409,22 +1415,24 @@ x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 x-change Host Integration Slice 2 — Journal/action/feedback read-model hydration into Cockpit surfaces
 ```
 
-Completed through Host Integration Slice 2I and Cash/Voucher Upstream BrickMath Fix Execution.
+Completed through Host Integration Slice 2I and Retry Wave 5H — x-change Characterization Flip.
 
 Recommended next checkpoint:
 
 ```text
-Retry Wave 5H — x-change Characterization Flip.
+Wave 5I — Real Activity Fixture Cleanup Decision / Execution.
 ```
 
 Recommended actions:
 
-1. Update x-change characterization coverage to assert no Brick\Math deprecation during real `GeneratePayCode`.
-2. Preserve Quick Generate behavior, voucher behavior, wallet behavior, durable activity behavior, redaction behavior, and money movement semantics.
-3. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
-4. Keep durable activity production default enablement deferred.
-5. Do not add campaign mutation endpoints, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls outside `GeneratePayCode`, campaign state mutation, direct money movement, raw payload exposure, direct wallet access, retry controls, or new mutation controls unless explicitly approved.
-6. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
+1. Decide whether to remove the synthetic `PC-LOCAL-DIAGNOSTIC` fixture row now that real `MCPC` activity exists.
+2. If removal is executed locally, record the exact command/query and verification.
+3. Note the visual effect: removing the fixture removes the synthetic diagnostic card from Cockpit.
+4. Preserve Quick Generate behavior, voucher behavior, wallet behavior, durable activity behavior, redaction behavior, and money movement semantics.
+5. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
+6. Keep durable activity production default enablement deferred.
+7. Do not add campaign mutation endpoints, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls outside `GeneratePayCode`, campaign state mutation, direct money movement, raw payload exposure, direct wallet access, retry controls, or new mutation controls unless explicitly approved.
+8. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
 ## x-journal Initial Intent
 

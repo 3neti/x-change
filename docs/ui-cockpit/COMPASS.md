@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cash/Voucher Upstream BrickMath Fix Execution
-Status: Completed upstream
+Current slice: Retry Wave 5H — x-change Characterization Flip
+Status: Completed
 Last updated: 2026-07-11
 
 ## Completed
@@ -516,6 +516,12 @@ Last updated: 2026-07-11
   - Next checkpoint is `Retry Wave 5H — x-change Characterization Flip`.
   - No x-change production behavior, Cockpit UI, host-published assets, routes, controllers, APIs, durable activity defaults, journal writes, action execution, feedback delivery, provider calls, direct wallet mutation, voucher execution behavior, campaign mutation, or money movement behavior was changed.
   - Report: `reports/103-cash-voucher-upstream-brickmath-fix-execution.md`.
+- Completed Retry Wave 5H — x-change Characterization Flip:
+  - Confirmed the old x-change characterization expectation failed after the upstream cash fix because the deprecation array was empty.
+  - Updated `GeneratePayCodeIntegrationTest` to assert no `Passing floats to BigNumber::of()` warning during real `GeneratePayCode`.
+  - Preserved the real issuance path and result amount assertion.
+  - No x-change production behavior, Cockpit UI, host-published assets, routes, controllers, APIs, durable activity defaults, journal writes, action execution, feedback delivery, provider calls, direct wallet mutation, voucher execution behavior, campaign mutation, or money movement behavior was changed.
+  - Report: `reports/104-x-change-brickmath-characterization-flip.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -1124,13 +1130,14 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Retry Wave 5H — x-change Characterization Flip
+Wave 5I — Real Activity Fixture Cleanup Decision / Execution
 ```
 
 Purpose:
 
-- update x-change characterization coverage to assert no Brick\Math warning during real `GeneratePayCode`
-- preserve Quick Generate behavior, wallet debit behavior, voucher instruction amount, durable activity behavior, and redaction behavior
+- decide whether to remove the synthetic `PC-LOCAL-DIAGNOSTIC` fixture row now that real `MCPC` activity exists
+- if removal is executed locally, record the exact command/query and verification
+- note the visual effect: removing the fixture removes the synthetic diagnostic card from Cockpit
 - preserve Quick Generate behavior, voucher behavior, wallet behavior, durable activity behavior, redaction behavior, and money movement semantics
 
 Completed host integration boundary:
@@ -1674,3 +1681,6 @@ Current boundary:
 - Cash/Voucher Upstream BrickMath Fix Execution voucher regression result: `29 passed, 96 assertions`.
 - Cash/Voucher Upstream BrickMath Fix Execution voucher full suite result: `387 passed, 28 skipped, 1159 assertions`.
 - Cash/Voucher Upstream BrickMath Fix Execution next checkpoint result: `Retry Wave 5H — x-change Characterization Flip`.
+- Retry Wave 5H red transition result: old x-change characterization failed with `Expecting [] not to be empty.`
+- Retry Wave 5H test flip result: `GeneratePayCodeIntegrationTest` now asserts `deprecations` is empty.
+- Retry Wave 5H next checkpoint result: `Wave 5I — Real Activity Fixture Cleanup Decision / Execution`.

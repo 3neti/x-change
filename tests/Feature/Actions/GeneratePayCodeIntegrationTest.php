@@ -63,7 +63,7 @@ it('generates a pay code end to end and debits the issuer wallet', function () {
     expect(data_get($voucher?->instructions, 'cash.amount'))->toBe(100.0);
 });
 
-it('characterizes the brick math float deprecation during voucher cash persistence', function () {
+it('does not emit the brick math float deprecation during voucher cash persistence', function () {
     $user = actingAsTestUser(1_000_000);
 
     $payload = array_merge(validPayCodePayload(25.0), [
@@ -100,10 +100,7 @@ it('characterizes the brick math float deprecation during voucher cash persisten
 
     expect($result)->toBeInstanceOf(GeneratePayCodeResultData::class)
         ->and($result->amount)->toBe(25.0)
-        ->and($deprecations)->not->toBeEmpty()
-        ->and($deprecations[0]['message'])->toContain('Passing floats to BigNumber::of()')
-        ->and($deprecations[0]['trace_files'])->toContain('/Users/rli/PhpstormProjects/packages/cash/src/Models/Cash.php')
-        ->and($deprecations[0]['trace_files'])->toContain('/Users/rli/PhpstormProjects/packages/voucher/src/Pipelines/Voucher/PersistCash.php');
+        ->and($deprecations)->toBeEmpty();
 });
 
 it('fails end to end when issuer wallet cannot afford pay code generation', function () {
