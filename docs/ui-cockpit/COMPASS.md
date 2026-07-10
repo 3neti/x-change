@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 5F — BrickMath Monetary Normalization Characterization
-Status: Characterized
+Current slice: Cockpit Mutation Wave 5G — Cross-Package BrickMath Fix Instruction / Upstream Coordination
+Status: Instruction drafted
 Last updated: 2026-07-11
 
 ## Completed
@@ -482,6 +482,16 @@ Last updated: 2026-07-11
   - Recommended the next checkpoint coordinate the upstream fix in cash and/or voucher, then return to x-change to flip the characterization test to assert the warning is gone.
   - No committed `.env` changes, database deletes, source behavior changes beyond test coverage, frontend behavior, host-published assets, routes, controllers, APIs, migrations, models, repository changes, recorder changes, production defaults, Quick Generate semantics, voucher execution changes, journal writes, action execution, feedback delivery, provider calls, direct wallet access changes, lifecycle truth ownership, raw payload exposure, retry controls, new mutation controls, campaign mutation, or money movement were added.
   - Report: `reports/100-brickmath-monetary-normalization-characterization.md`.
+- Completed Cockpit Mutation Wave 5G — Cross-Package BrickMath Fix Instruction / Upstream Coordination:
+  - Drafted exact upstream instructions for the cash package agent.
+  - Drafted exact upstream instructions for the voucher package agent.
+  - Required failing or characterization tests before upstream production changes.
+  - Required cash verification around float input, string decimal input, stored minor amount, getter behavior, and full package tests.
+  - Required voucher verification around voucher generation with float `cash.amount`, persisted Cash amount, public instruction semantics, redemption behavior, legacy compatibility, and execution engine behavior.
+  - Defined the x-change return criteria: flip the Wave 5F characterization test to assert no `Passing floats to BigNumber::of()` warning after upstream fixes are applied.
+  - Reaffirmed no cash or voucher package edits should be made inside the x-change checkpoint.
+  - No committed `.env` changes, database writes, database deletes, x-change production behavior, frontend behavior, host-published assets, routes, controllers, APIs, migrations, models, repository changes, recorder changes, production defaults, Quick Generate semantics, voucher execution changes, journal writes, action execution, feedback delivery, provider calls, direct wallet access changes, lifecycle truth ownership, raw payload exposure, retry controls, new mutation controls, campaign mutation, or money movement were added.
+  - Report: `reports/101-cross-package-brickmath-fix-instruction-upstream-coordination.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -1090,15 +1100,14 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 5G — Cross-Package BrickMath Fix Instruction / Upstream Coordination
+Cockpit Mutation Wave 5H — Upstream BrickMath Fix Intake / x-change Characterization Flip
 ```
 
 Purpose:
 
-- draft exact upstream instructions for the cash and voucher package agents
-- require failing tests before any cash or voucher production change
-- require the relevant cash and voucher package suites to pass after the upstream fix
-- return to x-change after the upstream fix and update the characterization test to assert no Brick\Math deprecation
+- inspect cash and voucher package fix reports/commits after upstream work is complete
+- verify the relevant cash and voucher tests passed
+- update x-change characterization coverage to assert no Brick\Math deprecation during real `GeneratePayCode`
 - preserve Quick Generate behavior, voucher behavior, wallet behavior, durable activity behavior, redaction behavior, and money movement semantics
 
 Completed host integration boundary:
@@ -1621,3 +1630,9 @@ Current boundary:
 - Cockpit Mutation Wave 5F focused characterization result: `1 passed, 6 assertions`.
 - Cockpit Mutation Wave 5F next checkpoint result: `Cockpit Mutation Wave 5G — Cross-Package BrickMath Fix Instruction / Upstream Coordination`.
 - Cockpit Mutation Wave 5F scope result: characterization test and documentation only; no source behavior, UI, local config, or database state changed.
+- Cockpit Mutation Wave 5G instruction result: upstream cash and voucher package instructions drafted.
+- Cockpit Mutation Wave 5G cash instruction result: normalize numeric floats before `Money::of()` at the cash monetary persistence boundary and prove stored amounts are unchanged.
+- Cockpit Mutation Wave 5G voucher instruction result: verify voucher generation no longer emits the warning after cash fix, and only normalize in `PersistCash` if cash fix is insufficient.
+- Cockpit Mutation Wave 5G x-change return result: after upstream fixes, flip the characterization test to assert no `Passing floats to BigNumber::of()` warning.
+- Cockpit Mutation Wave 5G next checkpoint result: `Cockpit Mutation Wave 5H — Upstream BrickMath Fix Intake / x-change Characterization Flip`.
+- Cockpit Mutation Wave 5G scope result: instruction/documentation and guard test only; no cash, voucher, x-change production behavior, UI, local config, or database state changed.
