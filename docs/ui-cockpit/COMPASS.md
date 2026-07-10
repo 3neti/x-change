@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 2K — Activity UI Manual Browser Verification
-Status: Blocked for browser visual confirmation; programmatic publish/build checks passed, but no visual pass is claimed
+Current slice: Cockpit Mutation Wave 2L — Human Activity UI Visual Confirmation Record
+Status: Passed by human visual confirmation; dashboard activity UI is visible and read-only in its current not-wired state
 Last updated: 2026-07-10
 
 ## Completed
@@ -94,6 +94,13 @@ Last updated: 2026-07-10
   - Recorded human verification instructions for the dashboard activity panel.
   - No browser automation dependencies, screenshots, new routes/controllers/APIs, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload exposure, or money movement were added.
   - Report: `reports/061-activity-ui-manual-browser-verification.md`.
+- Completed Cockpit Mutation Wave 2L — Human Activity UI Visual Confirmation Record:
+  - Recorded human visual confirmation for `http://x-change-sandbox.test/x/cockpit`.
+  - Human reviewer confirmed the visible dashboard content is read-only.
+  - Confirmed the Operator Issuance Activity panel appears with `Quick Generate evidence`, `presentation-only`, and the safe `No operator issuance activity available` not-wired state.
+  - Confirmed visible dashboard sections include Journal Evidence, Action CTAs, Feedback Deliveries, Redemption Pipeline, Risk and Expiry, and Recent Activity as read-only/not-wired/deferred summaries.
+  - No durable activity storage, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload exposure, or money movement were authorized or added.
+  - Report: `reports/062-human-activity-ui-visual-confirmation-record.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -702,15 +709,15 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 2L — Human Activity UI Visual Confirmation Record
+Cockpit Mutation Wave 3A — Durable Activity Storage Boundary Plan
 ```
 
 Purpose:
 
-- record the human/manual visual outcome for `http://x-change-sandbox.test/x/cockpit`
-- confirm whether the operator issuance activity panel is visible and understandable
-- confirm whether the panel remains read-only with no journal/action/feedback execution controls
-- update the visual gate as pass or blocked based on human evidence
+- plan durable operator issuance activity storage without implementing persistence yet
+- define redaction, retention, correlation, and read-model ownership
+- keep journal/action/feedback handoffs explicit boundaries
+- require approval before migrations, models, repositories, queues, or durable writes
 
 Completed host integration boundary:
 
@@ -1046,3 +1053,5 @@ Current boundary:
 - Cockpit Mutation Wave 2K host build result: `npm run build` passed.
 - Cockpit Mutation Wave 2K browser result: blocked before page navigation because browser runtime was unavailable.
 - Cockpit Mutation Wave 2K focused documentation/readiness result: `2 passed, 45 assertions`.
+- Cockpit Mutation Wave 2L human visual result: `Pass — accepted by human`.
+- Cockpit Mutation Wave 2L focused documentation/readiness result: `2 passed, 47 assertions`.
