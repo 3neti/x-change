@@ -1,0 +1,13 @@
+<?php
+
+declare(strict_types=1);
+
+namespace LBHurtado\XChange\Contracts;
+
+use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityJournalHandoffResultData;
+use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityJournalHandoffStatusProjectionData;
+
+interface CockpitOperatorIssuanceActivityJournalHandoffStatusProjectorContract
+{
+    public function project(CockpitOperatorIssuanceActivityJournalHandoffResultData $result): CockpitOperatorIssuanceActivityJournalHandoffStatusProjectionData;
+}

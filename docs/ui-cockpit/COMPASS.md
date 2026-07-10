@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 4E — Durable Activity Journal Handoff Status Persistence Decision
-Status: Implemented; journal handoff status persistence is approved only through a future explicit projector slice, not inside the x-journal adapter
+Current slice: Cockpit Mutation Wave 4F — Durable Activity Journal Handoff Status Projector Contract
+Status: Implemented; a null status projector contract exists and does not persist durable activity status yet
 Last updated: 2026-07-10
 
 ## Completed
@@ -281,6 +281,16 @@ Last updated: 2026-07-10
   - No production code changes, repository update method, durable activity row mutation, migration change, UI changes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload exposure, mutation controls, or money movement were added.
   - No UI was changed in this slice.
   - Report: `reports/081-durable-activity-journal-handoff-status-persistence-decision.md`.
+- Completed Cockpit Mutation Wave 4F — Durable Activity Journal Handoff Status Projector Contract:
+  - Added `CockpitOperatorIssuanceActivityJournalHandoffStatusProjectorContract`.
+  - Added `CockpitOperatorIssuanceActivityJournalHandoffStatusProjectionData`.
+  - Added `NullCockpitOperatorIssuanceActivityJournalHandoffStatusProjector`.
+  - Bound the projector contract to the null projector by default.
+  - The null projector maps `CockpitOperatorIssuanceActivityJournalHandoffResultData` into status projection facts with `persists_status: false`.
+  - Proved durable activity rows are not mutated by the null projector.
+  - No durable activity row mutation, repository update method, migration change, x-journal call, journal write, UI changes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload exposure, mutation controls, or money movement were added.
+  - No UI was changed in this slice.
+  - Report: `reports/082-durable-activity-journal-handoff-status-projector-contract.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -889,16 +899,16 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 4E — Durable Activity Journal Handoff Status Persistence Decision
+Cockpit Mutation Wave 4G — Durable Activity Journal Handoff Status Persistence Adapter
 ```
 
 Purpose:
 
-- decide whether and when durable activity rows should persist journal handoff status
-- define retry and reconciliation semantics for failed handoff attempts
-- keep the default runtime safe and opt-in
-- prove duplicate/idempotent journal inputs do not duplicate records
-- do not update durable activity handoff status yet
+- add an opt-in status persistence adapter behind the projector contract
+- update only journal handoff status and safe handoff metadata
+- preserve action and feedback handoff status fields
+- no-op when the durable activity row is missing
+- keep status persistence non-blocking
 
 Completed host integration boundary:
 
@@ -1299,3 +1309,9 @@ Current boundary:
 - Cockpit Mutation Wave 4E related Wave 4 result: `16 passed, 174 assertions`.
 - Cockpit Mutation Wave 4E full package Pest result: `1181 passed, 5 skipped, 7375 assertions`.
 - Cockpit Mutation Wave 4E scope result: decision-only; no production code and no UI changed.
+- Cockpit Mutation Wave 4F focused red baseline: `5 failed, 1 assertion`.
+- Cockpit Mutation Wave 4F focused projector result: `4 passed, 16 assertions`.
+- Cockpit Mutation Wave 4F focused contract result: `5 passed, 36 assertions`.
+- Cockpit Mutation Wave 4F related Wave 4 result: `21 passed, 210 assertions`.
+- Cockpit Mutation Wave 4F full package Pest result: `1186 passed, 5 skipped, 7411 assertions`.
+- Cockpit Mutation Wave 4F scope result: contract/null projector only; no durable status persistence and no UI changed.

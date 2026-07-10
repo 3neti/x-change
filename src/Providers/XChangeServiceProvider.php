@@ -60,6 +60,7 @@ use LBHurtado\XChange\Contracts\ClaimOtpVerificationContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityActionHandoffContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityFeedbackHandoffContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityJournalHandoffContract;
+use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityJournalHandoffStatusProjectorContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityPresenterContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityRecorderContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityRedactionPolicyContract;
@@ -131,6 +132,7 @@ use LBHurtado\XChange\Services\Cockpit\DurableCockpitOperatorIssuanceActivityRea
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityActionHandoff;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityFeedbackHandoff;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityJournalHandoff;
+use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityJournalHandoffStatusProjector;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityRecorder;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityRepository;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitReadModelProvider;
@@ -309,6 +311,10 @@ class XChangeServiceProvider extends ServiceProvider
                 ? $service
                 : NullCockpitOperatorIssuanceActivityJournalHandoff::class);
         });
+        $this->app->bind(
+            CockpitOperatorIssuanceActivityJournalHandoffStatusProjectorContract::class,
+            NullCockpitOperatorIssuanceActivityJournalHandoffStatusProjector::class,
+        );
         $this->app->bind(
             CockpitOperatorIssuanceActivityActionHandoffContract::class,
             NullCockpitOperatorIssuanceActivityActionHandoff::class,
