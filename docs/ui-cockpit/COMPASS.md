@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Retry Wave 5H — x-change Characterization Flip
-Status: Completed
+Current slice: Wave 5I — Real Activity Fixture Cleanup Decision / Execution
+Status: Completed locally
 Last updated: 2026-07-11
 
 ## Completed
@@ -522,6 +522,13 @@ Last updated: 2026-07-11
   - Preserved the real issuance path and result amount assertion.
   - No x-change production behavior, Cockpit UI, host-published assets, routes, controllers, APIs, durable activity defaults, journal writes, action execution, feedback delivery, provider calls, direct wallet mutation, voucher execution behavior, campaign mutation, or money movement behavior was changed.
   - Report: `reports/104-x-change-brickmath-characterization-flip.md`.
+- Completed Wave 5I — Real Activity Fixture Cleanup Decision / Execution:
+  - Deleted only the synthetic `PC-LOCAL-DIAGNOSTIC` fixture row from the local durable activity table.
+  - Verified `fixture_count: 0`.
+  - Verified the real `MCPC` durable activity remains for operator `5`.
+  - Expected UI effect: the synthetic diagnostic card disappears from Cockpit, while the real `MCPC` activity remains visible if durable activity config stays enabled.
+  - No source behavior, Cockpit UI code, host-published assets, routes, controllers, APIs, durable activity defaults, journal writes, action execution, feedback delivery, provider calls, direct wallet mutation, voucher execution behavior, campaign mutation, or money movement behavior was changed.
+  - Report: `reports/105-real-activity-fixture-cleanup-execution.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -1130,14 +1137,14 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Wave 5I — Real Activity Fixture Cleanup Decision / Execution
+Wave 5J — Durable Activity Local Opt-In Closure
 ```
 
 Purpose:
 
-- decide whether to remove the synthetic `PC-LOCAL-DIAGNOSTIC` fixture row now that real `MCPC` activity exists
-- if removal is executed locally, record the exact command/query and verification
-- note the visual effect: removing the fixture removes the synthetic diagnostic card from Cockpit
+- decide whether to keep or disable the local durable activity repository/recorder `.env` opt-in
+- record the expected UI effect of the decision
+- preserve the real `MCPC` row unless explicitly cleaning local verification data
 - preserve Quick Generate behavior, voucher behavior, wallet behavior, durable activity behavior, redaction behavior, and money movement semantics
 
 Completed host integration boundary:
@@ -1684,3 +1691,8 @@ Current boundary:
 - Retry Wave 5H red transition result: old x-change characterization failed with `Expecting [] not to be empty.`
 - Retry Wave 5H test flip result: `GeneratePayCodeIntegrationTest` now asserts `deprecations` is empty.
 - Retry Wave 5H next checkpoint result: `Wave 5I — Real Activity Fixture Cleanup Decision / Execution`.
+- Wave 5I fixture cleanup result: deleted the synthetic `PC-LOCAL-DIAGNOSTIC` local fixture row.
+- Wave 5I fixture verification result: `fixture_count: 0`.
+- Wave 5I real activity verification result: `MCPC` remains in durable activity storage for operator `5`.
+- Wave 5I expected UI effect: synthetic diagnostic card disappears; real `MCPC` activity remains visible while local durable activity config is enabled.
+- Wave 5I next checkpoint result: `Wave 5J — Durable Activity Local Opt-In Closure`.
