@@ -267,7 +267,6 @@ describe('Cockpit Quick Generate foundation', () => {
 
         expect(router.reload).toHaveBeenCalledWith({
             only: ['quick_generate_read_model'],
-            preserveScroll: true,
         });
 
         vi.unstubAllGlobals();

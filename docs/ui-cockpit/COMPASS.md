@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 2I — Published Asset Sync / Drift Guard Validation
-Status: Implemented; published asset drift guard correctly reports stale/missing host mirrors after package UI changes
+Current slice: Cockpit Mutation Wave 2J — Activity UI Host Publish Verification
+Status: Implemented; package-owned Cockpit activity UI publishes cleanly into the host app and the drift guard passes
 Last updated: 2026-07-10
 
 ## Completed
@@ -79,6 +79,14 @@ Last updated: 2026-07-10
   - Detected missing `components/CockpitOperatorIssuanceActivityPanel.vue` and stale `pages/Dashboard.vue` / `types.ts` host mirrors.
   - No host mirror files were staged, committed, or manually edited.
   - Report: `reports/059-published-asset-sync-drift-validation.md`.
+- Completed Cockpit Mutation Wave 2J — Activity UI Host Publish Verification:
+  - Ran `php artisan x-change:install --force` from the host app root to publish package-owned Cockpit assets.
+  - Re-ran `php artisan x-change:doctor --assets --json` and confirmed the published Cockpit assets are clean: checked 55, ok 55, stale 0, missing 0, extra 0.
+  - Confirmed `components/CockpitOperatorIssuanceActivityPanel.vue` is now present in the host mirror and matches package source.
+  - Fixed the package-owned `CockpitQuickGenerateSubmitPanel.vue` partial reload to use the installed Inertia v3 `router.reload()` option shape.
+  - Confirmed the host `npm run build` passes after publishing.
+  - No manual host mirror edits, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload exposure, or money movement were added.
+  - Report: `reports/060-activity-ui-host-publish-verification.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -684,6 +692,19 @@ No implementation slice is in progress.
 
 ## Next
 
+Recommended next checkpoint:
+
+```text
+Cockpit Mutation Wave 2K — Activity UI Manual Browser Verification
+```
+
+Purpose:
+
+- verify the published dashboard activity panel visually in the host app
+- confirm the operator sees activity facts without mutation controls
+- confirm no journal/action/feedback handoff buttons or hidden side-effect controls are exposed
+- record human/browser evidence before adding any deeper activity storage or handoff execution
+
 Completed host integration boundary:
 
 Current boundary:
@@ -1008,3 +1029,8 @@ Current boundary:
 - Cockpit Mutation Wave 2I host drift guard result: `checked 55, ok 52, stale 2, missing 1, extra 0`.
 - Cockpit Mutation Wave 2I focused documentation/readiness result: `3 passed, 43 assertions`.
 - Cockpit Mutation Wave 2I formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
+- Cockpit Mutation Wave 2J host install result: `php artisan x-change:install --force` passed.
+- Cockpit Mutation Wave 2J host drift guard result: `checked 55, ok 55, stale 0, missing 0, extra 0`.
+- Cockpit Mutation Wave 2J host build result: `npm run build` passed.
+- Cockpit Mutation Wave 2J package frontend result: `74 passed, 476 tests`.
+- Cockpit Mutation Wave 2J focused documentation/readiness result: `2 passed, 37 assertions`.

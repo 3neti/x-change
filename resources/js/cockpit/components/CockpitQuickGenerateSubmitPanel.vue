@@ -123,7 +123,6 @@ function refreshReadModel(): void {
 
     router.reload({
         only: ['quick_generate_read_model'],
-        preserveScroll: true,
     });
 }
 

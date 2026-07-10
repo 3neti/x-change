@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 2I published asset drift validation implemented
+Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 2J activity UI host publish verification implemented
 Last updated: 2026-07-10
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-10
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Mutation Wave 2I published asset drift validation implemented | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Mutation Wave 2J activity UI host publish verification implemented | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -974,6 +974,13 @@ ExecutionDriverContract
   - Host mirror drift is limited to the new activity panel plus dashboard/types updates.
   - No host mirror files were staged, committed, or manually edited.
   - Report: `../ui-cockpit/reports/059-published-asset-sync-drift-validation.md`.
+- x-change Cockpit Mutation Wave 2J — Activity UI Host Publish Verification:
+  - Ran `php artisan x-change:install --force` from the host app root to publish package-owned Cockpit assets.
+  - Confirmed `php artisan x-change:doctor --assets --json` reports clean published assets: checked 55, ok 55, stale 0, missing 0, extra 0.
+  - Confirmed the host app `npm run build` passes with the published Cockpit activity UI.
+  - Fixed the package-owned Quick Generate read-model refresh to use the installed Inertia v3 `router.reload()` option shape.
+  - No manual host mirror edits, new routes/controllers/APIs, journal writes, action execution, feedback delivery, persistence, migrations, queues, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload exposure, or money movement were added.
+  - Report: `../ui-cockpit/reports/060-activity-ui-host-publish-verification.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -989,12 +996,12 @@ x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 x-change Host Integration Slice 2 — Journal/action/feedback read-model hydration into Cockpit surfaces
 ```
 
-Completed through Host Integration Slice 2I.
+Completed through Host Integration Slice 2I and Cockpit Mutation Wave 2J.
 
 Recommended next checkpoint:
 
 ```text
-Approve or revise Cockpit Mutation Wave 2J — Activity UI Host Publish Verification.
+Cockpit Mutation Wave 2K — Activity UI Manual Browser Verification.
 ```
 
 Recommended actions:
