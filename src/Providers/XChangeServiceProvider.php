@@ -33,6 +33,7 @@ use LBHurtado\XChange\Actions\Auth\CreateNewMobileFirstUser;
 use LBHurtado\XChange\Console\Commands\Claim\LoadPayCodeRedemptionCompletionContextCommand;
 use LBHurtado\XChange\Console\Commands\Claim\PreparePayCodeRedemptionFlowCommand;
 use LBHurtado\XChange\Console\Commands\Claim\SubmitPayCodeClaimCommand;
+use LBHurtado\XChange\Console\Commands\Cockpit\SeedCockpitDiagnosticActivityCommand;
 use LBHurtado\XChange\Console\Commands\Disbursement\CheckDisbursementStatusCommand;
 use LBHurtado\XChange\Console\Commands\DoctorXChangeCommand;
 use LBHurtado\XChange\Console\Commands\InstallXChangeCommand;
@@ -633,6 +634,7 @@ class XChangeServiceProvider extends ServiceProvider
                 RunLifecycleScenarioGroupCommand::class,
                 InstallXChangeCommand::class,
                 DoctorXChangeCommand::class,
+                SeedCockpitDiagnosticActivityCommand::class,
             ]);
         }
 
