@@ -45,7 +45,7 @@ x-change.cockpit.operator_issuance_activity.repository  LBHurtado\XChange\Servic
 Fixture re-seed:
 
 ```text
-php artisan x-change:cockpit:seed-diagnostic-activity --local-only --json
+php artisan x-change:cockpit:seed-diagnostic-activity --local-only --operator-id=5 --json
 ```
 
 Result:
@@ -55,6 +55,7 @@ Result:
   "seeded": true,
   "local_only": true,
   "activity_id": "fixture-cockpit-journal-diagnostic-activity",
+  "operator_id": "5",
   "code": "PC-LOCAL-DIAGNOSTIC",
   "journal_handoff_status": "recorded",
   "dashboard_ready": true,
@@ -79,6 +80,7 @@ The seeded fixture row exists with:
 
 ```text
 activity_id: fixture-cockpit-journal-diagnostic-activity
+actor_id: 5
 source: cockpit.local-diagnostic-fixture
 subject_reference: PC-LOCAL-DIAGNOSTIC
 journal_handoff_status: recorded
@@ -91,6 +93,38 @@ provider_payloads_exposed: false
 wallet_data_exposed: false
 recipient_secrets_exposed: false
 ```
+
+## Operator Scope Correction
+
+Human browser verification after the initial 4Q enablement showed the Cockpit dashboard still rendered:
+
+```text
+No durable operator issuance activity available
+Durable activity storage is configured, but no matching activity has been recorded yet.
+```
+
+Root cause:
+
+```text
+The local fixture was seeded with actor_id `local-fixture-operator`, while the authenticated local operator `admin@disburse.cash` resolves to operator id `5`.
+```
+
+Cockpit intentionally filters operator issuance activity by the authenticated operator id. The fix was to make the local fixture command operator-scoped:
+
+```text
+php artisan x-change:cockpit:seed-diagnostic-activity --local-only --operator-id=5 --json
+```
+
+Verification:
+
+```text
+activity_id: fixture-cockpit-journal-diagnostic-activity
+actor_id: 5
+subject_reference: PC-LOCAL-DIAGNOSTIC
+journal_handoff_status: recorded
+```
+
+This was a fixture/testability correction only. It did not change dashboard filtering semantics, production defaults, repository behavior, issuer activity recording, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher mutation, raw payload exposure, or money movement.
 
 ## Decision
 

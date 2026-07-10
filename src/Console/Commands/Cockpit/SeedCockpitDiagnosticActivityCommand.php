@@ -18,6 +18,7 @@ class SeedCockpitDiagnosticActivityCommand extends Command
         {--local-only : Required safety flag for local diagnostic fixture seeding}
         {--activity-id=fixture-cockpit-journal-diagnostic-activity : Synthetic activity id}
         {--code=PC-LOCAL-DIAGNOSTIC : Synthetic Pay Code reference}
+        {--operator-id=local-fixture-operator : Synthetic/operator id that should see the fixture in Cockpit}
         {--json : Output JSON}
         {--pretty : Pretty-print JSON output}';
 
@@ -43,6 +44,7 @@ class SeedCockpitDiagnosticActivityCommand extends Command
             'seeded' => true,
             'local_only' => true,
             'activity_id' => $record->activity_id,
+            'operator_id' => $record->actor_id,
             'code' => $record->subject_reference,
             'journal_handoff_status' => $record->journal_handoff_status,
             'dashboard_ready' => $this->dashboardReady(),
@@ -71,10 +73,11 @@ class SeedCockpitDiagnosticActivityCommand extends Command
     {
         $activityId = $this->nonEmptyOption('activity-id', 'fixture-cockpit-journal-diagnostic-activity');
         $code = $this->nonEmptyOption('code', 'PC-LOCAL-DIAGNOSTIC');
+        $operatorId = $this->nonEmptyOption('operator-id', 'local-fixture-operator');
 
         return new CockpitOperatorIssuanceActivityRecordData(
             activity_id: $activityId,
-            actor_id: 'local-fixture-operator',
+            actor_id: $operatorId,
             actor_label: 'Treasury Operations',
             source: 'cockpit.local-diagnostic-fixture',
             subject_type: 'pay_code',

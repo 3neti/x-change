@@ -1283,6 +1283,10 @@ ExecutionDriverContract
   - Re-ran `php artisan x-change:cockpit:seed-diagnostic-activity --local-only --json`.
   - Confirmed the fixture now reports `dashboard_ready: true`.
   - Verified the fixture row remains safe with journal handoff status `recorded`, reference `ERN-LOCAL-COCKPIT-0001`, event type `cockpit.operator_issuance_activity.fixture`, and all unsafe exposure flags false.
+  - Human browser scrape then showed no matching durable activity because the seeded fixture was scoped to `local-fixture-operator` while Cockpit filters by the authenticated operator id.
+  - Added `--operator-id=` to the local diagnostic fixture command so local browser verification can seed a fixture for the actual operator without changing dashboard filtering semantics.
+  - Re-seeded with `php artisan x-change:cockpit:seed-diagnostic-activity --local-only --operator-id=5 --json`.
+  - Verified `fixture-cockpit-journal-diagnostic-activity` now has `actor_id: 5` and remains safe for populated read-only browser verification.
   - Did not commit `.env`.
   - Did not change production defaults, package source behavior, frontend assets, host-published assets, routes, controllers, APIs, migrations, models, or runtime behavior.
   - No UI was changed in this checkpoint.

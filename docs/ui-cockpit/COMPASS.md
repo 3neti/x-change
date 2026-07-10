@@ -1499,6 +1499,11 @@ Current boundary:
 - Cockpit Mutation Wave 4Q local config result: `x-change.cockpit.operator_issuance_activity.repository` resolves to `LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRepository`.
 - Cockpit Mutation Wave 4Q fixture seed result: `seeded true`, `dashboard_ready true`, database repository active.
 - Cockpit Mutation Wave 4Q database verification result: fixture row exists and all unsafe exposure flags are false.
+- Cockpit Mutation Wave 4Q human scrape follow-up result: dashboard still showed no matching durable activity because the fixture was scoped to `local-fixture-operator`.
+- Cockpit Mutation Wave 4Q operator-scope fix result: `x-change:cockpit:seed-diagnostic-activity` now accepts `--operator-id=`.
+- Cockpit Mutation Wave 4Q operator-scoped fixture seed result: `php artisan x-change:cockpit:seed-diagnostic-activity --local-only --operator-id=5 --json` returned `dashboard_ready true`.
+- Cockpit Mutation Wave 4Q operator-scoped database verification result: `fixture-cockpit-journal-diagnostic-activity` now has `actor_id: 5`, matching the authenticated local operator id `5`.
 - Cockpit Mutation Wave 4Q scope result: local `.env` config enablement only; `.env` not committed and no source behavior or UI changed.
+- Cockpit Mutation Wave 4Q operator-scope fix scope result: fixture/testability correction only; dashboard operator filtering semantics remain unchanged.
 - Cockpit Mutation Wave 4Q formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
 - Cockpit Mutation Wave 4Q focused documentation guard result: `1 passed, 21 assertions`.

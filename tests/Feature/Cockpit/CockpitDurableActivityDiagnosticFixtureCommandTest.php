@@ -36,6 +36,7 @@ it('seeds one safe local durable diagnostic activity record', function () {
 
     expect($activity)->not->toBeNull()
         ->and($activity?->source)->toBe('cockpit.local-diagnostic-fixture')
+        ->and($activity?->actor_id)->toBe('local-fixture-operator')
         ->and($activity?->subject_reference)->toBe('PC-LOCAL-DIAGNOSTIC')
         ->and($activity?->journal_handoff_status)->toBe('recorded')
         ->and($activity?->action_handoff_status)->toBe('not_wired')
@@ -103,4 +104,28 @@ it('hydrates the seeded diagnostic fixture through the cockpit read model when d
         ->and($readModel->presentations[0]->metadata['raw_payload'] ?? null)->toBeNull()
         ->and($readModel->presentations[0]->metadata['provider_payload'] ?? null)->toBeNull()
         ->and($readModel->presentations[0]->metadata['wallet'] ?? null)->toBeNull();
+});
+
+it('can seed the diagnostic fixture for a specific cockpit operator id', function () {
+    config()->set('x-change.cockpit.operator_issuance_activity.repository', DatabaseCockpitOperatorIssuanceActivityRepository::class);
+
+    $this->artisan('x-change:cockpit:seed-diagnostic-activity --local-only --operator-id=5 --json')
+        ->expectsOutputToContain('"operator_id":"5"')
+        ->assertSuccessful();
+
+    $activity = CockpitOperatorIssuanceActivity::query()
+        ->where('activity_id', 'fixture-cockpit-journal-diagnostic-activity')
+        ->first();
+
+    expect($activity?->actor_id)->toBe('5');
+
+    $readModel = app(CockpitReadModelProviderContract::class)
+        ->forOperatorIssuanceActivity(new CockpitReadModelQueryData(
+            operatorId: '5',
+            correlationId: 'corr-local-cockpit-diagnostic',
+        ));
+
+    expect($readModel->status)->toBe('available')
+        ->and($readModel->items)->toHaveCount(1)
+        ->and($readModel->items[0]->code)->toBe('PC-LOCAL-DIAGNOSTIC');
 });
