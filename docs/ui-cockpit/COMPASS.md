@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 2J — Activity UI Host Publish Verification
-Status: Implemented; package-owned Cockpit activity UI publishes cleanly into the host app and the drift guard passes
+Current slice: Cockpit Mutation Wave 2K — Activity UI Manual Browser Verification
+Status: Blocked for browser visual confirmation; programmatic publish/build checks passed, but no visual pass is claimed
 Last updated: 2026-07-10
 
 ## Completed
@@ -87,6 +87,13 @@ Last updated: 2026-07-10
   - Confirmed the host `npm run build` passes after publishing.
   - No manual host mirror edits, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload exposure, or money movement were added.
   - Report: `reports/060-activity-ui-host-publish-verification.md`.
+- Completed Cockpit Mutation Wave 2K — Activity UI Manual Browser Verification:
+  - Attempted to open `http://x-change-sandbox.test/x/cockpit` through the in-app browser for visual verification.
+  - Browser runtime failed before page navigation, so no visual pass is claimed.
+  - Confirmed supporting checks still pass: Cockpit routes are registered, published assets are clean, and the host build succeeds.
+  - Recorded human verification instructions for the dashboard activity panel.
+  - No browser automation dependencies, screenshots, new routes/controllers/APIs, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload exposure, or money movement were added.
+  - Report: `reports/061-activity-ui-manual-browser-verification.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -695,15 +702,15 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 2K — Activity UI Manual Browser Verification
+Cockpit Mutation Wave 2L — Human Activity UI Visual Confirmation Record
 ```
 
 Purpose:
 
-- verify the published dashboard activity panel visually in the host app
-- confirm the operator sees activity facts without mutation controls
-- confirm no journal/action/feedback handoff buttons or hidden side-effect controls are exposed
-- record human/browser evidence before adding any deeper activity storage or handoff execution
+- record the human/manual visual outcome for `http://x-change-sandbox.test/x/cockpit`
+- confirm whether the operator issuance activity panel is visible and understandable
+- confirm whether the panel remains read-only with no journal/action/feedback execution controls
+- update the visual gate as pass or blocked based on human evidence
 
 Completed host integration boundary:
 
@@ -1034,3 +1041,8 @@ Current boundary:
 - Cockpit Mutation Wave 2J host build result: `npm run build` passed.
 - Cockpit Mutation Wave 2J package frontend result: `74 passed, 476 tests`.
 - Cockpit Mutation Wave 2J focused documentation/readiness result: `2 passed, 37 assertions`.
+- Cockpit Mutation Wave 2K route registration check: `php artisan route:list --path=x/cockpit` showed 6 Cockpit routes.
+- Cockpit Mutation Wave 2K host drift guard result: `checked 55, ok 55, stale 0, missing 0, extra 0`.
+- Cockpit Mutation Wave 2K host build result: `npm run build` passed.
+- Cockpit Mutation Wave 2K browser result: blocked before page navigation because browser runtime was unavailable.
+- Cockpit Mutation Wave 2K focused documentation/readiness result: `2 passed, 45 assertions`.
