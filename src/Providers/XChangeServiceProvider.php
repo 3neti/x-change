@@ -62,7 +62,9 @@ use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityFeedbackHandoffCo
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityJournalHandoffContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityPresenterContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityRecorderContract;
+use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityRedactionPolicyContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityRepositoryContract;
+use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityRetentionPolicyContract;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Contracts\CockpitRedactorContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationContract;
@@ -123,6 +125,8 @@ use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\CacheClaimApprovalWorkflowStore;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitOperatorIssuanceActivityPresenter;
+use LBHurtado\XChange\Services\Cockpit\DefaultCockpitOperatorIssuanceActivityRedactionPolicy;
+use LBHurtado\XChange\Services\Cockpit\DefaultCockpitOperatorIssuanceActivityRetentionPolicy;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityActionHandoff;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityFeedbackHandoff;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityJournalHandoff;
@@ -272,6 +276,14 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->bind(
             CockpitOperatorIssuanceActivityRepositoryContract::class,
             NullCockpitOperatorIssuanceActivityRepository::class,
+        );
+        $this->app->bind(
+            CockpitOperatorIssuanceActivityRedactionPolicyContract::class,
+            DefaultCockpitOperatorIssuanceActivityRedactionPolicy::class,
+        );
+        $this->app->bind(
+            CockpitOperatorIssuanceActivityRetentionPolicyContract::class,
+            DefaultCockpitOperatorIssuanceActivityRetentionPolicy::class,
         );
         $this->app->bind(
             CockpitOperatorIssuanceActivityJournalHandoffContract::class,

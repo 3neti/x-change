@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 3C — In-Memory Durable Activity Repository Baseline
-Status: Implemented; in-memory repository exists for tests/explicit host wiring while default runtime binding remains null and non-persistent
+Current slice: Cockpit Mutation Wave 3D — Activity Redaction and Retention Policy Contracts
+Status: Implemented; redaction and retention policy contracts now exist with safe defaults before any durable database storage is introduced
 Last updated: 2026-07-10
 
 ## Completed
@@ -126,6 +126,17 @@ Last updated: 2026-07-10
   - No migrations, Eloquent models, database writes, queue jobs, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, raw payload persistence, UI changes, mutation controls, or money movement were added.
   - No UI was changed in this slice.
   - Report: `reports/065-in-memory-durable-activity-repository-baseline.md`.
+- Completed Cockpit Mutation Wave 3D — Activity Redaction and Retention Policy Contracts:
+  - Added `CockpitOperatorIssuanceActivityRedactionPolicyContract`.
+  - Added `CockpitOperatorIssuanceActivityRetentionPolicyContract`.
+  - Added `DefaultCockpitOperatorIssuanceActivityRedactionPolicy`.
+  - Added `DefaultCockpitOperatorIssuanceActivityRetentionPolicy`.
+  - Bound both policy contracts in `XChangeServiceProvider`.
+  - The redaction policy returns a new activity record DTO with sensitive context/metadata redacted and unsafe exposure flags normalized false.
+  - The retention policy preserves explicit retention deadlines, derives default retention from occurrence time, and rejects records with missing activity IDs or unsafe exposure flags.
+  - No migrations, Eloquent models, database writes, queue jobs, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, raw payload persistence, UI changes, mutation controls, or money movement were added.
+  - No UI was changed in this slice.
+  - Report: `reports/066-activity-redaction-retention-policy-contracts.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -734,14 +745,14 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 3D — Activity Redaction and Retention Policy Contracts
+Cockpit Mutation Wave 3E — Database Migration Decision Point
 ```
 
 Purpose:
 
-- add redaction policy and retention policy contracts
-- add safe default/null policy implementations
-- do not add migrations, models, queues, or database writes
+- decide whether durable operator issuance activity storage should use a package migration now
+- document schema, indexes, retention enforcement, and redaction enforcement points before creating a table
+- do not add database writes until the schema and persistence contract are explicitly accepted
 - preserve the current Cockpit UI unless a separate presentation-only UI slice is approved
 
 Completed host integration boundary:
@@ -1090,3 +1101,8 @@ Current boundary:
 - Cockpit Mutation Wave 3C focused repository result: `6 passed, 24 assertions`.
 - Cockpit Mutation Wave 3C focused repository/architecture result: `8 passed, 75 assertions`.
 - Cockpit Mutation Wave 3C scope result: no UI changed.
+- Cockpit Mutation Wave 3D focused red baseline: `4 failed, 0 assertions`.
+- Cockpit Mutation Wave 3D focused policy result: `4 passed, 13 assertions`.
+- Cockpit Mutation Wave 3D focused policy/architecture result: `6 passed, 53 assertions`.
+- Cockpit Mutation Wave 3D full package Pest result: `1138 passed, 5 skipped, 6953 assertions`.
+- Cockpit Mutation Wave 3D scope result: no UI changed.
