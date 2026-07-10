@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 4Q — Durable Activity Repository Local Config Enablement Decision
-Status: Local repository config enabled; fixture is dashboard-ready for human visual confirmation
+Current slice: Cockpit Mutation Wave 4R — Seeded Diagnostic Fixture Human Visual Confirmation
+Status: Pass — accepted by human
 Last updated: 2026-07-11
 
 ## Completed
@@ -408,6 +408,15 @@ Last updated: 2026-07-11
   - Did not change production defaults, package source behavior, frontend assets, host-published assets, routes, controllers, APIs, migrations, models, or runtime behavior.
   - No UI was changed in this checkpoint.
   - Report: `reports/093-durable-activity-repository-local-config-enablement-decision.md`.
+- Completed Cockpit Mutation Wave 4R — Seeded Diagnostic Fixture Human Visual Confirmation:
+  - Human reviewer confirmed the populated Operator Issuance Activity diagnostic fixture card is visible on `/x/cockpit`.
+  - Confirmed `Pay Code PC-LOCAL-DIAGNOSTIC issued` renders with `PHP 25.00 issued through Quick Generate`.
+  - Confirmed journal handoff evidence renders: `journal: recorded`, `journal-entry-local-fixture`, `local_fixture`, `ERN-LOCAL-COCKPIT-0001`, and `cockpit.operator_issuance_activity.fixture`.
+  - Confirmed operator diagnostic evidence renders: `Diagnostic: Journal recorded`, `Action: none`, `Read-only: yes`, and `corr-local-cockpit-diagnostic`.
+  - Confirmed action and feedback remain `not_wired`.
+  - Confirmed no unsafe payloads, retry controls, or mutation controls were reported visible.
+  - No frontend behavior, backend behavior, routes, controllers, APIs, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher mutation, raw payload exposure, or money movement were added.
+  - Report: `reports/094-seeded-diagnostic-fixture-human-visual-confirmation.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -1016,17 +1025,15 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 4R — Seeded Diagnostic Fixture Human Visual Confirmation
+Cockpit Mutation Wave 5A — Real Operator Activity Rollout Readiness Decision
 ```
 
 Purpose:
 
-- have the human reviewer open `/x/cockpit`
-- confirm the populated fixture activity card is visible
-- confirm journal handoff and operator diagnostic evidence renders
-- confirm no unsafe payloads, retry controls, or mutation controls are visible
-- record pass/block/fail evidence
-- update the Cockpit and Settlement OS compasses
+- decide whether the local diagnostic path is sufficient to close durable activity visualization
+- decide the next real mutation/read-model target
+- keep any new mutation path routed through existing x-change services
+- do not add retry execution, journal write-side production behavior, action execution, feedback delivery, provider calls, wallet mutation, or money movement without an explicit slice
 
 Completed host integration boundary:
 
@@ -1507,3 +1514,6 @@ Current boundary:
 - Cockpit Mutation Wave 4Q operator-scope fix scope result: fixture/testability correction only; dashboard operator filtering semantics remain unchanged.
 - Cockpit Mutation Wave 4Q formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
 - Cockpit Mutation Wave 4Q focused documentation guard result: `1 passed, 21 assertions`.
+- Cockpit Mutation Wave 4R human visual result: `Pass — accepted by human`.
+- Cockpit Mutation Wave 4R populated fixture evidence result: `Pay Code PC-LOCAL-DIAGNOSTIC issued`, `journal: recorded`, `journal-entry-local-fixture`, `ERN-LOCAL-COCKPIT-0001`, `Diagnostic: Journal recorded`, `Action: none`, and `Read-only: yes`.
+- Cockpit Mutation Wave 4R scope result: confirmation-only; no source behavior or UI changed.
