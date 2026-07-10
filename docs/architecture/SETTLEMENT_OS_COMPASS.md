@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 4F durable activity journal handoff status projector contract implemented
+Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 4G durable activity journal handoff status persistence adapter implemented
 Last updated: 2026-07-10
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-10
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Mutation Wave 4F durable activity journal handoff status projector contract implemented | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Mutation Wave 4G durable activity journal handoff status persistence adapter implemented | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1161,6 +1161,18 @@ ExecutionDriverContract
   - No durable activity row mutation, repository update method, migration change, x-journal call, journal write, UI changes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload exposure, mutation controls, or money movement were added.
   - No UI was changed in this slice.
   - Report: `../ui-cockpit/reports/082-durable-activity-journal-handoff-status-projector-contract.md`.
+- x-change Cockpit Mutation Wave 4G — Durable Activity Journal Handoff Status Persistence Adapter:
+  - Added `DatabaseCockpitOperatorIssuanceActivityJournalHandoffStatusProjector`.
+  - Added config seam `x-change.cockpit.operator_issuance_activity.journal_handoff_status_projector`.
+  - Added the database projector to `available_journal_handoff_status_projectors`.
+  - Kept the null status projector as the default runtime behavior.
+  - Proved the database projector updates only local durable activity `journal_handoff_status` and safe `metadata.journal_handoff`.
+  - Proved missing durable activity rows and missing activity IDs no-op without blocking.
+  - Preserved action and feedback handoff statuses.
+  - Full x-change package Pest result: `1192 passed, 5 skipped, 7458 assertions`.
+  - No default durable status persistence, invocation pipeline, x-journal runtime call, journal write, UI changes, action execution, feedback delivery, provider call, wallet access, voucher execution change, lifecycle truth ownership, raw payload exposure, mutation controls, or money movement were added.
+  - No UI was changed in this slice.
+  - Report: `../ui-cockpit/reports/083-durable-activity-journal-handoff-status-persistence-adapter.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -1176,12 +1188,12 @@ x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 x-change Host Integration Slice 2 — Journal/action/feedback read-model hydration into Cockpit surfaces
 ```
 
-Completed through Host Integration Slice 2I and Cockpit Mutation Wave 4F.
+Completed through Host Integration Slice 2I and Cockpit Mutation Wave 4G.
 
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 4G — Durable Activity Journal Handoff Status Persistence Adapter.
+Cockpit Mutation Wave 4H — Durable Activity Journal Handoff Invocation Pipeline.
 ```
 
 Recommended actions:

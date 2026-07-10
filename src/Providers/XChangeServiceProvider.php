@@ -311,10 +311,16 @@ class XChangeServiceProvider extends ServiceProvider
                 ? $service
                 : NullCockpitOperatorIssuanceActivityJournalHandoff::class);
         });
-        $this->app->bind(
-            CockpitOperatorIssuanceActivityJournalHandoffStatusProjectorContract::class,
-            NullCockpitOperatorIssuanceActivityJournalHandoffStatusProjector::class,
-        );
+        $this->app->bind(CockpitOperatorIssuanceActivityJournalHandoffStatusProjectorContract::class, function ($app) {
+            $service = config(
+                'x-change.cockpit.operator_issuance_activity.journal_handoff_status_projector',
+                NullCockpitOperatorIssuanceActivityJournalHandoffStatusProjector::class,
+            );
+
+            return $app->make(is_string($service) && trim($service) !== ''
+                ? $service
+                : NullCockpitOperatorIssuanceActivityJournalHandoffStatusProjector::class);
+        });
         $this->app->bind(
             CockpitOperatorIssuanceActivityActionHandoffContract::class,
             NullCockpitOperatorIssuanceActivityActionHandoff::class,
