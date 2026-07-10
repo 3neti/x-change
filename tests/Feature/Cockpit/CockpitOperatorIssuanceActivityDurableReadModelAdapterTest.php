@@ -75,3 +75,72 @@ it('hydrates operator issuance activity from the configured durable repository',
         ->and($readModel->redactions['raw_payloads_exposed'])->toBeFalse()
         ->and($readModel->redactions['moves_money'])->toBeFalse();
 });
+
+it('exposes persisted journal handoff summary as safe read-only presentation metadata', function () {
+    config()->set('x-change.cockpit.operator_issuance_activity.repository', DatabaseCockpitOperatorIssuanceActivityRepository::class);
+
+    $repository = app(DatabaseCockpitOperatorIssuanceActivityRepository::class);
+
+    $repository->record(new CockpitOperatorIssuanceActivityRecordData(
+        activity_id: 'activity-journal-read-model-1',
+        actor_id: 'operator-1',
+        source: 'cockpit.quick-generate',
+        subject_type: 'pay_code',
+        subject_reference: 'PC-JOURNAL-READ-1',
+        status: 'issued',
+        occurred_at: '2026-07-10T09:00:00+08:00',
+        correlation_id: 'corr-journal-read-1',
+        safe_context: [
+            'amount' => '50',
+            'currency' => 'PHP',
+            'route' => 'x-change.cockpit.quick-generate.store',
+            'detail_href' => '/x/cockpit/pay-codes/PC-JOURNAL-READ-1',
+        ],
+        journal_handoff_status: 'recorded',
+        action_handoff_status: 'not_wired',
+        feedback_handoff_status: 'not_wired',
+        metadata: [
+            'journal_handoff' => [
+                'status' => 'recorded',
+                'journal_entry_id' => 'journal-entry-1',
+                'writes_journal' => true,
+                'source' => 'test-journal-handoff',
+                'reason' => 'Journal handoff was recorded.',
+                'metadata' => [
+                    'reference_number' => 'XJ-1',
+                    'event_type' => 'cockpit.operator_issuance_activity.recorded',
+                    'provider_payload' => 'must-not-render',
+                    'token' => 'must-not-render',
+                ],
+            ],
+            'provider_payload' => 'must-not-render',
+        ],
+    ));
+
+    $readModel = app(CockpitReadModelProviderContract::class)
+        ->forOperatorIssuanceActivity(new CockpitReadModelQueryData(
+            operatorId: 'operator-1',
+            correlationId: 'corr-journal-read-1',
+        ));
+
+    expect($readModel->presentations)->toHaveCount(1)
+        ->and($readModel->presentations[0]->handoffs)->toBe([
+            'journal' => 'recorded',
+            'action' => 'not_wired',
+            'feedback' => 'not_wired',
+        ])
+        ->and($readModel->presentations[0]->metadata['journal_handoff'])->toBe([
+            'status' => 'recorded',
+            'journal_entry_id' => 'journal-entry-1',
+            'writes_journal' => true,
+            'source' => 'test-journal-handoff',
+            'reason' => 'Journal handoff was recorded.',
+            'metadata' => [
+                'reference_number' => 'XJ-1',
+                'event_type' => 'cockpit.operator_issuance_activity.recorded',
+            ],
+        ])
+        ->and($readModel->presentations[0]->metadata['provider_payload'] ?? null)->toBeNull()
+        ->and($readModel->presentations[0]->metadata['journal_handoff']['metadata']['provider_payload'] ?? null)->toBeNull()
+        ->and($readModel->presentations[0]->metadata['journal_handoff']['metadata']['token'] ?? null)->toBeNull();
+});

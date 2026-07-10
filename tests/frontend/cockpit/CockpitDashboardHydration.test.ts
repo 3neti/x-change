@@ -146,7 +146,7 @@ const operatorIssuanceActivityReadModel = {
             detail_href: '/x/cockpit/pay-codes/PC-1234',
             correlation_id: 'corr-1',
             handoffs: {
-                journal: 'not_wired',
+                journal: 'recorded',
                 action: 'not_wired',
                 feedback: 'not_wired',
             },
@@ -159,6 +159,19 @@ const operatorIssuanceActivityReadModel = {
                 owns_lifecycle_truth: false,
             },
             metadata: {
+                journal_handoff: {
+                    status: 'recorded',
+                    journal_entry_id: 'journal-entry-1',
+                    writes_journal: true,
+                    source: 'test-journal-handoff',
+                    reason: 'Journal handoff was recorded.',
+                    metadata: {
+                        reference_number: 'XJ-1',
+                        event_type: 'cockpit.operator_issuance_activity.recorded',
+                        provider_payload: 'must-not-render',
+                        token: 'must-not-render',
+                    },
+                },
                 provider_payload: 'must-not-render',
                 raw_payload: 'must-not-render',
                 wallet: 'must-not-render',
@@ -512,11 +525,18 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('Pay Code PC-1234 issued');
         expect(wrapper.text()).toContain('PHP 100.00 issued through Quick Generate');
         expect(wrapper.text()).toContain('corr-1');
-        expect(wrapper.text()).toContain('journal: not_wired');
+        expect(wrapper.text()).toContain('journal: recorded');
         expect(wrapper.text()).toContain('action: not_wired');
         expect(wrapper.text()).toContain('feedback: not_wired');
+        expect(wrapper.text()).toContain('Journal entry: journal-entry-1');
+        expect(wrapper.text()).toContain('Writes journal: yes');
+        expect(wrapper.text()).toContain('Source: test-journal-handoff');
+        expect(wrapper.text()).toContain('Reason: Journal handoff was recorded.');
+        expect(wrapper.text()).toContain('Reference: XJ-1');
+        expect(wrapper.text()).toContain('Event: cockpit.operator_issuance_activity.recorded');
         expect(wrapper.text()).toContain('presentation-only');
         expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-card"]')).toHaveLength(1);
+        expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-journal-summary"]')).toHaveLength(1);
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-link"]').attributes('href')).toBe('/x/cockpit/pay-codes/PC-1234');
     });
 
@@ -532,6 +552,7 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).not.toContain('provider_payload');
         expect(wrapper.text()).not.toContain('raw_payload');
         expect(wrapper.text()).not.toContain('recipient_secret');
+        expect(wrapper.text()).not.toContain('token');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-mutation"]').exists()).toBe(false);
     });
 

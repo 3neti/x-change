@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 4H — Durable Activity Journal Handoff Invocation Pipeline
-Status: Implemented; Quick Generate fresh issuance can invoke the configured activity handoff pipeline while defaults remain null/not-wired
+Current slice: Cockpit Mutation Wave 4I — Durable Activity Journal Handoff Read Model Exposure
+Status: Implemented; persisted journal handoff status and safe summary fields are exposed through read-only operator issuance activity presentation
 Last updated: 2026-07-10
 
 ## Completed
@@ -313,6 +313,15 @@ Last updated: 2026-07-10
   - No default journal writes, default durable status persistence, queue job, retry orchestration, UI changes, action execution, feedback delivery, provider call, wallet access, voucher execution change, lifecycle truth ownership, raw payload exposure, new mutation controls, or new money movement were added.
   - No UI was changed in this slice.
   - Report: `reports/084-durable-activity-journal-handoff-invocation-pipeline.md`.
+- Completed Cockpit Mutation Wave 4I — Durable Activity Journal Handoff Read Model Exposure:
+  - Updated `DurableCockpitOperatorIssuanceActivityReadModelProvider` to hydrate safe journal handoff summary fields from durable activity metadata.
+  - Updated `DefaultCockpitOperatorIssuanceActivityPresenter` to expose `metadata.journal_handoff`.
+  - Updated the Cockpit dashboard operator issuance activity panel to render safe journal handoff evidence.
+  - Exposes journal entry ID, writes-journal flag, source, reason, reference number, and event type only.
+  - Excludes unsafe metadata, provider payloads, raw payloads, credentials, tokens, wallet data, and recipient secrets.
+  - No journal write, handoff retry, queue job, action execution, feedback delivery, provider call, wallet access, voucher execution change, lifecycle truth ownership, new mutation control, or money movement was added.
+  - UI changed: existing dashboard operator issuance activity cards can now display a read-only journal handoff evidence box when safe handoff metadata exists.
+  - Report: `reports/085-durable-activity-journal-handoff-read-model-exposure.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -1351,3 +1360,13 @@ Current boundary:
 - Cockpit Mutation Wave 4H formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
 - Cockpit Mutation Wave 4H full package Pest result: `1196 passed, 5 skipped, 7518 assertions`.
 - Cockpit Mutation Wave 4H scope result: invocation pipeline only; default runtime and UI unchanged.
+- Cockpit Mutation Wave 4I focused red baseline: backend `1 failed, 2 passed, 20 assertions`; frontend `1 failed, 15 passed`.
+- Cockpit Mutation Wave 4I focused backend result: `6 passed, 35 assertions`.
+- Cockpit Mutation Wave 4I focused frontend result: `1 passed, 16 tests`.
+- Cockpit Mutation Wave 4I focused backend/documentation result after formatting: `7 passed, 56 assertions`.
+- Cockpit Mutation Wave 4I related Cockpit activity result: `48 passed, 697 assertions`.
+- Cockpit Mutation Wave 4I full frontend result: `74 passed, 476 tests`.
+- Cockpit Mutation Wave 4I formatter result: `../../vendor/bin/pint --dirty --format agent` fixed formatting and passed.
+- Cockpit Mutation Wave 4I full package Pest result: `1198 passed, 5 skipped, 7545 assertions`.
+- Cockpit Mutation Wave 4I post-doc architecture guard result: `1 passed, 21 assertions`.
+- Cockpit Mutation Wave 4I scope result: read-only journal handoff summary exposure; UI evidence box added; no new mutation behavior.

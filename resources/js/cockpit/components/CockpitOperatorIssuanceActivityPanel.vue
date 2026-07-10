@@ -16,6 +16,14 @@ type SafePresentation = {
     status: string;
     href?: string;
     correlationId?: string;
+    journalSummary?: {
+        journalEntryId?: string;
+        writesJournal: boolean;
+        source?: string;
+        reason?: string;
+        referenceNumber?: string;
+        eventType?: string;
+    };
     handoffs: {
         journal: string;
         action: string;
@@ -56,11 +64,38 @@ function sanitizePresentation(presentation: CockpitOperatorIssuanceActivityPrese
         status,
         href: safeDetailHref(presentation.detail_href),
         correlationId: stringValue(presentation.correlation_id),
+        journalSummary: safeJournalSummary(presentation.metadata?.journal_handoff),
         handoffs: {
             journal: stringValue(presentation.handoffs?.journal) ?? 'not_wired',
             action: stringValue(presentation.handoffs?.action) ?? 'not_wired',
             feedback: stringValue(presentation.handoffs?.feedback) ?? 'not_wired',
         },
+    };
+}
+
+function safeJournalSummary(value: unknown): SafePresentation['journalSummary'] | undefined {
+    if (!isPlainObject(value)) {
+        return undefined;
+    }
+
+    const journalEntryId = stringValue(value.journal_entry_id);
+    const source = stringValue(value.source);
+    const reason = stringValue(value.reason);
+    const metadata = isPlainObject(value.metadata) ? value.metadata : {};
+    const referenceNumber = stringValue(metadata.reference_number);
+    const eventType = stringValue(metadata.event_type);
+
+    if (!journalEntryId && !source && !reason && !referenceNumber && !eventType) {
+        return undefined;
+    }
+
+    return {
+        journalEntryId,
+        writesJournal: value.writes_journal === true,
+        source,
+        reason,
+        referenceNumber,
+        eventType,
     };
 }
 
@@ -84,6 +119,10 @@ function stringValue(value: unknown): string | undefined {
     }
 
     return undefined;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 </script>
 
@@ -158,6 +197,49 @@ function stringValue(value: unknown): string | undefined {
                             Feedback
                         </dt>
                         <dd>feedback: {{ presentation.handoffs.feedback }}</dd>
+                    </div>
+                </dl>
+
+                <dl
+                    v-if="presentation.journalSummary"
+                    class="mt-4 grid gap-2 rounded-lg bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-950 dark:text-slate-300 sm:grid-cols-2"
+                    data-testid="cockpit-operator-issuance-activity-journal-summary"
+                >
+                    <div v-if="presentation.journalSummary.journalEntryId">
+                        <dt class="font-semibold text-slate-700 dark:text-slate-200">
+                            Journal entry
+                        </dt>
+                        <dd>Journal entry: {{ presentation.journalSummary.journalEntryId }}</dd>
+                    </div>
+                    <div>
+                        <dt class="font-semibold text-slate-700 dark:text-slate-200">
+                            Writes journal
+                        </dt>
+                        <dd>Writes journal: {{ presentation.journalSummary.writesJournal ? 'yes' : 'no' }}</dd>
+                    </div>
+                    <div v-if="presentation.journalSummary.source">
+                        <dt class="font-semibold text-slate-700 dark:text-slate-200">
+                            Source
+                        </dt>
+                        <dd>Source: {{ presentation.journalSummary.source }}</dd>
+                    </div>
+                    <div v-if="presentation.journalSummary.reason">
+                        <dt class="font-semibold text-slate-700 dark:text-slate-200">
+                            Reason
+                        </dt>
+                        <dd>Reason: {{ presentation.journalSummary.reason }}</dd>
+                    </div>
+                    <div v-if="presentation.journalSummary.referenceNumber">
+                        <dt class="font-semibold text-slate-700 dark:text-slate-200">
+                            Reference
+                        </dt>
+                        <dd>Reference: {{ presentation.journalSummary.referenceNumber }}</dd>
+                    </div>
+                    <div v-if="presentation.journalSummary.eventType">
+                        <dt class="font-semibold text-slate-700 dark:text-slate-200">
+                            Event
+                        </dt>
+                        <dd>Event: {{ presentation.journalSummary.eventType }}</dd>
                     </div>
                 </dl>
 

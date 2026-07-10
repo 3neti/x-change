@@ -44,11 +44,7 @@ class DurableCockpitOperatorIssuanceActivityReadModelProvider
 
                 return $this->presenter->present(
                     $item,
-                    new CockpitOperatorIssuanceActivityJournalHandoffResultData(
-                        status: $record->journal_handoff_status,
-                        activity_id: $record->activity_id,
-                        correlation_id: $record->correlation_id,
-                    ),
+                    $this->journalHandoffResult($record),
                     new CockpitOperatorIssuanceActivityActionHandoffResultData(
                         status: $record->action_handoff_status,
                         activity_id: $record->activity_id,
@@ -99,5 +95,53 @@ class DurableCockpitOperatorIssuanceActivityReadModelProvider
                 'durable_record' => true,
             ],
         );
+    }
+
+    private function journalHandoffResult(CockpitOperatorIssuanceActivityRecordData $record): CockpitOperatorIssuanceActivityJournalHandoffResultData
+    {
+        $summary = $this->journalHandoffSummary($record);
+
+        return new CockpitOperatorIssuanceActivityJournalHandoffResultData(
+            status: (string) data_get($summary, 'status', $record->journal_handoff_status),
+            activity_id: $record->activity_id,
+            correlation_id: $record->correlation_id,
+            journal_entry_id: $this->nullableString(data_get($summary, 'journal_entry_id')),
+            writes_journal: (bool) data_get($summary, 'writes_journal', false),
+            source: (string) data_get($summary, 'source', 'durable-operator-issuance-activity-read-model'),
+            reason: (string) data_get($summary, 'reason', 'Journal handoff status is projected from durable Cockpit activity storage.'),
+            metadata: $this->safeJournalHandoffMetadata(data_get($summary, 'metadata', [])),
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function journalHandoffSummary(CockpitOperatorIssuanceActivityRecordData $record): array
+    {
+        $summary = data_get($record->metadata, 'journal_handoff');
+
+        return is_array($summary) ? $summary : [];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function safeJournalHandoffMetadata(mixed $metadata): array
+    {
+        if (! is_array($metadata)) {
+            return [];
+        }
+
+        return array_intersect_key($metadata, array_flip([
+            'reference_number',
+            'event_type',
+            'idempotency_key',
+            'exception',
+        ]));
+    }
+
+    private function nullableString(mixed $value): ?string
+    {
+        return is_string($value) && trim($value) !== '' ? $value : null;
     }
 }

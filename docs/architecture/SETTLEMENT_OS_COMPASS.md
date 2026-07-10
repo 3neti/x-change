@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 4H durable activity journal handoff invocation pipeline implemented
+Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 4I durable activity journal handoff read model exposure implemented
 Last updated: 2026-07-10
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-10
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Mutation Wave 4H durable activity journal handoff invocation pipeline implemented | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Mutation Wave 4I durable activity journal handoff read model exposure implemented | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1187,6 +1187,22 @@ ExecutionDriverContract
   - No default journal writes, default durable status persistence, queue job, retry orchestration, UI changes, action execution, feedback delivery, provider call, wallet access, voucher execution change, lifecycle truth ownership, raw payload exposure, new mutation controls, or new money movement were added.
   - No UI was changed in this slice.
   - Report: `../ui-cockpit/reports/084-durable-activity-journal-handoff-invocation-pipeline.md`.
+- x-change Cockpit Mutation Wave 4I — Durable Activity Journal Handoff Read Model Exposure:
+  - Updated durable operator issuance activity read models to expose safe persisted journal handoff summary fields.
+  - Updated presentation hydration to include `metadata.journal_handoff`.
+  - Updated the Cockpit dashboard operator issuance activity panel with a read-only journal handoff evidence box.
+  - Safe exposed fields are limited to journal entry ID, writes-journal flag, source, reason, reference number, event type, idempotency key, and exception class.
+  - Unsafe metadata, provider payloads, raw payloads, credentials, tokens, wallet data, and recipient secrets remain excluded.
+  - Focused backend result: `6 passed, 35 assertions`.
+  - Focused frontend result: `1 passed, 16 tests`.
+  - Focused backend/documentation result after formatting: `7 passed, 56 assertions`.
+  - Related Cockpit activity result: `48 passed, 697 assertions`.
+  - Full frontend result: `74 passed, 476 tests`.
+  - Formatter result: `../../vendor/bin/pint --dirty --format agent` fixed formatting and passed.
+  - Full x-change package Pest result: `1198 passed, 5 skipped, 7545 assertions`.
+  - No journal write, handoff retry, queue job, action execution, feedback delivery, provider call, wallet access, voucher execution change, lifecycle truth ownership, new mutation control, or money movement was added.
+  - UI changed: dashboard operator issuance activity cards can show read-only journal handoff evidence when safe metadata exists.
+  - Report: `../ui-cockpit/reports/085-durable-activity-journal-handoff-read-model-exposure.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -1202,12 +1218,12 @@ x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 x-change Host Integration Slice 2 — Journal/action/feedback read-model hydration into Cockpit surfaces
 ```
 
-Completed through Host Integration Slice 2I and Cockpit Mutation Wave 4H.
+Completed through Host Integration Slice 2I and Cockpit Mutation Wave 4I.
 
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 4I — Durable Activity Journal Handoff Read Model Exposure.
+Cockpit Mutation Wave 4J — Durable Activity Journal Handoff Operator Diagnostics.
 ```
 
 Recommended actions:

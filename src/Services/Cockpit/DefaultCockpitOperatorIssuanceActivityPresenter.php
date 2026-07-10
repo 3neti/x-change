@@ -32,6 +32,16 @@ class DefaultCockpitOperatorIssuanceActivityPresenter implements CockpitOperator
                 'action' => $action->status,
                 'feedback' => $feedback->status,
             ],
+            metadata: [
+                'journal_handoff' => [
+                    'status' => $journal->status,
+                    'journal_entry_id' => $journal->journal_entry_id,
+                    'writes_journal' => $journal->writes_journal,
+                    'source' => $journal->source,
+                    'reason' => $journal->reason,
+                    'metadata' => $journal->metadata,
+                ],
+            ],
         );
     }
 }
