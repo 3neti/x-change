@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 4O local durable activity diagnostic fixture implemented
+Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 4P host fixture seeded and populated visual verification blocked until local repository config is enabled
 Last updated: 2026-07-10
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-10
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Mutation Wave 4O local durable activity diagnostic fixture implemented | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Mutation Wave 4P host fixture seeded; populated visual verification blocked until local repository config is enabled | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1262,6 +1262,20 @@ ExecutionDriverContract
   - No frontend changes, host-published asset changes, routes, controllers, public APIs, migrations, model changes, x-journal calls, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher mutation, raw payload exposure, retry controls, mutation controls, or money movement were added.
   - No UI was changed in this checkpoint.
   - Report: `../ui-cockpit/reports/091-local-durable-activity-diagnostic-fixture-implementation.md`.
+- x-change Cockpit Mutation Wave 4P — Seeded Diagnostic Fixture Host Verification / Human Visual Handoff:
+  - Verified the host app registers `x-change:cockpit:seed-diagnostic-activity`.
+  - Confirmed the host Cockpit durable activity repository config is currently `null`.
+  - Confirmed published Cockpit assets are clean: checked 55, ok 55, stale 0, missing 0, extra 0.
+  - Ran the local fixture command from the host app: `php artisan x-change:cockpit:seed-diagnostic-activity --local-only --json`.
+  - Confirmed the fixture command seeded `fixture-cockpit-journal-diagnostic-activity` for `PC-LOCAL-DIAGNOSTIC`.
+  - Confirmed the fixture command reported `dashboard_ready: false` and `dashboard_repository: null`.
+  - Verified the fixture row exists in `x_change_cockpit_operator_issuance_activities` with `journal_handoff_status: recorded`, reference `ERN-LOCAL-COCKPIT-0001`, and event type `cockpit.operator_issuance_activity.fixture`.
+  - Confirmed Cockpit route registration still shows 6 routes.
+  - Confirmed host `npm run build` passes with existing third-party Rolldown annotation warnings.
+  - Marked populated human visual verification as blocked until the local host enables the database activity repository config.
+  - Did not edit host `.env`, host config, package source behavior, frontend assets, host-published assets, routes, controllers, APIs, migrations, models, or runtime behavior.
+  - No UI was changed in this checkpoint.
+  - Report: `../ui-cockpit/reports/092-seeded-diagnostic-fixture-host-verification-human-visual-handoff.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -1277,22 +1291,22 @@ x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 x-change Host Integration Slice 2 — Journal/action/feedback read-model hydration into Cockpit surfaces
 ```
 
-Completed through Host Integration Slice 2I and Cockpit Mutation Wave 4O.
+Completed through Host Integration Slice 2I and Cockpit Mutation Wave 4P.
 
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 4P — Seeded Diagnostic Fixture Host Verification / Human Visual Handoff.
+Cockpit Mutation Wave 4Q — Durable Activity Repository Local Config Enablement Decision.
 ```
 
 Recommended actions:
 
-1. Run the fixture command in the local host app only if populated browser evidence is needed.
-2. Confirm the database repository config is active for Cockpit operator issuance activity.
-3. Open `/x/cockpit`.
+1. Decide whether to update local host `.env` for the database activity repository.
+2. If approved, update only local environment config.
+3. Clear config cache if needed.
 4. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
 5. Existing issuance handoff, idempotency/replay, UI submit, manual refresh, generated Pay Code detail navigation, operator issuance activity read-model props, operator issuance activity dashboard rendering, journal handoff evidence, and journal handoff diagnostics are wired.
-6. Verify the populated Operator Issuance Activity diagnostic card.
+6. Re-run the local fixture command and ask the human reviewer to visually confirm the populated Operator Issuance Activity diagnostic card.
 7. Do not add campaign mutation endpoints, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls outside `GeneratePayCode`, campaign state mutation, direct money movement, raw payload exposure, direct wallet access, retry controls, or new mutation controls unless explicitly approved.
 8. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 

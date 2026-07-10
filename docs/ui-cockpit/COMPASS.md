@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 4O — Local Durable Activity Diagnostic Fixture Implementation
-Status: Implemented; next step is local host seeded visual verification
+Current slice: Cockpit Mutation Wave 4P — Seeded Diagnostic Fixture Host Verification / Human Visual Handoff
+Status: Host fixture seeded; populated visual verification is blocked until local repository config is enabled
 Last updated: 2026-07-10
 
 ## Completed
@@ -383,6 +383,20 @@ Last updated: 2026-07-10
   - No frontend changes, host-published asset changes, routes, controllers, public APIs, migrations, model changes, x-journal calls, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher mutation, raw payload exposure, retry controls, mutation controls, or money movement were added.
   - No UI was changed in this checkpoint.
   - Report: `reports/091-local-durable-activity-diagnostic-fixture-implementation.md`.
+- Completed Cockpit Mutation Wave 4P — Seeded Diagnostic Fixture Host Verification / Human Visual Handoff:
+  - Verified the host app registers `x-change:cockpit:seed-diagnostic-activity`.
+  - Confirmed the host Cockpit durable activity repository config is currently `null`.
+  - Confirmed published Cockpit assets are clean: checked 55, ok 55, stale 0, missing 0, extra 0.
+  - Ran the local fixture command from the host app: `php artisan x-change:cockpit:seed-diagnostic-activity --local-only --json`.
+  - Confirmed the fixture command seeded `fixture-cockpit-journal-diagnostic-activity` for `PC-LOCAL-DIAGNOSTIC`.
+  - Confirmed the fixture command reported `dashboard_ready: false` and `dashboard_repository: null`.
+  - Verified the fixture row exists in `x_change_cockpit_operator_issuance_activities` with `journal_handoff_status: recorded`, reference `ERN-LOCAL-COCKPIT-0001`, and event type `cockpit.operator_issuance_activity.fixture`.
+  - Confirmed Cockpit route registration still shows 6 routes.
+  - Confirmed host `npm run build` passes with existing third-party Rolldown annotation warnings.
+  - Marked populated human visual verification as blocked until the local host enables the database activity repository config.
+  - Did not edit host `.env`, host config, package source behavior, frontend assets, host-published assets, routes, controllers, APIs, migrations, models, or runtime behavior.
+  - No UI was changed in this checkpoint.
+  - Report: `reports/092-seeded-diagnostic-fixture-host-verification-human-visual-handoff.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -991,16 +1005,16 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 4P — Seeded Diagnostic Fixture Host Verification / Human Visual Handoff
+Cockpit Mutation Wave 4Q — Durable Activity Repository Local Config Enablement Decision
 ```
 
 Purpose:
 
-- run the fixture command in the local host app only if populated browser evidence is needed
-- confirm the database repository config is active for Cockpit operator issuance activity
-- open `/x/cockpit`
-- verify the populated Operator Issuance Activity diagnostic card
-- record pass/block/fail human evidence
+- decide whether to update local host `.env` for the database activity repository
+- if approved, update only local environment config
+- clear config cache if needed
+- re-run the fixture command
+- ask the human reviewer to visually confirm the populated diagnostic card
 - update the Cockpit and Settlement OS compasses
 
 Completed host integration boundary:
@@ -1461,3 +1475,13 @@ Current boundary:
 - Cockpit Mutation Wave 4O focused command/read-model result: `4 passed, 59 assertions`.
 - Cockpit Mutation Wave 4O formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
 - Cockpit Mutation Wave 4O related command/read-model/documentation result: `8 passed, 111 assertions`.
+- Cockpit Mutation Wave 4P host command registration result: `x-change:cockpit:seed-diagnostic-activity` registered.
+- Cockpit Mutation Wave 4P host repository config result: `x-change.cockpit.operator_issuance_activity.repository = null`.
+- Cockpit Mutation Wave 4P host drift guard result: `checked 55, ok 55, stale 0, missing 0, extra 0`.
+- Cockpit Mutation Wave 4P fixture seed result: `seeded true`, `dashboard_ready false`, `dashboard_repository null`.
+- Cockpit Mutation Wave 4P database verification result: fixture row exists with `journal_handoff_status: recorded`.
+- Cockpit Mutation Wave 4P route check result: `php artisan route:list --path=x/cockpit` showed 6 Cockpit routes.
+- Cockpit Mutation Wave 4P host build result: `npm run build` passed with existing Rolldown annotation warnings from `reka-ui` / `@vueuse`.
+- Cockpit Mutation Wave 4P scope result: host verification/handoff only; no source behavior or UI changed.
+- Cockpit Mutation Wave 4P formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
+- Cockpit Mutation Wave 4P focused documentation guard result: `1 passed, 19 assertions`.
