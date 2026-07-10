@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 3L — Durable Activity Dashboard Verification
-Status: Implemented; existing dashboard props verified for default not-wired and configured durable activity states
+Current slice: Cockpit Mutation Wave 3M — Durable Activity Host Publish / Manual Verification
+Status: Implemented; host-published Cockpit assets verified clean after durable activity backend/read-model work
 Last updated: 2026-07-10
 
 ## Completed
@@ -213,6 +213,15 @@ Last updated: 2026-07-10
   - No production source, Vue components, pages, routes, TypeScript contracts, package assets, host-published assets, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, UI changes, mutation controls, or money movement were added.
   - No UI was changed in this slice.
   - Report: `reports/074-durable-activity-dashboard-verification.md`.
+- Completed Cockpit Mutation Wave 3M — Durable Activity Host Publish / Manual Verification:
+  - Ran `php artisan x-change:doctor --assets --json` from the host app root.
+  - Confirmed host-published Cockpit assets are clean: checked 55, ok 55, stale 0, missing 0, extra 0.
+  - Confirmed no package frontend assets changed in Waves 3J–3L.
+  - Did not run `php artisan x-change:install --force` because the drift guard was already clean.
+  - Resolved Cockpit URL: `http://x-change-sandbox.test/x/cockpit`.
+  - No Vue components, pages, routes, TypeScript contracts, package assets, host-published assets, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, UI changes, mutation controls, or money movement were added.
+  - No UI was changed in this slice.
+  - Report: `reports/075-durable-activity-host-publish-manual-verification.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -821,16 +830,15 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 3M — Durable Activity Host Publish / Manual Verification
+Cockpit Mutation Wave 3N — Durable Activity Closure / Production Readiness Decision
 ```
 
 Purpose:
 
-- publish package assets only if needed
-- run Cockpit asset drift guard
-- verify the dashboard manually with persistence disabled
-- optionally verify dashboard activity with persistence enabled in a local test context
-- do not add new mutation behavior
+- close the durable activity storage mini-wave
+- summarize runtime opt-in requirements
+- decide whether to enable durable activity in local host config for manual testing
+- decide whether the next wave should be journal/action/feedback handoff implementation or broader Cockpit mutation UX
 
 Completed host integration boundary:
 
@@ -1211,3 +1219,5 @@ Current boundary:
 - Cockpit Mutation Wave 3K scope result: read-model adapter only; no UI changed.
 - Cockpit Mutation Wave 3L dashboard verification result: `2 passed, 19 assertions`.
 - Cockpit Mutation Wave 3L scope result: verification only; no production or UI changed.
+- Cockpit Mutation Wave 3M host drift guard result: `checked 55, ok 55, stale 0, missing 0, extra 0`.
+- Cockpit Mutation Wave 3M scope result: host verification only; no publish required and no UI changed.
