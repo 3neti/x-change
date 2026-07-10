@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 3N — Durable Activity Closure / Production Readiness Decision
-Status: Implemented; durable operator issuance activity mini-wave closed as opt-in baseline
+Current slice: Cockpit Mutation Wave 4A — Durable Activity Journal Handoff Implementation Decision
+Status: Implemented; future journal handoff approved as opt-in observational seam, with no journal writes added yet
 Last updated: 2026-07-10
 
 ## Completed
@@ -232,6 +232,16 @@ Last updated: 2026-07-10
   - No production source, Vue components, pages, routes, TypeScript contracts, package assets, host-published assets, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, UI changes, mutation controls, or money movement were added.
   - No UI was changed in this slice.
   - Report: `reports/076-durable-activity-closure-production-readiness-decision.md`.
+- Completed Cockpit Mutation Wave 4A — Durable Activity Journal Handoff Implementation Decision:
+  - Decided to proceed with a future opt-in journal handoff for durable operator issuance activity.
+  - Kept this checkpoint decision-only: no journal writes and no x-journal runtime calls.
+  - Established the future boundary: Quick Generate → durable Cockpit activity record → optional journal handoff → x-journal append-only record.
+  - Confirmed the handoff must remain observational and must not authorize issuance, execute actions, complete CTAs, send feedback, retry issuance, alter voucher state, or move money.
+  - Identified candidate x-journal surfaces for the next slice: `JournalEventRecorder`, `OperatorActionJournalRecorder`, `JournalEventData`, `JournalEventTransformerRegistry`, and `CockpitJournalReader`.
+  - Proposed future config seam: `x-change.cockpit.operator_issuance_activity.journal_handoff`.
+  - No production source, migrations, queue jobs, retries, journal writes, x-journal runtime calls, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload exposure, UI changes, mutation controls, or money movement were added.
+  - No UI was changed in this slice.
+  - Report: `reports/077-durable-activity-journal-handoff-implementation-decision.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -840,15 +850,15 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 4A — Durable Activity Journal Handoff Implementation Decision
+Cockpit Mutation Wave 4B — Durable Activity Journal Handoff Contract / Null Runtime Configuration
 ```
 
 Purpose:
 
-- decide whether Quick Generate durable activity should append x-journal entries
-- keep journal handoff opt-in
-- preserve durable activity as operational evidence, not lifecycle truth
-- do not add action execution or feedback delivery yet
+- add a config seam for journal handoff implementation
+- keep null handoff as default
+- add tests for default `not_wired` behavior and configured service resolution
+- do not call x-journal yet
 
 Completed host integration boundary:
 
@@ -1233,3 +1243,5 @@ Current boundary:
 - Cockpit Mutation Wave 3M scope result: host verification only; no publish required and no UI changed.
 - Cockpit Mutation Wave 3N closure guard result: `1 passed, 15 assertions`.
 - Cockpit Mutation Wave 3N scope result: closure/decision only; no production or UI changed.
+- Cockpit Mutation Wave 4A decision guard result: `1 passed, 17 assertions`.
+- Cockpit Mutation Wave 4A scope result: decision only; no production or UI changed.

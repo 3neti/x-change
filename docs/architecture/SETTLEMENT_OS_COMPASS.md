@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 3N durable activity opt-in baseline closed
+Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 4A durable activity journal handoff decision implemented
 Last updated: 2026-07-10
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-10
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Mutation Wave 3N durable activity opt-in baseline closed | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Mutation Wave 4A durable activity journal handoff decision implemented | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1107,6 +1107,15 @@ ExecutionDriverContract
   - No production source, Vue components, pages, routes, TypeScript contracts, package assets, host-published assets, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, UI changes, mutation controls, or money movement were added.
   - No UI was changed in this slice.
   - Report: `../ui-cockpit/reports/076-durable-activity-closure-production-readiness-decision.md`.
+- x-change Cockpit Mutation Wave 4A — Durable Activity Journal Handoff Implementation Decision:
+  - Decided to proceed with a future opt-in journal handoff for durable operator issuance activity.
+  - Kept the checkpoint decision-only: no journal writes and no x-journal runtime calls.
+  - Established the future boundary: Quick Generate → durable Cockpit activity record → optional journal handoff → x-journal append-only record.
+  - Confirmed the handoff must remain observational and must not authorize issuance, execute actions, complete CTAs, send feedback, retry issuance, alter voucher state, or move money.
+  - Proposed future config seam: `x-change.cockpit.operator_issuance_activity.journal_handoff`.
+  - No production source, migrations, queue jobs, retries, journal writes, x-journal runtime calls, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload exposure, UI changes, mutation controls, or money movement were added.
+  - No UI was changed in this slice.
+  - Report: `../ui-cockpit/reports/077-durable-activity-journal-handoff-implementation-decision.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -1122,12 +1131,12 @@ x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 x-change Host Integration Slice 2 — Journal/action/feedback read-model hydration into Cockpit surfaces
 ```
 
-Completed through Host Integration Slice 2I and Cockpit Mutation Wave 3N.
+Completed through Host Integration Slice 2I and Cockpit Mutation Wave 4A.
 
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 4A — Durable Activity Journal Handoff Implementation Decision.
+Cockpit Mutation Wave 4B — Durable Activity Journal Handoff Contract / Null Runtime Configuration.
 ```
 
 Recommended actions:
