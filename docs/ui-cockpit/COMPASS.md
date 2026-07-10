@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Wave 5K — Real Activity Production Readiness Decision
-Status: Not ready for production default enablement
+Current slice: Wave 5L — Cockpit Mutation Wave 5 Closure Report
+Status: Closed pending manual UI review
 Last updated: 2026-07-11
 
 ## Completed
@@ -546,6 +546,16 @@ Last updated: 2026-07-11
   - Local UI remains governed by uncommitted local `.env` configuration.
   - No source behavior, Cockpit UI code, host-published assets, local config, routes, controllers, APIs, database writes, database deletes, durable activity defaults, journal writes, action execution, feedback delivery, provider calls, direct wallet mutation, voucher execution behavior, campaign mutation, or money movement behavior was changed.
   - Report: `reports/107-real-activity-production-readiness-decision.md`.
+- Completed Wave 5L — Cockpit Mutation Wave 5 Closure Report:
+  - Closed Wave 5 pending manual UI review.
+  - Summarized cash, voucher, and x-change commits.
+  - Summarized test evidence across cash, voucher, and x-change.
+  - Confirmed `PC-LOCAL-DIAGNOSTIC` is removed and real `MCPC` remains.
+  - Confirmed local durable activity repository/recorder remain enabled for UI review.
+  - Confirmed durable activity production default remains deferred.
+  - Listed manual UI verification targets for `/x/cockpit`.
+  - Recommended next wave: `Cockpit Mutation Wave 6 — Production Hardening Plan`, starting with `Wave 6A — Durable Activity Authorization / Tenant Scope Decision`.
+  - Report: `reports/108-cockpit-mutation-wave-5-closure-report.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -1154,15 +1164,16 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Wave 5L — Cockpit Mutation Wave 5 Closure Report
+Manual UI Review — Cockpit Operator Issuance Activity
 ```
 
 Purpose:
 
-- close Wave 5 with a single evidence, commit, test, UI-impact, and remaining-risk summary
-- list what the user should verify in Cockpit manually
-- identify the next implementation wave after UI review
-- preserve Quick Generate behavior, voucher behavior, wallet behavior, durable activity behavior, redaction behavior, and money movement semantics
+- open `http://x-change-sandbox.test/x/cockpit`
+- verify the real `MCPC` activity is visible
+- verify the synthetic `PC-LOCAL-DIAGNOSTIC` fixture is absent
+- verify no raw payloads, secrets, retry controls, or new mutation controls are visible
+- after UI review, proceed to `Cockpit Mutation Wave 6 — Production Hardening Plan`
 
 Completed host integration boundary:
 
@@ -1723,3 +1734,6 @@ Current boundary:
 - Wave 5K blocker result: authorization/tenant scoping, retention/purge, recorder observability, handoff defaults, PII classification, runbook, search/filter policy, and volume strategy remain open.
 - Wave 5K expected UI effect: none.
 - Wave 5K next checkpoint result: `Wave 5L — Cockpit Mutation Wave 5 Closure Report`.
+- Wave 5L closure result: Wave 5 closed pending manual UI review.
+- Wave 5L expected UI result: `MCPC` visible, `PC-LOCAL-DIAGNOSTIC` absent, journal/action/feedback not wired, no raw payloads or retry controls visible.
+- Wave 5L next checkpoint result: manual UI review, then `Cockpit Mutation Wave 6 — Production Hardening Plan`.
