@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 4M — Durable Activity Journal Handoff Operator Diagnostics Human Visual Confirmation Record
-Status: Human dashboard check completed; diagnostic-specific visual confirmation is blocked because no durable activity data is available
+Current slice: Cockpit Mutation Wave 4N — Durable Activity Diagnostic Fixture / Seeded Visual Verification Plan
+Status: Plan recorded; next step is local-only fixture implementation
 Last updated: 2026-07-10
 
 ## Completed
@@ -363,6 +363,15 @@ Last updated: 2026-07-10
   - Confirmed this checkpoint adds no backend behavior, frontend behavior, routes, controllers, APIs, browser automation dependencies, screenshots, mutation controls, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher mutation, raw payload exposure, or money movement.
   - No UI was changed in this checkpoint.
   - Report: `reports/089-durable-activity-journal-handoff-operator-diagnostics-human-visual-confirmation-record.md`.
+- Completed Cockpit Mutation Wave 4N — Durable Activity Diagnostic Fixture / Seeded Visual Verification Plan:
+  - Defined the safe local-only fixture path needed to unblock populated diagnostic UI verification.
+  - Recommended a future explicit local-only command shape: `php artisan x-change:cockpit:seed-diagnostic-activity --local-only`.
+  - Required the future fixture to refuse production, require an explicit `--local-only` flag, and write only to the package-owned durable activity table.
+  - Required safe synthetic `metadata.journal_handoff` and `metadata.journal_handoff.diagnostic` facts for visual verification only.
+  - Prohibited x-journal calls, journal writes, action execution, feedback delivery, provider calls, voucher mutation, wallet access, raw payload exposure, retry controls, mutation controls, and money movement.
+  - Confirmed this checkpoint did not add the fixture command, seeder, migration, model changes, repository changes, database writes, frontend changes, host-published assets, routes, controllers, APIs, browser automation, screenshots, or runtime behavior changes.
+  - No UI was changed in this checkpoint.
+  - Report: `reports/090-durable-activity-diagnostic-fixture-seeded-visual-verification-plan.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -971,15 +980,17 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 4N — Durable Activity Diagnostic Fixture / Seeded Visual Verification Plan
+Cockpit Mutation Wave 4O — Local Durable Activity Diagnostic Fixture Implementation
 ```
 
 Purpose:
 
-- define a safe local way to create or seed a durable operator issuance activity record
-- include journal handoff diagnostic metadata needed to visually verify the populated diagnostic state
-- keep the seed/fixture local and explicitly non-production
-- avoid creating journal writes, action execution, feedback delivery, provider calls, voucher mutation, wallet access, or money movement
+- add the local-only fixture command or helper
+- protect it with production refusal and an explicit `--local-only` flag
+- write one safe durable activity record through existing package-owned storage seams
+- test that unsafe fields are absent
+- verify dashboard read models can hydrate the fixture
+- avoid x-journal calls, journal writes, action execution, feedback delivery, provider calls, voucher mutation, wallet access, raw payload exposure, retry controls, mutation controls, or money movement
 - update the Cockpit and Settlement OS compasses
 
 Completed host integration boundary:
@@ -1433,3 +1444,6 @@ Current boundary:
 - Cockpit Mutation Wave 4M scope result: human dashboard check completed; diagnostic-specific populated state blocked because no durable activity data is available; no behavior or UI changed.
 - Cockpit Mutation Wave 4M formatter result: `../../vendor/bin/pint --dirty --format agent` fixed EOF formatting and passed.
 - Cockpit Mutation Wave 4M focused documentation guard result: `1 passed, 16 assertions`.
+- Cockpit Mutation Wave 4N scope result: fixture/seeded visual verification plan only; no behavior or UI changed.
+- Cockpit Mutation Wave 4N formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
+- Cockpit Mutation Wave 4N focused documentation guard result: `1 passed, 24 assertions`.

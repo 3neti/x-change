@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 4M dashboard visual check completed and diagnostic-specific confirmation blocked by missing durable activity data
+Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 4N durable activity diagnostic fixture / seeded visual verification plan recorded
 Last updated: 2026-07-10
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-10
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Mutation Wave 4M dashboard visual check completed; diagnostic-specific confirmation blocked by missing durable activity data | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Mutation Wave 4N durable activity diagnostic fixture / seeded visual verification plan recorded | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1242,6 +1242,15 @@ ExecutionDriverContract
   - No package source behavior, frontend behavior, routes, controllers, APIs, browser automation dependencies, screenshots, x-journal invocation, journal write, handoff retry, queue job, action execution, feedback delivery, provider call, wallet access, voucher execution change, lifecycle truth ownership, raw payload exposure, new mutation control, or money movement was added.
   - No new UI was changed in this checkpoint.
   - Report: `../ui-cockpit/reports/089-durable-activity-journal-handoff-operator-diagnostics-human-visual-confirmation-record.md`.
+- x-change Cockpit Mutation Wave 4N — Durable Activity Diagnostic Fixture / Seeded Visual Verification Plan:
+  - Defined the safe local-only fixture path needed to unblock populated diagnostic UI verification.
+  - Recommended a future explicit local-only command shape: `php artisan x-change:cockpit:seed-diagnostic-activity --local-only`.
+  - Required the future fixture to refuse production, require an explicit `--local-only` flag, and write only to the package-owned durable activity table.
+  - Required safe synthetic `metadata.journal_handoff` and `metadata.journal_handoff.diagnostic` facts for visual verification only.
+  - Prohibited x-journal calls, journal writes, action execution, feedback delivery, provider calls, voucher mutation, wallet access, raw payload exposure, retry controls, mutation controls, and money movement.
+  - Confirmed this checkpoint did not add the fixture command, seeder, migration, model changes, repository changes, database writes, frontend changes, host-published assets, routes, controllers, APIs, browser automation, screenshots, or runtime behavior changes.
+  - No UI was changed in this checkpoint.
+  - Report: `../ui-cockpit/reports/090-durable-activity-diagnostic-fixture-seeded-visual-verification-plan.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -1257,19 +1266,19 @@ x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 x-change Host Integration Slice 2 — Journal/action/feedback read-model hydration into Cockpit surfaces
 ```
 
-Completed through Host Integration Slice 2I and Cockpit Mutation Wave 4M.
+Completed through Host Integration Slice 2I and Cockpit Mutation Wave 4N.
 
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 4N — Durable Activity Diagnostic Fixture / Seeded Visual Verification Plan.
+Cockpit Mutation Wave 4O — Local Durable Activity Diagnostic Fixture Implementation.
 ```
 
 Recommended actions:
 
-1. Define a safe local fixture or seed path for a durable operator issuance activity record with journal handoff diagnostic metadata.
-2. Keep the fixture/seed non-production and local-only unless explicitly promoted later.
-3. Use the fixture only to visually verify the populated diagnostic state.
+1. Add the local-only fixture command or helper.
+2. Protect it with production refusal and an explicit `--local-only` flag.
+3. Write one safe durable activity record through existing package-owned storage seams.
 4. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
 5. Existing issuance handoff, idempotency/replay, UI submit, manual refresh, generated Pay Code detail navigation, operator issuance activity read-model props, operator issuance activity dashboard rendering, journal handoff evidence, and journal handoff diagnostics are wired.
 6. Confirm no retry button, mutation control, raw payload, provider payload, wallet data, or secret is visible after populated verification.
