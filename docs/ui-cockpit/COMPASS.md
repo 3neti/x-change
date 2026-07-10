@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 5A — Real Operator Activity Rollout Readiness Decision
-Status: Decision recorded
+Current slice: Cockpit Mutation Wave 5B — Real Quick Generate Durable Activity Local Opt-In Verification
+Status: Verified locally
 Last updated: 2026-07-11
 
 ## Completed
@@ -427,6 +427,21 @@ Last updated: 2026-07-11
   - Did not authorize journal write-side production defaults, action execution, feedback delivery, provider calls outside existing issuance, direct wallet mutation, retry execution, lifecycle truth ownership, raw payload exposure, campaign mutation, or money movement outside existing issuance.
   - No runtime behavior, frontend behavior, host-published assets, routes, controllers, APIs, migrations, models, repository bindings, recorder bindings, journal/action/feedback handoff bindings, provider behavior, wallet behavior, voucher behavior, or money movement changed.
   - Report: `reports/095-real-operator-activity-rollout-readiness-decision.md`.
+- Completed Cockpit Mutation Wave 5B — Real Quick Generate Durable Activity Local Opt-In Verification:
+  - Enabled the existing database durable activity recorder locally through `.env`; `.env` remains uncommitted.
+  - Verified repository config resolves to `LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRepository`.
+  - Verified recorder config resolves to `LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRecorder`.
+  - Verified Cockpit published assets remain synchronized: checked 55, ok 55, stale 0, missing 0, extra 0.
+  - Sent one real authenticated local Quick Generate request through `POST /x/cockpit/quick-generate`.
+  - Generated Pay Code `MCPC` for `PHP 25` with correlation `corr-cockpit-real-activity-5b` and idempotency key `cockpit-real-activity-5b-20260711`.
+  - Verified durable activity row exists for operator `5`, source `cockpit.quick-generate`, subject reference `MCPC`, and status `issued`.
+  - Verified only the idempotency hash was stored; the raw idempotency key was not persisted.
+  - Verified `journal_handoff_status`, `action_handoff_status`, and `feedback_handoff_status` remain `not_wired`.
+  - Verified Cockpit read model hydrates `Pay Code MCPC issued` for operator `5`.
+  - Verified no `raw_payload`, `provider_payload`, or `wallet` metadata is exposed in the presentation.
+  - Recorded an existing Brick\Math deprecation warning about passing floats to `BigNumber::of()` as a separate cleanup risk.
+  - No production default durable activity recording, new runtime behavior, frontend behavior, host-published asset changes, routes, controllers, APIs, migrations, models, repository changes, recorder changes, voucher execution changes, journal writes, action execution, feedback delivery, provider calls outside existing issuance, direct wallet access, direct wallet mutation, lifecycle truth ownership, raw payload exposure, retry controls, or campaign mutation were added.
+  - Report: `reports/096-real-quick-generate-durable-activity-local-opt-in-verification.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -1035,18 +1050,16 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 5B — Real Quick Generate Durable Activity Local Opt-In Verification
+Cockpit Mutation Wave 5C — Real Durable Activity Human Visual Confirmation
 ```
 
 Purpose:
 
-- enable the existing database durable activity recorder locally
-- keep the existing database durable activity repository locally enabled
-- run one real Cockpit Quick Generate issuance through the existing route/UI
-- confirm a generated Pay Code activity is durably recorded for the authenticated operator
-- confirm Cockpit renders the generated Pay Code activity
-- confirm raw idempotency keys and unsafe payloads are not persisted or visible
-- keep action and feedback non-executing unless separately authorized
+- have the human reviewer open `/x/cockpit`
+- confirm `Pay Code MCPC issued` appears in Operator Issuance Activity
+- confirm journal/action/feedback remain `not_wired`
+- confirm no unsafe payloads, retry controls, or new mutation controls are visible
+- record pass/block/fail evidence
 
 Completed host integration boundary:
 
@@ -1534,3 +1547,12 @@ Current boundary:
 - Cockpit Mutation Wave 5A production decision result: do not enable durable activity recording by default in production yet.
 - Cockpit Mutation Wave 5A next checkpoint result: `Cockpit Mutation Wave 5B — Real Quick Generate Durable Activity Local Opt-In Verification`.
 - Cockpit Mutation Wave 5A scope result: decision-only; no source behavior or UI changed.
+- Cockpit Mutation Wave 5B local config result: repository and recorder resolve to database implementations.
+- Cockpit Mutation Wave 5B asset drift result: checked 55, ok 55, stale 0, missing 0, extra 0.
+- Cockpit Mutation Wave 5B real issuance result: `POST /x/cockpit/quick-generate` returned HTTP 201 and generated Pay Code `MCPC`.
+- Cockpit Mutation Wave 5B durable activity result: row recorded for actor `5`, source `cockpit.quick-generate`, subject `MCPC`, status `issued`, and correlation `corr-cockpit-real-activity-5b`.
+- Cockpit Mutation Wave 5B redaction result: raw idempotency key not persisted; unsafe exposure flags false; no raw payload, provider payload, or wallet metadata exposed in read-model presentation.
+- Cockpit Mutation Wave 5B handoff result: journal/action/feedback remain `not_wired`.
+- Cockpit Mutation Wave 5B warning result: existing Brick\Math float deprecation observed and recorded as a separate cleanup risk.
+- Cockpit Mutation Wave 5B next checkpoint result: `Cockpit Mutation Wave 5C — Real Durable Activity Human Visual Confirmation`.
+- Cockpit Mutation Wave 5B scope result: local verification only; no source behavior or UI changed.

@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 5A real operator activity rollout readiness decision recorded
+Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 5B real Quick Generate durable activity local opt-in verified
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Mutation Wave 5A real operator activity rollout readiness decision recorded | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Mutation Wave 5B real Quick Generate durable activity local opt-in verified | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1310,6 +1310,21 @@ ExecutionDriverContract
   - Did not authorize journal write-side production defaults, action execution, feedback delivery, provider calls outside existing issuance, direct wallet mutation, retry execution, lifecycle truth ownership, raw payload exposure, campaign mutation, or money movement outside existing issuance.
   - No runtime behavior, frontend behavior, host-published assets, routes, controllers, APIs, migrations, models, repository bindings, recorder bindings, journal/action/feedback handoff bindings, provider behavior, wallet behavior, voucher behavior, or money movement changed.
   - Report: `../ui-cockpit/reports/095-real-operator-activity-rollout-readiness-decision.md`.
+- x-change Cockpit Mutation Wave 5B — Real Quick Generate Durable Activity Local Opt-In Verification:
+  - Enabled the existing database durable activity recorder locally through `.env`; `.env` remains uncommitted.
+  - Verified repository config resolves to `LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRepository`.
+  - Verified recorder config resolves to `LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRecorder`.
+  - Verified Cockpit published assets remain synchronized: checked 55, ok 55, stale 0, missing 0, extra 0.
+  - Sent one real authenticated local Quick Generate request through `POST /x/cockpit/quick-generate`.
+  - Generated Pay Code `MCPC` for `PHP 25` with correlation `corr-cockpit-real-activity-5b` and idempotency key `cockpit-real-activity-5b-20260711`.
+  - Verified durable activity row exists for operator `5`, source `cockpit.quick-generate`, subject reference `MCPC`, and status `issued`.
+  - Verified only the idempotency hash was stored; the raw idempotency key was not persisted.
+  - Verified `journal_handoff_status`, `action_handoff_status`, and `feedback_handoff_status` remain `not_wired`.
+  - Verified Cockpit read model hydrates `Pay Code MCPC issued` for operator `5`.
+  - Verified no `raw_payload`, `provider_payload`, or `wallet` metadata is exposed in the presentation.
+  - Recorded an existing Brick\Math deprecation warning about passing floats to `BigNumber::of()` as a separate cleanup risk.
+  - No production default durable activity recording, new runtime behavior, frontend behavior, host-published asset changes, routes, controllers, APIs, migrations, models, repository changes, recorder changes, voucher execution changes, journal writes, action execution, feedback delivery, provider calls outside existing issuance, direct wallet access, direct wallet mutation, lifecycle truth ownership, raw payload exposure, retry controls, or campaign mutation were added.
+  - Report: `../ui-cockpit/reports/096-real-quick-generate-durable-activity-local-opt-in-verification.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -1325,22 +1340,22 @@ x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 x-change Host Integration Slice 2 — Journal/action/feedback read-model hydration into Cockpit surfaces
 ```
 
-Completed through Host Integration Slice 2I and Cockpit Mutation Wave 5A.
+Completed through Host Integration Slice 2I and Cockpit Mutation Wave 5B.
 
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 5B — Real Quick Generate Durable Activity Local Opt-In Verification.
+Cockpit Mutation Wave 5C — Real Durable Activity Human Visual Confirmation.
 ```
 
 Recommended actions:
 
-1. Enable the existing database durable activity recorder locally.
-2. Keep the existing database durable activity repository locally enabled.
-3. Run one real Cockpit Quick Generate issuance through the existing route/UI.
+1. Have the human reviewer open `/x/cockpit`.
+2. Confirm `Pay Code MCPC issued` appears in Operator Issuance Activity.
+3. Confirm journal/action/feedback remain `not_wired`.
 4. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
-5. Confirm a generated Pay Code activity is durably recorded for the authenticated operator and visible in Cockpit.
-6. Confirm raw idempotency keys and unsafe payloads are not persisted or visible.
+5. Confirm no unsafe payloads, retry controls, or new mutation controls are visible.
+6. Record pass/block/fail evidence.
 7. Do not add campaign mutation endpoints, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls outside `GeneratePayCode`, campaign state mutation, direct money movement, raw payload exposure, direct wallet access, retry controls, or new mutation controls unless explicitly approved.
 8. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
