@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 3F — Durable Activity Migration Baseline
-Status: Implemented; package-owned durable activity table migration exists with schema/index coverage and no write repository yet
+Current slice: Cockpit Mutation Wave 3G — Durable Activity Model Baseline
+Status: Implemented; durable activity model exists with safe fillable attributes and casts while repository writes remain unwired
 Last updated: 2026-07-10
 
 ## Completed
@@ -155,6 +155,16 @@ Last updated: 2026-07-10
   - No Eloquent models, database repositories, database writes, queue jobs, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, raw payload persistence, UI changes, mutation controls, or money movement were added.
   - No UI was changed in this slice.
   - Report: `reports/068-durable-activity-migration-baseline.md`.
+- Completed Cockpit Mutation Wave 3G — Durable Activity Model Baseline:
+  - Added `CockpitOperatorIssuanceActivity`.
+  - Mapped the model to `x_change_cockpit_operator_issuance_activities`.
+  - Added fillable attributes limited to operator-safe durable activity fields.
+  - Added casts for `safe_context`, `redaction_flags`, `metadata`, `occurred_at`, and `retention_until`.
+  - Proved raw payload, provider payload, wallet, balance, account number, recipient secret, OTP, funding source, and raw idempotency key are not fillable model attributes.
+  - Kept the default repository binding on `NullCockpitOperatorIssuanceActivityRepository`.
+  - No database repositories, repository binding changes, database writes, queue jobs, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, raw payload persistence, UI changes, mutation controls, or money movement were added.
+  - No UI was changed in this slice.
+  - Report: `reports/069-durable-activity-model-baseline.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -763,15 +773,14 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 3G — Durable Activity Model Baseline
+Cockpit Mutation Wave 3H — Durable Activity Database Repository Baseline
 ```
 
 Purpose:
 
-- add the Eloquent model for `x_change_cockpit_operator_issuance_activities`
-- add casts and guarded/fillable behavior
-- prove no raw payload fields are model attributes
-- do not add database write repository behavior yet
+- add a database-backed repository implementation behind `CockpitOperatorIssuanceActivityRepositoryContract`
+- apply redaction and retention policies before persistence
+- keep the default binding on the null repository unless an explicit host/test binding opts in
 - preserve the current Cockpit UI unless a separate presentation-only UI slice is approved
 
 Completed host integration boundary:
@@ -1133,3 +1142,7 @@ Current boundary:
 - Cockpit Mutation Wave 3F focused schema result: `2 passed, 7 assertions`.
 - Cockpit Mutation Wave 3F related schema/architecture result: `5 passed, 51 assertions`.
 - Cockpit Mutation Wave 3F scope result: migration only; no UI changed.
+- Cockpit Mutation Wave 3G focused red baseline: `3 failed, 0 assertions`.
+- Cockpit Mutation Wave 3G focused model result: `3 passed, 8 assertions`.
+- Cockpit Mutation Wave 3G related model/schema/architecture result: `7 passed, 53 assertions`.
+- Cockpit Mutation Wave 3G scope result: model only; no UI changed.
