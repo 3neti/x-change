@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 4B — Durable Activity Journal Handoff Contract / Null Runtime Configuration
-Status: Implemented; journal handoff config seam exists with null runtime default and no x-journal calls
+Current slice: Cockpit Mutation Wave 4C — Durable Activity Journal Payload Mapping Baseline
+Status: Implemented; package-local journal-ready payload mapper exists without x-journal runtime calls
 Last updated: 2026-07-10
 
 ## Completed
@@ -252,6 +252,16 @@ Last updated: 2026-07-10
   - No x-journal runtime calls, journal writes, x-journal DTO normalization, migrations, queue jobs, retries, durable activity handoff status mutation, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload exposure, UI changes, mutation controls, or money movement were added.
   - No UI was changed in this slice.
   - Report: `reports/078-durable-activity-journal-handoff-contract-null-runtime-configuration.md`.
+- Completed Cockpit Mutation Wave 4C — Durable Activity Journal Payload Mapping Baseline:
+  - Added `CockpitOperatorIssuanceActivityJournalPayloadData`.
+  - Added `CockpitOperatorIssuanceActivityJournalPayloadMapper`.
+  - Mapped `CockpitOperatorIssuanceActivityItemData` into event name, domain, stable idempotency key, actor, subject, references, operator-safe payload, and redaction metadata.
+  - Proved raw payload, provider payload, wallet, recipient secret, OTP, and funding source data are excluded.
+  - Proved missing correlation/operator details degrade deterministically.
+  - Kept the payload package-local and intentionally not an x-journal DTO yet.
+  - No x-journal runtime calls, journal writes, x-journal DTO normalization, journal handoff implementation, durable activity handoff status mutation, migrations, queue jobs, retries, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload exposure, UI changes, mutation controls, or money movement were added.
+  - No UI was changed in this slice.
+  - Report: `reports/079-durable-activity-journal-payload-mapping-baseline.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -860,15 +870,16 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 4C — Durable Activity Journal Payload Mapping Baseline
+Cockpit Mutation Wave 4D — Durable Activity Journal Handoff Adapter Baseline
 ```
 
 Purpose:
 
-- introduce a pure mapper from `CockpitOperatorIssuanceActivityItemData` to a journal-ready payload
-- keep mapper independent of x-journal runtime
-- cover idempotency key, actor, subject, correlation, safe context, and redaction boundaries
-- do not write journal entries yet
+- introduce an opt-in handoff implementation that consumes the package-local payload mapper
+- adapt to the chosen x-journal recording surface
+- keep failure non-blocking
+- prove duplicate/idempotent journal inputs do not duplicate records
+- do not update durable activity handoff status yet
 
 Completed host integration boundary:
 
@@ -1258,3 +1269,6 @@ Current boundary:
 - Cockpit Mutation Wave 4B focused red baseline: `1 failed, 2 passed, 7 assertions`.
 - Cockpit Mutation Wave 4B focused runtime result: `3 passed, 11 assertions`.
 - Cockpit Mutation Wave 4B scope result: config/null runtime only; no x-journal calls and no UI changed.
+- Cockpit Mutation Wave 4C focused red baseline: `3 failed, 0 assertions`.
+- Cockpit Mutation Wave 4C focused mapper result: `3 passed, 19 assertions`.
+- Cockpit Mutation Wave 4C scope result: pure payload mapper only; no x-journal calls and no UI changed.
