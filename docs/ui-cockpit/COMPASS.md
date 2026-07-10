@@ -4,9 +4,9 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 4P — Seeded Diagnostic Fixture Host Verification / Human Visual Handoff
-Status: Host fixture seeded; populated visual verification is blocked until local repository config is enabled
-Last updated: 2026-07-10
+Current slice: Cockpit Mutation Wave 4Q — Durable Activity Repository Local Config Enablement Decision
+Status: Local repository config enabled; fixture is dashboard-ready for human visual confirmation
+Last updated: 2026-07-11
 
 ## Completed
 
@@ -397,6 +397,17 @@ Last updated: 2026-07-10
   - Did not edit host `.env`, host config, package source behavior, frontend assets, host-published assets, routes, controllers, APIs, migrations, models, or runtime behavior.
   - No UI was changed in this checkpoint.
   - Report: `reports/092-seeded-diagnostic-fixture-host-verification-human-visual-handoff.md`.
+- Completed Cockpit Mutation Wave 4Q — Durable Activity Repository Local Config Enablement Decision:
+  - Added the local `.env` entry for `XCHANGE_COCKPIT_OPERATOR_ISSUANCE_ACTIVITY_REPOSITORY`.
+  - Cleared config with `php artisan config:clear`.
+  - Verified `x-change.cockpit.operator_issuance_activity.repository` resolves to `LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRepository`.
+  - Re-ran `php artisan x-change:cockpit:seed-diagnostic-activity --local-only --json`.
+  - Confirmed the fixture now reports `dashboard_ready: true`.
+  - Verified the fixture row remains safe with journal handoff status `recorded`, reference `ERN-LOCAL-COCKPIT-0001`, event type `cockpit.operator_issuance_activity.fixture`, and all unsafe exposure flags false.
+  - Did not commit `.env`.
+  - Did not change production defaults, package source behavior, frontend assets, host-published assets, routes, controllers, APIs, migrations, models, or runtime behavior.
+  - No UI was changed in this checkpoint.
+  - Report: `reports/093-durable-activity-repository-local-config-enablement-decision.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -1005,16 +1016,16 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 4Q — Durable Activity Repository Local Config Enablement Decision
+Cockpit Mutation Wave 4R — Seeded Diagnostic Fixture Human Visual Confirmation
 ```
 
 Purpose:
 
-- decide whether to update local host `.env` for the database activity repository
-- if approved, update only local environment config
-- clear config cache if needed
-- re-run the fixture command
-- ask the human reviewer to visually confirm the populated diagnostic card
+- have the human reviewer open `/x/cockpit`
+- confirm the populated fixture activity card is visible
+- confirm journal handoff and operator diagnostic evidence renders
+- confirm no unsafe payloads, retry controls, or mutation controls are visible
+- record pass/block/fail evidence
 - update the Cockpit and Settlement OS compasses
 
 Completed host integration boundary:
@@ -1485,3 +1496,9 @@ Current boundary:
 - Cockpit Mutation Wave 4P scope result: host verification/handoff only; no source behavior or UI changed.
 - Cockpit Mutation Wave 4P formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
 - Cockpit Mutation Wave 4P focused documentation guard result: `1 passed, 19 assertions`.
+- Cockpit Mutation Wave 4Q local config result: `x-change.cockpit.operator_issuance_activity.repository` resolves to `LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRepository`.
+- Cockpit Mutation Wave 4Q fixture seed result: `seeded true`, `dashboard_ready true`, database repository active.
+- Cockpit Mutation Wave 4Q database verification result: fixture row exists and all unsafe exposure flags are false.
+- Cockpit Mutation Wave 4Q scope result: local `.env` config enablement only; `.env` not committed and no source behavior or UI changed.
+- Cockpit Mutation Wave 4Q formatter result: `../../vendor/bin/pint --dirty --format agent` passed.
+- Cockpit Mutation Wave 4Q focused documentation guard result: `1 passed, 21 assertions`.
