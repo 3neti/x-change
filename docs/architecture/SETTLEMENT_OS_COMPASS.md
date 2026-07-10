@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 5G upstream BrickMath fix instructions drafted
+Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 5H intake blocked pending upstream BrickMath fix
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Mutation Wave 5G upstream BrickMath fix instructions drafted | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Mutation Wave 5H intake blocked pending upstream BrickMath fix | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1374,6 +1374,16 @@ ExecutionDriverContract
   - Reaffirmed no cash or voucher package edits should be made inside the x-change checkpoint.
   - No committed `.env` changes, database writes, database deletes, x-change production behavior, frontend behavior, host-published assets, routes, controllers, APIs, migrations, models, repository changes, recorder changes, production defaults, Quick Generate semantics, voucher execution changes, journal writes, action execution, feedback delivery, provider calls, direct wallet access changes, lifecycle truth ownership, raw payload exposure, retry controls, new mutation controls, campaign mutation, or money movement were added.
   - Report: `../ui-cockpit/reports/101-cross-package-brickmath-fix-instruction-upstream-coordination.md`.
+- x-change Cockpit Mutation Wave 5H — Upstream BrickMath Fix Intake / x-change Characterization Flip:
+  - Inspected the local cash and voucher package warning boundaries.
+  - Confirmed the cash package `Cash::amount` mutator still passes `$value` directly into `Money::of()`.
+  - Confirmed the voucher package `PersistCash` step still passes `$amount` directly into `Cash::create()`.
+  - Confirmed both upstream package working trees are clean.
+  - Re-ran the x-change Brick\Math characterization test and confirmed it still passes by capturing the existing warning: `1 passed, 6 assertions`.
+  - Decided not to flip the x-change characterization test because the upstream fix is not yet present locally.
+  - Set the next checkpoint to `Cash/Voucher Upstream BrickMath Fix Execution`.
+  - No committed `.env` changes, database writes, database deletes, x-change production behavior, cash package edits, voucher package edits, frontend behavior, host-published assets, routes, controllers, APIs, migrations, models, repository changes, recorder changes, production defaults, Quick Generate semantics, voucher execution changes, journal writes, action execution, feedback delivery, provider calls, direct wallet access changes, lifecycle truth ownership, raw payload exposure, retry controls, new mutation controls, campaign mutation, or money movement were added.
+  - Report: `../ui-cockpit/reports/102-upstream-brickmath-fix-intake-characterization-flip.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -1389,24 +1399,25 @@ x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 x-change Host Integration Slice 2 — Journal/action/feedback read-model hydration into Cockpit surfaces
 ```
 
-Completed through Host Integration Slice 2I and Cockpit Mutation Wave 5G.
+Completed through Host Integration Slice 2I and Cockpit Mutation Wave 5H intake gate.
 
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 5H — Upstream BrickMath Fix Intake / x-change Characterization Flip.
+Cash/Voucher Upstream BrickMath Fix Execution.
 ```
 
 Recommended actions:
 
-1. Inspect the cash and voucher package fix reports/commits after upstream work is complete.
-2. Verify the relevant cash and voucher focused/full tests passed.
-3. Update x-change characterization coverage to assert no Brick\Math deprecation during real `GeneratePayCode`.
-4. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
-5. Preserve Quick Generate behavior, voucher behavior, wallet behavior, durable activity behavior, redaction behavior, and money movement semantics.
-6. Keep durable activity production default enablement deferred.
-7. Do not add campaign mutation endpoints, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls outside `GeneratePayCode`, campaign state mutation, direct money movement, raw payload exposure, direct wallet access, retry controls, or new mutation controls unless explicitly approved.
-8. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
+1. Run the Wave 5G instructions in `/Users/rli/PhpstormProjects/packages/cash`.
+2. Run the Wave 5G instructions in `/Users/rli/PhpstormProjects/packages/voucher`.
+3. Verify the relevant cash and voucher focused/full tests pass.
+4. Return to x-change and retry Wave 5H only after upstream package fixes are available locally.
+5. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
+6. Preserve Quick Generate behavior, voucher behavior, wallet behavior, durable activity behavior, redaction behavior, and money movement semantics.
+7. Keep durable activity production default enablement deferred.
+8. Do not add campaign mutation endpoints, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls outside `GeneratePayCode`, campaign state mutation, direct money movement, raw payload exposure, direct wallet access, retry controls, or new mutation controls unless explicitly approved.
+9. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
 ## x-journal Initial Intent
 

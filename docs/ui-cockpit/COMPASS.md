@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 5G — Cross-Package BrickMath Fix Instruction / Upstream Coordination
-Status: Instruction drafted
+Current slice: Cockpit Mutation Wave 5H — Upstream BrickMath Fix Intake / x-change Characterization Flip
+Status: Blocked pending upstream fix
 Last updated: 2026-07-11
 
 ## Completed
@@ -492,6 +492,16 @@ Last updated: 2026-07-11
   - Reaffirmed no cash or voucher package edits should be made inside the x-change checkpoint.
   - No committed `.env` changes, database writes, database deletes, x-change production behavior, frontend behavior, host-published assets, routes, controllers, APIs, migrations, models, repository changes, recorder changes, production defaults, Quick Generate semantics, voucher execution changes, journal writes, action execution, feedback delivery, provider calls, direct wallet access changes, lifecycle truth ownership, raw payload exposure, retry controls, new mutation controls, campaign mutation, or money movement were added.
   - Report: `reports/101-cross-package-brickmath-fix-instruction-upstream-coordination.md`.
+- Recorded Cockpit Mutation Wave 5H — Upstream BrickMath Fix Intake / x-change Characterization Flip:
+  - Inspected the local cash and voucher package warning boundaries.
+  - Confirmed the cash package `Cash::amount` mutator still passes `$value` directly into `Money::of()`.
+  - Confirmed the voucher package `PersistCash` step still passes `$amount` directly into `Cash::create()`.
+  - Confirmed both upstream package working trees are clean.
+  - Re-ran the x-change Brick\Math characterization test and confirmed it still passes by capturing the existing warning: `1 passed, 6 assertions`.
+  - Decided not to flip the x-change characterization test because the upstream fix is not yet present locally.
+  - Set the next checkpoint to `Cash/Voucher Upstream BrickMath Fix Execution`.
+  - No committed `.env` changes, database writes, database deletes, x-change production behavior, cash package edits, voucher package edits, frontend behavior, host-published assets, routes, controllers, APIs, migrations, models, repository changes, recorder changes, production defaults, Quick Generate semantics, voucher execution changes, journal writes, action execution, feedback delivery, provider calls, direct wallet access changes, lifecycle truth ownership, raw payload exposure, retry controls, new mutation controls, campaign mutation, or money movement were added.
+  - Report: `reports/102-upstream-brickmath-fix-intake-characterization-flip.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -1100,14 +1110,15 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 5H — Upstream BrickMath Fix Intake / x-change Characterization Flip
+Cash/Voucher Upstream BrickMath Fix Execution
 ```
 
 Purpose:
 
-- inspect cash and voucher package fix reports/commits after upstream work is complete
-- verify the relevant cash and voucher tests passed
-- update x-change characterization coverage to assert no Brick\Math deprecation during real `GeneratePayCode`
+- run the Wave 5G instructions in `/Users/rli/PhpstormProjects/packages/cash`
+- run the Wave 5G instructions in `/Users/rli/PhpstormProjects/packages/voucher`
+- verify the relevant cash and voucher tests pass
+- return to x-change and retry Wave 5H only after upstream package fixes are available locally
 - preserve Quick Generate behavior, voucher behavior, wallet behavior, durable activity behavior, redaction behavior, and money movement semantics
 
 Completed host integration boundary:
@@ -1636,3 +1647,10 @@ Current boundary:
 - Cockpit Mutation Wave 5G x-change return result: after upstream fixes, flip the characterization test to assert no `Passing floats to BigNumber::of()` warning.
 - Cockpit Mutation Wave 5G next checkpoint result: `Cockpit Mutation Wave 5H — Upstream BrickMath Fix Intake / x-change Characterization Flip`.
 - Cockpit Mutation Wave 5G scope result: instruction/documentation and guard test only; no cash, voucher, x-change production behavior, UI, local config, or database state changed.
+- Cockpit Mutation Wave 5H intake result: blocked pending upstream fix.
+- Cockpit Mutation Wave 5H cash inspection result: `Cash::amount` still calls `Money::of($value, $currency)`.
+- Cockpit Mutation Wave 5H voucher inspection result: `PersistCash` still passes `$amount` directly into `Cash::create()`.
+- Cockpit Mutation Wave 5H upstream git status result: cash and voucher package working trees returned no status output.
+- Cockpit Mutation Wave 5H characterization result: x-change Brick\Math test still captures the warning and passes with `1 passed, 6 assertions`.
+- Cockpit Mutation Wave 5H next checkpoint result: `Cash/Voucher Upstream BrickMath Fix Execution`.
+- Cockpit Mutation Wave 5H scope result: intake documentation and guard test only; no cash, voucher, x-change production behavior, UI, local config, or database state changed.
