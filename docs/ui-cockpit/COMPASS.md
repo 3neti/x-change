@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 5B — Real Quick Generate Durable Activity Local Opt-In Verification
-Status: Verified locally
+Current slice: Cockpit Mutation Wave 5C — Real Durable Activity Human Visual Confirmation
+Status: Pass — accepted by human
 Last updated: 2026-07-11
 
 ## Completed
@@ -442,6 +442,16 @@ Last updated: 2026-07-11
   - Recorded an existing Brick\Math deprecation warning about passing floats to `BigNumber::of()` as a separate cleanup risk.
   - No production default durable activity recording, new runtime behavior, frontend behavior, host-published asset changes, routes, controllers, APIs, migrations, models, repository changes, recorder changes, voucher execution changes, journal writes, action execution, feedback delivery, provider calls outside existing issuance, direct wallet access, direct wallet mutation, lifecycle truth ownership, raw payload exposure, retry controls, or campaign mutation were added.
   - Report: `reports/096-real-quick-generate-durable-activity-local-opt-in-verification.md`.
+- Completed Cockpit Mutation Wave 5C — Real Durable Activity Human Visual Confirmation:
+  - Human reviewer confirmed the real generated durable activity renders in Cockpit.
+  - Confirmed `Pay Code MCPC issued` and `PHP 25 issued through Quick Generate` render in Operator Issuance Activity.
+  - Confirmed journal/action/feedback remain `not_wired` for the real `MCPC` activity.
+  - Confirmed `Writes journal: no`, `Source: durable-operator-issuance-activity-read-model`, and `Diagnostic: Journal handoff not wired` render for the real activity.
+  - Confirmed operator diagnostic remains read-only with `Action: configure_when_ready` and `Correlation: corr-cockpit-real-activity-5b`.
+  - Confirmed the prior synthetic `PC-LOCAL-DIAGNOSTIC` diagnostic fixture remains visible for comparison.
+  - Confirmed no unsafe payloads, retry controls, or new mutation controls were reported visible.
+  - No source behavior, frontend behavior, host-published assets, routes, controllers, APIs, migrations, models, repository changes, recorder changes, production default durable activity recording, new Quick Generate semantics, voucher execution changes, journal writes, action execution, feedback delivery, provider calls outside existing issuance, direct wallet access, direct wallet mutation, lifecycle truth ownership, raw payload exposure, retry controls, new mutation controls, campaign mutation, or money movement were added.
+  - Report: `reports/097-real-durable-activity-human-visual-confirmation.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -1050,16 +1060,16 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 5C — Real Durable Activity Human Visual Confirmation
+Cockpit Mutation Wave 5D — Durable Activity Local Opt-In Closure / Cleanup Decision
 ```
 
 Purpose:
 
-- have the human reviewer open `/x/cockpit`
-- confirm `Pay Code MCPC issued` appears in Operator Issuance Activity
-- confirm journal/action/feedback remain `not_wired`
-- confirm no unsafe payloads, retry controls, or new mutation controls are visible
-- record pass/block/fail evidence
+- decide whether to keep the local recorder enabled for continued manual testing
+- decide whether to remove the synthetic diagnostic fixture from the local database after visual verification
+- decide whether to create a separate cleanup slice for the Brick\Math float deprecation
+- do not production-enable durable activity recording by default yet
+- do not add journal writes, action execution, feedback delivery, retry controls, provider changes, wallet changes, or new mutation controls
 
 Completed host integration boundary:
 
@@ -1556,3 +1566,8 @@ Current boundary:
 - Cockpit Mutation Wave 5B warning result: existing Brick\Math float deprecation observed and recorded as a separate cleanup risk.
 - Cockpit Mutation Wave 5B next checkpoint result: `Cockpit Mutation Wave 5C — Real Durable Activity Human Visual Confirmation`.
 - Cockpit Mutation Wave 5B scope result: local verification only; no source behavior or UI changed.
+- Cockpit Mutation Wave 5C human visual result: `Pass — accepted by human`.
+- Cockpit Mutation Wave 5C real activity evidence result: `Pay Code MCPC issued`, `PHP 25 issued through Quick Generate`, `journal: not_wired`, `action: not_wired`, `feedback: not_wired`, `Writes journal: no`, and `Correlation: corr-cockpit-real-activity-5b`.
+- Cockpit Mutation Wave 5C fixture comparison result: `Pay Code PC-LOCAL-DIAGNOSTIC issued` remains visible with synthetic recorded journal metadata.
+- Cockpit Mutation Wave 5C next checkpoint result: `Cockpit Mutation Wave 5D — Durable Activity Local Opt-In Closure / Cleanup Decision`.
+- Cockpit Mutation Wave 5C scope result: confirmation-only; no source behavior or UI changed.

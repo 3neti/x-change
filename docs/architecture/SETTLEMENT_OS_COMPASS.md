@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 5B real Quick Generate durable activity local opt-in verified
+Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 5C real durable activity human visual confirmation passed
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Mutation Wave 5B real Quick Generate durable activity local opt-in verified | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Mutation Wave 5C real durable activity human visual confirmation passed | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1325,6 +1325,16 @@ ExecutionDriverContract
   - Recorded an existing Brick\Math deprecation warning about passing floats to `BigNumber::of()` as a separate cleanup risk.
   - No production default durable activity recording, new runtime behavior, frontend behavior, host-published asset changes, routes, controllers, APIs, migrations, models, repository changes, recorder changes, voucher execution changes, journal writes, action execution, feedback delivery, provider calls outside existing issuance, direct wallet access, direct wallet mutation, lifecycle truth ownership, raw payload exposure, retry controls, or campaign mutation were added.
   - Report: `../ui-cockpit/reports/096-real-quick-generate-durable-activity-local-opt-in-verification.md`.
+- x-change Cockpit Mutation Wave 5C — Real Durable Activity Human Visual Confirmation:
+  - Human reviewer confirmed the real generated durable activity renders in Cockpit.
+  - Confirmed `Pay Code MCPC issued` and `PHP 25 issued through Quick Generate` render in Operator Issuance Activity.
+  - Confirmed journal/action/feedback remain `not_wired` for the real `MCPC` activity.
+  - Confirmed `Writes journal: no`, `Source: durable-operator-issuance-activity-read-model`, and `Diagnostic: Journal handoff not wired` render for the real activity.
+  - Confirmed operator diagnostic remains read-only with `Action: configure_when_ready` and `Correlation: corr-cockpit-real-activity-5b`.
+  - Confirmed the prior synthetic `PC-LOCAL-DIAGNOSTIC` diagnostic fixture remains visible for comparison.
+  - Confirmed no unsafe payloads, retry controls, or new mutation controls were reported visible.
+  - No source behavior, frontend behavior, host-published assets, routes, controllers, APIs, migrations, models, repository changes, recorder changes, production default durable activity recording, new Quick Generate semantics, voucher execution changes, journal writes, action execution, feedback delivery, provider calls outside existing issuance, direct wallet access, direct wallet mutation, lifecycle truth ownership, raw payload exposure, retry controls, new mutation controls, campaign mutation, or money movement were added.
+  - Report: `../ui-cockpit/reports/097-real-durable-activity-human-visual-confirmation.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -1340,22 +1350,22 @@ x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 x-change Host Integration Slice 2 — Journal/action/feedback read-model hydration into Cockpit surfaces
 ```
 
-Completed through Host Integration Slice 2I and Cockpit Mutation Wave 5B.
+Completed through Host Integration Slice 2I and Cockpit Mutation Wave 5C.
 
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 5C — Real Durable Activity Human Visual Confirmation.
+Cockpit Mutation Wave 5D — Durable Activity Local Opt-In Closure / Cleanup Decision.
 ```
 
 Recommended actions:
 
-1. Have the human reviewer open `/x/cockpit`.
-2. Confirm `Pay Code MCPC issued` appears in Operator Issuance Activity.
-3. Confirm journal/action/feedback remain `not_wired`.
+1. Decide whether to keep the local recorder enabled for continued manual testing.
+2. Decide whether to remove the synthetic diagnostic fixture from the local database after visual verification.
+3. Decide whether to create a separate cleanup slice for the Brick\Math float deprecation.
 4. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
-5. Confirm no unsafe payloads, retry controls, or new mutation controls are visible.
-6. Record pass/block/fail evidence.
+5. Do not production-enable durable activity recording by default yet.
+6. Do not add journal writes, action execution, feedback delivery, retry controls, provider changes, wallet changes, or new mutation controls.
 7. Do not add campaign mutation endpoints, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls outside `GeneratePayCode`, campaign state mutation, direct money movement, raw payload exposure, direct wallet access, retry controls, or new mutation controls unless explicitly approved.
 8. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
