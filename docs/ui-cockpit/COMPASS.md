@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 3J — Durable Activity Runtime Opt-In Configuration
-Status: Implemented; database-backed operator issuance activity storage is available only through explicit config opt-in
+Current slice: Cockpit Mutation Wave 3K — Durable Activity Read Model Adapter
+Status: Implemented; configured durable operator issuance activity can hydrate existing Cockpit activity read models without UI changes
 Last updated: 2026-07-10
 
 ## Completed
@@ -195,6 +195,16 @@ Last updated: 2026-07-10
   - No automatic production persistence, journal writes, action execution, feedback delivery, queue jobs, provider calls beyond existing Quick Generate issuance, wallet access, voucher execution changes, raw payload persistence, UI changes, mutation controls, or money movement were added.
   - No UI was changed in this slice.
   - Report: `reports/072-durable-activity-runtime-opt-in-configuration.md`.
+- Completed Cockpit Mutation Wave 3K — Durable Activity Read Model Adapter:
+  - Added `DurableCockpitOperatorIssuanceActivityReadModelProvider`.
+  - Wired `VoucherLifecycleCockpitReadModelProvider::forOperatorIssuanceActivity()` to use the durable adapter.
+  - Preserved the default null/not-wired read model when durable activity persistence is disabled.
+  - Hydrated durable records into `CockpitOperatorIssuanceActivityItemData`.
+  - Hydrated durable records into existing presentation DTOs through `CockpitOperatorIssuanceActivityPresenterContract`.
+  - Used stored handoff statuses as read-only display facts only.
+  - No package Vue components, pages, routes, TypeScript contracts, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, UI changes, mutation controls, or money movement were added.
+  - No UI was changed in this slice.
+  - Report: `reports/073-durable-activity-read-model-adapter.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -803,16 +813,15 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 3K — Durable Activity Read Model Adapter
+Cockpit Mutation Wave 3L — Durable Activity Dashboard Verification
 ```
 
 Purpose:
 
-- add a read model provider/decorator that reads durable operator issuance activity records from the configured repository
-- keep dashboard presentation read-only
-- show database-backed activity only when the repository is explicitly configured
-- preserve null/not-wired presentation when persistence is disabled
-- do not add new mutation controls
+- verify the existing dashboard props carry durable activity read-model data when persistence is configured
+- keep Vue/UI source unchanged unless a stale prop mismatch is discovered
+- prove default dashboard props remain not-wired when persistence is disabled
+- preserve read-only presentation semantics
 
 Completed host integration boundary:
 
@@ -1188,3 +1197,6 @@ Current boundary:
 - Cockpit Mutation Wave 3J focused red baseline: `2 failed, 1 passed, 11 assertions`.
 - Cockpit Mutation Wave 3J focused runtime opt-in result: `3 passed, 13 assertions`.
 - Cockpit Mutation Wave 3J scope result: config opt-in only; no UI changed.
+- Cockpit Mutation Wave 3K focused red baseline: `1 failed, 1 passed, 5 assertions`.
+- Cockpit Mutation Wave 3K focused read-model result: `2 passed, 18 assertions`.
+- Cockpit Mutation Wave 3K scope result: read-model adapter only; no UI changed.

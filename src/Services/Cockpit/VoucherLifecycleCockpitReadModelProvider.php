@@ -53,6 +53,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         private readonly VoucherLifecycleServiceContract $vouchers,
         private readonly NullCockpitReadModelProvider $fallback = new NullCockpitReadModelProvider,
         private readonly ?OptionalCockpitIntegrationReadModels $integrations = null,
+        private readonly ?DurableCockpitOperatorIssuanceActivityReadModelProvider $operatorIssuanceActivity = null,
     ) {}
 
     public function forVoucher(CockpitReadModelQueryData $query): CockpitReadModelBundleData
@@ -816,7 +817,8 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
 
     public function forOperatorIssuanceActivity(CockpitReadModelQueryData $query): CockpitOperatorIssuanceActivityReadModelData
     {
-        return $this->fallback->forOperatorIssuanceActivity($query);
+        return $this->operatorIssuanceActivity?->forOperator($query)
+            ?? $this->fallback->forOperatorIssuanceActivity($query);
     }
 
     public function forPayCodeList(CockpitReadModelQueryData $query): CockpitPayCodeListReadModelData

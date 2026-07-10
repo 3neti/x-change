@@ -127,6 +127,7 @@ use LBHurtado\XChange\Services\CacheClaimApprovalWorkflowStore;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitOperatorIssuanceActivityPresenter;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitOperatorIssuanceActivityRedactionPolicy;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitOperatorIssuanceActivityRetentionPolicy;
+use LBHurtado\XChange\Services\Cockpit\DurableCockpitOperatorIssuanceActivityReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityActionHandoff;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityFeedbackHandoff;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityJournalHandoff;
@@ -266,6 +267,7 @@ class XChangeServiceProvider extends ServiceProvider
                 vouchers: $app->make(VoucherLifecycleServiceContract::class),
                 fallback: new NullCockpitReadModelProvider,
                 integrations: $app->make(OptionalCockpitIntegrationReadModels::class),
+                operatorIssuanceActivity: $app->make(DurableCockpitOperatorIssuanceActivityReadModelProvider::class),
             );
         });
         $this->app->singleton(CockpitRedactorContract::class, DefaultCockpitRedactor::class);
