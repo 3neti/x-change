@@ -5,7 +5,7 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Cockpit Mutation Wave 4M — Durable Activity Journal Handoff Operator Diagnostics Human Visual Confirmation Record
-Status: Human visual confirmation record scaffolded; pass/block/fail decision remains pending
+Status: Human dashboard check completed; diagnostic-specific visual confirmation is blocked because no durable activity data is available
 Last updated: 2026-07-10
 
 ## Completed
@@ -352,10 +352,13 @@ Last updated: 2026-07-10
   - No package source behavior, manual host mirror edits, asset publishing, x-journal invocation, journal write, handoff retry, queue job, action execution, feedback delivery, provider call, wallet access, voucher execution change, lifecycle truth ownership, raw payload exposure, new mutation control, or money movement was added.
   - No new UI was changed in this checkpoint.
   - Report: `reports/088-durable-activity-journal-handoff-operator-diagnostics-manual-browser-verification.md`.
-- Scaffolded Cockpit Mutation Wave 4M — Durable Activity Journal Handoff Operator Diagnostics Human Visual Confirmation Record:
+- Completed Cockpit Mutation Wave 4M — Durable Activity Journal Handoff Operator Diagnostics Human Visual Confirmation Record:
   - Added the human visual confirmation record for the Wave 4J read-only operator diagnostic UI.
   - Recorded the target route as `http://x-change-sandbox.test/x/cockpit`.
-  - Kept the checkpoint status as pending because no diagnostic-specific human pass/block/fail decision has been supplied yet.
+  - Recorded the human dashboard scrape as evidence that `/x/cockpit` rendered without visible errors.
+  - Confirmed the Operator Issuance Activity panel rendered with `Quick Generate evidence`, `presentation-only`, and `No operator issuance activity available`.
+  - Confirmed no retry controls, mutation controls, raw payloads, provider payloads, wallet data, secrets, tokens, credentials, OTPs, or recipient secrets were reported visible.
+  - Marked diagnostic-specific visual confirmation as blocked because no durable activity record with journal handoff diagnostic metadata was available.
   - Documented pass, blocked, and fail criteria for the Operator Issuance Activity diagnostic section.
   - Confirmed this checkpoint adds no backend behavior, frontend behavior, routes, controllers, APIs, browser automation dependencies, screenshots, mutation controls, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher mutation, raw payload exposure, or money movement.
   - No UI was changed in this checkpoint.
@@ -968,16 +971,16 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Complete Cockpit Mutation Wave 4M — Durable Activity Journal Handoff Operator Diagnostics Human Visual Confirmation Decision
+Cockpit Mutation Wave 4N — Durable Activity Diagnostic Fixture / Seeded Visual Verification Plan
 ```
 
 Purpose:
 
-- have the human reviewer inspect `/x/cockpit`
-- record the pass/block/fail decision in `reports/089-durable-activity-journal-handoff-operator-diagnostics-human-visual-confirmation-record.md`
-- cite visible evidence or blocker
+- define a safe local way to create or seed a durable operator issuance activity record
+- include journal handoff diagnostic metadata needed to visually verify the populated diagnostic state
+- keep the seed/fixture local and explicitly non-production
+- avoid creating journal writes, action execution, feedback delivery, provider calls, voucher mutation, wallet access, or money movement
 - update the Cockpit and Settlement OS compasses
-- do not add new behavior
 
 Completed host integration boundary:
 
@@ -1427,6 +1430,6 @@ Current boundary:
 - Cockpit Mutation Wave 4L host build result: `npm run build` passed with existing Rolldown annotation warnings from `reka-ui` / `@vueuse`.
 - Cockpit Mutation Wave 4L package frontend result: `74 passed, 476 tests`.
 - Cockpit Mutation Wave 4L scope result: manual browser verification handoff only; no behavior or UI changed.
-- Cockpit Mutation Wave 4M scope result: human visual confirmation record scaffolded; decision remains pending and no behavior or UI changed.
+- Cockpit Mutation Wave 4M scope result: human dashboard check completed; diagnostic-specific populated state blocked because no durable activity data is available; no behavior or UI changed.
 - Cockpit Mutation Wave 4M formatter result: `../../vendor/bin/pint --dirty --format agent` fixed EOF formatting and passed.
 - Cockpit Mutation Wave 4M focused documentation guard result: `1 passed, 16 assertions`.

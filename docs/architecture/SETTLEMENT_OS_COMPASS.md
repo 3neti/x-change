@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 4M durable activity journal handoff operator diagnostics human visual confirmation record scaffolded and pending decision
+Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 4M dashboard visual check completed and diagnostic-specific confirmation blocked by missing durable activity data
 Last updated: 2026-07-10
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-10
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Mutation Wave 4M durable activity journal handoff operator diagnostics human visual confirmation record scaffolded and pending decision | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Mutation Wave 4M dashboard visual check completed; diagnostic-specific confirmation blocked by missing durable activity data | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1234,7 +1234,10 @@ ExecutionDriverContract
 - x-change Cockpit Mutation Wave 4M — Durable Activity Journal Handoff Operator Diagnostics Human Visual Confirmation Record:
   - Added the human visual confirmation record for the read-only operator diagnostic UI.
   - Recorded the target route as `http://x-change-sandbox.test/x/cockpit`.
-  - Kept the checkpoint status as pending because no diagnostic-specific human pass/block/fail decision has been supplied yet.
+  - Recorded the human dashboard scrape as evidence that `/x/cockpit` rendered without visible errors.
+  - Confirmed the Operator Issuance Activity panel rendered with `Quick Generate evidence`, `presentation-only`, and `No operator issuance activity available`.
+  - Confirmed no retry controls, mutation controls, raw payloads, provider payloads, wallet data, secrets, tokens, credentials, OTPs, or recipient secrets were reported visible.
+  - Marked diagnostic-specific visual confirmation as blocked because no durable activity record with journal handoff diagnostic metadata was available.
   - Documented pass, blocked, and fail criteria for journal handoff evidence, operator diagnostics, absence of retry/mutation controls, and absence of unsafe payload exposure.
   - No package source behavior, frontend behavior, routes, controllers, APIs, browser automation dependencies, screenshots, x-journal invocation, journal write, handoff retry, queue job, action execution, feedback delivery, provider call, wallet access, voucher execution change, lifecycle truth ownership, raw payload exposure, new mutation control, or money movement was added.
   - No new UI was changed in this checkpoint.
@@ -1254,25 +1257,24 @@ x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 x-change Host Integration Slice 2 — Journal/action/feedback read-model hydration into Cockpit surfaces
 ```
 
-Completed through Host Integration Slice 2I and Cockpit Mutation Wave 4M scaffold.
+Completed through Host Integration Slice 2I and Cockpit Mutation Wave 4M.
 
 Recommended next checkpoint:
 
 ```text
-Complete Cockpit Mutation Wave 4M — Durable Activity Journal Handoff Operator Diagnostics Human Visual Confirmation Decision.
+Cockpit Mutation Wave 4N — Durable Activity Diagnostic Fixture / Seeded Visual Verification Plan.
 ```
 
 Recommended actions:
 
-1. Have the human reviewer inspect `/x/cockpit`.
-2. Record the human pass/block/fail decision in `../ui-cockpit/reports/089-durable-activity-journal-handoff-operator-diagnostics-human-visual-confirmation-record.md`.
-3. Cite visible evidence or blocker.
-4. Update the Cockpit and Settlement OS compasses.
-5. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
-6. Existing issuance handoff, idempotency/replay, UI submit, manual refresh, generated Pay Code detail navigation, operator issuance activity read-model props, operator issuance activity dashboard rendering, journal handoff evidence, and journal handoff diagnostics are wired.
-7. Confirm no retry button, mutation control, raw payload, provider payload, wallet data, or secret is visible.
-8. Do not add campaign mutation endpoints, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls outside `GeneratePayCode`, campaign state mutation, direct money movement, raw payload exposure, direct wallet access, retry controls, or new mutation controls unless explicitly approved.
-9. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
+1. Define a safe local fixture or seed path for a durable operator issuance activity record with journal handoff diagnostic metadata.
+2. Keep the fixture/seed non-production and local-only unless explicitly promoted later.
+3. Use the fixture only to visually verify the populated diagnostic state.
+4. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
+5. Existing issuance handoff, idempotency/replay, UI submit, manual refresh, generated Pay Code detail navigation, operator issuance activity read-model props, operator issuance activity dashboard rendering, journal handoff evidence, and journal handoff diagnostics are wired.
+6. Confirm no retry button, mutation control, raw payload, provider payload, wallet data, or secret is visible after populated verification.
+7. Do not add campaign mutation endpoints, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls outside `GeneratePayCode`, campaign state mutation, direct money movement, raw payload exposure, direct wallet access, retry controls, or new mutation controls unless explicitly approved.
+8. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
 ## x-journal Initial Intent
 

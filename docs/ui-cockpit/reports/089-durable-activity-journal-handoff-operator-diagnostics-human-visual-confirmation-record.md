@@ -1,6 +1,6 @@
 # Cockpit Mutation Wave 4M — Durable Activity Journal Handoff Operator Diagnostics Human Visual Confirmation Record
 
-Status: Pending human confirmation
+Status: Blocked — no durable activity data available
 
 Date: 2026-07-10
 
@@ -32,12 +32,12 @@ Fill this table after browser inspection.
 
 | Surface | Expected Evidence | Result | Evidence / Notes |
 | --- | --- | --- | --- |
-| Cockpit Dashboard | `/x/cockpit` renders | Pending | Human confirmation not yet supplied. |
-| Operator Issuance Activity panel | `Operator Issuance Activity` and `Quick Generate evidence` render | Pending | Human confirmation not yet supplied. |
-| Journal handoff evidence | `Journal entry`, `Writes journal`, `Source`, `Reason`, `Reference`, or `Event` render when safe metadata exists | Pending | Human confirmation not yet supplied. |
-| Operator diagnostic | `Operator diagnostic`, `Diagnostic: ...`, `Action: ...`, and `Read-only: yes` render when safe diagnostic metadata exists | Pending | Human confirmation not yet supplied. |
-| Retry / mutation controls | No retry button or mutation control is visible | Pending | Human confirmation not yet supplied. |
-| Unsafe payload exposure | No raw payload, provider payload, wallet data, secret, token, credential, OTP, or recipient secret is visible | Pending | Human confirmation not yet supplied. |
+| Cockpit Dashboard | `/x/cockpit` renders | Pass | Human scrape shows the Cockpit dashboard rendered with the expected read-only shell content. |
+| Operator Issuance Activity panel | `Operator Issuance Activity` and `Quick Generate evidence` render | Pass | Human scrape shows `Operator Issuance Activity`, `Quick Generate evidence`, and `presentation-only`. |
+| Journal handoff evidence | `Journal entry`, `Writes journal`, `Source`, `Reason`, `Reference`, or `Event` render when safe metadata exists | Blocked | Human scrape shows `No operator issuance activity available`; no populated durable activity exists to verify journal handoff evidence. |
+| Operator diagnostic | `Operator diagnostic`, `Diagnostic: ...`, `Action: ...`, and `Read-only: yes` render when safe diagnostic metadata exists | Blocked | Human scrape shows no populated durable activity or diagnostic metadata. |
+| Retry / mutation controls | No retry button or mutation control is visible | Pass | Human scrape shows read-only/deferred/not-wired states and no retry or mutation control. |
+| Unsafe payload exposure | No raw payload, provider payload, wallet data, secret, token, credential, OTP, or recipient secret is visible | Pass | Human scrape shows no unsafe payload, wallet data, secret, token, credential, OTP, or recipient secret. |
 
 Allowed result values:
 
@@ -95,10 +95,30 @@ Mark this checkpoint `Fail` and stop if the Cockpit dashboard shows:
 Current decision:
 
 ```text
-Pending human confirmation
+Blocked — no durable activity data available
 ```
 
-No human pass/block decision has been supplied yet for the Wave 4J diagnostic-specific UI.
+The dashboard itself rendered without visible error and the observed content remained read-only. The diagnostic-specific populated state could not be confirmed because the Operator Issuance Activity panel showed:
+
+```text
+No operator issuance activity available
+Activity recording is not wired yet. Quick Generate can still use the existing issuance path.
+```
+
+This is not a UI failure. It is an evidence gap: the checkpoint requires a populated durable activity record with safe journal handoff diagnostic metadata before the diagnostic rendering can be accepted as visually confirmed.
+
+## Human Evidence Received
+
+The human reviewer reported that `/x/cockpit` rendered and supplied a screen scrape showing:
+
+- `Operator Issuance Activity`;
+- `Quick Generate evidence`;
+- `presentation-only`;
+- `No operator issuance activity available`;
+- `Activity recording is not wired yet`;
+- read-only/not-wired/deferred summaries for Journal Evidence, Action CTAs, Feedback Deliveries, Redemption Pipeline, Risk and Expiry, and Recent Activity.
+
+No visible errors, retry controls, mutation controls, raw payloads, provider payloads, wallet data, or secrets were reported.
 
 ## Boundary
 
@@ -132,7 +152,9 @@ The previous checkpoint, Wave 4L, recorded:
 
 ## Next Action
 
-Human reviewer should open:
+Next implementation or verification work should create or seed a safe local durable operator issuance activity record with journal handoff diagnostic metadata, then repeat this visual confirmation.
+
+Human reviewer should then open:
 
 ```text
 http://x-change-sandbox.test/x/cockpit
@@ -147,4 +169,3 @@ Fail — with defect
 ```
 
 After that, update this report, `COMPASS.md`, and `SETTLEMENT_OS_COMPASS.md` with the final human decision.
-
