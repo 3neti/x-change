@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 3D — Activity Redaction and Retention Policy Contracts
-Status: Implemented; redaction and retention policy contracts now exist with safe defaults before any durable database storage is introduced
+Current slice: Cockpit Mutation Wave 3E — Database Migration Decision Point
+Status: Implemented; durable activity storage decision is closed and a package-owned migration baseline is recommended next
 Last updated: 2026-07-10
 
 ## Completed
@@ -137,6 +137,15 @@ Last updated: 2026-07-10
   - No migrations, Eloquent models, database writes, queue jobs, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, raw payload persistence, UI changes, mutation controls, or money movement were added.
   - No UI was changed in this slice.
   - Report: `reports/066-activity-redaction-retention-policy-contracts.md`.
+- Completed Cockpit Mutation Wave 3E — Database Migration Decision Point:
+  - Decided to proceed with a package-owned durable activity table in the next implementation slice.
+  - Proposed table name: `x_change_cockpit_operator_issuance_activities`.
+  - Documented proposed columns for activity identity, operator display, subject reference, status, correlation, redacted context, handoff statuses, retention, and metadata.
+  - Documented required indexes: `index_activity_id_unique`, `index_operator_occurred_at`, `index_subject_reference`, `index_correlation_id`, and `index_retention_until`.
+  - Confirmed future persistent repositories must apply `CockpitOperatorIssuanceActivityRedactionPolicyContract` and `CockpitOperatorIssuanceActivityRetentionPolicyContract` before writes.
+  - No migration files, Eloquent models, database writes, persistent repositories, queue jobs, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, raw payload persistence, UI changes, mutation controls, or money movement were added.
+  - No UI was changed in this slice.
+  - Report: `reports/067-activity-database-migration-decision-point.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -745,14 +754,14 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 3E — Database Migration Decision Point
+Cockpit Mutation Wave 3F — Durable Activity Migration Baseline
 ```
 
 Purpose:
 
-- decide whether durable operator issuance activity storage should use a package migration now
-- document schema, indexes, retention enforcement, and redaction enforcement points before creating a table
-- do not add database writes until the schema and persistence contract are explicitly accepted
+- add the package migration for `x_change_cockpit_operator_issuance_activities`
+- add schema tests for columns and indexes
+- do not add database writes until the database repository slice
 - preserve the current Cockpit UI unless a separate presentation-only UI slice is approved
 
 Completed host integration boundary:
@@ -1106,3 +1115,7 @@ Current boundary:
 - Cockpit Mutation Wave 3D focused policy/architecture result: `6 passed, 53 assertions`.
 - Cockpit Mutation Wave 3D full package Pest result: `1138 passed, 5 skipped, 6953 assertions`.
 - Cockpit Mutation Wave 3D scope result: no UI changed.
+- Cockpit Mutation Wave 3E focused red baseline: `1 failed, 1 passed, 2 assertions`.
+- Cockpit Mutation Wave 3E focused decision-point result: `2 passed, 24 assertions`.
+- Cockpit Mutation Wave 3E related architecture result: `3 passed, 39 assertions`.
+- Cockpit Mutation Wave 3E scope result: decision-only; no UI changed.

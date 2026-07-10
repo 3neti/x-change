@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 3D activity redaction and retention policy contracts implemented
+Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 3E database migration decision point implemented
 Last updated: 2026-07-10
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-10
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Mutation Wave 3D activity redaction and retention policy contracts implemented | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Mutation Wave 3E database migration decision point implemented | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1030,6 +1030,14 @@ ExecutionDriverContract
   - No migrations, Eloquent models, database writes, queue jobs, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, raw payload persistence, UI changes, mutation controls, or money movement were added.
   - No UI was changed in this slice.
   - Report: `../ui-cockpit/reports/066-activity-redaction-retention-policy-contracts.md`.
+- x-change Cockpit Mutation Wave 3E — Database Migration Decision Point:
+  - Decided to proceed with a package-owned durable activity table in the next implementation slice.
+  - Proposed table name: `x_change_cockpit_operator_issuance_activities`.
+  - Documented proposed columns, required indexes, redaction enforcement, retention enforcement, and repository boundary before creating storage.
+  - Confirmed future persistent repositories must apply activity redaction and retention policies before database writes.
+  - No migration files, Eloquent models, database writes, persistent repositories, queue jobs, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, raw payload persistence, UI changes, mutation controls, or money movement were added.
+  - No UI was changed in this slice.
+  - Report: `../ui-cockpit/reports/067-activity-database-migration-decision-point.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -1045,12 +1053,12 @@ x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 x-change Host Integration Slice 2 — Journal/action/feedback read-model hydration into Cockpit surfaces
 ```
 
-Completed through Host Integration Slice 2I and Cockpit Mutation Wave 3D.
+Completed through Host Integration Slice 2I and Cockpit Mutation Wave 3E.
 
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 3E — Database Migration Decision Point.
+Cockpit Mutation Wave 3F — Durable Activity Migration Baseline.
 ```
 
 Recommended actions:
