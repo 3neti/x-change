@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 3I — Durable Activity Recorder Opt-In Boundary
-Status: Implemented; opt-in database recorder exists while default Quick Generate activity recording remains null/non-persistent
+Current slice: Cockpit Mutation Wave 3J — Durable Activity Runtime Opt-In Configuration
+Status: Implemented; database-backed operator issuance activity storage is available only through explicit config opt-in
 Last updated: 2026-07-10
 
 ## Completed
@@ -185,6 +185,16 @@ Last updated: 2026-07-10
   - No provider binding changes, default persistent recorder/repository binding, automatic Cockpit persistence, config opt-in, queue jobs, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, raw payload persistence, UI changes, mutation controls, or money movement were added.
   - No UI was changed in this slice.
   - Report: `reports/071-durable-activity-recorder-opt-in-boundary.md`.
+- Completed Cockpit Mutation Wave 3J — Durable Activity Runtime Opt-In Configuration:
+  - Added `x-change.cockpit.operator_issuance_activity.repository` and `x-change.cockpit.operator_issuance_activity.recorder` config seams.
+  - Documented available database repository and recorder classes in package config.
+  - Updated `XChangeServiceProvider` so repository and recorder contracts resolve from config at runtime.
+  - Kept null repository and null recorder as defaults when config is missing, empty, or null.
+  - Proved Quick Generate writes no durable activity by default.
+  - Proved Quick Generate persists durable activity only when the database repository and recorder are explicitly configured.
+  - No automatic production persistence, journal writes, action execution, feedback delivery, queue jobs, provider calls beyond existing Quick Generate issuance, wallet access, voucher execution changes, raw payload persistence, UI changes, mutation controls, or money movement were added.
+  - No UI was changed in this slice.
+  - Report: `reports/072-durable-activity-runtime-opt-in-configuration.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -793,15 +803,16 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 3J — Durable Activity Runtime Opt-In Configuration
+Cockpit Mutation Wave 3K — Durable Activity Read Model Adapter
 ```
 
 Purpose:
 
-- add config-driven opt-in seams for database repository and recorder
-- keep defaults null/non-persistent
-- prove Quick Generate can persist activity only when explicitly configured
-- preserve the current Cockpit UI unless a separate presentation-only UI slice is approved
+- add a read model provider/decorator that reads durable operator issuance activity records from the configured repository
+- keep dashboard presentation read-only
+- show database-backed activity only when the repository is explicitly configured
+- preserve null/not-wired presentation when persistence is disabled
+- do not add new mutation controls
 
 Completed host integration boundary:
 
@@ -1174,3 +1185,6 @@ Current boundary:
 - Cockpit Mutation Wave 3I focused recorder result: `2 passed, 8 assertions`.
 - Cockpit Mutation Wave 3I related recorder/repository/model/schema/architecture result: `14 passed, 67 assertions`.
 - Cockpit Mutation Wave 3I scope result: opt-in recorder only; no UI changed.
+- Cockpit Mutation Wave 3J focused red baseline: `2 failed, 1 passed, 11 assertions`.
+- Cockpit Mutation Wave 3J focused runtime opt-in result: `3 passed, 13 assertions`.
+- Cockpit Mutation Wave 3J scope result: config opt-in only; no UI changed.

@@ -269,14 +269,26 @@ class XChangeServiceProvider extends ServiceProvider
             );
         });
         $this->app->singleton(CockpitRedactorContract::class, DefaultCockpitRedactor::class);
-        $this->app->bind(
-            CockpitOperatorIssuanceActivityRecorderContract::class,
-            NullCockpitOperatorIssuanceActivityRecorder::class,
-        );
-        $this->app->bind(
-            CockpitOperatorIssuanceActivityRepositoryContract::class,
-            NullCockpitOperatorIssuanceActivityRepository::class,
-        );
+        $this->app->bind(CockpitOperatorIssuanceActivityRecorderContract::class, function ($app) {
+            $service = config(
+                'x-change.cockpit.operator_issuance_activity.recorder',
+                NullCockpitOperatorIssuanceActivityRecorder::class,
+            );
+
+            return $app->make(is_string($service) && trim($service) !== ''
+                ? $service
+                : NullCockpitOperatorIssuanceActivityRecorder::class);
+        });
+        $this->app->bind(CockpitOperatorIssuanceActivityRepositoryContract::class, function ($app) {
+            $service = config(
+                'x-change.cockpit.operator_issuance_activity.repository',
+                NullCockpitOperatorIssuanceActivityRepository::class,
+            );
+
+            return $app->make(is_string($service) && trim($service) !== ''
+                ? $service
+                : NullCockpitOperatorIssuanceActivityRepository::class);
+        });
         $this->app->bind(
             CockpitOperatorIssuanceActivityRedactionPolicyContract::class,
             DefaultCockpitOperatorIssuanceActivityRedactionPolicy::class,

@@ -32,6 +32,8 @@ use LBHurtado\XChange\Services\ApprovalHandlers\ManualApprovalRequirementHandler
 use LBHurtado\XChange\Services\ApprovalHandlers\OtpApprovalRequirementHandler;
 use LBHurtado\XChange\Services\Base64PngVoucherPaymentQrRenderer;
 use LBHurtado\XChange\Services\CacheIdempotencyStore;
+use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRecorder;
+use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRepository;
 use LBHurtado\XChange\Services\ConfigProviderRuntimeSettingsResolver;
 use LBHurtado\XChange\Services\ConfigProviderTopologyResolver;
 use LBHurtado\XChange\Services\ContextUserResolver;
@@ -114,6 +116,19 @@ return [
     ],
 
     'cockpit' => [
+        'operator_issuance_activity' => [
+            'repository' => env('XCHANGE_COCKPIT_OPERATOR_ISSUANCE_ACTIVITY_REPOSITORY')
+                ?: null,
+            'recorder' => env('XCHANGE_COCKPIT_OPERATOR_ISSUANCE_ACTIVITY_RECORDER')
+                ?: null,
+            'available_repositories' => [
+                'database' => DatabaseCockpitOperatorIssuanceActivityRepository::class,
+            ],
+            'available_recorders' => [
+                'database' => DatabaseCockpitOperatorIssuanceActivityRecorder::class,
+            ],
+        ],
+
         'integrations' => [
             'journal' => [
                 'reader' => env('XCHANGE_COCKPIT_JOURNAL_READER'),
