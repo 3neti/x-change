@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; durable activity local opt-in kept enabled for UI review
+Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; durable activity production default remains deferred
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Durable activity local opt-in kept enabled for UI review | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Durable activity production default remains deferred; Wave 5 closure next | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1416,6 +1416,14 @@ ExecutionDriverContract
   - Reaffirmed production defaults remain unchanged and durable activity recording is not production-enabled by default.
   - No source behavior, Cockpit UI code, host-published assets, routes, controllers, APIs, database writes, database deletes, durable activity defaults, journal writes, action execution, feedback delivery, provider calls, direct wallet mutation, voucher execution behavior, campaign mutation, or money movement behavior was changed.
   - Report: `../ui-cockpit/reports/106-durable-activity-local-opt-in-closure.md`.
+- Wave 5K — Real Activity Production Readiness Decision:
+  - Decided durable Cockpit operator issuance activity recording is not ready for production default enablement.
+  - Reaffirmed durable operator issuance activity remains package-supported but disabled by default.
+  - Identified blockers: operator authorization/tenant scoping, retention/purge schedule, recorder observability, default journal/action/feedback handoff policy, PII classification, production runbook, search/filter policy, and high-volume projection strategy.
+  - Expected UI effect: none.
+  - Local UI remains governed by uncommitted local `.env` configuration.
+  - No source behavior, Cockpit UI code, host-published assets, local config, routes, controllers, APIs, database writes, database deletes, durable activity defaults, journal writes, action execution, feedback delivery, provider calls, direct wallet mutation, voucher execution behavior, campaign mutation, or money movement behavior was changed.
+  - Report: `../ui-cockpit/reports/107-real-activity-production-readiness-decision.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -1431,19 +1439,19 @@ x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 x-change Host Integration Slice 2 — Journal/action/feedback read-model hydration into Cockpit surfaces
 ```
 
-Completed through Host Integration Slice 2I and Wave 5J — Durable Activity Local Opt-In Closure.
+Completed through Host Integration Slice 2I and Wave 5K — Real Activity Production Readiness Decision.
 
 Recommended next checkpoint:
 
 ```text
-Wave 5K — Real Activity Production Readiness Decision.
+Wave 5L — Cockpit Mutation Wave 5 Closure Report.
 ```
 
 Recommended actions:
 
-1. Decide whether real durable activity recording is ready for production default enablement.
-2. Record remaining production blockers if the answer is no.
-3. Keep local UI verification separate from production enablement.
+1. Close Wave 5 with a single evidence, commit, test, UI-impact, and remaining-risk summary.
+2. List what the user should verify in Cockpit manually.
+3. Identify the next implementation wave after UI review.
 4. Preserve Quick Generate behavior, voucher behavior, wallet behavior, durable activity behavior, redaction behavior, and money movement semantics.
 5. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
 6. Keep durable activity production default enablement deferred.

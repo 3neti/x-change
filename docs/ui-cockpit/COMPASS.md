@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Wave 5J — Durable Activity Local Opt-In Closure
-Status: Closed locally
+Current slice: Wave 5K — Real Activity Production Readiness Decision
+Status: Not ready for production default enablement
 Last updated: 2026-07-11
 
 ## Completed
@@ -538,6 +538,14 @@ Last updated: 2026-07-11
   - Reaffirmed production defaults remain unchanged and durable activity recording is not production-enabled by default.
   - No source behavior, Cockpit UI code, host-published assets, routes, controllers, APIs, database writes, database deletes, durable activity defaults, journal writes, action execution, feedback delivery, provider calls, direct wallet mutation, voucher execution behavior, campaign mutation, or money movement behavior was changed.
   - Report: `reports/106-durable-activity-local-opt-in-closure.md`.
+- Completed Wave 5K — Real Activity Production Readiness Decision:
+  - Decided durable Cockpit operator issuance activity recording is not ready for production default enablement.
+  - Reaffirmed durable operator issuance activity remains package-supported but disabled by default.
+  - Identified blockers: operator authorization/tenant scoping, retention/purge schedule, recorder observability, default journal/action/feedback handoff policy, PII classification, production runbook, search/filter policy, and high-volume projection strategy.
+  - Expected UI effect: none.
+  - Local UI remains governed by uncommitted local `.env` configuration.
+  - No source behavior, Cockpit UI code, host-published assets, local config, routes, controllers, APIs, database writes, database deletes, durable activity defaults, journal writes, action execution, feedback delivery, provider calls, direct wallet mutation, voucher execution behavior, campaign mutation, or money movement behavior was changed.
+  - Report: `reports/107-real-activity-production-readiness-decision.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -1146,14 +1154,14 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Wave 5K — Real Activity Production Readiness Decision
+Wave 5L — Cockpit Mutation Wave 5 Closure Report
 ```
 
 Purpose:
 
-- decide whether real durable activity recording is ready for production default enablement
-- record remaining production blockers if the answer is no
-- keep local UI verification separate from production enablement
+- close Wave 5 with a single evidence, commit, test, UI-impact, and remaining-risk summary
+- list what the user should verify in Cockpit manually
+- identify the next implementation wave after UI review
 - preserve Quick Generate behavior, voucher behavior, wallet behavior, durable activity behavior, redaction behavior, and money movement semantics
 
 Completed host integration boundary:
@@ -1711,3 +1719,7 @@ Current boundary:
 - Wave 5J expected UI effect: real `MCPC` activity remains visible; synthetic fixture remains absent.
 - Wave 5J production default result: durable activity recording remains not production-enabled by default.
 - Wave 5J next checkpoint result: `Wave 5K — Real Activity Production Readiness Decision`.
+- Wave 5K production readiness result: durable Cockpit operator issuance activity recording is not ready for production default enablement.
+- Wave 5K blocker result: authorization/tenant scoping, retention/purge, recorder observability, handoff defaults, PII classification, runbook, search/filter policy, and volume strategy remain open.
+- Wave 5K expected UI effect: none.
+- Wave 5K next checkpoint result: `Wave 5L — Cockpit Mutation Wave 5 Closure Report`.
