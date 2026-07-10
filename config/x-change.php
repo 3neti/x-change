@@ -34,6 +34,7 @@ use LBHurtado\XChange\Services\Base64PngVoucherPaymentQrRenderer;
 use LBHurtado\XChange\Services\CacheIdempotencyStore;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRecorder;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRepository;
+use LBHurtado\XChange\Services\Cockpit\XJournalCockpitOperatorIssuanceActivityJournalHandoff;
 use LBHurtado\XChange\Services\ConfigProviderRuntimeSettingsResolver;
 use LBHurtado\XChange\Services\ConfigProviderTopologyResolver;
 use LBHurtado\XChange\Services\ContextUserResolver;
@@ -129,7 +130,9 @@ return [
             'available_recorders' => [
                 'database' => DatabaseCockpitOperatorIssuanceActivityRecorder::class,
             ],
-            'available_journal_handoffs' => [],
+            'available_journal_handoffs' => [
+                'x-journal' => XJournalCockpitOperatorIssuanceActivityJournalHandoff::class,
+            ],
         ],
 
         'integrations' => [

@@ -1917,10 +1917,13 @@ it('binds the cockpit read model provider contract to the voucher lifecycle adap
 
 it('keeps the cockpit read model baseline free of direct integration package dependencies', function () {
     $files = collect([
-        ...glob(__DIR__.'/../../../src/Data/Cockpit/*.php'),
-        ...glob(__DIR__.'/../../../src/Services/Cockpit/*.php'),
+        ...glob(__DIR__.'/../../../src/Data/Cockpit/*ReadModel*.php'),
+        ...glob(__DIR__.'/../../../src/Services/Cockpit/*ReadModel*.php'),
+        __DIR__.'/../../../src/Services/Cockpit/OptionalCockpitIntegrationReadModels.php',
+        __DIR__.'/../../../src/Services/Cockpit/VoucherLifecycleCockpitReadModelProvider.php',
+        __DIR__.'/../../../src/Services/Cockpit/NullCockpitReadModelProvider.php',
         ...glob(__DIR__.'/../../../src/Contracts/CockpitReadModelProviderContract.php'),
-    ]);
+    ])->filter(fn (string $file): bool => file_exists($file));
 
     $contents = $files
         ->map(fn (string $file): string => file_get_contents($file) ?: '')

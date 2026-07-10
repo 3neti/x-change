@@ -23,7 +23,7 @@ it('documents the cockpit durable activity journal handoff runtime configuration
         ->and($report)->toContain('No journal writes')
         ->and($report)->toContain('Cockpit Mutation Wave 4C — Durable Activity Journal Payload Mapping Baseline')
         ->and($config)->toContain("'journal_handoff' => env('XCHANGE_COCKPIT_OPERATOR_ISSUANCE_ACTIVITY_JOURNAL_HANDOFF')")
-        ->and($config)->toContain("'available_journal_handoffs' => []")
+        ->and($config)->toContain("'available_journal_handoffs' => [")
         ->and($provider)->toContain("config(\n                'x-change.cockpit.operator_issuance_activity.journal_handoff'")
         ->and($runtimeTest)->toContain('FakeConfiguredCockpitActivityJournalHandoff')
         ->and($runtimeTest)->toContain('writes_journal')->toContain('toBeFalse')

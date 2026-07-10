@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 4C — Durable Activity Journal Payload Mapping Baseline
-Status: Implemented; package-local journal-ready payload mapper exists without x-journal runtime calls
+Current slice: Cockpit Mutation Wave 4D — Durable Activity Journal Handoff Adapter Baseline
+Status: Implemented; opt-in x-journal adapter records durable activity through `ExecutionJournalRecorder` with idempotent replay and non-blocking failure semantics
 Last updated: 2026-07-10
 
 ## Completed
@@ -262,6 +262,17 @@ Last updated: 2026-07-10
   - No x-journal runtime calls, journal writes, x-journal DTO normalization, journal handoff implementation, durable activity handoff status mutation, migrations, queue jobs, retries, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload exposure, UI changes, mutation controls, or money movement were added.
   - No UI was changed in this slice.
   - Report: `reports/079-durable-activity-journal-payload-mapping-baseline.md`.
+- Completed Cockpit Mutation Wave 4D — Durable Activity Journal Handoff Adapter Baseline:
+  - Added `XJournalCockpitOperatorIssuanceActivityJournalHandoff`.
+  - Added `x-change.cockpit.operator_issuance_activity.available_journal_handoffs.x-journal`.
+  - Adapted package-local durable activity journal payloads to x-journal `ExecutionJournalEntryData`.
+  - Recorded through x-journal `ExecutionJournalRecorder` to preserve durable idempotency semantics.
+  - Proved duplicate handoffs return the existing canonical journal entry instead of creating duplicates.
+  - Proved recorder failures return `failed_non_blocking` and do not block the Cockpit activity flow.
+  - Kept the null handoff as the default; hosts must explicitly opt in to the x-journal adapter.
+  - No durable activity handoff status mutation, UI changes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload exposure, mutation controls, or money movement were added.
+  - No UI was changed in this slice.
+  - Report: `reports/080-durable-activity-journal-handoff-adapter-baseline.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -870,14 +881,14 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 4D — Durable Activity Journal Handoff Adapter Baseline
+Cockpit Mutation Wave 4E — Durable Activity Journal Handoff Status Persistence Decision
 ```
 
 Purpose:
 
-- introduce an opt-in handoff implementation that consumes the package-local payload mapper
-- adapt to the chosen x-journal recording surface
-- keep failure non-blocking
+- decide whether and when durable activity rows should persist journal handoff status
+- define retry and reconciliation semantics for failed handoff attempts
+- keep the default runtime safe and opt-in
 - prove duplicate/idempotent journal inputs do not duplicate records
 - do not update durable activity handoff status yet
 
@@ -1272,3 +1283,6 @@ Current boundary:
 - Cockpit Mutation Wave 4C focused red baseline: `3 failed, 0 assertions`.
 - Cockpit Mutation Wave 4C focused mapper result: `3 passed, 19 assertions`.
 - Cockpit Mutation Wave 4C scope result: pure payload mapper only; no x-journal calls and no UI changed.
+- Cockpit Mutation Wave 4D focused red baseline: `3 failed, 1 assertion`.
+- Cockpit Mutation Wave 4D focused adapter result: `3 passed, 62 assertions`.
+- Cockpit Mutation Wave 4D scope result: opt-in x-journal adapter only; default runtime and UI unchanged.
