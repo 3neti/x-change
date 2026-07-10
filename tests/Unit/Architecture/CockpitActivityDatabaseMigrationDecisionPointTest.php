@@ -36,9 +36,11 @@ it('documents the cockpit activity database migration decision point before crea
         ->and($settlementCompass)->toContain('../ui-cockpit/reports/067-activity-database-migration-decision-point.md');
 });
 
-it('does not create the durable activity migration before the decision point is closed', function () {
+it('documents that the decision point itself did not create the durable activity migration', function () {
     $packageRoot = dirname(__DIR__, 3);
-    $migrations = glob($packageRoot.'/database/migrations/*cockpit_operator_issuance_activit*.php') ?: [];
+    $reportPath = $packageRoot.'/docs/ui-cockpit/reports/067-activity-database-migration-decision-point.md';
 
-    expect($migrations)->toBe([]);
+    expect(file_get_contents($reportPath))
+        ->toContain('No migration file was created in this slice')
+        ->and(file_get_contents($reportPath))->toContain('Cockpit Mutation Wave 3F — Durable Activity Migration Baseline');
 });
