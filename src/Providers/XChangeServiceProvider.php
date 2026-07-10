@@ -299,10 +299,16 @@ class XChangeServiceProvider extends ServiceProvider
             CockpitOperatorIssuanceActivityRetentionPolicyContract::class,
             DefaultCockpitOperatorIssuanceActivityRetentionPolicy::class,
         );
-        $this->app->bind(
-            CockpitOperatorIssuanceActivityJournalHandoffContract::class,
-            NullCockpitOperatorIssuanceActivityJournalHandoff::class,
-        );
+        $this->app->bind(CockpitOperatorIssuanceActivityJournalHandoffContract::class, function ($app) {
+            $service = config(
+                'x-change.cockpit.operator_issuance_activity.journal_handoff',
+                NullCockpitOperatorIssuanceActivityJournalHandoff::class,
+            );
+
+            return $app->make(is_string($service) && trim($service) !== ''
+                ? $service
+                : NullCockpitOperatorIssuanceActivityJournalHandoff::class);
+        });
         $this->app->bind(
             CockpitOperatorIssuanceActivityActionHandoffContract::class,
             NullCockpitOperatorIssuanceActivityActionHandoff::class,

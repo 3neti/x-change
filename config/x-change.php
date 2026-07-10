@@ -121,12 +121,15 @@ return [
                 ?: null,
             'recorder' => env('XCHANGE_COCKPIT_OPERATOR_ISSUANCE_ACTIVITY_RECORDER')
                 ?: null,
+            'journal_handoff' => env('XCHANGE_COCKPIT_OPERATOR_ISSUANCE_ACTIVITY_JOURNAL_HANDOFF')
+                ?: null,
             'available_repositories' => [
                 'database' => DatabaseCockpitOperatorIssuanceActivityRepository::class,
             ],
             'available_recorders' => [
                 'database' => DatabaseCockpitOperatorIssuanceActivityRecorder::class,
             ],
+            'available_journal_handoffs' => [],
         ],
 
         'integrations' => [
