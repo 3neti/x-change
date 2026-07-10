@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 4R — Seeded Diagnostic Fixture Human Visual Confirmation
-Status: Pass — accepted by human
+Current slice: Cockpit Mutation Wave 5A — Real Operator Activity Rollout Readiness Decision
+Status: Decision recorded
 Last updated: 2026-07-11
 
 ## Completed
@@ -417,6 +417,16 @@ Last updated: 2026-07-11
   - Confirmed no unsafe payloads, retry controls, or mutation controls were reported visible.
   - No frontend behavior, backend behavior, routes, controllers, APIs, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher mutation, raw payload exposure, or money movement were added.
   - Report: `reports/094-seeded-diagnostic-fixture-human-visual-confirmation.md`.
+- Completed Cockpit Mutation Wave 5A — Real Operator Activity Rollout Readiness Decision:
+  - Decided the local diagnostic path is sufficient to close seeded durable activity visualization.
+  - Authorized the next checkpoint to verify real Quick Generate durable activity recording through the existing opt-in database recorder.
+  - Kept durable activity recording not enabled by default in production.
+  - Kept the authorized mutation surface limited to the existing Cockpit Quick Generate issuance path.
+  - Required the next checkpoint to prove a generated Pay Code activity is recorded for the authenticated operator and visible in Cockpit.
+  - Required the next checkpoint to prove raw idempotency keys, raw payloads, provider payloads, wallet data, secrets, tokens, credentials, OTPs, and recipient secrets are not persisted or visible.
+  - Did not authorize journal write-side production defaults, action execution, feedback delivery, provider calls outside existing issuance, direct wallet mutation, retry execution, lifecycle truth ownership, raw payload exposure, campaign mutation, or money movement outside existing issuance.
+  - No runtime behavior, frontend behavior, host-published assets, routes, controllers, APIs, migrations, models, repository bindings, recorder bindings, journal/action/feedback handoff bindings, provider behavior, wallet behavior, voucher behavior, or money movement changed.
+  - Report: `reports/095-real-operator-activity-rollout-readiness-decision.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -1025,15 +1035,18 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 5A — Real Operator Activity Rollout Readiness Decision
+Cockpit Mutation Wave 5B — Real Quick Generate Durable Activity Local Opt-In Verification
 ```
 
 Purpose:
 
-- decide whether the local diagnostic path is sufficient to close durable activity visualization
-- decide the next real mutation/read-model target
-- keep any new mutation path routed through existing x-change services
-- do not add retry execution, journal write-side production behavior, action execution, feedback delivery, provider calls, wallet mutation, or money movement without an explicit slice
+- enable the existing database durable activity recorder locally
+- keep the existing database durable activity repository locally enabled
+- run one real Cockpit Quick Generate issuance through the existing route/UI
+- confirm a generated Pay Code activity is durably recorded for the authenticated operator
+- confirm Cockpit renders the generated Pay Code activity
+- confirm raw idempotency keys and unsafe payloads are not persisted or visible
+- keep action and feedback non-executing unless separately authorized
 
 Completed host integration boundary:
 
@@ -1517,3 +1530,7 @@ Current boundary:
 - Cockpit Mutation Wave 4R human visual result: `Pass — accepted by human`.
 - Cockpit Mutation Wave 4R populated fixture evidence result: `Pay Code PC-LOCAL-DIAGNOSTIC issued`, `journal: recorded`, `journal-entry-local-fixture`, `ERN-LOCAL-COCKPIT-0001`, `Diagnostic: Journal recorded`, `Action: none`, and `Read-only: yes`.
 - Cockpit Mutation Wave 4R scope result: confirmation-only; no source behavior or UI changed.
+- Cockpit Mutation Wave 5A decision result: proceed to local real Quick Generate durable activity opt-in verification.
+- Cockpit Mutation Wave 5A production decision result: do not enable durable activity recording by default in production yet.
+- Cockpit Mutation Wave 5A next checkpoint result: `Cockpit Mutation Wave 5B — Real Quick Generate Durable Activity Local Opt-In Verification`.
+- Cockpit Mutation Wave 5A scope result: decision-only; no source behavior or UI changed.
