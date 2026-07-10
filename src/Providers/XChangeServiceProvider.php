@@ -62,6 +62,7 @@ use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityFeedbackHandoffCo
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityJournalHandoffContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityPresenterContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityRecorderContract;
+use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityRepositoryContract;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Contracts\CockpitRedactorContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationContract;
@@ -126,6 +127,7 @@ use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityAction
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityFeedbackHandoff;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityJournalHandoff;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityRecorder;
+use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityRepository;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\OptionalCockpitIntegrationReadModels;
 use LBHurtado\XChange\Services\Cockpit\VoucherLifecycleCockpitReadModelProvider;
@@ -266,6 +268,10 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->bind(
             CockpitOperatorIssuanceActivityRecorderContract::class,
             NullCockpitOperatorIssuanceActivityRecorder::class,
+        );
+        $this->app->bind(
+            CockpitOperatorIssuanceActivityRepositoryContract::class,
+            NullCockpitOperatorIssuanceActivityRepository::class,
         );
         $this->app->bind(
             CockpitOperatorIssuanceActivityJournalHandoffContract::class,

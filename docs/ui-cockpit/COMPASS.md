@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 3A — Durable Activity Storage Boundary Plan
-Status: Implemented as planning-only boundary; no UI, persistence, migrations, repositories, or side effects were added
+Current slice: Cockpit Mutation Wave 3B — Durable Activity DTO and Repository Contract
+Status: Implemented; durable activity DTO, repository contract, and null non-persistent repository binding exist without UI or persistence changes
 Last updated: 2026-07-10
 
 ## Completed
@@ -108,6 +108,16 @@ Last updated: 2026-07-10
   - Explicitly did not authorize migrations, Eloquent models, database writes, repositories, queue jobs, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, raw payload persistence, UI changes, mutation controls, or money movement.
   - No UI was changed in this slice.
   - Report: `reports/063-durable-activity-storage-boundary-plan.md`.
+- Completed Cockpit Mutation Wave 3B — Durable Activity DTO and Repository Contract:
+  - Added `CockpitOperatorIssuanceActivityRecordData` for operator-safe durable activity facts.
+  - Added `CockpitOperatorIssuanceActivityRepositoryContract`.
+  - Added `NullCockpitOperatorIssuanceActivityRepository` as the default non-persistent repository implementation.
+  - Bound the repository contract to the null implementation in `XChangeServiceProvider`.
+  - Confirmed the DTO omits raw payload, provider payload, wallet, recipient secret, OTP, and funding source fields.
+  - Confirmed the null repository returns supplied records but does not retain or retrieve them.
+  - No migrations, Eloquent models, database writes, queue jobs, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, raw payload persistence, UI changes, mutation controls, or money movement were added.
+  - No UI was changed in this slice.
+  - Report: `reports/064-durable-activity-dto-repository-contract.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -716,13 +726,13 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 3B — Durable Activity DTO and Repository Contract
+Cockpit Mutation Wave 3C — In-Memory Durable Activity Repository Baseline
 ```
 
 Purpose:
 
-- add DTO and repository contracts only
-- keep repository implementation in-memory or null unless explicitly approved
+- add an in-memory repository implementation
+- test capped recent query behavior and lookup by activity ID
 - do not add migrations, models, queues, or database writes
 - preserve the current Cockpit UI unless a separate presentation-only UI slice is approved
 
@@ -1064,3 +1074,7 @@ Current boundary:
 - Cockpit Mutation Wave 2L focused documentation/readiness result: `2 passed, 47 assertions`.
 - Cockpit Mutation Wave 3A scope result: planning-only; no UI changed.
 - Cockpit Mutation Wave 3A focused documentation/readiness result: `2 passed, 48 assertions`.
+- Cockpit Mutation Wave 3B focused red baseline: `3 failed`.
+- Cockpit Mutation Wave 3B focused DTO/contract result: `3 passed, 14 assertions`.
+- Cockpit Mutation Wave 3B focused DTO/architecture result: `5 passed, 65 assertions`.
+- Cockpit Mutation Wave 3B scope result: no UI changed.

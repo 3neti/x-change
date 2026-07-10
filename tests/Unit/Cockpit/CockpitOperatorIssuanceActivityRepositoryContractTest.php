@@ -1,0 +1,119 @@
+<?php
+
+declare(strict_types=1);
+
+use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityRepositoryContract;
+use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityRecordData;
+use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
+use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityRepository;
+
+it('defines a durable operator issuance activity record dto without raw payload fields', function () {
+    $record = new CockpitOperatorIssuanceActivityRecordData(
+        activity_id: 'activity-1',
+        actor_id: 'operator-1',
+        actor_label: 'Treasury Operations',
+        source: 'cockpit.quick-generate',
+        subject_type: 'pay_code',
+        subject_reference: 'PC-1234',
+        status: 'issued',
+        severity: 'info',
+        occurred_at: '2026-07-10T09:00:00+08:00',
+        idempotency_key_hash: 'idem-hash-1',
+        correlation_id: 'corr-1',
+        causation_id: 'cause-1',
+        summary: 'Pay Code PC-1234 issued',
+        safe_context: [
+            'amount' => '100.00',
+            'currency' => 'PHP',
+        ],
+        redaction_flags: [
+            'raw_payloads_exposed' => false,
+            'provider_payloads_exposed' => false,
+            'wallet_data_exposed' => false,
+            'recipient_secrets_exposed' => false,
+        ],
+        journal_handoff_status: 'not_wired',
+        action_handoff_status: 'not_wired',
+        feedback_handoff_status: 'not_wired',
+        retention_until: '2026-08-10T09:00:00+08:00',
+        metadata: [
+            'schema' => 'x-change.cockpit.operator-issuance-activity-record.v1',
+        ],
+    );
+
+    expect($record->toArray())->toBe([
+        'activity_id' => 'activity-1',
+        'schema' => 'x-change.cockpit.operator-issuance-activity-record.v1',
+        'actor_id' => 'operator-1',
+        'actor_label' => 'Treasury Operations',
+        'source' => 'cockpit.quick-generate',
+        'subject_type' => 'pay_code',
+        'subject_reference' => 'PC-1234',
+        'status' => 'issued',
+        'severity' => 'info',
+        'occurred_at' => '2026-07-10T09:00:00+08:00',
+        'idempotency_key_hash' => 'idem-hash-1',
+        'correlation_id' => 'corr-1',
+        'causation_id' => 'cause-1',
+        'summary' => 'Pay Code PC-1234 issued',
+        'safe_context' => [
+            'amount' => '100.00',
+            'currency' => 'PHP',
+        ],
+        'redaction_flags' => [
+            'raw_payloads_exposed' => false,
+            'provider_payloads_exposed' => false,
+            'wallet_data_exposed' => false,
+            'recipient_secrets_exposed' => false,
+        ],
+        'journal_handoff_status' => 'not_wired',
+        'action_handoff_status' => 'not_wired',
+        'feedback_handoff_status' => 'not_wired',
+        'retention_until' => '2026-08-10T09:00:00+08:00',
+        'metadata' => [
+            'schema' => 'x-change.cockpit.operator-issuance-activity-record.v1',
+        ],
+    ])
+        ->and($record->toArray())->not->toHaveKeys([
+            'raw_payload',
+            'provider_payload',
+            'wallet',
+            'balance',
+            'account_number',
+            'recipient_secret',
+            'otp',
+            'funding_source',
+        ]);
+});
+
+it('binds the durable activity repository contract to a null non-persistent implementation', function () {
+    $repository = app(CockpitOperatorIssuanceActivityRepositoryContract::class);
+
+    expect($repository)
+        ->toBeInstanceOf(CockpitOperatorIssuanceActivityRepositoryContract::class)
+        ->toBeInstanceOf(NullCockpitOperatorIssuanceActivityRepository::class);
+});
+
+it('keeps the null durable activity repository non-persistent and read-model safe', function () {
+    $repository = app(CockpitOperatorIssuanceActivityRepositoryContract::class);
+
+    $record = new CockpitOperatorIssuanceActivityRecordData(
+        activity_id: 'activity-1',
+        actor_id: 'operator-1',
+        actor_label: 'Treasury Operations',
+        source: 'cockpit.quick-generate',
+        subject_type: 'pay_code',
+        subject_reference: 'PC-1234',
+        status: 'issued',
+        occurred_at: '2026-07-10T09:00:00+08:00',
+        summary: 'Pay Code PC-1234 issued',
+    );
+
+    expect($repository->record($record))->toBe($record)
+        ->and($repository->findByActivityId('activity-1'))->toBeNull()
+        ->and($repository->recent(new CockpitReadModelQueryData(
+            operatorId: 'operator-1',
+            include: ['operator_issuance_activity'],
+            correlationId: 'corr-1',
+        )))->toBe([]);
+});
