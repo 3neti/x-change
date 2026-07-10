@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 4J — Durable Activity Journal Handoff Operator Diagnostics
-Status: Implemented; safe read-only operator diagnostics are exposed for durable activity journal handoff evidence
+Current slice: Cockpit Mutation Wave 4K — Durable Activity Journal Handoff Operator Diagnostics Host Publish / Verification
+Status: Implemented; host-published Cockpit assets are synchronized and the host build passes for journal handoff operator diagnostics
 Last updated: 2026-07-10
 
 ## Completed
@@ -331,6 +331,16 @@ Last updated: 2026-07-10
   - No x-journal invocation, journal write, handoff retry, queue job, action execution, feedback delivery, provider call, wallet access, voucher execution change, lifecycle truth ownership, raw payload exposure, new mutation control, or money movement was added.
   - UI changed: existing dashboard operator issuance activity cards can now display a read-only operator diagnostic inside the journal handoff evidence box.
   - Report: `reports/086-durable-activity-journal-handoff-operator-diagnostics.md`.
+- Completed Cockpit Mutation Wave 4K — Durable Activity Journal Handoff Operator Diagnostics Host Publish / Verification:
+  - Ran `php artisan x-change:doctor --assets --json` from the host app root.
+  - Confirmed host-published Cockpit assets are clean: checked 55, ok 55, stale 0, missing 0, extra 0.
+  - Did not run `php artisan x-change:install --force` because the host mirrors already matched package source.
+  - Included the synchronized host-published Cockpit mirror files in this checkpoint so the next slice starts from a clean slate.
+  - Ran the host `npm run build`; it passed with existing Rolldown pure annotation warnings from `reka-ui` / `@vueuse`.
+  - Ran the package frontend suite: `74 passed, 476 tests`.
+  - No package source behavior, manual host mirror edits, unnecessary publishing, x-journal invocation, journal write, handoff retry, queue job, action execution, feedback delivery, provider call, wallet access, voucher execution change, lifecycle truth ownership, raw payload exposure, new mutation control, or money movement was added.
+  - No new UI was changed in this checkpoint.
+  - Report: `reports/087-durable-activity-journal-handoff-operator-diagnostics-host-publish-verification.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -939,15 +949,15 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 4K — Durable Activity Journal Handoff Operator Diagnostics Host Publish / Verification
+Cockpit Mutation Wave 4L — Durable Activity Journal Handoff Operator Diagnostics Manual Browser Verification
 ```
 
 Purpose:
 
-- run the Cockpit published asset drift guard
-- publish package Cockpit assets if the host mirrors are stale
-- verify package frontend tests and host build after publishing
-- keep the checkpoint verification-only unless publishing is needed
+- open `/x/cockpit`
+- confirm the dashboard still renders
+- confirm the read-only operator diagnostic section appears when durable activity with safe journal handoff metadata exists
+- confirm no retry button, mutation control, raw payload, provider payload, wallet data, or secret is visible
 
 Completed host integration boundary:
 
@@ -1386,3 +1396,8 @@ Current boundary:
 - Cockpit Mutation Wave 4J full package Pest result: `1203 passed, 5 skipped, 7632 assertions`.
 - Cockpit Mutation Wave 4J full frontend result: `74 passed, 476 tests`.
 - Cockpit Mutation Wave 4J scope result: read-only journal handoff operator diagnostics added; UI diagnostic section added; no retry or mutation controls.
+- Cockpit Mutation Wave 4K host drift guard result: `checked 55, ok 55, stale 0, missing 0, extra 0`.
+- Cockpit Mutation Wave 4K publish result: skipped because published host mirrors already matched package source.
+- Cockpit Mutation Wave 4K host build result: `npm run build` passed with existing Rolldown annotation warnings from `reka-ui` / `@vueuse`.
+- Cockpit Mutation Wave 4K package frontend result: `74 passed, 476 tests`.
+- Cockpit Mutation Wave 4K scope result: verification-only; no package source behavior changed and no UI changed.
