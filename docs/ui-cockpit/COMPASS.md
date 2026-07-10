@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Wave 5I — Real Activity Fixture Cleanup Decision / Execution
-Status: Completed locally
+Current slice: Wave 5J — Durable Activity Local Opt-In Closure
+Status: Closed locally
 Last updated: 2026-07-11
 
 ## Completed
@@ -529,6 +529,15 @@ Last updated: 2026-07-11
   - Expected UI effect: the synthetic diagnostic card disappears from Cockpit, while the real `MCPC` activity remains visible if durable activity config stays enabled.
   - No source behavior, Cockpit UI code, host-published assets, routes, controllers, APIs, durable activity defaults, journal writes, action execution, feedback delivery, provider calls, direct wallet mutation, voucher execution behavior, campaign mutation, or money movement behavior was changed.
   - Report: `reports/105-real-activity-fixture-cleanup-execution.md`.
+- Completed Wave 5J — Durable Activity Local Opt-In Closure:
+  - Decided to keep local durable activity repository and recorder enabled for the next manual UI review.
+  - Verified repository config resolves to `DatabaseCockpitOperatorIssuanceActivityRepository`.
+  - Verified recorder config resolves to `DatabaseCockpitOperatorIssuanceActivityRecorder`.
+  - Verified real `MCPC` durable activity count remains `1`.
+  - Expected UI effect: real `MCPC` activity remains visible; synthetic `PC-LOCAL-DIAGNOSTIC` remains absent.
+  - Reaffirmed production defaults remain unchanged and durable activity recording is not production-enabled by default.
+  - No source behavior, Cockpit UI code, host-published assets, routes, controllers, APIs, database writes, database deletes, durable activity defaults, journal writes, action execution, feedback delivery, provider calls, direct wallet mutation, voucher execution behavior, campaign mutation, or money movement behavior was changed.
+  - Report: `reports/106-durable-activity-local-opt-in-closure.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -1137,14 +1146,14 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Wave 5J — Durable Activity Local Opt-In Closure
+Wave 5K — Real Activity Production Readiness Decision
 ```
 
 Purpose:
 
-- decide whether to keep or disable the local durable activity repository/recorder `.env` opt-in
-- record the expected UI effect of the decision
-- preserve the real `MCPC` row unless explicitly cleaning local verification data
+- decide whether real durable activity recording is ready for production default enablement
+- record remaining production blockers if the answer is no
+- keep local UI verification separate from production enablement
 - preserve Quick Generate behavior, voucher behavior, wallet behavior, durable activity behavior, redaction behavior, and money movement semantics
 
 Completed host integration boundary:
@@ -1696,3 +1705,9 @@ Current boundary:
 - Wave 5I real activity verification result: `MCPC` remains in durable activity storage for operator `5`.
 - Wave 5I expected UI effect: synthetic diagnostic card disappears; real `MCPC` activity remains visible while local durable activity config is enabled.
 - Wave 5I next checkpoint result: `Wave 5J — Durable Activity Local Opt-In Closure`.
+- Wave 5J local opt-in decision result: keep local durable activity repository and recorder enabled.
+- Wave 5J config verification result: database repository and database recorder are configured locally.
+- Wave 5J real activity result: `MCPC count: 1`.
+- Wave 5J expected UI effect: real `MCPC` activity remains visible; synthetic fixture remains absent.
+- Wave 5J production default result: durable activity recording remains not production-enabled by default.
+- Wave 5J next checkpoint result: `Wave 5K — Real Activity Production Readiness Decision`.
