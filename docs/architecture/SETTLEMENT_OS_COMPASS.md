@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 3K durable activity read-model adapter implemented
+Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 3L durable activity dashboard verification implemented
 Last updated: 2026-07-10
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-10
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Mutation Wave 3K durable activity read-model adapter implemented | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Mutation Wave 3L durable activity dashboard verification implemented | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1085,6 +1085,13 @@ ExecutionDriverContract
   - No package Vue components, pages, routes, TypeScript contracts, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, UI changes, mutation controls, or money movement were added.
   - No UI was changed in this slice.
   - Report: `../ui-cockpit/reports/073-durable-activity-read-model-adapter.md`.
+- x-change Cockpit Mutation Wave 3L — Durable Activity Dashboard Verification:
+  - Verified existing dashboard props remain `not_wired` by default and become `available` when durable activity persistence is explicitly configured and records exist.
+  - Verified durable activity read-model data reaches `operator_issuance_activity_read_model` without UI source changes.
+  - Verified raw payload, provider payload, and wallet fields remain absent from dashboard props.
+  - No production source, Vue components, pages, routes, TypeScript contracts, package assets, host-published assets, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, UI changes, mutation controls, or money movement were added.
+  - No UI was changed in this slice.
+  - Report: `../ui-cockpit/reports/074-durable-activity-dashboard-verification.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -1100,12 +1107,12 @@ x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 x-change Host Integration Slice 2 — Journal/action/feedback read-model hydration into Cockpit surfaces
 ```
 
-Completed through Host Integration Slice 2I and Cockpit Mutation Wave 3K.
+Completed through Host Integration Slice 2I and Cockpit Mutation Wave 3L.
 
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 3L — Durable Activity Dashboard Verification.
+Cockpit Mutation Wave 3M — Durable Activity Host Publish / Manual Verification.
 ```
 
 Recommended actions:
