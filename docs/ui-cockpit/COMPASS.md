@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 2L — Human Activity UI Visual Confirmation Record
-Status: Passed by human visual confirmation; dashboard activity UI is visible and read-only in its current not-wired state
+Current slice: Cockpit Mutation Wave 3A — Durable Activity Storage Boundary Plan
+Status: Implemented as planning-only boundary; no UI, persistence, migrations, repositories, or side effects were added
 Last updated: 2026-07-10
 
 ## Completed
@@ -101,6 +101,13 @@ Last updated: 2026-07-10
   - Confirmed visible dashboard sections include Journal Evidence, Action CTAs, Feedback Deliveries, Redemption Pipeline, Risk and Expiry, and Recent Activity as read-only/not-wired/deferred summaries.
   - No durable activity storage, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload exposure, or money movement were authorized or added.
   - Report: `reports/062-human-activity-ui-visual-confirmation-record.md`.
+- Completed Cockpit Mutation Wave 3A — Durable Activity Storage Boundary Plan:
+  - Defined the future durable operator issuance activity storage boundary before adding schema or runtime changes.
+  - Documented proposed record shape, redaction policy, retention policy, correlation policy, and read-model policy.
+  - Established the next implementation sequence from DTO/repository contracts through possible persistence wiring.
+  - Explicitly did not authorize migrations, Eloquent models, database writes, repositories, queue jobs, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, raw payload persistence, UI changes, mutation controls, or money movement.
+  - No UI was changed in this slice.
+  - Report: `reports/063-durable-activity-storage-boundary-plan.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -709,15 +716,15 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 3A — Durable Activity Storage Boundary Plan
+Cockpit Mutation Wave 3B — Durable Activity DTO and Repository Contract
 ```
 
 Purpose:
 
-- plan durable operator issuance activity storage without implementing persistence yet
-- define redaction, retention, correlation, and read-model ownership
-- keep journal/action/feedback handoffs explicit boundaries
-- require approval before migrations, models, repositories, queues, or durable writes
+- add DTO and repository contracts only
+- keep repository implementation in-memory or null unless explicitly approved
+- do not add migrations, models, queues, or database writes
+- preserve the current Cockpit UI unless a separate presentation-only UI slice is approved
 
 Completed host integration boundary:
 
@@ -1055,3 +1062,5 @@ Current boundary:
 - Cockpit Mutation Wave 2K focused documentation/readiness result: `2 passed, 45 assertions`.
 - Cockpit Mutation Wave 2L human visual result: `Pass — accepted by human`.
 - Cockpit Mutation Wave 2L focused documentation/readiness result: `2 passed, 47 assertions`.
+- Cockpit Mutation Wave 3A scope result: planning-only; no UI changed.
+- Cockpit Mutation Wave 3A focused documentation/readiness result: `2 passed, 48 assertions`.
