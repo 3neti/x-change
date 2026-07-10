@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 3M — Durable Activity Host Publish / Manual Verification
-Status: Implemented; host-published Cockpit assets verified clean after durable activity backend/read-model work
+Current slice: Cockpit Mutation Wave 3N — Durable Activity Closure / Production Readiness Decision
+Status: Implemented; durable operator issuance activity mini-wave closed as opt-in baseline
 Last updated: 2026-07-10
 
 ## Completed
@@ -222,6 +222,16 @@ Last updated: 2026-07-10
   - No Vue components, pages, routes, TypeScript contracts, package assets, host-published assets, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, UI changes, mutation controls, or money movement were added.
   - No UI was changed in this slice.
   - Report: `reports/075-durable-activity-host-publish-manual-verification.md`.
+- Completed Cockpit Mutation Wave 3N — Durable Activity Closure / Production Readiness Decision:
+  - Closed durable operator issuance activity as an opt-in baseline.
+  - Confirmed durable activity storage is ready for local/manual opt-in testing.
+  - Confirmed durable activity storage is not ready for default production enablement.
+  - Recorded runtime opt-in requirements for database repository and recorder.
+  - Recorded remaining production decisions: retention/purge, authorization/tenant scope, x-journal handoff, x-action hints, x-feedback intents, and Cockpit search/filter UX.
+  - Recommended next wave: Cockpit Mutation Wave 4 — Journal / Action / Feedback Handoff Implementations.
+  - No production source, Vue components, pages, routes, TypeScript contracts, package assets, host-published assets, journal writes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, UI changes, mutation controls, or money movement were added.
+  - No UI was changed in this slice.
+  - Report: `reports/076-durable-activity-closure-production-readiness-decision.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -830,15 +840,15 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 3N — Durable Activity Closure / Production Readiness Decision
+Cockpit Mutation Wave 4A — Durable Activity Journal Handoff Implementation Decision
 ```
 
 Purpose:
 
-- close the durable activity storage mini-wave
-- summarize runtime opt-in requirements
-- decide whether to enable durable activity in local host config for manual testing
-- decide whether the next wave should be journal/action/feedback handoff implementation or broader Cockpit mutation UX
+- decide whether Quick Generate durable activity should append x-journal entries
+- keep journal handoff opt-in
+- preserve durable activity as operational evidence, not lifecycle truth
+- do not add action execution or feedback delivery yet
 
 Completed host integration boundary:
 
@@ -1221,3 +1231,5 @@ Current boundary:
 - Cockpit Mutation Wave 3L scope result: verification only; no production or UI changed.
 - Cockpit Mutation Wave 3M host drift guard result: `checked 55, ok 55, stale 0, missing 0, extra 0`.
 - Cockpit Mutation Wave 3M scope result: host verification only; no publish required and no UI changed.
+- Cockpit Mutation Wave 3N closure guard result: `1 passed, 15 assertions`.
+- Cockpit Mutation Wave 3N scope result: closure/decision only; no production or UI changed.
