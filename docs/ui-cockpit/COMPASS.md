@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 5D — Durable Activity Local Opt-In Closure / Cleanup Decision
+Current slice: Cockpit Mutation Wave 5E — Synthetic Fixture Local Cleanup Decision / BrickMath Cleanup Planning
 Status: Decision recorded
 Last updated: 2026-07-11
 
@@ -461,6 +461,17 @@ Last updated: 2026-07-11
   - Documented rollback guidance for unsetting the local recorder and repository config values.
   - No committed `.env` changes, database writes, database deletes, source behavior, frontend behavior, host-published assets, routes, controllers, APIs, migrations, models, repository changes, recorder changes, production defaults, Quick Generate semantics, voucher execution changes, journal writes, action execution, feedback delivery, provider calls, wallet access, lifecycle truth ownership, raw payload exposure, retry controls, new mutation controls, campaign mutation, or money movement were added.
   - Report: `reports/098-durable-activity-local-opt-in-closure-cleanup-decision.md`.
+- Completed Cockpit Mutation Wave 5E — Synthetic Fixture Local Cleanup Decision / BrickMath Cleanup Planning:
+  - Decided not to remove the `PC-LOCAL-DIAGNOSTIC` synthetic fixture row in this checkpoint.
+  - Decided to keep `PC-LOCAL-DIAGNOSTIC` temporarily as side-by-side diagnostic comparison evidence.
+  - Decided to keep the real `MCPC` durable activity row in the local database.
+  - Decided to keep local database repository and recorder config enabled for continued manual testing.
+  - Reaffirmed durable activity recording must not be enabled by default in production.
+  - Documented the future deletion shape for `PC-LOCAL-DIAGNOSTIC` if explicitly approved later.
+  - Planned the Brick\Math cleanup as `Cockpit / issuance cleanup — Monetary String Normalization for BrickMath Compatibility`.
+  - Identified candidate areas for characterization: `GeneratePayCode::requiredIssuanceAmount()`, `EstimatePayCodeCost::handle()`, `InstructionRevenueAllocatorService::allocate()`, `InstructionRevenueAllocatorService::buildTransferMeta()`, and `VoucherIssuancePayloadNormalizer`.
+  - No committed `.env` changes, database writes, database deletes, source behavior, frontend behavior, host-published assets, routes, controllers, APIs, migrations, models, repository changes, recorder changes, production defaults, Quick Generate semantics, voucher execution changes, journal writes, action execution, feedback delivery, provider calls, wallet access, lifecycle truth ownership, raw payload exposure, retry controls, new mutation controls, campaign mutation, or money movement were added.
+  - Report: `reports/099-synthetic-fixture-local-cleanup-decision-brickmath-cleanup-planning.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -1069,15 +1080,15 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 5E — Synthetic Fixture Local Cleanup Decision / BrickMath Cleanup Planning
+Cockpit Mutation Wave 5F — BrickMath Monetary Normalization Characterization
 ```
 
 Purpose:
 
-- decide whether to remove the `PC-LOCAL-DIAGNOSTIC` local fixture row now that real activity is visible
-- if approved, remove only the synthetic fixture row from the local database and document the command/query used
-- draft a separate tested cleanup plan for the Brick\Math float deprecation
-- keep durable activity production default enablement deferred
+- add failing/characterization coverage around the observed Brick\Math deprecation
+- identify the exact call path emitting the warning
+- fix monetary normalization only if the test proves the safe boundary
+- preserve Quick Generate behavior, voucher behavior, wallet behavior, durable activity behavior, and redaction behavior
 
 Completed host integration boundary:
 
@@ -1586,3 +1597,10 @@ Current boundary:
 - Cockpit Mutation Wave 5D cleanup decision result: track the Brick\Math float deprecation as a separate cleanup slice.
 - Cockpit Mutation Wave 5D next checkpoint result: `Cockpit Mutation Wave 5E — Synthetic Fixture Local Cleanup Decision / BrickMath Cleanup Planning`.
 - Cockpit Mutation Wave 5D scope result: decision-only; no source behavior, UI, local config, or database state changed.
+- Cockpit Mutation Wave 5E fixture decision result: keep `PC-LOCAL-DIAGNOSTIC` for now; no deletion executed.
+- Cockpit Mutation Wave 5E real activity decision result: keep `MCPC` locally for continued visual verification.
+- Cockpit Mutation Wave 5E local config decision result: keep local database repository and recorder enabled for manual testing.
+- Cockpit Mutation Wave 5E cleanup planning result: Brick\Math cleanup should be a separate monetary normalization characterization slice.
+- Cockpit Mutation Wave 5E candidate source result: inspect `GeneratePayCode::requiredIssuanceAmount()`, `EstimatePayCodeCost::handle()`, `InstructionRevenueAllocatorService::allocate()`, `InstructionRevenueAllocatorService::buildTransferMeta()`, and `VoucherIssuancePayloadNormalizer`.
+- Cockpit Mutation Wave 5E next checkpoint result: `Cockpit Mutation Wave 5F — BrickMath Monetary Normalization Characterization`.
+- Cockpit Mutation Wave 5E scope result: decision/planning-only; no source behavior, UI, local config, or database state changed.

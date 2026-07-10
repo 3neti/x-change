@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 5D local opt-in closure decision recorded
+Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 5E fixture cleanup decision and BrickMath cleanup planning recorded
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Mutation Wave 5D local opt-in closure decision recorded | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Mutation Wave 5E fixture cleanup decision and BrickMath cleanup planning recorded | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1344,6 +1344,17 @@ ExecutionDriverContract
   - Documented rollback guidance for unsetting the local recorder and repository config values.
   - No committed `.env` changes, database writes, database deletes, source behavior, frontend behavior, host-published assets, routes, controllers, APIs, migrations, models, repository changes, recorder changes, production defaults, Quick Generate semantics, voucher execution changes, journal writes, action execution, feedback delivery, provider calls, wallet access, lifecycle truth ownership, raw payload exposure, retry controls, new mutation controls, campaign mutation, or money movement were added.
   - Report: `../ui-cockpit/reports/098-durable-activity-local-opt-in-closure-cleanup-decision.md`.
+- x-change Cockpit Mutation Wave 5E — Synthetic Fixture Local Cleanup Decision / BrickMath Cleanup Planning:
+  - Decided not to remove the `PC-LOCAL-DIAGNOSTIC` synthetic fixture row in this checkpoint.
+  - Decided to keep `PC-LOCAL-DIAGNOSTIC` temporarily as side-by-side diagnostic comparison evidence.
+  - Decided to keep the real `MCPC` durable activity row in the local database.
+  - Decided to keep local database repository and recorder config enabled for continued manual testing.
+  - Reaffirmed durable activity recording must not be enabled by default in production.
+  - Documented the future deletion shape for `PC-LOCAL-DIAGNOSTIC` if explicitly approved later.
+  - Planned the Brick\Math cleanup as `Cockpit / issuance cleanup — Monetary String Normalization for BrickMath Compatibility`.
+  - Identified candidate areas for characterization: `GeneratePayCode::requiredIssuanceAmount()`, `EstimatePayCodeCost::handle()`, `InstructionRevenueAllocatorService::allocate()`, `InstructionRevenueAllocatorService::buildTransferMeta()`, and `VoucherIssuancePayloadNormalizer`.
+  - No committed `.env` changes, database writes, database deletes, source behavior, frontend behavior, host-published assets, routes, controllers, APIs, migrations, models, repository changes, recorder changes, production defaults, Quick Generate semantics, voucher execution changes, journal writes, action execution, feedback delivery, provider calls, wallet access, lifecycle truth ownership, raw payload exposure, retry controls, new mutation controls, campaign mutation, or money movement were added.
+  - Report: `../ui-cockpit/reports/099-synthetic-fixture-local-cleanup-decision-brickmath-cleanup-planning.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -1359,22 +1370,22 @@ x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 x-change Host Integration Slice 2 — Journal/action/feedback read-model hydration into Cockpit surfaces
 ```
 
-Completed through Host Integration Slice 2I and Cockpit Mutation Wave 5D.
+Completed through Host Integration Slice 2I and Cockpit Mutation Wave 5E.
 
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 5E — Synthetic Fixture Local Cleanup Decision / BrickMath Cleanup Planning.
+Cockpit Mutation Wave 5F — BrickMath Monetary Normalization Characterization.
 ```
 
 Recommended actions:
 
-1. Decide whether to remove the `PC-LOCAL-DIAGNOSTIC` local fixture row now that real activity is visible.
-2. If approved, remove only the synthetic fixture row from the local database and document the command/query used.
-3. Draft a separate tested cleanup plan for the Brick\Math float deprecation.
+1. Add failing/characterization coverage around the observed Brick\Math deprecation.
+2. Identify the exact call path emitting the warning.
+3. Fix monetary normalization only if the test proves the safe boundary.
 4. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
-5. Keep durable activity production default enablement deferred.
-6. Do not add journal writes, action execution, feedback delivery, retry controls, provider changes, wallet changes, or new mutation controls.
+5. Preserve Quick Generate behavior, voucher behavior, wallet behavior, durable activity behavior, and redaction behavior.
+6. Keep durable activity production default enablement deferred.
 7. Do not add campaign mutation endpoints, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls outside `GeneratePayCode`, campaign state mutation, direct money movement, raw payload exposure, direct wallet access, retry controls, or new mutation controls unless explicitly approved.
 8. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
