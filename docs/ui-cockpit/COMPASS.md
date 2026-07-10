@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 4D — Durable Activity Journal Handoff Adapter Baseline
-Status: Implemented; opt-in x-journal adapter records durable activity through `ExecutionJournalRecorder` with idempotent replay and non-blocking failure semantics
+Current slice: Cockpit Mutation Wave 4E — Durable Activity Journal Handoff Status Persistence Decision
+Status: Implemented; journal handoff status persistence is approved only through a future explicit projector slice, not inside the x-journal adapter
 Last updated: 2026-07-10
 
 ## Completed
@@ -273,6 +273,14 @@ Last updated: 2026-07-10
   - No durable activity handoff status mutation, UI changes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload exposure, mutation controls, or money movement were added.
   - No UI was changed in this slice.
   - Report: `reports/080-durable-activity-journal-handoff-adapter-baseline.md`.
+- Completed Cockpit Mutation Wave 4E — Durable Activity Journal Handoff Status Persistence Decision:
+  - Decided that journal handoff status persistence should be handled by a future status projector.
+  - Kept `XJournalCockpitOperatorIssuanceActivityJournalHandoff` focused on x-journal recording and result return only.
+  - Kept `CockpitOperatorIssuanceActivityRepositoryContract` free of journal-specific mutation methods in this checkpoint.
+  - Confirmed existing durable activity records already contain `journal_handoff_status`.
+  - No production code changes, repository update method, durable activity row mutation, migration change, UI changes, action execution, feedback delivery, provider calls, wallet access, voucher execution changes, lifecycle truth ownership, raw payload exposure, mutation controls, or money movement were added.
+  - No UI was changed in this slice.
+  - Report: `reports/081-durable-activity-journal-handoff-status-persistence-decision.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -1286,3 +1294,8 @@ Current boundary:
 - Cockpit Mutation Wave 4D focused red baseline: `3 failed, 1 assertion`.
 - Cockpit Mutation Wave 4D focused adapter result: `3 passed, 62 assertions`.
 - Cockpit Mutation Wave 4D scope result: opt-in x-journal adapter only; default runtime and UI unchanged.
+- Cockpit Mutation Wave 4E focused red baseline: `1 failed, 1 assertion`.
+- Cockpit Mutation Wave 4E focused decision result: `1 passed, 19 assertions`.
+- Cockpit Mutation Wave 4E related Wave 4 result: `16 passed, 174 assertions`.
+- Cockpit Mutation Wave 4E full package Pest result: `1181 passed, 5 skipped, 7375 assertions`.
+- Cockpit Mutation Wave 4E scope result: decision-only; no production code and no UI changed.
