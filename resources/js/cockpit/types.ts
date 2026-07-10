@@ -97,6 +97,18 @@ export type CockpitOperatorIssuanceActivityPresentation = {
             writes_journal?: boolean | null;
             source?: string | null;
             reason?: string | null;
+            diagnostic?: {
+                classification?: string | null;
+                tone?: string | null;
+                label?: string | null;
+                description?: string | null;
+                operator_action?: string | null;
+                read_only?: boolean | null;
+                retry_enabled?: boolean | null;
+                mutation_enabled?: boolean | null;
+                raw_payloads_exposed?: boolean | null;
+                [key: string]: unknown;
+            };
             metadata?: {
                 reference_number?: string | null;
                 event_type?: string | null;

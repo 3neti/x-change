@@ -89,3 +89,43 @@ it('presents operator issuance activity without creating side effects', function
         ->and($presentation->safety['sends_feedback'])->toBeFalse()
         ->and($presentation->safety['moves_money'])->toBeFalse();
 });
+
+it('adds read-only journal handoff diagnostics to presentation metadata', function () {
+    $presenter = app(CockpitOperatorIssuanceActivityPresenterContract::class);
+
+    $presentation = $presenter->present(
+        activity: new CockpitOperatorIssuanceActivityItemData(
+            id: 'activity-1',
+            code: 'PC-1234',
+            amount: '25',
+            currency: 'PHP',
+            status: 'issued',
+            issued_at: '2026-07-10T09:00:00+00:00',
+            route: 'x-change.cockpit.quick-generate.store',
+            correlation_id: 'corr-1',
+            detail_href: '/x/cockpit/pay-codes/PC-1234',
+        ),
+        journal: new CockpitOperatorIssuanceActivityJournalHandoffResultData(
+            status: 'recorded',
+            activity_id: 'activity-1',
+            correlation_id: 'corr-1',
+            journal_entry_id: 'journal-entry-1',
+            writes_journal: true,
+            source: 'x-journal',
+            reason: 'Journal handoff was recorded.',
+        ),
+        action: new CockpitOperatorIssuanceActivityActionHandoffResultData(activity_id: 'activity-1', correlation_id: 'corr-1'),
+        feedback: new CockpitOperatorIssuanceActivityFeedbackHandoffResultData(activity_id: 'activity-1', correlation_id: 'corr-1'),
+    );
+
+    expect($presentation->metadata['journal_handoff']['diagnostic'])->toMatchArray([
+        'classification' => 'recorded',
+        'tone' => 'success',
+        'label' => 'Journal recorded',
+        'operator_action' => 'none',
+        'read_only' => true,
+        'retry_enabled' => false,
+        'mutation_enabled' => false,
+        'raw_payloads_exposed' => false,
+    ]);
+});

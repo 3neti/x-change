@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 4I durable activity journal handoff read model exposure implemented
+Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Quick Generate mutation Wave 1F closed; published asset drift guard complete; Cockpit Mutation Wave 4J durable activity journal handoff operator diagnostics implemented
 Last updated: 2026-07-10
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-10
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Mutation Wave 4I durable activity journal handoff read model exposure implemented | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Mutation Wave 4J durable activity journal handoff operator diagnostics implemented | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1203,6 +1203,14 @@ ExecutionDriverContract
   - No journal write, handoff retry, queue job, action execution, feedback delivery, provider call, wallet access, voucher execution change, lifecycle truth ownership, new mutation control, or money movement was added.
   - UI changed: dashboard operator issuance activity cards can show read-only journal handoff evidence when safe metadata exists.
   - Report: `../ui-cockpit/reports/085-durable-activity-journal-handoff-read-model-exposure.md`.
+- x-change Cockpit Mutation Wave 4J — Durable Activity Journal Handoff Operator Diagnostics:
+  - Added safe read-only classification for durable activity journal handoff evidence.
+  - Exposed diagnostics under `metadata.journal_handoff.diagnostic`.
+  - Rendered a read-only operator diagnostic section on dashboard operator issuance activity cards.
+  - Diagnostics explicitly disable retry, mutation, and raw payload exposure.
+  - No x-journal invocation, journal write, handoff retry, queue job, action execution, feedback delivery, provider call, wallet access, voucher execution change, lifecycle truth ownership, raw payload exposure, new mutation control, or money movement was added.
+  - UI changed: dashboard operator issuance activity cards can show a read-only operator diagnostic when safe diagnostic metadata exists.
+  - Report: `../ui-cockpit/reports/086-durable-activity-journal-handoff-operator-diagnostics.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -1218,40 +1226,23 @@ x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 x-change Host Integration Slice 2 — Journal/action/feedback read-model hydration into Cockpit surfaces
 ```
 
-Completed through Host Integration Slice 2I and Cockpit Mutation Wave 4I.
+Completed through Host Integration Slice 2I and Cockpit Mutation Wave 4J.
 
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 4J — Durable Activity Journal Handoff Operator Diagnostics.
+Cockpit Mutation Wave 4K — Durable Activity Journal Handoff Operator Diagnostics Host Publish / Verification.
 ```
 
 Recommended actions:
 
-1. Read [INTEGRATION_READINESS_REPORT.md](INTEGRATION_READINESS_REPORT.md).
-2. Read the Cockpit compass before implementation: `packages/x-change/docs/ui-cockpit/COMPASS.md`.
-3. Read `packages/x-change/docs/ui-cockpit/reports/042-quick-generate-mutation-plan-safety-contract.md`.
-4. Read `packages/x-change/docs/ui-cockpit/reports/043-quick-generate-mutation-contract-safety-gates.md`.
-5. Read `packages/x-change/docs/ui-cockpit/reports/044-quick-generate-mutation-route-shell.md`.
-6. Read `packages/x-change/docs/ui-cockpit/reports/045-quick-generate-existing-issuance-handoff.md`.
-7. Read `packages/x-change/docs/ui-cockpit/reports/046-quick-generate-idempotency-replay-contract.md`.
-8. Read `packages/x-change/docs/ui-cockpit/reports/047-quick-generate-ui-submit-enablement.md`.
-9. Read `packages/x-change/docs/ui-cockpit/reports/048-quick-generate-read-model-refresh-navigation-closure.md`.
-10. Read `packages/x-change/docs/ui-cockpit/reports/049-operator-visible-issuance-activity-audit-handoff-plan.md`.
-11. Read `packages/x-change/docs/ui-cockpit/reports/051-operator-issuance-activity-read-model-contract.md`.
-12. Read `packages/x-change/docs/ui-cockpit/reports/052-operator-issuance-activity-recorder-boundary.md`.
-13. Read `packages/x-change/docs/ui-cockpit/reports/053-operator-issuance-activity-journal-handoff-boundary.md`.
-14. Read `packages/x-change/docs/ui-cockpit/reports/054-operator-issuance-activity-action-handoff-boundary.md`.
-15. Read `packages/x-change/docs/ui-cockpit/reports/055-operator-issuance-activity-feedback-handoff-boundary.md`.
-16. Read `packages/x-change/docs/ui-cockpit/reports/056-operator-issuance-activity-presentation-closure.md`.
-17. Read `packages/x-change/docs/ui-cockpit/reports/057-operator-issuance-activity-read-model-presentation-adoption.md`.
-18. Read `packages/x-change/docs/ui-cockpit/reports/058-operator-issuance-activity-ui-rendering-boundary.md`.
-19. Read `packages/x-change/docs/ui-cockpit/reports/059-published-asset-sync-drift-validation.md`.
-20. Approve, revise, or reject Wave 2J before host publish verification is scaffolded.
-21. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
-22. Existing issuance handoff, idempotency/replay, UI submit, manual refresh, generated Pay Code detail navigation, operator issuance activity read-model props, operator issuance activity dashboard rendering, and drift detection are wired.
-23. Do not add campaign mutation endpoints, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls outside `GeneratePayCode`, campaign state mutation, direct money movement, raw payload exposure, or direct wallet access unless explicitly approved.
-24. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
+1. Run the Cockpit published asset drift guard.
+2. Publish package Cockpit assets if the host mirrors are stale.
+3. Verify package frontend tests and host build after publishing.
+4. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
+5. Existing issuance handoff, idempotency/replay, UI submit, manual refresh, generated Pay Code detail navigation, operator issuance activity read-model props, operator issuance activity dashboard rendering, journal handoff evidence, and journal handoff diagnostics are wired.
+6. Do not add campaign mutation endpoints, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls outside `GeneratePayCode`, campaign state mutation, direct money movement, raw payload exposure, direct wallet access, retry controls, or new mutation controls unless explicitly approved.
+7. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
 
 ## x-journal Initial Intent
 

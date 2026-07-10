@@ -139,6 +139,17 @@ it('exposes persisted journal handoff summary as safe read-only presentation met
                 'reference_number' => 'XJ-1',
                 'event_type' => 'cockpit.operator_issuance_activity.recorded',
             ],
+            'diagnostic' => [
+                'classification' => 'recorded',
+                'tone' => 'success',
+                'label' => 'Journal recorded',
+                'description' => 'The durable activity was handed to the journal and a journal entry identifier is available for read-only inspection.',
+                'operator_action' => 'none',
+                'read_only' => true,
+                'retry_enabled' => false,
+                'mutation_enabled' => false,
+                'raw_payloads_exposed' => false,
+            ],
         ])
         ->and($readModel->presentations[0]->metadata['provider_payload'] ?? null)->toBeNull()
         ->and($readModel->presentations[0]->metadata['journal_handoff']['metadata']['provider_payload'] ?? null)->toBeNull()

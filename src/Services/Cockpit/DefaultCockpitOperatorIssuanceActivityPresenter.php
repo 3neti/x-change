@@ -13,6 +13,10 @@ use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityPresentationDa
 
 class DefaultCockpitOperatorIssuanceActivityPresenter implements CockpitOperatorIssuanceActivityPresenterContract
 {
+    public function __construct(
+        private readonly CockpitOperatorIssuanceActivityJournalHandoffDiagnostics $journalHandoffDiagnostics,
+    ) {}
+
     public function present(
         CockpitOperatorIssuanceActivityItemData $activity,
         CockpitOperatorIssuanceActivityJournalHandoffResultData $journal,
@@ -40,6 +44,7 @@ class DefaultCockpitOperatorIssuanceActivityPresenter implements CockpitOperator
                     'source' => $journal->source,
                     'reason' => $journal->reason,
                     'metadata' => $journal->metadata,
+                    'diagnostic' => $this->journalHandoffDiagnostics->classify($journal),
                 ],
             ],
         );

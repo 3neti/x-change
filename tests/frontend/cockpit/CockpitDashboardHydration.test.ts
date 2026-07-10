@@ -165,6 +165,17 @@ const operatorIssuanceActivityReadModel = {
                     writes_journal: true,
                     source: 'test-journal-handoff',
                     reason: 'Journal handoff was recorded.',
+                    diagnostic: {
+                        classification: 'recorded',
+                        tone: 'success',
+                        label: 'Journal recorded',
+                        description: 'The durable activity was handed to the journal and a journal entry identifier is available for read-only inspection.',
+                        operator_action: 'none',
+                        read_only: true,
+                        retry_enabled: false,
+                        mutation_enabled: false,
+                        raw_payloads_exposed: false,
+                    },
                     metadata: {
                         reference_number: 'XJ-1',
                         event_type: 'cockpit.operator_issuance_activity.recorded',
@@ -534,9 +545,13 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('Reason: Journal handoff was recorded.');
         expect(wrapper.text()).toContain('Reference: XJ-1');
         expect(wrapper.text()).toContain('Event: cockpit.operator_issuance_activity.recorded');
+        expect(wrapper.text()).toContain('Diagnostic: Journal recorded');
+        expect(wrapper.text()).toContain('Action: none');
+        expect(wrapper.text()).toContain('Read-only: yes');
         expect(wrapper.text()).toContain('presentation-only');
         expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-card"]')).toHaveLength(1);
         expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-journal-summary"]')).toHaveLength(1);
+        expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-journal-diagnostic"]')).toHaveLength(1);
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-link"]').attributes('href')).toBe('/x/cockpit/pay-codes/PC-1234');
     });
 
@@ -554,6 +569,7 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).not.toContain('recipient_secret');
         expect(wrapper.text()).not.toContain('token');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-mutation"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-journal-retry"]').exists()).toBe(false);
     });
 
     it('renders unavailable operator issuance activity as a read-only empty state', () => {

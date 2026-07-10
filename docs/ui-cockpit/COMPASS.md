@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 4I — Durable Activity Journal Handoff Read Model Exposure
-Status: Implemented; persisted journal handoff status and safe summary fields are exposed through read-only operator issuance activity presentation
+Current slice: Cockpit Mutation Wave 4J — Durable Activity Journal Handoff Operator Diagnostics
+Status: Implemented; safe read-only operator diagnostics are exposed for durable activity journal handoff evidence
 Last updated: 2026-07-10
 
 ## Completed
@@ -322,6 +322,15 @@ Last updated: 2026-07-10
   - No journal write, handoff retry, queue job, action execution, feedback delivery, provider call, wallet access, voucher execution change, lifecycle truth ownership, new mutation control, or money movement was added.
   - UI changed: existing dashboard operator issuance activity cards can now display a read-only journal handoff evidence box when safe handoff metadata exists.
   - Report: `reports/085-durable-activity-journal-handoff-read-model-exposure.md`.
+- Completed Cockpit Mutation Wave 4J — Durable Activity Journal Handoff Operator Diagnostics:
+  - Added `CockpitOperatorIssuanceActivityJournalHandoffDiagnostics`.
+  - Classified safe journal handoff evidence into `recorded`, `not_wired`, `failed_non_blocking`, and `unknown` display diagnostics.
+  - Added safe diagnostic metadata under `metadata.journal_handoff.diagnostic`.
+  - Updated the Cockpit dashboard operator issuance activity panel to render a read-only `Operator diagnostic` section.
+  - Every diagnostic remains `read_only: true`, `retry_enabled: false`, `mutation_enabled: false`, and `raw_payloads_exposed: false`.
+  - No x-journal invocation, journal write, handoff retry, queue job, action execution, feedback delivery, provider call, wallet access, voucher execution change, lifecycle truth ownership, raw payload exposure, new mutation control, or money movement was added.
+  - UI changed: existing dashboard operator issuance activity cards can now display a read-only operator diagnostic inside the journal handoff evidence box.
+  - Report: `reports/086-durable-activity-journal-handoff-operator-diagnostics.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -930,16 +939,15 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 4G — Durable Activity Journal Handoff Status Persistence Adapter
+Cockpit Mutation Wave 4K — Durable Activity Journal Handoff Operator Diagnostics Host Publish / Verification
 ```
 
 Purpose:
 
-- add an opt-in status persistence adapter behind the projector contract
-- update only journal handoff status and safe handoff metadata
-- preserve action and feedback handoff status fields
-- no-op when the durable activity row is missing
-- keep status persistence non-blocking
+- run the Cockpit published asset drift guard
+- publish package Cockpit assets if the host mirrors are stale
+- verify package frontend tests and host build after publishing
+- keep the checkpoint verification-only unless publishing is needed
 
 Completed host integration boundary:
 
@@ -1370,3 +1378,11 @@ Current boundary:
 - Cockpit Mutation Wave 4I full package Pest result: `1198 passed, 5 skipped, 7545 assertions`.
 - Cockpit Mutation Wave 4I post-doc architecture guard result: `1 passed, 21 assertions`.
 - Cockpit Mutation Wave 4I scope result: read-only journal handoff summary exposure; UI evidence box added; no new mutation behavior.
+- Cockpit Mutation Wave 4J focused red baseline: diagnostic classifier missing and presentation diagnostic metadata absent.
+- Cockpit Mutation Wave 4J focused backend result: `10 passed, 101 assertions`.
+- Cockpit Mutation Wave 4J focused frontend result: `1 passed, 16 tests`.
+- Cockpit Mutation Wave 4J focused backend/architecture result after formatting: `11 passed, 122 assertions`.
+- Cockpit Mutation Wave 4J formatter result: `../../vendor/bin/pint --dirty --format agent` fixed EOF formatting and passed.
+- Cockpit Mutation Wave 4J full package Pest result: `1203 passed, 5 skipped, 7632 assertions`.
+- Cockpit Mutation Wave 4J full frontend result: `74 passed, 476 tests`.
+- Cockpit Mutation Wave 4J scope result: read-only journal handoff operator diagnostics added; UI diagnostic section added; no retry or mutation controls.

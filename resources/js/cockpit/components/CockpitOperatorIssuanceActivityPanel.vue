@@ -9,6 +9,24 @@ const props = defineProps<{
     readModel?: CockpitOperatorIssuanceActivityReadModel;
 }>();
 
+type SafeJournalDiagnostic = {
+    label: string;
+    tone?: string;
+    description?: string;
+    operatorAction?: string;
+    readOnly: boolean;
+};
+
+type SafeJournalSummary = {
+    journalEntryId?: string;
+    writesJournal: boolean;
+    source?: string;
+    reason?: string;
+    referenceNumber?: string;
+    eventType?: string;
+    diagnostic?: SafeJournalDiagnostic;
+};
+
 type SafePresentation = {
     id: string;
     title: string;
@@ -16,14 +34,7 @@ type SafePresentation = {
     status: string;
     href?: string;
     correlationId?: string;
-    journalSummary?: {
-        journalEntryId?: string;
-        writesJournal: boolean;
-        source?: string;
-        reason?: string;
-        referenceNumber?: string;
-        eventType?: string;
-    };
+    journalSummary?: SafeJournalSummary;
     handoffs: {
         journal: string;
         action: string;
@@ -73,7 +84,7 @@ function sanitizePresentation(presentation: CockpitOperatorIssuanceActivityPrese
     };
 }
 
-function safeJournalSummary(value: unknown): SafePresentation['journalSummary'] | undefined {
+function safeJournalSummary(value: unknown): SafeJournalSummary | undefined {
     if (!isPlainObject(value)) {
         return undefined;
     }
@@ -84,8 +95,9 @@ function safeJournalSummary(value: unknown): SafePresentation['journalSummary'] 
     const metadata = isPlainObject(value.metadata) ? value.metadata : {};
     const referenceNumber = stringValue(metadata.reference_number);
     const eventType = stringValue(metadata.event_type);
+    const diagnostic = safeJournalDiagnostic(value.diagnostic);
 
-    if (!journalEntryId && !source && !reason && !referenceNumber && !eventType) {
+    if (!journalEntryId && !source && !reason && !referenceNumber && !eventType && !diagnostic) {
         return undefined;
     }
 
@@ -96,6 +108,27 @@ function safeJournalSummary(value: unknown): SafePresentation['journalSummary'] 
         reason,
         referenceNumber,
         eventType,
+        diagnostic,
+    };
+}
+
+function safeJournalDiagnostic(value: unknown): SafeJournalDiagnostic | undefined {
+    if (!isPlainObject(value)) {
+        return undefined;
+    }
+
+    const label = stringValue(value.label);
+
+    if (!label) {
+        return undefined;
+    }
+
+    return {
+        label,
+        tone: stringValue(value.tone),
+        description: stringValue(value.description),
+        operatorAction: stringValue(value.operator_action),
+        readOnly: value.read_only === true && value.retry_enabled !== true && value.mutation_enabled !== true && value.raw_payloads_exposed !== true,
     };
 }
 
@@ -240,6 +273,25 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                             Event
                         </dt>
                         <dd>Event: {{ presentation.journalSummary.eventType }}</dd>
+                    </div>
+                    <div
+                        v-if="presentation.journalSummary.diagnostic"
+                        class="sm:col-span-2"
+                        data-testid="cockpit-operator-issuance-activity-journal-diagnostic"
+                    >
+                        <dt class="font-semibold text-slate-700 dark:text-slate-200">
+                            Operator diagnostic
+                        </dt>
+                        <dd>Diagnostic: {{ presentation.journalSummary.diagnostic.label }}</dd>
+                        <dd v-if="presentation.journalSummary.diagnostic.description">
+                            {{ presentation.journalSummary.diagnostic.description }}
+                        </dd>
+                        <dd v-if="presentation.journalSummary.diagnostic.operatorAction">
+                            Action: {{ presentation.journalSummary.diagnostic.operatorAction }}
+                        </dd>
+                        <dd>
+                            Read-only: {{ presentation.journalSummary.diagnostic.readOnly ? 'yes' : 'no' }}
+                        </dd>
                     </div>
                 </dl>
 
