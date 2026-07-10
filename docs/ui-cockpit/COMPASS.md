@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 5H — Upstream BrickMath Fix Intake / x-change Characterization Flip
-Status: Blocked pending upstream fix
+Current slice: Cash/Voucher Upstream BrickMath Fix Execution
+Status: Completed upstream
 Last updated: 2026-07-11
 
 ## Completed
@@ -502,6 +502,20 @@ Last updated: 2026-07-11
   - Set the next checkpoint to `Cash/Voucher Upstream BrickMath Fix Execution`.
   - No committed `.env` changes, database writes, database deletes, x-change production behavior, cash package edits, voucher package edits, frontend behavior, host-published assets, routes, controllers, APIs, migrations, models, repository changes, recorder changes, production defaults, Quick Generate semantics, voucher execution changes, journal writes, action execution, feedback delivery, provider calls, direct wallet access changes, lifecycle truth ownership, raw payload exposure, retry controls, new mutation controls, campaign mutation, or money movement were added.
   - Report: `reports/102-upstream-brickmath-fix-intake-characterization-flip.md`.
+- Completed Cash/Voucher Upstream BrickMath Fix Execution:
+  - Implemented the cash package fix in `/Users/rli/PhpstormProjects/packages/cash`.
+  - Cash commit: `198ff60 cash: normalize monetary floats before BrickMoney`.
+  - Added voucher package verification in `/Users/rli/PhpstormProjects/packages/voucher`.
+  - Voucher commit: `7a6889e voucher: verify cash persistence avoids BrickMath floats`.
+  - Confirmed no voucher production code change was required.
+  - Cash focused result: `2 passed, 7 assertions`.
+  - Cash full suite result: `95 passed, 194 assertions`.
+  - Voucher focused result: `1 passed, 8 assertions`.
+  - Voucher execution/regression group result: `29 passed, 96 assertions`.
+  - Voucher full suite result: `387 passed, 28 skipped, 1159 assertions`.
+  - Next checkpoint is `Retry Wave 5H — x-change Characterization Flip`.
+  - No x-change production behavior, Cockpit UI, host-published assets, routes, controllers, APIs, durable activity defaults, journal writes, action execution, feedback delivery, provider calls, direct wallet mutation, voucher execution behavior, campaign mutation, or money movement behavior was changed.
+  - Report: `reports/103-cash-voucher-upstream-brickmath-fix-execution.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -1110,15 +1124,13 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cash/Voucher Upstream BrickMath Fix Execution
+Retry Wave 5H — x-change Characterization Flip
 ```
 
 Purpose:
 
-- run the Wave 5G instructions in `/Users/rli/PhpstormProjects/packages/cash`
-- run the Wave 5G instructions in `/Users/rli/PhpstormProjects/packages/voucher`
-- verify the relevant cash and voucher tests pass
-- return to x-change and retry Wave 5H only after upstream package fixes are available locally
+- update x-change characterization coverage to assert no Brick\Math warning during real `GeneratePayCode`
+- preserve Quick Generate behavior, wallet debit behavior, voucher instruction amount, durable activity behavior, and redaction behavior
 - preserve Quick Generate behavior, voucher behavior, wallet behavior, durable activity behavior, redaction behavior, and money movement semantics
 
 Completed host integration boundary:
@@ -1654,3 +1666,11 @@ Current boundary:
 - Cockpit Mutation Wave 5H characterization result: x-change Brick\Math test still captures the warning and passes with `1 passed, 6 assertions`.
 - Cockpit Mutation Wave 5H next checkpoint result: `Cash/Voucher Upstream BrickMath Fix Execution`.
 - Cockpit Mutation Wave 5H scope result: intake documentation and guard test only; no cash, voucher, x-change production behavior, UI, local config, or database state changed.
+- Cash/Voucher Upstream BrickMath Fix Execution cash commit result: `198ff60 cash: normalize monetary floats before BrickMoney`.
+- Cash/Voucher Upstream BrickMath Fix Execution voucher commit result: `7a6889e voucher: verify cash persistence avoids BrickMath floats`.
+- Cash/Voucher Upstream BrickMath Fix Execution cash focused result: `2 passed, 7 assertions`.
+- Cash/Voucher Upstream BrickMath Fix Execution cash full suite result: `95 passed, 194 assertions`.
+- Cash/Voucher Upstream BrickMath Fix Execution voucher focused result: `1 passed, 8 assertions`.
+- Cash/Voucher Upstream BrickMath Fix Execution voucher regression result: `29 passed, 96 assertions`.
+- Cash/Voucher Upstream BrickMath Fix Execution voucher full suite result: `387 passed, 28 skipped, 1159 assertions`.
+- Cash/Voucher Upstream BrickMath Fix Execution next checkpoint result: `Retry Wave 5H — x-change Characterization Flip`.
