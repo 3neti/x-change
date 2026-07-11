@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 15B pass/block criteria recorded; next is browser evidence snapshot
+Current status: Cockpit Wave 15C browser evidence snapshot recorded; next is runtime decision
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 15B pass/block criteria recorded; next is browser evidence snapshot | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 15C browser evidence snapshot recorded; next is runtime decision | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1671,3 +1671,4 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Cockpit Wave 14E — Wave 14 Closure / Next Planning Record: completed in [../ui-cockpit/reports/179-wave-14e-closure-next-planning-record.md](../ui-cockpit/reports/179-wave-14e-closure-next-planning-record.md); next recommended wave `Cockpit Wave 15 — Browser-confirmed Visual Acceptance and Next Runtime Decision`.
 - Cockpit Wave 15A — Human Visual Confirmation Intake: implemented in [../ui-cockpit/reports/180-wave-15a-human-visual-confirmation-intake.md](../ui-cockpit/reports/180-wave-15a-human-visual-confirmation-intake.md); next `Cockpit Wave 15B — Pass / Block Decision Criteria Record`.
 - Cockpit Wave 15B — Pass / Block Decision Criteria Record: implemented in [../ui-cockpit/reports/181-wave-15b-pass-block-decision-criteria.md](../ui-cockpit/reports/181-wave-15b-pass-block-decision-criteria.md); next `Cockpit Wave 15C — Browser Evidence / Log Snapshot Record`.
+- Cockpit Wave 15C — Browser Evidence / Log Snapshot Record: implemented in [../ui-cockpit/reports/182-wave-15c-browser-evidence-log-snapshot.md](../ui-cockpit/reports/182-wave-15c-browser-evidence-log-snapshot.md); next `Cockpit Wave 15D — Next Runtime Decision Record`.

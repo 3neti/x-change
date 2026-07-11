@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 15B — Pass / Block Decision Criteria Record
-Status: Implemented / Go and no-go criteria recorded
+Current slice: Cockpit Wave 15C — Browser Evidence / Log Snapshot Record
+Status: Implemented / Browser log snapshot recorded
 Last updated: 2026-07-11
 
 ## Completed
@@ -1929,3 +1929,4 @@ Current boundary:
 - Cockpit Wave 14E result: Wave 14 closed after asset doctor, host mirror sync, route smoke verification, frontend tests, PHP architecture/feature tests, and browser visual handoff checklist; report `reports/179-wave-14e-closure-next-planning-record.md`; next recommended wave `Cockpit Wave 15 — Browser-confirmed Visual Acceptance and Next Runtime Decision`.
 - Cockpit Wave 15A result: human visual confirmation intake record created for Quick Generate and legacy bridge callouts; report `reports/180-wave-15a-human-visual-confirmation-intake.md`; next `Cockpit Wave 15B — Pass / Block Decision Criteria Record`.
 - Cockpit Wave 15B result: pass/block criteria recorded for moving from visual acceptance into next runtime decision; report `reports/181-wave-15b-pass-block-decision-criteria.md`; next `Cockpit Wave 15C — Browser Evidence / Log Snapshot Record`.
+- Cockpit Wave 15C result: available browser logs recorded; snapshot contains historical Vite reconnect entries and no identified new Wave 15 blocking browser exception; report `reports/182-wave-15c-browser-evidence-log-snapshot.md`; next `Cockpit Wave 15D — Next Runtime Decision Record`.
