@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 25 — Operator Activity Search / Filter UI Presentation
-Status: Complete / read-only activity filter UI presented and browser-smoked
+Current slice: Cockpit Wave 26 — Operator Activity Filter Manual Browser Acceptance / Query UX Hardening
+Status: Complete / read-only activity filter query UX hardened and accepted for browser/manual verification
 Last updated: 2026-07-11
 
 ## Completed
@@ -2024,3 +2024,12 @@ Current boundary:
   - Dusk browser smoke for filtered activity rendering and no mutation/configuration controls.
 - Cockpit Wave 25 expected UI result: `/x/cockpit` shows a read-only filter bar in the Operator Issuance Activity panel.
 - Cockpit Wave 25 next recommended wave: `Cockpit Wave 26 — Operator Activity Filter Manual Browser Acceptance / Query UX Hardening`.
+- Cockpit Wave 26 result: Operator Activity filter manual/browser acceptance and query UX hardening completed; report `reports/198-wave-26-operator-activity-filter-browser-acceptance.md`.
+- Cockpit Wave 26 completed:
+  - result summary hardening for no filters, active filters, and runtime-not-wired states;
+  - filtered no-match empty-state copy using `No activity matches current filters`;
+  - host-published Cockpit asset sync with asset drift doctor `checked 58, ok 58, stale 0`;
+  - browser/manual acceptance criteria for `/x/cockpit?activity_search=PC-DUSK-FILTER&activity_status=issued&activity_handoff_status=recorded`;
+  - architecture-test coverage for the acceptance record and next-wave decision.
+- Cockpit Wave 26 expected UI result: `/x/cockpit` shows the Operator Issuance Activity filter bar with a read-only result summary; no-match filters show explicit no-match copy instead of runtime-not-wired copy.
+- Cockpit Wave 26 next recommended wave: `Cockpit Wave 27 — Operator Activity Filter UX Refinement / Multi-Select Decision`.

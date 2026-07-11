@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 19 complete; combined operator activity journal/action/feedback runtime profile verified
+Current status: Cockpit Wave 26 complete; operator activity filter browser/manual acceptance and query UX hardening complete
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 19 complete; combined operator activity journal/action/feedback runtime profile verified | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 26 complete; operator activity filter browser/manual acceptance and query UX hardening complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1688,3 +1688,4 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Cockpit Wave 23 — Runtime Profile Operator Acceptance Closure / Next Runtime Decision: completed in [../ui-cockpit/reports/194-wave-23-runtime-profile-operator-acceptance-closure.md](../ui-cockpit/reports/194-wave-23-runtime-profile-operator-acceptance-closure.md) and [../ui-cockpit/reports/195-wave-23-next-runtime-decision-record.md](../ui-cockpit/reports/195-wave-23-next-runtime-decision-record.md); Runtime Profile is accepted as a read-only operator diagnostics surface; runtime mutation remains blocked; next recommended wave is `Cockpit Wave 24 — Operator Activity Search / Filter Runtime Readiness`.
 - Cockpit Wave 24 — Operator Activity Search / Filter Runtime Readiness: completed in [../ui-cockpit/reports/196-wave-24-operator-activity-search-filter-readiness.md](../ui-cockpit/reports/196-wave-24-operator-activity-search-filter-readiness.md); durable operator activity can now be queried with read-only search/status/handoff filters and exposes active filter metadata through the read model; no visible UI or mutation scope changed; next recommended wave is `Cockpit Wave 25 — Operator Activity Search / Filter UI Presentation`.
 - Cockpit Wave 25 — Operator Activity Search / Filter UI Presentation: completed in [../ui-cockpit/reports/197-wave-25-operator-activity-search-filter-ui-presentation.md](../ui-cockpit/reports/197-wave-25-operator-activity-search-filter-ui-presentation.md); `/x/cockpit` now exposes read-only operator activity search/status/handoff filter controls backed by GET query params; Dusk verified filtered rendering; no mutation/provider/wallet/journal/action/feedback execution scope changed; next recommended wave is `Cockpit Wave 26 — Operator Activity Filter Manual Browser Acceptance / Query UX Hardening`.
+- Cockpit Wave 26 — Operator Activity Filter Manual Browser Acceptance / Query UX Hardening: completed in [../ui-cockpit/reports/198-wave-26-operator-activity-filter-browser-acceptance.md](../ui-cockpit/reports/198-wave-26-operator-activity-filter-browser-acceptance.md); `/x/cockpit` now summarizes filtered operator activity results and shows explicit no-match copy when active filters match no activity; host-published assets are clean; no mutation/provider/wallet/journal/action/feedback execution scope changed; next recommended wave is `Cockpit Wave 27 — Operator Activity Filter UX Refinement / Multi-Select Decision`.
