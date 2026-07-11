@@ -2105,3 +2105,5 @@ Current boundary:
 - Cockpit Wave 32 completed: Voucher Detail now has typed evidence summary facts, provider hydration, Vue rendering, browser verification, and clean published assets while preserving read-only boundaries.
 - Cockpit Wave 32 expected UI result: `/x/cockpit/pay-codes/{code}` shows read-only lifecycle, claim, approval, execution, journal, action, and feedback evidence summary cards.
 - Cockpit Wave 32 next recommended wave: `Cockpit Wave 33 — Distribution Workspace Functional Parity / Share Surface Hardening`.
+- Cockpit Wave 33A result: Distribution Workspace functional parity audit completed; report `reports/225-wave-33a-distribution-workspace-functional-parity-audit.md`; next `Cockpit Wave 33B — Distribution Workspace Read Model Contract`.
+- Cockpit Wave 33A expected UI result: no UI change; this slice defines read-only distribution/share hardening scope.
