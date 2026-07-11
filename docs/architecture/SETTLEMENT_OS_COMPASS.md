@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 12C Pay Code create bridge marker implemented; next is explorer/balances bridge marker
+Current status: Cockpit Wave 12D explorer/balances bridge markers implemented; next is functional parity bridge closure
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 12C Pay Code create bridge marker implemented; next is explorer/balances bridge marker | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 12D explorer/balances bridge markers implemented; next is functional parity bridge closure | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1657,3 +1657,4 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Cockpit Wave 12A — Quick Generate Stale Baseline Copy Cleanup: implemented in [../ui-cockpit/reports/165-wave-12a-quick-generate-stale-baseline-copy-cleanup.md](../ui-cockpit/reports/165-wave-12a-quick-generate-stale-baseline-copy-cleanup.md); next `Cockpit Wave 12B — Legacy Page Functional Parity Bridge Audit`.
 - Cockpit Wave 12B — Legacy Page Functional Parity Bridge Audit: implemented in [../ui-cockpit/reports/166-wave-12b-legacy-page-functional-parity-bridge-audit.md](../ui-cockpit/reports/166-wave-12b-legacy-page-functional-parity-bridge-audit.md); next `Cockpit Wave 12C — Pay Code Create Page Template/Campaign Draft Bridge Marker`.
 - Cockpit Wave 12C — Pay Code Create Page Template/Campaign Draft Bridge Marker: implemented in [../ui-cockpit/reports/167-wave-12c-pay-code-create-template-campaign-draft-bridge-marker.md](../ui-cockpit/reports/167-wave-12c-pay-code-create-template-campaign-draft-bridge-marker.md); next `Cockpit Wave 12D — Pay Code Explorer / Balances Bridge Marker`.
+- Cockpit Wave 12D — Pay Code Explorer / Balances Bridge Marker: implemented in [../ui-cockpit/reports/168-wave-12d-pay-code-explorer-balances-bridge-marker.md](../ui-cockpit/reports/168-wave-12d-pay-code-explorer-balances-bridge-marker.md); next `Cockpit Wave 12E — Functional Parity Bridge Closure / Host Publish Handoff`.
