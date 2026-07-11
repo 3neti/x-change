@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 26 — Operator Activity Filter Manual Browser Acceptance / Query UX Hardening
-Status: Complete / read-only activity filter query UX hardened and accepted for browser/manual verification
+Current slice: Cockpit Wave 27 — Operator Activity Filter UX Refinement / Multi-Select Decision
+Status: Complete / single-select filter UX refined with compact summary and clear-per-filter links
 Last updated: 2026-07-11
 
 ## Completed
@@ -2033,3 +2033,13 @@ Current boundary:
   - architecture-test coverage for the acceptance record and next-wave decision.
 - Cockpit Wave 26 expected UI result: `/x/cockpit` shows the Operator Issuance Activity filter bar with a read-only result summary; no-match filters show explicit no-match copy instead of runtime-not-wired copy.
 - Cockpit Wave 26 next recommended wave: `Cockpit Wave 27 — Operator Activity Filter UX Refinement / Multi-Select Decision`.
+- Cockpit Wave 27 result: Operator Activity filter UX refinement and multi-select decision completed; reports `reports/199-wave-27a-operator-activity-filter-multiselect-decision.md` and `reports/200-wave-27-operator-activity-filter-ux-refinement-closure.md`.
+- Cockpit Wave 27 completed:
+  - decided to keep visible filter controls single-select for now;
+  - documented deferred multi-select criteria;
+  - added compact active-filter summary copy;
+  - added clear-per-filter links for search, status, and handoff filters;
+  - host-published Cockpit asset sync with asset drift doctor `checked 58, ok 58, stale 0`;
+  - Dusk browser smoke for the activity filter surface.
+- Cockpit Wave 27 expected UI result: `/x/cockpit` shows `Filters: search “…” · status … · handoff …` plus `Clear search`, `Clear status`, and `Clear handoff` links when those filters are active.
+- Cockpit Wave 27 next recommended wave: `Cockpit Wave 28 — Operator Activity Filter Browser Acceptance / Next Runtime Decision`.
