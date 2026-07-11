@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 8J — Runtime Enforcement / Parity Planning Closure
-Status: Scaffolded / Runtime planning recorded
+Current slice: Cockpit Wave 9A — Functional Parity Audit
+Status: Scaffolded / Functional audit recorded
 Last updated: 2026-07-11
 
 ## Completed
@@ -1887,3 +1887,5 @@ Current boundary:
 - Cockpit Mutation Wave 8I — Parity Readiness Gate Plan expected UI result: no current Cockpit UI change is expected.
 - Cockpit Mutation Wave 8J — Runtime Enforcement / Parity Planning Closure scaffold result: runtime planning recorded; report `reports/140-wave-8j-runtime-enforcement-parity-planning-closure.md`; next `Wave 9A — /x/dashboard, /x/pay-codes, and /x/balances Parity Audit`.
 - Cockpit Mutation Wave 8J — Runtime Enforcement / Parity Planning Closure expected UI result: no current Cockpit UI change is expected.
+- Cockpit Wave 9A — Functional Parity Audit result: functional parity audit recorded for `/x/dashboard`, `/x/pay-codes`, `/x/pay-codes/create`, `/x/balances`, and Cockpit Quick Generate; report `reports/141-wave-9a-functional-parity-audit.md`; next `Cockpit Wave 9B — Template/Campaign Issuance Draft Contract Baseline`.
+- Cockpit Wave 9A — Functional Parity Audit finding: Cockpit already generates Pay Codes through `GeneratePayCode`; the next gap is template/campaign issuance draft compilation, not UI matching.
