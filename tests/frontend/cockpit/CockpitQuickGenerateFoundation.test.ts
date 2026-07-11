@@ -314,6 +314,118 @@ describe('Cockpit Quick Generate foundation', () => {
         vi.unstubAllGlobals();
     });
 
+    it('prefills Quick Generate from read-only campaign context without campaign mutation', async () => {
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: true,
+            json: vi.fn().mockResolvedValue({
+                status: 'issued',
+                result: {
+                    code: 'PC-CAMPAIGN-001',
+                    links: {
+                        cockpit_detail: '/x/cockpit/pay-codes/PC-CAMPAIGN-001',
+                    },
+                },
+            }),
+        });
+
+        vi.stubGlobal('fetch', fetchMock);
+        vi.stubGlobal('crypto', {
+            randomUUID: () => 'cockpit-ui-idempotency-campaign',
+        });
+
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                draftContract: {
+                    template_key: 'money-changer',
+                    amount: '25',
+                    currency: 'PHP',
+                    recipient_reference: '',
+                    purpose: '',
+                },
+                campaignContext: {
+                    schema: 'x-change.cockpit.quick-generate-campaign-context.v1',
+                    status: 'available',
+                    authorized: true,
+                    read_only: true,
+                    mutates_campaign: false,
+                    planning_key: 'plan-35d',
+                    execution_id: 'exec-35d',
+                    campaign_id: 'campaign-35d',
+                    audience_id: 'audience-35d',
+                    recipient_id: 'recipient-35d',
+                    source: 'campaign_cockpit',
+                    draft: {
+                        template_key: 'ofw-remittance',
+                        amount: '500.00',
+                        currency: 'PHP',
+                        recipient_reference: '09173011987',
+                        purpose: 'Campaign payout',
+                    },
+                    redactions: {
+                        payloads: 'campaign-context-prefill-only',
+                    },
+                },
+                mutationContract: {
+                    runtime_enabled: true,
+                    route: 'x-change.cockpit.quick-generate.store',
+                    route_url: '/x/cockpit/quick-generate',
+                    allowed_methods: ['POST'],
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-campaign-context-panel"]').exists()).toBe(true);
+        expect(wrapper.text()).toContain('Campaign context prefill');
+        expect(wrapper.text()).toContain('plan-35d');
+        expect(wrapper.text()).toContain('exec-35d');
+        expect(wrapper.text()).toContain('campaign-35d');
+        expect(wrapper.text()).toContain('does not mutate campaign state');
+        expect((wrapper.find('[data-testid="cockpit-quick-generate-submit-template"]').element as HTMLSelectElement).value).toBe('ofw-remittance');
+        expect((wrapper.find('[data-testid="cockpit-quick-generate-submit-amount"]').element as HTMLInputElement).value).toBe('500.00');
+        expect((wrapper.find('[data-testid="cockpit-quick-generate-submit-recipient"]').element as HTMLInputElement).value).toBe('09173011987');
+        expect((wrapper.find('[data-testid="cockpit-quick-generate-submit-purpose"]').element as HTMLTextAreaElement).value).toBe('Campaign payout');
+
+        await wrapper.find('[data-testid="cockpit-quick-generate-submit-panel"]').trigger('submit');
+        await Promise.resolve();
+        await Promise.resolve();
+
+        const [, options] = fetchMock.mock.calls[0];
+        const payload = JSON.parse(options.body);
+
+        expect(payload.cash).toEqual({
+            amount: 500,
+            currency: 'PHP',
+            validation: {},
+        });
+        expect(payload.feedback).toEqual({
+            mobile: '09173011987',
+        });
+        expect(payload.rider).toEqual({
+            message: 'Campaign payout',
+        });
+        expect(payload.metadata.campaign).toEqual({
+            planning_key: 'plan-35d',
+            execution_id: 'exec-35d',
+            campaign_id: 'campaign-35d',
+            audience_id: 'audience-35d',
+            recipient_id: 'recipient-35d',
+            source: 'campaign_cockpit',
+            read_only: true,
+            mutates_campaign: false,
+        });
+        expect(payload.metadata.custom.cockpit).toEqual({
+            template_key: 'ofw-remittance',
+            source: 'cockpit.quick-generate',
+            campaign_context: 'read-model-prefill',
+        });
+        expect(JSON.stringify(payload)).not.toContain('campaign_payload');
+        expect(JSON.stringify(payload)).not.toContain('provider_payload');
+        expect(JSON.stringify(payload)).not.toContain('wallet');
+
+        vi.unstubAllGlobals();
+    });
+
     it('refreshes the quick generate read model only when the operator clicks refresh after success', async () => {
         const fetchMock = vi.fn().mockResolvedValue({
             ok: true,

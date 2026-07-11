@@ -2,6 +2,7 @@
 import { router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import type {
+    CockpitQuickGenerateCampaignContext,
     CockpitQuickGenerateDraftContract,
     CockpitQuickGenerateMutationContract,
     CockpitQuickGeneratePostIssuanceNavigation,
@@ -16,6 +17,7 @@ import type {
 const props = defineProps<{
     mutationContract?: CockpitQuickGenerateMutationContract;
     draftContract?: CockpitQuickGenerateDraftContract;
+    campaignContext?: CockpitQuickGenerateCampaignContext;
     templates: CockpitQuickGenerateTemplate[];
 }>();
 
@@ -25,11 +27,11 @@ const emit = defineEmits<{
     submitError: [error: Record<string, unknown>];
 }>();
 
-const selectedTemplate = ref(stringValue(props.draftContract?.template_key) ?? props.templates[0]?.key ?? 'money-changer');
-const amount = ref(stringValue(props.draftContract?.amount) ?? '25');
-const currency = ref(stringValue(props.draftContract?.currency) ?? 'PHP');
-const recipientReference = ref(stringValue(props.draftContract?.recipient_reference) ?? '');
-const purpose = ref(stringValue(props.draftContract?.purpose) ?? '');
+const selectedTemplate = ref(stringValue(props.campaignContext?.draft?.template_key) ?? stringValue(props.draftContract?.template_key) ?? props.templates[0]?.key ?? 'money-changer');
+const amount = ref(stringValue(props.campaignContext?.draft?.amount) ?? stringValue(props.draftContract?.amount) ?? '25');
+const currency = ref(stringValue(props.campaignContext?.draft?.currency) ?? stringValue(props.draftContract?.currency) ?? 'PHP');
+const recipientReference = ref(stringValue(props.campaignContext?.draft?.recipient_reference) ?? stringValue(props.draftContract?.recipient_reference) ?? '');
+const purpose = ref(stringValue(props.campaignContext?.draft?.purpose) ?? stringValue(props.draftContract?.purpose) ?? '');
 const processing = ref(false);
 const lastStatus = ref('ready');
 const lastMessage = ref('Submit will call the existing x-change issuance handoff route.');
@@ -51,6 +53,13 @@ const canSubmit = computed<boolean>(() => {
     return props.mutationContract?.runtime_enabled === true
         && routeUrl.value !== null
         && allowedMethods.value.includes('POST');
+});
+
+const campaignContextAvailable = computed<boolean>(() => {
+    return props.campaignContext?.status === 'available'
+        && props.campaignContext?.authorized === true
+        && props.campaignContext?.read_only !== false
+        && props.campaignContext?.mutates_campaign !== true;
 });
 
 const resultCode = computed<string | null>(() => {
@@ -166,6 +175,7 @@ function buildPayload(): Record<string, unknown> {
     const normalizedAmount = Number(amount.value);
     const mobile = recipientReference.value.trim();
     const message = purpose.value.trim();
+    const campaign = campaignMetadata();
 
     return {
         cash: {
@@ -184,13 +194,32 @@ function buildPayload(): Record<string, unknown> {
             message: message === '' ? null : message,
         },
         metadata: {
+            ...(campaign === null ? {} : { campaign }),
             custom: {
                 cockpit: {
                     template_key: selectedTemplate.value,
                     source: 'cockpit.quick-generate',
+                    ...(campaign === null ? {} : { campaign_context: 'read-model-prefill' }),
                 },
             },
         },
+    };
+}
+
+function campaignMetadata(): Record<string, unknown> | null {
+    if (!campaignContextAvailable.value) {
+        return null;
+    }
+
+    return {
+        planning_key: stringValue(props.campaignContext?.planning_key),
+        execution_id: stringValue(props.campaignContext?.execution_id),
+        campaign_id: stringValue(props.campaignContext?.campaign_id),
+        audience_id: stringValue(props.campaignContext?.audience_id),
+        recipient_id: stringValue(props.campaignContext?.recipient_id),
+        source: stringValue(props.campaignContext?.source) ?? 'campaign_cockpit',
+        read_only: true,
+        mutates_campaign: false,
     };
 }
 
@@ -299,6 +328,60 @@ function dataGet(source: unknown, path: string[]): unknown {
                 {{ lastStatus }}
             </span>
         </div>
+
+        <section
+            v-if="campaignContextAvailable"
+            class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-100"
+            data-testid="cockpit-quick-generate-campaign-context-panel"
+        >
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="font-semibold">
+                        Campaign context prefill
+                    </p>
+                    <p class="mt-1 leading-5">
+                        Campaign context is used only to prefill this form. Quick Generate still hands off to existing issuance and does not mutate campaign state.
+                    </p>
+                </div>
+                <span class="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800">
+                    read-only
+                </span>
+            </div>
+            <dl class="mt-3 grid gap-2 sm:grid-cols-2">
+                <div>
+                    <dt class="text-amber-700/80 dark:text-amber-200/80">
+                        Planning key
+                    </dt>
+                    <dd class="font-semibold">
+                        {{ displayValue(campaignContext?.planning_key) }}
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-amber-700/80 dark:text-amber-200/80">
+                        Execution
+                    </dt>
+                    <dd class="font-semibold">
+                        {{ displayValue(campaignContext?.execution_id) }}
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-amber-700/80 dark:text-amber-200/80">
+                        Campaign
+                    </dt>
+                    <dd class="font-semibold">
+                        {{ displayValue(campaignContext?.campaign_id) }}
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-amber-700/80 dark:text-amber-200/80">
+                        Source
+                    </dt>
+                    <dd class="font-semibold">
+                        {{ displayValue(campaignContext?.source, 'campaign_cockpit') }}
+                    </dd>
+                </div>
+            </dl>
+        </section>
 
         <div class="mt-4 grid gap-3">
             <label class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-300">

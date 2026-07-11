@@ -498,6 +498,46 @@ export type CockpitQuickGenerateDraftContract = {
     [key: string]: unknown;
 };
 
+export type CockpitQuickGenerateCampaignContextDraft = {
+    schema?: string | null;
+    status?: string | null;
+    template_key?: string | null;
+    amount?: string | number | null;
+    currency?: string | null;
+    count?: string | number | null;
+    recipient_reference?: string | null;
+    purpose?: string | null;
+    idempotency_key?: string | null;
+    correlation_id?: string | null;
+    campaign?: {
+        planning_key?: string | null;
+        execution_id?: string | null;
+        campaign_id?: string | null;
+        audience_id?: string | null;
+        recipient_id?: string | null;
+        source?: string | null;
+        [key: string]: unknown;
+    } | null;
+    [key: string]: unknown;
+};
+
+export type CockpitQuickGenerateCampaignContext = {
+    schema?: string | null;
+    status?: string | null;
+    authorized?: boolean | null;
+    read_only?: boolean | null;
+    mutates_campaign?: boolean | null;
+    planning_key?: string | null;
+    execution_id?: string | null;
+    campaign_id?: string | null;
+    audience_id?: string | null;
+    recipient_id?: string | null;
+    source?: string | null;
+    draft?: CockpitQuickGenerateCampaignContextDraft | null;
+    redactions?: CockpitReadModelRedactions;
+    [key: string]: unknown;
+};
+
 export type CockpitQuickGenerateRuntimePricingPreflight = {
     status?: string | null;
     currency?: string | null;
@@ -604,6 +644,7 @@ export type CockpitQuickGenerateReadModel = {
     mutation_authorization_decision?: CockpitQuickGenerateMutationAuthorizationDecision;
     mutation_contract?: CockpitQuickGenerateMutationContract;
     draft_contract?: CockpitQuickGenerateDraftContract;
+    campaign_context?: CockpitQuickGenerateCampaignContext;
     authorization?: CockpitQuickGenerateAuthorization;
     post_issuance_navigation?: CockpitQuickGeneratePostIssuanceNavigation;
     action?: {

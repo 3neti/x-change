@@ -2139,3 +2139,5 @@ Current boundary:
 - Cockpit Wave 35B expected UI result: no visible UI change until campaign context is hydrated into the Quick Generate read model and rendered by Vue.
 - Cockpit Wave 35C result: Quick Generate campaign query intake and provider hydration completed; report `reports/239-wave-35c-quick-generate-campaign-query-intake-provider-hydration.md`; next `Cockpit Wave 35D — Quick Generate Campaign Prefill UI Presentation`.
 - Cockpit Wave 35C expected UI result: no visible UI change yet; `quick_generate_read_model.campaign_context` is hydrated for Vue consumption in the next slice.
+- Cockpit Wave 35D result: Quick Generate campaign prefill UI presentation completed; report `reports/240-wave-35d-quick-generate-campaign-prefill-ui-presentation.md`; next `Cockpit Wave 35E — Campaign Context Quick Generate Browser / Publish Verification`.
+- Cockpit Wave 35D expected UI result: `/x/cockpit/quick-generate` opened with campaign query parameters shows a `Campaign context prefill` card and prefilled template, amount, recipient, and purpose fields.
