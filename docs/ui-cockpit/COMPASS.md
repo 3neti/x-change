@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 13C — Legacy Page Bridge Callout Component
-Status: Implemented / Legacy page bridge callouts added
+Current slice: Cockpit Wave 13D — Legacy Page Bridge Route Prop Verification
+Status: Implemented / Legacy bridge route props verified
 Last updated: 2026-07-11
 
 ## Completed
@@ -1920,3 +1920,4 @@ Current boundary:
 - Cockpit Wave 13A result: Quick Generate historical gate/baseline panels were demoted behind a diagnostics disclosure so the runtime form and issuance handoff remain the primary operator path; report `reports/170-wave-13a-quick-generate-diagnostics-demotion.md`; next `Cockpit Wave 13B — Quick Generate Runtime Copy Alignment`.
 - Cockpit Wave 13B result: Quick Generate fallback copy now points to the active form, post-submit preflights, and approved existing issuance handoff instead of old read-only-only baseline language; report `reports/171-wave-13b-quick-generate-runtime-copy-alignment.md`; next `Cockpit Wave 13C — Legacy Page Bridge Callout Component`.
 - Cockpit Wave 13C result: added reusable legacy-page Cockpit bridge callout and rendered it on `/x/pay-codes/create`, `/x/pay-codes`, and `/x/balances` when bridge metadata is available; report `reports/172-wave-13c-legacy-page-bridge-callout-component.md`; next `Cockpit Wave 13D — Legacy Page Bridge Route Prop Verification`.
+- Cockpit Wave 13D result: protected server route bridge props and frontend callout wiring for `/x/pay-codes/create`, `/x/pay-codes`, and `/x/balances`; report `reports/173-wave-13d-legacy-page-bridge-route-prop-verification.md`; next `Cockpit Wave 13E — Quick Generate Operator-Focused Presentation Closure`.
