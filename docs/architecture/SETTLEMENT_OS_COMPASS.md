@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 9I functional issuance scenario characterized; next is Wave 9 closure
+Current status: Cockpit Wave 9J functional template/campaign issuance foundation complete; next is runtime compiler adoption
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 9I functional issuance scenario characterized; next is Wave 9 closure | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 9J functional template/campaign issuance foundation complete; next is runtime compiler adoption | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1639,3 +1639,4 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Cockpit Wave 9G — Campaign Context to Issuance Draft Adapter: implemented in [../ui-cockpit/reports/147-wave-9g-campaign-context-issuance-draft-adapter.md](../ui-cockpit/reports/147-wave-9g-campaign-context-issuance-draft-adapter.md); next `Cockpit Wave 9H — Draft Redaction / Audit Metadata Baseline`.
 - Cockpit Wave 9H — Draft Redaction / Audit Metadata Baseline: implemented in [../ui-cockpit/reports/148-wave-9h-draft-redaction-audit-metadata-baseline.md](../ui-cockpit/reports/148-wave-9h-draft-redaction-audit-metadata-baseline.md); next `Cockpit Wave 9I — Functional Issuance Scenario Characterization`.
 - Cockpit Wave 9I — Functional Issuance Scenario Characterization: implemented in [../ui-cockpit/reports/149-wave-9i-functional-issuance-scenario-characterization.md](../ui-cockpit/reports/149-wave-9i-functional-issuance-scenario-characterization.md); next `Cockpit Wave 9J — Functional Template/Campaign Issuance Foundation Closure`.
+- Cockpit Wave 9J — Functional Template/Campaign Issuance Foundation Closure: completed in [../ui-cockpit/reports/150-wave-9j-functional-template-campaign-issuance-foundation-closure.md](../ui-cockpit/reports/150-wave-9j-functional-template-campaign-issuance-foundation-closure.md); next `Cockpit Wave 10 — Runtime Compiler Adoption`.
