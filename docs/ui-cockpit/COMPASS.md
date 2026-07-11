@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 9E — Template Profile Registry / Resolver Baseline
-Status: Implemented / Registry baseline
+Current slice: Cockpit Wave 9F — Template Constraints and Draft Validation Baseline
+Status: Implemented / Validation baseline
 Last updated: 2026-07-11
 
 ## Completed
@@ -1893,3 +1893,4 @@ Current boundary:
 - Cockpit Wave 9C result: added `CockpitIssuanceDraftCompilerContract` and `DefaultCockpitIssuanceDraftCompiler`; report `reports/143-wave-9c-draft-to-generate-pay-code-payload-compiler.md`; next `Cockpit Wave 9D — Quick Generate Compiler Adoption Boundary`.
 - Cockpit Wave 9D result: bound `CockpitIssuanceDraftCompilerContract` to `DefaultCockpitIssuanceDraftCompiler`; report `reports/144-wave-9d-quick-generate-compiler-adoption-boundary.md`; next `Cockpit Wave 9E — Template Profile Registry / Resolver Baseline`.
 - Cockpit Wave 9E result: added template profile registry and runtime binding; report `reports/145-wave-9e-template-profile-registry-resolver-baseline.md`; next `Cockpit Wave 9F — Template Constraints and Draft Validation Baseline`.
+- Cockpit Wave 9F result: added draft validator and validation result DTO; report `reports/146-wave-9f-template-constraints-draft-validation-baseline.md`; next `Cockpit Wave 9G — Campaign Context to Issuance Draft Adapter`.
