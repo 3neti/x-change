@@ -35,6 +35,7 @@ use LBHurtado\XChange\Services\CacheIdempotencyStore;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityJournalHandoffStatusProjector;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRecorder;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRepository;
+use LBHurtado\XChange\Services\Cockpit\XActionCockpitOperatorIssuanceActivityActionHandoff;
 use LBHurtado\XChange\Services\Cockpit\XJournalCockpitOperatorIssuanceActivityJournalHandoff;
 use LBHurtado\XChange\Services\ConfigProviderRuntimeSettingsResolver;
 use LBHurtado\XChange\Services\ConfigProviderTopologyResolver;
@@ -123,6 +124,8 @@ return [
                 ?: null,
             'recorder' => env('XCHANGE_COCKPIT_OPERATOR_ISSUANCE_ACTIVITY_RECORDER')
                 ?: null,
+            'action_handoff' => env('XCHANGE_COCKPIT_OPERATOR_ISSUANCE_ACTIVITY_ACTION_HANDOFF')
+                ?: null,
             'journal_handoff' => env('XCHANGE_COCKPIT_OPERATOR_ISSUANCE_ACTIVITY_JOURNAL_HANDOFF')
                 ?: null,
             'journal_handoff_status_projector' => env('XCHANGE_COCKPIT_OPERATOR_ISSUANCE_ACTIVITY_JOURNAL_HANDOFF_STATUS_PROJECTOR')
@@ -132,6 +135,9 @@ return [
             ],
             'available_recorders' => [
                 'database' => DatabaseCockpitOperatorIssuanceActivityRecorder::class,
+            ],
+            'available_action_handoffs' => [
+                'x-action' => XActionCockpitOperatorIssuanceActivityActionHandoff::class,
             ],
             'available_journal_handoffs' => [
                 'x-journal' => XJournalCockpitOperatorIssuanceActivityJournalHandoff::class,
