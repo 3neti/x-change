@@ -12,6 +12,7 @@ import {
     PayCodeInstructionPreview,
 } from '@/components/x-change/pay-codes';
 import ProvisioningSetup from '../../../components/x-change/ProvisioningSetup.vue';
+import CockpitBridgeCallout from '../../../components/x-change/CockpitBridgeCallout.vue';
 import {
     normalizeProvisioningRequirement,
     type ProvisioningRequirement,
@@ -80,9 +81,18 @@ interface PayCodeNamedSlice {
     claim_by?: string | null;
 }
 
+interface CockpitBridge {
+    status?: string | null;
+    relationship?: string | null;
+    cockpit_route?: string | null;
+    legacy_owner?: string | null;
+    mutation?: Record<string, boolean | null | undefined> | null;
+}
+
 const props = defineProps<{
     provisioning_requirement?: ProvisioningRequirement | null;
     balance_overview?: BalanceOverview | null;
+    cockpit_bridge?: CockpitBridge | null;
 }>();
 
 const routes = useXChangeRoutes();
@@ -638,6 +648,11 @@ async function submit(): Promise<void> {
                 {{ errorMessage }}
             </AlertDescription>
         </Alert>
+
+        <CockpitBridgeCallout
+            :bridge="props.cockpit_bridge ?? null"
+            title="Template-first Quick Generate is available in Cockpit"
+        />
 
         <ProvisioningSetup
             :requirement="provisioningRequirement"

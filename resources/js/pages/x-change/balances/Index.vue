@@ -4,6 +4,7 @@ import { onMounted, ref } from 'vue';
 import BalanceOverviewCards, {
     type BalanceOverview,
 } from '@/components/x-change/BalanceOverviewCards.vue';
+import CockpitBridgeCallout from '@/components/x-change/CockpitBridgeCallout.vue';
 import ReconciliationStatusCard from '@/components/x-change/ReconciliationStatusCard.vue';
 import {
     useXChangeDashboardApi,
@@ -23,6 +24,13 @@ defineOptions({
 const { getStats } = useXChangeDashboardApi();
 defineProps<{
     balance_overview?: BalanceOverview | null;
+    cockpit_bridge?: {
+        status?: string | null;
+        relationship?: string | null;
+        cockpit_route?: string | null;
+        legacy_owner?: string | null;
+        mutation?: Record<string, boolean | null | undefined> | null;
+    } | null;
 }>();
 
 const stats = ref<DashboardStats | null>(null);
@@ -44,6 +52,11 @@ onMounted(async () => {
                 Balance authority changes by provider. Paynamics uses the provider wallet; NetBank uses the local ledger.
             </p>
         </div>
+
+        <CockpitBridgeCallout
+            :bridge="cockpit_bridge ?? null"
+            title="Cockpit dashboard can show balance readiness"
+        />
 
         <div class="grid gap-4 md:grid-cols-2">
             <BalanceOverviewCards :overview="balance_overview ?? null" />

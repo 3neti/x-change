@@ -9,6 +9,7 @@ import {
     PayCodeListTable,
     PayCodeStatsCards,
 } from '@/components/x-change/pay-codes';
+import CockpitBridgeCallout from '@/components/x-change/CockpitBridgeCallout.vue';
 import { useXChangeRoutes } from '@/composables/useXChangeRoutes';
 import { PlusCircle } from 'lucide-vue-next';
 
@@ -60,6 +61,13 @@ interface Props {
         total_amount?: string | number;
         redeemed_amount?: string | number;
     };
+    cockpit_bridge?: {
+        status?: string | null;
+        relationship?: string | null;
+        cockpit_route?: string | null;
+        legacy_owner?: string | null;
+        mutation?: Record<string, boolean | null | undefined> | null;
+    } | null;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -287,6 +295,11 @@ onMounted(fetchVouchers);
         </div>
 
         <!-- Stats -->
+        <CockpitBridgeCallout
+            :bridge="props.cockpit_bridge ?? null"
+            title="Cockpit Pay Code Explorer is available"
+        />
+
         <PayCodeStatsCards :stats="computedStats" />
 
         <!-- List -->
