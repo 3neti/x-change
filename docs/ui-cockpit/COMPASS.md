@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 10I — Manual Local Scenario Verification
-Status: Scaffolded / Pending human-local verification
+Current slice: Cockpit Wave 10J — Runtime Compiler Adoption Closure
+Status: Complete / Runtime compiler adoption closed
 Last updated: 2026-07-11
 
 ## Completed
@@ -1907,3 +1907,4 @@ Current boundary:
 - Cockpit Wave 10G result: Quick Generate response and operator activity metadata now share operator-safe draft/preflight runtime facts; report `reports/157-wave-10g-operator-safe-response-activity-metadata-alignment.md`; next `Cockpit Wave 10H — Runtime Characterization with Existing GeneratePayCode Path`.
 - Cockpit Wave 10H result: documented and protected the runtime path from `GeneratePayCodeRequest` through draft compiler/preflights into existing `GeneratePayCode`; report `reports/158-wave-10h-runtime-characterization-with-existing-generate-pay-code-path.md`; next `Cockpit Wave 10I — Manual Local Scenario Verification`.
 - Cockpit Wave 10I result: manual local scenario verification checklist scaffolded for `/x/cockpit/quick-generate`; report `reports/159-wave-10i-manual-local-scenario-verification.md`; next `Cockpit Wave 10J — Runtime Compiler Adoption Closure`.
+- Cockpit Wave 10J result: runtime compiler adoption closed from Quick Generate payload through draft validation/compiler, template defaults, pricing/funding preflights, campaign metadata intake, and operator-safe activity metadata; report `reports/160-wave-10j-runtime-compiler-adoption-closure.md`; next recommended wave `Wave 11 — Quick Generate Runtime Metadata Presentation`.
