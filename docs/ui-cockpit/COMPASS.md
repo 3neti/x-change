@@ -2127,3 +2127,5 @@ Current boundary:
 - Cockpit Wave 34C expected UI result: no visible UI change until the Vue result panel renders the hydrated navigation block.
 - Cockpit Wave 34D result: Quick Generate successful result panel now renders a `Post-issuance handoff` card with read-only Detail and Distribution links; report `reports/234-wave-34d-quick-generate-post-issuance-ui-presentation.md`; next `Cockpit Wave 34E — Browser / Publish Verification`.
 - Cockpit Wave 34D expected UI result: after successful `/x/cockpit/quick-generate`, operators see `Post-issuance handoff`, `Open Cockpit detail`, and `Open Distribution workspace`.
+- Cockpit Wave 34E result: Quick Generate post-issuance browser/publish verification scaffolded with a Playwright POST-intercept smoke; report `reports/235-wave-34e-quick-generate-post-issuance-browser-publish-verification.md`; next `Cockpit Wave 34F — Post-Issuance Navigation Closure`.
+- Cockpit Wave 34E expected UI result: browser-rendered successful Quick Generate fixture shows `Post-issuance handoff`, `Open Cockpit detail`, `Open Distribution workspace`, and `Automatic redirect: disabled` without real issuance.
