@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 32D complete; Voucher Detail evidence summary UI presentation complete
+Current status: Cockpit Wave 32E complete; Voucher Detail evidence browser/publish verification complete
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 32D complete; Voucher Detail evidence summary UI presentation complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 32E complete; Voucher Detail evidence browser/publish verification complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1703,3 +1703,4 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Cockpit Wave 32B — Voucher Detail Evidence Summary Read Model Contract: implemented in [../ui-cockpit/reports/220-wave-32b-voucher-detail-evidence-summary-read-model-contract.md](../ui-cockpit/reports/220-wave-32b-voucher-detail-evidence-summary-read-model-contract.md); Voucher Detail read models can now carry typed read-only evidence summary facts, not yet hydrated or rendered; next `Cockpit Wave 32C — Voucher Detail Evidence Summary Provider Hydration`.
 - Cockpit Wave 32C — Voucher Detail Evidence Summary Provider Hydration: implemented in [../ui-cockpit/reports/221-wave-32c-voucher-detail-evidence-summary-provider-hydration.md](../ui-cockpit/reports/221-wave-32c-voucher-detail-evidence-summary-provider-hydration.md); Voucher Detail read models now hydrate operator-safe lifecycle, claim, approval, execution, journal, action, and feedback evidence summary facts without executing drivers, writing journal entries, executing actions, sending feedback, mutating campaigns, calling providers, or exposing raw payloads; next `Cockpit Wave 32D — Voucher Detail Evidence Summary UI Presentation`.
 - Cockpit Wave 32D — Voucher Detail Evidence Summary UI Presentation: implemented in [../ui-cockpit/reports/222-wave-32d-voucher-detail-evidence-summary-ui-presentation.md](../ui-cockpit/reports/222-wave-32d-voucher-detail-evidence-summary-ui-presentation.md); Voucher Detail now renders hydrated read-only evidence summary cards and keeps the placeholder fallback for unavailable read models; package assets were published and asset doctor reported clean; next `Cockpit Wave 32E — Voucher Detail Evidence Browser / Publish Verification`.
+- Cockpit Wave 32E — Voucher Detail Evidence Browser / Publish Verification: implemented in [../ui-cockpit/reports/223-wave-32e-voucher-detail-evidence-browser-publish-verification.md](../ui-cockpit/reports/223-wave-32e-voucher-detail-evidence-browser-publish-verification.md); Playwright verifies Explorer-to-Detail navigation renders the Evidence summary panel and unsafe payload labels remain absent; asset doctor reports published Cockpit assets match package source; next `Cockpit Wave 32F — Voucher Detail Evidence Surface Closure`.
