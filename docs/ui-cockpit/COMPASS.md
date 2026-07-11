@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 15E — Wave 15 Closure / Human Acceptance Pending Record
-Status: Complete / Wave 15 closed with human acceptance pending
+Current slice: Cockpit Wave 15G — Laravel Dusk Browser Smoke Baseline
+Status: Complete / browser smoke baseline green
 Last updated: 2026-07-11
 
 ## Completed
@@ -1935,3 +1935,5 @@ Current boundary:
 - Cockpit Wave 15F result: Quick Generate read-model copy reconciled after manual browser review found stale Slice 16–26 baseline copy on the now-working runtime screen; report `reports/185-wave-15f-quick-generate-read-model-copy-reconciliation.md`.
 - Cockpit Wave 15F expected UI result: `/x/cockpit/quick-generate` should show `Use the Quick Generate form`, `Shown after submit`, `Existing handoff`, and runtime diagnostics instead of current-state claims that generation remains unauthorized or no mutation route exists.
 - Cockpit Wave 15F next checkpoint: focused PHP/frontend tests, host publish verification, browser/curl smoke check, then human Pass/Blocked decision before starting Wave 16.
+- Cockpit Wave 15G result: Laravel Dusk installed in the host app and `tests/Browser/CockpitQuickGenerateSmokeTest.php` added to verify the reconciled Quick Generate runtime copy in a real browser; Dusk smoke passed 1 test / 13 assertions; report `reports/186-wave-15g-laravel-dusk-browser-smoke-baseline.md`.
+- Cockpit Wave 15G expected UI result: no UI change; this checkpoint automates browser coverage for the already-visible Quick Generate runtime state from Wave 15F.
