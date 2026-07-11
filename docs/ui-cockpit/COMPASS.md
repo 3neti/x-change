@@ -2077,3 +2077,5 @@ Current boundary:
 - Cockpit Wave 30 expected UI result: `/x/cockpit/pay-codes` shows a functional parity summary plus search/status GET filters. `/x/cockpit/pay-codes?search={term}&status={status}` keeps filter state visible.
 - Cockpit Wave 30 boundary: search/status GET filters are read-only navigation; no legacy page replacement, voucher mutation, provider call, wallet mutation, journal write, action execution, feedback delivery, campaign mutation, or unsafe payload exposure was added.
 - Cockpit Wave 30 next recommended wave: `Cockpit Wave 31 — Pay Code Explorer Detail Navigation / Row Action Runtime Parity`.
+- Cockpit Wave 31A result: Pay Code Explorer row action parity audit completed; report `reports/213-wave-31a-pay-code-explorer-row-action-parity-audit.md`; next `Cockpit Wave 31B — Pay Code Explorer Row Action Read Model Contract`.
+- Cockpit Wave 31A expected UI result: no UI change; this slice only authorizes read-only detail/distribution row navigation and records mutation boundaries.
