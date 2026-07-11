@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 8H — Parity Surface Inventory Plan
+Current slice: Cockpit Mutation Wave 8I — Parity Readiness Gate Plan
 Status: Scaffolded / Runtime planning recorded
 Last updated: 2026-07-11
 
@@ -1883,3 +1883,5 @@ Current boundary:
 - Cockpit Mutation Wave 8G — Handoff Runtime Enablement Gate Plan expected UI result: no current Cockpit UI change is expected.
 - Cockpit Mutation Wave 8H — Parity Surface Inventory Plan scaffold result: runtime planning recorded; report `reports/138-wave-8h-parity-surface-inventory-plan.md`; next `8I — Parity Readiness Gate Plan`.
 - Cockpit Mutation Wave 8H — Parity Surface Inventory Plan expected UI result: no current Cockpit UI change is expected.
+- Cockpit Mutation Wave 8I — Parity Readiness Gate Plan scaffold result: runtime planning recorded; report `reports/139-wave-8i-parity-readiness-gate-plan.md`; next `8J — Runtime Enforcement / Parity Planning Closure`.
+- Cockpit Mutation Wave 8I — Parity Readiness Gate Plan expected UI result: no current Cockpit UI change is expected.
