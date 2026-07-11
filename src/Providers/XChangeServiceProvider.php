@@ -72,6 +72,7 @@ use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityRecorderContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityRedactionPolicyContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityRepositoryContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityRetentionPolicyContract;
+use LBHurtado\XChange\Contracts\CockpitQuickGenerateDraftFactoryContract;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Contracts\CockpitRedactorContract;
 use LBHurtado\XChange\Contracts\DisbursementReconciliationContract;
@@ -139,6 +140,7 @@ use LBHurtado\XChange\Services\Cockpit\DefaultCockpitIssuanceTemplateRegistry;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitOperatorIssuanceActivityPresenter;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitOperatorIssuanceActivityRedactionPolicy;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitOperatorIssuanceActivityRetentionPolicy;
+use LBHurtado\XChange\Services\Cockpit\DefaultCockpitQuickGenerateDraftFactory;
 use LBHurtado\XChange\Services\Cockpit\DurableCockpitOperatorIssuanceActivityReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityActionHandoff;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityFeedbackHandoff;
@@ -347,6 +349,10 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->bind(
             CockpitIssuanceDraftCompilerContract::class,
             DefaultCockpitIssuanceDraftCompiler::class,
+        );
+        $this->app->bind(
+            CockpitQuickGenerateDraftFactoryContract::class,
+            DefaultCockpitQuickGenerateDraftFactory::class,
         );
         $this->app->singleton(
             CockpitIssuanceTemplateRegistryContract::class,

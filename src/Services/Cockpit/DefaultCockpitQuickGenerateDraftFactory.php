@@ -1,0 +1,76 @@
+<?php
+
+declare(strict_types=1);
+
+namespace LBHurtado\XChange\Services\Cockpit;
+
+use LBHurtado\XChange\Contracts\CockpitQuickGenerateDraftFactoryContract;
+use LBHurtado\XChange\Data\Cockpit\CockpitIssuanceDraftData;
+
+class DefaultCockpitQuickGenerateDraftFactory implements CockpitQuickGenerateDraftFactoryContract
+{
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    public function fromPayload(
+        array $payload,
+        ?string $idempotencyKey = null,
+        ?string $correlationId = null,
+    ): CockpitIssuanceDraftData {
+        return new CockpitIssuanceDraftData(
+            template_key: $this->string($payload, 'metadata.custom.cockpit.template_key', 'money-changer') ?? 'money-changer',
+            amount: data_get($payload, 'cash.amount'),
+            currency: $this->string($payload, 'cash.currency', 'PHP') ?? 'PHP',
+            count: max(1, (int) data_get($payload, 'count', 1)),
+            recipient_reference: $this->string($payload, 'feedback.mobile')
+                ?? $this->string($payload, 'cash.validation.mobile'),
+            purpose: $this->string($payload, 'rider.message')
+                ?? $this->string($payload, 'metadata.custom.cockpit.purpose'),
+            idempotency_key: $idempotencyKey ?? $this->string($payload, '_meta.idempotency_key'),
+            correlation_id: $correlationId ?? $this->string($payload, '_meta.correlation_id'),
+            feedback: [
+                'email' => $this->string($payload, 'feedback.email'),
+                'mobile' => $this->string($payload, 'feedback.mobile'),
+                'webhook' => $this->string($payload, 'feedback.webhook'),
+            ],
+            rider: [
+                'message' => $this->string($payload, 'rider.message'),
+                'url' => $this->string($payload, 'rider.url'),
+                'splash' => data_get($payload, 'rider.splash'),
+                'splash_timeout' => data_get($payload, 'rider.splash_timeout'),
+            ],
+            validation: (array) data_get($payload, 'cash.validation', []),
+            input_fields: array_values((array) data_get($payload, 'inputs.fields', [])),
+            metadata: $this->metadata($payload),
+        );
+    }
+
+    private function string(array $source, string $key, ?string $default = null): ?string
+    {
+        $value = data_get($source, $key, $default);
+
+        if (! is_scalar($value)) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function metadata(array $payload): array
+    {
+        return array_replace_recursive((array) data_get($payload, 'metadata', []), [
+            'custom' => [
+                'cockpit' => [
+                    'source' => $this->string($payload, 'metadata.custom.cockpit.source', 'cockpit.quick-generate')
+                        ?? 'cockpit.quick-generate',
+                ],
+            ],
+        ]);
+    }
+}
