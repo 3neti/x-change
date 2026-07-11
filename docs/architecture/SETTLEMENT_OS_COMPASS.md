@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 10C template defaults implemented; next is pricing preflight
+Current status: Cockpit Wave 10D pricing preflight implemented; next is balance/funding preflight
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 10C template defaults implemented; next is pricing preflight | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 10D pricing preflight implemented; next is balance/funding preflight | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1643,3 +1643,4 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Cockpit Wave 10A — Quick Generate Draft Factory from Existing Form Payload: implemented in [../ui-cockpit/reports/151-wave-10a-quick-generate-draft-factory-from-existing-form-payload.md](../ui-cockpit/reports/151-wave-10a-quick-generate-draft-factory-from-existing-form-payload.md); next `Cockpit Wave 10B — Quick Generate Route Uses Draft Validator and Compiler`.
 - Cockpit Wave 10B — Quick Generate Route Uses Draft Validator and Compiler: implemented in [../ui-cockpit/reports/152-wave-10b-quick-generate-route-uses-draft-validator-and-compiler.md](../ui-cockpit/reports/152-wave-10b-quick-generate-route-uses-draft-validator-and-compiler.md); next `Cockpit Wave 10C — Template Profile Defaults Applied During Compilation`.
 - Cockpit Wave 10C — Template Profile Defaults Applied During Compilation: implemented in [../ui-cockpit/reports/153-wave-10c-template-profile-defaults-applied-during-compilation.md](../ui-cockpit/reports/153-wave-10c-template-profile-defaults-applied-during-compilation.md); next `Cockpit Wave 10D — Pricing Estimate Preflight for Compiled Drafts`.
+- Cockpit Wave 10D — Pricing Estimate Preflight for Compiled Drafts: implemented in [../ui-cockpit/reports/154-wave-10d-pricing-estimate-preflight-for-compiled-drafts.md](../ui-cockpit/reports/154-wave-10d-pricing-estimate-preflight-for-compiled-drafts.md); next `Cockpit Wave 10E — Balance/Funding Preflight using BuildBalanceOverview`.

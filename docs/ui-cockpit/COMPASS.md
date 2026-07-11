@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 10C — Template Profile Defaults Applied During Compilation
-Status: Implemented / Template defaults baseline ready
+Current slice: Cockpit Wave 10D — Pricing Estimate Preflight for Compiled Drafts
+Status: Implemented / Pricing preflight baseline ready
 Last updated: 2026-07-11
 
 ## Completed
@@ -1901,3 +1901,4 @@ Current boundary:
 - Cockpit Wave 10A result: added `CockpitQuickGenerateDraftFactoryContract` and `DefaultCockpitQuickGenerateDraftFactory` to convert the existing Quick Generate form payload into `CockpitIssuanceDraftData`; report `reports/151-wave-10a-quick-generate-draft-factory-from-existing-form-payload.md`; next `Cockpit Wave 10B — Quick Generate Route Uses Draft Validator and Compiler`.
 - Cockpit Wave 10B result: Quick Generate route now creates a draft, validates it, compiles it, then hands the compiled payload to existing `GeneratePayCode`; report `reports/152-wave-10b-quick-generate-route-uses-draft-validator-and-compiler.md`; next `Cockpit Wave 10C — Template Profile Defaults Applied During Compilation`.
 - Cockpit Wave 10C result: issuance draft compiler now applies template profile defaults for validation, input fields, feedback, rider, and template metadata; report `reports/153-wave-10c-template-profile-defaults-applied-during-compilation.md`; next `Cockpit Wave 10D — Pricing Estimate Preflight for Compiled Drafts`.
+- Cockpit Wave 10D result: Quick Generate response now includes non-blocking operator-safe pricing preflight metadata from `EstimatePayCodeCost`; report `reports/154-wave-10d-pricing-estimate-preflight-for-compiled-drafts.md`; next `Cockpit Wave 10E — Balance/Funding Preflight using BuildBalanceOverview`.

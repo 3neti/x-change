@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Contracts\CockpitIssuanceDraftCompilerContract;
 use LBHurtado\XChange\Contracts\CockpitIssuanceDraftValidatorContract;
@@ -30,6 +31,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         CockpitQuickGenerateDraftFactoryContract $quickGenerateDraftFactory,
         CockpitIssuanceDraftValidatorContract $draftValidator,
         CockpitIssuanceDraftCompilerContract $draftCompiler,
+        EstimatePayCodeCost $estimatePayCodeCost,
     ): JsonResponse {
         $payload = $request->validated();
         $payload = $this->normalizePayloadForIssuance($payload);
@@ -66,8 +68,9 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
             }
         }
 
+        $pricingPreflight = $this->pricingPreflight($payload, $estimatePayCodeCost);
         $result = $generatePayCode->handle($payload);
-        $response = $this->responsePayload($request, $result, $key, false);
+        $response = $this->responsePayload($request, $result, $key, false, $pricingPreflight);
         $this->processOperatorIssuanceActivity($request, $response, $key, $operatorIssuanceActivityHandoffPipeline);
 
         if (is_string($key)) {
@@ -97,8 +100,13 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
     /**
      * @return array<string, mixed>
      */
-    protected function responsePayload(GeneratePayCodeRequest $request, GeneratePayCodeResultData $result, ?string $key, bool $replayed): array
-    {
+    protected function responsePayload(
+        GeneratePayCodeRequest $request,
+        GeneratePayCodeResultData $result,
+        ?string $key,
+        bool $replayed,
+        array $pricingPreflight = [],
+    ): array {
         return [
             'schema' => 'x-change.cockpit.quick-generate-existing-issuance-handoff.v1',
             'status' => 'issued',
@@ -126,6 +134,9 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                 'controller' => 'GeneratePayCodeController',
                 'executed' => true,
                 'controller_invoked' => false,
+            ],
+            'preflight' => [
+                'pricing' => $pricingPreflight,
             ],
             'idempotency' => [
                 'status' => is_string($key) ? 'replay-safe' : 'key-not-provided',
@@ -160,6 +171,34 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         throw ValidationException::withMessages([
             'draft' => array_values($validation->errors),
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    protected function pricingPreflight(array $payload, EstimatePayCodeCost $estimatePayCodeCost): array
+    {
+        try {
+            $estimate = $estimatePayCodeCost->handle($payload);
+
+            return [
+                'status' => 'estimated',
+                'currency' => $estimate->currency,
+                'base_fee' => $estimate->base_fee,
+                'total' => $estimate->total,
+                'components' => $estimate->components,
+                'blocking' => false,
+                'source' => 'EstimatePayCodeCost',
+            ];
+        } catch (Throwable $throwable) {
+            return [
+                'status' => 'unavailable',
+                'blocking' => false,
+                'source' => 'EstimatePayCodeCost',
+                'reason' => $throwable::class,
+            ];
+        }
     }
 
     /**
