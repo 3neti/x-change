@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 10F — Campaign Draft Runtime Intake Boundary
-Status: Implemented / Campaign intake boundary ready
+Current slice: Cockpit Wave 10G — Operator-safe Response / Activity Metadata Alignment
+Status: Implemented / Activity metadata alignment ready
 Last updated: 2026-07-11
 
 ## Completed
@@ -1904,3 +1904,4 @@ Current boundary:
 - Cockpit Wave 10D result: Quick Generate response now includes non-blocking operator-safe pricing preflight metadata from `EstimatePayCodeCost`; report `reports/154-wave-10d-pricing-estimate-preflight-for-compiled-drafts.md`; next `Cockpit Wave 10E — Balance/Funding Preflight using BuildBalanceOverview`.
 - Cockpit Wave 10E result: Quick Generate response now includes non-blocking operator-safe funding preflight metadata from `BuildBalanceOverview`; report `reports/155-wave-10e-balance-funding-preflight-using-build-balance-overview.md`; next `Cockpit Wave 10F — Campaign Draft Runtime Intake Boundary`.
 - Cockpit Wave 10F result: Quick Generate draft factory now accepts safe `metadata.campaign` context and passes it through compiled issuance metadata without campaign mutation; report `reports/156-wave-10f-campaign-draft-runtime-intake-boundary.md`; next `Cockpit Wave 10G — Operator-safe Response / Activity Metadata Alignment`.
+- Cockpit Wave 10G result: Quick Generate response and operator activity metadata now share operator-safe draft/preflight runtime facts; report `reports/157-wave-10g-operator-safe-response-activity-metadata-alignment.md`; next `Cockpit Wave 10H — Runtime Characterization with Existing GeneratePayCode Path`.

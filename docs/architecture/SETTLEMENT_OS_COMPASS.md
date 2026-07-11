@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 10F campaign draft runtime intake implemented; next is operator-safe response/activity alignment
+Current status: Cockpit Wave 10G response/activity metadata alignment implemented; next is runtime characterization
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 10F campaign draft runtime intake implemented; next is operator-safe response/activity alignment | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 10G response/activity metadata alignment implemented; next is runtime characterization | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1646,3 +1646,4 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Cockpit Wave 10D — Pricing Estimate Preflight for Compiled Drafts: implemented in [../ui-cockpit/reports/154-wave-10d-pricing-estimate-preflight-for-compiled-drafts.md](../ui-cockpit/reports/154-wave-10d-pricing-estimate-preflight-for-compiled-drafts.md); next `Cockpit Wave 10E — Balance/Funding Preflight using BuildBalanceOverview`.
 - Cockpit Wave 10E — Balance/Funding Preflight using BuildBalanceOverview: implemented in [../ui-cockpit/reports/155-wave-10e-balance-funding-preflight-using-build-balance-overview.md](../ui-cockpit/reports/155-wave-10e-balance-funding-preflight-using-build-balance-overview.md); next `Cockpit Wave 10F — Campaign Draft Runtime Intake Boundary`.
 - Cockpit Wave 10F — Campaign Draft Runtime Intake Boundary: implemented in [../ui-cockpit/reports/156-wave-10f-campaign-draft-runtime-intake-boundary.md](../ui-cockpit/reports/156-wave-10f-campaign-draft-runtime-intake-boundary.md); next `Cockpit Wave 10G — Operator-safe Response / Activity Metadata Alignment`.
+- Cockpit Wave 10G — Operator-safe Response / Activity Metadata Alignment: implemented in [../ui-cockpit/reports/157-wave-10g-operator-safe-response-activity-metadata-alignment.md](../ui-cockpit/reports/157-wave-10g-operator-safe-response-activity-metadata-alignment.md); next `Cockpit Wave 10H — Runtime Characterization with Existing GeneratePayCode Path`.

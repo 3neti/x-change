@@ -143,6 +143,13 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                 'pricing' => $pricingPreflight,
                 'funding' => $fundingPreflight,
             ],
+            'activity' => [
+                'schema' => 'x-change.cockpit.operator-issuance-activity.v1',
+                'status' => 'recording-attempted-after-issuance',
+                'source' => 'cockpit.quick-generate',
+                'presentation_only' => true,
+                'metadata_alignment' => 'response-and-activity-share-operator-safe-runtime-facts',
+            ],
             'idempotency' => [
                 'status' => is_string($key) ? 'replay-safe' : 'key-not-provided',
                 'key' => $key,
@@ -303,6 +310,10 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                     'source' => 'x-change.cockpit',
                     'presentation_only' => true,
                     'recorder' => 'cockpit.operator-issuance-activity.v1',
+                    'draft_status' => data_get($response, 'draft.status'),
+                    'pricing_preflight_status' => data_get($response, 'preflight.pricing.status'),
+                    'funding_preflight_status' => data_get($response, 'preflight.funding.status'),
+                    'activity_schema' => data_get($response, 'activity.schema'),
                 ],
             ));
         } catch (Throwable) {
