@@ -727,6 +727,31 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-result-summary"]').text()).toContain('Activity filters become available when durable activity storage is wired.');
     });
 
+    it('renders a filtered no-match empty state without implying missing runtime wiring', () => {
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                dashboard_read_model: dashboardReadModel,
+                operator_issuance_activity_read_model: {
+                    ...operatorIssuanceActivityReadModel,
+                    items: [],
+                    presentations: [],
+                    search_filters: {
+                        ...operatorIssuanceActivityReadModel.search_filters,
+                        search: 'missing pay code',
+                        statuses: ['issued'],
+                        handoff_statuses: ['recorded'],
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('No activity matches current filters');
+        expect(wrapper.text()).toContain('Clear filters or adjust the search/status criteria to inspect durable operator issuance activity.');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-result-summary"]').text()).toContain('Showing 0 matching activities for the current read-only filters.');
+        expect(wrapper.text()).not.toContain('Activity recording is not wired yet.');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-mutation"]').exists()).toBe(false);
+    });
+
     it('forwards operator issuance activity props through the dashboard route adapter', () => {
         const wrapper = mount(DashboardRouteAdapter, {
             props: {

@@ -123,6 +123,20 @@ const emptyDescription = computed(() => (
     stringValue(props.readModel?.empty_state?.description)
     ?? 'Activity recording is not wired yet. Quick Generate can still use the existing issuance path.'
 ));
+const visibleEmptyTitle = computed(() => {
+    if (canFilter.value && activeFilterCount.value > 0 && presentations.value.length === 0) {
+        return 'No activity matches current filters';
+    }
+
+    return emptyTitle.value;
+});
+const visibleEmptyDescription = computed(() => {
+    if (canFilter.value && activeFilterCount.value > 0 && presentations.value.length === 0) {
+        return 'Clear filters or adjust the search/status criteria to inspect durable operator issuance activity.';
+    }
+
+    return emptyDescription.value;
+});
 
 function sanitizePresentation(presentation: CockpitOperatorIssuanceActivityPresentation): SafePresentation | null {
     const id = stringValue(presentation.id);
@@ -447,10 +461,10 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
             data-testid="cockpit-operator-issuance-activity-empty"
         >
             <p class="text-sm font-semibold text-slate-950 dark:text-slate-50">
-                {{ emptyTitle }}
+                {{ visibleEmptyTitle }}
             </p>
             <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                {{ emptyDescription }}
+                {{ visibleEmptyDescription }}
             </p>
         </div>
 
