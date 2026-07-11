@@ -2093,3 +2093,5 @@ Current boundary:
 - Cockpit Wave 31 next recommended wave: `Cockpit Wave 32 — Voucher Detail Functional Parity / Evidence Surface Hardening`.
 - Cockpit Wave 32A result: Voucher Detail functional parity audit completed; report `reports/219-wave-32a-voucher-detail-functional-parity-audit.md`; next `Cockpit Wave 32B — Voucher Detail Evidence Summary Read Model Contract`.
 - Cockpit Wave 32A expected UI result: no UI change; this slice defines read-only evidence hardening scope.
+- Cockpit Wave 32B result: Voucher Detail evidence summary read-model contract added; report `reports/220-wave-32b-voucher-detail-evidence-summary-read-model-contract.md`; next `Cockpit Wave 32C — Voucher Detail Evidence Summary Provider Hydration`.
+- Cockpit Wave 32B expected UI result: no visible UI change until provider hydration and Vue adoption.
