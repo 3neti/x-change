@@ -58,6 +58,7 @@ use LBHurtado\XChange\Contracts\ClaimApprovalWorkflowStoreContract;
 use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
 use LBHurtado\XChange\Contracts\ClaimOtpChallengeContract;
 use LBHurtado\XChange\Contracts\ClaimOtpVerificationContract;
+use LBHurtado\XChange\Contracts\CockpitCampaignIssuanceDraftAdapterContract;
 use LBHurtado\XChange\Contracts\CockpitIssuanceDraftCompilerContract;
 use LBHurtado\XChange\Contracts\CockpitIssuanceDraftValidatorContract;
 use LBHurtado\XChange\Contracts\CockpitIssuanceTemplateRegistryContract;
@@ -129,6 +130,7 @@ use LBHurtado\XChange\Listeners\RecordFailedVoucherDisbursement;
 use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\CacheClaimApprovalWorkflowStore;
+use LBHurtado\XChange\Services\Cockpit\DefaultCockpitCampaignIssuanceDraftAdapter;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitIssuanceDraftCompiler;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitIssuanceDraftValidator;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitIssuanceTemplateRegistry;
@@ -351,6 +353,10 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->bind(
             CockpitIssuanceDraftValidatorContract::class,
             DefaultCockpitIssuanceDraftValidator::class,
+        );
+        $this->app->bind(
+            CockpitCampaignIssuanceDraftAdapterContract::class,
+            DefaultCockpitCampaignIssuanceDraftAdapter::class,
         );
 
         $this->app->bind(WithdrawalValidationContract::class, function ($app) {
