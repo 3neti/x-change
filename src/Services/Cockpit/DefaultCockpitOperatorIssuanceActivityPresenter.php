@@ -56,6 +56,17 @@ class DefaultCockpitOperatorIssuanceActivityPresenter implements CockpitOperator
                     'reason' => $action->reason,
                     'metadata' => $action->metadata,
                 ],
+                'feedback_handoff' => [
+                    'status' => $feedback->status,
+                    'feedback_intent_id' => $feedback->feedback_intent_id,
+                    'delivery_plan_id' => $feedback->delivery_plan_id,
+                    'delivery_receipt_id' => $feedback->delivery_receipt_id,
+                    'feedback_required' => $feedback->feedback_required,
+                    'sends_feedback' => $feedback->sends_feedback,
+                    'source' => $feedback->source,
+                    'reason' => $feedback->reason,
+                    'metadata' => $feedback->metadata,
+                ],
             ],
         );
     }

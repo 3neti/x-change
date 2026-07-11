@@ -46,11 +46,7 @@ class DurableCockpitOperatorIssuanceActivityReadModelProvider
                     $item,
                     $this->journalHandoffResult($record),
                     $this->actionHandoffResult($record),
-                    new CockpitOperatorIssuanceActivityFeedbackHandoffResultData(
-                        status: $record->feedback_handoff_status,
-                        activity_id: $record->activity_id,
-                        correlation_id: $record->correlation_id,
-                    ),
+                    $this->feedbackHandoffResult($record),
                 );
             })
             ->filter()
@@ -127,6 +123,25 @@ class DurableCockpitOperatorIssuanceActivityReadModelProvider
         );
     }
 
+    private function feedbackHandoffResult(CockpitOperatorIssuanceActivityRecordData $record): CockpitOperatorIssuanceActivityFeedbackHandoffResultData
+    {
+        $summary = $this->feedbackHandoffSummary($record);
+
+        return new CockpitOperatorIssuanceActivityFeedbackHandoffResultData(
+            status: (string) data_get($summary, 'status', $record->feedback_handoff_status),
+            activity_id: $record->activity_id,
+            correlation_id: $record->correlation_id,
+            feedback_intent_id: $this->nullableString(data_get($summary, 'feedback_intent_id')),
+            delivery_plan_id: $this->nullableString(data_get($summary, 'delivery_plan_id')),
+            delivery_receipt_id: $this->nullableString(data_get($summary, 'delivery_receipt_id')),
+            feedback_required: (bool) data_get($summary, 'feedback_required', false),
+            sends_feedback: (bool) data_get($summary, 'sends_feedback', false),
+            source: (string) data_get($summary, 'source', 'durable-operator-issuance-activity-read-model'),
+            reason: (string) data_get($summary, 'reason', 'Feedback handoff status is projected from durable Cockpit activity storage.'),
+            metadata: $this->safeFeedbackHandoffMetadata(data_get($summary, 'metadata', [])),
+        );
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -143,6 +158,16 @@ class DurableCockpitOperatorIssuanceActivityReadModelProvider
     private function actionHandoffSummary(CockpitOperatorIssuanceActivityRecordData $record): array
     {
         $summary = data_get($record->metadata, 'action_handoff');
+
+        return is_array($summary) ? $summary : [];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function feedbackHandoffSummary(CockpitOperatorIssuanceActivityRecordData $record): array
+    {
+        $summary = data_get($record->metadata, 'feedback_handoff');
 
         return is_array($summary) ? $summary : [];
     }
@@ -208,6 +233,57 @@ class DurableCockpitOperatorIssuanceActivityReadModelProvider
             'run_id',
             'target',
             'run_semantics',
+        ]));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function safeFeedbackHandoffMetadata(mixed $metadata): array
+    {
+        if (! is_array($metadata)) {
+            return [];
+        }
+
+        $safe = array_intersect_key($metadata, array_flip([
+            'intent_key',
+            'event_type',
+            'delivery_boundary',
+            'planned_deliveries',
+            'channels',
+            'plan_items',
+            'composition',
+            'exception',
+        ]));
+
+        if (isset($safe['plan_items']) && is_array($safe['plan_items'])) {
+            $safe['plan_items'] = array_values(array_map(
+                fn (mixed $item): array => $this->safeFeedbackPlanItemMetadata($item),
+                $safe['plan_items'],
+            ));
+        }
+
+        return $safe;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function safeFeedbackPlanItemMetadata(mixed $item): array
+    {
+        if (! is_array($item)) {
+            return [];
+        }
+
+        return array_intersect_key($item, array_flip([
+            'intent_key',
+            'recipient_type',
+            'recipient_id',
+            'channel',
+            'status',
+            'priority',
+            'correlation_id',
+            'causation_id',
         ]));
     }
 
