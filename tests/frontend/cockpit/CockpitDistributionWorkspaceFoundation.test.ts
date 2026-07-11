@@ -5,6 +5,7 @@ import CockpitDistributionAnalyticsPanel from '../../../resources/js/cockpit/com
 import CockpitPrintTemplatePanel from '../../../resources/js/cockpit/components/CockpitPrintTemplatePanel.vue';
 import CockpitShareQrPanel from '../../../resources/js/cockpit/components/CockpitShareQrPanel.vue';
 import DistributionWorkspace from '../../../resources/js/cockpit/pages/DistributionWorkspace.vue';
+import DistributionWorkspaceRouteAdapter from '../../../resources/js/pages/x-change/cockpit/DistributionWorkspace.vue';
 import {
     cockpitDistributionActions,
     cockpitDistributionChannels,
@@ -103,5 +104,147 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).toContain('write journal entries');
         expect(wrapper.text()).toContain('call providers');
         expect(wrapper.text()).toContain('move money');
+    });
+
+    it('renders hydrated read-only distribution workspace facts from route props', () => {
+        const distributionWorkspaceReadModel = {
+            schema: 'x-change.cockpit.distribution-workspace.v1',
+            status: 'available',
+            authorized: true,
+            code: 'PC-DIST-001',
+            summary: {
+                code: 'PC-DIST-001',
+                display_status: 'ready',
+                provider_payload: 'must-not-render',
+                raw_payload: 'must-not-render',
+                wallet: 'must-not-render',
+            },
+            share_assets: [
+                {
+                    key: 'copy-text',
+                    label: 'Copy text',
+                    status: 'preview',
+                    description: 'Operator-safe Pay Code copy text can be displayed without secret claim material.',
+                    read_only: true,
+                    available: true,
+                    source: 'voucher-summary',
+                    metadata: {
+                        copies_secret_claim_material: false,
+                    },
+                },
+                {
+                    key: 'qr',
+                    label: 'QR asset',
+                    status: 'deferred',
+                    description: 'QR generation remains disabled.',
+                    read_only: true,
+                    available: false,
+                    source: 'distribution-policy',
+                },
+            ],
+            channels: [
+                {
+                    key: 'sms',
+                    label: 'SMS',
+                    status: 'not_wired',
+                    description: 'SMS delivery state must come from x-feedback.',
+                    read_only: true,
+                    available: false,
+                    source: 'feedback-read-model',
+                },
+            ],
+            print_templates: [
+                {
+                    key: 'receipt-card',
+                    label: 'Receipt card',
+                    status: 'planned',
+                    description: 'Receipt card output remains preview-only.',
+                    read_only: true,
+                    available: false,
+                    source: 'distribution-policy',
+                },
+            ],
+            analytics: [
+                {
+                    key: 'delivery-state',
+                    label: 'Delivery state',
+                    status: 'not_wired',
+                    description: 'Delivery truth is communication state from x-feedback.',
+                    read_only: true,
+                    available: false,
+                    source: 'feedback-read-model',
+                },
+            ],
+            actions: [
+                {
+                    key: 'send-now',
+                    label: 'Send now',
+                    status: 'blocked',
+                    description: 'Distribution dispatch is not authorized from Cockpit.',
+                    read_only: true,
+                    available: false,
+                    source: 'mutation-boundary',
+                },
+            ],
+            redactions: {
+                payloads: 'distribution-read-model-summary-only',
+                dispatch_enabled: false,
+                artifact_generation_enabled: false,
+                campaign_mutation_enabled: false,
+            },
+        };
+
+        const wrapper = mount(DistributionWorkspace, {
+            props: {
+                context: { code: 'PC-DIST-001' },
+                distribution_workspace_read_model: distributionWorkspaceReadModel,
+            },
+        });
+
+        expect(wrapper.text()).toContain('Wave 33 · Share surface');
+        expect(wrapper.text()).toContain('Distribution Workspace Runtime');
+        expect(wrapper.text()).toContain('PC-DIST-001');
+        expect(wrapper.text()).toContain('ready');
+        expect(wrapper.text()).toContain('distribution-read-model-summary-only');
+        expect(wrapper.text()).toContain('Copy text');
+        expect(wrapper.text()).toContain('preview');
+        expect(wrapper.text()).toContain('voucher-summary');
+        expect(wrapper.text()).toContain('QR asset');
+        expect(wrapper.text()).toContain('deferred');
+        expect(wrapper.text()).toContain('SMS');
+        expect(wrapper.text()).toContain('feedback-read-model');
+        expect(wrapper.text()).toContain('Receipt card');
+        expect(wrapper.text()).toContain('Delivery state');
+        expect(wrapper.text()).toContain('Send now');
+        expect(wrapper.text()).toContain('blocked');
+        expect(wrapper.text()).not.toContain('must-not-render');
+        expect(wrapper.text()).not.toContain('provider_payload');
+        expect(wrapper.text()).not.toContain('raw_payload');
+        expect(wrapper.text()).not.toContain('wallet');
+    });
+
+    it('forwards route adapter props into the distribution workspace page', () => {
+        const wrapper = mount(DistributionWorkspaceRouteAdapter, {
+            props: {
+                context: { code: 'PC-DIST-002' },
+                distribution_workspace_read_model: {
+                    schema: 'x-change.cockpit.distribution-workspace.v1',
+                    status: 'available',
+                    authorized: true,
+                    code: 'PC-DIST-002',
+                    summary: { code: 'PC-DIST-002', display_status: 'ready' },
+                    share_assets: [],
+                    channels: [],
+                    print_templates: [],
+                    analytics: [],
+                    actions: [],
+                    redactions: { payloads: 'distribution-read-model-summary-only' },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('PC-DIST-002');
+        expect(wrapper.text()).toContain('Distribution Workspace Runtime');
+        expect(wrapper.find('[data-testid="cockpit-distribution-workspace-shell"]').exists()).toBe(true);
     });
 });

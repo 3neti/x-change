@@ -2111,3 +2111,5 @@ Current boundary:
 - Cockpit Wave 33B expected UI result: no visible UI change until route hydration and Vue adoption.
 - Cockpit Wave 33C result: Distribution route now hydrates `distribution_workspace_read_model` with read-only share/channel/print/analytics/action facts; report `reports/227-wave-33c-distribution-workspace-route-prop-hydration.md`; next `Cockpit Wave 33D — Distribution Workspace UI Presentation`.
 - Cockpit Wave 33C expected UI result: no visible UI change until the Vue page consumes the hydrated prop.
+- Cockpit Wave 33D result: Distribution Workspace now renders hydrated read-only share/channel/print/analytics/action facts and forwards route adapter props; report `reports/228-wave-33d-distribution-workspace-ui-presentation.md`; next `Cockpit Wave 33E — Distribution Workspace Browser / Publish Verification`.
+- Cockpit Wave 33D expected UI result: `/x/cockpit/pay-codes/{code}/distribution` shows `Distribution Workspace Runtime`, Pay Code, payload policy, hydrated share/channel/print/analytics cards, and blocked actions.

@@ -811,3 +811,42 @@ export type CockpitDistributionAction = {
     disabled: boolean;
     reason: string;
 };
+
+export type CockpitDistributionWorkspaceItem = {
+    key: string;
+    label: string;
+    status: string;
+    description: string;
+    read_only?: boolean;
+    available?: boolean;
+    source?: string | null;
+    href?: string | null;
+    metadata?: Record<string, unknown>;
+};
+
+export type CockpitDistributionWorkspaceReadModel = {
+    schema?: string;
+    status: string;
+    authorized?: boolean;
+    code?: string | null;
+    summary?: Record<string, unknown>;
+    share_assets?: CockpitDistributionWorkspaceItem[];
+    channels?: CockpitDistributionWorkspaceItem[];
+    print_templates?: CockpitDistributionWorkspaceItem[];
+    analytics?: CockpitDistributionWorkspaceItem[];
+    actions?: CockpitDistributionWorkspaceItem[];
+    redactions?: CockpitReadModelRedactions;
+    [key: string]: unknown;
+};
+
+export type CockpitDistributionWorkspacePageProps = {
+    context?: {
+        code?: string | null;
+    };
+    can?: CockpitPageAuthorization;
+    redaction?: CockpitReadModelRedactions & {
+        policy?: string;
+    };
+    read_model?: CockpitReadModelBundle;
+    distribution_workspace_read_model?: CockpitDistributionWorkspaceReadModel;
+};
