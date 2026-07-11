@@ -2097,3 +2097,5 @@ Current boundary:
 - Cockpit Wave 32B expected UI result: no visible UI change until provider hydration and Vue adoption.
 - Cockpit Wave 32C result: Voucher Detail provider hydration now emits lifecycle, claim, approval, execution, journal, action, and feedback evidence summary facts; report `reports/221-wave-32c-voucher-detail-evidence-summary-provider-hydration.md`; next `Cockpit Wave 32D — Voucher Detail Evidence Summary UI Presentation`.
 - Cockpit Wave 32C expected UI result: no visible UI change until the Vue page renders `voucher.evidence_summary`.
+- Cockpit Wave 32D result: Voucher Detail Evidence panel now renders hydrated `voucher.evidence_summary` cards and retains the placeholder fallback; report `reports/222-wave-32d-voucher-detail-evidence-summary-ui-presentation.md`; next `Cockpit Wave 32E — Voucher Detail Evidence Browser / Publish Verification`.
+- Cockpit Wave 32D expected UI result: `/x/cockpit/pay-codes/{code}` shows an `Evidence summary` panel with read-only lifecycle, claim, approval, execution, journal, action, and feedback evidence cards when hydrated.

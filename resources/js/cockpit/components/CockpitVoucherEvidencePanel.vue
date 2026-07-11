@@ -3,6 +3,7 @@ import type { CockpitVoucherEvidenceItem } from '../types';
 
 defineProps<{
     items: CockpitVoucherEvidenceItem[];
+    heading?: string;
 }>();
 </script>
 
@@ -15,7 +16,7 @@ defineProps<{
             Evidence
         </p>
         <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-            Evidence tab placeholder
+            {{ heading ?? 'Evidence tab placeholder' }}
         </h3>
 
         <div class="mt-5 grid gap-3">
@@ -36,6 +37,23 @@ defineProps<{
                 <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
                     {{ item.helper }}
                 </p>
+                <dl
+                    v-if="item.source || item.read_only !== undefined"
+                    class="mt-3 grid gap-2 text-xs text-slate-500 dark:text-slate-400 sm:grid-cols-2"
+                >
+                    <div v-if="item.source">
+                        <dt class="font-semibold uppercase tracking-wide">
+                            Source
+                        </dt>
+                        <dd>{{ item.source }}</dd>
+                    </div>
+                    <div v-if="item.read_only !== undefined">
+                        <dt class="font-semibold uppercase tracking-wide">
+                            Read-only
+                        </dt>
+                        <dd>{{ item.read_only ? 'yes' : 'no' }}</dd>
+                    </div>
+                </dl>
             </article>
         </div>
     </section>

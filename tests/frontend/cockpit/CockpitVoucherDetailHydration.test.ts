@@ -28,6 +28,71 @@ const readModel = {
             claims: 'must-not-render',
             approval: 'must-not-render',
         },
+        evidence_summary: [
+            {
+                key: 'lifecycle',
+                label: 'Lifecycle facts',
+                status: 'ready',
+                description: 'Sanitized voucher lifecycle summary is available.',
+                read_only: true,
+                available: true,
+                source: 'voucher',
+            },
+            {
+                key: 'claim',
+                label: 'Claim evidence',
+                status: 'not_claimed',
+                description: 'Claim state is represented only as sanitized summary booleans.',
+                read_only: true,
+                available: true,
+                source: 'voucher-summary',
+            },
+            {
+                key: 'approval',
+                label: 'Approval evidence',
+                status: 'redacted',
+                description: 'Approval references and OTP metadata remain redacted from the voucher summary.',
+                read_only: true,
+                available: false,
+                source: 'redaction-policy',
+            },
+            {
+                key: 'execution',
+                label: 'Execution evidence',
+                status: 'not_wired',
+                description: 'Execution evidence is read from the execution read model; this page does not invoke drivers.',
+                read_only: true,
+                available: false,
+                source: 'execution-read-model',
+            },
+            {
+                key: 'journal',
+                label: 'Journal evidence',
+                status: 'not_wired',
+                description: 'Journal evidence is read-only and only available through authorized journal read models.',
+                read_only: true,
+                available: false,
+                source: 'journal-read-model',
+            },
+            {
+                key: 'actions',
+                label: 'Action evidence',
+                status: 'not_wired',
+                description: 'Action evidence is presentation-only; Cockpit does not execute actions from Voucher Detail.',
+                read_only: true,
+                available: false,
+                source: 'action-read-model',
+            },
+            {
+                key: 'feedback',
+                label: 'Feedback evidence',
+                status: 'not_wired',
+                description: 'Feedback evidence is communication state only; Cockpit does not send feedback from Voucher Detail.',
+                read_only: true,
+                available: false,
+                source: 'feedback-read-model',
+            },
+        ],
         redactions: {
             payloads: 'sanitized-summary-only',
             excluded: [
@@ -88,6 +153,32 @@ describe('Cockpit Voucher Detail hydration', () => {
         expect(wrapper.text()).toContain('Not claimed');
         expect(wrapper.text()).toContain('sanitized-summary-only');
         expect(wrapper.findAll('[data-testid="cockpit-voucher-overview-item"]').length).toBeGreaterThanOrEqual(6);
+    });
+
+    it('renders hydrated voucher evidence summary facts without exposing unsafe payloads', () => {
+        const wrapper = mount(VoucherDetail, {
+            props: {
+                context: { code: 'PC-HYDRATED-001' },
+                read_model: readModel,
+            },
+        });
+
+        expect(wrapper.text()).toContain('Evidence summary');
+        expect(wrapper.text()).toContain('Lifecycle facts');
+        expect(wrapper.text()).toContain('Claim evidence');
+        expect(wrapper.text()).toContain('Approval evidence');
+        expect(wrapper.text()).toContain('Execution evidence');
+        expect(wrapper.text()).toContain('Journal evidence');
+        expect(wrapper.text()).toContain('Action evidence');
+        expect(wrapper.text()).toContain('Feedback evidence');
+        expect(wrapper.text()).toContain('voucher-summary');
+        expect(wrapper.text()).toContain('redaction-policy');
+        expect(wrapper.text()).toContain('Read-only');
+        expect(wrapper.text()).toContain('yes');
+        expect(wrapper.findAll('[data-testid="cockpit-voucher-evidence-item"]')).toHaveLength(7);
+        expect(wrapper.text()).not.toContain('provider_payload');
+        expect(wrapper.text()).not.toContain('raw_payload');
+        expect(wrapper.text()).not.toContain('must-not-render');
     });
 
     it('keeps dependent read models explicitly not wired during voucher hydration', () => {

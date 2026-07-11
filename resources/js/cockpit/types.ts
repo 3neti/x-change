@@ -658,6 +658,19 @@ export type CockpitVoucherEvidenceItem = {
     label: string;
     status: string;
     helper: string;
+    source?: string | null;
+    read_only?: boolean;
+    available?: boolean;
+};
+
+export type CockpitVoucherEvidenceSummary = {
+    key: string;
+    label: string;
+    status: string;
+    description: string;
+    read_only?: boolean;
+    available?: boolean;
+    source?: string | null;
 };
 
 export type CockpitVoucherDistributionItem = {
@@ -690,6 +703,7 @@ export type CockpitVoucherReadModel = {
     code?: string | null;
     status: string;
     summary?: Record<string, unknown>;
+    evidence_summary?: CockpitVoucherEvidenceSummary[];
     redactions?: CockpitReadModelRedactions;
     authorized?: boolean;
 };

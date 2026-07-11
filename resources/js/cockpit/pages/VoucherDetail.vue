@@ -14,6 +14,7 @@ import type {
     CockpitVoucherDetailPageProps,
     CockpitVoucherDistributionItem,
     CockpitVoucherEvidenceItem,
+    CockpitVoucherEvidenceSummary,
     CockpitVoucherOverviewItem,
     CockpitVoucherTimelineItem,
 } from '../types';
@@ -109,25 +110,15 @@ const timelineItems = computed<CockpitVoucherTimelineItem[]>(() => [
 ]);
 
 const evidenceItems = computed<CockpitVoucherEvidenceItem[]>(() => [
-    {
-        id: 'claim-evidence',
-        label: 'Claim evidence',
-        status: 'not_wired',
-        helper: 'Claim evidence and uploaded artifacts are not exposed by the voucher summary read model.',
-    },
-    {
-        id: 'approval-evidence',
-        label: 'Approval evidence',
-        status: 'not_wired',
-        helper: 'Approval references and OTP metadata remain redacted from Cockpit voucher hydration.',
-    },
-    {
-        id: 'settlement-envelope',
-        label: 'Settlement envelope evidence',
-        status: 'not_wired',
-        helper: 'Settlement Envelope readiness requires a future authorized read model.',
-    },
+    ...hydratedEvidenceItems(props.read_model?.voucher?.evidence_summary),
 ]);
+
+const evidenceHeading = computed(() => (
+    Array.isArray(props.read_model?.voucher?.evidence_summary)
+    && props.read_model.voucher.evidence_summary.length > 0
+        ? 'Evidence summary'
+        : 'Evidence tab placeholder'
+));
 
 const distributionItems = computed<CockpitVoucherDistributionItem[]>(() => [
     ...feedbackDistributionItems(props.read_model?.feedback),
@@ -226,6 +217,43 @@ function availabilityWindow(startsAt: unknown, expiresAt: unknown): string {
 
 function readModelStatus(model?: CockpitDependentReadModel): string {
     return stringValue(model?.status) ?? 'not_wired';
+}
+
+function hydratedEvidenceItems(
+    evidenceSummary?: CockpitVoucherEvidenceSummary[],
+): CockpitVoucherEvidenceItem[] {
+    if (!Array.isArray(evidenceSummary) || evidenceSummary.length === 0) {
+        return [
+            {
+                id: 'claim-evidence',
+                label: 'Claim evidence',
+                status: 'not_wired',
+                helper: 'Claim evidence and uploaded artifacts are not exposed by the voucher summary read model.',
+            },
+            {
+                id: 'approval-evidence',
+                label: 'Approval evidence',
+                status: 'not_wired',
+                helper: 'Approval references and OTP metadata remain redacted from Cockpit voucher hydration.',
+            },
+            {
+                id: 'settlement-envelope',
+                label: 'Settlement envelope evidence',
+                status: 'not_wired',
+                helper: 'Settlement Envelope readiness requires a future authorized read model.',
+            },
+        ];
+    }
+
+    return evidenceSummary.map((item) => ({
+        id: item.key,
+        label: item.label,
+        status: item.status,
+        helper: item.description,
+        source: item.source,
+        read_only: item.read_only ?? true,
+        available: item.available ?? false,
+    }));
 }
 
 function journalAuditItems(model?: CockpitDependentReadModel): CockpitVoucherAuditItem[] {
@@ -484,7 +512,10 @@ function integrationSummary(
             <div class="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
                 <CockpitVoucherTimelinePanel :items="timelineItems" />
                 <div class="space-y-6">
-                    <CockpitVoucherEvidencePanel :items="evidenceItems" />
+                    <CockpitVoucherEvidencePanel
+                        :heading="evidenceHeading"
+                        :items="evidenceItems"
+                    />
                     <CockpitVoucherDistributionPanel :items="distributionItems" />
                     <CockpitVoucherAuditPanel
                         :audits="auditItems"
