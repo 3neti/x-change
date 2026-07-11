@@ -1973,3 +1973,11 @@ Current boundary:
   - Dusk dashboard smoke proving the existing Operator Issuance Activity panel renders combined handoff evidence on one card.
 - Cockpit Wave 19 expected UI result: one Operator Issuance Activity card can show `journal: recorded`, `action: composed`, `feedback: planned`, journal entry facts, action hint facts, and feedback planning facts together.
 - Cockpit Wave 19 next recommended wave: `Cockpit Wave 20 — Operator Activity Runtime Configuration UX / Local Operations Handoff`.
+- Cockpit Wave 20 result: operator activity runtime configuration operations handoff completed; report `reports/191-wave-20-runtime-configuration-operations-handoff.md`.
+- Cockpit Wave 20 completed:
+  - runtime profile DTO and inspector for repository, recorder, journal, action, and feedback handoff configuration;
+  - `x-change:cockpit:operator-activity-runtime-profile` for JSON/structured local inspection;
+  - `x-change:doctor --operator-activity-runtime` for explicit doctor integration;
+  - focused tests proving default `not_wired`, explicit `partially_wired`, and combined runtime profile inspection.
+- Cockpit Wave 20 expected UI result: no current Cockpit UI change is expected; this wave adds local operations/CLI visibility only.
+- Cockpit Wave 20 next recommended wave: `Cockpit Wave 21 — Runtime Profile UI Surface Decision`.
