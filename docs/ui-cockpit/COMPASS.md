@@ -4,7 +4,7 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 8A — Authorization / Tenant Scope Runtime Plan
+Current slice: Cockpit Mutation Wave 8B — Durable Activity Scope DTO / Decision Contract Plan
 Status: Scaffolded / Runtime planning recorded
 Last updated: 2026-07-11
 
@@ -1869,3 +1869,5 @@ Current boundary:
 - Cockpit Mutation Wave 7J — Production Hardening Controls Closure expected UI result: no current Cockpit UI change is expected.
 - Cockpit Mutation Wave 8A — Authorization / Tenant Scope Runtime Plan scaffold result: runtime planning recorded; report `reports/131-wave-8a-authorization-tenant-scope-runtime-plan.md`; next `8B — Durable Activity Scope DTO / Decision Contract Plan`.
 - Cockpit Mutation Wave 8A — Authorization / Tenant Scope Runtime Plan expected UI result: no current Cockpit UI change is expected.
+- Cockpit Mutation Wave 8B — Durable Activity Scope DTO / Decision Contract Plan scaffold result: runtime planning recorded; report `reports/132-wave-8b-durable-activity-scope-contract-plan.md`; next `8C — Read Model Scope Enforcement Plan`.
+- Cockpit Mutation Wave 8B — Durable Activity Scope DTO / Decision Contract Plan expected UI result: no current Cockpit UI change is expected.
