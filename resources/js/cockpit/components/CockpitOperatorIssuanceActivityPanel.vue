@@ -104,6 +104,22 @@ const activeFilterCount = computed(() => [
     ...searchFilters.value.statuses,
     ...searchFilters.value.handoffStatuses,
 ].filter((value) => value !== undefined && value !== '').length);
+const activeFilterLabels = computed(() => [
+    searchFilters.value.search ? `search “${searchFilters.value.search}”` : undefined,
+    ...searchFilters.value.statuses.map((status) => `status ${status}`),
+    ...searchFilters.value.handoffStatuses.map((status) => `handoff ${status}`),
+].filter((value): value is string => value !== undefined));
+const activeFilterSummary = computed(() => {
+    if (!canFilter.value) {
+        return 'Filter summary unavailable until durable activity storage is wired.';
+    }
+
+    if (activeFilterLabels.value.length === 0) {
+        return 'No activity filters applied.';
+    }
+
+    return `Filters: ${activeFilterLabels.value.join(' · ')}`;
+});
 const activityResultSummary = computed(() => {
     const count = presentations.value.length;
     const noun = count === 1 ? 'activity' : 'activities';
@@ -452,6 +468,12 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                 data-testid="cockpit-operator-issuance-activity-result-summary"
             >
                 {{ activityResultSummary }}
+            </p>
+            <p
+                class="mt-1 text-xs text-slate-500 dark:text-slate-400"
+                data-testid="cockpit-operator-issuance-activity-filter-summary"
+            >
+                {{ activeFilterSummary }}
             </p>
         </form>
 
