@@ -677,6 +677,9 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-result-summary"]').text()).toContain('Showing 1 matching activity for the current read-only filters.');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-filter-summary"]').text()).toContain('Filters: search “money changer” · status issued · handoff recorded');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-filter-clear"]').attributes('href')).toBe('/x/cockpit');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-clear-search"]').attributes('href')).toBe('/x/cockpit?activity_status=issued&activity_handoff_status=recorded');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-clear-status"]').attributes('href')).toBe('/x/cockpit?activity_search=money+changer&activity_handoff_status=recorded');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-clear-handoff"]').attributes('href')).toBe('/x/cockpit?activity_search=money+changer&activity_status=issued');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-mutation"]').exists()).toBe(false);
     });
 

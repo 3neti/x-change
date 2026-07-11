@@ -74,6 +74,12 @@ type SafeSearchFilters = {
     readOnly: boolean;
 };
 
+type FilterClearLink = {
+    key: string;
+    label: string;
+    href: string;
+};
+
 const presentations = computed<SafePresentation[]>(() => {
     if (!props.readModel?.authorized || !Array.isArray(props.readModel.presentations)) {
         return [];
@@ -119,6 +125,29 @@ const activeFilterSummary = computed(() => {
     }
 
     return `Filters: ${activeFilterLabels.value.join(' · ')}`;
+});
+const filterClearLinks = computed<FilterClearLink[]>(() => {
+    if (!canFilter.value) {
+        return [];
+    }
+
+    return [
+        searchFilters.value.search ? {
+            key: 'search',
+            label: 'Clear search',
+            href: filterHrefWithout('search'),
+        } : undefined,
+        searchFilters.value.statuses.length > 0 ? {
+            key: 'status',
+            label: 'Clear status',
+            href: filterHrefWithout('status'),
+        } : undefined,
+        searchFilters.value.handoffStatuses.length > 0 ? {
+            key: 'handoff',
+            label: 'Clear handoff',
+            href: filterHrefWithout('handoff'),
+        } : undefined,
+    ].filter((link): link is FilterClearLink => link !== undefined);
 });
 const activityResultSummary = computed(() => {
     const count = presentations.value.length;
@@ -299,6 +328,26 @@ function safeDetailHref(value: unknown): string | undefined {
     return href;
 }
 
+function filterHrefWithout(filter: 'search' | 'status' | 'handoff'): string {
+    const params = new URLSearchParams();
+
+    if (filter !== 'search' && searchFilters.value.search) {
+        params.set('activity_search', searchFilters.value.search);
+    }
+
+    if (filter !== 'status') {
+        searchFilters.value.statuses.forEach((status) => params.append('activity_status', status));
+    }
+
+    if (filter !== 'handoff') {
+        searchFilters.value.handoffStatuses.forEach((status) => params.append('activity_handoff_status', status));
+    }
+
+    const query = params.toString();
+
+    return query === '' ? '/x/cockpit' : `/x/cockpit?${query}`;
+}
+
 function stringValue(value: unknown): string | undefined {
     if (typeof value === 'string' && value.trim() !== '') {
         return value.trim();
@@ -475,6 +524,21 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
             >
                 {{ activeFilterSummary }}
             </p>
+            <div
+                v-if="filterClearLinks.length > 0"
+                class="mt-3 flex flex-wrap gap-2 text-xs"
+                data-testid="cockpit-operator-issuance-activity-clear-links"
+            >
+                <a
+                    v-for="link in filterClearLinks"
+                    :key="link.key"
+                    :href="link.href"
+                    class="rounded-full border border-slate-200 bg-white px-2 py-1 font-semibold text-slate-600 hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:text-slate-100"
+                    :data-testid="`cockpit-operator-issuance-activity-clear-${link.key}`"
+                >
+                    {{ link.label }}
+                </a>
+            </div>
         </form>
 
         <div
