@@ -33,6 +33,7 @@ use LBHurtado\XChange\Services\ApprovalHandlers\OtpApprovalRequirementHandler;
 use LBHurtado\XChange\Services\Base64PngVoucherPaymentQrRenderer;
 use LBHurtado\XChange\Services\CacheIdempotencyStore;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityActionHandoffStatusProjector;
+use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityFeedbackHandoffStatusProjector;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityJournalHandoffStatusProjector;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRecorder;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRepository;
@@ -136,6 +137,8 @@ return [
                 ?: null,
             'feedback_handoff' => env('XCHANGE_COCKPIT_OPERATOR_ISSUANCE_ACTIVITY_FEEDBACK_HANDOFF')
                 ?: null,
+            'feedback_handoff_status_projector' => env('XCHANGE_COCKPIT_OPERATOR_ISSUANCE_ACTIVITY_FEEDBACK_HANDOFF_STATUS_PROJECTOR')
+                ?: null,
             'available_repositories' => [
                 'database' => DatabaseCockpitOperatorIssuanceActivityRepository::class,
             ],
@@ -156,6 +159,9 @@ return [
             ],
             'available_feedback_handoffs' => [
                 'x-feedback' => XFeedbackCockpitOperatorIssuanceActivityFeedbackHandoff::class,
+            ],
+            'available_feedback_handoff_status_projectors' => [
+                'database' => DatabaseCockpitOperatorIssuanceActivityFeedbackHandoffStatusProjector::class,
             ],
         ],
 

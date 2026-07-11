@@ -66,6 +66,7 @@ use LBHurtado\XChange\Contracts\CockpitIssuanceTemplateRegistryContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityActionHandoffContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityActionHandoffStatusProjectorContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityFeedbackHandoffContract;
+use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityFeedbackHandoffStatusProjectorContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityJournalHandoffContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityJournalHandoffStatusProjectorContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityPresenterContract;
@@ -146,6 +147,7 @@ use LBHurtado\XChange\Services\Cockpit\DurableCockpitOperatorIssuanceActivityRea
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityActionHandoff;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityActionHandoffStatusProjector;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityFeedbackHandoff;
+use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityFeedbackHandoffStatusProjector;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityJournalHandoff;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityJournalHandoffStatusProjector;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityRecorder;
@@ -355,6 +357,15 @@ class XChangeServiceProvider extends ServiceProvider
                 'feedback_handoff',
                 'available_feedback_handoffs',
                 NullCockpitOperatorIssuanceActivityFeedbackHandoff::class,
+            );
+
+            return $app->make($service);
+        });
+        $this->app->bind(CockpitOperatorIssuanceActivityFeedbackHandoffStatusProjectorContract::class, function ($app) {
+            $service = $this->cockpitOperatorIssuanceActivityService(
+                'feedback_handoff_status_projector',
+                'available_feedback_handoff_status_projectors',
+                NullCockpitOperatorIssuanceActivityFeedbackHandoffStatusProjector::class,
             );
 
             return $app->make($service);

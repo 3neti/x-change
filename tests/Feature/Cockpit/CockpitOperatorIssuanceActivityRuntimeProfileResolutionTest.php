@@ -5,17 +5,20 @@ declare(strict_types=1);
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityActionHandoffContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityActionHandoffStatusProjectorContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityFeedbackHandoffContract;
+use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityFeedbackHandoffStatusProjectorContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityJournalHandoffContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityJournalHandoffStatusProjectorContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityRecorderContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityRepositoryContract;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityActionHandoffStatusProjector;
+use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityFeedbackHandoffStatusProjector;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityJournalHandoffStatusProjector;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRecorder;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRepository;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityActionHandoff;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityActionHandoffStatusProjector;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityFeedbackHandoff;
+use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityFeedbackHandoffStatusProjector;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityJournalHandoff;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityJournalHandoffStatusProjector;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityRecorder;
@@ -30,6 +33,7 @@ it('keeps null cockpit operator issuance activity runtime services by default', 
         ->and(app(CockpitOperatorIssuanceActivityActionHandoffContract::class))->toBeInstanceOf(NullCockpitOperatorIssuanceActivityActionHandoff::class)
         ->and(app(CockpitOperatorIssuanceActivityActionHandoffStatusProjectorContract::class))->toBeInstanceOf(NullCockpitOperatorIssuanceActivityActionHandoffStatusProjector::class)
         ->and(app(CockpitOperatorIssuanceActivityFeedbackHandoffContract::class))->toBeInstanceOf(NullCockpitOperatorIssuanceActivityFeedbackHandoff::class)
+        ->and(app(CockpitOperatorIssuanceActivityFeedbackHandoffStatusProjectorContract::class))->toBeInstanceOf(NullCockpitOperatorIssuanceActivityFeedbackHandoffStatusProjector::class)
         ->and(app(CockpitOperatorIssuanceActivityJournalHandoffContract::class))->toBeInstanceOf(NullCockpitOperatorIssuanceActivityJournalHandoff::class)
         ->and(app(CockpitOperatorIssuanceActivityJournalHandoffStatusProjectorContract::class))->toBeInstanceOf(NullCockpitOperatorIssuanceActivityJournalHandoffStatusProjector::class);
 });
@@ -40,6 +44,7 @@ it('resolves named local journal runtime profile keys from config', function () 
     config()->set('x-change.cockpit.operator_issuance_activity.action_handoff', 'x-action');
     config()->set('x-change.cockpit.operator_issuance_activity.action_handoff_status_projector', 'database');
     config()->set('x-change.cockpit.operator_issuance_activity.feedback_handoff', 'x-feedback');
+    config()->set('x-change.cockpit.operator_issuance_activity.feedback_handoff_status_projector', 'database');
     config()->set('x-change.cockpit.operator_issuance_activity.journal_handoff', 'x-journal');
     config()->set('x-change.cockpit.operator_issuance_activity.journal_handoff_status_projector', 'database');
 
@@ -50,6 +55,7 @@ it('resolves named local journal runtime profile keys from config', function () 
         ->and(app(CockpitOperatorIssuanceActivityActionHandoffContract::class))->toBeInstanceOf(XActionCockpitOperatorIssuanceActivityActionHandoff::class)
         ->and(app(CockpitOperatorIssuanceActivityActionHandoffStatusProjectorContract::class))->toBeInstanceOf(DatabaseCockpitOperatorIssuanceActivityActionHandoffStatusProjector::class)
         ->and(app(CockpitOperatorIssuanceActivityFeedbackHandoffContract::class))->toBeInstanceOf(XFeedbackCockpitOperatorIssuanceActivityFeedbackHandoff::class)
+        ->and(app(CockpitOperatorIssuanceActivityFeedbackHandoffStatusProjectorContract::class))->toBeInstanceOf(DatabaseCockpitOperatorIssuanceActivityFeedbackHandoffStatusProjector::class)
         ->and(app(CockpitOperatorIssuanceActivityJournalHandoffContract::class))->toBeInstanceOf(XJournalCockpitOperatorIssuanceActivityJournalHandoff::class)
         ->and(app(CockpitOperatorIssuanceActivityJournalHandoffStatusProjectorContract::class))->toBeInstanceOf(DatabaseCockpitOperatorIssuanceActivityJournalHandoffStatusProjector::class);
 });
@@ -60,6 +66,7 @@ it('continues to resolve direct class names for cockpit operator issuance activi
     config()->set('x-change.cockpit.operator_issuance_activity.action_handoff', XActionCockpitOperatorIssuanceActivityActionHandoff::class);
     config()->set('x-change.cockpit.operator_issuance_activity.action_handoff_status_projector', DatabaseCockpitOperatorIssuanceActivityActionHandoffStatusProjector::class);
     config()->set('x-change.cockpit.operator_issuance_activity.feedback_handoff', XFeedbackCockpitOperatorIssuanceActivityFeedbackHandoff::class);
+    config()->set('x-change.cockpit.operator_issuance_activity.feedback_handoff_status_projector', DatabaseCockpitOperatorIssuanceActivityFeedbackHandoffStatusProjector::class);
     config()->set('x-change.cockpit.operator_issuance_activity.journal_handoff', XJournalCockpitOperatorIssuanceActivityJournalHandoff::class);
     config()->set('x-change.cockpit.operator_issuance_activity.journal_handoff_status_projector', DatabaseCockpitOperatorIssuanceActivityJournalHandoffStatusProjector::class);
 
@@ -70,6 +77,7 @@ it('continues to resolve direct class names for cockpit operator issuance activi
         ->and(app(CockpitOperatorIssuanceActivityActionHandoffContract::class))->toBeInstanceOf(XActionCockpitOperatorIssuanceActivityActionHandoff::class)
         ->and(app(CockpitOperatorIssuanceActivityActionHandoffStatusProjectorContract::class))->toBeInstanceOf(DatabaseCockpitOperatorIssuanceActivityActionHandoffStatusProjector::class)
         ->and(app(CockpitOperatorIssuanceActivityFeedbackHandoffContract::class))->toBeInstanceOf(XFeedbackCockpitOperatorIssuanceActivityFeedbackHandoff::class)
+        ->and(app(CockpitOperatorIssuanceActivityFeedbackHandoffStatusProjectorContract::class))->toBeInstanceOf(DatabaseCockpitOperatorIssuanceActivityFeedbackHandoffStatusProjector::class)
         ->and(app(CockpitOperatorIssuanceActivityJournalHandoffContract::class))->toBeInstanceOf(XJournalCockpitOperatorIssuanceActivityJournalHandoff::class)
         ->and(app(CockpitOperatorIssuanceActivityJournalHandoffStatusProjectorContract::class))->toBeInstanceOf(DatabaseCockpitOperatorIssuanceActivityJournalHandoffStatusProjector::class);
 });
@@ -81,6 +89,7 @@ function forgetCockpitOperatorIssuanceActivityRuntimeContracts(): void
     app()->forgetInstance(CockpitOperatorIssuanceActivityActionHandoffContract::class);
     app()->forgetInstance(CockpitOperatorIssuanceActivityActionHandoffStatusProjectorContract::class);
     app()->forgetInstance(CockpitOperatorIssuanceActivityFeedbackHandoffContract::class);
+    app()->forgetInstance(CockpitOperatorIssuanceActivityFeedbackHandoffStatusProjectorContract::class);
     app()->forgetInstance(CockpitOperatorIssuanceActivityJournalHandoffContract::class);
     app()->forgetInstance(CockpitOperatorIssuanceActivityJournalHandoffStatusProjectorContract::class);
 }
