@@ -124,12 +124,34 @@ class CockpitReadOnlyPageProps
     /**
      * @return array<string, mixed>
      */
-    public function toQuickGenerateArray(): array
-    {
+    public function toQuickGenerateArray(
+        ?string $campaignPlanningKey = null,
+        ?string $campaignExecutionId = null,
+        ?string $campaignId = null,
+        ?string $campaignAudienceId = null,
+        ?string $campaignRecipientId = null,
+        ?string $campaignSource = null,
+        ?string $campaignTemplateKey = null,
+        int|float|string|null $campaignAmount = null,
+        ?string $campaignCurrency = null,
+        ?string $campaignRecipientReference = null,
+        ?string $campaignPurpose = null,
+    ): array {
         return [
             ...$this->toArray(),
             'quick_generate_read_model' => $this->readModels->forQuickGenerate(new CockpitReadModelQueryData(
                 include: ['templates', 'pricing'],
+                campaignPlanningKey: $this->optionalString($campaignPlanningKey),
+                campaignExecutionId: $this->optionalString($campaignExecutionId),
+                campaignId: $this->optionalString($campaignId),
+                campaignAudienceId: $this->optionalString($campaignAudienceId),
+                campaignRecipientId: $this->optionalString($campaignRecipientId),
+                campaignSource: $this->optionalString($campaignSource),
+                campaignTemplateKey: $this->optionalString($campaignTemplateKey),
+                campaignAmount: $campaignAmount,
+                campaignCurrency: $this->optionalString($campaignCurrency),
+                campaignRecipientReference: $this->optionalString($campaignRecipientReference),
+                campaignPurpose: $this->optionalString($campaignPurpose),
             ))->toArray(),
         ];
     }

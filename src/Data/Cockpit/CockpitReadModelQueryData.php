@@ -19,5 +19,16 @@ class CockpitReadModelQueryData extends Data
         public readonly array $include = [],
         public readonly ?string $correlationId = null,
         public readonly ?CockpitOperatorIssuanceActivitySearchFilterData $operatorActivityFilters = null,
+        public readonly ?string $campaignPlanningKey = null,
+        public readonly ?string $campaignExecutionId = null,
+        public readonly ?string $campaignId = null,
+        public readonly ?string $campaignAudienceId = null,
+        public readonly ?string $campaignRecipientId = null,
+        public readonly ?string $campaignSource = null,
+        public readonly ?string $campaignTemplateKey = null,
+        public readonly int|float|string|null $campaignAmount = null,
+        public readonly ?string $campaignCurrency = null,
+        public readonly ?string $campaignRecipientReference = null,
+        public readonly ?string $campaignPurpose = null,
     ) {}
 }

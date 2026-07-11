@@ -8,6 +8,7 @@ use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route;
 use JsonSerializable;
+use LBHurtado\XChange\Contracts\CockpitCampaignIssuanceDraftAdapterContract;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitCampaignReadModelData;
@@ -25,6 +26,7 @@ use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeRowActionData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateActionData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateAuthorizationData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateAuthorizationGateData;
+use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateCampaignContextData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateDraftContractData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateFundingGateCheckData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateFundingGateData;
@@ -58,6 +60,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         private readonly NullCockpitReadModelProvider $fallback = new NullCockpitReadModelProvider,
         private readonly ?OptionalCockpitIntegrationReadModels $integrations = null,
         private readonly ?DurableCockpitOperatorIssuanceActivityReadModelProvider $operatorIssuanceActivity = null,
+        private readonly ?CockpitCampaignIssuanceDraftAdapterContract $campaignDraftAdapter = null,
     ) {}
 
     public function forVoucher(CockpitReadModelQueryData $query): CockpitReadModelBundleData
@@ -884,6 +887,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 enabled: true,
                 reason: 'existing-issuance-handoff-enabled',
             ),
+            campaign_context: $this->quickGenerateCampaignContext($query),
             redactions: [
                 'payloads' => 'sanitized-quick-generate-catalog-only',
                 'excluded' => [
@@ -895,6 +899,57 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                     'pricing_breakdown',
                     'funding_source',
                     'issuer_id',
+                ],
+            ],
+        );
+    }
+
+    private function quickGenerateCampaignContext(CockpitReadModelQueryData $query): CockpitQuickGenerateCampaignContextData
+    {
+        if ($query->campaignPlanningKey === null && $query->campaignExecutionId === null && $query->campaignId === null) {
+            return new CockpitQuickGenerateCampaignContextData;
+        }
+
+        $campaignContext = [
+            'planning_key' => $query->campaignPlanningKey,
+            'execution_id' => $query->campaignExecutionId,
+            'campaign_id' => $query->campaignId,
+            'audience_id' => $query->campaignAudienceId,
+            'recipient_id' => $query->campaignRecipientId,
+            'source' => $query->campaignSource ?? 'campaign_cockpit',
+            'template_key' => $query->campaignTemplateKey,
+            'amount' => $query->campaignAmount,
+            'currency' => $query->campaignCurrency,
+            'recipient_reference' => $query->campaignRecipientReference,
+            'purpose' => $query->campaignPurpose,
+            'metadata' => [
+                'read_only' => true,
+                'source' => 'x-change.cockpit.quick-generate',
+            ],
+        ];
+
+        $draft = ($this->campaignDraftAdapter ?? new DefaultCockpitCampaignIssuanceDraftAdapter)
+            ->fromCampaignContext($campaignContext);
+
+        return new CockpitQuickGenerateCampaignContextData(
+            status: 'available',
+            authorized: true,
+            planning_key: $query->campaignPlanningKey,
+            execution_id: $query->campaignExecutionId,
+            campaign_id: $query->campaignId,
+            audience_id: $query->campaignAudienceId,
+            recipient_id: $query->campaignRecipientId,
+            source: $query->campaignSource ?? 'campaign_cockpit',
+            draft: $draft,
+            redactions: [
+                'payloads' => 'campaign-context-prefill-only',
+                'excluded' => [
+                    'campaign_payload',
+                    'recipient_payload',
+                    'provider_payload',
+                    'wallet',
+                    'balance',
+                    'raw_payload',
                 ],
             ],
         );

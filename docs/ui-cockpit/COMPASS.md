@@ -2137,3 +2137,5 @@ Current boundary:
 - Cockpit Wave 35A expected UI result: no UI change; this slice defines safe campaign context intake/prefill scope and blocks campaign mutation, bulk issuance, and delivery.
 - Cockpit Wave 35B result: Campaign context Quick Generate read-model contract added; report `reports/238-wave-35b-campaign-context-quick-generate-read-model-contract.md`; next `Cockpit Wave 35C — Quick Generate Campaign Query Intake / Provider Hydration`.
 - Cockpit Wave 35B expected UI result: no visible UI change until campaign context is hydrated into the Quick Generate read model and rendered by Vue.
+- Cockpit Wave 35C result: Quick Generate campaign query intake and provider hydration completed; report `reports/239-wave-35c-quick-generate-campaign-query-intake-provider-hydration.md`; next `Cockpit Wave 35D — Quick Generate Campaign Prefill UI Presentation`.
+- Cockpit Wave 35C expected UI result: no visible UI change yet; `quick_generate_read_model.campaign_context` is hydrated for Vue consumption in the next slice.
