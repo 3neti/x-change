@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 10A — Quick Generate Draft Factory from Existing Form Payload
-Status: Implemented / Factory baseline ready
+Current slice: Cockpit Wave 10B — Quick Generate Route Uses Draft Validator and Compiler
+Status: Implemented / Route compiler adoption baseline ready
 Last updated: 2026-07-11
 
 ## Completed
@@ -1899,3 +1899,4 @@ Current boundary:
 - Cockpit Wave 9I result: characterized campaign context → draft → validation → compiler → `GeneratePayCodeRequest` rules without issuance; report `reports/149-wave-9i-functional-issuance-scenario-characterization.md`; next `Cockpit Wave 9J — Functional Template/Campaign Issuance Foundation Closure`.
 - Cockpit Wave 9J result: closed functional template/campaign issuance foundation; report `reports/150-wave-9j-functional-template-campaign-issuance-foundation-closure.md`; next `Cockpit Wave 10 — Runtime Compiler Adoption`.
 - Cockpit Wave 10A result: added `CockpitQuickGenerateDraftFactoryContract` and `DefaultCockpitQuickGenerateDraftFactory` to convert the existing Quick Generate form payload into `CockpitIssuanceDraftData`; report `reports/151-wave-10a-quick-generate-draft-factory-from-existing-form-payload.md`; next `Cockpit Wave 10B — Quick Generate Route Uses Draft Validator and Compiler`.
+- Cockpit Wave 10B result: Quick Generate route now creates a draft, validates it, compiles it, then hands the compiled payload to existing `GeneratePayCode`; report `reports/152-wave-10b-quick-generate-route-uses-draft-validator-and-compiler.md`; next `Cockpit Wave 10C — Template Profile Defaults Applied During Compilation`.

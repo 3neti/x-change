@@ -7,7 +7,12 @@ namespace LBHurtado\XChange\Http\Controllers\Web\Cockpit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\ValidationException;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
+use LBHurtado\XChange\Contracts\CockpitIssuanceDraftCompilerContract;
+use LBHurtado\XChange\Contracts\CockpitIssuanceDraftValidatorContract;
+use LBHurtado\XChange\Contracts\CockpitQuickGenerateDraftFactoryContract;
+use LBHurtado\XChange\Data\Cockpit\CockpitIssuanceDraftValidationResultData;
 use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityItemData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Http\Requests\GeneratePayCodeRequest;
@@ -22,6 +27,9 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         GeneratePayCode $generatePayCode,
         IdempotencyService $idempotency,
         CockpitOperatorIssuanceActivityHandoffPipeline $operatorIssuanceActivityHandoffPipeline,
+        CockpitQuickGenerateDraftFactoryContract $quickGenerateDraftFactory,
+        CockpitIssuanceDraftValidatorContract $draftValidator,
+        CockpitIssuanceDraftCompilerContract $draftCompiler,
     ): JsonResponse {
         $payload = $request->validated();
         $payload = $this->normalizePayloadForIssuance($payload);
@@ -29,6 +37,14 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         $correlationId = $request->header((string) config('x-change.api.correlation.header', 'X-Correlation-ID'));
         $issuerId = $request->user()?->getAuthIdentifier();
 
+        $draft = $quickGenerateDraftFactory->fromPayload(
+            $payload,
+            idempotencyKey: $key,
+            correlationId: is_string($correlationId) ? $correlationId : null,
+        );
+        $this->ensureDraftIsValid($draftValidator->validate($draft));
+
+        $payload = $draftCompiler->compile($draft);
         $payload['_meta'] = [
             'idempotency_key' => $key,
             'correlation_id' => is_string($correlationId) ? $correlationId : null,
@@ -96,6 +112,13 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                 'status' => 'executed',
                 'request' => 'GeneratePayCodeRequest',
                 'executed' => true,
+                'draft_validator' => 'CockpitIssuanceDraftValidatorContract',
+            ],
+            'draft' => [
+                'status' => 'compiled',
+                'factory' => 'CockpitQuickGenerateDraftFactoryContract',
+                'compiler' => 'CockpitIssuanceDraftCompilerContract',
+                'source' => 'cockpit.quick-generate',
             ],
             'handoff' => [
                 'status' => 'executed',
@@ -126,6 +149,17 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
             ],
             'next_step' => 'Draft next Cockpit mutation wave before adding more write behavior.',
         ];
+    }
+
+    protected function ensureDraftIsValid(CockpitIssuanceDraftValidationResultData $validation): void
+    {
+        if ($validation->valid) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'draft' => array_values($validation->errors),
+        ]);
     }
 
     /**
