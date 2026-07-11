@@ -287,24 +287,22 @@ class XChangeServiceProvider extends ServiceProvider
         });
         $this->app->singleton(CockpitRedactorContract::class, DefaultCockpitRedactor::class);
         $this->app->bind(CockpitOperatorIssuanceActivityRecorderContract::class, function ($app) {
-            $service = config(
-                'x-change.cockpit.operator_issuance_activity.recorder',
+            $service = $this->cockpitOperatorIssuanceActivityService(
+                'recorder',
+                'available_recorders',
                 NullCockpitOperatorIssuanceActivityRecorder::class,
             );
 
-            return $app->make(is_string($service) && trim($service) !== ''
-                ? $service
-                : NullCockpitOperatorIssuanceActivityRecorder::class);
+            return $app->make($service);
         });
         $this->app->bind(CockpitOperatorIssuanceActivityRepositoryContract::class, function ($app) {
-            $service = config(
-                'x-change.cockpit.operator_issuance_activity.repository',
+            $service = $this->cockpitOperatorIssuanceActivityService(
+                'repository',
+                'available_repositories',
                 NullCockpitOperatorIssuanceActivityRepository::class,
             );
 
-            return $app->make(is_string($service) && trim($service) !== ''
-                ? $service
-                : NullCockpitOperatorIssuanceActivityRepository::class);
+            return $app->make($service);
         });
         $this->app->bind(
             CockpitOperatorIssuanceActivityRedactionPolicyContract::class,
@@ -315,24 +313,22 @@ class XChangeServiceProvider extends ServiceProvider
             DefaultCockpitOperatorIssuanceActivityRetentionPolicy::class,
         );
         $this->app->bind(CockpitOperatorIssuanceActivityJournalHandoffContract::class, function ($app) {
-            $service = config(
-                'x-change.cockpit.operator_issuance_activity.journal_handoff',
+            $service = $this->cockpitOperatorIssuanceActivityService(
+                'journal_handoff',
+                'available_journal_handoffs',
                 NullCockpitOperatorIssuanceActivityJournalHandoff::class,
             );
 
-            return $app->make(is_string($service) && trim($service) !== ''
-                ? $service
-                : NullCockpitOperatorIssuanceActivityJournalHandoff::class);
+            return $app->make($service);
         });
         $this->app->bind(CockpitOperatorIssuanceActivityJournalHandoffStatusProjectorContract::class, function ($app) {
-            $service = config(
-                'x-change.cockpit.operator_issuance_activity.journal_handoff_status_projector',
+            $service = $this->cockpitOperatorIssuanceActivityService(
+                'journal_handoff_status_projector',
+                'available_journal_handoff_status_projectors',
                 NullCockpitOperatorIssuanceActivityJournalHandoffStatusProjector::class,
             );
 
-            return $app->make(is_string($service) && trim($service) !== ''
-                ? $service
-                : NullCockpitOperatorIssuanceActivityJournalHandoffStatusProjector::class);
+            return $app->make($service);
         });
         $this->app->bind(
             CockpitOperatorIssuanceActivityActionHandoffContract::class,
@@ -1149,6 +1145,26 @@ class XChangeServiceProvider extends ServiceProvider
     protected function apiResponses(): ApiResponseFactory
     {
         return $this->app->make(ApiResponseFactory::class);
+    }
+
+    protected function cockpitOperatorIssuanceActivityService(
+        string $configuredKey,
+        string $availableKey,
+        string $fallback,
+    ): string {
+        $configured = config("x-change.cockpit.operator_issuance_activity.{$configuredKey}");
+
+        if (! is_string($configured) || trim($configured) === '') {
+            return $fallback;
+        }
+
+        $available = config("x-change.cockpit.operator_issuance_activity.{$availableKey}", []);
+
+        if (is_array($available) && is_string($available[$configured] ?? null)) {
+            return $available[$configured];
+        }
+
+        return $configured;
     }
 
     protected function packagePath(string $path = ''): string
