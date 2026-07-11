@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 23 — Runtime Profile Operator Acceptance Closure / Next Runtime Decision
-Status: Complete / runtime profile accepted; next runtime decision recorded
+Current slice: Cockpit Wave 24 — Operator Activity Search / Filter Runtime Readiness
+Status: Complete / read-only activity search-filter readiness implemented
 Last updated: 2026-07-11
 
 ## Completed
@@ -2007,3 +2007,12 @@ Current boundary:
   - selected the next runtime direction as read-only operator activity search/filter readiness.
 - Cockpit Wave 23 expected UI result: no UI change; Runtime Profile remains read-only and no mutation controls should appear.
 - Cockpit Wave 23 next recommended wave: `Cockpit Wave 24 — Operator Activity Search / Filter Runtime Readiness`.
+- Cockpit Wave 24 result: Operator Activity search/filter runtime readiness completed; report `reports/196-wave-24-operator-activity-search-filter-readiness.md`.
+- Cockpit Wave 24 completed:
+  - added `CockpitOperatorIssuanceActivitySearchFilterData`;
+  - added `CockpitReadModelQueryData::operatorActivityFilters`;
+  - extended in-memory and database durable activity repositories with read-only search/status/handoff filtering;
+  - exposed `CockpitOperatorIssuanceActivityReadModelData::search_filters` as operator-safe metadata;
+  - updated Cockpit TypeScript read-model typing for the new Inertia payload shape.
+- Cockpit Wave 24 expected UI result: no visible UI change; the read model is ready for future search/filter controls.
+- Cockpit Wave 24 next recommended wave: `Cockpit Wave 25 — Operator Activity Search / Filter UI Presentation`.
