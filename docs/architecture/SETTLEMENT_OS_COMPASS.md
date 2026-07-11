@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Mutation Wave 7J — Production Hardening Controls Closure scaffolded; durable activity production default remains disabled
+Current status: Cockpit Mutation Wave 8A — Authorization / Tenant Scope Runtime Plan scaffolded; durable activity production default remains disabled
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Mutation Wave 7J — Production Hardening Controls Closure scaffolded; durable activity production default remains disabled | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Mutation Wave 8A — Authorization / Tenant Scope Runtime Plan scaffolded; durable activity production default remains disabled | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1620,3 +1620,4 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Cockpit Mutation Wave 7H — Activity Search / Filter Implementation Baseline: implementation-control baseline recorded in [../ui-cockpit/reports/128-wave-7h-activity-search-filter-implementation-baseline.md](../ui-cockpit/reports/128-wave-7h-activity-search-filter-implementation-baseline.md); next `7I — Projection / Queue Seam Implementation Baseline`.
 - Cockpit Mutation Wave 7I — Projection / Queue Seam Implementation Baseline: implementation-control baseline recorded in [../ui-cockpit/reports/129-wave-7i-projection-queue-seam-implementation-baseline.md](../ui-cockpit/reports/129-wave-7i-projection-queue-seam-implementation-baseline.md); next `7J — Production Hardening Controls Closure`.
 - Cockpit Mutation Wave 7J — Production Hardening Controls Closure: implementation-control baseline recorded in [../ui-cockpit/reports/130-wave-7j-production-hardening-controls-closure.md](../ui-cockpit/reports/130-wave-7j-production-hardening-controls-closure.md); next `Manual UI Review / Wave 8 runtime enforcement planning`.
+- Cockpit Mutation Wave 8A — Authorization / Tenant Scope Runtime Plan: runtime planning recorded in [../ui-cockpit/reports/131-wave-8a-authorization-tenant-scope-runtime-plan.md](../ui-cockpit/reports/131-wave-8a-authorization-tenant-scope-runtime-plan.md); next `8B — Durable Activity Scope DTO / Decision Contract Plan`.
