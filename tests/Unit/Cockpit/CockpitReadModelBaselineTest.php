@@ -1266,6 +1266,13 @@ it('returns an empty not wired quick generate read model by default', function (
             'enabled' => false,
             'reason' => 'not-loaded',
         ],
+        'post_issuance_navigation' => [
+            'schema' => 'x-change.cockpit.quick-generate-post-issuance-navigation.v1',
+            'status' => 'not_wired',
+            'auto_redirect' => false,
+            'items' => [],
+            'redactions' => ['payloads' => 'not-loaded'],
+        ],
         'redactions' => ['payloads' => 'not-loaded'],
     ]);
 });
@@ -2060,6 +2067,13 @@ it('adapts safe quick generate catalog facts without invoking voucher lifecycle 
             'action' => [
                 'enabled' => true,
                 'reason' => 'existing-issuance-handoff-enabled',
+            ],
+            'post_issuance_navigation' => [
+                'schema' => 'x-change.cockpit.quick-generate-post-issuance-navigation.v1',
+                'status' => 'not_wired',
+                'auto_redirect' => false,
+                'items' => [],
+                'redactions' => ['payloads' => 'not-loaded'],
             ],
             'redactions' => [
                 'payloads' => 'sanitized-quick-generate-catalog-only',
