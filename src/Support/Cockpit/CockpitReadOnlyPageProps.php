@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Support\Cockpit;
 
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
+use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivitySearchFilterData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
 use LBHurtado\XChange\Services\Cockpit\CockpitOperatorIssuanceActivityRuntimeProfileInspector;
 
@@ -86,6 +87,7 @@ class CockpitReadOnlyPageProps
         ?string $campaignPlanningKey = null,
         ?string $campaignExecutionId = null,
         ?string $operatorId = null,
+        ?CockpitOperatorIssuanceActivitySearchFilterData $operatorActivityFilters = null,
     ): array {
         return [
             ...$this->toArray(),
@@ -101,6 +103,7 @@ class CockpitReadOnlyPageProps
             'operator_issuance_activity_read_model' => $this->readModels->forOperatorIssuanceActivity(new CockpitReadModelQueryData(
                 operatorId: $operatorId,
                 include: ['operator_issuance_activity', 'presentations'],
+                operatorActivityFilters: $operatorActivityFilters,
             ))->toArray(),
         ];
     }

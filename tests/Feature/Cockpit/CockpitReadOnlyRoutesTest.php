@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
+use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityRecordData;
 use LBHurtado\XChange\Data\DebitData;
 use LBHurtado\XChange\Data\IssuerData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Data\PayCodeLinksData;
 use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Http\Controllers\PayCode\GeneratePayCodeController;
+use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRepository;
 
 it('registers read-only cockpit routes under the x cockpit namespace', function () {
     expect(route('x-change.cockpit.dashboard'))->toBe('http://localhost/x/cockpit')
@@ -244,6 +246,62 @@ it('exposes operator issuance activity presentation read models on the dashboard
         ->assertJsonMissingPath('props.operator_issuance_activity_read_model.raw_payload')
         ->assertJsonMissingPath('props.operator_issuance_activity_read_model.wallet')
         ->assertJsonMissingPath('props.operator_issuance_activity_read_model.provider');
+});
+
+it('passes read-only operator activity search filter query parameters to the dashboard read model', function () {
+    $operator = actingAsTestUser();
+
+    config()->set('x-change.cockpit.operator_issuance_activity.repository', DatabaseCockpitOperatorIssuanceActivityRepository::class);
+
+    $repository = app(DatabaseCockpitOperatorIssuanceActivityRepository::class);
+
+    $repository->record(new CockpitOperatorIssuanceActivityRecordData(
+        activity_id: 'activity-dashboard-filter-1',
+        actor_id: (string) $operator->getAuthIdentifier(),
+        source: 'cockpit.quick-generate',
+        subject_type: 'pay_code',
+        subject_reference: 'PC-DASHBOARD-FILTER-1',
+        status: 'issued',
+        occurred_at: '2026-07-10T09:00:00+08:00',
+        correlation_id: 'corr-dashboard-filter-1',
+        summary: 'Money Changer Pay Code issued',
+        safe_context: [
+            'amount' => '25',
+            'currency' => 'PHP',
+            'route' => 'x-change.cockpit.quick-generate.store',
+            'detail_href' => '/x/cockpit/pay-codes/PC-DASHBOARD-FILTER-1',
+        ],
+        journal_handoff_status: 'recorded',
+    ));
+
+    $repository->record(new CockpitOperatorIssuanceActivityRecordData(
+        activity_id: 'activity-dashboard-filter-2',
+        actor_id: (string) $operator->getAuthIdentifier(),
+        source: 'cockpit.quick-generate',
+        subject_type: 'pay_code',
+        subject_reference: 'PC-DASHBOARD-FILTER-2',
+        status: 'failed',
+        occurred_at: '2026-07-10T09:05:00+08:00',
+        correlation_id: 'corr-dashboard-filter-2',
+        summary: 'Failed issuance activity',
+    ));
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.dashboard', [
+            'activity_search' => 'money changer',
+            'activity_status' => ['issued'],
+            'activity_handoff_status' => ['recorded'],
+        ]))
+        ->assertOk()
+        ->assertJsonPath('props.operator_issuance_activity_read_model.items.0.id', 'activity-dashboard-filter-1')
+        ->assertJsonPath('props.operator_issuance_activity_read_model.search_filters.search', 'money changer')
+        ->assertJsonPath('props.operator_issuance_activity_read_model.search_filters.statuses.0', 'issued')
+        ->assertJsonPath('props.operator_issuance_activity_read_model.search_filters.handoff_statuses.0', 'recorded')
+        ->assertJsonPath('props.operator_issuance_activity_read_model.search_filters.safety.read_only', true)
+        ->assertJsonPath('props.operator_issuance_activity_read_model.search_filters.safety.moves_money', false)
+        ->assertJsonMissingPath('props.operator_issuance_activity_read_model.provider_payload')
+        ->assertJsonMissingPath('props.operator_issuance_activity_read_model.raw_payload')
+        ->assertJsonMissingPath('props.operator_issuance_activity_read_model.mutation_route');
 });
 
 it('passes optional campaign context from the dashboard route to the read-only campaign adapter', function () {

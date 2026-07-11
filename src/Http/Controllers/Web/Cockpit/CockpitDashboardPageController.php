@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
+use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivitySearchFilterData;
 use LBHurtado\XChange\Support\Cockpit\CockpitReadOnlyPageProps;
 
 class CockpitDashboardPageController extends Controller
@@ -22,6 +23,11 @@ class CockpitDashboardPageController extends Controller
             campaignPlanningKey: $this->optionalString($request->query('campaign_planning_key')),
             campaignExecutionId: $this->optionalString($request->query('campaign_execution_id')),
             operatorId: is_scalar($operatorId) ? (string) $operatorId : null,
+            operatorActivityFilters: CockpitOperatorIssuanceActivitySearchFilterData::normalize(
+                search: $this->optionalString($request->query('activity_search')),
+                statuses: $this->queryStringList($request->query('activity_status')),
+                handoffStatuses: $this->queryStringList($request->query('activity_handoff_status')),
+            ),
         ));
     }
 
@@ -34,5 +40,23 @@ class CockpitDashboardPageController extends Controller
         $normalized = trim((string) $value);
 
         return $normalized !== '' ? $normalized : null;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function queryStringList(mixed $value): array
+    {
+        if ($value === null) {
+            return [];
+        }
+
+        $values = is_array($value) ? $value : [$value];
+
+        return collect($values)
+            ->map(fn (mixed $item): string => is_scalar($item) ? trim((string) $item) : '')
+            ->filter(fn (string $item): bool => $item !== '')
+            ->values()
+            ->all();
     }
 }
