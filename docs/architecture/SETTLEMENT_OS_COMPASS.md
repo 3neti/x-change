@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Mutation Wave 8B — Durable Activity Scope DTO / Decision Contract Plan scaffolded; durable activity production default remains disabled
+Current status: Cockpit Mutation Wave 8C — Read Model Scope Enforcement Plan scaffolded; durable activity production default remains disabled
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -1622,3 +1622,4 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Cockpit Mutation Wave 7J — Production Hardening Controls Closure: implementation-control baseline recorded in [../ui-cockpit/reports/130-wave-7j-production-hardening-controls-closure.md](../ui-cockpit/reports/130-wave-7j-production-hardening-controls-closure.md); next `Manual UI Review / Wave 8 runtime enforcement planning`.
 - Cockpit Mutation Wave 8A — Authorization / Tenant Scope Runtime Plan: runtime planning recorded in [../ui-cockpit/reports/131-wave-8a-authorization-tenant-scope-runtime-plan.md](../ui-cockpit/reports/131-wave-8a-authorization-tenant-scope-runtime-plan.md); next `8B — Durable Activity Scope DTO / Decision Contract Plan`.
 - Cockpit Mutation Wave 8B — Durable Activity Scope DTO / Decision Contract Plan: runtime planning recorded in [../ui-cockpit/reports/132-wave-8b-durable-activity-scope-contract-plan.md](../ui-cockpit/reports/132-wave-8b-durable-activity-scope-contract-plan.md); next `8C — Read Model Scope Enforcement Plan`.
+- Cockpit Mutation Wave 8C — Read Model Scope Enforcement Plan: runtime planning recorded in [../ui-cockpit/reports/133-wave-8c-read-model-scope-enforcement-plan.md](../ui-cockpit/reports/133-wave-8c-read-model-scope-enforcement-plan.md); next `8D — Repository Query Scope Enforcement Plan`.
