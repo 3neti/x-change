@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 9G — Campaign Context to Issuance Draft Adapter
-Status: Implemented / Adapter baseline
+Current slice: Cockpit Wave 9H — Draft Redaction / Audit Metadata Baseline
+Status: Implemented / Redaction metadata baseline
 Last updated: 2026-07-11
 
 ## Completed
@@ -1895,3 +1895,4 @@ Current boundary:
 - Cockpit Wave 9E result: added template profile registry and runtime binding; report `reports/145-wave-9e-template-profile-registry-resolver-baseline.md`; next `Cockpit Wave 9F — Template Constraints and Draft Validation Baseline`.
 - Cockpit Wave 9F result: added draft validator and validation result DTO; report `reports/146-wave-9f-template-constraints-draft-validation-baseline.md`; next `Cockpit Wave 9G — Campaign Context to Issuance Draft Adapter`.
 - Cockpit Wave 9G result: added campaign-to-issuance-draft adapter and runtime binding; report `reports/147-wave-9g-campaign-context-issuance-draft-adapter.md`; next `Cockpit Wave 9H — Draft Redaction / Audit Metadata Baseline`.
+- Cockpit Wave 9H result: added safe issuance draft audit metadata builder and runtime binding; report `reports/148-wave-9h-draft-redaction-audit-metadata-baseline.md`; next `Cockpit Wave 9I — Functional Issuance Scenario Characterization`.
