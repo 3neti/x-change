@@ -6,10 +6,13 @@ namespace LBHurtado\XChange\Services\Cockpit;
 
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityActionHandoffContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityActionHandoffStatusProjectorContract;
+use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityFeedbackHandoffContract;
+use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityFeedbackHandoffStatusProjectorContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityJournalHandoffContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityJournalHandoffStatusProjectorContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityRecorderContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityActionHandoffResultData;
+use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityFeedbackHandoffResultData;
 use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityItemData;
 use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityJournalHandoffResultData;
 use Throwable;
@@ -22,6 +25,8 @@ class CockpitOperatorIssuanceActivityHandoffPipeline
         private readonly CockpitOperatorIssuanceActivityJournalHandoffStatusProjectorContract $journalHandoffStatusProjector,
         private readonly CockpitOperatorIssuanceActivityActionHandoffContract $actionHandoff,
         private readonly CockpitOperatorIssuanceActivityActionHandoffStatusProjectorContract $actionHandoffStatusProjector,
+        private readonly CockpitOperatorIssuanceActivityFeedbackHandoffContract $feedbackHandoff,
+        private readonly CockpitOperatorIssuanceActivityFeedbackHandoffStatusProjectorContract $feedbackHandoffStatusProjector,
     ) {}
 
     public function process(CockpitOperatorIssuanceActivityItemData $activity): void
@@ -44,6 +49,14 @@ class CockpitOperatorIssuanceActivityHandoffPipeline
 
         try {
             $this->actionHandoffStatusProjector->project($actionResult);
+        } catch (Throwable) {
+            //
+        }
+
+        $feedbackResult = $this->feedbackHandoffResult($activity);
+
+        try {
+            $this->feedbackHandoffStatusProjector->project($feedbackResult);
         } catch (Throwable) {
             //
         }
@@ -81,6 +94,26 @@ class CockpitOperatorIssuanceActivityHandoffPipeline
                 executes_action: false,
                 source: 'cockpit-operator-issuance-activity-handoff-pipeline',
                 reason: 'Action handoff invocation failed without blocking the Cockpit activity flow.',
+                metadata: [
+                    'exception' => $exception::class,
+                ],
+            );
+        }
+    }
+
+    private function feedbackHandoffResult(CockpitOperatorIssuanceActivityItemData $activity): CockpitOperatorIssuanceActivityFeedbackHandoffResultData
+    {
+        try {
+            return $this->feedbackHandoff->handoff($activity);
+        } catch (Throwable $exception) {
+            return new CockpitOperatorIssuanceActivityFeedbackHandoffResultData(
+                status: 'failed_non_blocking',
+                activity_id: $activity->id,
+                correlation_id: $activity->correlation_id,
+                feedback_required: false,
+                sends_feedback: false,
+                source: 'cockpit-operator-issuance-activity-handoff-pipeline',
+                reason: 'Feedback handoff invocation failed without blocking the Cockpit activity flow.',
                 metadata: [
                     'exception' => $exception::class,
                 ],
