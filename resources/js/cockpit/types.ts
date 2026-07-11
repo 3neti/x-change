@@ -594,6 +594,23 @@ export type CockpitQuickGenerateRuntimeActivity = {
     [key: string]: unknown;
 };
 
+export type CockpitQuickGenerateCampaignAttribution = {
+    schema?: string | null;
+    status?: string | null;
+    available?: boolean | null;
+    read_only?: boolean | null;
+    mutates_campaign?: boolean | null;
+    planning_key?: string | null;
+    execution_id?: string | null;
+    campaign_id?: string | null;
+    audience_id?: string | null;
+    recipient_id?: string | null;
+    source?: string | null;
+    generated_code?: string | null;
+    redactions?: CockpitReadModelRedactions;
+    [key: string]: unknown;
+};
+
 export type CockpitQuickGeneratePostIssuanceNavigationItem = {
     key?: string | null;
     label?: string | null;

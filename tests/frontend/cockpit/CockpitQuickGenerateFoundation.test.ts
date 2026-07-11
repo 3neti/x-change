@@ -325,6 +325,43 @@ describe('Cockpit Quick Generate foundation', () => {
                         cockpit_detail: '/x/cockpit/pay-codes/PC-CAMPAIGN-001',
                     },
                 },
+                campaign_attribution: {
+                    schema: 'x-change.cockpit.quick-generate-campaign-attribution.v1',
+                    status: 'available',
+                    available: true,
+                    read_only: true,
+                    mutates_campaign: false,
+                    planning_key: 'plan-35d',
+                    execution_id: 'exec-35d',
+                    campaign_id: 'campaign-35d',
+                    audience_id: 'audience-35d',
+                    recipient_id: 'recipient-35d',
+                    source: 'campaign_cockpit',
+                    generated_code: 'PC-CAMPAIGN-001',
+                },
+                post_issuance_navigation: {
+                    schema: 'x-change.cockpit.quick-generate-post-issuance-navigation.v1',
+                    status: 'available',
+                    auto_redirect: false,
+                    items: [
+                        {
+                            key: 'campaign_explorer',
+                            label: 'Return to Campaign Explorer',
+                            href: '/x/cockpit/pay-codes?campaign_planning_key=plan-35d&campaign_execution_id=exec-35d&campaign_source=campaign_cockpit&activity_code=PC-CAMPAIGN-001',
+                            status: 'available',
+                            enabled: true,
+                            read_only: true,
+                        },
+                        {
+                            key: 'campaign_dashboard',
+                            label: 'Return to Campaign Dashboard',
+                            href: '/x/cockpit?campaign_planning_key=plan-35d&campaign_execution_id=exec-35d',
+                            status: 'available',
+                            enabled: true,
+                            read_only: true,
+                        },
+                    ],
+                },
             }),
         });
 
@@ -419,6 +456,14 @@ describe('Cockpit Quick Generate foundation', () => {
             source: 'cockpit.quick-generate',
             campaign_context: 'read-model-prefill',
         });
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-campaign-attribution-panel"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-campaign-attribution-panel"]').text()).toContain('Campaign attribution');
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-campaign-attribution-panel"]').text()).toContain('plan-35d');
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-campaign-attribution-panel"]').text()).toContain('PC-CAMPAIGN-001');
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-post-issuance-link-campaign_explorer"]').attributes('href')).toContain('campaign_planning_key=plan-35d');
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-post-issuance-link-campaign_dashboard"]').attributes('href')).toContain('campaign_execution_id=exec-35d');
         expect(JSON.stringify(payload)).not.toContain('campaign_payload');
         expect(JSON.stringify(payload)).not.toContain('provider_payload');
         expect(JSON.stringify(payload)).not.toContain('wallet');

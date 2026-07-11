@@ -2,6 +2,7 @@
 import { router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import type {
+    CockpitQuickGenerateCampaignAttribution,
     CockpitQuickGenerateCampaignContext,
     CockpitQuickGenerateDraftContract,
     CockpitQuickGenerateMutationContract,
@@ -84,6 +85,17 @@ const draftRuntime = computed<CockpitQuickGenerateRuntimeDraft | null>(() => {
 
 const activityRuntime = computed<CockpitQuickGenerateRuntimeActivity | null>(() => {
     return objectValue(dataGet(lastResponse.value, ['activity'])) as CockpitQuickGenerateRuntimeActivity | null;
+});
+
+const campaignAttribution = computed<CockpitQuickGenerateCampaignAttribution | null>(() => {
+    return objectValue(dataGet(lastResponse.value, ['campaign_attribution'])) as CockpitQuickGenerateCampaignAttribution | null;
+});
+
+const campaignAttributionAvailable = computed<boolean>(() => {
+    return campaignAttribution.value?.status === 'available'
+        && campaignAttribution.value?.available === true
+        && campaignAttribution.value?.read_only !== false
+        && campaignAttribution.value?.mutates_campaign !== true;
 });
 
 const postIssuanceNavigation = computed<CockpitQuickGeneratePostIssuanceNavigation | null>(() => {
@@ -488,6 +500,60 @@ function dataGet(source: unknown, path: string[]): unknown {
             <p class="mt-3 leading-5 text-slate-500 dark:text-slate-400">
                 No automatic redirect is performed. The operator chooses whether to refresh Cockpit data or open the generated Pay Code detail.
             </p>
+
+            <section
+                v-if="campaignAttributionAvailable"
+                class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/70 dark:bg-amber-950/30"
+                data-testid="cockpit-quick-generate-campaign-attribution-panel"
+            >
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p class="font-semibold text-amber-950 dark:text-amber-50">
+                            Campaign attribution
+                        </p>
+                        <p class="mt-1 text-[11px] leading-4 text-amber-800 dark:text-amber-200">
+                            This result keeps campaign context for read-only navigation only. Campaign state is not mutated here.
+                        </p>
+                    </div>
+                    <span class="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800">
+                        read-only
+                    </span>
+                </div>
+                <dl class="mt-3 grid gap-2 sm:grid-cols-2">
+                    <div>
+                        <dt class="text-amber-700/80 dark:text-amber-200/80">
+                            Planning key
+                        </dt>
+                        <dd class="font-semibold text-amber-950 dark:text-amber-50">
+                            {{ displayValue(campaignAttribution?.planning_key) }}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-amber-700/80 dark:text-amber-200/80">
+                            Execution
+                        </dt>
+                        <dd class="font-semibold text-amber-950 dark:text-amber-50">
+                            {{ displayValue(campaignAttribution?.execution_id) }}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-amber-700/80 dark:text-amber-200/80">
+                            Campaign
+                        </dt>
+                        <dd class="font-semibold text-amber-950 dark:text-amber-50">
+                            {{ displayValue(campaignAttribution?.campaign_id) }}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-amber-700/80 dark:text-amber-200/80">
+                            Generated Pay Code
+                        </dt>
+                        <dd class="font-semibold text-amber-950 dark:text-amber-50">
+                            {{ displayValue(campaignAttribution?.generated_code) }}
+                        </dd>
+                    </div>
+                </dl>
+            </section>
 
             <section
                 v-if="postIssuanceNavigationItems.length > 0"
