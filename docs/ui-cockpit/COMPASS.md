@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 12B — Legacy Page Functional Parity Bridge Audit
-Status: Implemented / Legacy page ownership recorded
+Current slice: Cockpit Wave 12C — Pay Code Create Page Template/Campaign Draft Bridge Marker
+Status: Implemented / Create page bridge marker ready
 Last updated: 2026-07-11
 
 ## Completed
@@ -1914,3 +1914,4 @@ Current boundary:
 - Cockpit Wave 11D result: runtime metadata presentation closed; Quick Generate result panel now presents operator-safe pricing, funding, draft, and activity runtime facts; report `reports/164-wave-11d-runtime-metadata-presentation-closure.md`; next recommended wave `Wave 12 — Functional Parity Bridge for /x/pay-codes/create, /x/pay-codes, and /x/balances`.
 - Cockpit Wave 12A result: removed stale Quick Generate baseline copy that contradicted the working mutation route; report `reports/165-wave-12a-quick-generate-stale-baseline-copy-cleanup.md`; next `Cockpit Wave 12B — Legacy Page Functional Parity Bridge Audit`.
 - Cockpit Wave 12B result: recorded legacy page functional ownership for `/x/pay-codes/create`, `/x/pay-codes`, and `/x/balances`; report `reports/166-wave-12b-legacy-page-functional-parity-bridge-audit.md`; next `Cockpit Wave 12C — Pay Code Create Page Template/Campaign Draft Bridge Marker`.
+- Cockpit Wave 12C result: `/x/pay-codes/create` now exposes an operator-safe `cockpit_bridge` prop linking the legacy advanced form to Cockpit Quick Generate without replacing it; report `reports/167-wave-12c-pay-code-create-template-campaign-draft-bridge-marker.md`; next `Cockpit Wave 12D — Pay Code Explorer / Balances Bridge Marker`.
