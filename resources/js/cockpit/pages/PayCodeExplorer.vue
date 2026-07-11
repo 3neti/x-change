@@ -24,8 +24,19 @@ const props = defineProps<CockpitPayCodeExplorerPageProps>();
 const readModel = computed(() => props.pay_codes_read_model);
 const isHydrated = computed(() => readModel.value?.authorized === true);
 const query = computed(() => stringValue(readModel.value?.query) ?? '');
+const statusFilter = computed(() => stringValue(readModel.value?.status_filter) ?? null);
 const payloadPolicy = computed(() => stringValue(readModel.value?.redactions?.payloads) ?? 'not-loaded');
 const status = computed(() => stringValue(readModel.value?.status) ?? 'not_wired');
+const stats = computed(() => ({
+    total: numberValue(readModel.value?.stats?.total),
+    active: numberValue(readModel.value?.stats?.active),
+    awaitingApproval: numberValue(readModel.value?.stats?.awaiting_approval),
+    redeemed: numberValue(readModel.value?.stats?.redeemed),
+    expired: numberValue(readModel.value?.stats?.expired),
+    pending: numberValue(readModel.value?.stats?.pending),
+    failed: numberValue(readModel.value?.stats?.failed),
+    filtered: numberValue(readModel.value?.stats?.filtered),
+}));
 const campaignNavigationContext = computed<CockpitCampaignNavigationContext | null>(() => {
     const context = props.campaign_navigation_context;
 
@@ -98,6 +109,8 @@ const filters = computed<CockpitPayCodeExplorerFilter[]>(() => {
         return cockpitPayCodeExplorerFilters;
     }
 
+    const readModelFilters = readModel.value?.filters ?? [];
+
     return [
         {
             key: 'query',
@@ -117,6 +130,14 @@ const filters = computed<CockpitPayCodeExplorerFilter[]>(() => {
             value: status.value,
             helper: 'This status describes list-readiness only; it is not voucher lifecycle truth.',
         },
+        ...readModelFilters.map((filter) => ({
+            key: filter.key,
+            label: filter.label,
+            value: filter.value,
+            active: filter.active === true,
+            read_only: filter.read_only !== false,
+            helper: filter.read_only === false ? 'Unexpected writable filter metadata.' : 'Read-only GET filter metadata.',
+        })),
     ];
 });
 
@@ -167,6 +188,10 @@ function stringValue(value: unknown): string | null {
 
 function objectValue(value: unknown): Record<string, unknown> {
     return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function numberValue(value: unknown): number {
+    return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
 function moneyValue(value: unknown, currency: string | null = 'PHP'): string {
@@ -247,6 +272,35 @@ function integrationBadge(
                     </div>
                 </dl>
             </div>
+
+            <section
+                class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-pay-code-stats-summary"
+            >
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                    Functional parity summary
+                </p>
+                <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Filtered</p>
+                        <p class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">{{ stats.filtered }}</p>
+                    </div>
+                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Total</p>
+                        <p class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">{{ stats.total }}</p>
+                    </div>
+                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Active</p>
+                        <p class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">{{ stats.active }}</p>
+                    </div>
+                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Needs attention</p>
+                        <p class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">
+                            {{ stats.awaitingApproval + stats.pending + stats.failed + stats.expired }}
+                        </p>
+                    </div>
+                </div>
+            </section>
 
             <section
                 class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
@@ -372,7 +426,11 @@ function integrationBadge(
                 </div>
             </div>
 
-            <CockpitPayCodeSearchBar :query="query" />
+            <CockpitPayCodeSearchBar
+                :filters="readModel?.filters ?? []"
+                :query="query"
+                :status-filter="statusFilter"
+            />
             <CockpitPayCodeFilterBuilder :filters="filters" />
             <CockpitPayCodeResultsTable
                 :records="records"

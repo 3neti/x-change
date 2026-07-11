@@ -10,6 +10,40 @@ const payCodesReadModel = {
     redactions: {
         payloads: 'sanitized-list-only',
     },
+    status_filter: 'redeemed',
+    stats: {
+        total: 4,
+        active: 1,
+        awaiting_approval: 1,
+        redeemed: 2,
+        expired: 0,
+        pending: 0,
+        failed: 0,
+        filtered: 2,
+    },
+    filters: [
+        {
+            key: 'search',
+            label: 'Search',
+            value: 'PC-HYDRATED',
+            active: true,
+            read_only: true,
+        },
+        {
+            key: 'status',
+            label: 'All',
+            value: 'all',
+            active: false,
+            read_only: true,
+        },
+        {
+            key: 'status',
+            label: 'Redeemed',
+            value: 'redeemed',
+            active: true,
+            read_only: true,
+        },
+    ],
     records: [
         {
             code: 'PC-HYDRATED-001',
@@ -78,7 +112,7 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(wrapper.findAll('[data-testid="cockpit-pay-code-row"]')).toHaveLength(2);
     });
 
-    it('keeps search and filter controls local and read-only during hydration', () => {
+    it('renders search and status filters as read-only GET navigation during hydration', () => {
         const wrapper = mount(PayCodeExplorer, {
             props: {
                 pay_codes_read_model: payCodesReadModel,
@@ -86,11 +120,29 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         });
 
         const search = wrapper.find('[data-testid="cockpit-pay-code-search-input"]');
+        const status = wrapper.find('[data-testid="cockpit-pay-code-status-filter"]');
 
-        expect(search.element).toHaveProperty('readOnly', true);
         expect(search.element).toHaveProperty('value', 'PC-HYDRATED');
-        expect(wrapper.find('form').exists()).toBe(false);
-        expect(wrapper.text()).toContain('Filtering remains local and read-only until an approved host query API exists.');
+        expect(status.element).toHaveProperty('value', 'redeemed');
+        expect(wrapper.find('form').attributes('method')).toBe('get');
+        expect(wrapper.find('form').attributes('action')).toBe('/x/cockpit/pay-codes');
+        expect(wrapper.text()).toContain('Filters: search “PC-HYDRATED” · status redeemed');
+        expect(wrapper.text()).toContain('Filters use read-only GET navigation.');
+        expect(wrapper.find('[data-testid="cockpit-pay-code-clear-filters"]').exists()).toBe(true);
+    });
+
+    it('renders pay code explorer functional parity stats from the read model', () => {
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: payCodesReadModel,
+            },
+        });
+
+        expect(wrapper.find('[data-testid="cockpit-pay-code-stats-summary"]').exists()).toBe(true);
+        expect(wrapper.text()).toContain('Functional parity summary');
+        expect(wrapper.text()).toContain('Filtered');
+        expect(wrapper.text()).toContain('Total');
+        expect(wrapper.text()).toContain('Needs attention');
     });
 
     it('does not render unsafe fields from hydrated list records', () => {
