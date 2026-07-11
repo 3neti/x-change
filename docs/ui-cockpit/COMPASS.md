@@ -2087,3 +2087,7 @@ Current boundary:
 - Cockpit Wave 31D expected UI result: `/x/cockpit/pay-codes` rows show enabled read-only `View details` and `Distribution` links when hydrated row actions are present.
 - Cockpit Wave 31E result: row action browser/publish verification completed; report `reports/217-wave-31e-pay-code-explorer-row-action-browser-publish-verification.md`; next `Cockpit Wave 31F — Pay Code Explorer Row Action Runtime Parity Closure`.
 - Cockpit Wave 31E expected UI result: browser-verified row links navigate from Explorer rows to read-only Cockpit detail surfaces.
+- Cockpit Wave 31 result: Pay Code Explorer row action runtime parity closed; report `reports/218-wave-31-pay-code-explorer-row-action-runtime-parity-closure.md`.
+- Cockpit Wave 31 completed: rows now expose enabled read-only `View details` and `Distribution` links, disabled future actions remain explicit, Playwright verifies row navigation, and published host assets are clean.
+- Cockpit Wave 31 expected UI result: operators can navigate from Explorer rows to read-only Cockpit detail/distribution surfaces.
+- Cockpit Wave 31 next recommended wave: `Cockpit Wave 32 — Voucher Detail Functional Parity / Evidence Surface Hardening`.
