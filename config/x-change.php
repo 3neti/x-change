@@ -32,6 +32,7 @@ use LBHurtado\XChange\Services\ApprovalHandlers\ManualApprovalRequirementHandler
 use LBHurtado\XChange\Services\ApprovalHandlers\OtpApprovalRequirementHandler;
 use LBHurtado\XChange\Services\Base64PngVoucherPaymentQrRenderer;
 use LBHurtado\XChange\Services\CacheIdempotencyStore;
+use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityActionHandoffStatusProjector;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityJournalHandoffStatusProjector;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRecorder;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRepository;
@@ -126,6 +127,8 @@ return [
                 ?: null,
             'action_handoff' => env('XCHANGE_COCKPIT_OPERATOR_ISSUANCE_ACTIVITY_ACTION_HANDOFF')
                 ?: null,
+            'action_handoff_status_projector' => env('XCHANGE_COCKPIT_OPERATOR_ISSUANCE_ACTIVITY_ACTION_HANDOFF_STATUS_PROJECTOR')
+                ?: null,
             'journal_handoff' => env('XCHANGE_COCKPIT_OPERATOR_ISSUANCE_ACTIVITY_JOURNAL_HANDOFF')
                 ?: null,
             'journal_handoff_status_projector' => env('XCHANGE_COCKPIT_OPERATOR_ISSUANCE_ACTIVITY_JOURNAL_HANDOFF_STATUS_PROJECTOR')
@@ -138,6 +141,9 @@ return [
             ],
             'available_action_handoffs' => [
                 'x-action' => XActionCockpitOperatorIssuanceActivityActionHandoff::class,
+            ],
+            'available_action_handoff_status_projectors' => [
+                'database' => DatabaseCockpitOperatorIssuanceActivityActionHandoffStatusProjector::class,
             ],
             'available_journal_handoffs' => [
                 'x-journal' => XJournalCockpitOperatorIssuanceActivityJournalHandoff::class,

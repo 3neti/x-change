@@ -64,6 +64,7 @@ use LBHurtado\XChange\Contracts\CockpitIssuanceDraftCompilerContract;
 use LBHurtado\XChange\Contracts\CockpitIssuanceDraftValidatorContract;
 use LBHurtado\XChange\Contracts\CockpitIssuanceTemplateRegistryContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityActionHandoffContract;
+use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityActionHandoffStatusProjectorContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityFeedbackHandoffContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityJournalHandoffContract;
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityJournalHandoffStatusProjectorContract;
@@ -143,6 +144,7 @@ use LBHurtado\XChange\Services\Cockpit\DefaultCockpitOperatorIssuanceActivityRet
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitQuickGenerateDraftFactory;
 use LBHurtado\XChange\Services\Cockpit\DurableCockpitOperatorIssuanceActivityReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityActionHandoff;
+use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityActionHandoffStatusProjector;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityFeedbackHandoff;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityJournalHandoff;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityJournalHandoffStatusProjector;
@@ -335,6 +337,15 @@ class XChangeServiceProvider extends ServiceProvider
                 'action_handoff',
                 'available_action_handoffs',
                 NullCockpitOperatorIssuanceActivityActionHandoff::class,
+            );
+
+            return $app->make($service);
+        });
+        $this->app->bind(CockpitOperatorIssuanceActivityActionHandoffStatusProjectorContract::class, function ($app) {
+            $service = $this->cockpitOperatorIssuanceActivityService(
+                'action_handoff_status_projector',
+                'available_action_handoff_status_projectors',
+                NullCockpitOperatorIssuanceActivityActionHandoffStatusProjector::class,
             );
 
             return $app->make($service);
