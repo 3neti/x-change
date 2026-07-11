@@ -187,6 +187,18 @@ export type CockpitOperatorIssuanceActivityReadModel = {
         description?: string | null;
         [key: string]: unknown;
     };
+    search_filters?: {
+        schema?: string;
+        status?: string;
+        read_only?: boolean;
+        search?: string | null;
+        statuses?: string[];
+        handoff_statuses?: string[];
+        available_statuses?: string[];
+        available_handoff_statuses?: string[];
+        safety?: Record<string, unknown>;
+        [key: string]: unknown;
+    };
     redactions?: CockpitReadModelRedactions;
     [key: string]: unknown;
 };

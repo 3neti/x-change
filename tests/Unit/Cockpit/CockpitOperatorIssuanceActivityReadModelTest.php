@@ -70,6 +70,16 @@ it('defines the operator issuance activity read model with unavailable and empty
             'title' => 'No operator issuance activity available',
             'description' => 'Activity recording is not wired yet. Quick Generate can still use the existing issuance path.',
         ])
+        ->and($readModel->search_filters)->toBe([
+            'schema' => 'x-change.cockpit.operator-issuance-activity-search-filter.v1',
+            'status' => 'not_available',
+            'read_only' => true,
+            'search' => null,
+            'statuses' => [],
+            'handoff_statuses' => [],
+            'available_statuses' => [],
+            'available_handoff_statuses' => [],
+        ])
         ->and($readModel->redactions)->toBe([
             'payloads' => 'activity-summary-only',
             'raw_payloads_exposed' => false,

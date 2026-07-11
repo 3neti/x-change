@@ -12,6 +12,7 @@ use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityItemData;
 use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityJournalHandoffResultData;
 use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityRecordData;
+use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivitySearchFilterData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
 
 class DurableCockpitOperatorIssuanceActivityReadModelProvider
@@ -59,11 +60,54 @@ class DurableCockpitOperatorIssuanceActivityReadModelProvider
             source: 'durable-operator-issuance-activity-read-model',
             items: $items,
             presentations: $presentations,
+            search_filters: $this->searchFilters($query, $records),
             empty_state: [
                 'title' => 'No durable operator issuance activity available',
                 'description' => 'Durable activity storage is configured, but no matching activity has been recorded yet.',
             ],
         );
+    }
+
+    /**
+     * @param  array<int, CockpitOperatorIssuanceActivityRecordData>  $records
+     * @return array<string, mixed>
+     */
+    private function searchFilters(CockpitReadModelQueryData $query, array $records): array
+    {
+        $filters = $query->operatorActivityFilters ?? new CockpitOperatorIssuanceActivitySearchFilterData;
+
+        return [
+            'schema' => 'x-change.cockpit.operator-issuance-activity-search-filter.v1',
+            'status' => 'available',
+            'read_only' => true,
+            'search' => $filters->search,
+            'statuses' => $filters->statuses,
+            'handoff_statuses' => $filters->handoffStatuses,
+            'available_statuses' => collect($records)
+                ->pluck('status')
+                ->filter()
+                ->unique()
+                ->values()
+                ->all(),
+            'available_handoff_statuses' => collect($records)
+                ->flatMap(fn (CockpitOperatorIssuanceActivityRecordData $record): array => [
+                    $record->journal_handoff_status,
+                    $record->action_handoff_status,
+                    $record->feedback_handoff_status,
+                ])
+                ->filter()
+                ->unique()
+                ->values()
+                ->all(),
+            'safety' => [
+                'read_only' => true,
+                'writes_journal' => false,
+                'executes_actions' => false,
+                'sends_feedback' => false,
+                'moves_money' => false,
+                'owns_lifecycle_truth' => false,
+            ],
+        ];
     }
 
     private function toItem(CockpitOperatorIssuanceActivityRecordData $record): CockpitOperatorIssuanceActivityItemData

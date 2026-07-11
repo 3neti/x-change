@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityRecordData;
+use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivitySearchFilterData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRecorder;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRepository;
@@ -154,4 +155,77 @@ it('exposes persisted journal handoff summary as safe read-only presentation met
         ->and($readModel->presentations[0]->metadata['provider_payload'] ?? null)->toBeNull()
         ->and($readModel->presentations[0]->metadata['journal_handoff']['metadata']['provider_payload'] ?? null)->toBeNull()
         ->and($readModel->presentations[0]->metadata['journal_handoff']['metadata']['token'] ?? null)->toBeNull();
+});
+
+it('exposes active operator activity search filters as read-only read model metadata', function () {
+    config()->set('x-change.cockpit.operator_issuance_activity.repository', DatabaseCockpitOperatorIssuanceActivityRepository::class);
+
+    $repository = app(DatabaseCockpitOperatorIssuanceActivityRepository::class);
+
+    $repository->record(new CockpitOperatorIssuanceActivityRecordData(
+        activity_id: 'activity-search-read-model-1',
+        actor_id: 'operator-1',
+        source: 'cockpit.quick-generate',
+        subject_type: 'pay_code',
+        subject_reference: 'PC-FILTER-1',
+        status: 'issued',
+        occurred_at: '2026-07-10T09:00:00+08:00',
+        correlation_id: 'corr-filter-1',
+        summary: 'Money Changer Pay Code issued',
+        safe_context: [
+            'amount' => '25',
+            'currency' => 'PHP',
+            'route' => 'x-change.cockpit.quick-generate.store',
+        ],
+        journal_handoff_status: 'recorded',
+        action_handoff_status: 'not_wired',
+        feedback_handoff_status: 'not_wired',
+    ));
+
+    $repository->record(new CockpitOperatorIssuanceActivityRecordData(
+        activity_id: 'activity-search-read-model-2',
+        actor_id: 'operator-1',
+        source: 'cockpit.quick-generate',
+        subject_type: 'pay_code',
+        subject_reference: 'PC-FILTER-2',
+        status: 'failed',
+        occurred_at: '2026-07-10T09:05:00+08:00',
+        correlation_id: 'corr-filter-2',
+        summary: 'Failed issuance activity',
+        journal_handoff_status: 'not_wired',
+        action_handoff_status: 'not_wired',
+        feedback_handoff_status: 'not_wired',
+    ));
+
+    $readModel = app(CockpitReadModelProviderContract::class)
+        ->forOperatorIssuanceActivity(new CockpitReadModelQueryData(
+            operatorId: 'operator-1',
+            include: ['operator_issuance_activity'],
+            operatorActivityFilters: CockpitOperatorIssuanceActivitySearchFilterData::normalize(
+                search: 'money changer',
+                statuses: ['issued'],
+                handoffStatuses: ['recorded'],
+            ),
+        ));
+
+    expect($readModel->items)->toHaveCount(1)
+        ->and($readModel->items[0]->id)->toBe('activity-search-read-model-1')
+        ->and($readModel->search_filters)->toMatchArray([
+            'schema' => 'x-change.cockpit.operator-issuance-activity-search-filter.v1',
+            'status' => 'available',
+            'read_only' => true,
+            'search' => 'money changer',
+            'statuses' => ['issued'],
+            'handoff_statuses' => ['recorded'],
+            'available_statuses' => ['issued'],
+            'available_handoff_statuses' => ['recorded', 'not_wired'],
+            'safety' => [
+                'read_only' => true,
+                'writes_journal' => false,
+                'executes_actions' => false,
+                'sends_feedback' => false,
+                'moves_money' => false,
+                'owns_lifecycle_truth' => false,
+            ],
+        ]);
 });

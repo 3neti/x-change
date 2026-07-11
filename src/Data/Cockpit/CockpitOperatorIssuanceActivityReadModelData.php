@@ -12,6 +12,7 @@ class CockpitOperatorIssuanceActivityReadModelData extends Data
      * @param  array<int, CockpitOperatorIssuanceActivityItemData>  $items
      * @param  array<int, CockpitOperatorIssuanceActivityPresentationData>  $presentations
      * @param  array<string, mixed>  $empty_state
+     * @param  array<string, mixed>  $search_filters
      * @param  array<string, mixed>  $redactions
      */
     public function __construct(
@@ -24,6 +25,16 @@ class CockpitOperatorIssuanceActivityReadModelData extends Data
         public readonly array $empty_state = [
             'title' => 'No operator issuance activity available',
             'description' => 'Activity recording is not wired yet. Quick Generate can still use the existing issuance path.',
+        ],
+        public readonly array $search_filters = [
+            'schema' => 'x-change.cockpit.operator-issuance-activity-search-filter.v1',
+            'status' => 'not_available',
+            'read_only' => true,
+            'search' => null,
+            'statuses' => [],
+            'handoff_statuses' => [],
+            'available_statuses' => [],
+            'available_handoff_statuses' => [],
         ],
         public readonly array $redactions = [
             'payloads' => 'activity-summary-only',
