@@ -174,6 +174,33 @@ describe('Cockpit Quick Generate foundation', () => {
                     code: 'PC-UI-001',
                     links: {
                         cockpit_detail: '/x/cockpit/pay-codes/PC-UI-001',
+                        cockpit_distribution: '/x/cockpit/pay-codes/PC-UI-001/distribution',
+                    },
+                },
+                post_issuance_navigation: {
+                    schema: 'x-change.cockpit.quick-generate-post-issuance-navigation.v1',
+                    status: 'available',
+                    auto_redirect: false,
+                    items: [
+                        {
+                            key: 'detail',
+                            label: 'Open Cockpit detail',
+                            href: '/x/cockpit/pay-codes/PC-UI-001',
+                            status: 'available',
+                            enabled: true,
+                            read_only: true,
+                        },
+                        {
+                            key: 'distribution',
+                            label: 'Open Distribution workspace',
+                            href: '/x/cockpit/pay-codes/PC-UI-001/distribution',
+                            status: 'available',
+                            enabled: true,
+                            read_only: true,
+                        },
+                    ],
+                    redactions: {
+                        payloads: 'post-issuance-navigation-only',
                     },
                 },
                 draft: {
@@ -270,6 +297,11 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(JSON.stringify(payload)).not.toContain('provider_payload');
         expect(wrapper.emitted('submitSuccess')).toHaveLength(1);
         expect(wrapper.find('[data-testid="cockpit-quick-generate-result-link"]').attributes('href')).toBe('/x/cockpit/pay-codes/PC-UI-001');
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-post-issuance-navigation-panel"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-post-issuance-link-detail"]').attributes('href')).toBe('/x/cockpit/pay-codes/PC-UI-001');
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-post-issuance-link-distribution"]').attributes('href')).toBe('/x/cockpit/pay-codes/PC-UI-001/distribution');
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-post-issuance-navigation-panel"]').text()).toContain('Automatic redirect: disabled');
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-post-issuance-navigation-panel"]').text()).toContain('read-only');
         expect(wrapper.find('[data-testid="cockpit-quick-generate-runtime-preflight-panel"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="cockpit-quick-generate-pricing-preflight-card"]').text()).toContain('PHP 1.75');
         expect(wrapper.find('[data-testid="cockpit-quick-generate-funding-preflight-card"]').text()).toContain('local_ledger');

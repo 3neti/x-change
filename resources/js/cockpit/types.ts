@@ -554,6 +554,26 @@ export type CockpitQuickGenerateRuntimeActivity = {
     [key: string]: unknown;
 };
 
+export type CockpitQuickGeneratePostIssuanceNavigationItem = {
+    key?: string | null;
+    label?: string | null;
+    href?: string | null;
+    status?: string | null;
+    enabled?: boolean | null;
+    read_only?: boolean | null;
+    reason?: string | null;
+    [key: string]: unknown;
+};
+
+export type CockpitQuickGeneratePostIssuanceNavigation = {
+    schema?: string | null;
+    status?: string | null;
+    auto_redirect?: boolean | null;
+    items?: CockpitQuickGeneratePostIssuanceNavigationItem[];
+    redactions?: CockpitReadModelRedactions;
+    [key: string]: unknown;
+};
+
 export type CockpitQuickGenerateAuthorizationGate = {
     key?: string | null;
     label?: string | null;
@@ -585,6 +605,7 @@ export type CockpitQuickGenerateReadModel = {
     mutation_contract?: CockpitQuickGenerateMutationContract;
     draft_contract?: CockpitQuickGenerateDraftContract;
     authorization?: CockpitQuickGenerateAuthorization;
+    post_issuance_navigation?: CockpitQuickGeneratePostIssuanceNavigation;
     action?: {
         enabled?: boolean;
         reason?: string;

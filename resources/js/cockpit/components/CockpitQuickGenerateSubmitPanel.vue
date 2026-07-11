@@ -4,6 +4,8 @@ import { computed, ref } from 'vue';
 import type {
     CockpitQuickGenerateDraftContract,
     CockpitQuickGenerateMutationContract,
+    CockpitQuickGeneratePostIssuanceNavigation,
+    CockpitQuickGeneratePostIssuanceNavigationItem,
     CockpitQuickGenerateRuntimeActivity,
     CockpitQuickGenerateRuntimeDraft,
     CockpitQuickGenerateRuntimeFundingPreflight,
@@ -73,6 +75,20 @@ const draftRuntime = computed<CockpitQuickGenerateRuntimeDraft | null>(() => {
 
 const activityRuntime = computed<CockpitQuickGenerateRuntimeActivity | null>(() => {
     return objectValue(dataGet(lastResponse.value, ['activity'])) as CockpitQuickGenerateRuntimeActivity | null;
+});
+
+const postIssuanceNavigation = computed<CockpitQuickGeneratePostIssuanceNavigation | null>(() => {
+    return objectValue(dataGet(lastResponse.value, ['post_issuance_navigation'])) as CockpitQuickGeneratePostIssuanceNavigation | null;
+});
+
+const postIssuanceNavigationItems = computed<CockpitQuickGeneratePostIssuanceNavigationItem[]>(() => {
+    if (!Array.isArray(postIssuanceNavigation.value?.items)) {
+        return [];
+    }
+
+    return postIssuanceNavigation.value.items
+        .map((item): CockpitQuickGeneratePostIssuanceNavigationItem | null => sanitizePostIssuanceNavigationItem(item))
+        .filter((item): item is CockpitQuickGeneratePostIssuanceNavigationItem => item !== null);
 });
 
 const canRefreshReadModel = computed<boolean>(() => {
@@ -228,6 +244,25 @@ function displayValue(value: unknown, fallback = 'not available'): string {
     return normalized ?? fallback;
 }
 
+function sanitizePostIssuanceNavigationItem(item: CockpitQuickGeneratePostIssuanceNavigationItem): CockpitQuickGeneratePostIssuanceNavigationItem | null {
+    const key = stringValue(item.key);
+    const label = stringValue(item.label);
+
+    if (!key || !label) {
+        return null;
+    }
+
+    return {
+        key,
+        label,
+        href: stringValue(item.href),
+        status: stringValue(item.status) ?? 'unknown',
+        enabled: item.enabled === true,
+        read_only: item.read_only !== false,
+        reason: stringValue(item.reason) ?? 'Read-only post-issuance destination.',
+    };
+}
+
 function dataGet(source: unknown, path: string[]): unknown {
     return path.reduce<unknown>((value, key) => {
         if (typeof value !== 'object' || value === null || !(key in value)) {
@@ -370,6 +405,43 @@ function dataGet(source: unknown, path: string[]): unknown {
             <p class="mt-3 leading-5 text-slate-500 dark:text-slate-400">
                 No automatic redirect is performed. The operator chooses whether to refresh Cockpit data or open the generated Pay Code detail.
             </p>
+
+            <section
+                v-if="postIssuanceNavigationItems.length > 0"
+                class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-quick-generate-post-issuance-navigation-panel"
+            >
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p class="font-semibold text-slate-950 dark:text-slate-50">
+                            Post-issuance handoff
+                        </p>
+                        <p class="mt-1 text-[11px] leading-4 text-slate-500 dark:text-slate-400">
+                            Read-only destinations for the generated Pay Code. Automatic redirect:
+                            {{ postIssuanceNavigation?.auto_redirect === true ? 'enabled' : 'disabled' }}.
+                        </p>
+                    </div>
+                    <span class="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-300 dark:ring-slate-800">
+                        {{ displayValue(postIssuanceNavigation?.status) }}
+                    </span>
+                </div>
+
+                <div class="mt-3 grid gap-2">
+                    <a
+                        v-for="item in postIssuanceNavigationItems"
+                        :key="item.key ?? item.label"
+                        :href="item.enabled === true && item.href ? item.href : undefined"
+                        class="rounded-lg border border-slate-200 bg-white px-3 py-2 font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700 aria-disabled:cursor-not-allowed aria-disabled:opacity-60 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-emerald-900 dark:hover:text-emerald-300"
+                        :aria-disabled="item.enabled === true && item.href ? undefined : 'true'"
+                        :data-testid="`cockpit-quick-generate-post-issuance-link-${item.key}`"
+                    >
+                        {{ item.label }}
+                        <span class="ml-2 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                            {{ item.status }} · {{ item.read_only === true ? 'read-only' : 'mutation' }}
+                        </span>
+                    </a>
+                </div>
+            </section>
 
             <div
                 v-if="draftRuntime || activityRuntime"
