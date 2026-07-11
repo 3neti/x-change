@@ -2107,3 +2107,5 @@ Current boundary:
 - Cockpit Wave 32 next recommended wave: `Cockpit Wave 33 — Distribution Workspace Functional Parity / Share Surface Hardening`.
 - Cockpit Wave 33A result: Distribution Workspace functional parity audit completed; report `reports/225-wave-33a-distribution-workspace-functional-parity-audit.md`; next `Cockpit Wave 33B — Distribution Workspace Read Model Contract`.
 - Cockpit Wave 33A expected UI result: no UI change; this slice defines read-only distribution/share hardening scope.
+- Cockpit Wave 33B result: Distribution Workspace read-model contract added; report `reports/226-wave-33b-distribution-workspace-read-model-contract.md`; next `Cockpit Wave 33C — Distribution Workspace Route Prop Hydration`.
+- Cockpit Wave 33B expected UI result: no visible UI change until route hydration and Vue adoption.
