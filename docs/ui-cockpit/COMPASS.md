@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 27 — Operator Activity Filter UX Refinement / Multi-Select Decision
-Status: Complete / single-select filter UX refined with compact summary and clear-per-filter links
+Current slice: Cockpit Wave 28 — Operator Activity Filter Browser Acceptance / Next Runtime Decision
+Status: Complete / filter UX browser-accepted and next runtime direction selected
 Last updated: 2026-07-11
 
 ## Completed
@@ -2043,3 +2043,12 @@ Current boundary:
   - Dusk browser smoke for the activity filter surface.
 - Cockpit Wave 27 expected UI result: `/x/cockpit` shows `Filters: search “…” · status … · handoff …` plus `Clear search`, `Clear status`, and `Clear handoff` links when those filters are active.
 - Cockpit Wave 27 next recommended wave: `Cockpit Wave 28 — Operator Activity Filter Browser Acceptance / Next Runtime Decision`.
+- Cockpit Wave 28 result: Operator Activity filter browser acceptance and next runtime decision completed; reports `reports/201-wave-28b-operator-activity-filter-browser-acceptance.md`, `reports/202-wave-28c-operator-activity-next-runtime-decision.md`, and `reports/203-wave-28-operator-activity-filter-acceptance-closure.md`.
+- Cockpit Wave 28 completed:
+  - hardened Dusk browser smoke to verify compact active-filter summary and clear-per-filter links;
+  - verified `Dusk activity filter smoke: 1 passed, 27 assertions`;
+  - recorded browser acceptance for the refined filter UX;
+  - decided to close the Operator Activity filter hardening sequence for now;
+  - selected Pay Code Explorer runtime parity / activity navigation bridge as the next direction.
+- Cockpit Wave 28 expected UI result: no new UI beyond Wave 27; the existing filter bar, active-filter summary, and clear-per-filter links are browser-accepted.
+- Cockpit Wave 28 next recommended wave: `Cockpit Wave 29 — Pay Code Explorer Runtime Parity / Activity Navigation Bridge`.
