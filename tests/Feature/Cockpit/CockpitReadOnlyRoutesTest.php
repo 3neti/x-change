@@ -209,6 +209,31 @@ it('passes optional operator activity navigation context to the pay code explore
         ->assertJsonMissingPath('props.activity_navigation_context.pay_code_generation_payload');
 });
 
+it('passes read-only pay code explorer search and status query filters into the read model', function () {
+    actingAsTestUser();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.index', [
+            'search' => ' pc-filtered ',
+            'status' => ' redeemed ',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/cockpit/PayCodeExplorer')
+        ->assertJsonPath('props.pay_codes_read_model.query', 'PC-FILTERED')
+        ->assertJsonPath('props.pay_codes_read_model.status_filter', 'redeemed')
+        ->assertJsonPath('props.pay_codes_read_model.stats.total', 0)
+        ->assertJsonPath('props.pay_codes_read_model.stats.filtered', 0)
+        ->assertJsonPath('props.pay_codes_read_model.filters.0.key', 'search')
+        ->assertJsonPath('props.pay_codes_read_model.filters.0.value', 'PC-FILTERED')
+        ->assertJsonPath('props.pay_codes_read_model.filters.0.active', true)
+        ->assertJsonPath('props.pay_codes_read_model.filters.0.read_only', true)
+        ->assertJsonPath('props.pay_codes_read_model.redactions.payloads', 'sanitized-list-summary-only')
+        ->assertJsonMissingPath('props.pay_codes_read_model.provider_payload')
+        ->assertJsonMissingPath('props.pay_codes_read_model.raw_payload')
+        ->assertJsonMissingPath('props.pay_codes_read_model.wallet')
+        ->assertJsonMissingPath('props.pay_codes_read_model.mutation_route');
+});
+
 it('hydrates the dashboard with a sanitized dashboard read model prop', function () {
     actingAsTestUser();
 

@@ -22,6 +22,8 @@ class CockpitPayCodeExplorerPageController extends Controller
             campaignSource: $this->optionalString($request->query('campaign_source')),
             activityCode: $this->optionalString($request->query('activity_code')),
             activitySource: $this->optionalString($request->query('activity_source')),
+            search: $this->optionalString($request->query('search')),
+            status: $this->optionalString($request->query('status')),
         ));
     }
 

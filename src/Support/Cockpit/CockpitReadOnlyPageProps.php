@@ -68,11 +68,15 @@ class CockpitReadOnlyPageProps
         ?string $campaignSource = null,
         ?string $activityCode = null,
         ?string $activitySource = null,
+        ?string $search = null,
+        ?string $status = null,
     ): array {
         return [
             ...$this->toArray(),
             'pay_codes_read_model' => $this->readModels->forPayCodeList(new CockpitReadModelQueryData(
                 code: $this->normalizeCode($activityCode),
+                payCodeSearch: $this->optionalString($search),
+                payCodeStatus: $this->optionalString($status),
                 include: ['voucher'],
             ))->toArray(),
             'campaign_navigation_context' => $this->campaignNavigationContext(
