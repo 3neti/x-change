@@ -69,10 +69,10 @@ function displayValue(value: unknown, fallback: string): string {
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-violet-700 dark:text-violet-300">
-                    Authorization Gate Baseline
+                    Authorization Runtime Diagnostics
                 </p>
                 <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                    Generation stays disabled until every gate is explicitly approved
+                    Quick Generate is authorized only through the existing issuance handoff
                 </h3>
             </div>
             <span class="rounded-full border border-violet-200 bg-white px-3 py-1 text-xs font-semibold text-violet-700 dark:border-violet-900 dark:bg-slate-950 dark:text-violet-300">
@@ -115,7 +115,7 @@ function displayValue(value: unknown, fallback: string): string {
             Redaction policy: <span class="font-semibold">{{ redaction }}</span>
         </p>
         <p class="mt-2 text-xs font-medium text-violet-800 dark:text-violet-200">
-            Authorization gates are read-only facts in Slice 19.
+            Provider and money movement authority remain separately gated outside the Cockpit shell.
         </p>
     </section>
 </template>

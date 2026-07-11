@@ -69,10 +69,10 @@ function displayValue(value: unknown, fallback: string): string {
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-rose-700 dark:text-rose-300">
-                    Validation and Redaction Gate Baseline
+                    Validation and Redaction Diagnostics
                 </p>
                 <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                    Request validation and payload redaction stay blocked until mutation wiring is explicitly approved
+                    Quick Generate uses the existing validation path and redacted operator responses
                 </h3>
             </div>
             <span class="rounded-full border border-rose-200 bg-white px-3 py-1 text-xs font-semibold text-rose-700 dark:border-rose-900 dark:bg-slate-950 dark:text-rose-300">
@@ -115,7 +115,7 @@ function displayValue(value: unknown, fallback: string): string {
             Redaction policy: <span class="font-semibold">{{ redaction }}</span>
         </p>
         <p class="mt-2 text-xs font-medium text-rose-800 dark:text-rose-200">
-            Validation and redaction gates are read-only facts in Slice 23.
+            These diagnostics do not expose request payloads, validation internals, wallet data, or provider payloads.
         </p>
     </section>
 </template>

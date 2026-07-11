@@ -69,10 +69,10 @@ function displayValue(value: unknown, fallback: string): string {
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-700 dark:text-cyan-300">
-                    Pricing Gate Baseline
+                    Pricing Runtime Diagnostics
                 </p>
                 <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                    Pricing stays informational until calculation and funding are explicitly wired
+                    Pricing preflight is shown after the existing issuance handoff
                 </h3>
             </div>
             <span class="rounded-full border border-cyan-200 bg-white px-3 py-1 text-xs font-semibold text-cyan-700 dark:border-cyan-900 dark:bg-slate-950 dark:text-cyan-300">
@@ -115,7 +115,7 @@ function displayValue(value: unknown, fallback: string): string {
             Redaction policy: <span class="font-semibold">{{ redaction }}</span>
         </p>
         <p class="mt-2 text-xs font-medium text-cyan-800 dark:text-cyan-200">
-            Pricing gates are read-only facts in Slice 20.
+            These diagnostics are operator-safe facts; Cockpit still does not expose raw pricing payloads.
         </p>
     </section>
 </template>

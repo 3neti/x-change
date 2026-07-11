@@ -239,7 +239,7 @@ const mutationPreconditionsReview = computed<CockpitQuickGenerateMutationPrecond
 
     return {
         status: stringValue(mutationPreconditionsReviewReadModel.status) ?? 'blocked',
-        recommendation: stringValue(mutationPreconditionsReviewReadModel.recommendation) ?? 'remain-read-only',
+        recommendation: stringValue(mutationPreconditionsReviewReadModel.recommendation) ?? 'use-existing-issuance-handoff',
         items: items.length > 0 ? items : defaultMutationPreconditionsReview().items,
         redactions: {
             payloads: stringValue(mutationPreconditionsReviewReadModel.redactions?.payloads) ?? 'mutation-preconditions-review-only',
@@ -256,9 +256,9 @@ const mutationAuthorizationDecision = computed<CockpitQuickGenerateMutationAutho
 
     return {
         status: stringValue(mutationAuthorizationDecisionReadModel.status) ?? 'blocked',
-        decision: stringValue(mutationAuthorizationDecisionReadModel.decision) ?? 'not_authorized',
+        decision: stringValue(mutationAuthorizationDecisionReadModel.decision) ?? 'authorized_existing_handoff',
         required_approval: stringValue(mutationAuthorizationDecisionReadModel.required_approval) ?? 'human-approval-required-before-route-scaffold',
-        rationale: stringValue(mutationAuthorizationDecisionReadModel.rationale) ?? 'Mutation preconditions remain blocked; Cockpit must not register a write route until explicit human approval and a smaller mutation contract exist.',
+        rationale: stringValue(mutationAuthorizationDecisionReadModel.rationale) ?? 'Cockpit may submit Quick Generate through the existing GeneratePayCode action without inventing a parallel issuance runtime.',
         next_step: stringValue(mutationAuthorizationDecisionReadModel.next_step) ?? 'request-explicit-approval-or-continue-read-only-hardening',
         redactions: {
             payloads: stringValue(mutationAuthorizationDecisionReadModel.redactions?.payloads) ?? 'mutation-authorization-decision-only',
@@ -333,19 +333,19 @@ function defaultDraftContract(): CockpitQuickGenerateDraftContract {
 
 function defaultPricingGate(): CockpitQuickGeneratePricingGate {
     return {
-        status: 'blocked',
+        status: 'runtime-informational',
         checks: [
             {
                 key: 'template-selected',
                 label: 'Template Selected',
                 status: 'passed',
-                reason: 'The default Quick Generate template is visible as a read-only fact.',
+                reason: 'The Money Changer template is selected by default for the current Quick Generate runtime.',
             },
             {
                 key: 'amount-input-present',
                 label: 'Amount Input Present',
                 status: 'passed',
-                reason: 'The Quick Generate form accepts an operator amount and passes it through the existing issuance handoff.',
+                reason: 'The Quick Generate form accepts an operator amount and submits it to the existing issuance handoff.',
             },
             {
                 key: 'pricing-service-wired',
@@ -356,20 +356,20 @@ function defaultPricingGate(): CockpitQuickGeneratePricingGate {
             {
                 key: 'funding-source-selected',
                 label: 'Funding Source Selected',
-                status: 'diagnostic',
+                status: 'runtime-diagnostic',
                 reason: 'Funding authority is reported through the operator-safe funding preflight; Cockpit does not expose wallet internals.',
             },
             {
                 key: 'funds-reservation',
                 label: 'Funds Reservation',
                 status: 'blocked',
-                reason: 'Cockpit does not reserve, debit, or hold funds.',
+                reason: 'Cockpit does not reserve, debit, or hold funds directly; those effects remain behind the existing issuance services.',
             },
             {
                 key: 'provider-fee-quote',
                 label: 'Provider Fee Quote',
                 status: 'blocked',
-                reason: 'No provider quote or fee call is performed.',
+                reason: 'Cockpit does not call provider quote APIs directly.',
             },
         ],
         redactions: {
@@ -380,43 +380,43 @@ function defaultPricingGate(): CockpitQuickGeneratePricingGate {
 
 function defaultFundingGate(): CockpitQuickGenerateFundingGate {
     return {
-        status: 'blocked',
+        status: 'runtime-informational',
         checks: [
             {
                 key: 'funding-policy-known',
                 label: 'Funding Policy Known',
                 status: 'passed',
-                reason: 'Funding policy is represented as a read-only Cockpit readiness fact.',
+                reason: 'Funding preflight is represented as an operator-safe result after Quick Generate submits.',
             },
             {
                 key: 'issuer-wallet-identified',
                 label: 'Issuer Wallet Identified',
-                status: 'blocked',
-                reason: 'Cockpit does not resolve issuer wallets in Slice 21.',
+                status: 'runtime-diagnostic',
+                reason: 'Issuer funding details are evaluated by the existing issuance path and redacted from the Cockpit read model.',
             },
             {
                 key: 'wallet-balance-available',
                 label: 'Wallet Balance Available',
-                status: 'diagnostic',
-                reason: 'Quick Generate can display an operator-safe balance preflight returned by the existing balance overview path.',
+                status: 'runtime-diagnostic',
+                reason: 'The operator sees only the safe balance/funding preflight summary returned by the issuance runtime.',
             },
             {
                 key: 'sufficient-funds',
                 label: 'Sufficient Funds',
-                status: 'diagnostic',
-                reason: 'Sufficiency remains owned by the existing issuance/funding services and is surfaced only as safe preflight context.',
+                status: 'runtime-diagnostic',
+                reason: 'Sufficiency is reported as an operator-safe preflight after submit; raw wallet data remains hidden.',
             },
             {
                 key: 'funds-reservation-ready',
                 label: 'Funds Reservation Ready',
                 status: 'blocked',
-                reason: 'Cockpit does not reserve, hold, debit, or transfer funds.',
+                reason: 'Cockpit does not reserve, hold, debit, or transfer funds directly.',
             },
             {
                 key: 'provider-funding-ready',
                 label: 'Provider Funding Ready',
                 status: 'blocked',
-                reason: 'Cockpit does not call provider funding or account-readiness services.',
+                reason: 'Cockpit does not call provider funding or account-readiness services directly.',
             },
         ],
         redactions: {
@@ -427,43 +427,43 @@ function defaultFundingGate(): CockpitQuickGenerateFundingGate {
 
 function defaultIdempotencyGate(): CockpitQuickGenerateIdempotencyGate {
     return {
-        status: 'blocked',
+        status: 'backend-ready',
         checks: [
             {
                 key: 'idempotency-policy-known',
                 label: 'Idempotency Policy Known',
                 status: 'passed',
-                reason: 'Idempotency is represented as a read-only Cockpit readiness fact.',
+                reason: 'Cockpit uses the existing x-change idempotency policy for Quick Generate mutation requests.',
             },
             {
                 key: 'idempotency-key-source-defined',
                 label: 'Idempotency Key Source Defined',
-                status: 'blocked',
-                reason: 'Cockpit does not generate, accept, or persist idempotency keys in Slice 22.',
+                status: 'passed',
+                reason: 'Cockpit accepts the configured Idempotency-Key header on the Quick Generate mutation route.',
             },
             {
                 key: 'payload-fingerprint-defined',
                 label: 'Payload Fingerprint Defined',
-                status: 'blocked',
-                reason: 'Cockpit does not hash or fingerprint Quick Generate payloads in Slice 22.',
+                status: 'passed',
+                reason: 'Cockpit delegates payload fingerprinting to the existing IdempotencyService.',
             },
             {
                 key: 'replay-lookup-ready',
                 label: 'Replay Lookup Ready',
-                status: 'blocked',
-                reason: 'Cockpit does not query idempotency stores or replay records in Slice 22.',
+                status: 'passed',
+                reason: 'Cockpit replays stored redacted operator responses for matching keys and payloads.',
             },
             {
                 key: 'conflict-response-ready',
                 label: 'Conflict Response Ready',
-                status: 'blocked',
-                reason: 'Cockpit does not evaluate idempotency conflicts in Slice 22.',
+                status: 'passed',
+                reason: 'Cockpit returns the existing idempotency conflict response before a second issuance action call.',
             },
             {
                 key: 'ttl-policy-ready',
                 label: 'TTL Policy Ready',
-                status: 'blocked',
-                reason: 'Cockpit does not read or enforce idempotency TTL policy in Slice 22.',
+                status: 'passed',
+                reason: 'Cockpit uses the existing IdempotencyService TTL configuration.',
             },
         ],
         redactions: {
@@ -474,43 +474,43 @@ function defaultIdempotencyGate(): CockpitQuickGenerateIdempotencyGate {
 
 function defaultValidationRedactionGate(): CockpitQuickGenerateValidationRedactionGate {
     return {
-        status: 'blocked',
+        status: 'backend-ready',
         checks: [
             {
                 key: 'request-schema-known',
                 label: 'Request Schema Known',
                 status: 'passed',
-                reason: 'The Quick Generate draft contract schema is represented as a read-only Cockpit readiness fact.',
+                reason: 'The Quick Generate mutation request shape is known and handled by the existing handoff route.',
             },
             {
                 key: 'required-fields-defined',
                 label: 'Required Fields Defined',
-                status: 'blocked',
-                reason: 'Cockpit does not execute request validation or enforce required fields in Slice 23.',
+                status: 'passed',
+                reason: 'The Quick Generate form submits the required issuance fields to the existing GeneratePayCode request path.',
             },
             {
                 key: 'validation-rules-wired',
                 label: 'Validation Rules Wired',
-                status: 'blocked',
-                reason: 'Cockpit does not invoke GeneratePayCodeRequest validation in Slice 23.',
+                status: 'passed',
+                reason: 'The Cockpit handoff route uses GeneratePayCodeRequest-compatible validation.',
             },
             {
                 key: 'sensitive-fields-redacted',
                 label: 'Sensitive Fields Redacted',
-                status: 'blocked',
-                reason: 'Cockpit does not accept, persist, or redact submitted payloads in Slice 23.',
+                status: 'passed',
+                reason: 'Operator responses exclude raw payloads, provider payloads, wallet details, and idempotency internals.',
             },
             {
                 key: 'sanitized-preview-ready',
                 label: 'Sanitized Preview Ready',
-                status: 'blocked',
-                reason: 'Cockpit does not build sanitized request previews in Slice 23.',
+                status: 'passed',
+                reason: 'The result panel renders sanitized generated facts and preflight summaries only.',
             },
             {
                 key: 'validation-error-contract-ready',
                 label: 'Validation Error Contract Ready',
-                status: 'blocked',
-                reason: 'Cockpit does not expose validation error response contracts in Slice 23.',
+                status: 'passed',
+                reason: 'Validation errors remain on the Quick Generate form through the Inertia handoff route.',
             },
         ],
         redactions: {
@@ -521,7 +521,7 @@ function defaultValidationRedactionGate(): CockpitQuickGenerateValidationRedacti
 
 function defaultMutationHandoffPlan(): CockpitQuickGenerateMutationHandoffPlan {
     return {
-        status: 'blocked',
+        status: 'backend-handoff-wired',
         steps: [
             {
                 key: 'existing-issuance-owner-identified',
@@ -532,20 +532,20 @@ function defaultMutationHandoffPlan(): CockpitQuickGenerateMutationHandoffPlan {
             {
                 key: 'generate-pay-code-action-handoff',
                 label: 'GeneratePayCode Action Handoff',
-                status: 'blocked',
-                reason: 'Cockpit does not call GeneratePayCode in Slice 24.',
+                status: 'passed',
+                reason: 'Cockpit POST route calls the existing GeneratePayCode action through the approved handoff.',
             },
             {
                 key: 'generate-pay-code-controller-handoff',
                 label: 'GeneratePayCodeController Handoff',
-                status: 'blocked',
-                reason: 'Cockpit does not register a mutation route or controller handoff in Slice 24.',
+                status: 'confirmed',
+                reason: 'The public API route remains owned by GeneratePayCodeController while Cockpit shares the action directly.',
             },
             {
                 key: 'preconditions-green',
                 label: 'Preconditions Green',
                 status: 'blocked',
-                reason: 'Authorization, pricing, funding, idempotency, validation, and redaction gates remain blocked.',
+                reason: 'Provider, journal, action, and feedback side effects remain separately gated.',
             },
             {
                 key: 'side-effect-boundary-confirmed',
@@ -556,8 +556,8 @@ function defaultMutationHandoffPlan(): CockpitQuickGenerateMutationHandoffPlan {
             {
                 key: 'operator-response-contract-ready',
                 label: 'Operator Response Contract Ready',
-                status: 'blocked',
-                reason: 'Cockpit does not define a mutation success, failure, or validation response contract in Slice 24.',
+                status: 'passed',
+                reason: 'Cockpit returns only operator-safe generated facts from the existing issuance action.',
             },
         ],
         redactions: {
@@ -568,50 +568,50 @@ function defaultMutationHandoffPlan(): CockpitQuickGenerateMutationHandoffPlan {
 
 function defaultMutationPreconditionsReview(): CockpitQuickGenerateMutationPreconditionsReview {
     return {
-        status: 'blocked',
-        recommendation: 'remain-read-only',
+        status: 'existing-handoff-ready',
+        recommendation: 'use-existing-issuance-handoff',
         items: [
             {
                 key: 'authorization-ready',
                 label: 'Authorization Ready',
-                status: 'blocked',
-                reason: 'Generation, provider, and money movement authorization gates remain blocked.',
+                status: 'passed',
+                reason: 'The authenticated Cockpit route may submit through the approved GeneratePayCode handoff.',
             },
             {
                 key: 'pricing-ready',
                 label: 'Pricing Ready',
-                status: 'blocked',
-                reason: 'Amount input, pricing service wiring, funding source selection, reservation, and provider fee quote gates remain blocked.',
+                status: 'runtime-informational',
+                reason: 'Pricing preflight is available in the operator-safe result panel after submit.',
             },
             {
                 key: 'funding-ready',
                 label: 'Funding Ready',
-                status: 'blocked',
-                reason: 'Issuer wallet, balance, sufficiency, reservation, and provider funding readiness remain blocked.',
+                status: 'runtime-informational',
+                reason: 'Funding preflight is available in the operator-safe result panel after submit; raw wallet details remain redacted.',
             },
             {
                 key: 'idempotency-ready',
                 label: 'Idempotency Ready',
-                status: 'blocked',
-                reason: 'Idempotency key source, payload fingerprinting, replay lookup, conflict response, and TTL policy remain blocked.',
+                status: 'passed',
+                reason: 'The existing IdempotencyService handles key extraction, payload fingerprinting, replay lookup, conflict response, and TTL policy.',
             },
             {
                 key: 'validation-redaction-ready',
                 label: 'Validation and Redaction Ready',
-                status: 'blocked',
-                reason: 'Required fields, validation rules, submitted-payload redaction, sanitized previews, and validation error contracts remain blocked.',
+                status: 'passed',
+                reason: 'GeneratePayCodeRequest-compatible validation and operator-safe response redaction are wired.',
             },
             {
                 key: 'handoff-ready',
                 label: 'Handoff Ready',
-                status: 'blocked',
-                reason: 'GeneratePayCode action handoff and GeneratePayCodeController handoff remain blocked.',
+                status: 'passed',
+                reason: 'GeneratePayCode action handoff and GeneratePayCodeController handoff are wired.',
             },
             {
                 key: 'operator-response-ready',
                 label: 'Operator Response Ready',
-                status: 'blocked',
-                reason: 'Cockpit has no mutation success, failure, validation, rollback, or retry response contract.',
+                status: 'passed',
+                reason: 'Cockpit returns a redacted operator result with generated Pay Code, preflights, and activity runtime diagnostics.',
             },
         ],
         redactions: {
@@ -622,11 +622,11 @@ function defaultMutationPreconditionsReview(): CockpitQuickGenerateMutationPreco
 
 function defaultMutationAuthorizationDecision(): CockpitQuickGenerateMutationAuthorizationDecision {
     return {
-        status: 'blocked',
-        decision: 'not_authorized',
-        required_approval: 'human-approval-required-before-route-scaffold',
-        rationale: 'Mutation preconditions remain blocked; Cockpit must not register a write route until explicit human approval and a smaller mutation contract exist.',
-        next_step: 'request-explicit-approval-or-continue-read-only-hardening',
+        status: 'approved-handoff',
+        decision: 'authorized_existing_handoff',
+        required_approval: 'completed-for-existing-generate-pay-code-handoff',
+        rationale: 'Cockpit may submit Quick Generate through the existing GeneratePayCode action without inventing a parallel issuance runtime.',
+        next_step: 'keep-provider-journal-action-feedback-mutations-separately-gated',
         redactions: {
             payloads: 'mutation-authorization-decision-only',
         },
@@ -635,7 +635,7 @@ function defaultMutationAuthorizationDecision(): CockpitQuickGenerateMutationAut
 
 function defaultAuthorization(): CockpitQuickGenerateAuthorization {
     return {
-        status: 'blocked',
+        status: 'runtime-ready',
         gates: [
             {
                 key: 'operator-authenticated',
@@ -834,8 +834,8 @@ function sanitizeRuntimeInput(input: CockpitQuickGenerateReadModelRuntimeInput):
     return {
         key,
         label,
-        value: stringValue(input.value) ?? 'Pending operator input',
-        helper: stringValue(input.helper) ?? 'Input is presentation-only in this baseline.',
+        value: stringValue(input.value) ?? 'Use the Quick Generate form',
+        helper: stringValue(input.helper) ?? 'Runtime input is submitted through the existing issuance handoff.',
     };
 }
 
@@ -850,8 +850,8 @@ function sanitizePricingSummary(summary: CockpitQuickGenerateReadModelPricingSum
     return {
         key,
         label,
-        value: stringValue(summary.value) ?? 'Not calculated',
-        helper: stringValue(summary.helper) ?? 'No pricing or funding behavior is executed here.',
+        value: stringValue(summary.value) ?? 'Shown after submit',
+        helper: stringValue(summary.helper) ?? 'Operator-safe runtime output is shown after the existing issuance handoff completes.',
     };
 }
 

@@ -69,10 +69,10 @@ function displayValue(value: unknown, fallback: string): string {
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
-                    Funding Gate Baseline
+                    Funding Runtime Diagnostics
                 </p>
                 <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                    Funding stays blocked until wallet, balance, and reservation paths are explicitly wired
+                    Funding preflight is shown after the existing issuance handoff
                 </h3>
             </div>
             <span class="rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-900 dark:bg-slate-950 dark:text-emerald-300">
@@ -115,7 +115,7 @@ function displayValue(value: unknown, fallback: string): string {
             Redaction policy: <span class="font-semibold">{{ redaction }}</span>
         </p>
         <p class="mt-2 text-xs font-medium text-emerald-800 dark:text-emerald-200">
-            Funding gates are read-only facts in Slice 21.
+            These diagnostics are operator-safe facts; Cockpit still does not expose raw wallet or provider funding payloads.
         </p>
     </section>
 </template>

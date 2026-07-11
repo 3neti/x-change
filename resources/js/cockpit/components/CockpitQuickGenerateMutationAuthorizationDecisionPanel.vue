@@ -49,13 +49,13 @@ function displayValue(value: unknown, fallback: string): string {
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-rose-700 dark:text-rose-300">
-                    Mutation Authorization Decision Point
+                    Mutation Authorization Diagnostics
                 </p>
                 <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                    Quick Generate mutation remains explicitly unauthorized
+                    Quick Generate is authorized only through the existing issuance handoff
                 </h3>
                 <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    This decision point records whether Cockpit may graduate from read-only readiness facts to mutation-route scaffolding.
+                    This diagnostic records the approved GeneratePayCode handoff boundary and the side effects still gated outside Cockpit.
                 </p>
             </div>
             <span class="rounded-full border border-rose-200 bg-white px-3 py-1 text-xs font-semibold text-rose-700 dark:border-rose-900 dark:bg-slate-950 dark:text-rose-300">
@@ -105,7 +105,7 @@ function displayValue(value: unknown, fallback: string): string {
             Redaction policy: <span class="font-semibold">{{ redaction }}</span>
         </p>
         <p class="mt-2 text-xs font-medium text-rose-800 dark:text-rose-200">
-            No Cockpit mutation route is authorized in Slice 26.
+            Provider, journal, action, feedback, and campaign mutations remain separately gated.
         </p>
     </section>
 </template>

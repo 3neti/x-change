@@ -128,7 +128,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('Funding');
         expect(wrapper.text()).toContain('Idempotency');
         expect(wrapper.text()).toContain('Redaction');
-        expect(wrapper.text()).toContain('No Cockpit mutation route is registered in Slice 17.');
+        expect(wrapper.text()).toContain('current Quick Generate uses the approved handoff route.');
         expect(wrapper.find('form').exists()).toBe(false);
         expect(wrapper.find('[data-testid="cockpit-issuance-boundary-panel"]').exists()).toBe(true);
     });
@@ -403,7 +403,7 @@ describe('Cockpit Quick Generate foundation', () => {
         const wrapper = mount(CockpitQuickGenerateAuthorizationGatePanel, {
             props: {
                 authorization: {
-                    status: 'blocked',
+                    status: 'runtime-ready',
                     gates: [
                         {
                             key: 'operator-authenticated',
@@ -425,12 +425,12 @@ describe('Cockpit Quick Generate foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Authorization Gate Baseline');
+        expect(wrapper.text()).toContain('Authorization Runtime Diagnostics');
         expect(wrapper.text()).toContain('Operator Authenticated');
         expect(wrapper.text()).toContain('passed');
         expect(wrapper.text()).toContain('Can Generate Pay Code');
         expect(wrapper.text()).toContain('The approved Cockpit Quick Generate mutation route submits through the existing GeneratePayCode action.');
-        expect(wrapper.text()).toContain('Authorization gates are read-only facts in Slice 19.');
+        expect(wrapper.text()).toContain('Provider and money movement authority remain separately gated outside the Cockpit shell.');
         expect(wrapper.find('form').exists()).toBe(false);
         expect(wrapper.find('[data-testid="cockpit-quick-generate-authorization-gate-panel"]').exists()).toBe(true);
         expect(wrapper.findAll('[data-testid="cockpit-quick-generate-authorization-gate"]')).toHaveLength(2);
@@ -440,19 +440,19 @@ describe('Cockpit Quick Generate foundation', () => {
         const wrapper = mount(CockpitQuickGeneratePricingGatePanel, {
             props: {
                 pricingGate: {
-                    status: 'blocked',
+                    status: 'runtime-informational',
                     checks: [
                         {
                             key: 'template-selected',
                             label: 'Template Selected',
                             status: 'passed',
-                            reason: 'The default Quick Generate template is visible as a read-only fact.',
+                            reason: 'The Money Changer template is selected by default for the current Quick Generate runtime.',
                         },
                         {
                             key: 'pricing-service-wired',
                             label: 'Pricing Service Wired',
-                            status: 'blocked',
-                            reason: 'Cockpit does not call pricing services in Slice 20.',
+                            status: 'passed',
+                            reason: 'The mutation result exposes an operator-safe pricing preflight after GeneratePayCode completes.',
                         },
                     ],
                     redactions: {
@@ -462,13 +462,13 @@ describe('Cockpit Quick Generate foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Pricing Gate Baseline');
+        expect(wrapper.text()).toContain('Pricing Runtime Diagnostics');
         expect(wrapper.text()).toContain('Template Selected');
         expect(wrapper.text()).toContain('passed');
         expect(wrapper.text()).toContain('Pricing Service Wired');
-        expect(wrapper.text()).toContain('blocked');
-        expect(wrapper.text()).toContain('Cockpit does not call pricing services in Slice 20.');
-        expect(wrapper.text()).toContain('Pricing gates are read-only facts in Slice 20.');
+        expect(wrapper.text()).toContain('runtime-informational');
+        expect(wrapper.text()).toContain('The mutation result exposes an operator-safe pricing preflight after GeneratePayCode completes.');
+        expect(wrapper.text()).toContain('Cockpit still does not expose raw pricing payloads.');
         expect(wrapper.find('form').exists()).toBe(false);
         expect(wrapper.find('[data-testid="cockpit-quick-generate-pricing-gate-panel"]').exists()).toBe(true);
         expect(wrapper.findAll('[data-testid="cockpit-quick-generate-pricing-gate-check"]')).toHaveLength(2);
@@ -478,19 +478,19 @@ describe('Cockpit Quick Generate foundation', () => {
         const wrapper = mount(CockpitQuickGenerateFundingGatePanel, {
             props: {
                 fundingGate: {
-                    status: 'blocked',
+                    status: 'runtime-informational',
                     checks: [
                         {
                             key: 'funding-policy-known',
                             label: 'Funding Policy Known',
                             status: 'passed',
-                            reason: 'Funding policy is represented as a read-only Cockpit readiness fact.',
+                            reason: 'Funding preflight is represented as an operator-safe result after Quick Generate submits.',
                         },
                         {
                             key: 'issuer-wallet-identified',
                             label: 'Issuer Wallet Identified',
-                            status: 'blocked',
-                            reason: 'Cockpit does not resolve issuer wallets in Slice 21.',
+                            status: 'runtime-diagnostic',
+                            reason: 'Issuer funding details are evaluated by the existing issuance path and redacted from the Cockpit read model.',
                         },
                     ],
                     redactions: {
@@ -500,13 +500,13 @@ describe('Cockpit Quick Generate foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Funding Gate Baseline');
+        expect(wrapper.text()).toContain('Funding Runtime Diagnostics');
         expect(wrapper.text()).toContain('Funding Policy Known');
         expect(wrapper.text()).toContain('passed');
         expect(wrapper.text()).toContain('Issuer Wallet Identified');
-        expect(wrapper.text()).toContain('blocked');
-        expect(wrapper.text()).toContain('Cockpit does not resolve issuer wallets in Slice 21.');
-        expect(wrapper.text()).toContain('Funding gates are read-only facts in Slice 21.');
+        expect(wrapper.text()).toContain('runtime-informational');
+        expect(wrapper.text()).toContain('Issuer funding details are evaluated by the existing issuance path and redacted from the Cockpit read model.');
+        expect(wrapper.text()).toContain('Cockpit still does not expose raw wallet or provider funding payloads.');
         expect(wrapper.find('form').exists()).toBe(false);
         expect(wrapper.find('[data-testid="cockpit-quick-generate-funding-gate-panel"]').exists()).toBe(true);
         expect(wrapper.findAll('[data-testid="cockpit-quick-generate-funding-gate-check"]')).toHaveLength(2);
@@ -516,7 +516,7 @@ describe('Cockpit Quick Generate foundation', () => {
         const wrapper = mount(CockpitQuickGenerateIdempotencyGatePanel, {
             props: {
                 idempotencyGate: {
-                    status: 'blocked',
+                    status: 'backend-ready',
                     checks: [
                         {
                             key: 'idempotency-policy-known',
@@ -554,19 +554,19 @@ describe('Cockpit Quick Generate foundation', () => {
         const wrapper = mount(CockpitQuickGenerateValidationRedactionGatePanel, {
             props: {
                 validationRedactionGate: {
-                    status: 'blocked',
+                    status: 'backend-ready',
                     checks: [
                         {
                             key: 'request-schema-known',
                             label: 'Request Schema Known',
                             status: 'passed',
-                            reason: 'The Quick Generate draft contract schema is represented as a read-only Cockpit readiness fact.',
+                            reason: 'The Quick Generate mutation request shape is known and handled by the existing handoff route.',
                         },
                         {
                             key: 'sensitive-fields-redacted',
                             label: 'Sensitive Fields Redacted',
-                            status: 'blocked',
-                            reason: 'Cockpit does not accept, persist, or redact submitted payloads in Slice 23.',
+                            status: 'passed',
+                            reason: 'Operator responses exclude raw payloads, provider payloads, wallet details, and idempotency internals.',
                         },
                     ],
                     redactions: {
@@ -576,13 +576,13 @@ describe('Cockpit Quick Generate foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Validation and Redaction Gate Baseline');
+        expect(wrapper.text()).toContain('Validation and Redaction Diagnostics');
         expect(wrapper.text()).toContain('Request Schema Known');
         expect(wrapper.text()).toContain('passed');
         expect(wrapper.text()).toContain('Sensitive Fields Redacted');
-        expect(wrapper.text()).toContain('blocked');
-        expect(wrapper.text()).toContain('Cockpit does not accept, persist, or redact submitted payloads in Slice 23.');
-        expect(wrapper.text()).toContain('Validation and redaction gates are read-only facts in Slice 23.');
+        expect(wrapper.text()).toContain('backend-ready');
+        expect(wrapper.text()).toContain('Operator responses exclude raw payloads, provider payloads, wallet details, and idempotency internals.');
+        expect(wrapper.text()).toContain('These diagnostics do not expose request payloads');
         expect(wrapper.find('form').exists()).toBe(false);
         expect(wrapper.find('[data-testid="cockpit-quick-generate-validation-redaction-gate-panel"]').exists()).toBe(true);
         expect(wrapper.findAll('[data-testid="cockpit-quick-generate-validation-redaction-gate-check"]')).toHaveLength(2);
@@ -592,7 +592,7 @@ describe('Cockpit Quick Generate foundation', () => {
         const wrapper = mount(CockpitQuickGenerateMutationHandoffPlanPanel, {
             props: {
                 mutationHandoffPlan: {
-                    status: 'blocked',
+                    status: 'backend-handoff-wired',
                     steps: [
                         {
                             key: 'existing-issuance-owner-identified',
@@ -603,8 +603,8 @@ describe('Cockpit Quick Generate foundation', () => {
                         {
                             key: 'generate-pay-code-action-handoff',
                             label: 'GeneratePayCode Action Handoff',
-                            status: 'blocked',
-                            reason: 'Cockpit does not call GeneratePayCode in Slice 24.',
+                            status: 'passed',
+                            reason: 'Cockpit POST route calls the existing GeneratePayCode action through the approved handoff.',
                         },
                     ],
                     redactions: {
@@ -614,13 +614,13 @@ describe('Cockpit Quick Generate foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Mutation Handoff Boundary Plan');
+        expect(wrapper.text()).toContain('Mutation Handoff Diagnostics');
         expect(wrapper.text()).toContain('Existing Issuance Owner Identified');
         expect(wrapper.text()).toContain('passed');
         expect(wrapper.text()).toContain('GeneratePayCode Action Handoff');
-        expect(wrapper.text()).toContain('blocked');
-        expect(wrapper.text()).toContain('Cockpit does not call GeneratePayCode in Slice 24.');
-        expect(wrapper.text()).toContain('Mutation handoff remains a read-only boundary plan in Slice 24.');
+        expect(wrapper.text()).toContain('backend-handoff-wired');
+        expect(wrapper.text()).toContain('Cockpit POST route calls the existing GeneratePayCode action through the approved handoff.');
+        expect(wrapper.text()).toContain('Handoff diagnostics remain operator-safe');
         expect(wrapper.find('form').exists()).toBe(false);
         expect(wrapper.find('[data-testid="cockpit-quick-generate-mutation-handoff-plan-panel"]').exists()).toBe(true);
         expect(wrapper.findAll('[data-testid="cockpit-quick-generate-mutation-handoff-plan-step"]')).toHaveLength(2);
@@ -630,20 +630,20 @@ describe('Cockpit Quick Generate foundation', () => {
         const wrapper = mount(CockpitQuickGenerateMutationPreconditionsReviewPanel, {
             props: {
                 mutationPreconditionsReview: {
-                    status: 'blocked',
-                    recommendation: 'remain-read-only',
+                    status: 'existing-handoff-ready',
+                    recommendation: 'use-existing-issuance-handoff',
                     items: [
                         {
                             key: 'authorization-ready',
                             label: 'Authorization Ready',
-                            status: 'blocked',
-                            reason: 'Generation, provider, and money movement authorization gates remain blocked.',
+                            status: 'passed',
+                            reason: 'The authenticated Cockpit route may submit through the approved GeneratePayCode handoff.',
                         },
                         {
                             key: 'handoff-ready',
                             label: 'Handoff Ready',
-                            status: 'blocked',
-                            reason: 'GeneratePayCode action handoff and GeneratePayCodeController handoff remain blocked.',
+                            status: 'passed',
+                            reason: 'GeneratePayCode action handoff and GeneratePayCodeController handoff are wired.',
                         },
                     ],
                     redactions: {
@@ -653,12 +653,12 @@ describe('Cockpit Quick Generate foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Mutation Preconditions Review');
-        expect(wrapper.text()).toContain('remain-read-only');
+        expect(wrapper.text()).toContain('Handoff Preconditions Diagnostics');
+        expect(wrapper.text()).toContain('use-existing-issuance-handoff');
         expect(wrapper.text()).toContain('Authorization Ready');
         expect(wrapper.text()).toContain('Handoff Ready');
-        expect(wrapper.text()).toContain('GeneratePayCode action handoff and GeneratePayCodeController handoff remain blocked.');
-        expect(wrapper.text()).toContain('Mutation preconditions remain blocked in Slice 25.');
+        expect(wrapper.text()).toContain('GeneratePayCode action handoff and GeneratePayCodeController handoff are wired.');
+        expect(wrapper.text()).toContain('Provider, journal, action, feedback, and campaign mutations are not implied');
         expect(wrapper.find('form').exists()).toBe(false);
         expect(wrapper.find('[data-testid="cockpit-quick-generate-mutation-preconditions-review-panel"]').exists()).toBe(true);
         expect(wrapper.findAll('[data-testid="cockpit-quick-generate-mutation-preconditions-review-item"]')).toHaveLength(2);
@@ -668,11 +668,11 @@ describe('Cockpit Quick Generate foundation', () => {
         const wrapper = mount(CockpitQuickGenerateMutationAuthorizationDecisionPanel, {
             props: {
                 mutationAuthorizationDecision: {
-                    status: 'blocked',
-                    decision: 'not_authorized',
-                    required_approval: 'human-approval-required-before-route-scaffold',
-                    rationale: 'Mutation preconditions remain blocked; Cockpit must not register a write route until explicit human approval and a smaller mutation contract exist.',
-                    next_step: 'request-explicit-approval-or-continue-read-only-hardening',
+                    status: 'approved-handoff',
+                    decision: 'authorized_existing_handoff',
+                    required_approval: 'completed-for-existing-generate-pay-code-handoff',
+                    rationale: 'Cockpit may submit Quick Generate through the existing GeneratePayCode action without inventing a parallel issuance runtime.',
+                    next_step: 'keep-provider-journal-action-feedback-mutations-separately-gated',
                     redactions: {
                         payloads: 'mutation-authorization-decision-only',
                     },
@@ -680,12 +680,12 @@ describe('Cockpit Quick Generate foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Mutation Authorization Decision Point');
-        expect(wrapper.text()).toContain('not_authorized');
-        expect(wrapper.text()).toContain('human-approval-required-before-route-scaffold');
-        expect(wrapper.text()).toContain('explicit human approval');
-        expect(wrapper.text()).toContain('request-explicit-approval-or-continue-read-only-hardening');
-        expect(wrapper.text()).toContain('No Cockpit mutation route is authorized in Slice 26.');
+        expect(wrapper.text()).toContain('Mutation Authorization Diagnostics');
+        expect(wrapper.text()).toContain('authorized_existing_handoff');
+        expect(wrapper.text()).toContain('completed-for-existing-generate-pay-code-handoff');
+        expect(wrapper.text()).toContain('parallel issuance runtime');
+        expect(wrapper.text()).toContain('keep-provider-journal-action-feedback-mutations-separately-gated');
+        expect(wrapper.text()).toContain('Provider, journal, action, feedback, and campaign mutations remain separately gated.');
         expect(wrapper.find('form').exists()).toBe(false);
         expect(wrapper.find('[data-testid="cockpit-quick-generate-mutation-authorization-decision-panel"]').exists()).toBe(true);
     });
@@ -704,24 +704,24 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('GeneratePayCode action');
         expect(wrapper.text()).toContain('preflights are informational');
         expect(wrapper.text()).toContain('Issuance Boundary Plan');
-        expect(wrapper.text()).toContain('No Cockpit mutation route is registered in Slice 17.');
+        expect(wrapper.text()).toContain('current Quick Generate uses the approved handoff route.');
         expect(wrapper.text()).toContain('Request Draft Contract');
         expect(wrapper.text()).toContain('Drafts are local and read-only in Slice 18.');
-        expect(wrapper.text()).toContain('Authorization Gate Baseline');
-        expect(wrapper.text()).toContain('Authorization gates are read-only facts in Slice 19.');
-        expect(wrapper.text()).toContain('Pricing Gate Baseline');
-        expect(wrapper.text()).toContain('Pricing gates are read-only facts in Slice 20.');
-        expect(wrapper.text()).toContain('Funding Gate Baseline');
-        expect(wrapper.text()).toContain('Funding gates are read-only facts in Slice 21.');
+        expect(wrapper.text()).toContain('Authorization Runtime Diagnostics');
+        expect(wrapper.text()).toContain('Provider and money movement authority remain separately gated outside the Cockpit shell.');
+        expect(wrapper.text()).toContain('Pricing Runtime Diagnostics');
+        expect(wrapper.text()).toContain('Cockpit still does not expose raw pricing payloads.');
+        expect(wrapper.text()).toContain('Funding Runtime Diagnostics');
+        expect(wrapper.text()).toContain('Cockpit still does not expose raw wallet or provider funding payloads.');
         expect(wrapper.text()).toContain('Idempotency Gate Baseline');
         expect(wrapper.text()).toContain('Idempotency gates are read-only facts in Slice 22.');
-        expect(wrapper.text()).toContain('Validation and Redaction Gate Baseline');
-        expect(wrapper.text()).toContain('Validation and redaction gates are read-only facts in Slice 23.');
-        expect(wrapper.text()).toContain('Mutation Handoff Boundary Plan');
-        expect(wrapper.text()).toContain('Mutation handoff remains a read-only boundary plan in Slice 24.');
-        expect(wrapper.text()).toContain('Mutation Preconditions Review');
-        expect(wrapper.text()).toContain('Mutation preconditions remain blocked in Slice 25.');
-        expect(wrapper.text()).toContain('Mutation Authorization Decision Point');
-        expect(wrapper.text()).toContain('No Cockpit mutation route is authorized in Slice 26.');
+        expect(wrapper.text()).toContain('Validation and Redaction Diagnostics');
+        expect(wrapper.text()).toContain('These diagnostics do not expose request payloads');
+        expect(wrapper.text()).toContain('Mutation Handoff Diagnostics');
+        expect(wrapper.text()).toContain('Handoff diagnostics remain operator-safe');
+        expect(wrapper.text()).toContain('Handoff Preconditions Diagnostics');
+        expect(wrapper.text()).toContain('Provider, journal, action, feedback, and campaign mutations are not implied');
+        expect(wrapper.text()).toContain('Mutation Authorization Diagnostics');
+        expect(wrapper.text()).toContain('Provider, journal, action, feedback, and campaign mutations remain separately gated.');
     });
 });

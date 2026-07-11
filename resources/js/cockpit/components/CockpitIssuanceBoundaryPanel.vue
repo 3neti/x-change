@@ -17,17 +17,17 @@ const requiredGates = [
             Issuance Boundary Plan
         </p>
         <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-            Future generation must hand off to the existing issuance owner
+            Generation hands off to the existing issuance owner
         </h3>
         <p class="mt-3 text-sm leading-6 text-slate-700 dark:text-slate-300">
             Existing issuance action: <span class="font-semibold">GeneratePayCode</span>.
-            Cockpit may later call the approved API/controller handoff, but it must not
-            create a parallel issuance runtime or bypass established gates.
+            Cockpit uses the approved API/controller handoff and must not create a
+            parallel issuance runtime or bypass established gates.
         </p>
 
         <div class="mt-4 rounded-lg border border-amber-200 bg-white/70 p-4 dark:border-amber-900/60 dark:bg-slate-950/50">
             <p class="text-sm font-semibold text-slate-950 dark:text-slate-50">
-                Required gates before enabling generation
+                Gates that remain owned outside Cockpit
             </p>
             <ul class="mt-3 grid gap-2 text-sm text-slate-600 dark:text-slate-300 sm:grid-cols-2">
                 <li
@@ -41,7 +41,7 @@ const requiredGates = [
         </div>
 
         <p class="mt-4 text-xs font-medium text-amber-800 dark:text-amber-200">
-            No Cockpit mutation route is registered in Slice 17.
+            Historical Slice 17 note: no route was registered then; current Quick Generate uses the approved handoff route.
         </p>
     </section>
 </template>

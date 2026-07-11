@@ -69,10 +69,10 @@ function displayValue(value: unknown, fallback: string): string {
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-violet-700 dark:text-violet-300">
-                    Mutation Handoff Boundary Plan
+                    Mutation Handoff Diagnostics
                 </p>
                 <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                    Future generation must hand off to existing x-change issuance paths
+                    Quick Generate hands off to existing x-change issuance paths
                 </h3>
             </div>
             <span class="rounded-full border border-violet-200 bg-white px-3 py-1 text-xs font-semibold text-violet-700 dark:border-violet-900 dark:bg-slate-950 dark:text-violet-300">
@@ -115,7 +115,7 @@ function displayValue(value: unknown, fallback: string): string {
             Redaction policy: <span class="font-semibold">{{ redaction }}</span>
         </p>
         <p class="mt-2 text-xs font-medium text-violet-800 dark:text-violet-200">
-            Mutation handoff remains a read-only boundary plan in Slice 24.
+            Handoff diagnostics remain operator-safe and exclude raw request, wallet, provider, journal, action, and feedback payloads.
         </p>
     </section>
 </template>

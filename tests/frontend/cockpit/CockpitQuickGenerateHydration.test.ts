@@ -30,8 +30,8 @@ const quickGenerateReadModel = {
         {
             key: 'pricing',
             label: 'Pricing Estimate',
-            value: 'Not calculated',
-            helper: 'Existing pricing service not called.',
+            value: 'Shown after submit',
+            helper: 'Existing pricing preflight returned.',
             funding_source: 'must-not-render',
         },
     ],
@@ -61,7 +61,7 @@ describe('Cockpit Quick Generate hydration', () => {
         expect(wrapper.text()).toContain('Institutional Cash');
         expect(wrapper.text()).toContain('Sanitized operator-facing template.');
         expect(wrapper.text()).toContain('Pending amount');
-        expect(wrapper.text()).toContain('Existing pricing service not called.');
+        expect(wrapper.text()).toContain('Existing pricing preflight returned.');
     });
 
     it('does not render unsafe quick generate payload fields or enable generation from read model props', () => {
@@ -99,8 +99,8 @@ describe('Cockpit Quick Generate hydration', () => {
         });
 
         expect(wrapper.text()).toContain('Money Changer');
-        expect(wrapper.text()).toContain('Pending operator input');
-        expect(wrapper.text()).toContain('Not calculated');
+        expect(wrapper.text()).toContain('Use the Quick Generate form');
+        expect(wrapper.text()).toContain('Shown after submit');
     });
 
     it('forwards route adapter props into the cockpit quick generate page', () => {

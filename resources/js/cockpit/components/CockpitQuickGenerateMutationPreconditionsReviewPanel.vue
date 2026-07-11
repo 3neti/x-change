@@ -73,10 +73,10 @@ function displayValue(value: unknown, fallback: string): string {
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-700 dark:text-cyan-300">
-                    Mutation Preconditions Review
+                    Handoff Preconditions Diagnostics
                 </p>
                 <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                    Mutation route approval remains blocked until all prerequisites are real
+                    Existing issuance handoff is ready; external side effects remain separately gated
                 </h3>
                 <p class="mt-2 text-xs text-slate-600 dark:text-slate-300">
                     Recommendation: <span class="font-semibold">{{ recommendation }}</span>
@@ -103,7 +103,12 @@ function displayValue(value: unknown, fallback: string): string {
                             {{ item.key }}
                         </p>
                     </div>
-                    <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                    <span
+                        class="rounded-full px-3 py-1 text-xs font-semibold"
+                        :class="item.status === 'passed'
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'"
+                    >
                         {{ item.status }}
                     </span>
                 </div>
@@ -117,7 +122,7 @@ function displayValue(value: unknown, fallback: string): string {
             Redaction policy: <span class="font-semibold">{{ redaction }}</span>
         </p>
         <p class="mt-2 text-xs font-medium text-cyan-800 dark:text-cyan-200">
-            Mutation preconditions remain blocked in Slice 25.
+            Provider, journal, action, feedback, and campaign mutations are not implied by the Quick Generate handoff.
         </p>
     </section>
 </template>
