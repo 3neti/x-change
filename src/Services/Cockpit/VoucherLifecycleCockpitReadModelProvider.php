@@ -47,6 +47,7 @@ use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateValidationRedactionGateCh
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateValidationRedactionGateData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelBundleData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
+use LBHurtado\XChange\Data\Cockpit\CockpitVoucherEvidenceSummaryData;
 use LBHurtado\XChange\Data\Cockpit\CockpitVoucherReadModelData;
 use LBHurtado\XChange\Exceptions\VoucherNotFound;
 
@@ -93,13 +94,25 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             include: $query->include,
             correlationId: $query->correlationId,
         ));
+        $summary = $this->summary($detail, $code);
+        $execution = $fallback->execution;
+        $journal = $this->integrations?->journal($query) ?? $fallback->journal;
+        $actions = $this->integrations?->actions($query) ?? $fallback->actions;
+        $feedback = $this->integrations?->feedback($query) ?? $fallback->feedback;
 
         return new CockpitReadModelBundleData(
             code: $this->summaryCode($detail, $code),
             voucher: new CockpitVoucherReadModelData(
                 code: $this->summaryCode($detail, $code),
                 status: $this->summaryStatus($detail),
-                summary: $this->summary($detail, $code),
+                summary: $summary,
+                evidence_summary: $this->voucherEvidenceSummary(
+                    summary: $summary,
+                    executionStatus: $execution->status,
+                    journalStatus: $journal->status,
+                    actionStatus: $actions->status,
+                    feedbackStatus: $feedback->status,
+                ),
                 redactions: [
                     'payloads' => 'sanitized-summary-only',
                     'excluded' => [
@@ -117,11 +130,89 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 ],
                 authorized: true,
             ),
-            execution: $fallback->execution,
-            journal: $this->integrations?->journal($query) ?? $fallback->journal,
-            actions: $this->integrations?->actions($query) ?? $fallback->actions,
-            feedback: $this->integrations?->feedback($query) ?? $fallback->feedback,
+            execution: $execution,
+            journal: $journal,
+            actions: $actions,
+            feedback: $feedback,
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $summary
+     * @return array<int, CockpitVoucherEvidenceSummaryData>
+     */
+    private function voucherEvidenceSummary(
+        array $summary,
+        string $executionStatus,
+        string $journalStatus,
+        string $actionStatus,
+        string $feedbackStatus,
+    ): array {
+        $status = $this->stringValue($summary['display_status'] ?? null, $this->stringValue($summary['status'] ?? null, 'available'));
+        $claimStatus = match (true) {
+            ($summary['fully_claimed'] ?? null) === true => 'fully_claimed',
+            ($summary['claimed'] ?? null) === true => 'partially_claimed',
+            ($summary['claimed'] ?? null) === false || ($summary['fully_claimed'] ?? null) === false => 'not_claimed',
+            default => 'not_wired',
+        };
+
+        return [
+            new CockpitVoucherEvidenceSummaryData(
+                key: 'lifecycle',
+                label: 'Lifecycle facts',
+                status: $status,
+                description: 'Sanitized voucher lifecycle summary is available.',
+                available: true,
+                source: 'voucher',
+            ),
+            new CockpitVoucherEvidenceSummaryData(
+                key: 'claim',
+                label: 'Claim evidence',
+                status: $claimStatus,
+                description: 'Claim state is represented only as sanitized summary booleans.',
+                available: $claimStatus !== 'not_wired',
+                source: 'voucher-summary',
+            ),
+            new CockpitVoucherEvidenceSummaryData(
+                key: 'approval',
+                label: 'Approval evidence',
+                status: 'redacted',
+                description: 'Approval references and OTP metadata remain redacted from the voucher summary.',
+                source: 'redaction-policy',
+            ),
+            new CockpitVoucherEvidenceSummaryData(
+                key: 'execution',
+                label: 'Execution evidence',
+                status: $executionStatus,
+                description: 'Execution evidence is read from the execution read model; this page does not invoke drivers.',
+                available: $executionStatus === 'available',
+                source: 'execution-read-model',
+            ),
+            new CockpitVoucherEvidenceSummaryData(
+                key: 'journal',
+                label: 'Journal evidence',
+                status: $journalStatus,
+                description: 'Journal evidence is read-only and only available through authorized journal read models.',
+                available: $journalStatus === 'available',
+                source: 'journal-read-model',
+            ),
+            new CockpitVoucherEvidenceSummaryData(
+                key: 'actions',
+                label: 'Action evidence',
+                status: $actionStatus,
+                description: 'Action evidence is presentation-only; Cockpit does not execute actions from Voucher Detail.',
+                available: $actionStatus === 'available',
+                source: 'action-read-model',
+            ),
+            new CockpitVoucherEvidenceSummaryData(
+                key: 'feedback',
+                label: 'Feedback evidence',
+                status: $feedbackStatus,
+                description: 'Feedback evidence is communication state only; Cockpit does not send feedback from Voucher Detail.',
+                available: $feedbackStatus === 'available',
+                source: 'feedback-read-model',
+            ),
+        ];
     }
 
     public function forDashboard(CockpitReadModelQueryData $query): CockpitDashboardReadModelData

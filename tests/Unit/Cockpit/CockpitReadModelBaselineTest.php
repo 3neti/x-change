@@ -517,6 +517,23 @@ it('adapts voucher lifecycle details into a sanitized cockpit voucher summary', 
             'expires_at' => '2026-07-10T11:00:00+08:00',
             'redeemed_at' => null,
         ])
+        ->and($bundle->voucher->evidence_summary)->toHaveCount(7)
+        ->and($bundle->voucher->evidence_summary[0]->key)->toBe('lifecycle')
+        ->and($bundle->voucher->evidence_summary[0]->status)->toBe('ready')
+        ->and($bundle->voucher->evidence_summary[0]->available)->toBeTrue()
+        ->and($bundle->voucher->evidence_summary[1]->key)->toBe('claim')
+        ->and($bundle->voucher->evidence_summary[1]->status)->toBe('not_claimed')
+        ->and($bundle->voucher->evidence_summary[1]->available)->toBeTrue()
+        ->and($bundle->voucher->evidence_summary[2]->key)->toBe('approval')
+        ->and($bundle->voucher->evidence_summary[2]->status)->toBe('redacted')
+        ->and($bundle->voucher->evidence_summary[3]->key)->toBe('execution')
+        ->and($bundle->voucher->evidence_summary[3]->status)->toBe('not_wired')
+        ->and($bundle->voucher->evidence_summary[4]->key)->toBe('journal')
+        ->and($bundle->voucher->evidence_summary[4]->status)->toBe('not_wired')
+        ->and($bundle->voucher->evidence_summary[5]->key)->toBe('actions')
+        ->and($bundle->voucher->evidence_summary[5]->status)->toBe('not_wired')
+        ->and($bundle->voucher->evidence_summary[6]->key)->toBe('feedback')
+        ->and($bundle->voucher->evidence_summary[6]->status)->toBe('not_wired')
         ->and($bundle->voucher->redactions)->toBe([
             'payloads' => 'sanitized-summary-only',
             'excluded' => [

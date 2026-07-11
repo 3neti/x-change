@@ -2095,3 +2095,5 @@ Current boundary:
 - Cockpit Wave 32A expected UI result: no UI change; this slice defines read-only evidence hardening scope.
 - Cockpit Wave 32B result: Voucher Detail evidence summary read-model contract added; report `reports/220-wave-32b-voucher-detail-evidence-summary-read-model-contract.md`; next `Cockpit Wave 32C — Voucher Detail Evidence Summary Provider Hydration`.
 - Cockpit Wave 32B expected UI result: no visible UI change until provider hydration and Vue adoption.
+- Cockpit Wave 32C result: Voucher Detail provider hydration now emits lifecycle, claim, approval, execution, journal, action, and feedback evidence summary facts; report `reports/221-wave-32c-voucher-detail-evidence-summary-provider-hydration.md`; next `Cockpit Wave 32D — Voucher Detail Evidence Summary UI Presentation`.
+- Cockpit Wave 32C expected UI result: no visible UI change until the Vue page renders `voucher.evidence_summary`.
