@@ -2147,3 +2147,5 @@ Current boundary:
 - Cockpit Wave 35 completed: Quick Generate accepts safe campaign query context, hydrates the read model, renders a `Campaign context prefill` card, prefills the form, and submits read-only campaign metadata through the existing issuance handoff without campaign mutation.
 - Cockpit Wave 35 expected UI result: campaign-prefilled Quick Generate shows `Campaign context prefill`, `OFW Remittance`, amount, recipient/reference, and purpose values from the campaign draft.
 - Cockpit Wave 35 next recommended wave: `Cockpit Wave 36 — Campaign-Sourced Quick Generate Result Attribution / Explorer Bridge`.
+- Cockpit Wave 36A result: Campaign-sourced result attribution audit completed; report `reports/243-wave-36a-campaign-sourced-result-attribution-audit.md`; next `Cockpit Wave 36B — Campaign Attribution Response Contract / Backend Handoff Links`.
+- Cockpit Wave 36A expected UI result: no UI change; this slice defines campaign-aware return-link scope and mutation boundaries.
