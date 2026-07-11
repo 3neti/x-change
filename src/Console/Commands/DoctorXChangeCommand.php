@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Schema;
 use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Contracts\XChangeProviderTopologyResolverContract;
+use LBHurtado\XChange\Services\Cockpit\CockpitOperatorIssuanceActivityRuntimeProfileInspector;
 use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
 use Throwable;
 
@@ -15,7 +16,8 @@ class DoctorXChangeCommand extends Command
 {
     protected $signature = 'x-change:doctor
         {--json : Output JSON}
-        {--assets : Inspect published x-change frontend asset drift only}';
+        {--assets : Inspect published x-change frontend asset drift only}
+        {--operator-activity-runtime : Inspect Cockpit operator activity runtime configuration only}';
 
     protected $description = 'Inspect X-Change turnkey installation readiness.';
 
@@ -23,8 +25,11 @@ class DoctorXChangeCommand extends Command
         XChangeProviderTopologyResolverContract $topologies,
         ProviderRuntimeSettingsResolverContract $settings,
         PublishedAssetDriftDetector $publishedAssets,
+        CockpitOperatorIssuanceActivityRuntimeProfileInspector $operatorActivityRuntimeProfile,
     ): int {
-        $checks = $this->option('assets')
+        $checks = $this->option('operator-activity-runtime')
+            ? [$this->operatorActivityRuntimeProfileCheck($operatorActivityRuntimeProfile)]
+            : ($this->option('assets')
             ? [$this->publishedAssetCheck($publishedAssets)]
             : [
                 $this->check('x-change config', config('x-change') !== [], 'config(x-change) is loaded'),
@@ -37,7 +42,7 @@ class DoctorXChangeCommand extends Command
                 $this->check('Fortify mobile username', config('fortify.username') === 'mobile', 'fortify.username is mobile'),
                 $this->providerTopologyCheck($topologies),
                 $this->providerRuntimeSettingsCheck($settings),
-            ];
+            ]);
 
         if ($this->option('json')) {
             $this->line(json_encode([
@@ -76,6 +81,19 @@ class DoctorXChangeCommand extends Command
             'summary' => $result['summary'],
             'files' => $result['files'],
         ]);
+    }
+
+    /**
+     * @return array{name: string, passed: bool, message: string, meta: array<string, mixed>}
+     */
+    protected function operatorActivityRuntimeProfileCheck(CockpitOperatorIssuanceActivityRuntimeProfileInspector $inspector): array
+    {
+        return $this->check(
+            'cockpit operator activity runtime profile',
+            true,
+            'operator activity runtime profile inspected',
+            $inspector->inspect()->toArray(),
+        );
     }
 
     /**
