@@ -64,6 +64,54 @@ class InMemoryCockpitOperatorIssuanceActivityRepository implements CockpitOperat
             return false;
         }
 
+        $filters = $query->operatorActivityFilters;
+
+        if ($filters === null || $filters->isEmpty()) {
+            return true;
+        }
+
+        if ($filters->statuses !== [] && ! in_array($record->status, $filters->statuses, true)) {
+            return false;
+        }
+
+        if ($filters->handoffStatuses !== [] && ! $this->matchesHandoffStatus($record, $filters->handoffStatuses)) {
+            return false;
+        }
+
+        if ($filters->search !== null && ! $this->matchesSearch($record, $filters->search)) {
+            return false;
+        }
+
         return true;
+    }
+
+    /**
+     * @param  array<int, string>  $handoffStatuses
+     */
+    private function matchesHandoffStatus(
+        CockpitOperatorIssuanceActivityRecordData $record,
+        array $handoffStatuses,
+    ): bool {
+        return in_array($record->journal_handoff_status, $handoffStatuses, true)
+            || in_array($record->action_handoff_status, $handoffStatuses, true)
+            || in_array($record->feedback_handoff_status, $handoffStatuses, true);
+    }
+
+    private function matchesSearch(CockpitOperatorIssuanceActivityRecordData $record, string $search): bool
+    {
+        $haystack = implode(' ', array_filter([
+            $record->activity_id,
+            $record->actor_id,
+            $record->actor_label,
+            $record->subject_reference,
+            $record->status,
+            $record->severity,
+            $record->correlation_id,
+            $record->summary,
+            is_scalar(data_get($record->safe_context, 'amount')) ? (string) data_get($record->safe_context, 'amount') : null,
+            is_scalar(data_get($record->safe_context, 'currency')) ? (string) data_get($record->safe_context, 'currency') : null,
+        ], fn (mixed $value): bool => is_scalar($value) && (string) $value !== ''));
+
+        return str_contains(mb_strtolower($haystack), mb_strtolower($search));
     }
 }

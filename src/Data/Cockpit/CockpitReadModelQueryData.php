@@ -16,5 +16,6 @@ class CockpitReadModelQueryData extends Data
         public readonly ?string $operatorId = null,
         public readonly array $include = [],
         public readonly ?string $correlationId = null,
+        public readonly ?CockpitOperatorIssuanceActivitySearchFilterData $operatorActivityFilters = null,
     ) {}
 }

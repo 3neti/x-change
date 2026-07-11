@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use LBHurtado\XChange\Contracts\CockpitOperatorIssuanceActivityRepositoryContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityRecordData;
+use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivitySearchFilterData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
 use LBHurtado\XChange\Services\Cockpit\InMemoryCockpitOperatorIssuanceActivityRepository;
 use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityRepository;
@@ -223,6 +224,52 @@ it('overwrites duplicate in-memory activity ids without creating duplicate recen
         ->and($recent[0]->summary)->toBe('Updated summary');
 });
 
+it('filters in-memory activity records by search text status and handoff status', function () {
+    $repository = new InMemoryCockpitOperatorIssuanceActivityRepository;
+
+    $repository->record(cockpitActivityRecord(
+        activityId: 'activity-1',
+        actorId: 'operator-1',
+        subjectReference: 'PC-SEARCH-1',
+        occurredAt: '2026-07-10T09:00:00+08:00',
+        correlationId: 'corr-1',
+        summary: 'Money Changer Pay Code issued',
+        journalHandoffStatus: 'recorded',
+    ));
+    $repository->record(cockpitActivityRecord(
+        activityId: 'activity-2',
+        actorId: 'operator-1',
+        subjectReference: 'PC-SEARCH-2',
+        occurredAt: '2026-07-10T09:05:00+08:00',
+        correlationId: 'corr-2',
+        summary: 'Failed issuance activity',
+        status: 'failed',
+        journalHandoffStatus: 'not_wired',
+    ));
+    $repository->record(cockpitActivityRecord(
+        activityId: 'activity-3',
+        actorId: 'operator-1',
+        subjectReference: 'PC-SEARCH-3',
+        occurredAt: '2026-07-10T09:10:00+08:00',
+        correlationId: 'corr-3',
+        summary: 'OFW remittance Pay Code issued',
+        journalHandoffStatus: 'not_wired',
+    ));
+
+    $records = $repository->recent(new CockpitReadModelQueryData(
+        operatorId: 'operator-1',
+        include: ['operator_issuance_activity'],
+        operatorActivityFilters: CockpitOperatorIssuanceActivitySearchFilterData::normalize(
+            search: 'money changer',
+            statuses: ['issued'],
+            handoffStatuses: ['recorded'],
+        ),
+    ));
+
+    expect($records)->toHaveCount(1)
+        ->and($records[0]->activity_id)->toBe('activity-1');
+});
+
 function cockpitActivityRecord(
     string $activityId,
     string $actorId,
@@ -230,6 +277,8 @@ function cockpitActivityRecord(
     string $occurredAt,
     string $correlationId,
     string $summary = 'Pay Code issued',
+    string $status = 'issued',
+    string $journalHandoffStatus = 'not_wired',
 ): CockpitOperatorIssuanceActivityRecordData {
     return new CockpitOperatorIssuanceActivityRecordData(
         activity_id: $activityId,
@@ -238,7 +287,7 @@ function cockpitActivityRecord(
         source: 'cockpit.quick-generate',
         subject_type: 'pay_code',
         subject_reference: $subjectReference,
-        status: 'issued',
+        status: $status,
         occurred_at: $occurredAt,
         correlation_id: $correlationId,
         summary: $summary,
@@ -246,5 +295,6 @@ function cockpitActivityRecord(
             'amount' => '100.00',
             'currency' => 'PHP',
         ],
+        journal_handoff_status: $journalHandoffStatus,
     );
 }

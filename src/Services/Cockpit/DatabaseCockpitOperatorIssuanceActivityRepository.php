@@ -70,6 +70,39 @@ class DatabaseCockpitOperatorIssuanceActivityRepository implements CockpitOperat
             $builder->where('subject_reference', $query->code);
         }
 
+        $filters = $query->operatorActivityFilters;
+
+        if ($filters !== null && ! $filters->isEmpty()) {
+            if ($filters->statuses !== []) {
+                $builder->whereIn('status', $filters->statuses);
+            }
+
+            if ($filters->handoffStatuses !== []) {
+                $builder->where(function ($query) use ($filters): void {
+                    $query
+                        ->whereIn('journal_handoff_status', $filters->handoffStatuses)
+                        ->orWhereIn('action_handoff_status', $filters->handoffStatuses)
+                        ->orWhereIn('feedback_handoff_status', $filters->handoffStatuses);
+                });
+            }
+
+            if ($filters->search !== null) {
+                $search = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], mb_strtolower($filters->search)).'%';
+
+                $builder->where(function ($query) use ($search): void {
+                    $query
+                        ->whereRaw('lower(activity_id) like ?', [$search])
+                        ->orWhereRaw('lower(actor_id) like ?', [$search])
+                        ->orWhereRaw('lower(actor_label) like ?', [$search])
+                        ->orWhereRaw('lower(subject_reference) like ?', [$search])
+                        ->orWhereRaw('lower(status) like ?', [$search])
+                        ->orWhereRaw('lower(severity) like ?', [$search])
+                        ->orWhereRaw('lower(correlation_id) like ?', [$search])
+                        ->orWhereRaw('lower(summary) like ?', [$search]);
+                });
+            }
+        }
+
         return $builder
             ->orderByDesc('occurred_at')
             ->orderByDesc('id')
