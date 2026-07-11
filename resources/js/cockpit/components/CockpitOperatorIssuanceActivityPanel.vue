@@ -104,6 +104,20 @@ const activeFilterCount = computed(() => [
     ...searchFilters.value.statuses,
     ...searchFilters.value.handoffStatuses,
 ].filter((value) => value !== undefined && value !== '').length);
+const activityResultSummary = computed(() => {
+    const count = presentations.value.length;
+    const noun = count === 1 ? 'activity' : 'activities';
+
+    if (!canFilter.value) {
+        return 'Activity filters become available when durable activity storage is wired.';
+    }
+
+    if (activeFilterCount.value > 0) {
+        return `Showing ${count} matching ${noun} for the current read-only filters.`;
+    }
+
+    return `Showing ${count} recent ${noun}.`;
+});
 const emptyTitle = computed(() => stringValue(props.readModel?.empty_state?.title) ?? 'No operator issuance activity available');
 const emptyDescription = computed(() => (
     stringValue(props.readModel?.empty_state?.description)
@@ -419,6 +433,12 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                     Read-only filter query; no activity mutation is executed.
                 </span>
             </div>
+            <p
+                class="mt-3 text-xs font-medium text-slate-600 dark:text-slate-300"
+                data-testid="cockpit-operator-issuance-activity-result-summary"
+            >
+                {{ activityResultSummary }}
+            </p>
         </form>
 
         <div
