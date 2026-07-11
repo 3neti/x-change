@@ -19,6 +19,7 @@ class SeedCockpitDiagnosticActivityCommand extends Command
         {--activity-id=fixture-cockpit-journal-diagnostic-activity : Synthetic activity id}
         {--code=PC-LOCAL-DIAGNOSTIC : Synthetic Pay Code reference}
         {--operator-id=local-fixture-operator : Synthetic/operator id that should see the fixture in Cockpit}
+        {--with-action : Include synthetic x-action composed handoff facts}
         {--json : Output JSON}
         {--pretty : Pretty-print JSON output}';
 
@@ -47,6 +48,7 @@ class SeedCockpitDiagnosticActivityCommand extends Command
             'operator_id' => $record->actor_id,
             'code' => $record->subject_reference,
             'journal_handoff_status' => $record->journal_handoff_status,
+            'action_handoff_status' => $record->action_handoff_status,
             'dashboard_ready' => $this->dashboardReady(),
             'dashboard_repository' => config('x-change.cockpit.operator_issuance_activity.repository'),
             'next_step' => $this->dashboardReady()
@@ -104,9 +106,9 @@ class SeedCockpitDiagnosticActivityCommand extends Command
                 'recipient_secrets_exposed' => false,
             ],
             journal_handoff_status: 'recorded',
-            action_handoff_status: 'not_wired',
+            action_handoff_status: $this->withActionFixture() ? 'composed' : 'not_wired',
             feedback_handoff_status: 'not_wired',
-            metadata: [
+            metadata: array_filter([
                 'fixture' => true,
                 'local_only' => true,
                 'journal_handoff' => [
@@ -121,8 +123,40 @@ class SeedCockpitDiagnosticActivityCommand extends Command
                         'idempotency_key' => 'fixture-redacted-idempotency-key',
                     ],
                 ],
-            ],
+                'action_handoff' => $this->withActionFixture() ? [
+                    'status' => 'composed',
+                    'action_hint_id' => 'cockpit.pay-code.open',
+                    'action_run_id' => 'action-run-local-fixture',
+                    'action_required' => false,
+                    'executes_action' => false,
+                    'source' => 'local_fixture',
+                    'reason' => 'Synthetic local x-action fixture for Cockpit diagnostic visual verification.',
+                    'metadata' => [
+                        'event_or_state' => 'cockpit.operator_issuance_activity.fixture',
+                        'actions' => [
+                            [
+                                'key' => 'cockpit.pay-code.open',
+                                'label' => 'Open Pay Code',
+                                'run_id' => 'action-run-local-fixture',
+                                'target' => [
+                                    'url' => "/x/cockpit/pay-codes/{$code}",
+                                    'redirectable' => true,
+                                ],
+                            ],
+                        ],
+                        'composition' => [
+                            'presentation_only' => true,
+                            'executes_action' => false,
+                        ],
+                    ],
+                ] : null,
+            ], fn (mixed $value): bool => $value !== null),
         );
+    }
+
+    private function withActionFixture(): bool
+    {
+        return (bool) $this->option('with-action');
     }
 
     private function nonEmptyOption(string $key, string $fallback): string
