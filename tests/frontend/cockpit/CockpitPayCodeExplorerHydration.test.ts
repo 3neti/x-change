@@ -59,6 +59,31 @@ const payCodesReadModel = {
             wallet: 'must-not-render',
             claims: 'must-not-render',
             approval: 'must-not-render',
+            actions: [
+                {
+                    key: 'detail',
+                    label: 'View details',
+                    enabled: true,
+                    read_only: true,
+                    href: '/x/cockpit/pay-codes/PC-HYDRATED-001',
+                    reason: 'Read-only Cockpit voucher detail route.',
+                },
+                {
+                    key: 'distribution',
+                    label: 'Distribution',
+                    enabled: true,
+                    read_only: true,
+                    href: '/x/cockpit/pay-codes/PC-HYDRATED-001/distribution',
+                    reason: 'Read-only Cockpit distribution workspace route.',
+                },
+                {
+                    key: 'notify',
+                    label: 'Notify recipient',
+                    enabled: false,
+                    read_only: true,
+                    reason: 'Feedback delivery remains separately gated.',
+                },
+            ],
         },
         {
             code: 'PC-HYDRATED-002',
@@ -156,6 +181,26 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(wrapper.text()).not.toContain('provider_payload');
         expect(wrapper.text()).not.toContain('raw_payload');
         expect(wrapper.text()).not.toContain('wallet');
+    });
+
+    it('renders read-only detail and distribution row action links from hydrated records', () => {
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: payCodesReadModel,
+            },
+        });
+
+        const actionLinks = wrapper.findAll('[data-testid="cockpit-pay-code-row-action-link"]');
+        const disabledActions = wrapper.findAll('[data-testid="cockpit-pay-code-row-action-disabled"]');
+
+        expect(actionLinks).toHaveLength(2);
+        expect(actionLinks[0].attributes('href')).toBe('/x/cockpit/pay-codes/PC-HYDRATED-001');
+        expect(actionLinks[0].text()).toContain('View details');
+        expect(actionLinks[1].attributes('href')).toBe('/x/cockpit/pay-codes/PC-HYDRATED-001/distribution');
+        expect(actionLinks[1].text()).toContain('Distribution');
+        expect(disabledActions.some((action) => action.text().includes('Notify recipient'))).toBe(true);
+        expect(wrapper.find('[data-testid="cockpit-pay-code-results-table"]').text()).not.toContain('Execute');
+        expect(wrapper.text()).not.toContain('provider_payload');
     });
 
     it('renders an explicit empty state for authorized empty list read models', () => {

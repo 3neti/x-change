@@ -171,6 +171,41 @@ function sanitizeRecord(record: CockpitPayCodeExplorerReadModelRecord): CockpitP
         status: stringValue(record.display_status) ?? stringValue(record.status) ?? 'not_wired',
         owner: stringValue(record.owner) ?? 'Redacted',
         lastActivity: stringValue(record.last_activity) ?? 'Read model activity pending',
+        actions: Array.isArray(record.actions)
+            ? record.actions
+                .map((action) => sanitizeRowAction(action))
+                .filter((action): action is NonNullable<ReturnType<typeof sanitizeRowAction>> => action !== null)
+            : [],
+    };
+}
+
+function sanitizeRowAction(action: unknown): {
+    key: string;
+    label: string;
+    enabled: boolean;
+    disabled: boolean;
+    read_only: boolean;
+    href: string | null;
+    reason: string | null;
+} | null {
+    const value = objectValue(action);
+    const key = stringValue(value.key);
+    const label = stringValue(value.label);
+
+    if (!key || !label) {
+        return null;
+    }
+
+    const enabled = value.enabled === true && stringValue(value.href) !== null;
+
+    return {
+        key,
+        label,
+        enabled,
+        disabled: !enabled,
+        read_only: value.read_only !== false,
+        href: enabled ? stringValue(value.href) : null,
+        reason: stringValue(value.reason),
     };
 }
 

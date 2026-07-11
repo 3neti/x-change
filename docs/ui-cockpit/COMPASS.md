@@ -2083,3 +2083,5 @@ Current boundary:
 - Cockpit Wave 31B expected UI result: no visible UI change until provider hydration and table adoption.
 - Cockpit Wave 31C result: provider row action hydration completed; report `reports/215-wave-31c-pay-code-explorer-provider-row-action-hydration.md`; next `Cockpit Wave 31D — Pay Code Explorer Row Action UI Presentation`.
 - Cockpit Wave 31C expected UI result: no visible UI change until the Vue results table consumes per-row actions.
+- Cockpit Wave 31D result: row action UI presentation completed; report `reports/216-wave-31d-pay-code-explorer-row-action-ui-presentation.md`; next `Cockpit Wave 31E — Pay Code Explorer Row Action Browser / Publish Verification`.
+- Cockpit Wave 31D expected UI result: `/x/cockpit/pay-codes` rows show enabled read-only `View details` and `Distribution` links when hydrated row actions are present.

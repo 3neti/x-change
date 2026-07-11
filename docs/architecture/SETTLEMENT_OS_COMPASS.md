@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 31C complete; Pay Code Explorer provider row action hydration complete
+Current status: Cockpit Wave 31D complete; Pay Code Explorer row action UI presentation complete
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 31C complete; Pay Code Explorer provider row action hydration complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 31D complete; Pay Code Explorer row action UI presentation complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1696,3 +1696,4 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Cockpit Wave 31A — Pay Code Explorer Detail Navigation / Row Action Parity Audit: implemented in [../ui-cockpit/reports/213-wave-31a-pay-code-explorer-row-action-parity-audit.md](../ui-cockpit/reports/213-wave-31a-pay-code-explorer-row-action-parity-audit.md); row action parity is authorized only for read-only detail/distribution navigation plus disabled future actions; no voucher mutation, provider call, wallet mutation, journal write, action execution, feedback delivery, campaign mutation, or unsafe payload exposure is authorized; next `Cockpit Wave 31B — Pay Code Explorer Row Action Read Model Contract`.
 - Cockpit Wave 31B — Pay Code Explorer Row Action Read Model Contract: implemented in [../ui-cockpit/reports/214-wave-31b-pay-code-explorer-row-action-read-model-contract.md](../ui-cockpit/reports/214-wave-31b-pay-code-explorer-row-action-read-model-contract.md); row action metadata is now an explicit read-only contract on list records, but not yet hydrated into provider rows or rendered as enabled links; next `Cockpit Wave 31C — Pay Code Explorer Provider Row Action Hydration`.
 - Cockpit Wave 31C — Pay Code Explorer Provider Row Action Hydration: implemented in [../ui-cockpit/reports/215-wave-31c-pay-code-explorer-provider-row-action-hydration.md](../ui-cockpit/reports/215-wave-31c-pay-code-explorer-provider-row-action-hydration.md); provider rows now include enabled read-only detail/distribution navigation actions and disabled future timeline/notify actions; no action execution or delivery behavior was added; next `Cockpit Wave 31D — Pay Code Explorer Row Action UI Presentation`.
+- Cockpit Wave 31D — Pay Code Explorer Row Action UI Presentation: implemented in [../ui-cockpit/reports/216-wave-31d-pay-code-explorer-row-action-ui-presentation.md](../ui-cockpit/reports/216-wave-31d-pay-code-explorer-row-action-ui-presentation.md); Cockpit rows now render enabled read-only detail/distribution links and disabled future actions from hydrated row action metadata; next `Cockpit Wave 31E — Pay Code Explorer Row Action Browser / Publish Verification`.

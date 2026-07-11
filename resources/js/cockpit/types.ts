@@ -625,13 +625,17 @@ export type CockpitPayCodeExplorerRecord = {
     status: string;
     owner: string;
     lastActivity: string;
+    actions?: CockpitPayCodeRowAction[];
 };
 
 export type CockpitPayCodeRowAction = {
     key: string;
     label: string;
-    disabled: boolean;
-    reason: string;
+    enabled?: boolean;
+    disabled?: boolean;
+    read_only?: boolean;
+    href?: string | null;
+    reason?: string | null;
 };
 
 export type CockpitVoucherOverviewItem = {
@@ -737,6 +741,7 @@ export type CockpitPayCodeExplorerReadModelRecord = {
     display_status?: string | null;
     owner?: string | null;
     last_activity?: string | null;
+    actions?: CockpitPayCodeRowAction[];
     [key: string]: unknown;
 };
 

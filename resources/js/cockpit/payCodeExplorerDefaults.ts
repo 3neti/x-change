@@ -56,20 +56,22 @@ export const cockpitPayCodeRowActions: CockpitPayCodeRowAction[] = [
     {
         key: 'view',
         label: 'View details',
+        enabled: false,
         disabled: true,
         reason: 'Voucher detail foundation is a later slice.',
     },
     {
         key: 'timeline',
         label: 'Open timeline',
+        enabled: false,
         disabled: true,
         reason: 'Journal visibility and redaction are not wired in Slice 4.',
     },
     {
         key: 'notify',
         label: 'Notify recipient',
+        enabled: false,
         disabled: true,
         reason: 'Feedback delivery must be explicitly routed through x-feedback later.',
     },
 ];
-
