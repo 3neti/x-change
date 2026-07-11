@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Mutation Wave 8I — Parity Readiness Gate Plan scaffolded; durable activity production default remains disabled
+Current status: Cockpit Mutation Wave 8J — Runtime Enforcement / Parity Planning Closure scaffolded; next parity audit includes /x/dashboard, /x/pay-codes, and /x/balances
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Mutation Wave 8A — Authorization / Tenant Scope Runtime Plan scaffolded; durable activity production default remains disabled | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Mutation Wave 8J — Runtime Enforcement / Parity Planning Closure scaffolded; next parity audit includes /x/dashboard, /x/pay-codes, and /x/balances | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1629,3 +1629,4 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Cockpit Mutation Wave 8G — Handoff Runtime Enablement Gate Plan: runtime planning recorded in [../ui-cockpit/reports/137-wave-8g-handoff-runtime-enablement-gate-plan.md](../ui-cockpit/reports/137-wave-8g-handoff-runtime-enablement-gate-plan.md); next `8H — Parity Surface Inventory Plan`.
 - Cockpit Mutation Wave 8H — Parity Surface Inventory Plan: runtime planning recorded in [../ui-cockpit/reports/138-wave-8h-parity-surface-inventory-plan.md](../ui-cockpit/reports/138-wave-8h-parity-surface-inventory-plan.md); next `8I — Parity Readiness Gate Plan`.
 - Cockpit Mutation Wave 8I — Parity Readiness Gate Plan: runtime planning recorded in [../ui-cockpit/reports/139-wave-8i-parity-readiness-gate-plan.md](../ui-cockpit/reports/139-wave-8i-parity-readiness-gate-plan.md); next `8J — Runtime Enforcement / Parity Planning Closure`.
+- Cockpit Mutation Wave 8J — Runtime Enforcement / Parity Planning Closure: runtime planning recorded in [../ui-cockpit/reports/140-wave-8j-runtime-enforcement-parity-planning-closure.md](../ui-cockpit/reports/140-wave-8j-runtime-enforcement-parity-planning-closure.md); next `Wave 9A — /x/dashboard, /x/pay-codes, and /x/balances Parity Audit`.
