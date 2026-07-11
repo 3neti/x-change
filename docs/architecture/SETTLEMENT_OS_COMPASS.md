@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Mutation Wave 8G — Handoff Runtime Enablement Gate Plan scaffolded; durable activity production default remains disabled
+Current status: Cockpit Mutation Wave 8H — Parity Surface Inventory Plan scaffolded; durable activity production default remains disabled
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -1627,3 +1627,4 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Cockpit Mutation Wave 8E — Retention Enforcement Runtime Plan: runtime planning recorded in [../ui-cockpit/reports/135-wave-8e-retention-enforcement-runtime-plan.md](../ui-cockpit/reports/135-wave-8e-retention-enforcement-runtime-plan.md); next `8F — Recorder Failure Telemetry Runtime Plan`.
 - Cockpit Mutation Wave 8F — Recorder Failure Telemetry Runtime Plan: runtime planning recorded in [../ui-cockpit/reports/136-wave-8f-recorder-failure-telemetry-runtime-plan.md](../ui-cockpit/reports/136-wave-8f-recorder-failure-telemetry-runtime-plan.md); next `8G — Handoff Runtime Enablement Gate Plan`.
 - Cockpit Mutation Wave 8G — Handoff Runtime Enablement Gate Plan: runtime planning recorded in [../ui-cockpit/reports/137-wave-8g-handoff-runtime-enablement-gate-plan.md](../ui-cockpit/reports/137-wave-8g-handoff-runtime-enablement-gate-plan.md); next `8H — Parity Surface Inventory Plan`.
+- Cockpit Mutation Wave 8H — Parity Surface Inventory Plan: runtime planning recorded in [../ui-cockpit/reports/138-wave-8h-parity-surface-inventory-plan.md](../ui-cockpit/reports/138-wave-8h-parity-surface-inventory-plan.md); next `8I — Parity Readiness Gate Plan`.
