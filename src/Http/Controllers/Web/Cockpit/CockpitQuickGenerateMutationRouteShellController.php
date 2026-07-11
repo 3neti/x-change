@@ -73,7 +73,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         $pricingPreflight = $this->pricingPreflight($payload, $estimatePayCodeCost);
         $fundingPreflight = $this->fundingPreflight($request, $balanceOverview);
         $result = $generatePayCode->handle($payload);
-        $response = $this->responsePayload($request, $result, $key, false, $pricingPreflight, $fundingPreflight);
+        $response = $this->responsePayload($request, $result, $key, false, $pricingPreflight, $fundingPreflight, $payload);
         $this->processOperatorIssuanceActivity($request, $response, $key, $operatorIssuanceActivityHandoffPipeline);
 
         if (is_string($key)) {
@@ -110,7 +110,10 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         bool $replayed,
         array $pricingPreflight = [],
         array $fundingPreflight = [],
+        array $payload = [],
     ): array {
+        $campaignAttribution = $this->campaignAttribution($payload, $result);
+
         return [
             'schema' => 'x-change.cockpit.quick-generate-existing-issuance-handoff.v1',
             'status' => 'issued',
@@ -159,7 +162,8 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                 'replayed' => $replayed,
             ],
             'result' => $this->redactedResult($result),
-            'post_issuance_navigation' => $this->postIssuanceNavigation($result),
+            'campaign_attribution' => $campaignAttribution,
+            'post_issuance_navigation' => $this->postIssuanceNavigation($result, $campaignAttribution),
             'redactions' => [
                 'payloads' => 'operator-safe-generated-facts-only',
                 'request_payload' => 'excluded',
@@ -274,7 +278,60 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
     /**
      * @return array<string, mixed>
      */
-    protected function postIssuanceNavigation(GeneratePayCodeResultData $result): array
+    protected function campaignAttribution(array $payload, GeneratePayCodeResultData $result): array
+    {
+        $campaign = (array) data_get($payload, 'metadata.campaign', []);
+        $planningKey = $this->stringValue(data_get($campaign, 'planning_key'));
+        $executionId = $this->stringValue(data_get($campaign, 'execution_id'));
+        $campaignId = $this->stringValue(data_get($campaign, 'campaign_id'));
+        $audienceId = $this->stringValue(data_get($campaign, 'audience_id'));
+        $recipientId = $this->stringValue(data_get($campaign, 'recipient_id'));
+
+        if ($planningKey === null && $executionId === null && $campaignId === null) {
+            return [
+                'schema' => 'x-change.cockpit.quick-generate-campaign-attribution.v1',
+                'status' => 'not_available',
+                'available' => false,
+                'read_only' => true,
+                'mutates_campaign' => false,
+                'redactions' => [
+                    'payloads' => 'not-loaded',
+                ],
+            ];
+        }
+
+        return [
+            'schema' => 'x-change.cockpit.quick-generate-campaign-attribution.v1',
+            'status' => 'available',
+            'available' => true,
+            'read_only' => true,
+            'mutates_campaign' => false,
+            'planning_key' => $planningKey,
+            'execution_id' => $executionId,
+            'campaign_id' => $campaignId,
+            'audience_id' => $audienceId,
+            'recipient_id' => $recipientId,
+            'source' => $this->stringValue(data_get($campaign, 'source')) ?? 'campaign_cockpit',
+            'generated_code' => $result->code,
+            'redactions' => [
+                'payloads' => 'campaign-attribution-only',
+                'excluded' => [
+                    'campaign_payload',
+                    'recipient_payload',
+                    'provider_payload',
+                    'wallet',
+                    'balance',
+                    'raw_payload',
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $campaignAttribution
+     * @return array<string, mixed>
+     */
+    protected function postIssuanceNavigation(GeneratePayCodeResultData $result, array $campaignAttribution = []): array
     {
         $detailHref = Route::has('x-change.cockpit.pay-codes.show')
             ? route('x-change.cockpit.pay-codes.show', ['code' => $result->code], false)
@@ -282,6 +339,8 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         $distributionHref = Route::has('x-change.cockpit.pay-codes.distribution')
             ? route('x-change.cockpit.pay-codes.distribution', ['code' => $result->code], false)
             : null;
+        $campaignExplorerHref = $this->campaignExplorerHref($campaignAttribution, $result);
+        $campaignDashboardHref = $this->campaignDashboardHref($campaignAttribution);
 
         return [
             'schema' => 'x-change.cockpit.quick-generate-post-issuance-navigation.v1',
@@ -306,6 +365,24 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                     'read_only' => true,
                     'reason' => 'Read-only distribution/share workspace route for the generated Pay Code.',
                 ],
+                [
+                    'key' => 'campaign_explorer',
+                    'label' => 'Return to Campaign Explorer',
+                    'href' => $campaignExplorerHref,
+                    'status' => $campaignExplorerHref === null ? 'unavailable' : 'available',
+                    'enabled' => $campaignExplorerHref !== null,
+                    'read_only' => true,
+                    'reason' => 'Read-only campaign-aware Explorer context for the generated Pay Code.',
+                ],
+                [
+                    'key' => 'campaign_dashboard',
+                    'label' => 'Return to Campaign Dashboard',
+                    'href' => $campaignDashboardHref,
+                    'status' => $campaignDashboardHref === null ? 'unavailable' : 'available',
+                    'enabled' => $campaignDashboardHref !== null,
+                    'read_only' => true,
+                    'reason' => 'Read-only campaign-aware Dashboard context for the originating campaign.',
+                ],
             ],
             'redactions' => [
                 'payloads' => 'post-issuance-navigation-only',
@@ -322,6 +399,45 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                 ],
             ],
         ];
+    }
+
+    protected function campaignExplorerHref(array $campaignAttribution, GeneratePayCodeResultData $result): ?string
+    {
+        if (($campaignAttribution['available'] ?? false) !== true || ! Route::has('x-change.cockpit.pay-codes.index')) {
+            return null;
+        }
+
+        return route('x-change.cockpit.pay-codes.index', [
+            'campaign_planning_key' => $campaignAttribution['planning_key'] ?? null,
+            'campaign_execution_id' => $campaignAttribution['execution_id'] ?? null,
+            'campaign_source' => $campaignAttribution['source'] ?? 'campaign_cockpit',
+            'activity_code' => $result->code,
+            'activity_source' => 'cockpit.quick-generate',
+            'search' => $result->code,
+        ], false);
+    }
+
+    protected function campaignDashboardHref(array $campaignAttribution): ?string
+    {
+        if (($campaignAttribution['available'] ?? false) !== true || ! Route::has('x-change.cockpit.dashboard')) {
+            return null;
+        }
+
+        return route('x-change.cockpit.dashboard', [
+            'campaign_planning_key' => $campaignAttribution['planning_key'] ?? null,
+            'campaign_execution_id' => $campaignAttribution['execution_id'] ?? null,
+        ], false);
+    }
+
+    protected function stringValue(mixed $value): ?string
+    {
+        if (! is_scalar($value)) {
+            return null;
+        }
+
+        $normalized = trim((string) $value);
+
+        return $normalized === '' ? null : $normalized;
     }
 
     /**

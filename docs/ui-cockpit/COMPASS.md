@@ -2149,3 +2149,5 @@ Current boundary:
 - Cockpit Wave 35 next recommended wave: `Cockpit Wave 36 — Campaign-Sourced Quick Generate Result Attribution / Explorer Bridge`.
 - Cockpit Wave 36A result: Campaign-sourced result attribution audit completed; report `reports/243-wave-36a-campaign-sourced-result-attribution-audit.md`; next `Cockpit Wave 36B — Campaign Attribution Response Contract / Backend Handoff Links`.
 - Cockpit Wave 36A expected UI result: no UI change; this slice defines campaign-aware return-link scope and mutation boundaries.
+- Cockpit Wave 36B result: Campaign attribution response contract and backend handoff links completed; report `reports/244-wave-36b-campaign-attribution-response-contract-backend-handoff-links.md`; next `Cockpit Wave 36C — Campaign Attribution Result UI Presentation`.
+- Cockpit Wave 36B expected UI result: no visible UI change until the Vue result panel renders `campaign_attribution` and campaign-aware post-issuance items.
