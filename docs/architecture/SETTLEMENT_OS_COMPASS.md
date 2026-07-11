@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 31 complete; Pay Code Explorer row action runtime parity complete
+Current status: Cockpit Wave 32A complete; Voucher Detail functional parity audit complete
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 31 complete; Pay Code Explorer row action runtime parity complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 32A complete; Voucher Detail functional parity audit complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1699,3 +1699,4 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Cockpit Wave 31D — Pay Code Explorer Row Action UI Presentation: implemented in [../ui-cockpit/reports/216-wave-31d-pay-code-explorer-row-action-ui-presentation.md](../ui-cockpit/reports/216-wave-31d-pay-code-explorer-row-action-ui-presentation.md); Cockpit rows now render enabled read-only detail/distribution links and disabled future actions from hydrated row action metadata; next `Cockpit Wave 31E — Pay Code Explorer Row Action Browser / Publish Verification`.
 - Cockpit Wave 31E — Pay Code Explorer Row Action Browser / Publish Verification: implemented in [../ui-cockpit/reports/217-wave-31e-pay-code-explorer-row-action-browser-publish-verification.md](../ui-cockpit/reports/217-wave-31e-pay-code-explorer-row-action-browser-publish-verification.md); Playwright verifies row action links and read-only detail navigation while asset doctor confirms host-published assets are clean; next `Cockpit Wave 31F — Pay Code Explorer Row Action Runtime Parity Closure`.
 - Cockpit Wave 31 — Pay Code Explorer Row Action Runtime Parity: completed in [../ui-cockpit/reports/218-wave-31-pay-code-explorer-row-action-runtime-parity-closure.md](../ui-cockpit/reports/218-wave-31-pay-code-explorer-row-action-runtime-parity-closure.md); Explorer rows now render browser-verified read-only `View details` and `Distribution` links, while future timeline/notify actions remain disabled; next recommended wave is `Cockpit Wave 32 — Voucher Detail Functional Parity / Evidence Surface Hardening`.
+- Cockpit Wave 32A — Voucher Detail Functional Parity Audit: implemented in [../ui-cockpit/reports/219-wave-32a-voucher-detail-functional-parity-audit.md](../ui-cockpit/reports/219-wave-32a-voucher-detail-functional-parity-audit.md); Wave 32 is scoped to read-only voucher detail evidence hardening and explicitly excludes approval, execution, provider calls, wallet mutation, journal writes, action execution, feedback delivery, campaign mutation, and unsafe payload exposure; next `Cockpit Wave 32B — Voucher Detail Evidence Summary Read Model Contract`.

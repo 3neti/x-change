@@ -2091,3 +2091,5 @@ Current boundary:
 - Cockpit Wave 31 completed: rows now expose enabled read-only `View details` and `Distribution` links, disabled future actions remain explicit, Playwright verifies row navigation, and published host assets are clean.
 - Cockpit Wave 31 expected UI result: operators can navigate from Explorer rows to read-only Cockpit detail/distribution surfaces.
 - Cockpit Wave 31 next recommended wave: `Cockpit Wave 32 — Voucher Detail Functional Parity / Evidence Surface Hardening`.
+- Cockpit Wave 32A result: Voucher Detail functional parity audit completed; report `reports/219-wave-32a-voucher-detail-functional-parity-audit.md`; next `Cockpit Wave 32B — Voucher Detail Evidence Summary Read Model Contract`.
+- Cockpit Wave 32A expected UI result: no UI change; this slice defines read-only evidence hardening scope.
