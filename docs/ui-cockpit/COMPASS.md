@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 14C — Local Route Smoke Verification Record
-Status: Implemented / Local Cockpit and bridge routes verified
+Current slice: Cockpit Wave 14D — Browser Visual Handoff Checklist
+Status: Implemented / Browser visual checklist recorded
 Last updated: 2026-07-11
 
 ## Completed
@@ -1925,3 +1925,4 @@ Current boundary:
 - Cockpit Wave 14A result: asset drift guard passed after Wave 13; `php artisan x-change:doctor --assets --json` reported checked 56, ok 56, stale 0, missing 0, extra 0; report `reports/175-wave-14a-published-asset-drift-verification.md`; next `Cockpit Wave 14B — Host Mirror Publish State Record`.
 - Cockpit Wave 14B result: host-published Cockpit mirrors for Wave 13 were recorded and committed as synchronized generated assets while package source remains authoritative; report `reports/176-wave-14b-host-mirror-publish-state-record.md`; next `Cockpit Wave 14C — Local Route Smoke Verification Record`.
 - Cockpit Wave 14C result: local route smoke verification recorded for Cockpit and legacy bridge pages; route-list checks returned Cockpit 6 routes, Pay Codes 4 routes, Balances 1 route; report `reports/177-wave-14c-local-route-smoke-verification-record.md`; next `Cockpit Wave 14D — Browser Visual Handoff Checklist`.
+- Cockpit Wave 14D result: browser visual verification checklist recorded for Quick Generate diagnostics, successful generation result panel, and legacy page Cockpit bridge callouts; report `reports/178-wave-14d-browser-visual-handoff-checklist.md`; next `Cockpit Wave 14E — Wave 14 Closure / Next Planning Record`.
