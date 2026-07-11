@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 33E complete; Distribution Workspace browser/publish verification complete
+Current status: Cockpit Wave 33 complete; Distribution Workspace share-surface hardening complete
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 33E complete; Distribution Workspace browser/publish verification complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 33 complete; Distribution Workspace share-surface hardening complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1710,3 +1710,4 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Cockpit Wave 33C — Distribution Workspace Route Prop Hydration: implemented in [../ui-cockpit/reports/227-wave-33c-distribution-workspace-route-prop-hydration.md](../ui-cockpit/reports/227-wave-33c-distribution-workspace-route-prop-hydration.md); the Distribution Workspace route now receives read-only share/channel/print/analytics/action facts through `distribution_workspace_read_model`, not yet rendered by Vue; next `Cockpit Wave 33D — Distribution Workspace UI Presentation`.
 - Cockpit Wave 33D — Distribution Workspace UI Presentation: implemented in [../ui-cockpit/reports/228-wave-33d-distribution-workspace-ui-presentation.md](../ui-cockpit/reports/228-wave-33d-distribution-workspace-ui-presentation.md); Distribution Workspace now renders hydrated read-only share/channel/print/analytics/action facts and keeps placeholder fallbacks; next `Cockpit Wave 33E — Distribution Workspace Browser / Publish Verification`.
 - Cockpit Wave 33E — Distribution Workspace Browser / Publish Verification: implemented in [../ui-cockpit/reports/229-wave-33e-distribution-workspace-browser-publish-verification.md](../ui-cockpit/reports/229-wave-33e-distribution-workspace-browser-publish-verification.md); Playwright verifies Explorer-to-Distribution navigation renders the share surface and unsafe payload labels remain absent; asset doctor reports published Cockpit assets match package source; next `Cockpit Wave 33F — Distribution Workspace Share Surface Closure`.
+- Cockpit Wave 33 complete — Distribution Workspace Share Surface Hardening: closed in [../ui-cockpit/reports/230-wave-33-distribution-workspace-share-surface-closure.md](../ui-cockpit/reports/230-wave-33-distribution-workspace-share-surface-closure.md); Distribution Workspace now has typed read-only share/channel/print/analytics/action contracts, route hydration, Vue rendering, Playwright verification, and clean published assets while preserving read-only boundaries; next recommended wave is `Cockpit Wave 34 — Quick Generate Post-Issuance Navigation / Share Handoff`.

@@ -2115,3 +2115,7 @@ Current boundary:
 - Cockpit Wave 33D expected UI result: `/x/cockpit/pay-codes/{code}/distribution` shows `Distribution Workspace Runtime`, Pay Code, payload policy, hydrated share/channel/print/analytics cards, and blocked actions.
 - Cockpit Wave 33E result: browser and publish verification completed; Playwright verifies Explorer-to-Distribution navigation renders the read-only share surface and asset doctor reports clean; report `reports/229-wave-33e-distribution-workspace-browser-publish-verification.md`; next `Cockpit Wave 33F — Distribution Workspace Share Surface Closure`.
 - Cockpit Wave 33E expected UI result: users navigating from `/x/cockpit/pay-codes` to a distribution page see the runtime share surface in-browser with unsafe payload labels absent.
+- Cockpit Wave 33 result: Distribution Workspace share surface closed; report `reports/230-wave-33-distribution-workspace-share-surface-closure.md`.
+- Cockpit Wave 33 completed: Distribution Workspace now has typed read-only share/channel/print/analytics/action contracts, route prop hydration, Vue rendering, Playwright verification, and clean published assets while preserving read-only boundaries.
+- Cockpit Wave 33 expected UI result: `/x/cockpit/pay-codes/{code}/distribution` shows read-only Pay Code, payload policy, share/channel/print/analytics cards, and blocked distribution actions.
+- Cockpit Wave 33 next recommended wave: `Cockpit Wave 34 — Quick Generate Post-Issuance Navigation / Share Handoff`.
