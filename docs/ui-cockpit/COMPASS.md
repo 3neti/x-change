@@ -2153,3 +2153,5 @@ Current boundary:
 - Cockpit Wave 36B expected UI result: no visible UI change until the Vue result panel renders `campaign_attribution` and campaign-aware post-issuance items.
 - Cockpit Wave 36C result: Campaign attribution result UI presentation completed; report `reports/245-wave-36c-campaign-attribution-result-ui-presentation.md`; next `Cockpit Wave 36D — Campaign Attribution Browser / Publish Verification`.
 - Cockpit Wave 36C expected UI result: after campaign-prefilled Quick Generate succeeds, the result panel shows `Campaign attribution`, campaign identifiers, and `Return to Campaign Explorer` / `Return to Campaign Dashboard` links.
+- Cockpit Wave 36D result: Campaign attribution browser/publish verification completed; report `reports/246-wave-36d-campaign-attribution-browser-publish-verification.md`; next `Cockpit Wave 36E — Campaign-Sourced Result Attribution Closure`.
+- Cockpit Wave 36D expected UI result: browser-verified campaign-prefilled submit shows campaign attribution and read-only Campaign Explorer/Dashboard return links.
