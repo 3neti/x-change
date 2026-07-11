@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Mutation Wave 6J — Production Readiness Closure scaffolded; durable activity production default remains disabled
+Current status: Cockpit Mutation Wave 7J — Production Hardening Controls Closure scaffolded; durable activity production default remains disabled
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Mutation Wave 6J scaffolded; durable activity production default remains disabled | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Mutation Wave 7J — Production Hardening Controls Closure scaffolded; durable activity production default remains disabled | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1610,3 +1610,13 @@ Update this top-level Compass whenever:
 - the recommended next workstream changes
 
 Workstream compasses remain the source of detailed slice history. This Compass should summarize program status and link to the detailed Compass rather than duplicating every slice.
+- Cockpit Mutation Wave 7A — Durable Activity Authorization / Tenant Scope Enforcement Baseline: implementation-control baseline recorded in [../ui-cockpit/reports/121-wave-7a-durable-activity-authorization-tenant-scope-enforcement-baseline.md](../ui-cockpit/reports/121-wave-7a-durable-activity-authorization-tenant-scope-enforcement-baseline.md); next `7B — Durable Activity Retention / Purge Enforcement Baseline`.
+- Cockpit Mutation Wave 7B — Durable Activity Retention / Purge Enforcement Baseline: implementation-control baseline recorded in [../ui-cockpit/reports/122-wave-7b-durable-activity-retention-purge-enforcement-baseline.md](../ui-cockpit/reports/122-wave-7b-durable-activity-retention-purge-enforcement-baseline.md); next `7C — Recorder Failure Observability Implementation Baseline`.
+- Cockpit Mutation Wave 7C — Recorder Failure Observability Implementation Baseline: implementation-control baseline recorded in [../ui-cockpit/reports/123-wave-7c-recorder-observability-implementation-baseline.md](../ui-cockpit/reports/123-wave-7c-recorder-observability-implementation-baseline.md); next `7D — Journal Handoff Hardening Baseline`.
+- Cockpit Mutation Wave 7D — Journal Handoff Hardening Baseline: implementation-control baseline recorded in [../ui-cockpit/reports/124-wave-7d-journal-handoff-hardening-baseline.md](../ui-cockpit/reports/124-wave-7d-journal-handoff-hardening-baseline.md); next `7E — Action / Feedback Handoff Hardening Baseline`.
+- Cockpit Mutation Wave 7E — Action / Feedback Handoff Hardening Baseline: implementation-control baseline recorded in [../ui-cockpit/reports/125-wave-7e-action-feedback-handoff-hardening-baseline.md](../ui-cockpit/reports/125-wave-7e-action-feedback-handoff-hardening-baseline.md); next `7F — PII / Redaction Enforcement Baseline`.
+- Cockpit Mutation Wave 7F — PII / Redaction Enforcement Baseline: implementation-control baseline recorded in [../ui-cockpit/reports/126-wave-7f-pii-redaction-enforcement-baseline.md](../ui-cockpit/reports/126-wave-7f-pii-redaction-enforcement-baseline.md); next `7G — Rollback / Disable Operational Baseline`.
+- Cockpit Mutation Wave 7G — Rollback / Disable Operational Baseline: implementation-control baseline recorded in [../ui-cockpit/reports/127-wave-7g-rollback-disable-operational-baseline.md](../ui-cockpit/reports/127-wave-7g-rollback-disable-operational-baseline.md); next `7H — Activity Search / Filter Implementation Baseline`.
+- Cockpit Mutation Wave 7H — Activity Search / Filter Implementation Baseline: implementation-control baseline recorded in [../ui-cockpit/reports/128-wave-7h-activity-search-filter-implementation-baseline.md](../ui-cockpit/reports/128-wave-7h-activity-search-filter-implementation-baseline.md); next `7I — Projection / Queue Seam Implementation Baseline`.
+- Cockpit Mutation Wave 7I — Projection / Queue Seam Implementation Baseline: implementation-control baseline recorded in [../ui-cockpit/reports/129-wave-7i-projection-queue-seam-implementation-baseline.md](../ui-cockpit/reports/129-wave-7i-projection-queue-seam-implementation-baseline.md); next `7J — Production Hardening Controls Closure`.
+- Cockpit Mutation Wave 7J — Production Hardening Controls Closure: implementation-control baseline recorded in [../ui-cockpit/reports/130-wave-7j-production-hardening-controls-closure.md](../ui-cockpit/reports/130-wave-7j-production-hardening-controls-closure.md); next `Manual UI Review / Wave 8 runtime enforcement planning`.

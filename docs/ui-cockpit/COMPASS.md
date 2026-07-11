@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 6J — Production Readiness Closure
-Status: Scaffolded / Decision recorded
+Current slice: Cockpit Mutation Wave 7J — Production Hardening Controls Closure
+Status: Scaffolded / Baseline recorded
 Last updated: 2026-07-11
 
 ## Completed
@@ -1847,3 +1847,23 @@ Current boundary:
 - Cockpit Mutation Wave 6I scaffold result: `High-Volume Projection / Queue Decision` recorded; report `reports/119-wave-6i-high-volume-projection-queue-decision.md`; next `6J — Production Readiness Closure`.
 
 - Cockpit Mutation Wave 6J scaffold result: `Production Readiness Closure` recorded; report `reports/120-wave-6j-production-readiness-closure.md`; next `Manual UI Review / Wave 6 follow-up planning`.
+- Cockpit Mutation Wave 7A — Durable Activity Authorization / Tenant Scope Enforcement Baseline scaffold result: implementation-control baseline recorded; report `reports/121-wave-7a-durable-activity-authorization-tenant-scope-enforcement-baseline.md`; next `7B — Durable Activity Retention / Purge Enforcement Baseline`.
+- Cockpit Mutation Wave 7A — Durable Activity Authorization / Tenant Scope Enforcement Baseline expected UI result: no current Cockpit UI change is expected.
+- Cockpit Mutation Wave 7B — Durable Activity Retention / Purge Enforcement Baseline scaffold result: implementation-control baseline recorded; report `reports/122-wave-7b-durable-activity-retention-purge-enforcement-baseline.md`; next `7C — Recorder Failure Observability Implementation Baseline`.
+- Cockpit Mutation Wave 7B — Durable Activity Retention / Purge Enforcement Baseline expected UI result: no current Cockpit UI change is expected.
+- Cockpit Mutation Wave 7C — Recorder Failure Observability Implementation Baseline scaffold result: implementation-control baseline recorded; report `reports/123-wave-7c-recorder-observability-implementation-baseline.md`; next `7D — Journal Handoff Hardening Baseline`.
+- Cockpit Mutation Wave 7C — Recorder Failure Observability Implementation Baseline expected UI result: no current Cockpit UI change is expected.
+- Cockpit Mutation Wave 7D — Journal Handoff Hardening Baseline scaffold result: implementation-control baseline recorded; report `reports/124-wave-7d-journal-handoff-hardening-baseline.md`; next `7E — Action / Feedback Handoff Hardening Baseline`.
+- Cockpit Mutation Wave 7D — Journal Handoff Hardening Baseline expected UI result: no current Cockpit UI change is expected.
+- Cockpit Mutation Wave 7E — Action / Feedback Handoff Hardening Baseline scaffold result: implementation-control baseline recorded; report `reports/125-wave-7e-action-feedback-handoff-hardening-baseline.md`; next `7F — PII / Redaction Enforcement Baseline`.
+- Cockpit Mutation Wave 7E — Action / Feedback Handoff Hardening Baseline expected UI result: no current Cockpit UI change is expected.
+- Cockpit Mutation Wave 7F — PII / Redaction Enforcement Baseline scaffold result: implementation-control baseline recorded; report `reports/126-wave-7f-pii-redaction-enforcement-baseline.md`; next `7G — Rollback / Disable Operational Baseline`.
+- Cockpit Mutation Wave 7F — PII / Redaction Enforcement Baseline expected UI result: no current Cockpit UI change is expected.
+- Cockpit Mutation Wave 7G — Rollback / Disable Operational Baseline scaffold result: implementation-control baseline recorded; report `reports/127-wave-7g-rollback-disable-operational-baseline.md`; next `7H — Activity Search / Filter Implementation Baseline`.
+- Cockpit Mutation Wave 7G — Rollback / Disable Operational Baseline expected UI result: no current Cockpit UI change is expected.
+- Cockpit Mutation Wave 7H — Activity Search / Filter Implementation Baseline scaffold result: implementation-control baseline recorded; report `reports/128-wave-7h-activity-search-filter-implementation-baseline.md`; next `7I — Projection / Queue Seam Implementation Baseline`.
+- Cockpit Mutation Wave 7H — Activity Search / Filter Implementation Baseline expected UI result: no current Cockpit UI change is expected.
+- Cockpit Mutation Wave 7I — Projection / Queue Seam Implementation Baseline scaffold result: implementation-control baseline recorded; report `reports/129-wave-7i-projection-queue-seam-implementation-baseline.md`; next `7J — Production Hardening Controls Closure`.
+- Cockpit Mutation Wave 7I — Projection / Queue Seam Implementation Baseline expected UI result: no current Cockpit UI change is expected.
+- Cockpit Mutation Wave 7J — Production Hardening Controls Closure scaffold result: implementation-control baseline recorded; report `reports/130-wave-7j-production-hardening-controls-closure.md`; next `Manual UI Review / Wave 8 runtime enforcement planning`.
+- Cockpit Mutation Wave 7J — Production Hardening Controls Closure expected UI result: no current Cockpit UI change is expected.
