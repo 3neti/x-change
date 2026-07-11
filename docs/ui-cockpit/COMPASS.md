@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 5M — Local BrickMath Diagnostic Activity Cleanup
-Status: Completed locally
+Current slice: Cockpit Mutation Wave 5 — Human UI Confirmation
+Status: Pass — accepted by human
 Last updated: 2026-07-11
 
 ## Completed
@@ -563,6 +563,15 @@ Last updated: 2026-07-11
   - Expected UI effect: `Pay Code YEZA issued` disappears; `Pay Code MCPC issued` remains visible while local durable activity config is enabled.
   - No source behavior, Cockpit UI code, host-published assets, local config, routes, controllers, APIs, durable activity defaults, journal writes, action execution, feedback delivery, provider calls, direct wallet mutation, voucher execution behavior, campaign mutation, or money movement behavior was changed.
   - Report: `reports/109-local-brickmath-diagnostic-activity-cleanup.md`.
+- Completed Cockpit Mutation Wave 5 — Human UI Confirmation:
+  - Human reviewer confirmed `/x/cockpit` opened successfully.
+  - Human reviewer confirmed real `MCPC` activity is visible.
+  - Human reviewer confirmed BrickMath diagnostic `YEZA` activity is absent.
+  - Human reviewer confirmed synthetic `PC-LOCAL-DIAGNOSTIC` fixture is absent.
+  - Human reviewer confirmed no raw payloads, secrets, retry controls, or new mutation controls were visible in the provided scrape.
+  - Confirmed journal/action/feedback remain `not_wired`.
+  - Recommended next wave: `Cockpit Mutation Wave 6 — Production Hardening Plan`, starting with `Wave 6A — Durable Activity Authorization / Tenant Scope Decision`.
+  - Report: `reports/110-wave-5-human-ui-confirmation.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -1171,17 +1180,15 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Manual UI Review — Cockpit Operator Issuance Activity
+Cockpit Mutation Wave 6 — Production Hardening Plan
 ```
 
 Purpose:
 
-- open `http://x-change-sandbox.test/x/cockpit`
-- verify the real `MCPC` activity is visible
-- verify the BrickMath diagnostic `YEZA` activity is absent
-- verify the synthetic `PC-LOCAL-DIAGNOSTIC` fixture is absent
-- verify no raw payloads, secrets, retry controls, or new mutation controls are visible
-- after UI review, proceed to `Cockpit Mutation Wave 6 — Production Hardening Plan`
+- define production hardening slices for durable activity before default production enablement
+- start with `Wave 6A — Durable Activity Authorization / Tenant Scope Decision`
+- keep local UI verification separate from production enablement
+- preserve Quick Generate behavior, wallet behavior, voucher behavior, redaction behavior, and money movement semantics
 
 Completed host integration boundary:
 
@@ -1748,3 +1755,6 @@ Current boundary:
 - Cockpit Mutation Wave 5M cleanup result: deleted local `YEZA` / `corr-cockpit-brickmath-5f` durable activity row.
 - Cockpit Mutation Wave 5M verification result: `yeza_count: 0`, `mcpc_count: 1`.
 - Cockpit Mutation Wave 5M expected UI result: `YEZA` absent, `MCPC` visible, `PC-LOCAL-DIAGNOSTIC` absent.
+- Cockpit Mutation Wave 5 human UI result: Pass — accepted by human.
+- Cockpit Mutation Wave 5 human UI confirmed: `MCPC` visible, `YEZA` absent, `PC-LOCAL-DIAGNOSTIC` absent, journal/action/feedback `not_wired`, no raw payloads/secrets/retry controls/new mutation controls visible.
+- Cockpit Mutation Wave 5 next wave result: `Cockpit Mutation Wave 6 — Production Hardening Plan`.

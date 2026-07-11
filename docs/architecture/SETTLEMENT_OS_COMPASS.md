@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Cockpit Mutation Wave 5M local BrickMath diagnostic activity cleanup complete
+Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Cockpit Mutation Wave 5 human UI confirmation passed
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Mutation Wave 5M cleanup complete; manual UI review next | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Mutation Wave 5 human UI confirmation passed; Wave 6 hardening next | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1441,6 +1441,15 @@ ExecutionDriverContract
   - Expected UI effect: `Pay Code YEZA issued` disappears; `Pay Code MCPC issued` remains visible while local durable activity config is enabled.
   - No source behavior, Cockpit UI code, host-published assets, local config, routes, controllers, APIs, durable activity defaults, journal writes, action execution, feedback delivery, provider calls, direct wallet mutation, voucher execution behavior, campaign mutation, or money movement behavior was changed.
   - Report: `../ui-cockpit/reports/109-local-brickmath-diagnostic-activity-cleanup.md`.
+- Cockpit Mutation Wave 5 — Human UI Confirmation:
+  - Human reviewer confirmed `/x/cockpit` opened successfully.
+  - Human reviewer confirmed real `MCPC` activity is visible.
+  - Human reviewer confirmed BrickMath diagnostic `YEZA` activity is absent.
+  - Human reviewer confirmed synthetic `PC-LOCAL-DIAGNOSTIC` fixture is absent.
+  - Human reviewer confirmed no raw payloads, secrets, retry controls, or new mutation controls were visible in the provided scrape.
+  - Confirmed journal/action/feedback remain `not_wired`.
+  - Recommended next wave: `Cockpit Mutation Wave 6 — Production Hardening Plan`, starting with `Wave 6A — Durable Activity Authorization / Tenant Scope Decision`.
+  - Report: `../ui-cockpit/reports/110-wave-5-human-ui-confirmation.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -1456,22 +1465,20 @@ x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 x-change Host Integration Slice 2 — Journal/action/feedback read-model hydration into Cockpit surfaces
 ```
 
-Completed through Host Integration Slice 2I and Cockpit Mutation Wave 5M — Local BrickMath Diagnostic Activity Cleanup.
+Completed through Host Integration Slice 2I and Cockpit Mutation Wave 5 — Human UI Confirmation.
 
 Recommended next checkpoint:
 
 ```text
-Manual UI Review — Cockpit Operator Issuance Activity.
+Cockpit Mutation Wave 6 — Production Hardening Plan.
 ```
 
 Recommended actions:
 
-1. Open `http://x-change-sandbox.test/x/cockpit`.
-2. Verify the real `MCPC` activity is visible.
-3. Verify the BrickMath diagnostic `YEZA` activity is absent.
-4. Verify the synthetic `PC-LOCAL-DIAGNOSTIC` fixture is absent.
-5. Verify no raw payloads, secrets, retry controls, or new mutation controls are visible.
-6. After UI review, proceed to `Cockpit Mutation Wave 6 — Production Hardening Plan`.
+1. Define production hardening slices for durable activity before default production enablement.
+2. Start with `Wave 6A — Durable Activity Authorization / Tenant Scope Decision`.
+3. Keep local UI verification separate from production enablement.
+4. Preserve Quick Generate behavior, wallet behavior, voucher behavior, redaction behavior, and money movement semantics.
 4. Preserve Quick Generate behavior, voucher behavior, wallet behavior, durable activity behavior, redaction behavior, and money movement semantics.
 5. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
 6. Keep durable activity production default enablement deferred.
