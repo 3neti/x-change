@@ -118,6 +118,29 @@ export type CockpitOperatorIssuanceActivityPresentation = {
             };
             [key: string]: unknown;
         };
+        action_handoff?: {
+            status?: string | null;
+            action_hint_id?: string | null;
+            action_run_id?: string | null;
+            action_required?: boolean | null;
+            executes_action?: boolean | null;
+            source?: string | null;
+            reason?: string | null;
+            metadata?: {
+                event_or_state?: string | null;
+                actions?: Array<{
+                    key?: string | null;
+                    label?: string | null;
+                    run_id?: string | null;
+                    [key: string]: unknown;
+                }>;
+                composition?: Record<string, unknown>;
+                safe_diagnostics?: Array<Record<string, unknown>>;
+                exception?: string | null;
+                [key: string]: unknown;
+            };
+            [key: string]: unknown;
+        };
         [key: string]: unknown;
     };
     [key: string]: unknown;

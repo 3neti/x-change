@@ -147,7 +147,7 @@ const operatorIssuanceActivityReadModel = {
             correlation_id: 'corr-1',
             handoffs: {
                 journal: 'recorded',
-                action: 'not_wired',
+                action: 'composed',
                 feedback: 'not_wired',
             },
             safety: {
@@ -181,6 +181,35 @@ const operatorIssuanceActivityReadModel = {
                         event_type: 'cockpit.operator_issuance_activity.recorded',
                         provider_payload: 'must-not-render',
                         token: 'must-not-render',
+                    },
+                },
+                action_handoff: {
+                    status: 'composed',
+                    action_hint_id: 'cockpit.pay-code.open',
+                    action_run_id: 'action-run-1',
+                    action_required: false,
+                    executes_action: false,
+                    source: 'test-action-handoff',
+                    reason: 'x-action composed presentation-only operator action hints for this Cockpit activity.',
+                    metadata: {
+                        event_or_state: 'cockpit.operator_issuance_activity.recorded',
+                        actions: [
+                            {
+                                key: 'cockpit.pay-code.open',
+                                label: 'Open Pay Code',
+                                run_id: 'action-run-1',
+                                target: {
+                                    url: '/x/cockpit/pay-codes/PC-1234',
+                                    redirectable: true,
+                                },
+                                provider_payload: 'must-not-render',
+                            },
+                        ],
+                        composition: {
+                            presentation_only: true,
+                            executes_action: false,
+                        },
+                        provider_payload: 'must-not-render',
                     },
                 },
                 provider_payload: 'must-not-render',
@@ -537,7 +566,7 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('PHP 100.00 issued through Quick Generate');
         expect(wrapper.text()).toContain('corr-1');
         expect(wrapper.text()).toContain('journal: recorded');
-        expect(wrapper.text()).toContain('action: not_wired');
+        expect(wrapper.text()).toContain('action: composed');
         expect(wrapper.text()).toContain('feedback: not_wired');
         expect(wrapper.text()).toContain('Journal entry: journal-entry-1');
         expect(wrapper.text()).toContain('Writes journal: yes');
@@ -548,10 +577,15 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('Diagnostic: Journal recorded');
         expect(wrapper.text()).toContain('Action: none');
         expect(wrapper.text()).toContain('Read-only: yes');
+        expect(wrapper.text()).toContain('Action hint: cockpit.pay-code.open');
+        expect(wrapper.text()).toContain('Action run: action-run-1');
+        expect(wrapper.text()).toContain('Executes action: no');
+        expect(wrapper.text()).toContain('Suggested action: Open Pay Code');
         expect(wrapper.text()).toContain('presentation-only');
         expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-card"]')).toHaveLength(1);
         expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-journal-summary"]')).toHaveLength(1);
         expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-journal-diagnostic"]')).toHaveLength(1);
+        expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-action-summary"]')).toHaveLength(1);
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-link"]').attributes('href')).toBe('/x/cockpit/pay-codes/PC-1234');
     });
 

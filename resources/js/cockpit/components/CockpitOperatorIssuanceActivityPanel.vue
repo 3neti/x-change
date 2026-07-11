@@ -27,6 +27,15 @@ type SafeJournalSummary = {
     diagnostic?: SafeJournalDiagnostic;
 };
 
+type SafeActionSummary = {
+    actionHintId?: string;
+    actionRunId?: string;
+    executesAction: boolean;
+    source?: string;
+    reason?: string;
+    suggestedAction?: string;
+};
+
 type SafePresentation = {
     id: string;
     title: string;
@@ -35,6 +44,7 @@ type SafePresentation = {
     href?: string;
     correlationId?: string;
     journalSummary?: SafeJournalSummary;
+    actionSummary?: SafeActionSummary;
     handoffs: {
         journal: string;
         action: string;
@@ -76,11 +86,40 @@ function sanitizePresentation(presentation: CockpitOperatorIssuanceActivityPrese
         href: safeDetailHref(presentation.detail_href),
         correlationId: stringValue(presentation.correlation_id),
         journalSummary: safeJournalSummary(presentation.metadata?.journal_handoff),
+        actionSummary: safeActionSummary(presentation.metadata?.action_handoff),
         handoffs: {
             journal: stringValue(presentation.handoffs?.journal) ?? 'not_wired',
             action: stringValue(presentation.handoffs?.action) ?? 'not_wired',
             feedback: stringValue(presentation.handoffs?.feedback) ?? 'not_wired',
         },
+    };
+}
+
+function safeActionSummary(value: unknown): SafeActionSummary | undefined {
+    if (!isPlainObject(value)) {
+        return undefined;
+    }
+
+    const actionHintId = stringValue(value.action_hint_id);
+    const actionRunId = stringValue(value.action_run_id);
+    const source = stringValue(value.source);
+    const reason = stringValue(value.reason);
+    const metadata = isPlainObject(value.metadata) ? value.metadata : {};
+    const actions = Array.isArray(metadata.actions) ? metadata.actions : [];
+    const firstAction = actions.find((action): action is Record<string, unknown> => isPlainObject(action));
+    const suggestedAction = stringValue(firstAction?.label);
+
+    if (!actionHintId && !actionRunId && !source && !reason && !suggestedAction) {
+        return undefined;
+    }
+
+    return {
+        actionHintId,
+        actionRunId,
+        executesAction: value.executes_action === true,
+        source,
+        reason,
+        suggestedAction,
     };
 }
 
@@ -292,6 +331,49 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                         <dd>
                             Read-only: {{ presentation.journalSummary.diagnostic.readOnly ? 'yes' : 'no' }}
                         </dd>
+                    </div>
+                </dl>
+
+                <dl
+                    v-if="presentation.actionSummary"
+                    class="mt-4 grid gap-2 rounded-lg bg-indigo-50 p-3 text-xs text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200 sm:grid-cols-2"
+                    data-testid="cockpit-operator-issuance-activity-action-summary"
+                >
+                    <div v-if="presentation.actionSummary.actionHintId">
+                        <dt class="font-semibold text-indigo-900 dark:text-indigo-100">
+                            Action hint
+                        </dt>
+                        <dd>Action hint: {{ presentation.actionSummary.actionHintId }}</dd>
+                    </div>
+                    <div v-if="presentation.actionSummary.actionRunId">
+                        <dt class="font-semibold text-indigo-900 dark:text-indigo-100">
+                            Action run
+                        </dt>
+                        <dd>Action run: {{ presentation.actionSummary.actionRunId }}</dd>
+                    </div>
+                    <div>
+                        <dt class="font-semibold text-indigo-900 dark:text-indigo-100">
+                            Executes action
+                        </dt>
+                        <dd>Executes action: {{ presentation.actionSummary.executesAction ? 'yes' : 'no' }}</dd>
+                    </div>
+                    <div v-if="presentation.actionSummary.suggestedAction">
+                        <dt class="font-semibold text-indigo-900 dark:text-indigo-100">
+                            Suggested action
+                        </dt>
+                        <dd>Suggested action: {{ presentation.actionSummary.suggestedAction }}</dd>
+                    </div>
+                    <div v-if="presentation.actionSummary.source">
+                        <dt class="font-semibold text-indigo-900 dark:text-indigo-100">
+                            Source
+                        </dt>
+                        <dd>Source: {{ presentation.actionSummary.source }}</dd>
+                    </div>
+                    <div v-if="presentation.actionSummary.reason">
+                        <dt class="font-semibold text-indigo-900 dark:text-indigo-100">
+                            Reason
+                        </dt>
+                        <dd>Reason: {{ presentation.actionSummary.reason }}</dd>
                     </div>
                 </dl>
 
