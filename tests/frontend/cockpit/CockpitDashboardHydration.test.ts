@@ -261,6 +261,24 @@ const operatorIssuanceActivityReadModel = {
         sends_feedback: false,
         moves_money: false,
     },
+    search_filters: {
+        schema: 'x-change.cockpit.operator-issuance-activity-search-filter.v1',
+        status: 'available',
+        read_only: true,
+        search: 'money changer',
+        statuses: ['issued'],
+        handoff_statuses: ['recorded'],
+        available_statuses: ['issued', 'failed'],
+        available_handoff_statuses: ['recorded', 'not_wired', 'planned'],
+        safety: {
+            read_only: true,
+            writes_journal: false,
+            executes_actions: false,
+            sends_feedback: false,
+            moves_money: false,
+            owns_lifecycle_truth: false,
+        },
+    },
     provider_payload: 'must-not-render',
     raw_payload: 'must-not-render',
     wallet: 'must-not-render',
@@ -630,6 +648,36 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-link"]').attributes('href')).toBe('/x/cockpit/pay-codes/PC-1234');
     });
 
+    it('renders read-only operator issuance activity search and filter controls', () => {
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                dashboard_read_model: dashboardReadModel,
+                operator_issuance_activity_read_model: operatorIssuanceActivityReadModel,
+            },
+        });
+
+        const form = wrapper.find('[data-testid="cockpit-operator-issuance-activity-filter-form"]');
+        const search = wrapper.find('[data-testid="cockpit-operator-issuance-activity-search-input"]');
+        const status = wrapper.find('[data-testid="cockpit-operator-issuance-activity-status-filter"]');
+        const handoff = wrapper.find('[data-testid="cockpit-operator-issuance-activity-handoff-filter"]');
+
+        expect(form.attributes('method')).toBe('get');
+        expect(form.attributes('action')).toBe('/x/cockpit');
+        expect(search.attributes('name')).toBe('activity_search');
+        expect((search.element as HTMLInputElement).value).toBe('money changer');
+        expect(search.attributes('disabled')).toBeUndefined();
+        expect(status.attributes('name')).toBe('activity_status');
+        expect((status.element as HTMLSelectElement).value).toBe('issued');
+        expect(status.text()).toContain('failed');
+        expect(handoff.attributes('name')).toBe('activity_handoff_status');
+        expect((handoff.element as HTMLSelectElement).value).toBe('recorded');
+        expect(handoff.text()).toContain('planned');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-active-filters"]').text()).toContain('3 active filters');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-active-filters"]').text()).toContain('Read-only filter query; no activity mutation is executed.');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-filter-clear"]').attributes('href')).toBe('/x/cockpit');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-mutation"]').exists()).toBe(false);
+    });
+
     it('does not render unsafe operator issuance activity payloads or side-effect affordances', () => {
         const wrapper = mount(CockpitDashboard, {
             props: {
@@ -673,6 +721,8 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('No operator issuance activity available');
         expect(wrapper.text()).toContain('Activity recording is not wired yet.');
         expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-card"]')).toHaveLength(0);
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-search-input"]').attributes('disabled')).toBeDefined();
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-filter-submit"]').attributes('disabled')).toBeDefined();
     });
 
     it('forwards operator issuance activity props through the dashboard route adapter', () => {

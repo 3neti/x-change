@@ -64,6 +64,16 @@ type SafePresentation = {
     };
 };
 
+type SafeSearchFilters = {
+    status: string;
+    search?: string;
+    statuses: string[];
+    handoffStatuses: string[];
+    availableStatuses: string[];
+    availableHandoffStatuses: string[];
+    readOnly: boolean;
+};
+
 const presentations = computed<SafePresentation[]>(() => {
     if (!props.readModel?.authorized || !Array.isArray(props.readModel.presentations)) {
         return [];
@@ -74,6 +84,26 @@ const presentations = computed<SafePresentation[]>(() => {
         .filter((presentation): presentation is SafePresentation => presentation !== null);
 });
 
+const searchFilters = computed<SafeSearchFilters>(() => {
+    const filters = isPlainObject(props.readModel?.search_filters) ? props.readModel.search_filters : {};
+
+    return {
+        status: stringValue(filters.status) ?? 'not_available',
+        search: stringValue(filters.search),
+        statuses: stringList(filters.statuses),
+        handoffStatuses: stringList(filters.handoff_statuses),
+        availableStatuses: stringList(filters.available_statuses),
+        availableHandoffStatuses: stringList(filters.available_handoff_statuses),
+        readOnly: filters.read_only === true,
+    };
+});
+
+const canFilter = computed(() => props.readModel?.authorized === true && searchFilters.value.status === 'available');
+const activeFilterCount = computed(() => [
+    searchFilters.value.search,
+    ...searchFilters.value.statuses,
+    ...searchFilters.value.handoffStatuses,
+].filter((value) => value !== undefined && value !== '').length);
 const emptyTitle = computed(() => stringValue(props.readModel?.empty_state?.title) ?? 'No operator issuance activity available');
 const emptyDescription = computed(() => (
     stringValue(props.readModel?.empty_state?.description)
@@ -237,6 +267,16 @@ function stringValue(value: unknown): string | undefined {
     return undefined;
 }
 
+function stringList(value: unknown): string[] {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+
+    return value
+        .map((item) => stringValue(item))
+        .filter((item): item is string => item !== undefined);
+}
+
 function isPlainObject(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -260,6 +300,124 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                 presentation-only
             </span>
         </div>
+
+        <form
+            class="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950"
+            action="/x/cockpit"
+            method="get"
+            data-testid="cockpit-operator-issuance-activity-filter-form"
+        >
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-end">
+                <label class="flex-1">
+                    <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                        Search activity
+                    </span>
+                    <input
+                        name="activity_search"
+                        type="search"
+                        :value="searchFilters.search ?? ''"
+                        :disabled="!canFilter"
+                        placeholder="Search title, Pay Code, operator, or correlation"
+                        class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:disabled:bg-slate-900/50"
+                        data-testid="cockpit-operator-issuance-activity-search-input"
+                    />
+                </label>
+
+                <label class="lg:w-48">
+                    <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                        Status
+                    </span>
+                    <select
+                        name="activity_status"
+                        :value="searchFilters.statuses[0] ?? ''"
+                        :disabled="!canFilter"
+                        class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:disabled:bg-slate-900/50"
+                        data-testid="cockpit-operator-issuance-activity-status-filter"
+                    >
+                        <option value="">Any status</option>
+                        <option
+                            v-for="status in searchFilters.availableStatuses"
+                            :key="status"
+                            :value="status"
+                        >
+                            {{ status }}
+                        </option>
+                    </select>
+                </label>
+
+                <label class="lg:w-56">
+                    <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                        Handoff
+                    </span>
+                    <select
+                        name="activity_handoff_status"
+                        :value="searchFilters.handoffStatuses[0] ?? ''"
+                        :disabled="!canFilter"
+                        class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:disabled:bg-slate-900/50"
+                        data-testid="cockpit-operator-issuance-activity-handoff-filter"
+                    >
+                        <option value="">Any handoff status</option>
+                        <option
+                            v-for="status in searchFilters.availableHandoffStatuses"
+                            :key="status"
+                            :value="status"
+                        >
+                            {{ status }}
+                        </option>
+                    </select>
+                </label>
+
+                <div class="flex gap-2">
+                    <button
+                        type="submit"
+                        :disabled="!canFilter"
+                        class="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300 dark:bg-slate-50 dark:text-slate-950 dark:disabled:bg-slate-700 dark:disabled:text-slate-400"
+                        data-testid="cockpit-operator-issuance-activity-filter-submit"
+                    >
+                        Apply filters
+                    </button>
+                    <a
+                        href="/x/cockpit"
+                        class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200"
+                        data-testid="cockpit-operator-issuance-activity-filter-clear"
+                    >
+                        Clear
+                    </a>
+                </div>
+            </div>
+
+            <div
+                class="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400"
+                data-testid="cockpit-operator-issuance-activity-active-filters"
+            >
+                <span class="font-semibold text-slate-700 dark:text-slate-300">
+                    {{ activeFilterCount }} active filters
+                </span>
+                <span
+                    v-if="searchFilters.search"
+                    class="rounded-full bg-white px-2 py-1 dark:bg-slate-900"
+                >
+                    Search: {{ searchFilters.search }}
+                </span>
+                <span
+                    v-for="status in searchFilters.statuses"
+                    :key="`status-${status}`"
+                    class="rounded-full bg-white px-2 py-1 dark:bg-slate-900"
+                >
+                    Status: {{ status }}
+                </span>
+                <span
+                    v-for="status in searchFilters.handoffStatuses"
+                    :key="`handoff-${status}`"
+                    class="rounded-full bg-white px-2 py-1 dark:bg-slate-900"
+                >
+                    Handoff: {{ status }}
+                </span>
+                <span>
+                    Read-only filter query; no activity mutation is executed.
+                </span>
+            </div>
+        </form>
 
         <div
             v-if="presentations.length === 0"
