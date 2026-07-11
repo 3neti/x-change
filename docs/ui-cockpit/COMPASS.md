@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 28 — Operator Activity Filter Browser Acceptance / Next Runtime Decision
-Status: Complete / filter UX browser-accepted and next runtime direction selected
+Current slice: Cockpit Wave 29 — Pay Code Explorer Runtime Parity / Activity Navigation Bridge
+Status: Complete / activity cards bridge into Pay Code Explorer with read-only context
 Last updated: 2026-07-11
 
 ## Completed
@@ -2052,3 +2052,15 @@ Current boundary:
   - selected Pay Code Explorer runtime parity / activity navigation bridge as the next direction.
 - Cockpit Wave 28 expected UI result: no new UI beyond Wave 27; the existing filter bar, active-filter summary, and clear-per-filter links are browser-accepted.
 - Cockpit Wave 28 next recommended wave: `Cockpit Wave 29 — Pay Code Explorer Runtime Parity / Activity Navigation Bridge`.
+- Cockpit Wave 29 result: Pay Code Explorer runtime parity / activity navigation bridge completed; reports `reports/204-wave-29a-pay-code-explorer-runtime-parity-audit.md` and `reports/205-wave-29-pay-code-explorer-activity-bridge-closure.md`.
+- Cockpit Wave 29 completed:
+  - audited `/x/cockpit/pay-codes` against the legacy `/x/pay-codes` functional surface;
+  - added `activity_code` and `activity_source` read-only query intake;
+  - exposed `activity_navigation_context` on the Pay Code Explorer page props;
+  - added `Open in Explorer` links to Operator Issuance Activity cards;
+  - rendered a read-only Activity navigation context panel in Pay Code Explorer;
+  - verified `Dusk bridge smoke: 1 passed, 22 assertions`;
+  - verified published Cockpit assets are clean: checked 58, ok 58, stale 0, missing 0, extra 0.
+- Cockpit Wave 29 expected UI result: `/x/cockpit` activity cards can show `Open in Explorer`; `/x/cockpit/pay-codes?activity_code={code}&activity_source=operator_issuance_activity` shows the Activity navigation context card.
+- Cockpit Wave 29 boundary: no voucher mutation, driver execution, provider call, money movement, journal write, x-action execution, x-feedback delivery, campaign mutation, raw payload display, provider payload display, wallet internal display, or recipient-secret display was added.
+- Cockpit Wave 29 next recommended wave: `Cockpit Wave 30 — Pay Code Explorer Functional Read Model Parity / Legacy Index Comparison`.
