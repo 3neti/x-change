@@ -6,10 +6,14 @@ namespace LBHurtado\XChange\Support\Cockpit;
 
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
+use LBHurtado\XChange\Services\Cockpit\CockpitOperatorIssuanceActivityRuntimeProfileInspector;
 
 class CockpitReadOnlyPageProps
 {
-    public function __construct(private readonly CockpitReadModelProviderContract $readModels) {}
+    public function __construct(
+        private readonly CockpitReadModelProviderContract $readModels,
+        private readonly CockpitOperatorIssuanceActivityRuntimeProfileInspector $operatorActivityRuntimeProfile,
+    ) {}
 
     /**
      * @return array<string, mixed>
@@ -111,6 +115,45 @@ class CockpitReadOnlyPageProps
             'quick_generate_read_model' => $this->readModels->forQuickGenerate(new CockpitReadModelQueryData(
                 include: ['templates', 'pricing'],
             ))->toArray(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toRuntimeProfileArray(): array
+    {
+        return [
+            ...$this->toArray(),
+            'runtime_profile_read_model' => [
+                'schema' => 'x-change.cockpit.runtime-profile-page.v1',
+                'status' => 'available',
+                'authorized' => true,
+                'read_only' => true,
+                'profile' => $this->operatorActivityRuntimeProfile->inspect()->toArray(),
+                'copy' => [
+                    'eyebrow' => 'Wave 21 · Runtime diagnostics',
+                    'title' => 'Operator Activity Runtime Profile',
+                    'description' => 'Read-only visibility into Cockpit operator activity runtime configuration. This page does not enable handoffs, write journal entries, compose actions, send feedback, call providers, mutate vouchers, or move money.',
+                ],
+                'safety' => [
+                    'mutates_configuration' => false,
+                    'enables_handoffs' => false,
+                    'writes_journal' => false,
+                    'executes_action' => false,
+                    'sends_feedback' => false,
+                    'calls_provider' => false,
+                    'moves_money' => false,
+                    'owns_lifecycle_truth' => false,
+                ],
+                'redactions' => [
+                    'payloads' => 'runtime-configuration-class-names-only',
+                    'raw_payloads_exposed' => false,
+                    'provider_payloads_exposed' => false,
+                    'wallet_data_exposed' => false,
+                    'secrets_exposed' => false,
+                ],
+            ],
         ];
     }
 
