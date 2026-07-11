@@ -20,6 +20,7 @@ class SeedCockpitDiagnosticActivityCommand extends Command
         {--code=PC-LOCAL-DIAGNOSTIC : Synthetic Pay Code reference}
         {--operator-id=local-fixture-operator : Synthetic/operator id that should see the fixture in Cockpit}
         {--with-action : Include synthetic x-action composed handoff facts}
+        {--with-feedback : Include synthetic x-feedback planned handoff facts}
         {--json : Output JSON}
         {--pretty : Pretty-print JSON output}';
 
@@ -49,6 +50,7 @@ class SeedCockpitDiagnosticActivityCommand extends Command
             'code' => $record->subject_reference,
             'journal_handoff_status' => $record->journal_handoff_status,
             'action_handoff_status' => $record->action_handoff_status,
+            'feedback_handoff_status' => $record->feedback_handoff_status,
             'dashboard_ready' => $this->dashboardReady(),
             'dashboard_repository' => config('x-change.cockpit.operator_issuance_activity.repository'),
             'next_step' => $this->dashboardReady()
@@ -107,7 +109,7 @@ class SeedCockpitDiagnosticActivityCommand extends Command
             ],
             journal_handoff_status: 'recorded',
             action_handoff_status: $this->withActionFixture() ? 'composed' : 'not_wired',
-            feedback_handoff_status: 'not_wired',
+            feedback_handoff_status: $this->withFeedbackFixture() ? 'planned' : 'not_wired',
             metadata: array_filter([
                 'fixture' => true,
                 'local_only' => true,
@@ -150,6 +152,40 @@ class SeedCockpitDiagnosticActivityCommand extends Command
                         ],
                     ],
                 ] : null,
+                'feedback_handoff' => $this->withFeedbackFixture() ? [
+                    'status' => 'planned',
+                    'feedback_intent_id' => 'cockpit.operator_issuance_activity.fixture',
+                    'delivery_plan_id' => 'plan-local-fixture',
+                    'delivery_receipt_id' => null,
+                    'feedback_required' => false,
+                    'sends_feedback' => false,
+                    'source' => 'local_fixture',
+                    'reason' => 'Synthetic local x-feedback fixture for Cockpit diagnostic visual verification.',
+                    'metadata' => [
+                        'intent_key' => 'cockpit.operator_issuance_activity.fixture',
+                        'event_type' => 'cockpit.operator_issuance_activity.fixture',
+                        'delivery_boundary' => 'prepare_only',
+                        'planned_deliveries' => 1,
+                        'channels' => ['in_app'],
+                        'plan_items' => [
+                            [
+                                'intent_key' => 'cockpit.operator_issuance_activity.fixture',
+                                'recipient_type' => 'operator',
+                                'recipient_id' => $operatorId,
+                                'channel' => 'in_app',
+                                'status' => 'planned',
+                                'priority' => 100,
+                                'correlation_id' => 'corr-local-cockpit-diagnostic',
+                                'causation_id' => 'cause-local-cockpit-diagnostic',
+                            ],
+                        ],
+                        'composition' => [
+                            'presentation_only' => true,
+                            'sends_feedback' => false,
+                            'owns_lifecycle_truth' => false,
+                        ],
+                    ],
+                ] : null,
             ], fn (mixed $value): bool => $value !== null),
         );
     }
@@ -157,6 +193,11 @@ class SeedCockpitDiagnosticActivityCommand extends Command
     private function withActionFixture(): bool
     {
         return (bool) $this->option('with-action');
+    }
+
+    private function withFeedbackFixture(): bool
+    {
+        return (bool) $this->option('with-feedback');
     }
 
     private function nonEmptyOption(string $key, string $fallback): string
