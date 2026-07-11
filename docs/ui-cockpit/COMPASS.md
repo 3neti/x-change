@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 19 — Combined Operator Activity Runtime Profile Verification
-Status: Complete / combined runtime profile verified
+Current slice: Cockpit Wave 23 — Runtime Profile Operator Acceptance Closure / Next Runtime Decision
+Status: Complete / runtime profile accepted; next runtime decision recorded
 Last updated: 2026-07-11
 
 ## Completed
@@ -1999,3 +1999,11 @@ Current boundary:
   - package acceptance record protected by architecture test.
 - Cockpit Wave 22 expected UI result: Runtime Profile page visibly shows runtime status, components, and safety panels; no mutation controls should appear.
 - Cockpit Wave 22 next recommended wave: `Cockpit Wave 23 — Runtime Profile Operator Acceptance Closure / Next Runtime Decision`.
+- Cockpit Wave 23 result: Runtime Profile operator acceptance closure and next runtime decision completed; reports `reports/194-wave-23-runtime-profile-operator-acceptance-closure.md` and `reports/195-wave-23-next-runtime-decision-record.md`.
+- Cockpit Wave 23 completed:
+  - accepted `/x/cockpit/diagnostics/runtime-profile` as a read-only operator diagnostics surface;
+  - recorded that `partially_wired` is an acceptable local state when durable activity storage is enabled but journal/action/feedback handoffs remain null or fallback;
+  - reaffirmed that runtime configuration mutation is not authorized from Cockpit;
+  - selected the next runtime direction as read-only operator activity search/filter readiness.
+- Cockpit Wave 23 expected UI result: no UI change; Runtime Profile remains read-only and no mutation controls should appear.
+- Cockpit Wave 23 next recommended wave: `Cockpit Wave 24 — Operator Activity Search / Filter Runtime Readiness`.
