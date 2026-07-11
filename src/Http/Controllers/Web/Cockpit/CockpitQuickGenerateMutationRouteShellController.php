@@ -159,6 +159,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                 'replayed' => $replayed,
             ],
             'result' => $this->redactedResult($result),
+            'post_issuance_navigation' => $this->postIssuanceNavigation($result),
             'redactions' => [
                 'payloads' => 'operator-safe-generated-facts-only',
                 'request_payload' => 'excluded',
@@ -263,6 +264,62 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                 'cockpit_detail' => Route::has('x-change.cockpit.pay-codes.show')
                     ? route('x-change.cockpit.pay-codes.show', ['code' => $result->code], false)
                     : null,
+                'cockpit_distribution' => Route::has('x-change.cockpit.pay-codes.distribution')
+                    ? route('x-change.cockpit.pay-codes.distribution', ['code' => $result->code], false)
+                    : null,
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function postIssuanceNavigation(GeneratePayCodeResultData $result): array
+    {
+        $detailHref = Route::has('x-change.cockpit.pay-codes.show')
+            ? route('x-change.cockpit.pay-codes.show', ['code' => $result->code], false)
+            : null;
+        $distributionHref = Route::has('x-change.cockpit.pay-codes.distribution')
+            ? route('x-change.cockpit.pay-codes.distribution', ['code' => $result->code], false)
+            : null;
+
+        return [
+            'schema' => 'x-change.cockpit.quick-generate-post-issuance-navigation.v1',
+            'status' => 'available',
+            'auto_redirect' => false,
+            'items' => [
+                [
+                    'key' => 'detail',
+                    'label' => 'Open Cockpit detail',
+                    'href' => $detailHref,
+                    'status' => $detailHref === null ? 'unavailable' : 'available',
+                    'enabled' => $detailHref !== null,
+                    'read_only' => true,
+                    'reason' => 'Read-only voucher detail route for the generated Pay Code.',
+                ],
+                [
+                    'key' => 'distribution',
+                    'label' => 'Open Distribution workspace',
+                    'href' => $distributionHref,
+                    'status' => $distributionHref === null ? 'unavailable' : 'available',
+                    'enabled' => $distributionHref !== null,
+                    'read_only' => true,
+                    'reason' => 'Read-only distribution/share workspace route for the generated Pay Code.',
+                ],
+            ],
+            'redactions' => [
+                'payloads' => 'post-issuance-navigation-only',
+                'excluded' => [
+                    'request_payload',
+                    'validated_payload',
+                    'provider_payload',
+                    'wallet',
+                    'debit',
+                    'allocations',
+                    'cost',
+                    'idempotency_key',
+                    'raw_payload',
+                ],
             ],
         ];
     }

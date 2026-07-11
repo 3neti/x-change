@@ -2123,3 +2123,5 @@ Current boundary:
 - Cockpit Wave 34A expected UI result: no UI change; this slice defines post-generation navigation to voucher detail and Distribution Workspace while preserving no-auto-redirect and no-new-mutation boundaries.
 - Cockpit Wave 34B result: Post-issuance navigation read-model contract added; report `reports/232-wave-34b-post-issuance-navigation-read-model-contract.md`; next `Cockpit Wave 34C — Quick Generate Result Handoff Hydration`.
 - Cockpit Wave 34B expected UI result: no visible UI change until the route/provider response hydrates navigation links and Vue consumes them.
+- Cockpit Wave 34C result: Quick Generate success responses now hydrate `result.links.cockpit_distribution` and `post_issuance_navigation`; report `reports/233-wave-34c-quick-generate-result-handoff-hydration.md`; next `Cockpit Wave 34D — Quick Generate Post-Issuance UI Presentation`.
+- Cockpit Wave 34C expected UI result: no visible UI change until the Vue result panel renders the hydrated navigation block.
