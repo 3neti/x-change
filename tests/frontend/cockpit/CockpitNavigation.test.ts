@@ -19,11 +19,12 @@ describe('Cockpit navigation baseline', () => {
         ]);
 
         expect(cockpitSecondaryNavigation.map((item) => item.label)).toEqual([
+            'Runtime Profile',
             'Approvals',
             'Administration',
         ]);
 
-        expect(cockpitNavigationItems).toHaveLength(10);
+        expect(cockpitNavigationItems).toHaveLength(11);
     });
 
     it('marks only implemented Cockpit routes as enabled navigation links', () => {
@@ -34,6 +35,7 @@ describe('Cockpit navigation baseline', () => {
             'dashboard',
             'quick-generate',
             'pay-codes',
+            'runtime-profile',
         ]);
 
         expect(disabledItems.map((item) => item.key)).toEqual([

@@ -63,6 +63,13 @@ export const cockpitNavigationItems: CockpitNavigationItem[] = [
         disabledReason: 'Operations Cockpit route has not been implemented yet.',
     },
     {
+        key: 'runtime-profile',
+        label: 'Runtime Profile',
+        href: '/x/cockpit/diagnostics/runtime-profile',
+        group: 'secondary',
+        description: 'Read-only handoff configuration',
+    },
+    {
         key: 'reports',
         label: 'Reports',
         href: '/x/cockpit/reports',

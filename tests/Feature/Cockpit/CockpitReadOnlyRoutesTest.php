@@ -14,6 +14,7 @@ use LBHurtado\XChange\Http\Controllers\PayCode\GeneratePayCodeController;
 it('registers read-only cockpit routes under the x cockpit namespace', function () {
     expect(route('x-change.cockpit.dashboard'))->toBe('http://localhost/x/cockpit')
         ->and(route('x-change.cockpit.quick-generate'))->toBe('http://localhost/x/cockpit/quick-generate')
+        ->and(route('x-change.cockpit.diagnostics.runtime-profile'))->toBe('http://localhost/x/cockpit/diagnostics/runtime-profile')
         ->and(route('x-change.cockpit.pay-codes.index'))->toBe('http://localhost/x/cockpit/pay-codes')
         ->and(route('x-change.cockpit.pay-codes.show', ['code' => 'PC-READY-001']))->toBe('http://localhost/x/cockpit/pay-codes/PC-READY-001')
         ->and(route('x-change.cockpit.pay-codes.distribution', ['code' => 'PC-READY-001']))->toBe('http://localhost/x/cockpit/pay-codes/PC-READY-001/distribution');
@@ -38,10 +39,37 @@ it('renders cockpit pages as read-only inertia endpoints', function (string $rou
 })->with([
     'dashboard' => ['x-change.cockpit.dashboard', [], 'x-change/cockpit/Dashboard'],
     'quick generate' => ['x-change.cockpit.quick-generate', [], 'x-change/cockpit/QuickGenerate'],
+    'runtime profile' => ['x-change.cockpit.diagnostics.runtime-profile', [], 'x-change/cockpit/RuntimeProfile'],
     'pay code explorer' => ['x-change.cockpit.pay-codes.index', [], 'x-change/cockpit/PayCodeExplorer'],
     'voucher detail' => ['x-change.cockpit.pay-codes.show', ['code' => 'PC-READY-001'], 'x-change/cockpit/VoucherDetail'],
     'distribution workspace' => ['x-change.cockpit.pay-codes.distribution', ['code' => 'PC-READY-001'], 'x-change/cockpit/DistributionWorkspace'],
 ]);
+
+it('renders the runtime profile diagnostics page as read-only configuration visibility', function () {
+    actingAsTestUser();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.diagnostics.runtime-profile'))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/cockpit/RuntimeProfile')
+        ->assertJsonPath('props.runtime_profile_read_model.schema', 'x-change.cockpit.runtime-profile-page.v1')
+        ->assertJsonPath('props.runtime_profile_read_model.status', 'available')
+        ->assertJsonPath('props.runtime_profile_read_model.authorized', true)
+        ->assertJsonPath('props.runtime_profile_read_model.read_only', true)
+        ->assertJsonPath('props.runtime_profile_read_model.profile.schema', 'x-change.cockpit.operator-issuance-activity-runtime-profile.v1')
+        ->assertJsonPath('props.runtime_profile_read_model.safety.mutates_configuration', false)
+        ->assertJsonPath('props.runtime_profile_read_model.safety.enables_handoffs', false)
+        ->assertJsonPath('props.runtime_profile_read_model.safety.writes_journal', false)
+        ->assertJsonPath('props.runtime_profile_read_model.safety.executes_action', false)
+        ->assertJsonPath('props.runtime_profile_read_model.safety.sends_feedback', false)
+        ->assertJsonPath('props.runtime_profile_read_model.safety.calls_provider', false)
+        ->assertJsonPath('props.runtime_profile_read_model.safety.moves_money', false)
+        ->assertJsonPath('props.runtime_profile_read_model.redactions.payloads', 'runtime-configuration-class-names-only')
+        ->assertJsonMissingPath('props.runtime_profile_read_model.provider_payload')
+        ->assertJsonMissingPath('props.runtime_profile_read_model.raw_payload')
+        ->assertJsonMissingPath('props.runtime_profile_read_model.wallet')
+        ->assertJsonMissingPath('props.runtime_profile_read_model.mutation_route');
+});
 
 it('keeps voucher route context explicit without loading voucher payloads', function () {
     actingAsTestUser();

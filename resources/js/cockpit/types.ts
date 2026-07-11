@@ -242,6 +242,48 @@ export type CockpitDashboardPageProps = {
     read_model?: CockpitReadModelBundle;
 };
 
+export type CockpitRuntimeProfileComponent = {
+    key: string;
+    configured?: string | null;
+    enabled: boolean;
+    resolved_class: string;
+    fallback_class: string;
+    uses_fallback: boolean;
+    purpose: string;
+};
+
+export type CockpitRuntimeProfile = {
+    schema: string;
+    status: string;
+    repository_enabled: boolean;
+    recorder_enabled: boolean;
+    journal_handoff_enabled: boolean;
+    action_handoff_enabled: boolean;
+    feedback_handoff_enabled: boolean;
+    components: CockpitRuntimeProfileComponent[];
+    safety: Record<string, unknown>;
+};
+
+export type CockpitRuntimeProfileReadModel = {
+    schema: string;
+    status: string;
+    authorized: boolean;
+    read_only: boolean;
+    profile: CockpitRuntimeProfile;
+    copy: {
+        eyebrow: string;
+        title: string;
+        description: string;
+    };
+    safety: Record<string, unknown>;
+    redactions: CockpitReadModelRedactions;
+};
+
+export type CockpitRuntimeProfilePageProps = {
+    runtime_profile_read_model: CockpitRuntimeProfileReadModel;
+    read_model?: CockpitReadModelBundle;
+};
+
 export type CockpitQuickGenerateTemplate = {
     key: string;
     name: string;
