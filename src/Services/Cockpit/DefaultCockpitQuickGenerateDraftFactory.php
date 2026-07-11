@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Cockpit;
 
 use LBHurtado\XChange\Contracts\CockpitQuickGenerateDraftFactoryContract;
+use LBHurtado\XChange\Data\Cockpit\CockpitIssuanceCampaignContextData;
 use LBHurtado\XChange\Data\Cockpit\CockpitIssuanceDraftData;
 
 class DefaultCockpitQuickGenerateDraftFactory implements CockpitQuickGenerateDraftFactoryContract
@@ -28,6 +29,7 @@ class DefaultCockpitQuickGenerateDraftFactory implements CockpitQuickGenerateDra
                 ?? $this->string($payload, 'metadata.custom.cockpit.purpose'),
             idempotency_key: $idempotencyKey ?? $this->string($payload, '_meta.idempotency_key'),
             correlation_id: $correlationId ?? $this->string($payload, '_meta.correlation_id'),
+            campaign: $this->campaign($payload),
             feedback: [
                 'email' => $this->string($payload, 'feedback.email'),
                 'mobile' => $this->string($payload, 'feedback.mobile'),
@@ -72,5 +74,32 @@ class DefaultCockpitQuickGenerateDraftFactory implements CockpitQuickGenerateDra
                 ],
             ],
         ]);
+    }
+
+    private function campaign(array $payload): ?CockpitIssuanceCampaignContextData
+    {
+        $campaign = (array) data_get($payload, 'metadata.campaign', []);
+
+        $hasContext = collect([
+            'planning_key',
+            'execution_id',
+            'campaign_id',
+            'audience_id',
+            'recipient_id',
+        ])->contains(fn (string $key): bool => $this->string($campaign, $key) !== null);
+
+        if (! $hasContext) {
+            return null;
+        }
+
+        return new CockpitIssuanceCampaignContextData(
+            planning_key: $this->string($campaign, 'planning_key'),
+            execution_id: $this->string($campaign, 'execution_id'),
+            campaign_id: $this->string($campaign, 'campaign_id'),
+            audience_id: $this->string($campaign, 'audience_id'),
+            recipient_id: $this->string($campaign, 'recipient_id'),
+            source: $this->string($campaign, 'source', 'x-campaign'),
+            metadata: (array) data_get($campaign, 'metadata', []),
+        );
     }
 }

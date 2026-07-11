@@ -101,3 +101,44 @@ it('uses legacy quick generate defaults when optional fields are absent', functi
         ->and($draft->input_fields)->toBe([])
         ->and(data_get($draft->metadata, 'custom.cockpit.source'))->toBe('cockpit.quick-generate');
 });
+
+it('accepts campaign context metadata without mutating campaigns', function () {
+    $draft = (new DefaultCockpitQuickGenerateDraftFactory)->fromPayload([
+        'cash' => [
+            'amount' => '250.00',
+            'currency' => 'PHP',
+        ],
+        'inputs' => [
+            'fields' => [],
+        ],
+        'feedback' => [
+            'mobile' => '09173011987',
+        ],
+        'rider' => [
+            'message' => 'Campaign beneficiary payout',
+        ],
+        'metadata' => [
+            'campaign' => [
+                'planning_key' => 'plan-wave-10f',
+                'execution_id' => 'exec-wave-10f',
+                'campaign_id' => 'campaign-wave-10f',
+                'audience_id' => 'audience-wave-10f',
+                'recipient_id' => 'recipient-wave-10f',
+                'source' => 'x-campaign',
+            ],
+            'custom' => [
+                'cockpit' => [
+                    'template_key' => 'ofw-remittance',
+                ],
+            ],
+        ],
+    ]);
+
+    expect($draft->hasCampaignContext())->toBeTrue()
+        ->and($draft->campaign?->planning_key)->toBe('plan-wave-10f')
+        ->and($draft->campaign?->execution_id)->toBe('exec-wave-10f')
+        ->and($draft->campaign?->campaign_id)->toBe('campaign-wave-10f')
+        ->and($draft->campaign?->audience_id)->toBe('audience-wave-10f')
+        ->and($draft->campaign?->recipient_id)->toBe('recipient-wave-10f')
+        ->and($draft->campaign?->source)->toBe('x-campaign');
+});
