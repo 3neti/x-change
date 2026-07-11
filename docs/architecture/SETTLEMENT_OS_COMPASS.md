@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 14D browser visual handoff checklist recorded; next is Wave 14 closure
+Current status: Cockpit Wave 14E publish and visual handoff closed; next is browser-confirmed visual acceptance
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 14D browser visual handoff checklist recorded; next is Wave 14 closure | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 14E publish and visual handoff closed; next is browser-confirmed visual acceptance | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1668,3 +1668,4 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Cockpit Wave 14B — Host Mirror Publish State Record: implemented in [../ui-cockpit/reports/176-wave-14b-host-mirror-publish-state-record.md](../ui-cockpit/reports/176-wave-14b-host-mirror-publish-state-record.md); next `Cockpit Wave 14C — Local Route Smoke Verification Record`.
 - Cockpit Wave 14C — Local Route Smoke Verification Record: implemented in [../ui-cockpit/reports/177-wave-14c-local-route-smoke-verification-record.md](../ui-cockpit/reports/177-wave-14c-local-route-smoke-verification-record.md); next `Cockpit Wave 14D — Browser Visual Handoff Checklist`.
 - Cockpit Wave 14D — Browser Visual Handoff Checklist: implemented in [../ui-cockpit/reports/178-wave-14d-browser-visual-handoff-checklist.md](../ui-cockpit/reports/178-wave-14d-browser-visual-handoff-checklist.md); next `Cockpit Wave 14E — Wave 14 Closure / Next Planning Record`.
+- Cockpit Wave 14E — Wave 14 Closure / Next Planning Record: completed in [../ui-cockpit/reports/179-wave-14e-closure-next-planning-record.md](../ui-cockpit/reports/179-wave-14e-closure-next-planning-record.md); next recommended wave `Cockpit Wave 15 — Browser-confirmed Visual Acceptance and Next Runtime Decision`.
