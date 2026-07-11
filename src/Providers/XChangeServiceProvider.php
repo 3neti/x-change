@@ -34,6 +34,7 @@ use LBHurtado\XChange\Console\Commands\Claim\LoadPayCodeRedemptionCompletionCont
 use LBHurtado\XChange\Console\Commands\Claim\PreparePayCodeRedemptionFlowCommand;
 use LBHurtado\XChange\Console\Commands\Claim\SubmitPayCodeClaimCommand;
 use LBHurtado\XChange\Console\Commands\Cockpit\SeedCockpitDiagnosticActivityCommand;
+use LBHurtado\XChange\Console\Commands\Cockpit\ShowCockpitOperatorActivityRuntimeProfileCommand;
 use LBHurtado\XChange\Console\Commands\Disbursement\CheckDisbursementStatusCommand;
 use LBHurtado\XChange\Console\Commands\DoctorXChangeCommand;
 use LBHurtado\XChange\Console\Commands\InstallXChangeCommand;
@@ -699,6 +700,7 @@ class XChangeServiceProvider extends ServiceProvider
                 InstallXChangeCommand::class,
                 DoctorXChangeCommand::class,
                 SeedCockpitDiagnosticActivityCommand::class,
+                ShowCockpitOperatorActivityRuntimeProfileCommand::class,
             ]);
         }
 
