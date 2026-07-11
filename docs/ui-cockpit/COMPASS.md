@@ -5,7 +5,7 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Cockpit Wave 34 — Quick Generate Post-Issuance Navigation / Share Handoff
-Status: In progress / Wave 34A audit complete
+Status: Complete / post-issuance navigation and share handoff browser-verified
 Last updated: 2026-07-12
 
 ## Completed
@@ -2129,3 +2129,7 @@ Current boundary:
 - Cockpit Wave 34D expected UI result: after successful `/x/cockpit/quick-generate`, operators see `Post-issuance handoff`, `Open Cockpit detail`, and `Open Distribution workspace`.
 - Cockpit Wave 34E result: Quick Generate post-issuance browser/publish verification scaffolded with a Playwright POST-intercept smoke; report `reports/235-wave-34e-quick-generate-post-issuance-browser-publish-verification.md`; next `Cockpit Wave 34F — Post-Issuance Navigation Closure`.
 - Cockpit Wave 34E expected UI result: browser-rendered successful Quick Generate fixture shows `Post-issuance handoff`, `Open Cockpit detail`, `Open Distribution workspace`, and `Automatic redirect: disabled` without real issuance.
+- Cockpit Wave 34 result: Quick Generate post-issuance navigation/share handoff closed; report `reports/236-wave-34-post-issuance-navigation-closure.md`.
+- Cockpit Wave 34 completed: successful Quick Generate responses hydrate `post_issuance_navigation`, the Vue result panel renders read-only Detail and Distribution links, published assets are clean, and Playwright verifies the browser-rendered result with a safe intercepted response.
+- Cockpit Wave 34 expected UI result: after successful generation, operators see `Post-issuance handoff`, `Open Cockpit detail`, `Open Distribution workspace`, and `Automatic redirect: disabled`.
+- Cockpit Wave 34 next recommended wave: `Cockpit Wave 35 — Campaign Context Quick Generate Adoption`.
