@@ -6,6 +6,7 @@ import CockpitPayCodeSearchBar from '../components/CockpitPayCodeSearchBar.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
 import type {
     CockpitPayCodeExplorerFilter,
+    CockpitActivityNavigationContext,
     CockpitCampaignNavigationContext,
     CockpitDependentReadModel,
     CockpitPayCodeExplorerPageProps,
@@ -56,6 +57,38 @@ const campaignNavigationContext = computed<CockpitCampaignNavigationContext | nu
         },
         redactions: {
             payloads: stringValue(context.redactions?.payloads) ?? 'navigation-context-only',
+        },
+    };
+});
+const activityNavigationContext = computed<CockpitActivityNavigationContext | null>(() => {
+    const context = props.activity_navigation_context;
+
+    if (!context?.authorized || context.read_only !== true) {
+        return null;
+    }
+
+    const code = stringValue(context.code);
+    const destination = stringValue(context.destination);
+
+    if (!code || !destination) {
+        return null;
+    }
+
+    return {
+        schema: stringValue(context.schema) ?? 'x-change.cockpit.activity-navigation.v1',
+        status: stringValue(context.status) ?? 'available',
+        authorized: true,
+        source: stringValue(context.source) ?? 'operator_issuance_activity',
+        code,
+        destination,
+        read_only: true,
+        mutation: {
+            enabled: false,
+            status: stringValue(objectValue(context.mutation).status) ?? 'blocked',
+            reason: stringValue(objectValue(context.mutation).reason) ?? 'activity-navigation-read-only',
+        },
+        redactions: {
+            payloads: stringValue(context.redactions?.payloads) ?? 'activity-navigation-context-only',
         },
     };
 });
@@ -283,6 +316,58 @@ function integrationBadge(
                     </p>
                     <p class="mt-1">
                         {{ campaignNavigationContext.mutation?.reason }}
+                    </p>
+                </div>
+            </div>
+
+            <div
+                v-if="activityNavigationContext"
+                class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100"
+                data-testid="cockpit-activity-navigation-context"
+            >
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
+                    Activity navigation context
+                </p>
+                <div class="mt-3 grid gap-3 md:grid-cols-4">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                            Pay Code
+                        </p>
+                        <p class="mt-1 font-semibold">
+                            {{ activityNavigationContext.code }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                            Source
+                        </p>
+                        <p class="mt-1 font-semibold">
+                            {{ activityNavigationContext.source }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                            Destination
+                        </p>
+                        <p class="mt-1 font-semibold">
+                            {{ activityNavigationContext.destination }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                            Payload policy
+                        </p>
+                        <p class="mt-1 font-semibold">
+                            {{ activityNavigationContext.redactions?.payloads }}
+                        </p>
+                    </div>
+                </div>
+                <div class="mt-4 rounded-lg border border-emerald-200 bg-white/60 px-3 py-3 dark:border-emerald-800 dark:bg-emerald-900/40">
+                    <p class="font-semibold">
+                        Mutation blocked
+                    </p>
+                    <p class="mt-1">
+                        {{ activityNavigationContext.mutation?.reason }}
                     </p>
                 </div>
             </div>

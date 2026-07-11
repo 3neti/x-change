@@ -247,6 +247,19 @@ export type CockpitCampaignNavigationContext = {
     [key: string]: unknown;
 };
 
+export type CockpitActivityNavigationContext = {
+    schema?: string;
+    status: string;
+    authorized?: boolean;
+    source?: string;
+    code?: string | null;
+    destination?: string;
+    read_only?: boolean;
+    mutation?: Record<string, unknown>;
+    redactions?: CockpitReadModelRedactions;
+    [key: string]: unknown;
+};
+
 export type CockpitDashboardPageProps = {
     dashboard_read_model?: CockpitDashboardReadModel;
     campaign_read_model?: CockpitCampaignReadModel;
@@ -725,6 +738,7 @@ export type CockpitPayCodeExplorerReadModel = {
 export type CockpitPayCodeExplorerPageProps = {
     pay_codes_read_model?: CockpitPayCodeExplorerReadModel;
     campaign_navigation_context?: CockpitCampaignNavigationContext;
+    activity_navigation_context?: CockpitActivityNavigationContext;
     read_model?: CockpitReadModelBundle;
 };
 

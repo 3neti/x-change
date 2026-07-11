@@ -53,6 +53,7 @@ type SafePresentation = {
     subtitle: string;
     status: string;
     href?: string;
+    explorerHref?: string;
     correlationId?: string;
     journalSummary?: SafeJournalSummary;
     actionSummary?: SafeActionSummary;
@@ -199,6 +200,7 @@ function sanitizePresentation(presentation: CockpitOperatorIssuanceActivityPrese
         subtitle,
         status,
         href: safeDetailHref(presentation.detail_href),
+        explorerHref: safeExplorerHref(presentation.detail_href),
         correlationId: stringValue(presentation.correlation_id),
         journalSummary: safeJournalSummary(presentation.metadata?.journal_handoff),
         actionSummary: safeActionSummary(presentation.metadata?.action_handoff),
@@ -326,6 +328,27 @@ function safeDetailHref(value: unknown): string | undefined {
     }
 
     return href;
+}
+
+function safeExplorerHref(value: unknown): string | undefined {
+    const href = safeDetailHref(value);
+
+    if (!href) {
+        return undefined;
+    }
+
+    const code = href.replace('/x/cockpit/pay-codes/', '').split('/')[0];
+
+    if (!code) {
+        return undefined;
+    }
+
+    const params = new URLSearchParams({
+        activity_code: code,
+        activity_source: 'operator_issuance_activity',
+    });
+
+    return `/x/cockpit/pay-codes?${params.toString()}`;
 }
 
 function filterHrefWithout(filter: 'search' | 'status' | 'handoff'): string {
@@ -761,6 +784,14 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                         data-testid="cockpit-operator-issuance-activity-link"
                     >
                         Open Pay Code
+                    </a>
+                    <a
+                        v-if="presentation.explorerHref"
+                        :href="presentation.explorerHref"
+                        class="font-semibold text-sky-700 underline decoration-sky-300 underline-offset-4 hover:text-sky-950 dark:text-sky-200 dark:decoration-sky-600 dark:hover:text-white"
+                        data-testid="cockpit-operator-issuance-activity-explorer-link"
+                    >
+                        Open in Explorer
                     </a>
                 </div>
             </article>
