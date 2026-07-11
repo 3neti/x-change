@@ -33,20 +33,20 @@ export const cockpitRuntimeInputs: CockpitRuntimeInput[] = [
     {
         key: 'amount',
         label: 'Amount',
-        value: 'Pending operator input',
-        helper: 'No pricing or funding calculation is executed in Slice 3.',
+        value: 'Use the Quick Generate form',
+        helper: 'Pricing and funding preflights run after a successful form submit.',
     },
     {
         key: 'recipient',
         label: 'Recipient',
-        value: 'Pending recipient selection',
-        helper: 'Contact/package integration remains deferred.',
+        value: 'Use the Quick Generate form',
+        helper: 'Recipient reference is submitted through the existing issuance handoff.',
     },
     {
         key: 'purpose',
         label: 'Purpose',
-        value: 'Pending purpose note',
-        helper: 'Purpose is presentation context only in this baseline.',
+        value: 'Optional form note',
+        helper: 'Purpose/message is passed as operator-safe issuance context.',
     },
 ];
 
@@ -54,20 +54,19 @@ export const cockpitPricingFundingSummary: CockpitPricingFundingSummary[] = [
     {
         key: 'pricing',
         label: 'Pricing Estimate',
-        value: 'Not calculated',
-        helper: 'Will use existing pricing services only when explicitly wired.',
+        value: 'Shown after submit',
+        helper: 'The result panel displays the operator-safe pricing preflight returned by the existing runtime.',
     },
     {
         key: 'funding',
         label: 'Funding Impact',
-        value: 'Not reserved',
-        helper: 'No wallet lookup, reservation, debit, or provider call occurs here.',
+        value: 'Shown after submit',
+        helper: 'The result panel displays the operator-safe funding preflight; reservation and money movement remain behind existing issuance services.',
     },
     {
         key: 'execution',
         label: 'Execution Summary',
-        value: 'Template pending',
-        helper: 'Execution semantics stay voucher-owned and are not inferred in Vue.',
+        value: 'Existing handoff',
+        helper: 'Quick Generate compiles a draft and hands off to GeneratePayCode; execution semantics stay voucher-owned.',
     },
 ];
-

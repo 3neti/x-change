@@ -57,6 +57,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('Amount');
         expect(wrapper.text()).toContain('Recipient');
         expect(wrapper.text()).toContain('Purpose');
+        expect(wrapper.text()).toContain('Use the Quick Generate form');
         expect(wrapper.find('form').exists()).toBe(false);
         expect(wrapper.findAll('[data-testid="cockpit-runtime-input"]')).toHaveLength(3);
     });
@@ -69,10 +70,10 @@ describe('Cockpit Quick Generate foundation', () => {
         });
 
         expect(wrapper.text()).toContain('Pricing Estimate');
-        expect(wrapper.text()).toContain('Not calculated');
+        expect(wrapper.text()).toContain('Shown after submit');
         expect(wrapper.text()).toContain('Funding Impact');
-        expect(wrapper.text()).toContain('Not reserved');
-        expect(wrapper.text()).toContain('No wallet lookup, reservation, debit, or provider call occurs here.');
+        expect(wrapper.text()).toContain('Existing handoff');
+        expect(wrapper.text()).toContain('operator-safe funding preflight');
         expect(wrapper.findAll('[data-testid="cockpit-pricing-summary-item"]')).toHaveLength(3);
     });
 
@@ -413,8 +414,8 @@ describe('Cockpit Quick Generate foundation', () => {
                         {
                             key: 'can-generate-pay-code',
                             label: 'Can Generate Pay Code',
-                            status: 'blocked',
-                            reason: 'No Cockpit mutation route is registered.',
+                            status: 'passed',
+                            reason: 'The approved Cockpit Quick Generate mutation route submits through the existing GeneratePayCode action.',
                         },
                     ],
                     redactions: {
@@ -428,8 +429,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('Operator Authenticated');
         expect(wrapper.text()).toContain('passed');
         expect(wrapper.text()).toContain('Can Generate Pay Code');
-        expect(wrapper.text()).toContain('blocked');
-        expect(wrapper.text()).toContain('No Cockpit mutation route is registered.');
+        expect(wrapper.text()).toContain('The approved Cockpit Quick Generate mutation route submits through the existing GeneratePayCode action.');
         expect(wrapper.text()).toContain('Authorization gates are read-only facts in Slice 19.');
         expect(wrapper.find('form').exists()).toBe(false);
         expect(wrapper.find('[data-testid="cockpit-quick-generate-authorization-gate-panel"]').exists()).toBe(true);

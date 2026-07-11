@@ -344,20 +344,20 @@ function defaultPricingGate(): CockpitQuickGeneratePricingGate {
             {
                 key: 'amount-input-present',
                 label: 'Amount Input Present',
-                status: 'blocked',
-                reason: 'No operator amount input is accepted by Cockpit in Slice 20.',
+                status: 'passed',
+                reason: 'The Quick Generate form accepts an operator amount and passes it through the existing issuance handoff.',
             },
             {
                 key: 'pricing-service-wired',
                 label: 'Pricing Service Wired',
-                status: 'blocked',
-                reason: 'Cockpit does not call pricing services in Slice 20.',
+                status: 'passed',
+                reason: 'Quick Generate returns operator-safe pricing preflight metadata after a successful existing issuance handoff.',
             },
             {
                 key: 'funding-source-selected',
                 label: 'Funding Source Selected',
-                status: 'blocked',
-                reason: 'No wallet or funding source lookup is performed.',
+                status: 'diagnostic',
+                reason: 'Funding authority is reported through the operator-safe funding preflight; Cockpit does not expose wallet internals.',
             },
             {
                 key: 'funds-reservation',
@@ -397,14 +397,14 @@ function defaultFundingGate(): CockpitQuickGenerateFundingGate {
             {
                 key: 'wallet-balance-available',
                 label: 'Wallet Balance Available',
-                status: 'blocked',
-                reason: 'Cockpit does not read wallet balances in Slice 21.',
+                status: 'diagnostic',
+                reason: 'Quick Generate can display an operator-safe balance preflight returned by the existing balance overview path.',
             },
             {
                 key: 'sufficient-funds',
                 label: 'Sufficient Funds',
-                status: 'blocked',
-                reason: 'Cockpit does not evaluate spendable funds in Slice 21.',
+                status: 'diagnostic',
+                reason: 'Sufficiency remains owned by the existing issuance/funding services and is surfaced only as safe preflight context.',
             },
             {
                 key: 'funds-reservation-ready',
@@ -652,8 +652,8 @@ function defaultAuthorization(): CockpitQuickGenerateAuthorization {
             {
                 key: 'can-generate-pay-code',
                 label: 'Can Generate Pay Code',
-                status: 'blocked',
-                reason: 'No Cockpit mutation route is registered.',
+                status: 'passed',
+                reason: 'The approved Cockpit Quick Generate mutation route submits through the existing GeneratePayCode action.',
             },
             {
                 key: 'can-call-providers',
