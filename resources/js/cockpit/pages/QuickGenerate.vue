@@ -549,8 +549,8 @@ function defaultMutationHandoffPlan(): CockpitQuickGenerateMutationHandoffPlan {
             {
                 key: 'side-effect-boundary-confirmed',
                 label: 'Side Effect Boundary Confirmed',
-                status: 'blocked',
-                reason: 'No voucher generation, wallet movement, provider call, journal write, action run, or feedback delivery is authorized.',
+                status: 'passed',
+                reason: 'Quick Generate uses the existing GeneratePayCode issuance handoff; wallet movement, provider calls, journal writes, action runs, and feedback delivery remain separately gated.',
             },
             {
                 key: 'operator-response-contract-ready',
