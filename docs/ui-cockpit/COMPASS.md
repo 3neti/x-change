@@ -1981,3 +1981,13 @@ Current boundary:
   - focused tests proving default `not_wired`, explicit `partially_wired`, and combined runtime profile inspection.
 - Cockpit Wave 20 expected UI result: no current Cockpit UI change is expected; this wave adds local operations/CLI visibility only.
 - Cockpit Wave 20 next recommended wave: `Cockpit Wave 21 — Runtime Profile UI Surface Decision`.
+- Cockpit Wave 21 result: Runtime Profile UI surface implemented; report `reports/192-wave-21-runtime-profile-ui-surface.md`.
+- Cockpit Wave 21 completed:
+  - backend `runtime_profile_read_model` page-prop contract;
+  - read-only `GET /x/cockpit/diagnostics/runtime-profile` route;
+  - Inertia page `x-change/cockpit/RuntimeProfile`;
+  - Cockpit sidebar navigation item `Runtime Profile`;
+  - UI rendering runtime status, component resolution/fallbacks, and safety flags;
+  - host publish verification with asset drift doctor `checked 58, ok 58, stale 0`.
+- Cockpit Wave 21 expected UI result: `/x/cockpit/diagnostics/runtime-profile` shows a read-only diagnostics page; it has no mutation controls.
+- Cockpit Wave 21 next recommended wave: `Cockpit Wave 22 — Runtime Profile Browser Verification / Operator Acceptance`.
