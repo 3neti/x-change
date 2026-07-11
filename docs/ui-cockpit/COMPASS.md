@@ -2143,3 +2143,7 @@ Current boundary:
 - Cockpit Wave 35D expected UI result: `/x/cockpit/quick-generate` opened with campaign query parameters shows a `Campaign context prefill` card and prefilled template, amount, recipient, and purpose fields.
 - Cockpit Wave 35E result: campaign context browser/publish verification completed; report `reports/241-wave-35e-campaign-context-quick-generate-browser-publish-verification.md`; next `Cockpit Wave 35F — Campaign Context Quick Generate Adoption Closure`.
 - Cockpit Wave 35E expected UI result: browser-verified `/x/cockpit/quick-generate?...campaign_*` shows the `Campaign context prefill` card, prefilled form values, and safe campaign metadata on submit.
+- Cockpit Wave 35 result: Campaign Context Quick Generate Adoption closed; report `reports/242-wave-35-campaign-context-quick-generate-adoption-closure.md`.
+- Cockpit Wave 35 completed: Quick Generate accepts safe campaign query context, hydrates the read model, renders a `Campaign context prefill` card, prefills the form, and submits read-only campaign metadata through the existing issuance handoff without campaign mutation.
+- Cockpit Wave 35 expected UI result: campaign-prefilled Quick Generate shows `Campaign context prefill`, `OFW Remittance`, amount, recipient/reference, and purpose values from the campaign draft.
+- Cockpit Wave 35 next recommended wave: `Cockpit Wave 36 — Campaign-Sourced Quick Generate Result Attribution / Explorer Bridge`.
