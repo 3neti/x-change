@@ -141,6 +141,36 @@ export type CockpitOperatorIssuanceActivityPresentation = {
             };
             [key: string]: unknown;
         };
+        feedback_handoff?: {
+            status?: string | null;
+            feedback_intent_id?: string | null;
+            delivery_plan_id?: string | null;
+            delivery_receipt_id?: string | null;
+            feedback_required?: boolean | null;
+            sends_feedback?: boolean | null;
+            source?: string | null;
+            reason?: string | null;
+            metadata?: {
+                intent_key?: string | null;
+                event_type?: string | null;
+                delivery_boundary?: string | null;
+                planned_deliveries?: number | string | null;
+                channels?: Array<string | null>;
+                plan_items?: Array<{
+                    intent_key?: string | null;
+                    recipient_type?: string | null;
+                    recipient_id?: string | number | null;
+                    channel?: string | null;
+                    status?: string | null;
+                    priority?: number | string | null;
+                    [key: string]: unknown;
+                }>;
+                composition?: Record<string, unknown>;
+                exception?: string | null;
+                [key: string]: unknown;
+            };
+            [key: string]: unknown;
+        };
         [key: string]: unknown;
     };
     [key: string]: unknown;

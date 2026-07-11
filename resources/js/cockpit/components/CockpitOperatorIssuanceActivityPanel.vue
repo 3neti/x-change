@@ -36,6 +36,17 @@ type SafeActionSummary = {
     suggestedAction?: string;
 };
 
+type SafeFeedbackSummary = {
+    feedbackIntentId?: string;
+    deliveryPlanId?: string;
+    deliveryReceiptId?: string;
+    sendsFeedback: boolean;
+    source?: string;
+    reason?: string;
+    channel?: string;
+    plannedDeliveries?: string;
+};
+
 type SafePresentation = {
     id: string;
     title: string;
@@ -45,6 +56,7 @@ type SafePresentation = {
     correlationId?: string;
     journalSummary?: SafeJournalSummary;
     actionSummary?: SafeActionSummary;
+    feedbackSummary?: SafeFeedbackSummary;
     handoffs: {
         journal: string;
         action: string;
@@ -87,11 +99,43 @@ function sanitizePresentation(presentation: CockpitOperatorIssuanceActivityPrese
         correlationId: stringValue(presentation.correlation_id),
         journalSummary: safeJournalSummary(presentation.metadata?.journal_handoff),
         actionSummary: safeActionSummary(presentation.metadata?.action_handoff),
+        feedbackSummary: safeFeedbackSummary(presentation.metadata?.feedback_handoff),
         handoffs: {
             journal: stringValue(presentation.handoffs?.journal) ?? 'not_wired',
             action: stringValue(presentation.handoffs?.action) ?? 'not_wired',
             feedback: stringValue(presentation.handoffs?.feedback) ?? 'not_wired',
         },
+    };
+}
+
+function safeFeedbackSummary(value: unknown): SafeFeedbackSummary | undefined {
+    if (!isPlainObject(value)) {
+        return undefined;
+    }
+
+    const feedbackIntentId = stringValue(value.feedback_intent_id);
+    const deliveryPlanId = stringValue(value.delivery_plan_id);
+    const deliveryReceiptId = stringValue(value.delivery_receipt_id);
+    const source = stringValue(value.source);
+    const reason = stringValue(value.reason);
+    const metadata = isPlainObject(value.metadata) ? value.metadata : {};
+    const channels = Array.isArray(metadata.channels) ? metadata.channels : [];
+    const channel = stringValue(channels[0]);
+    const plannedDeliveries = stringValue(metadata.planned_deliveries);
+
+    if (!feedbackIntentId && !deliveryPlanId && !deliveryReceiptId && !source && !reason && !channel && !plannedDeliveries) {
+        return undefined;
+    }
+
+    return {
+        feedbackIntentId,
+        deliveryPlanId,
+        deliveryReceiptId,
+        sendsFeedback: value.sends_feedback === true,
+        source,
+        reason,
+        channel,
+        plannedDeliveries,
     };
 }
 
@@ -374,6 +418,55 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                             Reason
                         </dt>
                         <dd>Reason: {{ presentation.actionSummary.reason }}</dd>
+                    </div>
+                </dl>
+
+                <dl
+                    v-if="presentation.feedbackSummary"
+                    class="mt-4 grid gap-2 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200 sm:grid-cols-2"
+                    data-testid="cockpit-operator-issuance-activity-feedback-summary"
+                >
+                    <div v-if="presentation.feedbackSummary.feedbackIntentId">
+                        <dt class="font-semibold text-emerald-900 dark:text-emerald-100">
+                            Feedback intent
+                        </dt>
+                        <dd>Feedback intent: {{ presentation.feedbackSummary.feedbackIntentId }}</dd>
+                    </div>
+                    <div v-if="presentation.feedbackSummary.deliveryPlanId">
+                        <dt class="font-semibold text-emerald-900 dark:text-emerald-100">
+                            Delivery plan
+                        </dt>
+                        <dd>Delivery plan: {{ presentation.feedbackSummary.deliveryPlanId }}</dd>
+                    </div>
+                    <div>
+                        <dt class="font-semibold text-emerald-900 dark:text-emerald-100">
+                            Sends feedback
+                        </dt>
+                        <dd>Sends feedback: {{ presentation.feedbackSummary.sendsFeedback ? 'yes' : 'no' }}</dd>
+                    </div>
+                    <div v-if="presentation.feedbackSummary.channel">
+                        <dt class="font-semibold text-emerald-900 dark:text-emerald-100">
+                            Channel
+                        </dt>
+                        <dd>Channel: {{ presentation.feedbackSummary.channel }}</dd>
+                    </div>
+                    <div v-if="presentation.feedbackSummary.plannedDeliveries">
+                        <dt class="font-semibold text-emerald-900 dark:text-emerald-100">
+                            Planned deliveries
+                        </dt>
+                        <dd>Planned deliveries: {{ presentation.feedbackSummary.plannedDeliveries }}</dd>
+                    </div>
+                    <div v-if="presentation.feedbackSummary.source">
+                        <dt class="font-semibold text-emerald-900 dark:text-emerald-100">
+                            Source
+                        </dt>
+                        <dd>Source: {{ presentation.feedbackSummary.source }}</dd>
+                    </div>
+                    <div v-if="presentation.feedbackSummary.reason">
+                        <dt class="font-semibold text-emerald-900 dark:text-emerald-100">
+                            Reason
+                        </dt>
+                        <dd>Reason: {{ presentation.feedbackSummary.reason }}</dd>
                     </div>
                 </dl>
 

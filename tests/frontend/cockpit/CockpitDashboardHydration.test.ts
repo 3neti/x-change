@@ -148,7 +148,7 @@ const operatorIssuanceActivityReadModel = {
             handoffs: {
                 journal: 'recorded',
                 action: 'composed',
-                feedback: 'not_wired',
+                feedback: 'planned',
             },
             safety: {
                 presentation_only: true,
@@ -208,6 +208,40 @@ const operatorIssuanceActivityReadModel = {
                         composition: {
                             presentation_only: true,
                             executes_action: false,
+                        },
+                        provider_payload: 'must-not-render',
+                    },
+                },
+                feedback_handoff: {
+                    status: 'planned',
+                    feedback_intent_id: 'cockpit.operator_issuance_activity.recorded',
+                    delivery_plan_id: 'plan-feedback-1',
+                    delivery_receipt_id: null,
+                    feedback_required: false,
+                    sends_feedback: false,
+                    source: 'test-feedback-handoff',
+                    reason: 'x-feedback prepared an operator activity delivery plan without dispatching provider delivery.',
+                    metadata: {
+                        intent_key: 'cockpit.operator_issuance_activity.recorded',
+                        event_type: 'cockpit.operator_issuance_activity.recorded',
+                        delivery_boundary: 'prepare_only',
+                        planned_deliveries: 1,
+                        channels: ['in_app'],
+                        plan_items: [
+                            {
+                                intent_key: 'cockpit.operator_issuance_activity.recorded',
+                                recipient_type: 'operator',
+                                recipient_id: 'operator-1',
+                                channel: 'in_app',
+                                status: 'planned',
+                                priority: 100,
+                                provider_payload: 'must-not-render',
+                            },
+                        ],
+                        composition: {
+                            presentation_only: true,
+                            sends_feedback: false,
+                            owns_lifecycle_truth: false,
                         },
                         provider_payload: 'must-not-render',
                     },
@@ -567,7 +601,7 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('corr-1');
         expect(wrapper.text()).toContain('journal: recorded');
         expect(wrapper.text()).toContain('action: composed');
-        expect(wrapper.text()).toContain('feedback: not_wired');
+        expect(wrapper.text()).toContain('feedback: planned');
         expect(wrapper.text()).toContain('Journal entry: journal-entry-1');
         expect(wrapper.text()).toContain('Writes journal: yes');
         expect(wrapper.text()).toContain('Source: test-journal-handoff');
@@ -581,11 +615,18 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('Action run: action-run-1');
         expect(wrapper.text()).toContain('Executes action: no');
         expect(wrapper.text()).toContain('Suggested action: Open Pay Code');
+        expect(wrapper.text()).toContain('Feedback intent: cockpit.operator_issuance_activity.recorded');
+        expect(wrapper.text()).toContain('Delivery plan: plan-feedback-1');
+        expect(wrapper.text()).toContain('Sends feedback: no');
+        expect(wrapper.text()).toContain('Channel: in_app');
+        expect(wrapper.text()).toContain('Planned deliveries: 1');
+        expect(wrapper.text()).toContain('Source: test-feedback-handoff');
         expect(wrapper.text()).toContain('presentation-only');
         expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-card"]')).toHaveLength(1);
         expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-journal-summary"]')).toHaveLength(1);
         expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-journal-diagnostic"]')).toHaveLength(1);
         expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-action-summary"]')).toHaveLength(1);
+        expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-feedback-summary"]')).toHaveLength(1);
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-link"]').attributes('href')).toBe('/x/cockpit/pay-codes/PC-1234');
     });
 
