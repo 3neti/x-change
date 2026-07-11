@@ -45,11 +45,7 @@ class DurableCockpitOperatorIssuanceActivityReadModelProvider
                 return $this->presenter->present(
                     $item,
                     $this->journalHandoffResult($record),
-                    new CockpitOperatorIssuanceActivityActionHandoffResultData(
-                        status: $record->action_handoff_status,
-                        activity_id: $record->activity_id,
-                        correlation_id: $record->correlation_id,
-                    ),
+                    $this->actionHandoffResult($record),
                     new CockpitOperatorIssuanceActivityFeedbackHandoffResultData(
                         status: $record->feedback_handoff_status,
                         activity_id: $record->activity_id,
@@ -113,12 +109,40 @@ class DurableCockpitOperatorIssuanceActivityReadModelProvider
         );
     }
 
+    private function actionHandoffResult(CockpitOperatorIssuanceActivityRecordData $record): CockpitOperatorIssuanceActivityActionHandoffResultData
+    {
+        $summary = $this->actionHandoffSummary($record);
+
+        return new CockpitOperatorIssuanceActivityActionHandoffResultData(
+            status: (string) data_get($summary, 'status', $record->action_handoff_status),
+            activity_id: $record->activity_id,
+            correlation_id: $record->correlation_id,
+            action_hint_id: $this->nullableString(data_get($summary, 'action_hint_id')),
+            action_run_id: $this->nullableString(data_get($summary, 'action_run_id')),
+            action_required: (bool) data_get($summary, 'action_required', false),
+            executes_action: (bool) data_get($summary, 'executes_action', false),
+            source: (string) data_get($summary, 'source', 'durable-operator-issuance-activity-read-model'),
+            reason: (string) data_get($summary, 'reason', 'Action handoff status is projected from durable Cockpit activity storage.'),
+            metadata: $this->safeActionHandoffMetadata(data_get($summary, 'metadata', [])),
+        );
+    }
+
     /**
      * @return array<string, mixed>
      */
     private function journalHandoffSummary(CockpitOperatorIssuanceActivityRecordData $record): array
     {
         $summary = data_get($record->metadata, 'journal_handoff');
+
+        return is_array($summary) ? $summary : [];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function actionHandoffSummary(CockpitOperatorIssuanceActivityRecordData $record): array
+    {
+        $summary = data_get($record->metadata, 'action_handoff');
 
         return is_array($summary) ? $summary : [];
     }
@@ -137,6 +161,53 @@ class DurableCockpitOperatorIssuanceActivityReadModelProvider
             'event_type',
             'idempotency_key',
             'exception',
+        ]));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function safeActionHandoffMetadata(mixed $metadata): array
+    {
+        if (! is_array($metadata)) {
+            return [];
+        }
+
+        $safe = array_intersect_key($metadata, array_flip([
+            'event_or_state',
+            'actions',
+            'composition',
+            'safe_diagnostics',
+            'exception',
+        ]));
+
+        if (isset($safe['actions']) && is_array($safe['actions'])) {
+            $safe['actions'] = array_values(array_map(
+                fn (mixed $action): array => $this->safeActionMetadata($action),
+                $safe['actions'],
+            ));
+        }
+
+        return $safe;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function safeActionMetadata(mixed $action): array
+    {
+        if (! is_array($action)) {
+            return [];
+        }
+
+        return array_intersect_key($action, array_flip([
+            'key',
+            'label',
+            'intent',
+            'description',
+            'run_id',
+            'target',
+            'run_semantics',
         ]));
     }
 

@@ -46,6 +46,16 @@ class DefaultCockpitOperatorIssuanceActivityPresenter implements CockpitOperator
                     'metadata' => $journal->metadata,
                     'diagnostic' => $this->journalHandoffDiagnostics->classify($journal),
                 ],
+                'action_handoff' => [
+                    'status' => $action->status,
+                    'action_hint_id' => $action->action_hint_id,
+                    'action_run_id' => $action->action_run_id,
+                    'action_required' => $action->action_required,
+                    'executes_action' => $action->executes_action,
+                    'source' => $action->source,
+                    'reason' => $action->reason,
+                    'metadata' => $action->metadata,
+                ],
             ],
         );
     }
