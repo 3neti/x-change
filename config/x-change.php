@@ -37,6 +37,7 @@ use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityJo
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRecorder;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRepository;
 use LBHurtado\XChange\Services\Cockpit\XActionCockpitOperatorIssuanceActivityActionHandoff;
+use LBHurtado\XChange\Services\Cockpit\XFeedbackCockpitOperatorIssuanceActivityFeedbackHandoff;
 use LBHurtado\XChange\Services\Cockpit\XJournalCockpitOperatorIssuanceActivityJournalHandoff;
 use LBHurtado\XChange\Services\ConfigProviderRuntimeSettingsResolver;
 use LBHurtado\XChange\Services\ConfigProviderTopologyResolver;
@@ -133,6 +134,8 @@ return [
                 ?: null,
             'journal_handoff_status_projector' => env('XCHANGE_COCKPIT_OPERATOR_ISSUANCE_ACTIVITY_JOURNAL_HANDOFF_STATUS_PROJECTOR')
                 ?: null,
+            'feedback_handoff' => env('XCHANGE_COCKPIT_OPERATOR_ISSUANCE_ACTIVITY_FEEDBACK_HANDOFF')
+                ?: null,
             'available_repositories' => [
                 'database' => DatabaseCockpitOperatorIssuanceActivityRepository::class,
             ],
@@ -150,6 +153,9 @@ return [
             ],
             'available_journal_handoff_status_projectors' => [
                 'database' => DatabaseCockpitOperatorIssuanceActivityJournalHandoffStatusProjector::class,
+            ],
+            'available_feedback_handoffs' => [
+                'x-feedback' => XFeedbackCockpitOperatorIssuanceActivityFeedbackHandoff::class,
             ],
         ],
 

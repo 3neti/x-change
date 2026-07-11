@@ -350,10 +350,15 @@ class XChangeServiceProvider extends ServiceProvider
 
             return $app->make($service);
         });
-        $this->app->bind(
-            CockpitOperatorIssuanceActivityFeedbackHandoffContract::class,
-            NullCockpitOperatorIssuanceActivityFeedbackHandoff::class,
-        );
+        $this->app->bind(CockpitOperatorIssuanceActivityFeedbackHandoffContract::class, function ($app) {
+            $service = $this->cockpitOperatorIssuanceActivityService(
+                'feedback_handoff',
+                'available_feedback_handoffs',
+                NullCockpitOperatorIssuanceActivityFeedbackHandoff::class,
+            );
+
+            return $app->make($service);
+        });
         $this->app->bind(
             CockpitOperatorIssuanceActivityPresenterContract::class,
             DefaultCockpitOperatorIssuanceActivityPresenter::class,
