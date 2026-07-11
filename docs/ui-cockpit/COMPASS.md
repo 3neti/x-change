@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 16 — Operator Activity Journal Handoff Runtime Enablement
-Status: Complete / journal handoff runtime opt-in verified
+Current slice: Cockpit Wave 17 — Operator Activity Action Handoff Runtime Enablement
+Status: Complete / action handoff runtime opt-in verified
 Last updated: 2026-07-11
 
 ## Completed
@@ -1946,3 +1946,13 @@ Current boundary:
   - host Dusk dashboard smoke proving journal-recorded activity renders in the existing Operator Issuance Activity panel.
 - Cockpit Wave 16 expected UI result: existing Operator Issuance Activity cards can show `journal: recorded`, `Writes journal: yes`, journal entry, diagnostic, and reference metadata when durable journal handoff facts exist.
 - Cockpit Wave 16 next recommended wave: `Cockpit Wave 17 — Operator Activity Action Handoff Runtime Enablement`.
+- Cockpit Wave 17 result: operator issuance activity action handoff runtime enablement completed behind explicit config opt-in; report `reports/188-wave-17-operator-activity-action-handoff-runtime-enablement.md`.
+- Cockpit Wave 17 completed:
+  - real x-action adapter coverage for presentation-only action hint composition;
+  - runtime profile keys for `action_handoff=x-action` and `action_handoff_status_projector=database`;
+  - database status projection for `action_handoff_status=composed`;
+  - Quick Generate route coverage proving durable activity can compose x-action hints when configured;
+  - dashboard read-model coverage proving `action: composed`, action hint id, action run id, and `executes_action=false` are operator-visible safe facts;
+  - frontend and Dusk coverage proving the existing Operator Issuance Activity panel renders action-composed evidence.
+- Cockpit Wave 17 expected UI result: existing Operator Issuance Activity cards can show `action: composed`, `Action hint`, `Action run`, `Executes action: no`, and `Suggested action` when durable action handoff facts exist.
+- Cockpit Wave 17 next recommended wave: `Cockpit Wave 18 — Operator Activity Feedback Handoff Runtime Enablement`.
