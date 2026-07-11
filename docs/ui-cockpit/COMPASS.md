@@ -2101,3 +2101,7 @@ Current boundary:
 - Cockpit Wave 32D expected UI result: `/x/cockpit/pay-codes/{code}` shows an `Evidence summary` panel with read-only lifecycle, claim, approval, execution, journal, action, and feedback evidence cards when hydrated.
 - Cockpit Wave 32E result: browser and publish verification completed; Playwright verifies Explorer-to-Detail navigation renders the read-only Evidence summary panel and asset doctor reports clean; report `reports/223-wave-32e-voucher-detail-evidence-browser-publish-verification.md`; next `Cockpit Wave 32F — Voucher Detail Evidence Surface Closure`.
 - Cockpit Wave 32E expected UI result: users navigating from `/x/cockpit/pay-codes` to a detail page see the evidence summary cards in-browser with unsafe payload labels absent.
+- Cockpit Wave 32 result: Voucher Detail evidence surface closed; report `reports/224-wave-32-voucher-detail-evidence-surface-closure.md`.
+- Cockpit Wave 32 completed: Voucher Detail now has typed evidence summary facts, provider hydration, Vue rendering, browser verification, and clean published assets while preserving read-only boundaries.
+- Cockpit Wave 32 expected UI result: `/x/cockpit/pay-codes/{code}` shows read-only lifecycle, claim, approval, execution, journal, action, and feedback evidence summary cards.
+- Cockpit Wave 32 next recommended wave: `Cockpit Wave 33 — Distribution Workspace Functional Parity / Share Surface Hardening`.
