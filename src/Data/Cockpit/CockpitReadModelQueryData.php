@@ -13,6 +13,8 @@ class CockpitReadModelQueryData extends Data
      */
     public function __construct(
         public readonly ?string $code = null,
+        public readonly ?string $payCodeSearch = null,
+        public readonly ?string $payCodeStatus = null,
         public readonly ?string $operatorId = null,
         public readonly array $include = [],
         public readonly ?string $correlationId = null,

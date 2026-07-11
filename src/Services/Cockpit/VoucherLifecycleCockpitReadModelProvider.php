@@ -17,6 +17,8 @@ use LBHurtado\XChange\Data\Cockpit\CockpitDashboardPipelineStageData;
 use LBHurtado\XChange\Data\Cockpit\CockpitDashboardReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitDashboardRiskSignalData;
 use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityReadModelData;
+use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeExplorerFilterData;
+use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeExplorerStatsData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeListReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeListRecordData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateActionData;
@@ -824,25 +826,63 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
     public function forPayCodeList(CockpitReadModelQueryData $query): CockpitPayCodeListReadModelData
     {
         $queryCode = $this->normalizeCode($query->code);
-        $rows = collect($this->vouchers->list())
-            ->map(fn (mixed $row): ?CockpitPayCodeListRecordData => $this->listRecord($this->toArray($row)))
-            ->filter()
-            ->when($queryCode !== null, fn ($rows) => $rows->filter(
-                fn (CockpitPayCodeListRecordData $record): bool => str_contains($record->code, $queryCode)
+        $search = $this->normalizeSearch($query->payCodeSearch ?? $query->code);
+        $statusFilter = $this->normalizeStatusFilter($query->payCodeStatus);
+        $sourceRows = collect($this->vouchers->list())
+            ->map(fn (mixed $row): array => $this->toArray($row))
+            ->filter(fn (array $row): bool => $this->summaryCode($row, '') !== '')
+            ->values();
+        $filteredRows = $sourceRows
+            ->when($search !== null, fn ($rows) => $rows->filter(
+                fn (array $row): bool => $this->matchesPayCodeSearch($row, $search)
             ))
+            ->when($statusFilter !== null, fn ($rows) => $rows->filter(
+                fn (array $row): bool => $this->legacyIndexStatus($row) === $statusFilter
+            ))
+            ->values();
+        $rows = $filteredRows
+            ->map(fn (array $row): ?CockpitPayCodeListRecordData => $this->listRecord($row))
+            ->filter()
             ->values()
             ->all();
 
         return new CockpitPayCodeListReadModelData(
             status: 'available',
             authorized: true,
-            query: $queryCode,
+            query: $search ?? $queryCode,
+            status_filter: $statusFilter,
+            stats: $this->payCodeStats($sourceRows, $filteredRows->count()),
+            filters: $this->payCodeFilters($search, $statusFilter),
             records: $rows,
             redactions: [
                 'payloads' => 'sanitized-list-summary-only',
                 'excluded' => $this->excludedPayloadKeys(),
             ],
         );
+    }
+
+    private function normalizeSearch(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $normalized = strtoupper(trim($value));
+
+        return $normalized !== '' ? $normalized : null;
+    }
+
+    private function normalizeStatusFilter(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $normalized = strtolower(trim($value));
+
+        return in_array($normalized, $this->payCodeStatusKeys(), true) && $normalized !== 'all'
+            ? $normalized
+            : null;
     }
 
     private function normalizeCode(?string $code): ?string
@@ -908,12 +948,12 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             return null;
         }
 
-        $status = $this->summaryStatus($row);
+        $status = $this->legacyIndexStatus($row);
 
         return new CockpitPayCodeListRecordData(
             code: $code,
             template: $this->stringValue($row['template'] ?? null, 'Pay Code'),
-            amount: $this->amountValue($row['amount'] ?? null),
+            amount: $this->amountValue($row['formatted_amount'] ?? $row['amount'] ?? null),
             currency: $this->nullableString($row['currency'] ?? null),
             status: $status,
             display_status: $this->stringValue($row['display_status'] ?? null, $status),
@@ -926,6 +966,143 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                     ?? null
             ),
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function matchesPayCodeSearch(array $row, string $search): bool
+    {
+        $fields = [
+            $this->summaryCode($row, ''),
+            $row['mobile'] ?? null,
+            $row['account_number'] ?? null,
+            $row['bank_code'] ?? null,
+            $row['status'] ?? null,
+            $row['display_status'] ?? null,
+            $row['formatted_amount'] ?? null,
+            $row['amount'] ?? null,
+            $row['template'] ?? null,
+        ];
+
+        return collect($fields)
+            ->filter(fn (mixed $value): bool => is_scalar($value) && trim((string) $value) !== '')
+            ->map(fn (mixed $value): string => strtoupper(trim((string) $value)))
+            ->contains(fn (string $value): bool => str_contains($value, $search));
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function legacyIndexStatus(array $row): string
+    {
+        if (isset($row['display_status']) && is_scalar($row['display_status']) && trim((string) $row['display_status']) !== '') {
+            return strtolower(trim((string) $row['display_status']));
+        }
+
+        $approval = $row['approval'] ?? null;
+
+        if (is_array($approval) && ($approval['required'] ?? false) === true) {
+            return 'awaiting_approval';
+        }
+
+        if (isset($row['status']) && is_scalar($row['status']) && trim((string) $row['status']) !== '') {
+            return strtolower(trim((string) $row['status']));
+        }
+
+        if (isset($row['redeemed_at']) && is_scalar($row['redeemed_at']) && trim((string) $row['redeemed_at']) !== '') {
+            return 'redeemed';
+        }
+
+        if ($this->isExpired($row['expires_at'] ?? null)) {
+            return 'expired';
+        }
+
+        return 'active';
+    }
+
+    private function isExpired(mixed $value): bool
+    {
+        if (! is_scalar($value) || trim((string) $value) === '') {
+            return false;
+        }
+
+        $timestamp = strtotime((string) $value);
+
+        return $timestamp !== false && $timestamp < time();
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $rows
+     */
+    private function payCodeStats($rows, int $filtered): CockpitPayCodeExplorerStatsData
+    {
+        return new CockpitPayCodeExplorerStatsData(
+            total: $rows->count(),
+            active: $this->countLegacyStatus($rows, 'active'),
+            awaiting_approval: $this->countLegacyStatus($rows, 'awaiting_approval'),
+            redeemed: $this->countLegacyStatus($rows, 'redeemed'),
+            expired: $this->countLegacyStatus($rows, 'expired'),
+            pending: $this->countLegacyStatus($rows, 'pending'),
+            failed: $this->countLegacyStatus($rows, 'failed'),
+            filtered: $filtered,
+        );
+    }
+
+    /**
+     * @return array<int, CockpitPayCodeExplorerFilterData>
+     */
+    private function payCodeFilters(?string $search, ?string $statusFilter): array
+    {
+        return collect($this->payCodeStatusOptions())
+            ->map(fn (array $option): CockpitPayCodeExplorerFilterData => new CockpitPayCodeExplorerFilterData(
+                key: 'status',
+                label: $option['label'],
+                value: $option['value'],
+                active: $statusFilter === $option['value'] || ($statusFilter === null && $option['value'] === 'all'),
+            ))
+            ->prepend(new CockpitPayCodeExplorerFilterData(
+                key: 'search',
+                label: 'Search',
+                value: $search ?? '',
+                active: $search !== null,
+            ))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{value: string, label: string}>
+     */
+    private function payCodeStatusOptions(): array
+    {
+        return [
+            ['value' => 'all', 'label' => 'All'],
+            ['value' => 'awaiting_approval', 'label' => 'Awaiting Approval'],
+            ['value' => 'active', 'label' => 'Active'],
+            ['value' => 'redeemed', 'label' => 'Redeemed'],
+            ['value' => 'expired', 'label' => 'Expired'],
+            ['value' => 'pending', 'label' => 'Pending'],
+            ['value' => 'failed', 'label' => 'Failed'],
+        ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function payCodeStatusKeys(): array
+    {
+        return array_column($this->payCodeStatusOptions(), 'value');
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $rows
+     */
+    private function countLegacyStatus($rows, string $status): int
+    {
+        return $rows
+            ->filter(fn (array $row): bool => $this->legacyIndexStatus($row) === $status)
+            ->count();
     }
 
     /**
