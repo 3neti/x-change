@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 18 complete; operator activity journal/action/feedback handoff runtimes are opt-in and dashboard-visible
+Current status: Cockpit Wave 19 complete; combined operator activity journal/action/feedback runtime profile verified
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 18 complete; operator activity journal/action/feedback handoff runtimes are opt-in and dashboard-visible | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 19 complete; combined operator activity journal/action/feedback runtime profile verified | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1681,3 +1681,4 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Cockpit Wave 16 — Operator Activity Journal Handoff Runtime Enablement: completed in [../ui-cockpit/reports/187-wave-16-operator-activity-journal-handoff-runtime-enablement.md](../ui-cockpit/reports/187-wave-16-operator-activity-journal-handoff-runtime-enablement.md); Quick Generate durable operator activity can now write x-journal and project `journal: recorded` when explicitly configured; defaults remain safe/null; next recommended wave is `Cockpit Wave 17 — Operator Activity Action Handoff Runtime Enablement`.
 - Cockpit Wave 17 — Operator Activity Action Handoff Runtime Enablement: completed in [../ui-cockpit/reports/188-wave-17-operator-activity-action-handoff-runtime-enablement.md](../ui-cockpit/reports/188-wave-17-operator-activity-action-handoff-runtime-enablement.md); Quick Generate durable operator activity can now compose x-action presentation-only action hints and project `action: composed` when explicitly configured; defaults remain safe/null; next recommended wave is `Cockpit Wave 18 — Operator Activity Feedback Handoff Runtime Enablement`.
 - Cockpit Wave 18 — Operator Activity Feedback Handoff Runtime Enablement: completed in [../ui-cockpit/reports/189-wave-18-operator-activity-feedback-handoff-runtime-enablement.md](../ui-cockpit/reports/189-wave-18-operator-activity-feedback-handoff-runtime-enablement.md); Quick Generate durable operator activity can now prepare x-feedback notification planning facts and project `feedback: planned` when explicitly configured; no provider delivery is sent; defaults remain safe/null; next recommended wave is `Cockpit Wave 19 — Combined Operator Activity Runtime Profile Verification`.
+- Cockpit Wave 19 — Combined Operator Activity Runtime Profile Verification: completed in [../ui-cockpit/reports/190-wave-19-combined-operator-activity-runtime-profile-verification.md](../ui-cockpit/reports/190-wave-19-combined-operator-activity-runtime-profile-verification.md); one operator activity can now be verified with `journal: recorded`, `action: composed`, and `feedback: planned` together when all explicit runtime keys are enabled; defaults remain safe/null; next recommended wave is `Cockpit Wave 20 — Operator Activity Runtime Configuration UX / Local Operations Handoff`.

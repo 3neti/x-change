@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 18 — Operator Activity Feedback Handoff Runtime Enablement
-Status: Complete / feedback handoff runtime opt-in verified
+Current slice: Cockpit Wave 19 — Combined Operator Activity Runtime Profile Verification
+Status: Complete / combined runtime profile verified
 Last updated: 2026-07-11
 
 ## Completed
@@ -1966,3 +1966,10 @@ Current boundary:
   - frontend and Dusk coverage proving the existing Operator Issuance Activity panel renders feedback-planned evidence.
 - Cockpit Wave 18 expected UI result: existing Operator Issuance Activity cards can show `feedback: planned`, `Feedback intent`, `Delivery plan`, `Sends feedback: no`, `Channel`, and `Planned deliveries` when durable feedback handoff facts exist.
 - Cockpit Wave 18 next recommended wave: `Cockpit Wave 19 — Combined Operator Activity Runtime Profile Verification`.
+- Cockpit Wave 19 result: combined operator activity runtime profile verification completed; report `reports/190-wave-19-combined-operator-activity-runtime-profile-verification.md`.
+- Cockpit Wave 19 completed:
+  - package-level combined fixture coverage for `journal: recorded`, `action: composed`, and `feedback: planned`;
+  - Quick Generate combined runtime coverage proving one generated activity can flow through x-journal, x-action, and x-feedback when all explicit runtime keys are enabled;
+  - Dusk dashboard smoke proving the existing Operator Issuance Activity panel renders combined handoff evidence on one card.
+- Cockpit Wave 19 expected UI result: one Operator Issuance Activity card can show `journal: recorded`, `action: composed`, `feedback: planned`, journal entry facts, action hint facts, and feedback planning facts together.
+- Cockpit Wave 19 next recommended wave: `Cockpit Wave 20 — Operator Activity Runtime Configuration UX / Local Operations Handoff`.
