@@ -5,6 +5,7 @@ declare(strict_types=1);
 use LBHurtado\XChange\Data\Cockpit\CockpitIssuanceCampaignContextData;
 use LBHurtado\XChange\Data\Cockpit\CockpitIssuanceDraftData;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitIssuanceDraftCompiler;
+use LBHurtado\XChange\Services\Cockpit\DefaultCockpitIssuanceTemplateRegistry;
 
 it('compiles a cockpit issuance draft into a GeneratePayCodeRequest compatible payload', function () {
     $payload = (new DefaultCockpitIssuanceDraftCompiler)->compile(new CockpitIssuanceDraftData(
@@ -71,4 +72,37 @@ it('preserves campaign context as metadata without mutating campaigns', function
         'campaign_id' => 'campaign-001',
         'source' => 'x-campaign',
     ]);
+});
+
+it('applies template profile defaults while preserving explicit draft values', function () {
+    $payload = (new DefaultCockpitIssuanceDraftCompiler(new DefaultCockpitIssuanceTemplateRegistry))->compile(new CockpitIssuanceDraftData(
+        template_key: 'ofw-remittance',
+        amount: '500.00',
+        currency: 'PHP',
+        count: 1,
+        recipient_reference: '09173011987',
+        rider: [
+            'message' => 'Explicit remittance message',
+        ],
+        validation: [
+            'mobile' => '09173011987',
+        ],
+    ));
+
+    expect(data_get($payload, 'inputs.fields'))->toBe(['mobile'])
+        ->and(data_get($payload, 'cash.validation.mobile'))->toBe('09173011987')
+        ->and(data_get($payload, 'feedback.mobile'))->toBe('09173011987')
+        ->and(data_get($payload, 'rider.message'))->toBe('Explicit remittance message')
+        ->and(data_get($payload, 'metadata.template.purpose'))->toBe('remittance');
+});
+
+it('uses template rider defaults when the draft has no message', function () {
+    $payload = (new DefaultCockpitIssuanceDraftCompiler(new DefaultCockpitIssuanceTemplateRegistry))->compile(new CockpitIssuanceDraftData(
+        template_key: 'money-changer',
+        amount: '25.00',
+        currency: 'PHP',
+    ));
+
+    expect(data_get($payload, 'rider.message'))->toBe('Your Pay Code is ready.')
+        ->and(data_get($payload, 'metadata.template.purpose'))->toBe('branch-counter-cash-out');
 });
