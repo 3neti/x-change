@@ -17,6 +17,7 @@ use LBHurtado\XChange\Data\Cockpit\CockpitIssuanceDraftValidationResultData;
 use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivityItemData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Http\Requests\GeneratePayCodeRequest;
+use LBHurtado\XChange\Services\BuildBalanceOverview;
 use LBHurtado\XChange\Services\Cockpit\CockpitOperatorIssuanceActivityHandoffPipeline;
 use LBHurtado\XChange\Services\IdempotencyService;
 use Throwable;
@@ -32,6 +33,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         CockpitIssuanceDraftValidatorContract $draftValidator,
         CockpitIssuanceDraftCompilerContract $draftCompiler,
         EstimatePayCodeCost $estimatePayCodeCost,
+        BuildBalanceOverview $balanceOverview,
     ): JsonResponse {
         $payload = $request->validated();
         $payload = $this->normalizePayloadForIssuance($payload);
@@ -69,8 +71,9 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         }
 
         $pricingPreflight = $this->pricingPreflight($payload, $estimatePayCodeCost);
+        $fundingPreflight = $this->fundingPreflight($request, $balanceOverview);
         $result = $generatePayCode->handle($payload);
-        $response = $this->responsePayload($request, $result, $key, false, $pricingPreflight);
+        $response = $this->responsePayload($request, $result, $key, false, $pricingPreflight, $fundingPreflight);
         $this->processOperatorIssuanceActivity($request, $response, $key, $operatorIssuanceActivityHandoffPipeline);
 
         if (is_string($key)) {
@@ -106,6 +109,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         ?string $key,
         bool $replayed,
         array $pricingPreflight = [],
+        array $fundingPreflight = [],
     ): array {
         return [
             'schema' => 'x-change.cockpit.quick-generate-existing-issuance-handoff.v1',
@@ -137,6 +141,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
             ],
             'preflight' => [
                 'pricing' => $pricingPreflight,
+                'funding' => $fundingPreflight,
             ],
             'idempotency' => [
                 'status' => is_string($key) ? 'replay-safe' : 'key-not-provided',
@@ -196,6 +201,41 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                 'status' => 'unavailable',
                 'blocking' => false,
                 'source' => 'EstimatePayCodeCost',
+                'reason' => $throwable::class,
+            ];
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function fundingPreflight(GeneratePayCodeRequest $request, BuildBalanceOverview $balanceOverview): array
+    {
+        try {
+            $overview = $balanceOverview->handle($request->user(), syncIfStale: false);
+
+            return [
+                'status' => 'checked',
+                'provider' => data_get($overview, 'provider'),
+                'topology' => data_get($overview, 'topology'),
+                'authority' => data_get($overview, 'authority'),
+                'sync_status' => data_get($overview, 'sync_status'),
+                'authoritative' => [
+                    'key' => data_get($overview, 'authoritative.key'),
+                    'authority' => data_get($overview, 'authoritative.authority'),
+                    'source' => data_get($overview, 'authoritative.source'),
+                    'balance' => data_get($overview, 'authoritative.balance'),
+                    'currency' => data_get($overview, 'authoritative.currency'),
+                    'is_stale' => data_get($overview, 'authoritative.is_stale'),
+                ],
+                'blocking' => false,
+                'source' => 'BuildBalanceOverview',
+            ];
+        } catch (Throwable $throwable) {
+            return [
+                'status' => 'unavailable',
+                'blocking' => false,
+                'source' => 'BuildBalanceOverview',
                 'reason' => $throwable::class,
             ];
         }
