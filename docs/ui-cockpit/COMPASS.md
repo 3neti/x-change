@@ -2135,3 +2135,5 @@ Current boundary:
 - Cockpit Wave 34 next recommended wave: `Cockpit Wave 35 — Campaign Context Quick Generate Adoption`.
 - Cockpit Wave 35A result: Campaign context Quick Generate adoption audit completed; report `reports/237-wave-35a-campaign-context-quick-generate-adoption-audit.md`; next `Cockpit Wave 35B — Campaign Context Quick Generate Read Model Contract`.
 - Cockpit Wave 35A expected UI result: no UI change; this slice defines safe campaign context intake/prefill scope and blocks campaign mutation, bulk issuance, and delivery.
+- Cockpit Wave 35B result: Campaign context Quick Generate read-model contract added; report `reports/238-wave-35b-campaign-context-quick-generate-read-model-contract.md`; next `Cockpit Wave 35C — Quick Generate Campaign Query Intake / Provider Hydration`.
+- Cockpit Wave 35B expected UI result: no visible UI change until campaign context is hydrated into the Quick Generate read model and rendered by Vue.
