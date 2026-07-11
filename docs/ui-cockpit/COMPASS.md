@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Mutation Wave 5 — Human UI Confirmation
-Status: Pass — accepted by human
+Current slice: Cockpit Mutation Wave 6J — Production Readiness Closure
+Status: Scaffolded / Decision recorded
 Last updated: 2026-07-11
 
 ## Completed
@@ -572,6 +572,76 @@ Last updated: 2026-07-11
   - Confirmed journal/action/feedback remain `not_wired`.
   - Recommended next wave: `Cockpit Mutation Wave 6 — Production Hardening Plan`, starting with `Wave 6A — Durable Activity Authorization / Tenant Scope Decision`.
   - Report: `reports/110-wave-5-human-ui-confirmation.md`.
+- Completed Cockpit Mutation Wave 6A — Durable Activity Authorization / Tenant Scope Decision:
+  - Scaffolded production-hardening decision report.
+  - Added guard test for the report and compass entries.
+  - Confirmed no runtime behavior or UI behavior changed.
+  - Durable activity recording remains disabled by default.
+  - Next checkpoint: `6B — Durable Activity Retention / Purge Policy Decision`.
+  - Report: `reports/111-wave-6a-durable-activity-authorization-tenant-scope-decision.md`.
+- Completed Cockpit Mutation Wave 6B — Durable Activity Retention / Purge Policy Decision:
+  - Scaffolded production-hardening decision report.
+  - Added guard test for the report and compass entries.
+  - Confirmed no runtime behavior or UI behavior changed.
+  - Durable activity recording remains disabled by default.
+  - Next checkpoint: `6C — Recorder Failure Observability Baseline`.
+  - Report: `reports/112-wave-6b-durable-activity-retention-purge-policy-decision.md`.
+- Completed Cockpit Mutation Wave 6C — Recorder Failure Observability Baseline:
+  - Scaffolded production-hardening decision report.
+  - Added guard test for the report and compass entries.
+  - Confirmed no runtime behavior or UI behavior changed.
+  - Durable activity recording remains disabled by default.
+  - Next checkpoint: `6D — Journal Handoff Default Policy Decision`.
+  - Report: `reports/113-wave-6c-recorder-failure-observability-baseline.md`.
+- Completed Cockpit Mutation Wave 6D — Journal Handoff Default Policy Decision:
+  - Scaffolded production-hardening decision report.
+  - Added guard test for the report and compass entries.
+  - Confirmed no runtime behavior or UI behavior changed.
+  - Durable activity recording remains disabled by default.
+  - Next checkpoint: `6E — Action / Feedback Handoff Default Policy Decision`.
+  - Report: `reports/114-wave-6d-journal-handoff-default-policy-decision.md`.
+- Completed Cockpit Mutation Wave 6E — Action / Feedback Handoff Default Policy Decision:
+  - Scaffolded production-hardening decision report.
+  - Added guard test for the report and compass entries.
+  - Confirmed no runtime behavior or UI behavior changed.
+  - Durable activity recording remains disabled by default.
+  - Next checkpoint: `6F — PII Classification / Redaction Hardening Review`.
+  - Report: `reports/115-wave-6e-action-feedback-handoff-default-policy-decision.md`.
+- Completed Cockpit Mutation Wave 6F — PII Classification / Redaction Hardening Review:
+  - Scaffolded production-hardening decision report.
+  - Added guard test for the report and compass entries.
+  - Confirmed no runtime behavior or UI behavior changed.
+  - Durable activity recording remains disabled by default.
+  - Next checkpoint: `6G — Production Disable / Rollback Runbook`.
+  - Report: `reports/116-wave-6f-pii-classification-redaction-hardening-review.md`.
+- Completed Cockpit Mutation Wave 6G — Production Disable / Rollback Runbook:
+  - Scaffolded production-hardening decision report.
+  - Added guard test for the report and compass entries.
+  - Confirmed no runtime behavior or UI behavior changed.
+  - Durable activity recording remains disabled by default.
+  - Next checkpoint: `6H — Cockpit Activity Search / Filter Plan`.
+  - Report: `reports/117-wave-6g-production-disable-rollback-runbook.md`.
+- Completed Cockpit Mutation Wave 6H — Cockpit Activity Search / Filter Plan:
+  - Scaffolded production-hardening decision report.
+  - Added guard test for the report and compass entries.
+  - Confirmed no runtime behavior or UI behavior changed.
+  - Durable activity recording remains disabled by default.
+  - Next checkpoint: `6I — High-Volume Projection / Queue Decision`.
+  - Report: `reports/118-wave-6h-cockpit-activity-search-filter-plan.md`.
+- Completed Cockpit Mutation Wave 6I — High-Volume Projection / Queue Decision:
+  - Scaffolded production-hardening decision report.
+  - Added guard test for the report and compass entries.
+  - Confirmed no runtime behavior or UI behavior changed.
+  - Durable activity recording remains disabled by default.
+  - Next checkpoint: `6J — Production Readiness Closure`.
+  - Report: `reports/119-wave-6i-high-volume-projection-queue-decision.md`.
+- Completed Cockpit Mutation Wave 6J — Production Readiness Closure:
+  - Scaffolded production-hardening decision report.
+  - Added guard test for the report and compass entries.
+  - Confirmed no runtime behavior or UI behavior changed.
+  - Durable activity recording remains disabled by default.
+  - Next checkpoint: `Manual UI Review / Wave 6 follow-up planning`.
+  - Report: `reports/120-wave-6j-production-readiness-closure.md`.
 - Read the Cockpit planning documents under `/Users/rli/PhpstormProjects/x-change-sandbox/docs/todo/x-change_cockpit`.
 - Inspected the current x-change package resources, routes, package scripts, frontend tests, and package docs.
 - Compared Cockpit intent against the current Execution Engine, x-journal, x-action, and x-feedback baselines.
@@ -1180,14 +1250,13 @@ No implementation slice is in progress.
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 6 — Production Hardening Plan
+Manual UI Review / Wave 6 follow-up planning
 ```
 
 Purpose:
 
-- define production hardening slices for durable activity before default production enablement
-- start with `Wave 6A — Durable Activity Authorization / Tenant Scope Decision`
-- keep local UI verification separate from production enablement
+- continue Wave 6 production hardening without changing current UI behavior
+- keep durable activity production default disabled
 - preserve Quick Generate behavior, wallet behavior, voucher behavior, redaction behavior, and money movement semantics
 
 Completed host integration boundary:
@@ -1758,3 +1827,23 @@ Current boundary:
 - Cockpit Mutation Wave 5 human UI result: Pass — accepted by human.
 - Cockpit Mutation Wave 5 human UI confirmed: `MCPC` visible, `YEZA` absent, `PC-LOCAL-DIAGNOSTIC` absent, journal/action/feedback `not_wired`, no raw payloads/secrets/retry controls/new mutation controls visible.
 - Cockpit Mutation Wave 5 next wave result: `Cockpit Mutation Wave 6 — Production Hardening Plan`.
+
+- Cockpit Mutation Wave 6A scaffold result: `Durable Activity Authorization / Tenant Scope Decision` recorded; report `reports/111-wave-6a-durable-activity-authorization-tenant-scope-decision.md`; next `6B — Durable Activity Retention / Purge Policy Decision`.
+
+- Cockpit Mutation Wave 6B scaffold result: `Durable Activity Retention / Purge Policy Decision` recorded; report `reports/112-wave-6b-durable-activity-retention-purge-policy-decision.md`; next `6C — Recorder Failure Observability Baseline`.
+
+- Cockpit Mutation Wave 6C scaffold result: `Recorder Failure Observability Baseline` recorded; report `reports/113-wave-6c-recorder-failure-observability-baseline.md`; next `6D — Journal Handoff Default Policy Decision`.
+
+- Cockpit Mutation Wave 6D scaffold result: `Journal Handoff Default Policy Decision` recorded; report `reports/114-wave-6d-journal-handoff-default-policy-decision.md`; next `6E — Action / Feedback Handoff Default Policy Decision`.
+
+- Cockpit Mutation Wave 6E scaffold result: `Action / Feedback Handoff Default Policy Decision` recorded; report `reports/115-wave-6e-action-feedback-handoff-default-policy-decision.md`; next `6F — PII Classification / Redaction Hardening Review`.
+
+- Cockpit Mutation Wave 6F scaffold result: `PII Classification / Redaction Hardening Review` recorded; report `reports/116-wave-6f-pii-classification-redaction-hardening-review.md`; next `6G — Production Disable / Rollback Runbook`.
+
+- Cockpit Mutation Wave 6G scaffold result: `Production Disable / Rollback Runbook` recorded; report `reports/117-wave-6g-production-disable-rollback-runbook.md`; next `6H — Cockpit Activity Search / Filter Plan`.
+
+- Cockpit Mutation Wave 6H scaffold result: `Cockpit Activity Search / Filter Plan` recorded; report `reports/118-wave-6h-cockpit-activity-search-filter-plan.md`; next `6I — High-Volume Projection / Queue Decision`.
+
+- Cockpit Mutation Wave 6I scaffold result: `High-Volume Projection / Queue Decision` recorded; report `reports/119-wave-6i-high-volume-projection-queue-decision.md`; next `6J — Production Readiness Closure`.
+
+- Cockpit Mutation Wave 6J scaffold result: `Production Readiness Closure` recorded; report `reports/120-wave-6j-production-readiness-closure.md`; next `Manual UI Review / Wave 6 follow-up planning`.

@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Wave 5 — x-campaign complete through Phase 15; x-change read-only Cockpit visual validation passed; Cockpit Mutation Wave 5 human UI confirmation passed
+Current status: Cockpit Mutation Wave 6J — Production Readiness Closure scaffolded; durable activity production default remains disabled
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Mutation Wave 5 human UI confirmation passed; Wave 6 hardening next | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Mutation Wave 6J scaffolded; durable activity production default remains disabled | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1450,6 +1450,76 @@ ExecutionDriverContract
   - Confirmed journal/action/feedback remain `not_wired`.
   - Recommended next wave: `Cockpit Mutation Wave 6 — Production Hardening Plan`, starting with `Wave 6A — Durable Activity Authorization / Tenant Scope Decision`.
   - Report: `../ui-cockpit/reports/110-wave-5-human-ui-confirmation.md`.
+- Cockpit Mutation Wave 6A — Durable Activity Authorization / Tenant Scope Decision:
+  - Scaffolded production-hardening decision report.
+  - Added guard test for report and compass entries.
+  - Confirmed no runtime behavior or UI behavior changed.
+  - Durable activity recording remains disabled by default.
+  - Next checkpoint: `6B — Durable Activity Retention / Purge Policy Decision`.
+  - Report: `../ui-cockpit/reports/111-wave-6a-durable-activity-authorization-tenant-scope-decision.md`.
+- Cockpit Mutation Wave 6B — Durable Activity Retention / Purge Policy Decision:
+  - Scaffolded production-hardening decision report.
+  - Added guard test for report and compass entries.
+  - Confirmed no runtime behavior or UI behavior changed.
+  - Durable activity recording remains disabled by default.
+  - Next checkpoint: `6C — Recorder Failure Observability Baseline`.
+  - Report: `../ui-cockpit/reports/112-wave-6b-durable-activity-retention-purge-policy-decision.md`.
+- Cockpit Mutation Wave 6C — Recorder Failure Observability Baseline:
+  - Scaffolded production-hardening decision report.
+  - Added guard test for report and compass entries.
+  - Confirmed no runtime behavior or UI behavior changed.
+  - Durable activity recording remains disabled by default.
+  - Next checkpoint: `6D — Journal Handoff Default Policy Decision`.
+  - Report: `../ui-cockpit/reports/113-wave-6c-recorder-failure-observability-baseline.md`.
+- Cockpit Mutation Wave 6D — Journal Handoff Default Policy Decision:
+  - Scaffolded production-hardening decision report.
+  - Added guard test for report and compass entries.
+  - Confirmed no runtime behavior or UI behavior changed.
+  - Durable activity recording remains disabled by default.
+  - Next checkpoint: `6E — Action / Feedback Handoff Default Policy Decision`.
+  - Report: `../ui-cockpit/reports/114-wave-6d-journal-handoff-default-policy-decision.md`.
+- Cockpit Mutation Wave 6E — Action / Feedback Handoff Default Policy Decision:
+  - Scaffolded production-hardening decision report.
+  - Added guard test for report and compass entries.
+  - Confirmed no runtime behavior or UI behavior changed.
+  - Durable activity recording remains disabled by default.
+  - Next checkpoint: `6F — PII Classification / Redaction Hardening Review`.
+  - Report: `../ui-cockpit/reports/115-wave-6e-action-feedback-handoff-default-policy-decision.md`.
+- Cockpit Mutation Wave 6F — PII Classification / Redaction Hardening Review:
+  - Scaffolded production-hardening decision report.
+  - Added guard test for report and compass entries.
+  - Confirmed no runtime behavior or UI behavior changed.
+  - Durable activity recording remains disabled by default.
+  - Next checkpoint: `6G — Production Disable / Rollback Runbook`.
+  - Report: `../ui-cockpit/reports/116-wave-6f-pii-classification-redaction-hardening-review.md`.
+- Cockpit Mutation Wave 6G — Production Disable / Rollback Runbook:
+  - Scaffolded production-hardening decision report.
+  - Added guard test for report and compass entries.
+  - Confirmed no runtime behavior or UI behavior changed.
+  - Durable activity recording remains disabled by default.
+  - Next checkpoint: `6H — Cockpit Activity Search / Filter Plan`.
+  - Report: `../ui-cockpit/reports/117-wave-6g-production-disable-rollback-runbook.md`.
+- Cockpit Mutation Wave 6H — Cockpit Activity Search / Filter Plan:
+  - Scaffolded production-hardening decision report.
+  - Added guard test for report and compass entries.
+  - Confirmed no runtime behavior or UI behavior changed.
+  - Durable activity recording remains disabled by default.
+  - Next checkpoint: `6I — High-Volume Projection / Queue Decision`.
+  - Report: `../ui-cockpit/reports/118-wave-6h-cockpit-activity-search-filter-plan.md`.
+- Cockpit Mutation Wave 6I — High-Volume Projection / Queue Decision:
+  - Scaffolded production-hardening decision report.
+  - Added guard test for report and compass entries.
+  - Confirmed no runtime behavior or UI behavior changed.
+  - Durable activity recording remains disabled by default.
+  - Next checkpoint: `6J — Production Readiness Closure`.
+  - Report: `../ui-cockpit/reports/119-wave-6i-high-volume-projection-queue-decision.md`.
+- Cockpit Mutation Wave 6J — Production Readiness Closure:
+  - Scaffolded production-hardening decision report.
+  - Added guard test for report and compass entries.
+  - Confirmed no runtime behavior or UI behavior changed.
+  - Durable activity recording remains disabled by default.
+  - Next checkpoint: `Manual UI Review / Wave 6 follow-up planning`.
+  - Report: `../ui-cockpit/reports/120-wave-6j-production-readiness-closure.md`.
 - The primary x-journal Codex instruction file is empty; the addendum and functional specifications currently carry the actionable guidance.
 - Concrete settlement-envelope and stored-value gateway bindings remain unresolved.
 - Existing provider readiness, wallet mutation, claim submission, and reconciliation paths are sensitive; keep characterization tests around them.
@@ -1465,25 +1535,19 @@ x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption
 x-change Host Integration Slice 2 — Journal/action/feedback read-model hydration into Cockpit surfaces
 ```
 
-Completed through Host Integration Slice 2I and Cockpit Mutation Wave 5 — Human UI Confirmation.
+Completed through Host Integration Slice 2I and Cockpit Mutation Wave 6J — Production Readiness Closure.
 
 Recommended next checkpoint:
 
 ```text
-Cockpit Mutation Wave 6 — Production Hardening Plan.
+Manual UI Review / Wave 6 follow-up planning
 ```
 
 Recommended actions:
 
-1. Define production hardening slices for durable activity before default production enablement.
-2. Start with `Wave 6A — Durable Activity Authorization / Tenant Scope Decision`.
-3. Keep local UI verification separate from production enablement.
-4. Preserve Quick Generate behavior, wallet behavior, voucher behavior, redaction behavior, and money movement semantics.
-4. Preserve Quick Generate behavior, voucher behavior, wallet behavior, durable activity behavior, redaction behavior, and money movement semantics.
-5. Keep package access adapter-driven inside x-change; do not duplicate integration wiring in the host app.
-6. Keep durable activity production default enablement deferred.
-7. Do not add campaign mutation endpoints, delivery dispatch, execution, journal writes, action execution, feedback delivery, provider calls outside `GeneratePayCode`, campaign state mutation, direct money movement, raw payload exposure, direct wallet access, retry controls, or new mutation controls unless explicitly approved.
-8. Keep Claim UI protected and keep all productized Cockpit work inside `packages/x-change`.
+1. Continue Wave 6 production hardening without changing current UI behavior.
+2. Keep durable activity production default disabled.
+3. Preserve Quick Generate behavior, wallet behavior, voucher behavior, redaction behavior, and money movement semantics.
 
 ## x-journal Initial Intent
 
