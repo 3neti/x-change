@@ -112,6 +112,43 @@ it('presents not wired cockpit read models on voucher scoped pages', function (s
     'distribution workspace' => 'x-change.cockpit.pay-codes.distribution',
 ]);
 
+it('hydrates the distribution workspace with read-only share surface facts', function () {
+    actingAsTestUser();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.distribution', ['code' => 'PC-READY-001']))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/cockpit/DistributionWorkspace')
+        ->assertJsonPath('props.context.code', 'PC-READY-001')
+        ->assertJsonPath('props.distribution_workspace_read_model.schema', 'x-change.cockpit.distribution-workspace.v1')
+        ->assertJsonPath('props.distribution_workspace_read_model.status', 'available')
+        ->assertJsonPath('props.distribution_workspace_read_model.authorized', true)
+        ->assertJsonPath('props.distribution_workspace_read_model.code', 'PC-READY-001')
+        ->assertJsonPath('props.distribution_workspace_read_model.summary.code', 'PC-READY-001')
+        ->assertJsonPath('props.distribution_workspace_read_model.share_assets.0.key', 'copy-text')
+        ->assertJsonPath('props.distribution_workspace_read_model.share_assets.0.available', true)
+        ->assertJsonPath('props.distribution_workspace_read_model.share_assets.0.read_only', true)
+        ->assertJsonPath('props.distribution_workspace_read_model.share_assets.1.key', 'qr')
+        ->assertJsonPath('props.distribution_workspace_read_model.share_assets.1.status', 'deferred')
+        ->assertJsonPath('props.distribution_workspace_read_model.channels.0.key', 'sms')
+        ->assertJsonPath('props.distribution_workspace_read_model.channels.0.source', 'feedback-read-model')
+        ->assertJsonPath('props.distribution_workspace_read_model.print_templates.0.key', 'receipt-card')
+        ->assertJsonPath('props.distribution_workspace_read_model.analytics.0.key', 'delivery-state')
+        ->assertJsonPath('props.distribution_workspace_read_model.actions.0.key', 'send-now')
+        ->assertJsonPath('props.distribution_workspace_read_model.actions.0.status', 'blocked')
+        ->assertJsonPath('props.distribution_workspace_read_model.actions.0.read_only', true)
+        ->assertJsonPath('props.distribution_workspace_read_model.redactions.payloads', 'distribution-read-model-summary-only')
+        ->assertJsonPath('props.distribution_workspace_read_model.redactions.dispatch_enabled', false)
+        ->assertJsonPath('props.distribution_workspace_read_model.redactions.artifact_generation_enabled', false)
+        ->assertJsonPath('props.distribution_workspace_read_model.redactions.campaign_mutation_enabled', false)
+        ->assertJsonMissingPath('props.distribution_workspace_read_model.provider_payload')
+        ->assertJsonMissingPath('props.distribution_workspace_read_model.raw_payload')
+        ->assertJsonMissingPath('props.distribution_workspace_read_model.wallet')
+        ->assertJsonMissingPath('props.distribution_workspace_read_model.secret')
+        ->assertJsonMissingPath('props.distribution_workspace_read_model.dispatch_endpoint')
+        ->assertJsonMissingPath('props.distribution_workspace_read_model.mutation_route');
+});
+
 it('hydrates the pay code explorer with a sanitized list read model prop', function () {
     actingAsTestUser();
 

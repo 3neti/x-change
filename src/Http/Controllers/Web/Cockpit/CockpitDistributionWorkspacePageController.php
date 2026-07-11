@@ -11,12 +11,10 @@ use LBHurtado\XChange\Support\Cockpit\CockpitReadOnlyPageProps;
 
 class CockpitDistributionWorkspacePageController extends Controller
 {
-    public function __construct(private readonly CockpitReadOnlyPageProps $props)
-    {
-    }
+    public function __construct(private readonly CockpitReadOnlyPageProps $props) {}
 
     public function __invoke(string $code): Response
     {
-        return Inertia::render('x-change/cockpit/DistributionWorkspace', $this->props->toArray($code));
+        return Inertia::render('x-change/cockpit/DistributionWorkspace', $this->props->toDistributionWorkspaceArray($code));
     }
 }

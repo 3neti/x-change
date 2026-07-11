@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Support\Cockpit;
 
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
+use LBHurtado\XChange\Data\Cockpit\CockpitDistributionWorkspaceItemData;
+use LBHurtado\XChange\Data\Cockpit\CockpitDistributionWorkspaceReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitOperatorIssuanceActivitySearchFilterData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
 use LBHurtado\XChange\Services\Cockpit\CockpitOperatorIssuanceActivityRuntimeProfileInspector;
@@ -135,6 +137,22 @@ class CockpitReadOnlyPageProps
     /**
      * @return array<string, mixed>
      */
+    public function toDistributionWorkspaceArray(string $code): array
+    {
+        $props = $this->toArray($code);
+
+        return [
+            ...$props,
+            'distribution_workspace_read_model' => $this->distributionWorkspaceReadModel(
+                code: $this->normalizeCode($code),
+                readModel: $props['read_model'] ?? [],
+            )->toArray(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
     public function toRuntimeProfileArray(): array
     {
         return [
@@ -215,6 +233,178 @@ class CockpitReadOnlyPageProps
         $normalized = strtoupper(trim((string) $code));
 
         return $normalized !== '' ? $normalized : null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $readModel
+     */
+    private function distributionWorkspaceReadModel(?string $code, array $readModel): CockpitDistributionWorkspaceReadModelData
+    {
+        $voucher = is_array($readModel['voucher'] ?? null) ? $readModel['voucher'] : [];
+        $summary = is_array($voucher['summary'] ?? null) ? $voucher['summary'] : [];
+        $feedback = is_array($readModel['feedback'] ?? null) ? $readModel['feedback'] : [];
+        $feedbackStatus = $this->stringValue($feedback['status'] ?? null, 'not_wired');
+
+        return new CockpitDistributionWorkspaceReadModelData(
+            status: $code === null ? 'not_wired' : 'available',
+            authorized: $code !== null,
+            code: $code,
+            summary: [
+                'code' => $code,
+                'display_status' => $this->stringValue($summary['display_status'] ?? null, $this->stringValue($summary['status'] ?? null, 'not_wired')),
+                'amount' => $summary['amount'] ?? null,
+                'currency' => $this->stringValue($summary['currency'] ?? null, null),
+                'claimed' => $summary['claimed'] ?? null,
+                'fully_claimed' => $summary['fully_claimed'] ?? null,
+            ],
+            share_assets: [
+                new CockpitDistributionWorkspaceItemData(
+                    key: 'copy-text',
+                    label: 'Copy text',
+                    status: 'preview',
+                    description: 'Operator-safe Pay Code copy text can be displayed without secret claim material.',
+                    available: $code !== null,
+                    source: 'voucher-summary',
+                    metadata: ['copies_secret_claim_material' => false],
+                ),
+                new CockpitDistributionWorkspaceItemData(
+                    key: 'qr',
+                    label: 'QR asset',
+                    status: 'deferred',
+                    description: 'QR generation remains disabled until an approved Pay Code representation service is wired.',
+                    source: 'distribution-policy',
+                ),
+                new CockpitDistributionWorkspaceItemData(
+                    key: 'short-link',
+                    label: 'Short link',
+                    status: 'deferred',
+                    description: 'Short-link creation remains disabled until routing, expiration, and redaction policy are approved.',
+                    source: 'distribution-policy',
+                ),
+            ],
+            channels: [
+                new CockpitDistributionWorkspaceItemData(
+                    key: 'sms',
+                    label: 'SMS',
+                    status: $feedbackStatus,
+                    description: 'SMS delivery state must come from x-feedback; this workspace does not send messages.',
+                    source: 'feedback-read-model',
+                ),
+                new CockpitDistributionWorkspaceItemData(
+                    key: 'email',
+                    label: 'Email',
+                    status: $feedbackStatus,
+                    description: 'Email delivery state must come from x-feedback; this workspace does not send messages.',
+                    source: 'feedback-read-model',
+                ),
+                new CockpitDistributionWorkspaceItemData(
+                    key: 'in-app',
+                    label: 'In-app',
+                    status: $feedbackStatus,
+                    description: 'In-app notification state must come from x-feedback; this workspace does not create notifications.',
+                    source: 'feedback-read-model',
+                ),
+                new CockpitDistributionWorkspaceItemData(
+                    key: 'manual',
+                    label: 'Manual branch release',
+                    status: 'planned',
+                    description: 'Manual release requires authorized host workflows before use.',
+                    source: 'distribution-policy',
+                ),
+            ],
+            print_templates: [
+                new CockpitDistributionWorkspaceItemData(
+                    key: 'receipt-card',
+                    label: 'Receipt card',
+                    status: 'planned',
+                    description: 'Receipt card output remains preview-only; no print artifact is generated.',
+                    source: 'distribution-policy',
+                ),
+                new CockpitDistributionWorkspaceItemData(
+                    key: 'branch-sheet',
+                    label: 'Branch release sheet',
+                    status: 'planned',
+                    description: 'Bulk branch sheets remain disabled until explicit artifact generation is approved.',
+                    source: 'distribution-policy',
+                ),
+                new CockpitDistributionWorkspaceItemData(
+                    key: 'counter-slip',
+                    label: 'Counter slip',
+                    status: 'planned',
+                    description: 'Counter slip output remains preview-only; printer integration is not wired.',
+                    source: 'distribution-policy',
+                ),
+            ],
+            analytics: [
+                new CockpitDistributionWorkspaceItemData(
+                    key: 'delivery-state',
+                    label: 'Delivery state',
+                    status: $feedbackStatus,
+                    description: 'Delivery truth is communication state from x-feedback, not lifecycle truth.',
+                    source: 'feedback-read-model',
+                ),
+                new CockpitDistributionWorkspaceItemData(
+                    key: 'campaign-state',
+                    label: 'Campaign state',
+                    status: 'not_wired',
+                    description: 'Campaign distribution state requires x-campaign read models.',
+                    source: 'campaign-read-model',
+                ),
+            ],
+            actions: [
+                new CockpitDistributionWorkspaceItemData(
+                    key: 'send-now',
+                    label: 'Send now',
+                    status: 'blocked',
+                    description: 'Distribution dispatch is not authorized from Cockpit.',
+                    source: 'mutation-boundary',
+                ),
+                new CockpitDistributionWorkspaceItemData(
+                    key: 'generate-print',
+                    label: 'Generate print assets',
+                    status: 'blocked',
+                    description: 'Print artifact generation is not authorized from Cockpit.',
+                    source: 'mutation-boundary',
+                ),
+                new CockpitDistributionWorkspaceItemData(
+                    key: 'create-qr',
+                    label: 'Create QR',
+                    status: 'blocked',
+                    description: 'QR generation is not authorized from Cockpit.',
+                    source: 'mutation-boundary',
+                ),
+                new CockpitDistributionWorkspaceItemData(
+                    key: 'create-campaign',
+                    label: 'Create campaign',
+                    status: 'blocked',
+                    description: 'Campaign creation is not authorized from Cockpit.',
+                    source: 'mutation-boundary',
+                ),
+            ],
+            redactions: [
+                'payloads' => 'distribution-read-model-summary-only',
+                'raw_payloads_exposed' => false,
+                'provider_payloads_exposed' => false,
+                'wallet_data_exposed' => false,
+                'secret_claim_material_exposed' => false,
+                'dispatch_enabled' => false,
+                'artifact_generation_enabled' => false,
+                'campaign_mutation_enabled' => false,
+            ],
+        );
+    }
+
+    private function stringValue(mixed $value, ?string $fallback = ''): ?string
+    {
+        if (is_string($value) && trim($value) !== '') {
+            return trim($value);
+        }
+
+        if (is_int($value) || is_float($value) || is_bool($value)) {
+            return (string) $value;
+        }
+
+        return $fallback;
     }
 
     private function optionalString(?string $value): ?string

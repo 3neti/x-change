@@ -2109,3 +2109,5 @@ Current boundary:
 - Cockpit Wave 33A expected UI result: no UI change; this slice defines read-only distribution/share hardening scope.
 - Cockpit Wave 33B result: Distribution Workspace read-model contract added; report `reports/226-wave-33b-distribution-workspace-read-model-contract.md`; next `Cockpit Wave 33C — Distribution Workspace Route Prop Hydration`.
 - Cockpit Wave 33B expected UI result: no visible UI change until route hydration and Vue adoption.
+- Cockpit Wave 33C result: Distribution route now hydrates `distribution_workspace_read_model` with read-only share/channel/print/analytics/action facts; report `reports/227-wave-33c-distribution-workspace-route-prop-hydration.md`; next `Cockpit Wave 33D — Distribution Workspace UI Presentation`.
+- Cockpit Wave 33C expected UI result: no visible UI change until the Vue page consumes the hydrated prop.
