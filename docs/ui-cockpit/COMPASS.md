@@ -1991,3 +1991,11 @@ Current boundary:
   - host publish verification with asset drift doctor `checked 58, ok 58, stale 0`.
 - Cockpit Wave 21 expected UI result: `/x/cockpit/diagnostics/runtime-profile` shows a read-only diagnostics page; it has no mutation controls.
 - Cockpit Wave 21 next recommended wave: `Cockpit Wave 22 — Runtime Profile Browser Verification / Operator Acceptance`.
+- Cockpit Wave 22 result: Runtime Profile browser verification and operator acceptance handoff completed; report `reports/193-wave-22-runtime-profile-browser-operator-acceptance.md`.
+- Cockpit Wave 22 completed:
+  - Dusk smoke test `tests/Browser/CockpitRuntimeProfileDiagnosticsSmokeTest.php`;
+  - browser verification for `/x/cockpit/diagnostics/runtime-profile`;
+  - automated confirmation that runtime profile diagnostics render read-only facts and no mutation controls;
+  - package acceptance record protected by architecture test.
+- Cockpit Wave 22 expected UI result: Runtime Profile page visibly shows runtime status, components, and safety panels; no mutation controls should appear.
+- Cockpit Wave 22 next recommended wave: `Cockpit Wave 23 — Runtime Profile Operator Acceptance Closure / Next Runtime Decision`.
