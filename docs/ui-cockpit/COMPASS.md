@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 14E — Wave 14 Closure / Next Planning Record
-Status: Complete / Wave 14 publish and visual handoff closed
+Current slice: Cockpit Wave 15A — Human Visual Confirmation Intake
+Status: Implemented / Human visual intake record ready
 Last updated: 2026-07-11
 
 ## Completed
@@ -1927,3 +1927,4 @@ Current boundary:
 - Cockpit Wave 14C result: local route smoke verification recorded for Cockpit and legacy bridge pages; route-list checks returned Cockpit 6 routes, Pay Codes 4 routes, Balances 1 route; report `reports/177-wave-14c-local-route-smoke-verification-record.md`; next `Cockpit Wave 14D — Browser Visual Handoff Checklist`.
 - Cockpit Wave 14D result: browser visual verification checklist recorded for Quick Generate diagnostics, successful generation result panel, and legacy page Cockpit bridge callouts; report `reports/178-wave-14d-browser-visual-handoff-checklist.md`; next `Cockpit Wave 14E — Wave 14 Closure / Next Planning Record`.
 - Cockpit Wave 14E result: Wave 14 closed after asset doctor, host mirror sync, route smoke verification, frontend tests, PHP architecture/feature tests, and browser visual handoff checklist; report `reports/179-wave-14e-closure-next-planning-record.md`; next recommended wave `Cockpit Wave 15 — Browser-confirmed Visual Acceptance and Next Runtime Decision`.
+- Cockpit Wave 15A result: human visual confirmation intake record created for Quick Generate and legacy bridge callouts; report `reports/180-wave-15a-human-visual-confirmation-intake.md`; next `Cockpit Wave 15B — Pass / Block Decision Criteria Record`.
