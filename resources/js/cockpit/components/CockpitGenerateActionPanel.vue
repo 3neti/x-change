@@ -1,6 +1,7 @@
 <script setup lang="ts">
 defineProps<{
     enabled?: boolean;
+    runtimeEnabled?: boolean;
 }>();
 </script>
 
@@ -13,11 +14,12 @@ defineProps<{
             Generate Action
         </p>
         <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-            Handoff placeholder
+            Existing issuance handoff
         </h3>
         <p class="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
-            The generate action is intentionally disabled until a later slice wires existing
-            issuance services, authorization, pricing, funding, and idempotency.
+            Quick Generate now submits through the approved Cockpit mutation route, which hands
+            off to the existing x-change GeneratePayCode action. This panel is informational;
+            use the form above to generate a Pay Code.
         </p>
 
         <button
@@ -26,15 +28,14 @@ defineProps<{
             class="mt-5 w-full rounded-lg bg-slate-950 px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 dark:bg-slate-100 dark:text-slate-950 dark:disabled:bg-slate-800 dark:disabled:text-slate-400"
             data-testid="cockpit-generate-button"
         >
-            Generate Pay Code
+            {{ runtimeEnabled ? 'Use Quick Generate form above' : 'Generate Pay Code' }}
         </button>
 
         <ul class="mt-4 space-y-2 text-xs text-slate-500 dark:text-slate-400">
-            <li>No voucher generation</li>
-            <li>No wallet debit or reservation</li>
-            <li>No provider call</li>
-            <li>No journal or feedback side effect</li>
+            <li>Issuance owner remains GeneratePayCode</li>
+            <li>Pricing and funding preflights are informational</li>
+            <li>Journal, action, and feedback handoffs remain separately gated</li>
+            <li>No raw payloads, wallet internals, or provider payloads are rendered</li>
         </ul>
     </section>
 </template>
-

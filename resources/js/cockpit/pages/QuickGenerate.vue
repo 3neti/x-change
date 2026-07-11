@@ -870,15 +870,16 @@ function stringValue(value: unknown): string | null {
         <section class="space-y-6" data-testid="cockpit-quick-generate-shell">
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                    Wave 4 · Slice 3
+                    Wave 12 · Functional parity bridge
                 </p>
                 <h2 class="mt-2 text-2xl font-semibold text-slate-950 dark:text-slate-50">
-                    Quick Generate Foundation
+                    Quick Generate Runtime
                 </h2>
                 <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    This screen establishes the template-first issuance workspace only.
-                    It does not generate vouchers, calculate pricing, reserve funds, call providers,
-                    write journal entries, send feedback, or move money.
+                    This screen now uses the template-first draft/compiler path and hands off to the
+                    existing x-change GeneratePayCode action. Pricing and funding preflights are
+                    informational, while journal, action, feedback, provider, and campaign mutations
+                    remain separately gated.
                 </p>
             </div>
 
@@ -904,7 +905,7 @@ function stringValue(value: unknown): string | null {
                         :draft-contract="draftContract"
                         :templates="templates"
                     />
-                    <CockpitGenerateActionPanel :enabled="false" />
+                    <CockpitGenerateActionPanel :enabled="false" :runtime-enabled="true" />
                     <CockpitQuickGenerateAuthorizationGatePanel :authorization="authorization" />
                     <CockpitQuickGenerateDraftContractPanel :draft-contract="draftContract" />
                     <CockpitIssuanceBoundaryPanel />

@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 11D runtime metadata presentation complete; next is functional parity bridge for legacy x-change pages
+Current status: Cockpit Wave 12A Quick Generate runtime copy aligned; next is legacy page parity bridge audit
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 11D runtime metadata presentation complete; next is functional parity bridge for legacy x-change pages | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 12A Quick Generate runtime copy aligned; next is legacy page parity bridge audit | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1654,3 +1654,4 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Cockpit Wave 11B — Quick Generate Draft and Activity Runtime Metadata Presentation: implemented in [../ui-cockpit/reports/162-wave-11b-quick-generate-draft-activity-runtime-presentation.md](../ui-cockpit/reports/162-wave-11b-quick-generate-draft-activity-runtime-presentation.md); next `Cockpit Wave 11C — Published Asset Drift Verification / Host Publish Handoff`.
 - Cockpit Wave 11C — Published Asset Drift Verification / Host Publish Handoff: implemented in [../ui-cockpit/reports/163-wave-11c-published-asset-drift-verification-host-publish-handoff.md](../ui-cockpit/reports/163-wave-11c-published-asset-drift-verification-host-publish-handoff.md); next `Cockpit Wave 11D — Runtime Metadata Presentation Closure`.
 - Cockpit Wave 11D — Runtime Metadata Presentation Closure: completed in [../ui-cockpit/reports/164-wave-11d-runtime-metadata-presentation-closure.md](../ui-cockpit/reports/164-wave-11d-runtime-metadata-presentation-closure.md); next recommended wave `Wave 12 — Functional Parity Bridge for /x/pay-codes/create, /x/pay-codes, and /x/balances`.
+- Cockpit Wave 12A — Quick Generate Stale Baseline Copy Cleanup: implemented in [../ui-cockpit/reports/165-wave-12a-quick-generate-stale-baseline-copy-cleanup.md](../ui-cockpit/reports/165-wave-12a-quick-generate-stale-baseline-copy-cleanup.md); next `Cockpit Wave 12B — Legacy Page Functional Parity Bridge Audit`.

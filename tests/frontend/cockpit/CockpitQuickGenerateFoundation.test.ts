@@ -75,20 +75,22 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.findAll('[data-testid="cockpit-pricing-summary-item"]')).toHaveLength(3);
     });
 
-    it('keeps the generate action disabled until issuance is explicitly wired', async () => {
+    it('shows the generate action as an informational existing handoff status panel', async () => {
         const wrapper = mount(CockpitGenerateActionPanel, {
             props: {
                 enabled: false,
+                runtimeEnabled: true,
             },
         });
 
         const button = wrapper.find('[data-testid="cockpit-generate-button"]');
 
         expect(button.attributes('disabled')).toBeDefined();
-        expect(wrapper.text()).toContain('No voucher generation');
-        expect(wrapper.text()).toContain('No wallet debit or reservation');
-        expect(wrapper.text()).toContain('No provider call');
-        expect(wrapper.text()).toContain('No journal or feedback side effect');
+        expect(wrapper.text()).toContain('Existing issuance handoff');
+        expect(wrapper.text()).toContain('Use Quick Generate form above');
+        expect(wrapper.text()).toContain('Issuance owner remains GeneratePayCode');
+        expect(wrapper.text()).toContain('Pricing and funding preflights are informational');
+        expect(wrapper.text()).toContain('Journal, action, and feedback handoffs remain separately gated');
 
         await button.trigger('click');
 
@@ -673,16 +675,15 @@ describe('Cockpit Quick Generate foundation', () => {
         const wrapper = mount(QuickGenerate);
 
         expect(wrapper.find('[data-testid="cockpit-quick-generate-shell"]').exists()).toBe(true);
-        expect(wrapper.text()).toContain('Quick Generate Foundation');
+        expect(wrapper.text()).toContain('Quick Generate Runtime');
         expect(wrapper.text()).toContain('Template Selector');
         expect(wrapper.text()).toContain('Runtime Inputs');
         expect(wrapper.text()).toContain('Pricing and Funding');
         expect(wrapper.text()).toContain('Generate Action');
         expect(wrapper.find('[aria-current="page"]').text()).toContain('Quick Generate');
-        expect(wrapper.text()).toContain('does not generate vouchers');
-        expect(wrapper.text()).toContain('calculate pricing');
-        expect(wrapper.text()).toContain('reserve funds');
-        expect(wrapper.text()).toContain('move money');
+        expect(wrapper.text()).toContain('template-first draft/compiler path');
+        expect(wrapper.text()).toContain('GeneratePayCode action');
+        expect(wrapper.text()).toContain('preflights are informational');
         expect(wrapper.text()).toContain('Issuance Boundary Plan');
         expect(wrapper.text()).toContain('No Cockpit mutation route is registered in Slice 17.');
         expect(wrapper.text()).toContain('Request Draft Contract');
