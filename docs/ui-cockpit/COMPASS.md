@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 13E — Quick Generate Operator-Focused Presentation Closure
-Status: Complete / Wave 13 operator-focused presentation closed
+Current slice: Cockpit Wave 14A — Published Asset Drift Verification for Wave 13
+Status: Implemented / Published Cockpit assets match package source
 Last updated: 2026-07-11
 
 ## Completed
@@ -1922,3 +1922,4 @@ Current boundary:
 - Cockpit Wave 13C result: added reusable legacy-page Cockpit bridge callout and rendered it on `/x/pay-codes/create`, `/x/pay-codes`, and `/x/balances` when bridge metadata is available; report `reports/172-wave-13c-legacy-page-bridge-callout-component.md`; next `Cockpit Wave 13D — Legacy Page Bridge Route Prop Verification`.
 - Cockpit Wave 13D result: protected server route bridge props and frontend callout wiring for `/x/pay-codes/create`, `/x/pay-codes`, and `/x/balances`; report `reports/173-wave-13d-legacy-page-bridge-route-prop-verification.md`; next `Cockpit Wave 13E — Quick Generate Operator-Focused Presentation Closure`.
 - Cockpit Wave 13E result: Wave 13 closed; Quick Generate primary UI is operator-focused, historical gates are diagnostics, legacy pages render bridge callouts, and host publish handoff is documented; report `reports/174-wave-13e-operator-focused-presentation-closure.md`; next recommended wave `Cockpit Wave 14 — Legacy Page Bridge Visual Verification and Host Publish Closure`.
+- Cockpit Wave 14A result: asset drift guard passed after Wave 13; `php artisan x-change:doctor --assets --json` reported checked 56, ok 56, stale 0, missing 0, extra 0; report `reports/175-wave-14a-published-asset-drift-verification.md`; next `Cockpit Wave 14B — Host Mirror Publish State Record`.
