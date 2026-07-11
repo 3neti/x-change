@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 34 — Quick Generate Post-Issuance Navigation / Share Handoff
-Status: Complete / post-issuance navigation and share handoff browser-verified
+Current slice: Cockpit Wave 35 — Campaign Context Quick Generate Adoption
+Status: In progress / Wave 35A audit complete
 Last updated: 2026-07-12
 
 ## Completed
@@ -2133,3 +2133,5 @@ Current boundary:
 - Cockpit Wave 34 completed: successful Quick Generate responses hydrate `post_issuance_navigation`, the Vue result panel renders read-only Detail and Distribution links, published assets are clean, and Playwright verifies the browser-rendered result with a safe intercepted response.
 - Cockpit Wave 34 expected UI result: after successful generation, operators see `Post-issuance handoff`, `Open Cockpit detail`, `Open Distribution workspace`, and `Automatic redirect: disabled`.
 - Cockpit Wave 34 next recommended wave: `Cockpit Wave 35 — Campaign Context Quick Generate Adoption`.
+- Cockpit Wave 35A result: Campaign context Quick Generate adoption audit completed; report `reports/237-wave-35a-campaign-context-quick-generate-adoption-audit.md`; next `Cockpit Wave 35B — Campaign Context Quick Generate Read Model Contract`.
+- Cockpit Wave 35A expected UI result: no UI change; this slice defines safe campaign context intake/prefill scope and blocks campaign mutation, bulk issuance, and delivery.

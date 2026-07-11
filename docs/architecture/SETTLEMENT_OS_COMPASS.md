@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 34 complete; Quick Generate post-issuance navigation/share handoff browser-verified
+Current status: Cockpit Wave 35 in progress; Campaign Context Quick Generate adoption audit complete
 Last updated: 2026-07-12
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-12
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 34 complete; Quick Generate post-issuance navigation/share handoff browser-verified | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 35 in progress; Campaign Context Quick Generate adoption audit complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1717,3 +1717,4 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Cockpit Wave 34D — Quick Generate Post-Issuance UI Presentation: implemented in [../ui-cockpit/reports/234-wave-34d-quick-generate-post-issuance-ui-presentation.md](../ui-cockpit/reports/234-wave-34d-quick-generate-post-issuance-ui-presentation.md); successful Quick Generate result panels can now render a read-only `Post-issuance handoff` card with Detail and Distribution links; next `Cockpit Wave 34E — Browser / Publish Verification`.
 - Cockpit Wave 34E — Quick Generate Post-Issuance Browser / Publish Verification: implemented in [../ui-cockpit/reports/235-wave-34e-quick-generate-post-issuance-browser-publish-verification.md](../ui-cockpit/reports/235-wave-34e-quick-generate-post-issuance-browser-publish-verification.md); Playwright verifies the browser-rendered post-issuance handoff with a POST-intercepted safe fixture, and published Cockpit assets remain clean; next `Cockpit Wave 34F — Post-Issuance Navigation Closure`.
 - Cockpit Wave 34 complete — Quick Generate Post-Issuance Navigation / Share Handoff: closed in [../ui-cockpit/reports/236-wave-34-post-issuance-navigation-closure.md](../ui-cockpit/reports/236-wave-34-post-issuance-navigation-closure.md); successful Quick Generate results now expose browser-verified read-only Detail and Distribution handoff links with no auto-redirect or new mutation scope; next recommended wave is `Cockpit Wave 35 — Campaign Context Quick Generate Adoption`.
+- Cockpit Wave 35A — Campaign Context Quick Generate Adoption Audit: implemented in [../ui-cockpit/reports/237-wave-35a-campaign-context-quick-generate-adoption-audit.md](../ui-cockpit/reports/237-wave-35a-campaign-context-quick-generate-adoption-audit.md); Wave 35 is scoped to safe campaign context intake/prefill for Quick Generate while blocking campaign mutation, bulk issuance, delivery, campaign route creation, unsafe payload exposure, and bypassing `GeneratePayCode`; next `Cockpit Wave 35B — Campaign Context Quick Generate Read Model Contract`.
