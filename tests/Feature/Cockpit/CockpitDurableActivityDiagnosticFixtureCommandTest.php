@@ -129,3 +129,42 @@ it('can seed the diagnostic fixture for a specific cockpit operator id', functio
         ->and($readModel->items)->toHaveCount(1)
         ->and($readModel->items[0]->code)->toBe('PC-LOCAL-DIAGNOSTIC');
 });
+
+it('can seed a combined journal action and feedback diagnostic activity fixture', function () {
+    config()->set('x-change.cockpit.operator_issuance_activity.repository', DatabaseCockpitOperatorIssuanceActivityRepository::class);
+
+    $this->artisan('x-change:cockpit:seed-diagnostic-activity --local-only --with-action --with-feedback --activity-id=fixture-combined-runtime --code=PC-COMBINED --operator-id=combined-operator --json')
+        ->expectsOutputToContain('"activity_id":"fixture-combined-runtime"')
+        ->assertSuccessful();
+
+    $activity = CockpitOperatorIssuanceActivity::query()
+        ->where('activity_id', 'fixture-combined-runtime')
+        ->sole();
+
+    expect($activity->journal_handoff_status)->toBe('recorded')
+        ->and($activity->action_handoff_status)->toBe('composed')
+        ->and($activity->feedback_handoff_status)->toBe('planned')
+        ->and($activity->metadata['journal_handoff']['writes_journal'])->toBeTrue()
+        ->and($activity->metadata['action_handoff']['executes_action'])->toBeFalse()
+        ->and($activity->metadata['feedback_handoff']['sends_feedback'])->toBeFalse()
+        ->and($activity->metadata['feedback_handoff']['metadata']['channels'])->toBe(['in_app'])
+        ->and($activity->metadata)->not->toHaveKey('raw_payload')
+        ->and($activity->metadata)->not->toHaveKey('provider_payload')
+        ->and($activity->metadata)->not->toHaveKey('wallet');
+
+    $readModel = app(CockpitReadModelProviderContract::class)
+        ->forOperatorIssuanceActivity(new CockpitReadModelQueryData(
+            operatorId: 'combined-operator',
+            correlationId: 'corr-local-cockpit-diagnostic',
+        ));
+
+    expect($readModel->presentations)->toHaveCount(1)
+        ->and($readModel->presentations[0]->handoffs)->toBe([
+            'journal' => 'recorded',
+            'action' => 'composed',
+            'feedback' => 'planned',
+        ])
+        ->and($readModel->presentations[0]->metadata['journal_handoff']['status'])->toBe('recorded')
+        ->and($readModel->presentations[0]->metadata['action_handoff']['status'])->toBe('composed')
+        ->and($readModel->presentations[0]->metadata['feedback_handoff']['status'])->toBe('planned');
+});
