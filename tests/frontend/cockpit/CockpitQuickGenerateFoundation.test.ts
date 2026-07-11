@@ -154,6 +154,24 @@ describe('Cockpit Quick Generate foundation', () => {
                         cockpit_detail: '/x/cockpit/pay-codes/PC-UI-001',
                     },
                 },
+                preflight: {
+                    pricing: {
+                        status: 'estimated',
+                        currency: 'PHP',
+                        base_fee: 1.25,
+                        total: 1.75,
+                        blocking: false,
+                    },
+                    funding: {
+                        status: 'checked',
+                        authority: 'local_ledger',
+                        sync_status: 'not_required',
+                        authoritative: {
+                            balance: 10000,
+                            currency: 'PHP',
+                        },
+                    },
+                },
             }),
         });
 
@@ -220,6 +238,10 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(JSON.stringify(payload)).not.toContain('provider_payload');
         expect(wrapper.emitted('submitSuccess')).toHaveLength(1);
         expect(wrapper.find('[data-testid="cockpit-quick-generate-result-link"]').attributes('href')).toBe('/x/cockpit/pay-codes/PC-UI-001');
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-runtime-preflight-panel"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-pricing-preflight-card"]').text()).toContain('PHP 1.75');
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-funding-preflight-card"]').text()).toContain('local_ledger');
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-funding-preflight-card"]').text()).toContain('PHP 10000');
 
         vi.unstubAllGlobals();
     });

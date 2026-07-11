@@ -378,6 +378,45 @@ export type CockpitQuickGenerateDraftContract = {
     [key: string]: unknown;
 };
 
+export type CockpitQuickGenerateRuntimePricingPreflight = {
+    status?: string | null;
+    currency?: string | null;
+    base_fee?: string | number | null;
+    total?: string | number | null;
+    blocking?: boolean | null;
+    source?: string | null;
+    reason?: string | null;
+    components?: Record<string, string | number | null>;
+    [key: string]: unknown;
+};
+
+export type CockpitQuickGenerateRuntimeFundingPreflight = {
+    status?: string | null;
+    provider?: string | null;
+    topology?: string | null;
+    authority?: string | null;
+    sync_status?: string | null;
+    blocking?: boolean | null;
+    source?: string | null;
+    reason?: string | null;
+    authoritative?: {
+        key?: string | null;
+        authority?: string | null;
+        source?: string | null;
+        balance?: string | number | null;
+        currency?: string | null;
+        is_stale?: boolean | null;
+        [key: string]: unknown;
+    };
+    [key: string]: unknown;
+};
+
+export type CockpitQuickGenerateRuntimePreflight = {
+    pricing?: CockpitQuickGenerateRuntimePricingPreflight;
+    funding?: CockpitQuickGenerateRuntimeFundingPreflight;
+    [key: string]: unknown;
+};
+
 export type CockpitQuickGenerateAuthorizationGate = {
     key?: string | null;
     label?: string | null;
