@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { router } from '@inertiajs/vue3';
 import { describe, expect, it, vi } from 'vitest';
+import CockpitDiagnosticsDisclosure from '../../../resources/js/cockpit/components/CockpitDiagnosticsDisclosure.vue';
 import CockpitGenerateActionPanel from '../../../resources/js/cockpit/components/CockpitGenerateActionPanel.vue';
 import CockpitIssuanceBoundaryPanel from '../../../resources/js/cockpit/components/CockpitIssuanceBoundaryPanel.vue';
 import CockpitPricingFundingSummary from '../../../resources/js/cockpit/components/CockpitPricingFundingSummary.vue';
@@ -95,6 +96,24 @@ describe('Cockpit Quick Generate foundation', () => {
         await button.trigger('click');
 
         expect(wrapper.emitted()).toEqual({});
+    });
+
+    it('demotes historical gate panels behind a diagnostics disclosure', () => {
+        const wrapper = mount(CockpitDiagnosticsDisclosure, {
+            props: {
+                title: 'Architecture history and gate diagnostics',
+                summary: 'Older baseline panels remain available for engineering diagnostics.',
+            },
+            slots: {
+                default: '<div data-testid="diagnostic-slot">Authorization Gate Baseline</div>',
+            },
+        });
+
+        expect(wrapper.find('[data-testid="cockpit-diagnostics-disclosure"]').exists()).toBe(true);
+        expect(wrapper.text()).toContain('Diagnostics');
+        expect(wrapper.text()).toContain('Architecture history and gate diagnostics');
+        expect(wrapper.text()).toContain('Show architecture history');
+        expect(wrapper.find('[data-testid="diagnostic-slot"]').text()).toContain('Authorization Gate Baseline');
     });
 
     it('renders the issuance boundary plan without a mutation form', () => {

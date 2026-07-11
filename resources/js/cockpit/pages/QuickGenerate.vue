@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import CockpitDiagnosticsDisclosure from '../components/CockpitDiagnosticsDisclosure.vue';
 import CockpitGenerateActionPanel from '../components/CockpitGenerateActionPanel.vue';
 import CockpitIssuanceBoundaryPanel from '../components/CockpitIssuanceBoundaryPanel.vue';
 import CockpitPricingFundingSummary from '../components/CockpitPricingFundingSummary.vue';
@@ -892,23 +893,28 @@ function stringValue(value: unknown): string | null {
                 <CockpitRuntimeInputPanel :inputs="runtimeInputs" />
 
                 <div class="space-y-4">
-                    <CockpitPricingFundingSummary :summaries="pricingSummaries" />
-                    <CockpitQuickGeneratePricingGatePanel :pricing-gate="pricingGate" />
-                    <CockpitQuickGenerateFundingGatePanel :funding-gate="fundingGate" />
-                    <CockpitQuickGenerateIdempotencyGatePanel :idempotency-gate="idempotencyGate" />
-                    <CockpitQuickGenerateValidationRedactionGatePanel :validation-redaction-gate="validationRedactionGate" />
-                    <CockpitQuickGenerateMutationHandoffPlanPanel :mutation-handoff-plan="mutationHandoffPlan" />
-                    <CockpitQuickGenerateMutationPreconditionsReviewPanel :mutation-preconditions-review="mutationPreconditionsReview" />
-                    <CockpitQuickGenerateMutationAuthorizationDecisionPanel :mutation-authorization-decision="mutationAuthorizationDecision" />
                     <CockpitQuickGenerateSubmitPanel
                         :mutation-contract="mutationContract"
                         :draft-contract="draftContract"
                         :templates="templates"
                     />
                     <CockpitGenerateActionPanel :enabled="false" :runtime-enabled="true" />
-                    <CockpitQuickGenerateAuthorizationGatePanel :authorization="authorization" />
-                    <CockpitQuickGenerateDraftContractPanel :draft-contract="draftContract" />
-                    <CockpitIssuanceBoundaryPanel />
+                    <CockpitDiagnosticsDisclosure
+                        title="Architecture history and gate diagnostics"
+                        summary="Older baseline panels remain available for engineering diagnostics. They are no longer the primary operator guidance after the Quick Generate runtime handoff."
+                    >
+                        <CockpitPricingFundingSummary :summaries="pricingSummaries" />
+                        <CockpitQuickGeneratePricingGatePanel :pricing-gate="pricingGate" />
+                        <CockpitQuickGenerateFundingGatePanel :funding-gate="fundingGate" />
+                        <CockpitQuickGenerateIdempotencyGatePanel :idempotency-gate="idempotencyGate" />
+                        <CockpitQuickGenerateValidationRedactionGatePanel :validation-redaction-gate="validationRedactionGate" />
+                        <CockpitQuickGenerateMutationHandoffPlanPanel :mutation-handoff-plan="mutationHandoffPlan" />
+                        <CockpitQuickGenerateMutationPreconditionsReviewPanel :mutation-preconditions-review="mutationPreconditionsReview" />
+                        <CockpitQuickGenerateMutationAuthorizationDecisionPanel :mutation-authorization-decision="mutationAuthorizationDecision" />
+                        <CockpitQuickGenerateAuthorizationGatePanel :authorization="authorization" />
+                        <CockpitQuickGenerateDraftContractPanel :draft-contract="draftContract" />
+                        <CockpitIssuanceBoundaryPanel />
+                    </CockpitDiagnosticsDisclosure>
                 </div>
             </div>
         </section>
