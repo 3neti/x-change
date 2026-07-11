@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 24 — Operator Activity Search / Filter Runtime Readiness
-Status: Complete / read-only activity search-filter readiness implemented
+Current slice: Cockpit Wave 25 — Operator Activity Search / Filter UI Presentation
+Status: Complete / read-only activity filter UI presented and browser-smoked
 Last updated: 2026-07-11
 
 ## Completed
@@ -2016,3 +2016,11 @@ Current boundary:
   - updated Cockpit TypeScript read-model typing for the new Inertia payload shape.
 - Cockpit Wave 24 expected UI result: no visible UI change; the read model is ready for future search/filter controls.
 - Cockpit Wave 24 next recommended wave: `Cockpit Wave 25 — Operator Activity Search / Filter UI Presentation`.
+- Cockpit Wave 25 result: Operator Activity search/filter UI presentation completed; report `reports/197-wave-25-operator-activity-search-filter-ui-presentation.md`.
+- Cockpit Wave 25 completed:
+  - dashboard GET query intake for `activity_search`, `activity_status`, and `activity_handoff_status`;
+  - read-only filter controls in `CockpitOperatorIssuanceActivityPanel`;
+  - host-published Cockpit asset sync with asset drift doctor `checked 58, ok 58, stale 0`;
+  - Dusk browser smoke for filtered activity rendering and no mutation/configuration controls.
+- Cockpit Wave 25 expected UI result: `/x/cockpit` shows a read-only filter bar in the Operator Issuance Activity panel.
+- Cockpit Wave 25 next recommended wave: `Cockpit Wave 26 — Operator Activity Filter Manual Browser Acceptance / Query UX Hardening`.
