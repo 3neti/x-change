@@ -66,16 +66,23 @@ class CockpitReadOnlyPageProps
         ?string $campaignPlanningKey = null,
         ?string $campaignExecutionId = null,
         ?string $campaignSource = null,
+        ?string $activityCode = null,
+        ?string $activitySource = null,
     ): array {
         return [
             ...$this->toArray(),
             'pay_codes_read_model' => $this->readModels->forPayCodeList(new CockpitReadModelQueryData(
+                code: $this->normalizeCode($activityCode),
                 include: ['voucher'],
             ))->toArray(),
             'campaign_navigation_context' => $this->campaignNavigationContext(
                 campaignPlanningKey: $campaignPlanningKey,
                 campaignExecutionId: $campaignExecutionId,
                 campaignSource: $campaignSource,
+            ),
+            'activity_navigation_context' => $this->activityNavigationContext(
+                activityCode: $activityCode,
+                activitySource: $activitySource,
             ),
         ];
     }
@@ -194,6 +201,58 @@ class CockpitReadOnlyPageProps
                 'issues_pay_codes' => false,
                 'sends_feedback' => false,
                 'writes_journal' => false,
+                'moves_money' => false,
+            ],
+        ];
+    }
+
+    private function normalizeCode(?string $code): ?string
+    {
+        $normalized = strtoupper(trim((string) $code));
+
+        return $normalized !== '' ? $normalized : null;
+    }
+
+    private function optionalString(?string $value): ?string
+    {
+        $normalized = trim((string) $value);
+
+        return $normalized !== '' ? $normalized : null;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function activityNavigationContext(?string $activityCode, ?string $activitySource): ?array
+    {
+        $code = $this->normalizeCode($activityCode);
+
+        if ($code === null) {
+            return null;
+        }
+
+        return [
+            'schema' => 'x-change.cockpit.activity-navigation.v1',
+            'status' => 'available',
+            'authorized' => true,
+            'source' => $this->optionalString($activitySource) ?? 'operator_issuance_activity',
+            'code' => $code,
+            'destination' => 'pay_code_explorer',
+            'read_only' => true,
+            'mutation' => [
+                'enabled' => false,
+                'status' => 'blocked',
+                'reason' => 'activity-navigation-read-only',
+            ],
+            'redactions' => [
+                'payloads' => 'activity-navigation-context-only',
+                'routes_registered' => true,
+                'controllers_registered' => true,
+                'mutates_vouchers' => false,
+                'executes_drivers' => false,
+                'writes_journal' => false,
+                'sends_feedback' => false,
+                'calls_providers' => false,
                 'moves_money' => false,
             ],
         ];

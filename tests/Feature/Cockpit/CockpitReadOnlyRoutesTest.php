@@ -174,6 +174,41 @@ it('passes optional campaign navigation context to the pay code explorer without
     expect($campaignRoutes)->toHaveCount(0);
 });
 
+it('passes optional operator activity navigation context to the pay code explorer without mutation surfaces', function () {
+    actingAsTestUser();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.index', [
+            'activity_code' => ' pc-dusk-filter ',
+            'activity_source' => ' operator_issuance_activity ',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/cockpit/PayCodeExplorer')
+        ->assertJsonPath('props.pay_codes_read_model.query', 'PC-DUSK-FILTER')
+        ->assertJsonPath('props.activity_navigation_context.schema', 'x-change.cockpit.activity-navigation.v1')
+        ->assertJsonPath('props.activity_navigation_context.status', 'available')
+        ->assertJsonPath('props.activity_navigation_context.authorized', true)
+        ->assertJsonPath('props.activity_navigation_context.source', 'operator_issuance_activity')
+        ->assertJsonPath('props.activity_navigation_context.code', 'PC-DUSK-FILTER')
+        ->assertJsonPath('props.activity_navigation_context.destination', 'pay_code_explorer')
+        ->assertJsonPath('props.activity_navigation_context.read_only', true)
+        ->assertJsonPath('props.activity_navigation_context.mutation.enabled', false)
+        ->assertJsonPath('props.activity_navigation_context.mutation.status', 'blocked')
+        ->assertJsonPath('props.activity_navigation_context.mutation.reason', 'activity-navigation-read-only')
+        ->assertJsonPath('props.activity_navigation_context.redactions.payloads', 'activity-navigation-context-only')
+        ->assertJsonPath('props.activity_navigation_context.redactions.mutates_vouchers', false)
+        ->assertJsonPath('props.activity_navigation_context.redactions.executes_drivers', false)
+        ->assertJsonPath('props.activity_navigation_context.redactions.writes_journal', false)
+        ->assertJsonPath('props.activity_navigation_context.redactions.sends_feedback', false)
+        ->assertJsonPath('props.activity_navigation_context.redactions.calls_providers', false)
+        ->assertJsonPath('props.activity_navigation_context.redactions.moves_money', false)
+        ->assertJsonMissingPath('props.activity_navigation_context.provider_payload')
+        ->assertJsonMissingPath('props.activity_navigation_context.raw_payload')
+        ->assertJsonMissingPath('props.activity_navigation_context.wallet')
+        ->assertJsonMissingPath('props.activity_navigation_context.mutation_route')
+        ->assertJsonMissingPath('props.activity_navigation_context.pay_code_generation_payload');
+});
+
 it('hydrates the dashboard with a sanitized dashboard read model prop', function () {
     actingAsTestUser();
 

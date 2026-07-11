@@ -823,16 +823,20 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
 
     public function forPayCodeList(CockpitReadModelQueryData $query): CockpitPayCodeListReadModelData
     {
+        $queryCode = $this->normalizeCode($query->code);
         $rows = collect($this->vouchers->list())
             ->map(fn (mixed $row): ?CockpitPayCodeListRecordData => $this->listRecord($this->toArray($row)))
             ->filter()
+            ->when($queryCode !== null, fn ($rows) => $rows->filter(
+                fn (CockpitPayCodeListRecordData $record): bool => str_contains($record->code, $queryCode)
+            ))
             ->values()
             ->all();
 
         return new CockpitPayCodeListReadModelData(
             status: 'available',
             authorized: true,
-            query: $query->code,
+            query: $queryCode,
             records: $rows,
             redactions: [
                 'payloads' => 'sanitized-list-summary-only',

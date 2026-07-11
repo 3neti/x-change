@@ -20,6 +20,8 @@ class CockpitPayCodeExplorerPageController extends Controller
             campaignPlanningKey: $this->optionalString($request->query('campaign_planning_key')),
             campaignExecutionId: $this->optionalString($request->query('campaign_execution_id')),
             campaignSource: $this->optionalString($request->query('campaign_source')),
+            activityCode: $this->optionalString($request->query('activity_code')),
+            activitySource: $this->optionalString($request->query('activity_source')),
         ));
     }
 
