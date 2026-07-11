@@ -2081,3 +2081,5 @@ Current boundary:
 - Cockpit Wave 31A expected UI result: no UI change; this slice only authorizes read-only detail/distribution row navigation and records mutation boundaries.
 - Cockpit Wave 31B result: added the Pay Code Explorer row action read-model contract; report `reports/214-wave-31b-pay-code-explorer-row-action-read-model-contract.md`; next `Cockpit Wave 31C — Pay Code Explorer Provider Row Action Hydration`.
 - Cockpit Wave 31B expected UI result: no visible UI change until provider hydration and table adoption.
+- Cockpit Wave 31C result: provider row action hydration completed; report `reports/215-wave-31c-pay-code-explorer-provider-row-action-hydration.md`; next `Cockpit Wave 31D — Pay Code Explorer Row Action UI Presentation`.
+- Cockpit Wave 31C expected UI result: no visible UI change until the Vue results table consumes per-row actions.

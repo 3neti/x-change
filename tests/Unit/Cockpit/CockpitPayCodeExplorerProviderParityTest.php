@@ -99,6 +99,31 @@ it('filters cockpit pay code explorer records using legacy index search and stat
         ->and($readModel->records[0]->code)->toBe('PC-APPROVAL-001')
         ->and($readModel->records[0]->status)->toBe('awaiting_approval')
         ->and($readModel->records[0]->display_status)->toBe('awaiting_approval')
+        ->and($readModel->records[0]->actions)->toHaveCount(4)
+        ->and($readModel->records[0]->actions[0]->toArray())->toMatchArray([
+            'key' => 'detail',
+            'label' => 'View details',
+            'enabled' => true,
+            'read_only' => true,
+            'href' => '/x/cockpit/pay-codes/PC-APPROVAL-001',
+        ])
+        ->and($readModel->records[0]->actions[1]->toArray())->toMatchArray([
+            'key' => 'distribution',
+            'label' => 'Distribution',
+            'enabled' => true,
+            'read_only' => true,
+            'href' => '/x/cockpit/pay-codes/PC-APPROVAL-001/distribution',
+        ])
+        ->and($readModel->records[0]->actions[2]->toArray())->toMatchArray([
+            'key' => 'timeline',
+            'enabled' => false,
+            'read_only' => true,
+        ])
+        ->and($readModel->records[0]->actions[3]->toArray())->toMatchArray([
+            'key' => 'notify',
+            'enabled' => false,
+            'read_only' => true,
+        ])
         ->and($readModel->filters)->toHaveCount(8)
         ->and($readModel->filters[0]->toArray())->toMatchArray([
             'key' => 'search',
@@ -109,6 +134,19 @@ it('filters cockpit pay code explorer records using legacy index search and stat
         ->and(collect($readModel->filters)->firstWhere('value', 'awaiting_approval')->active)->toBeTrue()
         ->and($readModel->toArray())->not->toHaveKey('account_number')
         ->and($readModel->toArray())->not->toHaveKey('mobile');
+});
+
+it('url-encodes cockpit pay code explorer row action destinations', function () {
+    $provider = new VoucherLifecycleCockpitReadModelProvider(cockpitWave30VoucherLifecycle([
+        ['code' => 'pc weird/001', 'status' => 'active'],
+    ]));
+
+    $readModel = $provider->forPayCodeList(new CockpitReadModelQueryData);
+
+    expect($readModel->records)->toHaveCount(1)
+        ->and($readModel->records[0]->code)->toBe('PC WEIRD/001')
+        ->and($readModel->records[0]->actions[0]->href)->toBe('/x/cockpit/pay-codes/PC%20WEIRD%2F001')
+        ->and($readModel->records[0]->actions[1]->href)->toBe('/x/cockpit/pay-codes/PC%20WEIRD%2F001/distribution');
 });
 
 it('normalizes unknown cockpit pay code explorer status filters to all records', function () {

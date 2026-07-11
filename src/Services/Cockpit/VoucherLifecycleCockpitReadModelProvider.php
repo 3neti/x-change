@@ -21,6 +21,7 @@ use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeExplorerFilterData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeExplorerStatsData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeListReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeListRecordData;
+use LBHurtado\XChange\Data\Cockpit\CockpitPayCodeRowActionData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateActionData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateAuthorizationData;
 use LBHurtado\XChange\Data\Cockpit\CockpitQuickGenerateAuthorizationGateData;
@@ -965,7 +966,49 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                     ?? $row['created_at']
                     ?? null
             ),
+            actions: $this->payCodeRowActions($code),
         );
+    }
+
+    /**
+     * @return array<int, CockpitPayCodeRowActionData>
+     */
+    private function payCodeRowActions(string $code): array
+    {
+        $encodedCode = rawurlencode($code);
+
+        return [
+            new CockpitPayCodeRowActionData(
+                key: 'detail',
+                label: 'View details',
+                enabled: true,
+                read_only: true,
+                href: "/x/cockpit/pay-codes/{$encodedCode}",
+                reason: 'Read-only Cockpit voucher detail route.',
+            ),
+            new CockpitPayCodeRowActionData(
+                key: 'distribution',
+                label: 'Distribution',
+                enabled: true,
+                read_only: true,
+                href: "/x/cockpit/pay-codes/{$encodedCode}/distribution",
+                reason: 'Read-only Cockpit distribution workspace route.',
+            ),
+            new CockpitPayCodeRowActionData(
+                key: 'timeline',
+                label: 'Open timeline',
+                enabled: false,
+                read_only: true,
+                reason: 'Timeline requires journal visibility and redaction wiring.',
+            ),
+            new CockpitPayCodeRowActionData(
+                key: 'notify',
+                label: 'Notify recipient',
+                enabled: false,
+                read_only: true,
+                reason: 'Feedback delivery remains separately gated through x-feedback.',
+            ),
+        ];
     }
 
     /**
