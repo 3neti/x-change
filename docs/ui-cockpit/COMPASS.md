@@ -4,9 +4,9 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 30 — Pay Code Explorer Functional Read Model Parity / Legacy Index Comparison
-Status: Complete / read-only search/status filters and stats parity scaffolded
-Last updated: 2026-07-11
+Current slice: Cockpit Wave 34 — Quick Generate Post-Issuance Navigation / Share Handoff
+Status: In progress / Wave 34A audit complete
+Last updated: 2026-07-12
 
 ## Completed
 
@@ -2119,3 +2119,5 @@ Current boundary:
 - Cockpit Wave 33 completed: Distribution Workspace now has typed read-only share/channel/print/analytics/action contracts, route prop hydration, Vue rendering, Playwright verification, and clean published assets while preserving read-only boundaries.
 - Cockpit Wave 33 expected UI result: `/x/cockpit/pay-codes/{code}/distribution` shows read-only Pay Code, payload policy, share/channel/print/analytics cards, and blocked distribution actions.
 - Cockpit Wave 33 next recommended wave: `Cockpit Wave 34 — Quick Generate Post-Issuance Navigation / Share Handoff`.
+- Cockpit Wave 34A result: Quick Generate post-issuance navigation / share handoff audit completed; report `reports/231-wave-34a-quick-generate-post-issuance-navigation-share-handoff-audit.md`; next `Cockpit Wave 34B — Post-Issuance Navigation Read Model Contract`.
+- Cockpit Wave 34A expected UI result: no UI change; this slice defines post-generation navigation to voucher detail and Distribution Workspace while preserving no-auto-redirect and no-new-mutation boundaries.
