@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 14A — Published Asset Drift Verification for Wave 13
-Status: Implemented / Published Cockpit assets match package source
+Current slice: Cockpit Wave 14B — Host Mirror Publish State Record
+Status: Implemented / Host-published Cockpit mirrors recorded
 Last updated: 2026-07-11
 
 ## Completed
@@ -1923,3 +1923,4 @@ Current boundary:
 - Cockpit Wave 13D result: protected server route bridge props and frontend callout wiring for `/x/pay-codes/create`, `/x/pay-codes`, and `/x/balances`; report `reports/173-wave-13d-legacy-page-bridge-route-prop-verification.md`; next `Cockpit Wave 13E — Quick Generate Operator-Focused Presentation Closure`.
 - Cockpit Wave 13E result: Wave 13 closed; Quick Generate primary UI is operator-focused, historical gates are diagnostics, legacy pages render bridge callouts, and host publish handoff is documented; report `reports/174-wave-13e-operator-focused-presentation-closure.md`; next recommended wave `Cockpit Wave 14 — Legacy Page Bridge Visual Verification and Host Publish Closure`.
 - Cockpit Wave 14A result: asset drift guard passed after Wave 13; `php artisan x-change:doctor --assets --json` reported checked 56, ok 56, stale 0, missing 0, extra 0; report `reports/175-wave-14a-published-asset-drift-verification.md`; next `Cockpit Wave 14B — Host Mirror Publish State Record`.
+- Cockpit Wave 14B result: host-published Cockpit mirrors for Wave 13 were recorded and committed as synchronized generated assets while package source remains authoritative; report `reports/176-wave-14b-host-mirror-publish-state-record.md`; next `Cockpit Wave 14C — Local Route Smoke Verification Record`.
