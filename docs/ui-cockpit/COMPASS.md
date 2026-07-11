@@ -2079,3 +2079,5 @@ Current boundary:
 - Cockpit Wave 30 next recommended wave: `Cockpit Wave 31 — Pay Code Explorer Detail Navigation / Row Action Runtime Parity`.
 - Cockpit Wave 31A result: Pay Code Explorer row action parity audit completed; report `reports/213-wave-31a-pay-code-explorer-row-action-parity-audit.md`; next `Cockpit Wave 31B — Pay Code Explorer Row Action Read Model Contract`.
 - Cockpit Wave 31A expected UI result: no UI change; this slice only authorizes read-only detail/distribution row navigation and records mutation boundaries.
+- Cockpit Wave 31B result: added the Pay Code Explorer row action read-model contract; report `reports/214-wave-31b-pay-code-explorer-row-action-read-model-contract.md`; next `Cockpit Wave 31C — Pay Code Explorer Provider Row Action Hydration`.
+- Cockpit Wave 31B expected UI result: no visible UI change until provider hydration and table adoption.

@@ -8,6 +8,9 @@ use Spatie\LaravelData\Data;
 
 class CockpitPayCodeListRecordData extends Data
 {
+    /**
+     * @param  array<int, CockpitPayCodeRowActionData>  $actions
+     */
     public function __construct(
         public readonly string $code,
         public readonly string $template,
@@ -17,5 +20,6 @@ class CockpitPayCodeListRecordData extends Data
         public readonly string $display_status,
         public readonly string $owner,
         public readonly ?string $last_activity,
+        public readonly array $actions = [],
     ) {}
 }
