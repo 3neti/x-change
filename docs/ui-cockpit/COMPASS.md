@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 29 — Pay Code Explorer Runtime Parity / Activity Navigation Bridge
-Status: Complete / activity cards bridge into Pay Code Explorer with read-only context
+Current slice: Cockpit Wave 30 — Pay Code Explorer Functional Read Model Parity / Legacy Index Comparison
+Status: Complete / read-only search/status filters and stats parity scaffolded
 Last updated: 2026-07-11
 
 ## Completed
@@ -2064,3 +2064,16 @@ Current boundary:
 - Cockpit Wave 29 expected UI result: `/x/cockpit` activity cards can show `Open in Explorer`; `/x/cockpit/pay-codes?activity_code={code}&activity_source=operator_issuance_activity` shows the Activity navigation context card.
 - Cockpit Wave 29 boundary: no voucher mutation, driver execution, provider call, money movement, journal write, x-action execution, x-feedback delivery, campaign mutation, raw payload display, provider payload display, wallet internal display, or recipient-secret display was added.
 - Cockpit Wave 29 next recommended wave: `Cockpit Wave 30 — Pay Code Explorer Functional Read Model Parity / Legacy Index Comparison`.
+- Cockpit Wave 30 result: Pay Code Explorer functional read-model parity / legacy index comparison completed; reports `reports/206-wave-30a-pay-code-explorer-functional-parity-audit.md`, `reports/207-wave-30b-pay-code-explorer-filter-summary-read-model-contract.md`, `reports/208-wave-30c-pay-code-explorer-provider-filtering-stats-parity.md`, `reports/209-wave-30d-pay-code-explorer-controller-query-intake.md`, `reports/210-wave-30e-pay-code-explorer-filter-ui-presentation.md`, `reports/211-wave-30f-pay-code-explorer-filter-browser-publish-verification.md`, and `reports/212-wave-30-pay-code-explorer-functional-parity-closure.md`.
+- Cockpit Wave 30 completed:
+  - audited legacy `/x/pay-codes` functional behavior against `/x/cockpit/pay-codes`;
+  - added Pay Code Explorer filter and stats DTOs;
+  - added legacy-compatible search/status read-model filtering;
+  - added read-only `search` and `status` query intake;
+  - rendered search/status GET filters, stats, active filter summary, and clear filters link;
+  - verified route and frontend hydration tests;
+  - verified published Cockpit assets are clean: checked 58, ok 58, stale 0, missing 0, extra 0;
+  - added Dusk smoke coverage target, with browser execution blocked in this run by ChromeDriver process availability.
+- Cockpit Wave 30 expected UI result: `/x/cockpit/pay-codes` shows a functional parity summary plus search/status GET filters. `/x/cockpit/pay-codes?search={term}&status={status}` keeps filter state visible.
+- Cockpit Wave 30 boundary: search/status GET filters are read-only navigation; no legacy page replacement, voucher mutation, provider call, wallet mutation, journal write, action execution, feedback delivery, campaign mutation, or unsafe payload exposure was added.
+- Cockpit Wave 30 next recommended wave: `Cockpit Wave 31 — Pay Code Explorer Detail Navigation / Row Action Runtime Parity`.
