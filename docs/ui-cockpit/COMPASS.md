@@ -4,8 +4,8 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 17 — Operator Activity Action Handoff Runtime Enablement
-Status: Complete / action handoff runtime opt-in verified
+Current slice: Cockpit Wave 18 — Operator Activity Feedback Handoff Runtime Enablement
+Status: Complete / feedback handoff runtime opt-in verified
 Last updated: 2026-07-11
 
 ## Completed
@@ -1956,3 +1956,13 @@ Current boundary:
   - frontend and Dusk coverage proving the existing Operator Issuance Activity panel renders action-composed evidence.
 - Cockpit Wave 17 expected UI result: existing Operator Issuance Activity cards can show `action: composed`, `Action hint`, `Action run`, `Executes action: no`, and `Suggested action` when durable action handoff facts exist.
 - Cockpit Wave 17 next recommended wave: `Cockpit Wave 18 — Operator Activity Feedback Handoff Runtime Enablement`.
+- Cockpit Wave 18 result: operator issuance activity feedback handoff runtime enablement completed behind explicit config opt-in; report `reports/189-wave-18-operator-activity-feedback-handoff-runtime-enablement.md`.
+- Cockpit Wave 18 completed:
+  - real x-feedback adapter coverage for notification-planning-only handoff;
+  - runtime profile keys for `feedback_handoff=x-feedback` and `feedback_handoff_status_projector=database`;
+  - database status projection for `feedback_handoff_status=planned`;
+  - Quick Generate route coverage proving durable activity can prepare x-feedback handoff facts when configured;
+  - dashboard read-model coverage proving `feedback: planned`, feedback intent id, delivery plan id, `sends_feedback=false`, channel, and planned deliveries are operator-visible safe facts;
+  - frontend and Dusk coverage proving the existing Operator Issuance Activity panel renders feedback-planned evidence.
+- Cockpit Wave 18 expected UI result: existing Operator Issuance Activity cards can show `feedback: planned`, `Feedback intent`, `Delivery plan`, `Sends feedback: no`, `Channel`, and `Planned deliveries` when durable feedback handoff facts exist.
+- Cockpit Wave 18 next recommended wave: `Cockpit Wave 19 — Combined Operator Activity Runtime Profile Verification`.
