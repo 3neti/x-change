@@ -417,6 +417,23 @@ export type CockpitQuickGenerateRuntimePreflight = {
     [key: string]: unknown;
 };
 
+export type CockpitQuickGenerateRuntimeDraft = {
+    status?: string | null;
+    factory?: string | null;
+    compiler?: string | null;
+    source?: string | null;
+    [key: string]: unknown;
+};
+
+export type CockpitQuickGenerateRuntimeActivity = {
+    schema?: string | null;
+    status?: string | null;
+    source?: string | null;
+    presentation_only?: boolean | null;
+    metadata_alignment?: string | null;
+    [key: string]: unknown;
+};
+
 export type CockpitQuickGenerateAuthorizationGate = {
     key?: string | null;
     label?: string | null;

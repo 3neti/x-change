@@ -154,6 +154,11 @@ describe('Cockpit Quick Generate foundation', () => {
                         cockpit_detail: '/x/cockpit/pay-codes/PC-UI-001',
                     },
                 },
+                draft: {
+                    status: 'compiled',
+                    factory: 'CockpitQuickGenerateDraftFactoryContract',
+                    compiler: 'CockpitIssuanceDraftCompilerContract',
+                },
                 preflight: {
                     pricing: {
                         status: 'estimated',
@@ -171,6 +176,11 @@ describe('Cockpit Quick Generate foundation', () => {
                             currency: 'PHP',
                         },
                     },
+                },
+                activity: {
+                    schema: 'x-change.cockpit.operator-issuance-activity.v1',
+                    status: 'recording-attempted-after-issuance',
+                    presentation_only: true,
                 },
             }),
         });
@@ -242,6 +252,10 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.find('[data-testid="cockpit-quick-generate-pricing-preflight-card"]').text()).toContain('PHP 1.75');
         expect(wrapper.find('[data-testid="cockpit-quick-generate-funding-preflight-card"]').text()).toContain('local_ledger');
         expect(wrapper.find('[data-testid="cockpit-quick-generate-funding-preflight-card"]').text()).toContain('PHP 10000');
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-runtime-metadata-panel"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-draft-runtime-card"]').text()).toContain('compiled');
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-activity-runtime-card"]').text()).toContain('x-change.cockpit.operator-issuance-activity.v1');
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-activity-runtime-card"]').text()).toContain('yes');
 
         vi.unstubAllGlobals();
     });

@@ -4,6 +4,8 @@ import { computed, ref } from 'vue';
 import type {
     CockpitQuickGenerateDraftContract,
     CockpitQuickGenerateMutationContract,
+    CockpitQuickGenerateRuntimeActivity,
+    CockpitQuickGenerateRuntimeDraft,
     CockpitQuickGenerateRuntimeFundingPreflight,
     CockpitQuickGenerateRuntimePricingPreflight,
     CockpitQuickGenerateTemplate,
@@ -63,6 +65,14 @@ const pricingPreflight = computed<CockpitQuickGenerateRuntimePricingPreflight | 
 
 const fundingPreflight = computed<CockpitQuickGenerateRuntimeFundingPreflight | null>(() => {
     return objectValue(dataGet(lastResponse.value, ['preflight', 'funding'])) as CockpitQuickGenerateRuntimeFundingPreflight | null;
+});
+
+const draftRuntime = computed<CockpitQuickGenerateRuntimeDraft | null>(() => {
+    return objectValue(dataGet(lastResponse.value, ['draft'])) as CockpitQuickGenerateRuntimeDraft | null;
+});
+
+const activityRuntime = computed<CockpitQuickGenerateRuntimeActivity | null>(() => {
+    return objectValue(dataGet(lastResponse.value, ['activity'])) as CockpitQuickGenerateRuntimeActivity | null;
 });
 
 const canRefreshReadModel = computed<boolean>(() => {
@@ -360,6 +370,78 @@ function dataGet(source: unknown, path: string[]): unknown {
             <p class="mt-3 leading-5 text-slate-500 dark:text-slate-400">
                 No automatic redirect is performed. The operator chooses whether to refresh Cockpit data or open the generated Pay Code detail.
             </p>
+
+            <div
+                v-if="draftRuntime || activityRuntime"
+                class="mt-4 grid gap-3 md:grid-cols-2"
+                data-testid="cockpit-quick-generate-runtime-metadata-panel"
+            >
+                <section
+                    v-if="draftRuntime"
+                    class="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900"
+                    data-testid="cockpit-quick-generate-draft-runtime-card"
+                >
+                    <div class="flex items-center justify-between gap-3">
+                        <p class="font-semibold text-slate-950 dark:text-slate-50">
+                            Draft runtime
+                        </p>
+                        <span class="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-300 dark:ring-slate-800">
+                            {{ displayValue(draftRuntime.status) }}
+                        </span>
+                    </div>
+                    <dl class="mt-3 grid gap-2">
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-slate-500 dark:text-slate-400">
+                                Factory
+                            </dt>
+                            <dd class="font-medium text-slate-700 dark:text-slate-200">
+                                {{ displayValue(draftRuntime.factory) }}
+                            </dd>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-slate-500 dark:text-slate-400">
+                                Compiler
+                            </dt>
+                            <dd class="font-medium text-slate-700 dark:text-slate-200">
+                                {{ displayValue(draftRuntime.compiler) }}
+                            </dd>
+                        </div>
+                    </dl>
+                </section>
+
+                <section
+                    v-if="activityRuntime"
+                    class="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900"
+                    data-testid="cockpit-quick-generate-activity-runtime-card"
+                >
+                    <div class="flex items-center justify-between gap-3">
+                        <p class="font-semibold text-slate-950 dark:text-slate-50">
+                            Activity runtime
+                        </p>
+                        <span class="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-300 dark:ring-slate-800">
+                            {{ displayValue(activityRuntime.status) }}
+                        </span>
+                    </div>
+                    <dl class="mt-3 grid gap-2">
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-slate-500 dark:text-slate-400">
+                                Schema
+                            </dt>
+                            <dd class="font-medium text-slate-700 dark:text-slate-200">
+                                {{ displayValue(activityRuntime.schema) }}
+                            </dd>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-slate-500 dark:text-slate-400">
+                                Presentation only
+                            </dt>
+                            <dd class="font-medium text-slate-700 dark:text-slate-200">
+                                {{ activityRuntime.presentation_only === true ? 'yes' : 'no' }}
+                            </dd>
+                        </div>
+                    </dl>
+                </section>
+            </div>
 
             <div
                 v-if="pricingPreflight || fundingPreflight"

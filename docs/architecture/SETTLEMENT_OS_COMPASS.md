@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 11A preflight metadata presentation implemented; next is draft/activity metadata presentation
+Current status: Cockpit Wave 11B draft/activity metadata presentation implemented; next is published asset drift verification
 Last updated: 2026-07-11
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 11A preflight metadata presentation implemented; next is draft/activity metadata presentation | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 11B draft/activity metadata presentation implemented; next is published asset drift verification | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -1651,3 +1651,4 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Cockpit Wave 10I — Manual Local Scenario Verification: scaffolded in [../ui-cockpit/reports/159-wave-10i-manual-local-scenario-verification.md](../ui-cockpit/reports/159-wave-10i-manual-local-scenario-verification.md); next `Cockpit Wave 10J — Runtime Compiler Adoption Closure`.
 - Cockpit Wave 10J — Runtime Compiler Adoption Closure: completed in [../ui-cockpit/reports/160-wave-10j-runtime-compiler-adoption-closure.md](../ui-cockpit/reports/160-wave-10j-runtime-compiler-adoption-closure.md); next recommended wave `Wave 11 — Quick Generate Runtime Metadata Presentation`.
 - Cockpit Wave 11A — Quick Generate Result Preflight Presentation: implemented in [../ui-cockpit/reports/161-wave-11a-quick-generate-result-preflight-presentation.md](../ui-cockpit/reports/161-wave-11a-quick-generate-result-preflight-presentation.md); next `Cockpit Wave 11B — Quick Generate Draft and Activity Runtime Metadata Presentation`.
+- Cockpit Wave 11B — Quick Generate Draft and Activity Runtime Metadata Presentation: implemented in [../ui-cockpit/reports/162-wave-11b-quick-generate-draft-activity-runtime-presentation.md](../ui-cockpit/reports/162-wave-11b-quick-generate-draft-activity-runtime-presentation.md); next `Cockpit Wave 11C — Published Asset Drift Verification / Host Publish Handoff`.
