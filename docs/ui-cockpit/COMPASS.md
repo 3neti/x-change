@@ -2165,3 +2165,5 @@ Current boundary:
 - Cockpit Wave 37B expected UI result: no visible UI change yet; `campaign_read_model.quick_generate_link` now carries the full safe Quick Generate URL for Vue rendering.
 - Cockpit Wave 37C result: Campaign Quick Generate source link UI presentation completed; report `reports/250-wave-37c-campaign-quick-generate-source-link-ui-presentation.md`; next `Cockpit Wave 37D — Campaign Quick Generate Source Link Browser / Publish Verification`.
 - Cockpit Wave 37C expected UI result: `/x/cockpit` with campaign context can show `Open Quick Generate`, `Prefills the existing Quick Generate handoff`, and a read-only campaign context source link.
+- Cockpit Wave 37D result: Campaign Quick Generate source link browser/publish verification completed; report `reports/251-wave-37d-campaign-quick-generate-source-link-browser-publish-verification.md`; next `Cockpit Wave 37E — Campaign Context Source Link Generation Closure`.
+- Cockpit Wave 37D expected UI result: browser-verified `/x/cockpit?...campaign_*` shows `Open Quick Generate`; clicking it opens campaign-prefilled Quick Generate.
