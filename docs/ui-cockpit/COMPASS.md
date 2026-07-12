@@ -4,12 +4,17 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 60B — Manual Guidance Human Evidence Record Template
-Status: In progress / Wave 60A complete
+Current slice: Cockpit Wave 60C — Manual Guidance Acceptance Decision Policy
+Status: In progress / Wave 60B complete
 Last updated: 2026-07-12
 
 ## Completed
 
+- Completed Cockpit Wave 60B — Manual Guidance Human Evidence Record Template:
+  - Added a human evidence template for accepting manual distribution guidance on Voucher Detail and Distribution Workspace.
+  - The template captures reviewer context, Pay Code, browser, page URLs, guidance visibility, required safety statements, final decision, rationale, observed errors, and observed side effects.
+  - Current result remains `pending-human-guidance-intake` until a completed evidence record is supplied.
+  - Report: `reports/358-wave-60b-manual-guidance-human-evidence-record-template.md`.
 - Completed Cockpit Wave 60A — Manual Distribution Link Human Guidance Acceptance Plan:
   - Defined the human acceptance checklist for manual distribution guidance on Voucher Detail and Distribution Workspace.
   - Required both surfaces to clearly state manual distribution only, approved external workflow, recipient verification, no Cockpit SMS/email/webhook/in-app/campaign delivery, no copy telemetry, no short links/QR assets, and sensitive settlement access material.
