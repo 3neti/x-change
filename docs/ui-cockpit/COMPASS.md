@@ -4,12 +4,17 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 60C — Manual Guidance Acceptance Decision Policy
-Status: In progress / Wave 60B complete
+Current slice: Cockpit Wave 60D — Manual Guidance Pending Acceptance Status / Closure
+Status: In progress / Wave 60C complete
 Last updated: 2026-07-12
 
 ## Completed
 
+- Completed Cockpit Wave 60C — Manual Guidance Acceptance Decision Policy:
+  - Defined Pass, Blocked, Fail, and no-evidence decision rules for manual distribution guidance acceptance.
+  - Confirmed no completed human evidence means the only valid status is `pending-human-guidance-intake`.
+  - Confirmed acceptance does not authorize delivery, copy telemetry persistence, journal writes, action execution, provider calls, voucher mutation, wallet mutation, short-link generation, QR asset generation, or money movement.
+  - Report: `reports/359-wave-60c-manual-guidance-acceptance-decision-policy.md`.
 - Completed Cockpit Wave 60B — Manual Guidance Human Evidence Record Template:
   - Added a human evidence template for accepting manual distribution guidance on Voucher Detail and Distribution Workspace.
   - The template captures reviewer context, Pay Code, browser, page URLs, guidance visibility, required safety statements, final decision, rationale, observed errors, and observed side effects.
