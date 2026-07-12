@@ -4,12 +4,16 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 57B — Beneficiary URL Copy Intake Decision Policy
-Status: In progress / Wave 57A complete
+Current slice: Cockpit Wave 57C — Pending Human Intake Status Record
+Status: In progress / Wave 57B complete
 Last updated: 2026-07-12
 
 ## Completed
 
+- Completed Cockpit Wave 57B — Beneficiary URL Copy Intake Decision Policy:
+  - Defined Pass, Blocked, and Fail states for human clipboard UX acceptance evidence.
+  - Confirmed the wave must remain `pending-human-intake` without explicit human evidence.
+  - Report: `reports/347-wave-57b-beneficiary-url-copy-intake-decision-policy.md`.
 - Completed Cockpit Wave 57A — Beneficiary URL Copy Acceptance Intake Audit:
   - Started human acceptance intake without assuming a Pass/Fail/Blocked result.
   - Recorded that no human reviewer evidence has been supplied yet for actual URLs, copied clipboard values, errors, side effects, or final decision.

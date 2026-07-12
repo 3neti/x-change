@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 57B in progress; beneficiary URL copy acceptance intake audit complete
+Current status: Cockpit Wave 57C in progress; beneficiary URL copy intake decision policy complete
 Last updated: 2026-07-12
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-12
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 57B in progress; beneficiary URL copy acceptance intake audit complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 57C in progress; beneficiary URL copy intake decision policy complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,9 @@ Last updated: 2026-07-12
 
 ### Current Cockpit Host Integration
 
+- Cockpit Wave 57B complete:
+  - Defined Pass / Blocked / Fail classification for human clipboard UX evidence.
+  - Report: [../ui-cockpit/reports/347-wave-57b-beneficiary-url-copy-intake-decision-policy.md](../ui-cockpit/reports/347-wave-57b-beneficiary-url-copy-intake-decision-policy.md).
 - Cockpit Wave 57A complete:
   - Started beneficiary URL copy human acceptance intake.
   - Current intake status remains pending because no human browser evidence has been supplied yet.
