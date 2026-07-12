@@ -4,12 +4,16 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 59 — Manual Distribution Link Operational Guidance / Operator Help Text
-Status: Wave 58 complete / beneficiary URL copy accepted as Pass
+Current slice: Cockpit Wave 59B — Voucher Detail Operational Guidance Text
+Status: In progress / Wave 59A complete
 Last updated: 2026-07-12
 
 ## Completed
 
+- Completed Cockpit Wave 59A — Manual Distribution Link Operational Guidance Contract:
+  - Defined operator-facing guidance for accepted manual beneficiary URL copy UX.
+  - Guidance must state manual distribution only, approved external workflow, no Cockpit delivery, no copy telemetry, no short links/QR assets, sensitive settlement access material, and recipient verification.
+  - Report: `reports/353-wave-59a-manual-distribution-link-operational-guidance-contract.md`.
 - Completed Cockpit Wave 58 — Beneficiary URL Copy Acceptance Closure:
   - Recorded final acceptance result: Pass.
   - Accepted manual beneficiary URL copy UX for Voucher Detail and Distribution Workspace.
