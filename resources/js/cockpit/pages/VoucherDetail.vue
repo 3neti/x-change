@@ -204,6 +204,23 @@ const campaignNavigationContext = computed<CockpitCampaignNavigationContext | nu
         },
     };
 });
+const campaignExplorerReturnHref = computed(() => {
+    if (!campaignNavigationContext.value) {
+        return null;
+    }
+
+    return `/x/cockpit/pay-codes?${campaignQueryString({
+        activity_code: code.value,
+        activity_source: 'operator_issuance_activity',
+    })}`;
+});
+const campaignDashboardReturnHref = computed(() => {
+    if (!campaignNavigationContext.value) {
+        return null;
+    }
+
+    return `/x/cockpit?${campaignQueryString()}`;
+});
 
 function stringValue(value: unknown): string | null {
     if (typeof value === 'string' && value.trim() !== '') {
@@ -437,6 +454,34 @@ function channelLabel(channel: string): string {
     return channel.charAt(0).toUpperCase() + channel.slice(1);
 }
 
+function campaignQueryString(extra: Record<string, string | null> = {}): string {
+    const context = campaignNavigationContext.value;
+    const params = new URLSearchParams();
+
+    if (!context) {
+        return '';
+    }
+
+    setParam(params, 'campaign_planning_key', context.planning_key);
+    setParam(params, 'campaign_execution_id', context.execution_id);
+    setParam(params, 'campaign_id', stringValue(context.campaign_id));
+    setParam(params, 'campaign_audience_id', stringValue(context.audience_id));
+    setParam(params, 'campaign_recipient_id', stringValue(context.recipient_id));
+    setParam(params, 'campaign_source', stringValue(context.source));
+
+    for (const [key, value] of Object.entries(extra)) {
+        setParam(params, key, value);
+    }
+
+    return params.toString();
+}
+
+function setParam(params: URLSearchParams, key: string, value: string | null | undefined): void {
+    if (value && value.trim() !== '') {
+        params.set(key, value.trim());
+    }
+}
+
 function integrationSummary(
     key: string,
     label: string,
@@ -571,6 +616,24 @@ function integrationSummary(
                         </dd>
                     </div>
                 </dl>
+                <div class="mt-5 flex flex-wrap gap-3">
+                    <a
+                        v-if="campaignExplorerReturnHref"
+                        :href="campaignExplorerReturnHref"
+                        class="inline-flex items-center rounded-full border border-indigo-300 px-3 py-2 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-700 dark:text-indigo-200 dark:hover:bg-indigo-900/50"
+                        data-testid="cockpit-voucher-detail-campaign-explorer-return-link"
+                    >
+                        Return to Explorer · campaign context
+                    </a>
+                    <a
+                        v-if="campaignDashboardReturnHref"
+                        :href="campaignDashboardReturnHref"
+                        class="inline-flex items-center rounded-full border border-indigo-300 px-3 py-2 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-700 dark:text-indigo-200 dark:hover:bg-indigo-900/50"
+                        data-testid="cockpit-voucher-detail-campaign-dashboard-return-link"
+                    >
+                        Return to Campaign Dashboard · read-only
+                    </a>
+                </div>
             </section>
 
             <CockpitVoucherOverviewPanel :items="overviewItems" />
