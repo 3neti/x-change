@@ -250,6 +250,49 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).not.toContain('wallet');
     });
 
+    it('renders Distribution Workspace manual distribution operational guidance', () => {
+        const wrapper = mount(DistributionWorkspace, {
+            props: {
+                context: { code: 'PC-DIST-001' },
+                distribution_workspace_read_model: {
+                    schema: 'x-change.cockpit.distribution-workspace.v1',
+                    status: 'available',
+                    authorized: true,
+                    code: 'PC-DIST-001',
+                    summary: {
+                        code: 'PC-DIST-001',
+                        display_status: 'ready',
+                    },
+                    distribution_links: {
+                        schema: 'x-change.cockpit.distribution-links.v1',
+                        status: 'available',
+                        available: true,
+                        read_only: true,
+                        redeem_url: 'https://example.test/x/claim/PC-DIST-001/experience',
+                        redeem_path: '/x/claim/PC-DIST-001/experience',
+                        source: 'x-change.claim.experience',
+                        delivery_enabled: false,
+                        redactions: { payloads: 'distribution-links-only' },
+                    },
+                    redactions: {
+                        payloads: 'distribution-read-model-summary-only',
+                    },
+                },
+            },
+        });
+
+        const guidance = wrapper.find('[data-testid="cockpit-distribution-workspace-manual-distribution-guidance"]');
+
+        expect(guidance.exists()).toBe(true);
+        expect(guidance.text()).toContain('Manual distribution guidance');
+        expect(guidance.text()).toContain('manual distribution only');
+        expect(guidance.text()).toContain('approved external workflow');
+        expect(guidance.text()).toContain('verifying the recipient');
+        expect(guidance.text()).toContain('does not send SMS, email, webhook, in-app notification, or campaign delivery');
+        expect(guidance.text()).toContain('does not record copy telemetry');
+        expect(guidance.text()).toContain('sensitive settlement access material');
+    });
+
     it('copies the Distribution Workspace beneficiary URL through the browser clipboard only', async () => {
         const writeText = vi.fn().mockResolvedValue(undefined);
 
