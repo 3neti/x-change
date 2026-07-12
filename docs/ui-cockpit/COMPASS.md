@@ -4,12 +4,18 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 58 — Beneficiary URL Copy Human Evidence Intake / Acceptance Decision
-Status: Wave 57 complete / acceptance result pending-human-intake
+Current slice: Cockpit Wave 58B — Beneficiary URL Copy Acceptance Decision Record
+Status: In progress / Wave 58A complete
 Last updated: 2026-07-12
 
 ## Completed
 
+- Completed Cockpit Wave 58A — Beneficiary URL Copy Human Evidence Intake:
+  - Recorded human evidence for Pay Code `6LGM`.
+  - Voucher Detail and Distribution Workspace both copied `http://x-change-sandbox.test/x/claim/6LGM/experience`.
+  - Reviewer supplied final decision: Pass.
+  - No errors or side effects were reported.
+  - Report: `reports/350-wave-58a-beneficiary-url-copy-human-evidence-intake.md`.
 - Completed Cockpit Wave 57 — Beneficiary URL Copy Acceptance Intake Closure:
   - Closed the acceptance-intake scaffold with result `pending-human-intake`.
   - Confirmed no human browser evidence has been supplied yet.
