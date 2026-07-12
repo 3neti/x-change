@@ -2173,3 +2173,5 @@ Current boundary:
 - Cockpit Wave 37 next recommended wave: `Cockpit Wave 38 — Campaign Workspace Entry Point Real Adapter / x-campaign Source Context Adoption`.
 - Cockpit Wave 38A result: Campaign Workspace Entry Point real adapter audit completed; report `reports/253-wave-38a-campaign-workspace-entry-point-real-adapter-audit.md`; next `Cockpit Wave 38B — Campaign Adapter Source Context Normalization`.
 - Cockpit Wave 38A expected UI result: no UI change; this slice defines safe x-campaign metadata adoption for Quick Generate source links while blocking campaign mutation, bulk issuance, delivery, unsafe payload exposure, and bypassing `GeneratePayCode`.
+- Cockpit Wave 38B result: Campaign adapter source context normalization completed; report `reports/254-wave-38b-campaign-adapter-source-context-normalization.md`; next `Cockpit Wave 38C — Real x-campaign Source Context Fixture / Integration Verification`.
+- Cockpit Wave 38B expected UI result: no new component; existing `Open Quick Generate` links can now be populated by safe adapter metadata when query params are absent.
