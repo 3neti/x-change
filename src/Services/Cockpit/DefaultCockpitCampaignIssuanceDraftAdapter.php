@@ -13,15 +13,15 @@ class DefaultCockpitCampaignIssuanceDraftAdapter implements CockpitCampaignIssua
     public function fromCampaignContext(array $campaignContext): CockpitIssuanceDraftData
     {
         $template = $this->template($campaignContext);
+        $recipient = $this->recipient($campaignContext);
 
         return new CockpitIssuanceDraftData(
             template_key: $template['key'],
-            amount: data_get($campaignContext, 'amount'),
-            currency: $this->string($campaignContext, 'currency', 'PHP') ?? 'PHP',
+            amount: $recipient['amount'],
+            currency: $recipient['currency'],
             count: max(1, (int) data_get($campaignContext, 'count', 1)),
-            recipient_reference: $this->string($campaignContext, 'recipient_reference')
-                ?? $this->string($campaignContext, 'recipient.mobile'),
-            purpose: $this->string($campaignContext, 'purpose'),
+            recipient_reference: $recipient['reference'],
+            purpose: $recipient['purpose'],
             idempotency_key: $this->string($campaignContext, 'idempotency_key'),
             correlation_id: $this->string($campaignContext, 'correlation_id'),
             campaign: new CockpitIssuanceCampaignContextData(
@@ -34,15 +34,12 @@ class DefaultCockpitCampaignIssuanceDraftAdapter implements CockpitCampaignIssua
                 metadata: (array) data_get($campaignContext, 'metadata', []),
             ),
             feedback: [
-                'mobile' => $this->string($campaignContext, 'feedback.mobile')
-                    ?? $this->string($campaignContext, 'recipient.mobile'),
-                'email' => $this->string($campaignContext, 'feedback.email')
-                    ?? $this->string($campaignContext, 'recipient.email'),
+                'mobile' => $recipient['mobile'],
+                'email' => $recipient['email'],
                 'webhook' => $this->string($campaignContext, 'feedback.webhook'),
             ],
             rider: [
-                'message' => $this->string($campaignContext, 'rider.message')
-                    ?? $this->string($campaignContext, 'message'),
+                'message' => $recipient['message'],
             ],
             metadata: [
                 'campaign' => [
@@ -50,6 +47,8 @@ class DefaultCockpitCampaignIssuanceDraftAdapter implements CockpitCampaignIssua
                     'template_intent' => $template['intent'],
                     'template_key' => $template['key'],
                     'template_mapping_source' => $template['source'],
+                    'recipient_context' => $recipient['context'],
+                    'recipient_mapping_source' => $recipient['source'],
                 ],
             ],
         );
@@ -136,6 +135,82 @@ class DefaultCockpitCampaignIssuanceDraftAdapter implements CockpitCampaignIssua
             'settlement' => 'settlement-envelope',
             default => null,
         };
+    }
+
+    /**
+     * @return array{
+     *     amount: mixed,
+     *     currency: string,
+     *     reference: ?string,
+     *     purpose: ?string,
+     *     mobile: ?string,
+     *     email: ?string,
+     *     message: ?string,
+     *     context: array<string, mixed>,
+     *     source: string
+     * }
+     */
+    private function recipient(array $campaignContext): array
+    {
+        $explicit = $this->hasExplicitRecipientDraftFields($campaignContext);
+        $amount = data_get($campaignContext, 'amount') ?? data_get($campaignContext, 'payout.amount') ?? data_get($campaignContext, 'allocation.amount') ?? data_get($campaignContext, 'recipient.amount');
+        $currency = $this->string($campaignContext, 'currency')
+            ?? $this->string($campaignContext, 'payout.currency')
+            ?? $this->string($campaignContext, 'allocation.currency')
+            ?? 'PHP';
+        $reference = $this->string($campaignContext, 'recipient_reference')
+            ?? $this->string($campaignContext, 'recipient.reference')
+            ?? $this->string($campaignContext, 'recipient.id')
+            ?? $this->string($campaignContext, 'recipient.code')
+            ?? $this->string($campaignContext, 'recipient.mobile')
+            ?? $this->string($campaignContext, 'recipient.mobile_number')
+            ?? $this->string($campaignContext, 'recipient.msisdn');
+        $mobile = $this->string($campaignContext, 'feedback.mobile')
+            ?? $this->string($campaignContext, 'recipient.mobile')
+            ?? $this->string($campaignContext, 'recipient.mobile_number')
+            ?? $this->string($campaignContext, 'recipient.phone')
+            ?? $this->string($campaignContext, 'recipient.msisdn');
+        $email = $this->string($campaignContext, 'feedback.email')
+            ?? $this->string($campaignContext, 'recipient.email')
+            ?? $this->string($campaignContext, 'recipient.email_address');
+        $purpose = $this->string($campaignContext, 'purpose')
+            ?? $this->string($campaignContext, 'payout.purpose')
+            ?? $this->string($campaignContext, 'allocation.purpose')
+            ?? $this->string($campaignContext, 'recipient.purpose');
+        $message = $this->string($campaignContext, 'rider.message')
+            ?? $this->string($campaignContext, 'message')
+            ?? $this->string($campaignContext, 'payout.message')
+            ?? $this->string($campaignContext, 'recipient.message');
+
+        return [
+            'amount' => $amount,
+            'currency' => $currency,
+            'reference' => $reference,
+            'purpose' => $purpose,
+            'mobile' => $mobile,
+            'email' => $email,
+            'message' => $message,
+            'context' => array_filter([
+                'recipient_reference' => $reference,
+                'mobile' => $mobile,
+                'email' => $email,
+                'amount' => $amount,
+                'currency' => $currency,
+                'purpose' => $purpose,
+                'message' => $message,
+            ], fn (mixed $value): bool => $value !== null && $value !== ''),
+            'source' => $explicit ? 'explicit-draft-fields' : 'campaign-recipient-context',
+        ];
+    }
+
+    private function hasExplicitRecipientDraftFields(array $campaignContext): bool
+    {
+        return data_get($campaignContext, 'amount') !== null
+            || $this->string($campaignContext, 'recipient_reference') !== null
+            || $this->string($campaignContext, 'purpose') !== null
+            || $this->string($campaignContext, 'feedback.mobile') !== null
+            || $this->string($campaignContext, 'feedback.email') !== null
+            || $this->string($campaignContext, 'rider.message') !== null;
     }
 
     private function string(array $source, string $key, ?string $default = null): ?string

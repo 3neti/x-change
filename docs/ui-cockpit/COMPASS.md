@@ -2197,3 +2197,5 @@ Current boundary:
 - Cockpit Wave 39 next recommended wave: `Cockpit Wave 40 — Campaign Recipient-to-Issuance Draft Field Mapping`.
 - Cockpit Wave 40A result: Campaign recipient-to-issuance draft field mapping audit completed; report `reports/263-wave-40a-campaign-recipient-to-issuance-draft-field-mapping-audit.md`; next `Cockpit Wave 40B — Campaign Recipient Field Normalizer / Draft Adapter`.
 - Cockpit Wave 40A expected UI result: no UI change; this slice scopes safe recipient/payout field normalization into existing Quick Generate draft paths.
+- Cockpit Wave 40B result: Campaign recipient field normalizer/draft adapter completed; report `reports/264-wave-40b-campaign-recipient-field-normalizer-draft-adapter.md`; `DefaultCockpitCampaignIssuanceDraftAdapter` maps safe recipient/payout aliases into existing Quick Generate draft fields while preserving explicit draft fields.
+- Cockpit Wave 40B expected UI result: no direct UI change; campaign-sourced Quick Generate forms can now receive recipient reference, amount, feedback contact, purpose, and rider message from campaign context.

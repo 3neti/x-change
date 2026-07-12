@@ -71,3 +71,73 @@ it('preserves explicit cockpit template keys ahead of campaign template intent a
     expect($draft->template_key)->toBe('ofw-remittance')
         ->and($draft->metadata['campaign']['template_mapping_source'])->toBe('explicit-template-key');
 });
+
+it('normalizes campaign recipient and payout aliases into issuance draft fields', function (): void {
+    $draft = (new DefaultCockpitCampaignIssuanceDraftAdapter)->fromCampaignContext([
+        'planning_key' => 'plan-40b',
+        'execution_id' => 'exec-40b',
+        'recipient' => [
+            'reference' => 'BEN-0001',
+            'mobile_number' => '091700000040',
+            'email_address' => 'beneficiary40@example.test',
+            'name' => 'Beneficiary Forty',
+        ],
+        'payout' => [
+            'amount' => '875.50',
+            'currency' => 'PHP',
+            'purpose' => 'Recipient payout',
+            'message' => 'Your campaign Pay Code is ready.',
+        ],
+    ]);
+
+    expect($draft->amount)->toBe('875.50')
+        ->and($draft->currency)->toBe('PHP')
+        ->and($draft->recipient_reference)->toBe('BEN-0001')
+        ->and($draft->purpose)->toBe('Recipient payout')
+        ->and($draft->feedback)->toMatchArray([
+            'mobile' => '091700000040',
+            'email' => 'beneficiary40@example.test',
+        ])
+        ->and($draft->rider['message'])->toBe('Your campaign Pay Code is ready.')
+        ->and($draft->metadata['campaign']['recipient_mapping_source'])->toBe('campaign-recipient-context')
+        ->and($draft->metadata['campaign']['recipient_context'])->toMatchArray([
+            'recipient_reference' => 'BEN-0001',
+            'mobile' => '091700000040',
+            'email' => 'beneficiary40@example.test',
+        ]);
+});
+
+it('preserves explicit recipient draft fields ahead of campaign recipient aliases', function (): void {
+    $draft = (new DefaultCockpitCampaignIssuanceDraftAdapter)->fromCampaignContext([
+        'amount' => '100.00',
+        'recipient_reference' => 'EXPLICIT-REF',
+        'purpose' => 'Explicit purpose',
+        'feedback' => [
+            'mobile' => '09999999999',
+            'email' => 'explicit@example.test',
+        ],
+        'rider' => [
+            'message' => 'Explicit message',
+        ],
+        'recipient' => [
+            'reference' => 'RECIPIENT-REF',
+            'mobile_number' => '091700000040',
+            'email_address' => 'beneficiary40@example.test',
+        ],
+        'payout' => [
+            'amount' => '875.50',
+            'purpose' => 'Recipient payout',
+            'message' => 'Recipient message',
+        ],
+    ]);
+
+    expect($draft->amount)->toBe('100.00')
+        ->and($draft->recipient_reference)->toBe('EXPLICIT-REF')
+        ->and($draft->purpose)->toBe('Explicit purpose')
+        ->and($draft->feedback)->toMatchArray([
+            'mobile' => '09999999999',
+            'email' => 'explicit@example.test',
+        ])
+        ->and($draft->rider['message'])->toBe('Explicit message')
+        ->and($draft->metadata['campaign']['recipient_mapping_source'])->toBe('explicit-draft-fields');
+});
