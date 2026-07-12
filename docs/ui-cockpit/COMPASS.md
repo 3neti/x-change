@@ -2159,3 +2159,5 @@ Current boundary:
 - Cockpit Wave 36 completed: campaign-prefilled Quick Generate now returns safe `campaign_attribution`, renders campaign attribution in the result panel, and exposes read-only Campaign Explorer/Dashboard return links without campaign mutation.
 - Cockpit Wave 36 expected UI result: after campaign-prefilled Quick Generate succeeds, operators see `Campaign attribution`, generated Pay Code, `Return to Campaign Explorer`, and `Return to Campaign Dashboard`.
 - Cockpit Wave 36 next recommended wave: `Cockpit Wave 37 — Campaign Context Source Link Generation / Campaign Surface Entry Points`.
+- Cockpit Wave 37A result: Campaign context source link generation audit completed; report `reports/248-wave-37a-campaign-context-source-link-generation-audit.md`; next `Cockpit Wave 37B — Campaign Quick Generate Source Link Read Model Contract / Hydration`.
+- Cockpit Wave 37A expected UI result: no UI change; this slice defines safe campaign surface entry-link scope and blocks campaign mutation, bulk issuance, delivery, unsafe payload exposure, and bypassing `GeneratePayCode`.
