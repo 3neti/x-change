@@ -102,6 +102,30 @@ const campaignReadModel = {
         status: 'blocked',
         reason: 'campaign-mutations-not-authorized',
     },
+    quick_generate_link: {
+        schema: 'x-change.cockpit.campaign-quick-generate-link.v1',
+        status: 'available',
+        enabled: true,
+        label: 'Open Quick Generate',
+        href: 'http://localhost/x/cockpit/quick-generate?campaign_planning_key=campaign-plan-1&campaign_execution_id=execution-1&campaign_source=campaign_cockpit&campaign_template_key=ofw-remittance&campaign_amount=500.00&campaign_currency=PHP&campaign_recipient_reference=09173011987&campaign_purpose=Campaign%20payout',
+        route: 'x-change.cockpit.quick-generate',
+        read_only: true,
+        mutates_campaign: false,
+        planning_key: 'campaign-plan-1',
+        execution_id: 'execution-1',
+        source: 'campaign_cockpit',
+        draft: {
+            template_key: 'ofw-remittance',
+            amount: '500.00',
+            currency: 'PHP',
+            recipient_reference: '09173011987',
+            purpose: 'Campaign payout',
+            raw_payload: 'must-not-render',
+        },
+        redactions: {
+            payloads: 'campaign-source-link-query-only',
+        },
+    },
     redactions: {
         payloads: 'campaign-cockpit-summary-only',
         routes_registered: false,
@@ -449,6 +473,29 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.find('[data-testid="cockpit-campaign-mutation-button"]').exists()).toBe(false);
         expect(wrapper.text()).not.toContain('/campaigns/');
         expect(wrapper.text()).not.toContain('/must-not-render');
+    });
+
+    it('renders a read-only campaign quick generate source link from the campaign read model', () => {
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                dashboard_read_model: dashboardReadModel,
+                campaign_read_model: campaignReadModel,
+            },
+        });
+
+        const quickGenerateLink = wrapper.find('[data-testid="cockpit-campaign-quick-generate-link"]');
+
+        expect(quickGenerateLink.exists()).toBe(true);
+        expect(quickGenerateLink.attributes('href')).toContain('/x/cockpit/quick-generate');
+        expect(quickGenerateLink.attributes('href')).toContain('campaign_planning_key=campaign-plan-1');
+        expect(quickGenerateLink.attributes('href')).toContain('campaign_template_key=ofw-remittance');
+        expect(quickGenerateLink.attributes('href')).toContain('campaign_recipient_reference=09173011987');
+        expect(quickGenerateLink.text()).toContain('Open Quick Generate');
+        expect(quickGenerateLink.text()).toContain('Prefills the existing Quick Generate handoff');
+        expect(quickGenerateLink.text()).toContain('read-only campaign context');
+        expect(wrapper.text()).not.toContain('raw_payload');
+        expect(wrapper.text()).not.toContain('must-not-render');
+        expect(wrapper.find('[data-testid="cockpit-campaign-mutation-button"]').exists()).toBe(false);
     });
 
     it('renders journal action and feedback integration summary cards from the read model bundle', () => {

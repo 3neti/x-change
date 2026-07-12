@@ -211,6 +211,27 @@ export type CockpitCampaignReadModel = {
     surfaces?: Array<Record<string, unknown>>;
     facts?: Record<string, unknown>;
     mutation?: Record<string, unknown>;
+    quick_generate_link?: CockpitCampaignQuickGenerateLink;
+    redactions?: CockpitReadModelRedactions;
+    [key: string]: unknown;
+};
+
+export type CockpitCampaignQuickGenerateLink = {
+    schema?: string;
+    status?: string;
+    enabled?: boolean;
+    label?: string;
+    href?: string | null;
+    route?: string;
+    read_only?: boolean;
+    mutates_campaign?: boolean;
+    planning_key?: string | null;
+    execution_id?: string | null;
+    campaign_id?: string | null;
+    audience_id?: string | null;
+    recipient_id?: string | null;
+    source?: string | null;
+    draft?: Record<string, unknown> | null;
     redactions?: CockpitReadModelRedactions;
     [key: string]: unknown;
 };

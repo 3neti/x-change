@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import type {
     CockpitCampaignActionStatus,
     CockpitCampaignPanelStatus,
+    CockpitCampaignQuickGenerateLink,
     CockpitCampaignReadModel,
     CockpitCampaignSurface,
 } from '../types';
@@ -33,6 +34,7 @@ const planningKey = computed(() => stringValue(facts.value.planning_key) ?? 'No 
 const executionId = computed(() => stringValue(facts.value.execution_id) ?? 'No execution id');
 const mutationReason = computed(() => stringValue(objectValue(model.value?.mutation).reason) ?? 'campaign-mutations-not-authorized');
 const unavailableReason = computed(() => stringValue(objectValue(model.value?.redactions).reason) ?? 'read-model-not-available');
+const quickGenerateLink = computed<CockpitCampaignQuickGenerateLink | null>(() => sanitizeQuickGenerateLink(model.value?.quick_generate_link));
 const explorerHref = computed(() => {
     const normalizedPlanningKey = stringValue(facts.value.planning_key);
     const normalizedExecutionId = stringValue(facts.value.execution_id);
@@ -101,6 +103,29 @@ function sanitizeSurface(surface: unknown): CockpitCampaignSurface | null {
         enabled: payload.enabled === true,
         read_only: payload.read_only !== false,
         reason: stringValue(payload.reason),
+    };
+}
+
+function sanitizeQuickGenerateLink(link: unknown): CockpitCampaignQuickGenerateLink | null {
+    const payload = objectValue(link);
+    const href = stringValue(payload.href);
+
+    if (payload.enabled !== true || !href) {
+        return null;
+    }
+
+    return {
+        status: stringValue(payload.status) ?? 'available',
+        enabled: true,
+        label: stringValue(payload.label) ?? 'Open Quick Generate',
+        href,
+        route: stringValue(payload.route) ?? 'x-change.cockpit.quick-generate',
+        read_only: payload.read_only !== false,
+        mutates_campaign: payload.mutates_campaign === true,
+        planning_key: stringValue(payload.planning_key),
+        execution_id: stringValue(payload.execution_id),
+        source: stringValue(payload.source) ?? 'campaign_cockpit',
+        draft: objectValue(payload.draft),
     };
 }
 
@@ -213,6 +238,20 @@ function stringValue(value: unknown): string | undefined {
         </div>
 
         <div class="mt-5 grid gap-3 md:grid-cols-2">
+            <a
+                v-if="quickGenerateLink"
+                :href="quickGenerateLink.href ?? '#'"
+                class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-950 transition hover:border-emerald-300 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100"
+                data-testid="cockpit-campaign-quick-generate-link"
+            >
+                <span class="block font-semibold">{{ quickGenerateLink.label ?? 'Open Quick Generate' }}</span>
+                <span class="mt-1 block text-emerald-800 dark:text-emerald-200">
+                    Prefills the existing Quick Generate handoff
+                </span>
+                <span class="mt-2 block text-xs text-emerald-700 dark:text-emerald-200">
+                    {{ quickGenerateLink.read_only ? 'read-only campaign context' : 'campaign context' }} · {{ quickGenerateLink.source }}
+                </span>
+            </a>
             <a
                 v-if="explorerHref"
                 :href="explorerHref"
