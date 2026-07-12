@@ -223,6 +223,26 @@ describe('Cockpit Voucher Detail hydration', () => {
         expect(link.attributes('href')).toBe('https://example.test/x/claim/PC-HYDRATED-001/experience');
     });
 
+    it('renders Voucher Detail manual distribution operational guidance', () => {
+        const wrapper = mount(VoucherDetail, {
+            props: {
+                context: { code: 'PC-HYDRATED-001' },
+                read_model: readModel,
+            },
+        });
+
+        const guidance = wrapper.find('[data-testid="cockpit-voucher-detail-manual-distribution-guidance"]');
+
+        expect(guidance.exists()).toBe(true);
+        expect(guidance.text()).toContain('Manual distribution guidance');
+        expect(guidance.text()).toContain('manual distribution only');
+        expect(guidance.text()).toContain('approved external workflow');
+        expect(guidance.text()).toContain('verifying the recipient');
+        expect(guidance.text()).toContain('does not send SMS, email, webhook, in-app notification, or campaign delivery');
+        expect(guidance.text()).toContain('does not record copy telemetry');
+        expect(guidance.text()).toContain('sensitive settlement access material');
+    });
+
     it('copies the Voucher Detail beneficiary URL through the browser clipboard only', async () => {
         const writeText = vi.fn().mockResolvedValue(undefined);
 

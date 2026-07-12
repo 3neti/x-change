@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 59B in progress; manual distribution guidance contract complete
+Current status: Cockpit Wave 59C in progress; Voucher Detail operational guidance complete
 Last updated: 2026-07-12
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-12
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 59B in progress; manual distribution guidance contract complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 59C in progress; Voucher Detail operational guidance complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,9 @@ Last updated: 2026-07-12
 
 ### Current Cockpit Host Integration
 
+- Cockpit Wave 59B complete:
+  - Added operator-facing manual distribution guidance to the Voucher Detail beneficiary URL panel.
+  - Report: [../ui-cockpit/reports/354-wave-59b-voucher-detail-operational-guidance-text.md](../ui-cockpit/reports/354-wave-59b-voucher-detail-operational-guidance-text.md).
 - Cockpit Wave 59A complete:
   - Defined operator guidance requirements for accepted manual beneficiary URL copy UX.
   - Report: [../ui-cockpit/reports/353-wave-59a-manual-distribution-link-operational-guidance-contract.md](../ui-cockpit/reports/353-wave-59a-manual-distribution-link-operational-guidance-contract.md).

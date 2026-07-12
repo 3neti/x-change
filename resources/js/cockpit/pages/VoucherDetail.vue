@@ -728,6 +728,21 @@ function integrationSummary(
                         label="Copy beneficiary URL"
                     />
                 </div>
+                <div
+                    class="mt-5 rounded-lg border border-emerald-200 bg-white/80 p-4 text-sm leading-6 text-slate-600 dark:border-emerald-900/60 dark:bg-slate-950/70 dark:text-slate-300"
+                    data-testid="cockpit-voucher-detail-manual-distribution-guidance"
+                >
+                    <p class="font-semibold text-slate-950 dark:text-slate-50">
+                        Manual distribution guidance
+                    </p>
+                    <ul class="mt-3 list-disc space-y-1 pl-5">
+                        <li>Use this copied link for manual distribution only.</li>
+                        <li>Share it only through an approved external workflow after verifying the recipient.</li>
+                        <li>Cockpit does not send SMS, email, webhook, in-app notification, or campaign delivery from this panel.</li>
+                        <li>Cockpit does not record copy telemetry, create short links, or generate QR assets here.</li>
+                        <li>Treat this beneficiary URL as sensitive settlement access material.</li>
+                    </ul>
+                </div>
             </section>
 
             <CockpitVoucherOverviewPanel :items="overviewItems" />
