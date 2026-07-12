@@ -234,3 +234,67 @@ it('prefers explicit dashboard source link query values over adapter metadata', 
         ->assertJsonPath('props.campaign_read_model.quick_generate_link.draft.recipient_reference', '09173011987')
         ->assertJsonPath('props.campaign_read_model.quick_generate_link.draft.purpose', 'Explicit payout');
 });
+
+it('normalizes campaign adapter template intent into the quick generate source link', function (): void {
+    actingAsTestUser();
+
+    config(['x-change.cockpit.integrations.campaign.cockpit' => 'fake.wave39.campaign.cockpit']);
+    app()->instance('fake.wave39.campaign.cockpit', new class
+    {
+        /**
+         * @param  array<string, mixed>  $metadata
+         * @return array<string, mixed>
+         */
+        public function summary(
+            string $planningKey,
+            string $executionId,
+            string $operatorId,
+            string $channel = 'cockpit',
+            ?string $correlationId = null,
+            array $metadata = [],
+        ): array {
+            return [
+                'status' => 'ready',
+                'planning_key' => $planningKey,
+                'execution_id' => $executionId,
+                'operator_id' => $operatorId,
+                'metadata' => [
+                    'quick_generate_context' => [
+                        'campaign_id' => 'campaign-39c',
+                        'audience_id' => 'audience-39c',
+                        'recipient_id' => 'recipient-39c',
+                        'source' => 'x_campaign_adapter',
+                        'template_intent' => 'money_changer',
+                        'amount' => '125.00',
+                        'currency' => 'PHP',
+                        'recipient_reference' => '091700000039',
+                        'purpose' => 'Template intent payout',
+                    ],
+                ],
+            ];
+        }
+    });
+
+    $response = $this
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.dashboard', [
+            'campaign_planning_key' => 'plan-39c',
+            'campaign_execution_id' => 'exec-39c',
+        ]));
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('props.campaign_read_model.quick_generate_link.status', 'available')
+        ->assertJsonPath('props.campaign_read_model.quick_generate_link.draft.template_key', 'money-changer')
+        ->assertJsonPath('props.campaign_read_model.quick_generate_link.draft.amount', '125.00')
+        ->assertJsonPath('props.campaign_read_model.quick_generate_link.draft.recipient_reference', '091700000039')
+        ->assertJsonPath('props.campaign_read_model.quick_generate_link.mutates_campaign', false);
+
+    $href = $response->json('props.campaign_read_model.quick_generate_link.href');
+
+    expect($href)
+        ->toBeString()
+        ->toContain('campaign_template_key=money-changer')
+        ->toContain('campaign_source=x_campaign_adapter')
+        ->not->toContain('template_intent');
+});

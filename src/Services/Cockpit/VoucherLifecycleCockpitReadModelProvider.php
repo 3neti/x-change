@@ -1011,18 +1011,24 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         $source = $this->nullableString($query->campaignSource)
             ?? $this->nullableString($adapterContext['source'] ?? null)
             ?? 'campaign_cockpit';
+        $adapterDraft = $this->campaignSourceLinkDraft($adapterContext);
         $draft = [
             'template_key' => $this->nullableString($query->campaignTemplateKey)
-                ?? $this->nullableString($adapterContext['template_key'] ?? null),
+                ?? $this->nullableString($adapterContext['template_key'] ?? null)
+                ?? $this->nullableString($adapterDraft['template_key'] ?? null),
             'amount' => $this->amountValue($query->campaignAmount)
-                ?? $this->amountValue($adapterContext['amount'] ?? null),
+                ?? $this->amountValue($adapterContext['amount'] ?? null)
+                ?? $this->amountValue($adapterDraft['amount'] ?? null),
             'currency' => $this->nullableString($query->campaignCurrency)
                 ?? $this->nullableString($adapterContext['currency'] ?? null)
+                ?? $this->nullableString($adapterDraft['currency'] ?? null)
                 ?? 'PHP',
             'recipient_reference' => $this->nullableString($query->campaignRecipientReference)
-                ?? $this->nullableString($adapterContext['recipient_reference'] ?? null),
+                ?? $this->nullableString($adapterContext['recipient_reference'] ?? null)
+                ?? $this->nullableString($adapterDraft['recipient_reference'] ?? null),
             'purpose' => $this->nullableString($query->campaignPurpose)
-                ?? $this->nullableString($adapterContext['purpose'] ?? null),
+                ?? $this->nullableString($adapterContext['purpose'] ?? null)
+                ?? $this->nullableString($adapterDraft['purpose'] ?? null),
         ];
         $campaignId = $this->nullableString($query->campaignId)
             ?? $this->nullableString($adapterContext['campaign_id'] ?? null);
@@ -1098,6 +1104,27 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         }
 
         return [];
+    }
+
+    /**
+     * @return array{template_key?: mixed, amount?: mixed, currency?: mixed, recipient_reference?: mixed, purpose?: mixed}
+     */
+    private function campaignSourceLinkDraft(array $adapterContext): array
+    {
+        if ($adapterContext === []) {
+            return [];
+        }
+
+        $draft = ($this->campaignDraftAdapter ?? new DefaultCockpitCampaignIssuanceDraftAdapter)
+            ->fromCampaignContext($adapterContext);
+
+        return [
+            'template_key' => $draft->template_key,
+            'amount' => $draft->amount,
+            'currency' => $draft->currency,
+            'recipient_reference' => $draft->recipient_reference,
+            'purpose' => $draft->purpose,
+        ];
     }
 
     public function forOperatorIssuanceActivity(CockpitReadModelQueryData $query): CockpitOperatorIssuanceActivityReadModelData
