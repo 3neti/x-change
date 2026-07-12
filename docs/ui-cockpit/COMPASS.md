@@ -2195,3 +2195,5 @@ Current boundary:
 - Cockpit Wave 39 completed: campaign product/template intent aliases now normalize into existing Quick Generate template keys in both campaign draft adapter and Campaign `Open Quick Generate` source-link construction, while explicit `template_key` remains authoritative.
 - Cockpit Wave 39 expected UI result: no new component; existing Campaign source-link flow can now preselect the correct Quick Generate template from campaign intent.
 - Cockpit Wave 39 next recommended wave: `Cockpit Wave 40 — Campaign Recipient-to-Issuance Draft Field Mapping`.
+- Cockpit Wave 40A result: Campaign recipient-to-issuance draft field mapping audit completed; report `reports/263-wave-40a-campaign-recipient-to-issuance-draft-field-mapping-audit.md`; next `Cockpit Wave 40B — Campaign Recipient Field Normalizer / Draft Adapter`.
+- Cockpit Wave 40A expected UI result: no UI change; this slice scopes safe recipient/payout field normalization into existing Quick Generate draft paths.
