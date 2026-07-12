@@ -2155,3 +2155,7 @@ Current boundary:
 - Cockpit Wave 36C expected UI result: after campaign-prefilled Quick Generate succeeds, the result panel shows `Campaign attribution`, campaign identifiers, and `Return to Campaign Explorer` / `Return to Campaign Dashboard` links.
 - Cockpit Wave 36D result: Campaign attribution browser/publish verification completed; report `reports/246-wave-36d-campaign-attribution-browser-publish-verification.md`; next `Cockpit Wave 36E — Campaign-Sourced Result Attribution Closure`.
 - Cockpit Wave 36D expected UI result: browser-verified campaign-prefilled submit shows campaign attribution and read-only Campaign Explorer/Dashboard return links.
+- Cockpit Wave 36 result: Campaign-Sourced Quick Generate Result Attribution / Explorer Bridge closed; report `reports/247-wave-36-campaign-sourced-result-attribution-closure.md`.
+- Cockpit Wave 36 completed: campaign-prefilled Quick Generate now returns safe `campaign_attribution`, renders campaign attribution in the result panel, and exposes read-only Campaign Explorer/Dashboard return links without campaign mutation.
+- Cockpit Wave 36 expected UI result: after campaign-prefilled Quick Generate succeeds, operators see `Campaign attribution`, generated Pay Code, `Return to Campaign Explorer`, and `Return to Campaign Dashboard`.
+- Cockpit Wave 36 next recommended wave: `Cockpit Wave 37 — Campaign Context Source Link Generation / Campaign Surface Entry Points`.
