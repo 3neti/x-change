@@ -4,12 +4,18 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 54D — Distribution Workspace Full URL Presentation
-Status: In progress / Wave 54C complete
+Current slice: Cockpit Wave 54E — Full URL Destination Publish / Drift Verification
+Status: In progress / Wave 54D complete
 Last updated: 2026-07-12
 
 ## Completed
 
+- Completed Cockpit Wave 54D — Distribution Workspace Full URL Presentation:
+  - Added `distribution_links` to the Distribution Workspace TypeScript read-model contract.
+  - Rendered the canonical beneficiary Pay Code full URL and relative path on Distribution Workspace.
+  - Kept the URL panel read-only with delivery disabled.
+  - Confirmed the panel does not send feedback, dispatch campaigns, create short links, generate QR assets, write journal entries, execute actions, call providers, mutate vouchers, or move money.
+  - Report: `reports/335-wave-54d-distribution-workspace-full-url-presentation.md`.
 - Completed Cockpit Wave 54C — Pay Code Detail Full URL Presentation:
   - Added `distribution_links` to the Voucher Detail TypeScript read-model contract.
   - Rendered the canonical beneficiary Pay Code full URL and relative path on Voucher Detail.

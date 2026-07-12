@@ -119,6 +119,23 @@ describe('Cockpit Distribution Workspace foundation', () => {
                 raw_payload: 'must-not-render',
                 wallet: 'must-not-render',
             },
+            distribution_links: {
+                schema: 'x-change.cockpit.distribution-links.v1',
+                status: 'available',
+                available: true,
+                read_only: true,
+                redeem_url: 'https://example.test/x/claim/PC-DIST-001/experience',
+                redeem_path: '/x/claim/PC-DIST-001/experience',
+                source: 'x-change.claim.experience',
+                delivery_enabled: false,
+                redactions: {
+                    payloads: 'distribution-links-only',
+                    secret_claim_material_exposed: false,
+                    provider_payloads_exposed: false,
+                    wallet_data_exposed: false,
+                    delivery_payloads_exposed: false,
+                },
+            },
             share_assets: [
                 {
                     key: 'copy-text',
@@ -206,6 +223,12 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).toContain('PC-DIST-001');
         expect(wrapper.text()).toContain('ready');
         expect(wrapper.text()).toContain('distribution-read-model-summary-only');
+        expect(wrapper.text()).toContain('Beneficiary Pay Code URL');
+        expect(wrapper.text()).toContain('https://example.test/x/claim/PC-DIST-001/experience');
+        expect(wrapper.text()).toContain('/x/claim/PC-DIST-001/experience');
+        expect(wrapper.text()).toContain('delivery disabled');
+        expect(wrapper.find('[data-testid="cockpit-distribution-workspace-links-panel"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="cockpit-distribution-workspace-beneficiary-url-link"]').attributes('href')).toBe('https://example.test/x/claim/PC-DIST-001/experience');
         expect(wrapper.text()).toContain('Copy text');
         expect(wrapper.text()).toContain('preview');
         expect(wrapper.text()).toContain('voucher-summary');

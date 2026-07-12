@@ -31,6 +31,23 @@ const code = computed(() => stringValue(summary.value.code) ?? distributionReadM
 const status = computed(() => stringValue(summary.value.display_status) ?? distributionReadModel.value?.status ?? 'not_wired');
 const payloadPolicy = computed(() => stringValue(distributionReadModel.value?.redactions?.payloads) ?? 'not-loaded');
 const isHydrated = computed(() => Boolean(distributionReadModel.value?.authorized));
+const distributionLinks = computed<Record<string, unknown> | null>(() => {
+    const links = objectValue(distributionReadModel.value?.distribution_links);
+
+    if (links === null || links.read_only !== true) {
+        return null;
+    }
+
+    return links;
+});
+const beneficiaryRedeemUrl = computed(() => stringValue(distributionLinks.value?.redeem_url));
+const beneficiaryRedeemPath = computed(() => stringValue(distributionLinks.value?.redeem_path));
+const distributionLinksPolicy = computed(() => {
+    const linkRedactions = objectValue(distributionLinks.value?.redactions);
+
+    return stringValue(linkRedactions?.payloads) ?? 'distribution-links-only';
+});
+const distributionLinksAvailable = computed(() => beneficiaryRedeemUrl.value !== null || beneficiaryRedeemPath.value !== null);
 const campaignNavigationContext = computed<CockpitCampaignNavigationContext | null>(() => {
     const context = props.campaign_navigation_context;
 
@@ -359,6 +376,76 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                         Back to Campaign Dashboard · read-only
                     </a>
                 </div>
+            </section>
+
+            <section
+                v-if="distributionLinksAvailable"
+                class="rounded-xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm dark:border-emerald-900/70 dark:bg-emerald-950/40"
+                data-testid="cockpit-distribution-workspace-links-panel"
+            >
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
+                    Read-only share surface
+                </p>
+                <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
+                    Beneficiary Pay Code URL
+                </h3>
+                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    This workspace can display the canonical beneficiary claim URL for manual copy or inspection. It remains read-only;
+                    delivery disabled means Cockpit does not send feedback, dispatch campaigns, create short links, generate QR assets,
+                    write journal entries, call providers, mutate vouchers, or move money from this panel.
+                </p>
+                <dl class="mt-5 grid gap-3 text-sm md:grid-cols-3">
+                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70 md:col-span-2">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Full URL
+                        </dt>
+                        <dd class="mt-1 break-all font-semibold text-slate-950 dark:text-slate-50">
+                            <a
+                                v-if="beneficiaryRedeemUrl"
+                                :href="beneficiaryRedeemUrl"
+                                class="text-emerald-700 underline decoration-emerald-300 underline-offset-4 transition hover:text-emerald-900 dark:text-emerald-200 dark:decoration-emerald-700 dark:hover:text-emerald-100"
+                                data-testid="cockpit-distribution-workspace-beneficiary-url-link"
+                            >
+                                {{ beneficiaryRedeemUrl }}
+                            </a>
+                            <span v-else>
+                                {{ beneficiaryRedeemPath }}
+                            </span>
+                        </dd>
+                    </div>
+                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Path
+                        </dt>
+                        <dd class="mt-1 break-all font-semibold text-slate-950 dark:text-slate-50">
+                            {{ beneficiaryRedeemPath ?? 'path unavailable' }}
+                        </dd>
+                    </div>
+                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Source
+                        </dt>
+                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                            {{ distributionLinks?.source ?? 'x-change.claim.experience' }}
+                        </dd>
+                    </div>
+                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Delivery
+                        </dt>
+                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                            delivery disabled
+                        </dd>
+                    </div>
+                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Payload policy
+                        </dt>
+                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                            {{ distributionLinksPolicy }}
+                        </dd>
+                    </div>
+                </dl>
             </section>
 
             <CockpitDigitalDistributionPanel
