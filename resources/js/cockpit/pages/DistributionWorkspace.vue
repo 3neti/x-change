@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import CockpitDigitalDistributionPanel from '../components/CockpitDigitalDistributionPanel.vue';
 import CockpitDistributionAnalyticsPanel from '../components/CockpitDistributionAnalyticsPanel.vue';
+import CockpitManualCopyButton from '../components/CockpitManualCopyButton.vue';
 import CockpitPrintTemplatePanel from '../components/CockpitPrintTemplatePanel.vue';
 import CockpitShareQrPanel from '../components/CockpitShareQrPanel.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
@@ -446,6 +447,12 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                         </dd>
                     </div>
                 </dl>
+                <div class="mt-5">
+                    <CockpitManualCopyButton
+                        :value="beneficiaryRedeemUrl ?? beneficiaryRedeemPath"
+                        label="Copy beneficiary URL"
+                    />
+                </div>
             </section>
 
             <CockpitDigitalDistributionPanel

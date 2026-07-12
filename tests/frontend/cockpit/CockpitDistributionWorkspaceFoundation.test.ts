@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import CockpitDigitalDistributionPanel from '../../../resources/js/cockpit/components/CockpitDigitalDistributionPanel.vue';
 import CockpitDistributionAnalyticsPanel from '../../../resources/js/cockpit/components/CockpitDistributionAnalyticsPanel.vue';
 import CockpitPrintTemplatePanel from '../../../resources/js/cockpit/components/CockpitPrintTemplatePanel.vue';
@@ -15,6 +15,10 @@ import {
 } from '../../../resources/js/cockpit/distributionWorkspaceDefaults';
 
 describe('Cockpit Distribution Workspace foundation', () => {
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
     it('renders digital distribution planning placeholders with disabled actions', () => {
         const wrapper = mount(CockpitDigitalDistributionPanel, {
             props: {
@@ -244,6 +248,55 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).not.toContain('provider_payload');
         expect(wrapper.text()).not.toContain('raw_payload');
         expect(wrapper.text()).not.toContain('wallet');
+    });
+
+    it('copies the Distribution Workspace beneficiary URL through the browser clipboard only', async () => {
+        const writeText = vi.fn().mockResolvedValue(undefined);
+
+        vi.stubGlobal('navigator', {
+            clipboard: {
+                writeText,
+            },
+        });
+        vi.stubGlobal('fetch', vi.fn());
+
+        const wrapper = mount(DistributionWorkspace, {
+            props: {
+                context: { code: 'PC-DIST-001' },
+                distribution_workspace_read_model: {
+                    schema: 'x-change.cockpit.distribution-workspace.v1',
+                    status: 'available',
+                    authorized: true,
+                    code: 'PC-DIST-001',
+                    summary: {
+                        code: 'PC-DIST-001',
+                        display_status: 'ready',
+                    },
+                    distribution_links: {
+                        schema: 'x-change.cockpit.distribution-links.v1',
+                        status: 'available',
+                        available: true,
+                        read_only: true,
+                        redeem_url: 'https://example.test/x/claim/PC-DIST-001/experience',
+                        redeem_path: '/x/claim/PC-DIST-001/experience',
+                        source: 'x-change.claim.experience',
+                        delivery_enabled: false,
+                        redactions: { payloads: 'distribution-links-only' },
+                    },
+                    redactions: {
+                        payloads: 'distribution-read-model-summary-only',
+                    },
+                },
+            },
+        });
+
+        await wrapper.find('[data-testid="cockpit-manual-copy-button"]').trigger('click');
+        await Promise.resolve();
+
+        expect(writeText).toHaveBeenCalledWith('https://example.test/x/claim/PC-DIST-001/experience');
+        expect(globalThis.fetch).not.toHaveBeenCalled();
+        expect(wrapper.find('[data-testid="cockpit-manual-copy-button"]').text()).toContain('Copied');
+        expect(wrapper.find('[data-testid="cockpit-manual-copy-status"]').text()).toContain('No delivery was sent');
     });
 
     it('forwards route adapter props into the distribution workspace page', () => {

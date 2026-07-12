@@ -4,12 +4,16 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 55D — Distribution Workspace Manual Copy Adoption
-Status: In progress / Wave 55C complete
+Current slice: Cockpit Wave 55E — Manual Copy Publish / Drift Verification Closure
+Status: In progress / Wave 55D complete
 Last updated: 2026-07-12
 
 ## Completed
 
+- Completed Cockpit Wave 55D — Distribution Workspace Manual Copy Adoption:
+  - Adopted `CockpitManualCopyButton` inside the Distribution Workspace beneficiary URL panel.
+  - Copying uses the browser clipboard only and does not call backend endpoints.
+  - Report: `reports/340-wave-55d-distribution-workspace-manual-copy-adoption.md`.
 - Completed Cockpit Wave 55C — Voucher Detail Manual Copy Adoption:
   - Adopted `CockpitManualCopyButton` inside the Voucher Detail beneficiary URL panel.
   - Copying uses the browser clipboard only and does not call backend endpoints.
