@@ -812,9 +812,11 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-feedback-summary"]')).toHaveLength(1);
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-link"]').attributes('href')).toBe('/x/cockpit/pay-codes/PC-1234?campaign_planning_key=plan-wave-43c&campaign_execution_id=exec-wave-43c&campaign_id=campaign-wave-43c&campaign_audience_id=audience-wave-43c&campaign_recipient_id=recipient-wave-43c&campaign_source=x_campaign_adapter');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-link"]').text()).toContain('campaign context');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-link"]').text()).toContain('read-only');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-distribution-link"]').attributes('href')).toBe('/x/cockpit/pay-codes/PC-1234/distribution?campaign_planning_key=plan-wave-43c&campaign_execution_id=exec-wave-43c&campaign_id=campaign-wave-43c&campaign_audience_id=audience-wave-43c&campaign_recipient_id=recipient-wave-43c&campaign_source=x_campaign_adapter');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-distribution-link"]').text()).toContain('Open Distribution workspace');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-distribution-link"]').text()).toContain('campaign context');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-distribution-link"]').text()).toContain('read-only');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-explorer-link"]').attributes('href')).toBe('/x/cockpit/pay-codes?activity_code=PC-1234&activity_source=operator_issuance_activity&campaign_planning_key=plan-wave-43c&campaign_execution_id=exec-wave-43c&campaign_id=campaign-wave-43c&campaign_audience_id=audience-wave-43c&campaign_recipient_id=recipient-wave-43c&campaign_source=x_campaign_adapter');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-explorer-link"]').text()).toContain('Open in Explorer');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-explorer-link"]').text()).toContain('campaign context');
@@ -839,8 +841,10 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-explorer-link"]').text()).not.toContain('campaign context');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-link"]').attributes('href')).toBe('/x/cockpit/pay-codes/PC-1234');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-link"]').text()).not.toContain('campaign context');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-link"]').text()).not.toContain('read-only');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-distribution-link"]').attributes('href')).toBe('/x/cockpit/pay-codes/PC-1234/distribution');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-distribution-link"]').text()).not.toContain('campaign context');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-distribution-link"]').text()).not.toContain('read-only');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-campaign-dashboard-link"]').exists()).toBe(false);
         expect(wrapper.text()).toContain('Campaign mutation: yes');
         expect(wrapper.text()).toContain('Read-only: no');

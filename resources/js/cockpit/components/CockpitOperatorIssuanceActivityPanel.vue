@@ -1026,7 +1026,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                     >
                         Open Pay Code
                         <span v-if="presentation.campaignAttribution && !presentation.campaignAttribution.mutatesCampaign">
-                            · campaign context
+                            · campaign context · read-only
                         </span>
                     </a>
                     <a
@@ -1037,7 +1037,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                     >
                         Open Distribution workspace
                         <span v-if="presentation.campaignAttribution && !presentation.campaignAttribution.mutatesCampaign">
-                            · campaign context
+                            · campaign context · read-only
                         </span>
                     </a>
                     <a
