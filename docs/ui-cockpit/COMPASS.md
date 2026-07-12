@@ -4,12 +4,19 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 63C — Manual Copy Operational Hardening Closure
-Status: In progress / Wave 63B complete
+Current slice: Cockpit Wave 64 — Manual Distribution Operator Runbook / Workflow Handoff
+Status: Wave 63 complete / manual copy backend-transport guard strengthened
 Last updated: 2026-07-13
 
 ## Completed
 
+- Completed Cockpit Wave 63 — Manual Copy Operational Hardening Closure:
+  - Closed manual copy hardening with browser-local, non-persistent, non-delivery, non-telemetry behavior preserved.
+  - Strengthened `CockpitManualCopyButton` frontend coverage to prove manual copy does not use `fetch`, `navigator.sendBeacon`, or `XMLHttpRequest`.
+  - Verified host-published Cockpit assets remain clean: checked 59, ok 59, stale 0, missing 0, extra 0.
+  - Deferred copy telemetry, Cockpit-triggered x-feedback delivery, campaign dispatch, short links, QR assets, print artifacts, journal writes, action execution, provider calls, voucher mutation, wallet mutation, and money movement.
+  - Next recommended checkpoint: Cockpit Wave 64 — Manual Distribution Operator Runbook / Workflow Handoff.
+  - Report: `reports/369-wave-63-manual-copy-operational-hardening-closure.md`.
 - Completed Cockpit Wave 63B — Manual Copy No-Backend-Interaction Regression Guard:
   - Strengthened `CockpitManualCopyButton` frontend tests to prove manual copy does not call `fetch`, `navigator.sendBeacon`, or `XMLHttpRequest`.
   - Preserved existing success, unavailable, failure, disabled, and no-backend-interaction coverage.
