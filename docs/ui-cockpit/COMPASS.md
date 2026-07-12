@@ -2231,3 +2231,5 @@ Current boundary:
 - Cockpit Wave 42 completed: campaign-recipient Quick Generate submissions now preserve operator-safe recipient attribution after issuance; the result panel renders recipient id, recipient reference, template, amount, and generated Pay Code; campaign return links preserve recipient context.
 - Cockpit Wave 42 expected UI result: successful campaign-prefilled Quick Generate submissions show recipient attribution and recipient-aware Campaign Explorer/Dashboard return links.
 - Cockpit Wave 42 next recommended wave: `Cockpit Wave 43 — Campaign Recipient Issuance Activity Attribution / Dashboard Surfacing`.
+- Cockpit Wave 43A result: Campaign Recipient Issuance Activity Attribution audit completed; report `reports/278-wave-43a-campaign-recipient-issuance-activity-attribution-audit.md`; next `Cockpit Wave 43B — Campaign Recipient Activity Metadata Handoff`.
+- Cockpit Wave 43A expected UI result: no UI change; this slice scopes safe campaign-recipient attribution in durable operator issuance activity and blocks campaign mutation, bulk issuance, delivery, lifecycle truth ownership, unsafe payload exposure, and new issuance runtime behavior.
