@@ -211,6 +211,54 @@ it('passes optional campaign navigation context to the pay code explorer without
     expect($campaignRoutes)->toHaveCount(0);
 });
 
+it('passes optional campaign recipient navigation context to voucher detail and distribution destinations', function (string $route, string $destination) {
+    actingAsTestUser();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route($route, [
+            'code' => 'PC-READY-001',
+            'campaign_planning_key' => ' plan-wave-46 ',
+            'campaign_execution_id' => ' exec-wave-46 ',
+            'campaign_id' => ' campaign-wave-46 ',
+            'campaign_audience_id' => ' audience-wave-46 ',
+            'campaign_recipient_id' => ' recipient-wave-46 ',
+            'campaign_source' => ' x_campaign_adapter ',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('props.campaign_navigation_context.schema', 'x-change.cockpit.campaign-navigation.v1')
+        ->assertJsonPath('props.campaign_navigation_context.status', 'available')
+        ->assertJsonPath('props.campaign_navigation_context.authorized', true)
+        ->assertJsonPath('props.campaign_navigation_context.source', 'x_campaign_adapter')
+        ->assertJsonPath('props.campaign_navigation_context.planning_key', 'plan-wave-46')
+        ->assertJsonPath('props.campaign_navigation_context.execution_id', 'exec-wave-46')
+        ->assertJsonPath('props.campaign_navigation_context.campaign_id', 'campaign-wave-46')
+        ->assertJsonPath('props.campaign_navigation_context.audience_id', 'audience-wave-46')
+        ->assertJsonPath('props.campaign_navigation_context.recipient_id', 'recipient-wave-46')
+        ->assertJsonPath('props.campaign_navigation_context.destination', $destination)
+        ->assertJsonPath('props.campaign_navigation_context.read_only', true)
+        ->assertJsonPath('props.campaign_navigation_context.mutation.enabled', false)
+        ->assertJsonPath('props.campaign_navigation_context.mutation.status', 'blocked')
+        ->assertJsonPath('props.campaign_navigation_context.mutation.reason', 'campaign-navigation-read-only')
+        ->assertJsonPath('props.campaign_navigation_context.redactions.payloads', 'navigation-context-only')
+        ->assertJsonPath('props.campaign_navigation_context.redactions.routes_registered', false)
+        ->assertJsonPath('props.campaign_navigation_context.redactions.controllers_registered', false)
+        ->assertJsonPath('props.campaign_navigation_context.redactions.mutates_campaigns', false)
+        ->assertJsonPath('props.campaign_navigation_context.redactions.issues_pay_codes', false)
+        ->assertJsonPath('props.campaign_navigation_context.redactions.sends_feedback', false)
+        ->assertJsonPath('props.campaign_navigation_context.redactions.writes_journal', false)
+        ->assertJsonPath('props.campaign_navigation_context.redactions.moves_money', false)
+        ->assertJsonMissingPath('props.campaign_navigation_context.provider_payload')
+        ->assertJsonMissingPath('props.campaign_navigation_context.raw_payload')
+        ->assertJsonMissingPath('props.campaign_navigation_context.wallet')
+        ->assertJsonMissingPath('props.campaign_navigation_context.campaign_route')
+        ->assertJsonMissingPath('props.campaign_navigation_context.mutation_route')
+        ->assertJsonMissingPath('props.campaign_navigation_context.campaign_mutation_endpoint')
+        ->assertJsonMissingPath('props.campaign_navigation_context.pay_code_generation_payload');
+})->with([
+    'voucher detail' => ['x-change.cockpit.pay-codes.show', 'pay_code_detail'],
+    'distribution workspace' => ['x-change.cockpit.pay-codes.distribution', 'distribution_workspace'],
+]);
+
 it('passes optional operator activity navigation context to the pay code explorer without mutation surfaces', function () {
     actingAsTestUser();
 

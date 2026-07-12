@@ -64,6 +64,32 @@ class CockpitReadOnlyPageProps
     /**
      * @return array<string, mixed>
      */
+    public function toVoucherDetailArray(
+        string $code,
+        ?string $campaignPlanningKey = null,
+        ?string $campaignExecutionId = null,
+        ?string $campaignId = null,
+        ?string $campaignAudienceId = null,
+        ?string $campaignRecipientId = null,
+        ?string $campaignSource = null,
+    ): array {
+        return [
+            ...$this->toArray($code),
+            'campaign_navigation_context' => $this->campaignNavigationContext(
+                campaignPlanningKey: $campaignPlanningKey,
+                campaignExecutionId: $campaignExecutionId,
+                campaignSource: $campaignSource,
+                destination: 'pay_code_detail',
+                campaignId: $campaignId,
+                campaignAudienceId: $campaignAudienceId,
+                campaignRecipientId: $campaignRecipientId,
+            ),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
     public function toPayCodeExplorerArray(
         ?string $campaignPlanningKey = null,
         ?string $campaignExecutionId = null,
@@ -85,6 +111,7 @@ class CockpitReadOnlyPageProps
                 campaignPlanningKey: $campaignPlanningKey,
                 campaignExecutionId: $campaignExecutionId,
                 campaignSource: $campaignSource,
+                destination: 'pay_code_explorer',
             ),
             'activity_navigation_context' => $this->activityNavigationContext(
                 activityCode: $activityCode,
@@ -179,8 +206,15 @@ class CockpitReadOnlyPageProps
     /**
      * @return array<string, mixed>
      */
-    public function toDistributionWorkspaceArray(string $code): array
-    {
+    public function toDistributionWorkspaceArray(
+        string $code,
+        ?string $campaignPlanningKey = null,
+        ?string $campaignExecutionId = null,
+        ?string $campaignId = null,
+        ?string $campaignAudienceId = null,
+        ?string $campaignRecipientId = null,
+        ?string $campaignSource = null,
+    ): array {
         $props = $this->toArray($code);
 
         return [
@@ -189,6 +223,15 @@ class CockpitReadOnlyPageProps
                 code: $this->normalizeCode($code),
                 readModel: $props['read_model'] ?? [],
             )->toArray(),
+            'campaign_navigation_context' => $this->campaignNavigationContext(
+                campaignPlanningKey: $campaignPlanningKey,
+                campaignExecutionId: $campaignExecutionId,
+                campaignSource: $campaignSource,
+                destination: 'distribution_workspace',
+                campaignId: $campaignId,
+                campaignAudienceId: $campaignAudienceId,
+                campaignRecipientId: $campaignRecipientId,
+            ),
         ];
     }
 
@@ -238,8 +281,18 @@ class CockpitReadOnlyPageProps
         ?string $campaignPlanningKey,
         ?string $campaignExecutionId,
         ?string $campaignSource,
+        string $destination,
+        ?string $campaignId = null,
+        ?string $campaignAudienceId = null,
+        ?string $campaignRecipientId = null,
     ): ?array {
-        if ($campaignPlanningKey === null || $campaignExecutionId === null || $campaignSource !== 'campaign_cockpit') {
+        $source = $campaignSource ?? 'campaign_cockpit';
+
+        if (
+            $campaignPlanningKey === null
+            || $campaignExecutionId === null
+            || ! in_array($source, ['campaign_cockpit', 'x_campaign_adapter'], true)
+        ) {
             return null;
         }
 
@@ -247,10 +300,13 @@ class CockpitReadOnlyPageProps
             'schema' => 'x-change.cockpit.campaign-navigation.v1',
             'status' => 'available',
             'authorized' => true,
-            'source' => 'campaign_cockpit',
+            'source' => $source,
             'planning_key' => $campaignPlanningKey,
             'execution_id' => $campaignExecutionId,
-            'destination' => 'pay_code_explorer',
+            'campaign_id' => $campaignId,
+            'audience_id' => $campaignAudienceId,
+            'recipient_id' => $campaignRecipientId,
+            'destination' => $destination,
             'read_only' => true,
             'mutation' => [
                 'enabled' => false,
