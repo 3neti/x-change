@@ -513,18 +513,68 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                 idempotency_key: $key,
                 operator_id: $operatorId !== null ? (string) $operatorId : null,
                 detail_href: is_string($detailHref) ? $detailHref : null,
-                metadata: [
-                    'source' => 'x-change.cockpit',
-                    'presentation_only' => true,
-                    'recorder' => 'cockpit.operator-issuance-activity.v1',
-                    'draft_status' => data_get($response, 'draft.status'),
-                    'pricing_preflight_status' => data_get($response, 'preflight.pricing.status'),
-                    'funding_preflight_status' => data_get($response, 'preflight.funding.status'),
-                    'activity_schema' => data_get($response, 'activity.schema'),
-                ],
+                metadata: $this->operatorIssuanceActivityMetadata($response),
             ));
         } catch (Throwable) {
             //
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $response
+     * @return array<string, mixed>
+     */
+    protected function operatorIssuanceActivityMetadata(array $response): array
+    {
+        $metadata = [
+            'source' => 'x-change.cockpit',
+            'presentation_only' => true,
+            'recorder' => 'cockpit.operator-issuance-activity.v1',
+            'draft_status' => data_get($response, 'draft.status'),
+            'pricing_preflight_status' => data_get($response, 'preflight.pricing.status'),
+            'funding_preflight_status' => data_get($response, 'preflight.funding.status'),
+            'activity_schema' => data_get($response, 'activity.schema'),
+        ];
+
+        $campaignAttribution = $this->operatorSafeCampaignAttributionForActivity($response);
+
+        if ($campaignAttribution !== []) {
+            $metadata['campaign_attribution'] = $campaignAttribution;
+        }
+
+        return $metadata;
+    }
+
+    /**
+     * @param  array<string, mixed>  $response
+     * @return array<string, mixed>
+     */
+    protected function operatorSafeCampaignAttributionForActivity(array $response): array
+    {
+        if (data_get($response, 'campaign_attribution.available') !== true) {
+            return [];
+        }
+
+        return array_filter([
+            'schema' => data_get($response, 'campaign_attribution.schema'),
+            'status' => data_get($response, 'campaign_attribution.status'),
+            'read_only' => true,
+            'mutates_campaign' => false,
+            'planning_key' => data_get($response, 'campaign_attribution.planning_key'),
+            'execution_id' => data_get($response, 'campaign_attribution.execution_id'),
+            'campaign_id' => data_get($response, 'campaign_attribution.campaign_id'),
+            'audience_id' => data_get($response, 'campaign_attribution.audience_id'),
+            'recipient_id' => data_get($response, 'campaign_attribution.recipient_id'),
+            'source' => data_get($response, 'campaign_attribution.source'),
+            'generated_code' => data_get($response, 'campaign_attribution.generated_code'),
+            'template_key' => data_get($response, 'campaign_attribution.template_key'),
+            'amount' => data_get($response, 'campaign_attribution.amount'),
+            'currency' => data_get($response, 'campaign_attribution.currency'),
+            'recipient_reference' => data_get($response, 'campaign_attribution.recipient_reference'),
+            'purpose' => data_get($response, 'campaign_attribution.purpose'),
+            'redactions' => [
+                'payloads' => 'campaign-attribution-only',
+            ],
+        ], fn (mixed $value): bool => $value !== null && $value !== '');
     }
 }

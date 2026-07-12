@@ -2233,3 +2233,5 @@ Current boundary:
 - Cockpit Wave 42 next recommended wave: `Cockpit Wave 43 — Campaign Recipient Issuance Activity Attribution / Dashboard Surfacing`.
 - Cockpit Wave 43A result: Campaign Recipient Issuance Activity Attribution audit completed; report `reports/278-wave-43a-campaign-recipient-issuance-activity-attribution-audit.md`; next `Cockpit Wave 43B — Campaign Recipient Activity Metadata Handoff`.
 - Cockpit Wave 43A expected UI result: no UI change; this slice scopes safe campaign-recipient attribution in durable operator issuance activity and blocks campaign mutation, bulk issuance, delivery, lifecycle truth ownership, unsafe payload exposure, and new issuance runtime behavior.
+- Cockpit Wave 43B result: Campaign Recipient Activity metadata handoff completed; report `reports/279-wave-43b-campaign-recipient-activity-metadata-handoff.md`; next `Cockpit Wave 43C — Campaign Recipient Activity Dashboard Presentation`.
+- Cockpit Wave 43B expected UI result: no visible UI change yet; successful campaign-recipient Quick Generate activity now records safe `campaign_attribution` in durable operator issuance activity metadata for dashboard presentation.

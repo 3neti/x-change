@@ -76,6 +76,65 @@ it('records one quick generate activity through journal action and feedback hand
         ->and($entry->correlation_id)->toBe('corr-quick-generate-combined-runtime');
 });
 
+it('records campaign recipient attribution in durable operator issuance activity metadata', function () {
+    Route::get('/x/cockpit/pay-codes/{code}', fn (string $code): string => $code)
+        ->name('x-change.cockpit.pay-codes.show');
+
+    enableCockpitCombinedRuntimeProfile();
+    app()->instance(GeneratePayCode::class, cockpitCombinedRuntimeGeneratePayCodeAction('PC-WAVE-43B'));
+
+    actingAsTestUser();
+
+    $payload = cockpitCombinedRuntimePayload();
+    data_set($payload, 'cash.amount', '500.00');
+    data_set($payload, 'cash.currency', 'PHP');
+    data_set($payload, 'feedback.mobile', '09173011987');
+    data_set($payload, 'rider.message', 'Campaign payout');
+    data_set($payload, 'metadata.custom.cockpit.template_key', 'ofw-remittance');
+    data_set($payload, 'metadata.campaign', [
+        'planning_key' => 'plan-wave-43b',
+        'execution_id' => 'exec-wave-43b',
+        'campaign_id' => 'campaign-wave-43b',
+        'audience_id' => 'audience-wave-43b',
+        'recipient_id' => 'recipient-wave-43b',
+        'source' => 'x_campaign_adapter',
+    ]);
+
+    $this->withHeaders([
+        'Accept' => 'application/json',
+        'Idempotency-Key' => 'quick-generate-campaign-recipient-activity-wave-43b',
+        'X-Correlation-ID' => 'corr-quick-generate-campaign-recipient-activity-wave-43b',
+    ])
+        ->post(route('x-change.cockpit.quick-generate.store'), $payload)
+        ->assertCreated()
+        ->assertJsonPath('result.code', 'PC-WAVE-43B')
+        ->assertJsonPath('campaign_attribution.recipient_id', 'recipient-wave-43b');
+
+    $activity = CockpitOperatorIssuanceActivity::query()->sole();
+
+    expect($activity->subject_reference)->toBe('PC-WAVE-43B')
+        ->and($activity->metadata['campaign_attribution']['schema'])->toBe('x-change.cockpit.quick-generate-campaign-attribution.v1')
+        ->and($activity->metadata['campaign_attribution']['status'])->toBe('available')
+        ->and($activity->metadata['campaign_attribution']['read_only'])->toBeTrue()
+        ->and($activity->metadata['campaign_attribution']['mutates_campaign'])->toBeFalse()
+        ->and($activity->metadata['campaign_attribution']['planning_key'])->toBe('plan-wave-43b')
+        ->and($activity->metadata['campaign_attribution']['execution_id'])->toBe('exec-wave-43b')
+        ->and($activity->metadata['campaign_attribution']['campaign_id'])->toBe('campaign-wave-43b')
+        ->and($activity->metadata['campaign_attribution']['audience_id'])->toBe('audience-wave-43b')
+        ->and($activity->metadata['campaign_attribution']['recipient_id'])->toBe('recipient-wave-43b')
+        ->and($activity->metadata['campaign_attribution']['source'])->toBe('x_campaign_adapter')
+        ->and($activity->metadata['campaign_attribution']['generated_code'])->toBe('PC-WAVE-43B')
+        ->and($activity->metadata['campaign_attribution']['template_key'])->toBe('ofw-remittance')
+        ->and($activity->metadata['campaign_attribution']['amount'])->toBe('500.00')
+        ->and($activity->metadata['campaign_attribution']['currency'])->toBe('PHP')
+        ->and($activity->metadata['campaign_attribution']['recipient_reference'])->toBe('09173011987')
+        ->and($activity->metadata['campaign_attribution']['purpose'])->toBe('Campaign payout')
+        ->and($activity->metadata['campaign_attribution']['redactions']['payloads'])->toBe('campaign-attribution-only')
+        ->and($activity->metadata)->not->toHaveKey('raw_payload')
+        ->and($activity->metadata)->not->toHaveKey('provider_payload')
+        ->and($activity->metadata)->not->toHaveKey('wallet');
+});
+
 function enableCockpitCombinedRuntimeProfile(): void
 {
     config()->set('x-change.cockpit.operator_issuance_activity.repository', 'database');
