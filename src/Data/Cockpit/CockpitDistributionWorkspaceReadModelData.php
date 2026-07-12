@@ -15,6 +15,7 @@ class CockpitDistributionWorkspaceReadModelData extends Data
      * @param  array<int, CockpitDistributionWorkspaceItemData>  $print_templates
      * @param  array<int, CockpitDistributionWorkspaceItemData>  $analytics
      * @param  array<int, CockpitDistributionWorkspaceItemData>  $actions
+     * @param  array<string, mixed>  $distribution_links
      * @param  array<string, mixed>  $redactions
      */
     public function __construct(
@@ -28,6 +29,7 @@ class CockpitDistributionWorkspaceReadModelData extends Data
         public readonly array $print_templates = [],
         public readonly array $analytics = [],
         public readonly array $actions = [],
+        public readonly array $distribution_links = [],
         public readonly array $redactions = ['payloads' => 'not-loaded'],
     ) {}
 }

@@ -116,6 +116,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                     actionStatus: $actions->status,
                     feedbackStatus: $feedback->status,
                 ),
+                distribution_links: $this->distributionLinks($this->summaryCode($detail, $code)),
                 redactions: [
                     'payloads' => 'sanitized-summary-only',
                     'excluded' => [
@@ -138,6 +139,43 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             actions: $actions,
             feedback: $feedback,
         );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function distributionLinks(?string $code): array
+    {
+        if ($code === null || trim($code) === '' || ! Route::has('x-change.claim.experience')) {
+            return [
+                'schema' => 'x-change.cockpit.distribution-links.v1',
+                'status' => 'unavailable',
+                'available' => false,
+                'read_only' => true,
+                'delivery_enabled' => false,
+                'redactions' => [
+                    'payloads' => 'distribution-links-unavailable',
+                ],
+            ];
+        }
+
+        return [
+            'schema' => 'x-change.cockpit.distribution-links.v1',
+            'status' => 'available',
+            'available' => true,
+            'read_only' => true,
+            'redeem_url' => route('x-change.claim.experience', ['code' => $code]),
+            'redeem_path' => route('x-change.claim.experience', ['code' => $code], false),
+            'source' => 'x-change.claim.experience',
+            'delivery_enabled' => false,
+            'redactions' => [
+                'payloads' => 'distribution-links-only',
+                'secret_claim_material_exposed' => false,
+                'provider_payloads_exposed' => false,
+                'wallet_data_exposed' => false,
+                'delivery_payloads_exposed' => false,
+            ],
+        ];
     }
 
     /**

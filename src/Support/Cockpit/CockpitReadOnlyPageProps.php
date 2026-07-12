@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Support\Cockpit;
 
+use Illuminate\Support\Facades\Route;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitDistributionWorkspaceItemData;
 use LBHurtado\XChange\Data\Cockpit\CockpitDistributionWorkspaceReadModelData;
@@ -340,6 +341,9 @@ class CockpitReadOnlyPageProps
     {
         $voucher = is_array($readModel['voucher'] ?? null) ? $readModel['voucher'] : [];
         $summary = is_array($voucher['summary'] ?? null) ? $voucher['summary'] : [];
+        $distributionLinks = is_array($voucher['distribution_links'] ?? null)
+            ? $voucher['distribution_links']
+            : $this->distributionLinks($code);
         $feedback = is_array($readModel['feedback'] ?? null) ? $readModel['feedback'] : [];
         $feedbackStatus = $this->stringValue($feedback['status'] ?? null, 'not_wired');
 
@@ -355,6 +359,7 @@ class CockpitReadOnlyPageProps
                 'claimed' => $summary['claimed'] ?? null,
                 'fully_claimed' => $summary['fully_claimed'] ?? null,
             ],
+            distribution_links: $distributionLinks,
             share_assets: [
                 new CockpitDistributionWorkspaceItemData(
                     key: 'copy-text',
@@ -490,6 +495,43 @@ class CockpitReadOnlyPageProps
                 'campaign_mutation_enabled' => false,
             ],
         );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function distributionLinks(?string $code): array
+    {
+        if ($code === null || trim($code) === '' || ! Route::has('x-change.claim.experience')) {
+            return [
+                'schema' => 'x-change.cockpit.distribution-links.v1',
+                'status' => 'unavailable',
+                'available' => false,
+                'read_only' => true,
+                'delivery_enabled' => false,
+                'redactions' => [
+                    'payloads' => 'distribution-links-unavailable',
+                ],
+            ];
+        }
+
+        return [
+            'schema' => 'x-change.cockpit.distribution-links.v1',
+            'status' => 'available',
+            'available' => true,
+            'read_only' => true,
+            'redeem_url' => route('x-change.claim.experience', ['code' => $code]),
+            'redeem_path' => route('x-change.claim.experience', ['code' => $code], false),
+            'source' => 'x-change.claim.experience',
+            'delivery_enabled' => false,
+            'redactions' => [
+                'payloads' => 'distribution-links-only',
+                'secret_claim_material_exposed' => false,
+                'provider_payloads_exposed' => false,
+                'wallet_data_exposed' => false,
+                'delivery_payloads_exposed' => false,
+            ],
+        ];
     }
 
     private function stringValue(mixed $value, ?string $fallback = ''): ?string
