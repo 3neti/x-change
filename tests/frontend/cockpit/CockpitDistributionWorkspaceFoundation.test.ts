@@ -288,6 +288,12 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).toContain('distribution_workspace');
         expect(wrapper.text()).toContain('campaign-navigation-read-only');
         expect(wrapper.text()).toContain('navigation-context-only');
+        expect(wrapper.find('[data-testid="cockpit-distribution-campaign-detail-return-link"]').attributes('href')).toBe('/x/cockpit/pay-codes/Not%20wired?campaign_planning_key=plan-wave-46&campaign_execution_id=exec-wave-46&campaign_id=campaign-wave-46&campaign_audience_id=audience-wave-46&campaign_recipient_id=recipient-wave-46&campaign_source=x_campaign_adapter');
+        expect(wrapper.find('[data-testid="cockpit-distribution-campaign-detail-return-link"]').text()).toContain('campaign context');
+        expect(wrapper.find('[data-testid="cockpit-distribution-campaign-explorer-return-link"]').attributes('href')).toBe('/x/cockpit/pay-codes?campaign_planning_key=plan-wave-46&campaign_execution_id=exec-wave-46&campaign_id=campaign-wave-46&campaign_audience_id=audience-wave-46&campaign_recipient_id=recipient-wave-46&campaign_source=x_campaign_adapter&activity_code=Not+wired&activity_source=operator_issuance_activity');
+        expect(wrapper.find('[data-testid="cockpit-distribution-campaign-explorer-return-link"]').text()).toContain('campaign context');
+        expect(wrapper.find('[data-testid="cockpit-distribution-campaign-dashboard-return-link"]').attributes('href')).toBe('/x/cockpit?campaign_planning_key=plan-wave-46&campaign_execution_id=exec-wave-46&campaign_id=campaign-wave-46&campaign_audience_id=audience-wave-46&campaign_recipient_id=recipient-wave-46&campaign_source=x_campaign_adapter');
+        expect(wrapper.find('[data-testid="cockpit-distribution-campaign-dashboard-return-link"]').text()).toContain('read-only');
         expect(wrapper.text()).not.toContain('must-not-render');
         expect(wrapper.text()).not.toContain('provider_payload');
         expect(wrapper.text()).not.toContain('raw_payload');
@@ -310,6 +316,9 @@ describe('Cockpit Distribution Workspace foundation', () => {
         });
 
         expect(wrapper.find('[data-testid="cockpit-distribution-campaign-navigation-context"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="cockpit-distribution-campaign-detail-return-link"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="cockpit-distribution-campaign-explorer-return-link"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="cockpit-distribution-campaign-dashboard-return-link"]').exists()).toBe(false);
         expect(wrapper.text()).not.toContain('plan-wave-46');
     });
 });
