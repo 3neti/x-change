@@ -4,12 +4,17 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 64B — Manual Distribution Workflow Handoff Boundary
-Status: In progress / Wave 64A complete
+Current slice: Cockpit Wave 64C — Manual Distribution Operator Runbook / Workflow Handoff Closure
+Status: In progress / Wave 64B complete
 Last updated: 2026-07-13
 
 ## Completed
 
+- Completed Cockpit Wave 64B — Manual Distribution Workflow Handoff Boundary:
+  - Defined Cockpit responsibilities and approved external workflow responsibilities.
+  - Confirmed copying the URL is not delivery, delivery confirmation, feedback state, campaign state, journal state, action state, lifecycle truth, or money movement.
+  - Confirmed future automated delivery must route through x-feedback, x-campaign, x-journal, and x-action as appropriate.
+  - Report: `reports/371-wave-64b-manual-distribution-workflow-handoff-boundary.md`.
 - Completed Cockpit Wave 64A — Manual Distribution Operator Runbook:
   - Defined operator preconditions, manual distribution steps, safety rules, Cockpit boundaries, and escalation conditions.
   - Confirmed manual copy remains browser-local, non-persistent, non-delivery, non-telemetry, non-journaled, non-action-executing, non-provider-calling, non-voucher-mutating, non-wallet-mutating, non-artifact-generating, and non-money-moving.
