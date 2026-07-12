@@ -975,6 +975,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             facts: $readModel->facts,
             mutation: $readModel->mutation,
             quick_generate_link: $this->campaignQuickGenerateLink($query, $this->campaignAdapterSourceContext($readModel)),
+            recipient_quick_generate_links: $this->campaignRecipientQuickGenerateLinks($query, $readModel),
             redactions: $readModel->redactions,
         );
     }
@@ -1104,6 +1105,98 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         }
 
         return [];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function campaignRecipientQuickGenerateLinks(CockpitReadModelQueryData $query, CockpitCampaignReadModelData $readModel): array
+    {
+        $recipientContexts = $this->campaignAdapterRecipientSourceContexts($readModel);
+
+        if ($recipientContexts === []) {
+            return [];
+        }
+
+        return collect($recipientContexts)
+            ->take(10)
+            ->map(function (array $context, int $index) use ($query): array {
+                $link = $this->campaignQuickGenerateLink($query, $context);
+                $label = $this->nullableString($context['label'] ?? null)
+                    ?? $this->nullableString($context['name'] ?? null)
+                    ?? $this->nullableString($context['recipient_name'] ?? null)
+                    ?? 'Open Quick Generate';
+
+                return array_merge($link, [
+                    'key' => $this->nullableString($context['key'] ?? null)
+                        ?? $this->nullableString($context['recipient_id'] ?? null)
+                        ?? 'recipient-'.($index + 1),
+                    'label' => $label,
+                    'redactions' => [
+                        'payloads' => 'campaign-recipient-source-link-query-only',
+                        'excluded' => [
+                            'campaign_payload',
+                            'recipient_payload',
+                            'provider_payload',
+                            'wallet',
+                            'balance',
+                            'raw_payload',
+                            'mobile',
+                            'mobile_number',
+                            'email',
+                            'email_address',
+                            'pay_code_generation_payload',
+                            'delivery_dispatch_payload',
+                        ],
+                    ],
+                ]);
+            })
+            ->filter(fn (array $link): bool => ($link['enabled'] ?? false) === true)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function campaignAdapterRecipientSourceContexts(CockpitCampaignReadModelData $readModel): array
+    {
+        $metadata = $this->toArray($readModel->facts['metadata'] ?? []);
+        $campaignCard = $this->toArray($readModel->facts['cards']['campaign'] ?? []);
+        $candidates = [
+            $metadata['recipient_quick_generate_contexts'] ?? null,
+            $metadata['quick_generate_recipients'] ?? null,
+            $metadata['recipients'] ?? null,
+            $campaignCard['recipient_quick_generate_contexts'] ?? null,
+            $campaignCard['quick_generate_recipients'] ?? null,
+            $campaignCard['recipients'] ?? null,
+        ];
+
+        foreach ($candidates as $candidate) {
+            $contexts = $this->arrayListOfArrays($candidate);
+
+            if ($contexts !== []) {
+                return $contexts;
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function arrayListOfArrays(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return collect($value)
+            ->map(fn (mixed $item): array => $this->toArray($item))
+            ->filter(fn (array $item): bool => $item !== [])
+            ->values()
+            ->all();
     }
 
     /**

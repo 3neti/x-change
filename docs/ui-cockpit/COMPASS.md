@@ -2209,3 +2209,5 @@ Current boundary:
 - Cockpit Wave 40 next recommended wave: `Cockpit Wave 41 — Campaign Recipient Source-Link Selection / Operator Entry Point`.
 - Cockpit Wave 41A result: Campaign Recipient Source-Link Selection audit completed; report `reports/268-wave-41a-campaign-recipient-source-link-selection-audit.md`; next `Cockpit Wave 41B — Campaign Recipient Source-Link Read Model Contract / Hydration`.
 - Cockpit Wave 41A expected UI result: no UI change; this slice defines safe recipient-level Campaign → Quick Generate entry-point scope while blocking campaign mutation, bulk issuance, delivery, provider calls, wallet movement, and unsafe payload exposure.
+- Cockpit Wave 41B result: Campaign Recipient Source-Link read-model contract and hydration completed; report `reports/269-wave-41b-campaign-recipient-source-link-read-model-contract.md`; next `Cockpit Wave 41C — Campaign Recipient Source-Link UI Presentation`.
+- Cockpit Wave 41B expected UI result: no visible UI change yet; `campaign_read_model.recipient_quick_generate_links` can now carry up to 10 safe recipient-specific Quick Generate source links for Vue rendering.

@@ -217,6 +217,7 @@ it('returns a not wired campaign cockpit read model contract by default', functi
                 'draft' => null,
                 'redactions' => ['payloads' => 'not-loaded'],
             ],
+            'recipient_quick_generate_links' => [],
             'redactions' => ['payloads' => 'not-loaded'],
         ])
         ->and($readModel->toArray())->not->toHaveKeys([

@@ -13,6 +13,7 @@ class CockpitCampaignReadModelData extends Data
      * @param  array<string, mixed>  $facts
      * @param  array{enabled: bool, status: string, reason: string}  $mutation
      * @param  array<string, mixed>  $quick_generate_link
+     * @param  array<int, array<string, mixed>>  $recipient_quick_generate_links
      * @param  array<string, mixed>  $redactions
      */
     public function __construct(
@@ -81,6 +82,7 @@ class CockpitCampaignReadModelData extends Data
             'draft' => null,
             'redactions' => ['payloads' => 'not-loaded'],
         ],
+        public readonly array $recipient_quick_generate_links = [],
         public readonly array $redactions = ['payloads' => 'not-loaded'],
     ) {}
 }

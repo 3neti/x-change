@@ -373,3 +373,117 @@ it('normalizes campaign adapter recipient and payout fields into the quick gener
         ->not->toContain('beneficiary40%40example.test')
         ->not->toContain('091700000040');
 });
+
+it('hydrates safe campaign recipient quick generate source links from adapter metadata collections', function (): void {
+    actingAsTestUser();
+
+    config(['x-change.cockpit.integrations.campaign.cockpit' => 'fake.wave41.campaign.cockpit']);
+    app()->instance('fake.wave41.campaign.cockpit', new class
+    {
+        /**
+         * @param  array<string, mixed>  $metadata
+         * @return array<string, mixed>
+         */
+        public function summary(
+            string $planningKey,
+            string $executionId,
+            string $operatorId,
+            string $channel = 'cockpit',
+            ?string $correlationId = null,
+            array $metadata = [],
+        ): array {
+            return [
+                'status' => 'ready',
+                'planning_key' => $planningKey,
+                'execution_id' => $executionId,
+                'operator_id' => $operatorId,
+                'metadata' => [
+                    'recipient_quick_generate_contexts' => [
+                        [
+                            'campaign_id' => 'campaign-41b',
+                            'audience_id' => 'audience-41b',
+                            'recipient_id' => 'recipient-41b-a',
+                            'label' => 'Generate for Ana',
+                            'source' => 'x_campaign_adapter',
+                            'template_intent' => 'ofw_remittance',
+                            'recipient' => [
+                                'reference' => 'BEN-41B-A',
+                                'mobile_number' => '091700041001',
+                                'email_address' => 'ana41@example.test',
+                            ],
+                            'payout' => [
+                                'amount' => '500.00',
+                                'currency' => 'PHP',
+                                'message' => 'Ana campaign payout',
+                            ],
+                        ],
+                        [
+                            'campaign_id' => 'campaign-41b',
+                            'audience_id' => 'audience-41b',
+                            'recipient_id' => 'recipient-41b-b',
+                            'label' => 'Generate for Ben',
+                            'source' => 'x_campaign_adapter',
+                            'template_key' => 'money-changer',
+                            'recipient_reference' => 'BEN-41B-B',
+                            'amount' => '625.25',
+                            'currency' => 'PHP',
+                            'purpose' => 'Ben campaign payout',
+                            'raw_payload' => 'must-not-render',
+                        ],
+                    ],
+                ],
+            ];
+        }
+    });
+
+    $response = $this
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.dashboard', [
+            'campaign_planning_key' => 'plan-41b',
+            'campaign_execution_id' => 'exec-41b',
+        ]));
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('props.campaign_read_model.recipient_quick_generate_links.0.status', 'available')
+        ->assertJsonPath('props.campaign_read_model.recipient_quick_generate_links.0.label', 'Generate for Ana')
+        ->assertJsonPath('props.campaign_read_model.recipient_quick_generate_links.0.recipient_id', 'recipient-41b-a')
+        ->assertJsonPath('props.campaign_read_model.recipient_quick_generate_links.0.draft.template_key', 'ofw-remittance')
+        ->assertJsonPath('props.campaign_read_model.recipient_quick_generate_links.0.draft.amount', '500.00')
+        ->assertJsonPath('props.campaign_read_model.recipient_quick_generate_links.0.draft.recipient_reference', 'BEN-41B-A')
+        ->assertJsonPath('props.campaign_read_model.recipient_quick_generate_links.0.draft.purpose', 'Ana campaign payout')
+        ->assertJsonPath('props.campaign_read_model.recipient_quick_generate_links.0.mutates_campaign', false)
+        ->assertJsonPath('props.campaign_read_model.recipient_quick_generate_links.1.status', 'available')
+        ->assertJsonPath('props.campaign_read_model.recipient_quick_generate_links.1.label', 'Generate for Ben')
+        ->assertJsonPath('props.campaign_read_model.recipient_quick_generate_links.1.recipient_id', 'recipient-41b-b')
+        ->assertJsonPath('props.campaign_read_model.recipient_quick_generate_links.1.draft.template_key', 'money-changer')
+        ->assertJsonPath('props.campaign_read_model.recipient_quick_generate_links.1.draft.amount', '625.25')
+        ->assertJsonPath('props.campaign_read_model.recipient_quick_generate_links.1.draft.recipient_reference', 'BEN-41B-B')
+        ->assertJsonPath('props.campaign_read_model.recipient_quick_generate_links.1.draft.purpose', 'Ben campaign payout')
+        ->assertJsonMissingPath('props.campaign_read_model.recipient_quick_generate_links.0.raw_payload')
+        ->assertJsonMissingPath('props.campaign_read_model.recipient_quick_generate_links.1.raw_payload');
+
+    $firstHref = $response->json('props.campaign_read_model.recipient_quick_generate_links.0.href');
+    $secondHref = $response->json('props.campaign_read_model.recipient_quick_generate_links.1.href');
+
+    expect($firstHref)
+        ->toBeString()
+        ->toContain('campaign_planning_key=plan-41b')
+        ->toContain('campaign_execution_id=exec-41b')
+        ->toContain('campaign_recipient_id=recipient-41b-a')
+        ->toContain('campaign_template_key=ofw-remittance')
+        ->toContain('campaign_amount=500.00')
+        ->toContain('campaign_recipient_reference=BEN-41B-A')
+        ->toContain('campaign_purpose=Ana%20campaign%20payout')
+        ->not->toContain('ana41%40example.test')
+        ->not->toContain('091700041001');
+
+    expect($secondHref)
+        ->toBeString()
+        ->toContain('campaign_recipient_id=recipient-41b-b')
+        ->toContain('campaign_template_key=money-changer')
+        ->toContain('campaign_amount=625.25')
+        ->toContain('campaign_recipient_reference=BEN-41B-B')
+        ->toContain('campaign_purpose=Ben%20campaign%20payout')
+        ->not->toContain('must-not-render');
+});
