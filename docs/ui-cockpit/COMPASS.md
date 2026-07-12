@@ -4,12 +4,16 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 64 — Manual Distribution Operator Runbook / Workflow Handoff
-Status: Wave 63 complete / manual copy backend-transport guard strengthened
+Current slice: Cockpit Wave 64B — Manual Distribution Workflow Handoff Boundary
+Status: In progress / Wave 64A complete
 Last updated: 2026-07-13
 
 ## Completed
 
+- Completed Cockpit Wave 64A — Manual Distribution Operator Runbook:
+  - Defined operator preconditions, manual distribution steps, safety rules, Cockpit boundaries, and escalation conditions.
+  - Confirmed manual copy remains browser-local, non-persistent, non-delivery, non-telemetry, non-journaled, non-action-executing, non-provider-calling, non-voucher-mutating, non-wallet-mutating, non-artifact-generating, and non-money-moving.
+  - Report: `reports/370-wave-64a-manual-distribution-operator-runbook.md`.
 - Completed Cockpit Wave 63 — Manual Copy Operational Hardening Closure:
   - Closed manual copy hardening with browser-local, non-persistent, non-delivery, non-telemetry behavior preserved.
   - Strengthened `CockpitManualCopyButton` frontend coverage to prove manual copy does not use `fetch`, `navigator.sendBeacon`, or `XMLHttpRequest`.
