@@ -4,12 +4,20 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 55E — Manual Copy Publish / Drift Verification Closure
-Status: In progress / Wave 55D complete
+Current slice: Cockpit Wave 56 — Manual Distribution Human Browser Verification / Clipboard UX Acceptance
+Status: Wave 55 complete
 Last updated: 2026-07-12
 
 ## Completed
 
+- Completed Cockpit Wave 55 — Manual Distribution Copy Closure:
+  - Added browser-local manual copy affordances for beneficiary Pay Code URLs.
+  - Voucher Detail and Distribution Workspace now render `Copy beneficiary URL` controls when URL read-model data is available.
+  - Copying uses `navigator.clipboard.writeText`, updates only local UI state, and does not call backend endpoints.
+  - Published package-owned Cockpit assets into the host app with `php artisan x-change:install --force`.
+  - Verified published Cockpit assets are clean: checked 59, ok 59, stale 0, missing 0, extra 0.
+  - Next recommended slice: Cockpit Wave 56 — Manual Distribution Human Browser Verification / Clipboard UX Acceptance.
+  - Report: `reports/341-wave-55-manual-distribution-copy-closure.md`.
 - Completed Cockpit Wave 55D — Distribution Workspace Manual Copy Adoption:
   - Adopted `CockpitManualCopyButton` inside the Distribution Workspace beneficiary URL panel.
   - Copying uses the browser clipboard only and does not call backend endpoints.
