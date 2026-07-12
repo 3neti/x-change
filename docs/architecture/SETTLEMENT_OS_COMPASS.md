@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 56B in progress; manual clipboard UX acceptance plan complete
+Current status: Cockpit Wave 56C in progress; automated clipboard UX evidence guard complete
 Last updated: 2026-07-12
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-12
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 56B in progress; manual clipboard UX acceptance plan complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 56C in progress; automated clipboard UX evidence guard complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,9 @@ Last updated: 2026-07-12
 
 ### Current Cockpit Host Integration
 
+- Cockpit Wave 56B complete:
+  - Automated frontend evidence now covers successful, unavailable, disabled, and failed clipboard states.
+  - Report: [../ui-cockpit/reports/343-wave-56b-automated-clipboard-ux-evidence-guard.md](../ui-cockpit/reports/343-wave-56b-automated-clipboard-ux-evidence-guard.md).
 - Cockpit Wave 56A complete:
   - Defined the human browser verification checklist for the Voucher Detail and Distribution Workspace `Copy beneficiary URL` controls.
   - Report: [../ui-cockpit/reports/342-wave-56a-manual-clipboard-ux-acceptance-plan.md](../ui-cockpit/reports/342-wave-56a-manual-clipboard-ux-acceptance-plan.md).

@@ -49,6 +49,32 @@ describe('Cockpit manual copy button', () => {
         expect(wrapper.find('[data-testid="cockpit-manual-copy-status"]').text()).toContain('Copy unavailable');
     });
 
+    it('shows failed state when clipboard write rejects without backend interaction', async () => {
+        const writeText = vi.fn().mockRejectedValue(new Error('clipboard blocked'));
+
+        vi.stubGlobal('navigator', {
+            clipboard: {
+                writeText,
+            },
+        });
+        vi.stubGlobal('fetch', vi.fn());
+
+        const wrapper = mount(CockpitManualCopyButton, {
+            props: {
+                value: 'https://example.test/x/claim/PC-COPY-FAILED/experience',
+            },
+        });
+
+        await wrapper.find('[data-testid="cockpit-manual-copy-button"]').trigger('click');
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(writeText).toHaveBeenCalledWith('https://example.test/x/claim/PC-COPY-FAILED/experience');
+        expect(globalThis.fetch).not.toHaveBeenCalled();
+        expect(wrapper.find('[data-testid="cockpit-manual-copy-button"]').text()).toContain('Copy failed');
+        expect(wrapper.find('[data-testid="cockpit-manual-copy-status"]').text()).toContain('No backend call was made');
+    });
+
     it('disables copy when no value is available', () => {
         const wrapper = mount(CockpitManualCopyButton, {
             props: {
