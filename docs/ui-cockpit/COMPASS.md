@@ -4,12 +4,19 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 59D — Manual Distribution Link Operational Guidance Closure
-Status: In progress / Wave 59C complete
+Current slice: Cockpit Wave 60 — Manual Distribution Link Human Guidance Acceptance
+Status: Wave 59 complete
 Last updated: 2026-07-12
 
 ## Completed
 
+- Completed Cockpit Wave 59 — Manual Distribution Link Operational Guidance Closure:
+  - Added operator-facing manual distribution guidance to both accepted beneficiary URL copy surfaces.
+  - Voucher Detail and Distribution Workspace now state manual distribution only, approved external workflow, recipient verification, no Cockpit delivery, no copy telemetry, no short links/QR assets, and sensitive settlement access material.
+  - Published package-owned Cockpit assets into the host app with `php artisan x-change:install --force`.
+  - Verified host-published Cockpit assets remain clean: checked 59, ok 59, stale 0, missing 0, extra 0.
+  - Next recommended slice: Cockpit Wave 60 — Manual Distribution Link Human Guidance Acceptance.
+  - Report: `reports/356-wave-59-manual-distribution-link-operational-guidance-closure.md`.
 - Completed Cockpit Wave 59C — Distribution Workspace Operational Guidance Text:
   - Added operator-facing manual distribution guidance to the Distribution Workspace beneficiary URL panel.
   - Guidance states manual distribution only, approved external workflow, recipient verification, no Cockpit delivery, no copy telemetry, no short links/QR assets, and sensitive settlement access material.
