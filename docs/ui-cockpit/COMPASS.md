@@ -4,12 +4,17 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 55B — Manual Copy Component Contract
-Status: In progress / Wave 55A complete
+Current slice: Cockpit Wave 55C — Voucher Detail Manual Copy Adoption
+Status: In progress / Wave 55B complete
 Last updated: 2026-07-12
 
 ## Completed
 
+- Completed Cockpit Wave 55B — Manual Copy Component Contract:
+  - Added `CockpitManualCopyButton` as a reusable browser-local copy control.
+  - The component copies through `navigator.clipboard.writeText`, exposes local status, disables missing values, and does not call backend endpoints.
+  - Frontend tests prove the component does not call `fetch`.
+  - Report: `reports/338-wave-55b-manual-copy-component-contract.md`.
 - Completed Cockpit Wave 55A — Manual Distribution Copy Decision:
   - Decided to proceed with a browser-local manual copy affordance for beneficiary Pay Code URLs.
   - Confirmed the copy affordance is presentation-only and must not call backend endpoints, persist copy events, write journal entries, execute actions, send feedback, dispatch campaigns, call providers, mutate vouchers, expose unsafe payloads, or move money.
