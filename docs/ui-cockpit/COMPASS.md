@@ -2215,3 +2215,7 @@ Current boundary:
 - Cockpit Wave 41C expected UI result: `/x/cockpit` can show a `Recipient Quick Generate entry points` card under Campaign Cockpit Adoption when safe recipient source links are present.
 - Cockpit Wave 41D result: Campaign Recipient Source-Link publish/browser verification completed; report `reports/271-wave-41d-campaign-recipient-source-link-publish-browser-verification.md`; next `Cockpit Wave 41E — Campaign Recipient Source-Link Selection Closure`.
 - Cockpit Wave 41D expected UI result: host-published Cockpit assets include the recipient entry-points section, and the existing Campaign `Open Quick Generate` browser path still opens campaign-prefilled Quick Generate.
+- Cockpit Wave 41 result: Campaign Recipient Source-Link Selection / Operator Entry Point closed; report `reports/272-wave-41-campaign-recipient-source-link-selection-closure.md`.
+- Cockpit Wave 41 completed: campaign adapters can expose safe recipient-level Quick Generate entry points through `campaign_read_model.recipient_quick_generate_links`; the Campaign Cockpit Adoption panel renders them as `Recipient Quick Generate entry points`; selecting one opens existing Quick Generate with recipient context and no campaign mutation.
+- Cockpit Wave 41 expected UI result: `/x/cockpit` can show recipient-specific Quick Generate links under Campaign Cockpit Adoption when safe adapter metadata is present.
+- Cockpit Wave 41 next recommended wave: `Cockpit Wave 42 — Campaign Recipient Quick Generate Submission Attribution / Result Closure`.
