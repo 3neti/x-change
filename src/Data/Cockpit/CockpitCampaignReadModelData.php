@@ -12,6 +12,7 @@ class CockpitCampaignReadModelData extends Data
      * @param  array<int, array{key: string, status: string, enabled: bool, read_only: bool, reason: string}>  $surfaces
      * @param  array<string, mixed>  $facts
      * @param  array{enabled: bool, status: string, reason: string}  $mutation
+     * @param  array<string, mixed>  $quick_generate_link
      * @param  array<string, mixed>  $redactions
      */
     public function __construct(
@@ -61,6 +62,24 @@ class CockpitCampaignReadModelData extends Data
             'enabled' => false,
             'status' => 'blocked',
             'reason' => 'campaign-mutations-not-authorized',
+        ],
+        public readonly array $quick_generate_link = [
+            'schema' => 'x-change.cockpit.campaign-quick-generate-link.v1',
+            'status' => 'not_available',
+            'enabled' => false,
+            'label' => 'Open Quick Generate',
+            'href' => null,
+            'route' => 'x-change.cockpit.quick-generate',
+            'read_only' => true,
+            'mutates_campaign' => false,
+            'planning_key' => null,
+            'execution_id' => null,
+            'campaign_id' => null,
+            'audience_id' => null,
+            'recipient_id' => null,
+            'source' => null,
+            'draft' => null,
+            'redactions' => ['payloads' => 'not-loaded'],
         ],
         public readonly array $redactions = ['payloads' => 'not-loaded'],
     ) {}

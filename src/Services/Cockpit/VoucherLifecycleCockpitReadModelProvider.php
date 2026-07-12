@@ -957,11 +957,109 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
 
     public function forCampaignAdoption(CockpitReadModelQueryData $query): CockpitCampaignReadModelData
     {
-        if ($this->integrations === null) {
-            return $this->fallback->forCampaignAdoption($query);
+        $readModel = $this->integrations === null
+            ? $this->fallback->forCampaignAdoption($query)
+            : $this->integrations->campaignAdoption($query);
+
+        return $this->withCampaignQuickGenerateLink($readModel, $query);
+    }
+
+    private function withCampaignQuickGenerateLink(CockpitCampaignReadModelData $readModel, CockpitReadModelQueryData $query): CockpitCampaignReadModelData
+    {
+        return new CockpitCampaignReadModelData(
+            schema: $readModel->schema,
+            status: $readModel->status,
+            authorized: $readModel->authorized,
+            source: $readModel->source,
+            surfaces: $readModel->surfaces,
+            facts: $readModel->facts,
+            mutation: $readModel->mutation,
+            quick_generate_link: $this->campaignQuickGenerateLink($query),
+            redactions: $readModel->redactions,
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function campaignQuickGenerateLink(CockpitReadModelQueryData $query): array
+    {
+        $planningKey = $this->nullableString($query->campaignPlanningKey ?? $query->code);
+        $executionId = $this->nullableString($query->campaignExecutionId ?? $query->correlationId);
+
+        if ($planningKey === null || ! Route::has('x-change.cockpit.quick-generate')) {
+            return [
+                'schema' => 'x-change.cockpit.campaign-quick-generate-link.v1',
+                'status' => 'not_available',
+                'enabled' => false,
+                'label' => 'Open Quick Generate',
+                'href' => null,
+                'route' => 'x-change.cockpit.quick-generate',
+                'read_only' => true,
+                'mutates_campaign' => false,
+                'planning_key' => $planningKey,
+                'execution_id' => $executionId,
+                'campaign_id' => $this->nullableString($query->campaignId),
+                'audience_id' => $this->nullableString($query->campaignAudienceId),
+                'recipient_id' => $this->nullableString($query->campaignRecipientId),
+                'source' => $this->nullableString($query->campaignSource),
+                'draft' => null,
+                'redactions' => ['payloads' => 'not-loaded'],
+            ];
         }
 
-        return $this->integrations->campaignAdoption($query);
+        $source = $this->nullableString($query->campaignSource) ?? 'campaign_cockpit';
+        $draft = [
+            'template_key' => $this->nullableString($query->campaignTemplateKey),
+            'amount' => $this->amountValue($query->campaignAmount),
+            'currency' => $this->nullableString($query->campaignCurrency) ?? 'PHP',
+            'recipient_reference' => $this->nullableString($query->campaignRecipientReference),
+            'purpose' => $this->nullableString($query->campaignPurpose),
+        ];
+        $parameters = array_filter([
+            'campaign_planning_key' => $planningKey,
+            'campaign_execution_id' => $executionId,
+            'campaign_id' => $this->nullableString($query->campaignId),
+            'campaign_audience_id' => $this->nullableString($query->campaignAudienceId),
+            'campaign_recipient_id' => $this->nullableString($query->campaignRecipientId),
+            'campaign_source' => $source,
+            'campaign_template_key' => $draft['template_key'],
+            'campaign_amount' => $draft['amount'],
+            'campaign_currency' => $draft['currency'],
+            'campaign_recipient_reference' => $draft['recipient_reference'],
+            'campaign_purpose' => $draft['purpose'],
+        ], fn (mixed $value): bool => $value !== null && $value !== '');
+
+        return [
+            'schema' => 'x-change.cockpit.campaign-quick-generate-link.v1',
+            'status' => 'available',
+            'enabled' => true,
+            'label' => 'Open Quick Generate',
+            'href' => route('x-change.cockpit.quick-generate', $parameters),
+            'route' => 'x-change.cockpit.quick-generate',
+            'read_only' => true,
+            'mutates_campaign' => false,
+            'planning_key' => $planningKey,
+            'execution_id' => $executionId,
+            'campaign_id' => $this->nullableString($query->campaignId),
+            'audience_id' => $this->nullableString($query->campaignAudienceId),
+            'recipient_id' => $this->nullableString($query->campaignRecipientId),
+            'source' => $source,
+            'draft' => $draft,
+            'redactions' => [
+                'payloads' => 'campaign-source-link-query-only',
+                'excluded' => [
+                    'campaign_payload',
+                    'recipient_payload',
+                    'provider_payload',
+                    'wallet',
+                    'balance',
+                    'raw_payload',
+                    'pay_code_generation_payload',
+                    'delivery_dispatch_payload',
+                ],
+            ],
+        ];
     }
 
     public function forOperatorIssuanceActivity(CockpitReadModelQueryData $query): CockpitOperatorIssuanceActivityReadModelData

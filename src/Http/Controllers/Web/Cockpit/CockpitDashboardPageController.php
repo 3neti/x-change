@@ -22,6 +22,15 @@ class CockpitDashboardPageController extends Controller
         return Inertia::render('x-change/cockpit/Dashboard', $this->props->toDashboardArray(
             campaignPlanningKey: $this->optionalString($request->query('campaign_planning_key')),
             campaignExecutionId: $this->optionalString($request->query('campaign_execution_id')),
+            campaignId: $this->optionalString($request->query('campaign_id')),
+            campaignAudienceId: $this->optionalString($request->query('campaign_audience_id')),
+            campaignRecipientId: $this->optionalString($request->query('campaign_recipient_id')),
+            campaignSource: $this->optionalString($request->query('campaign_source')),
+            campaignTemplateKey: $this->optionalString($request->query('campaign_template_key')),
+            campaignAmount: $this->optionalScalar($request->query('campaign_amount')),
+            campaignCurrency: $this->optionalString($request->query('campaign_currency')),
+            campaignRecipientReference: $this->optionalString($request->query('campaign_recipient_reference')),
+            campaignPurpose: $this->optionalString($request->query('campaign_purpose')),
             operatorId: is_scalar($operatorId) ? (string) $operatorId : null,
             operatorActivityFilters: CockpitOperatorIssuanceActivitySearchFilterData::normalize(
                 search: $this->optionalString($request->query('activity_search')),
@@ -32,6 +41,17 @@ class CockpitDashboardPageController extends Controller
     }
 
     private function optionalString(mixed $value): ?string
+    {
+        if (! is_scalar($value)) {
+            return null;
+        }
+
+        $normalized = trim((string) $value);
+
+        return $normalized !== '' ? $normalized : null;
+    }
+
+    private function optionalScalar(mixed $value): int|float|string|null
     {
         if (! is_scalar($value)) {
             return null;

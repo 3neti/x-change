@@ -2161,3 +2161,5 @@ Current boundary:
 - Cockpit Wave 36 next recommended wave: `Cockpit Wave 37 — Campaign Context Source Link Generation / Campaign Surface Entry Points`.
 - Cockpit Wave 37A result: Campaign context source link generation audit completed; report `reports/248-wave-37a-campaign-context-source-link-generation-audit.md`; next `Cockpit Wave 37B — Campaign Quick Generate Source Link Read Model Contract / Hydration`.
 - Cockpit Wave 37A expected UI result: no UI change; this slice defines safe campaign surface entry-link scope and blocks campaign mutation, bulk issuance, delivery, unsafe payload exposure, and bypassing `GeneratePayCode`.
+- Cockpit Wave 37B result: Campaign Quick Generate source link read-model contract and hydration completed; report `reports/249-wave-37b-campaign-quick-generate-source-link-read-model-contract.md`; next `Cockpit Wave 37C — Campaign Quick Generate Source Link UI Presentation`.
+- Cockpit Wave 37B expected UI result: no visible UI change yet; `campaign_read_model.quick_generate_link` now carries the full safe Quick Generate URL for Vue rendering.
