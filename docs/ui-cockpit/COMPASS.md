@@ -2183,3 +2183,5 @@ Current boundary:
 - Cockpit Wave 38 completed: x-change now consumes safe x-campaign summary metadata and real `CampaignCockpitSummaryData` camelCase fields as Campaign → Quick Generate source-link context, while explicit query values still win.
 - Cockpit Wave 38 expected UI result: no new component; existing Campaign Cockpit Adoption `Open Quick Generate` remains the visible bridge into campaign-prefilled Quick Generate.
 - Cockpit Wave 38 next recommended wave: `Cockpit Wave 39 — Campaign Plan-to-Issuance Draft Template Mapping`.
+- Cockpit Wave 39A result: Campaign plan-to-issuance draft template mapping audit completed; report `reports/258-wave-39a-campaign-plan-to-issuance-draft-template-mapping-audit.md`; next `Cockpit Wave 39B — Campaign Template Intent Normalizer / Draft Adapter`.
+- Cockpit Wave 39A expected UI result: no UI change; this slice scopes safe campaign template intent normalization into existing Quick Generate draft paths.
