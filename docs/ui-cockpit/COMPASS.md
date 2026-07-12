@@ -4,12 +4,16 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 55 — Full URL Manual Distribution Operator Copy / Copy-to-Clipboard Decision
-Status: Wave 54 complete
+Current slice: Cockpit Wave 55B — Manual Copy Component Contract
+Status: In progress / Wave 55A complete
 Last updated: 2026-07-12
 
 ## Completed
 
+- Completed Cockpit Wave 55A — Manual Distribution Copy Decision:
+  - Decided to proceed with a browser-local manual copy affordance for beneficiary Pay Code URLs.
+  - Confirmed the copy affordance is presentation-only and must not call backend endpoints, persist copy events, write journal entries, execute actions, send feedback, dispatch campaigns, call providers, mutate vouchers, expose unsafe payloads, or move money.
+  - Report: `reports/337-wave-55a-manual-distribution-copy-decision.md`.
 - Completed Cockpit Wave 54 — Pay Code Detail / Distribution Full URL Continuity Closure:
   - Closed the full URL continuity gap between Pay Code read models, Voucher Detail, and Distribution Workspace.
   - Published package-owned Cockpit assets into the host app with `php artisan x-change:install --force`.
