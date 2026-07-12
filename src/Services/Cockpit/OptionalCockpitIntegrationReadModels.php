@@ -162,9 +162,9 @@ class OptionalCockpitIntegrationReadModels
                 source: 'x-campaign',
                 surfaces: $this->campaignSurfaces('available', true, 'x-campaign-read-model-available'),
                 facts: [
-                    'planning_key' => $payload['planning_key'] ?? $planningKey,
-                    'execution_id' => $payload['execution_id'] ?? $executionId,
-                    'operator_id' => $payload['operator_id'] ?? $operatorId,
+                    'planning_key' => $this->payloadValue($payload, 'planning_key', 'planningKey') ?? $planningKey,
+                    'execution_id' => $this->payloadValue($payload, 'execution_id', 'executionId') ?? $executionId,
+                    'operator_id' => $this->payloadValue($payload, 'operator_id', 'operatorId') ?? $operatorId,
                     'cards' => $this->arrayValue($payload['cards'] ?? []),
                     'panels' => $this->arrayValue($payload['panels'] ?? []),
                     'actions' => $this->arrayValue($payload['actions'] ?? []),
@@ -459,6 +459,11 @@ class OptionalCockpitIntegrationReadModels
         }
 
         return [];
+    }
+
+    private function payloadValue(array $payload, string $snakeKey, string $camelKey): mixed
+    {
+        return $payload[$snakeKey] ?? $payload[$camelKey] ?? null;
     }
 
     private function nonEmptyString(?string $value): ?string

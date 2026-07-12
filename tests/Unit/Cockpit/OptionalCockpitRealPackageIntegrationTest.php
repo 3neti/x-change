@@ -96,3 +96,77 @@ it('wires real read-only cockpit integration packages from x-change', function (
         ->and($campaign['redactions']['writes_journal'])->toBeFalse()
         ->and($campaign['redactions']['moves_money'])->toBeFalse();
 });
+
+it('normalizes real x-campaign cockpit summary dto keys for source context adoption', function () {
+    $summaryClass = 'LBHurtado\\XCampaign\\Data\\CampaignCockpitSummaryData';
+
+    expect(class_exists($summaryClass))->toBeTrue("Expected {$summaryClass} to be installed by x-change.");
+
+    config(['x-change.cockpit.integrations.campaign.cockpit' => 'fake.wave38.real.campaign.cockpit']);
+    app()->instance('fake.wave38.real.campaign.cockpit', new class($summaryClass)
+    {
+        public function __construct(private readonly string $summaryClass) {}
+
+        /**
+         * @param  array<string, mixed>  $metadata
+         */
+        public function summary(
+            string $planningKey,
+            string $executionId,
+            string $operatorId,
+            string $channel = 'cockpit',
+            ?string $correlationId = null,
+            array $metadata = [],
+        ): object {
+            return new $this->summaryClass(
+                status: 'ready',
+                planningKey: 'dto-plan-38c',
+                executionId: 'dto-exec-38c',
+                operatorId: 'dto-operator-38c',
+                cards: [
+                    'campaign' => [
+                        'campaign_id' => 'campaign-38c',
+                        'name' => 'Real DTO Campaign',
+                    ],
+                ],
+                metadata: [
+                    'source' => 'x-campaign-real-dto-fixture',
+                    'read_only' => true,
+                    'quick_generate_context' => [
+                        'campaign_id' => 'campaign-38c',
+                        'audience_id' => 'audience-38c',
+                        'recipient_id' => 'recipient-38c',
+                        'source' => 'x_campaign_adapter',
+                        'template_key' => 'ofw-remittance',
+                        'amount' => '880.00',
+                        'currency' => 'PHP',
+                        'recipient_reference' => '091700000038',
+                        'purpose' => 'Real DTO sourced payout',
+                    ],
+                ],
+            );
+        }
+    });
+
+    $campaign = app(OptionalCockpitIntegrationReadModels::class)
+        ->campaignAdoption(new CockpitReadModelQueryData(
+            code: 'query-plan-38c',
+            operatorId: 'query-operator-38c',
+            include: ['campaigns'],
+            correlationId: 'query-exec-38c',
+        ))
+        ->toArray();
+
+    expect($campaign['status'])->toBe('available')
+        ->and($campaign['facts']['planning_key'])->toBe('dto-plan-38c')
+        ->and($campaign['facts']['execution_id'])->toBe('dto-exec-38c')
+        ->and($campaign['facts']['operator_id'])->toBe('dto-operator-38c')
+        ->and($campaign['facts']['metadata']['quick_generate_context']['campaign_id'])->toBe('campaign-38c')
+        ->and($campaign['facts']['metadata']['quick_generate_context']['amount'])->toBe('880.00')
+        ->and($campaign['redactions']['source'])->toBe('x-campaign')
+        ->and($campaign['redactions']['mutates_campaigns'])->toBeFalse()
+        ->and($campaign['redactions']['issues_pay_codes'])->toBeFalse()
+        ->and($campaign['redactions']['sends_feedback'])->toBeFalse()
+        ->and($campaign['redactions']['writes_journal'])->toBeFalse()
+        ->and($campaign['redactions']['moves_money'])->toBeFalse();
+});
