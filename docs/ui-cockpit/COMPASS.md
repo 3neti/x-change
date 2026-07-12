@@ -4,12 +4,19 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 54E — Full URL Destination Publish / Drift Verification
-Status: In progress / Wave 54D complete
+Current slice: Cockpit Wave 55 — Full URL Manual Distribution Operator Copy / Copy-to-Clipboard Decision
+Status: Wave 54 complete
 Last updated: 2026-07-12
 
 ## Completed
 
+- Completed Cockpit Wave 54 — Pay Code Detail / Distribution Full URL Continuity Closure:
+  - Closed the full URL continuity gap between Pay Code read models, Voucher Detail, and Distribution Workspace.
+  - Published package-owned Cockpit assets into the host app with `php artisan x-change:install --force`.
+  - Verified published Cockpit assets are clean: checked 58, ok 58, stale 0, missing 0, extra 0.
+  - Kept all URL surfaces read-only and delivery-disabled.
+  - Next recommended slice: Cockpit Wave 55 — Full URL Manual Distribution Operator Copy / Copy-to-Clipboard Decision.
+  - Report: `reports/336-wave-54-pay-code-detail-distribution-full-url-continuity-closure.md`.
 - Completed Cockpit Wave 54D — Distribution Workspace Full URL Presentation:
   - Added `distribution_links` to the Distribution Workspace TypeScript read-model contract.
   - Rendered the canonical beneficiary Pay Code full URL and relative path on Distribution Workspace.

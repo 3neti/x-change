@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 54E in progress; Distribution Workspace full URL presentation complete
+Current status: Cockpit Wave 54 complete; next recommended Cockpit Wave 55 manual distribution copy decision
 Last updated: 2026-07-12
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-12
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 54E in progress; Distribution Workspace full URL presentation complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 54 complete; next recommended Cockpit Wave 55 manual distribution copy decision | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -59,6 +59,15 @@ Last updated: 2026-07-12
 | wallet / cash / contact / form-flow / emi-core | `/Users/rli/PhpstormProjects/packages/*` | Domain capabilities consumed through explicit seams |
 
 ## Completed Work
+
+### Current Cockpit Host Integration
+
+- Cockpit Wave 54 complete:
+  - Pay Code read models now expose read-only beneficiary full URL continuity through `distribution_links`.
+  - Voucher Detail and Distribution Workspace render the canonical beneficiary URL and relative claim path.
+  - Host-published Cockpit assets were verified clean after publish: checked 58, ok 58, stale 0, missing 0, extra 0.
+  - Report: [../ui-cockpit/reports/336-wave-54-pay-code-detail-distribution-full-url-continuity-closure.md](../ui-cockpit/reports/336-wave-54-pay-code-detail-distribution-full-url-continuity-closure.md).
+  - Next recommended slice: Cockpit Wave 55 — Full URL Manual Distribution Operator Copy / Copy-to-Clipboard Decision.
 
 ### Wave 1 — Execution Engine
 
