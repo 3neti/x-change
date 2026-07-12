@@ -141,3 +141,60 @@ it('preserves explicit recipient draft fields ahead of campaign recipient aliase
         ->and($draft->rider['message'])->toBe('Explicit message')
         ->and($draft->metadata['campaign']['recipient_mapping_source'])->toBe('explicit-draft-fields');
 });
+
+it('characterizes a single campaign recipient as a quick generate issuance draft without campaign mutation', function (): void {
+    $draft = (new DefaultCockpitCampaignIssuanceDraftAdapter)->fromCampaignContext([
+        'planning_key' => 'plan-wave-51',
+        'execution_id' => 'exec-wave-51',
+        'campaign_id' => 'campaign-wave-51',
+        'audience_id' => 'audience-wave-51',
+        'recipient_id' => 'recipient-wave-51',
+        'source' => 'x-campaign',
+        'template_intent' => 'campaign-payout',
+        'recipient' => [
+            'reference' => 'BEN-WAVE-51',
+            'mobile_number' => '09173011987',
+            'email_address' => 'beneficiary51@example.test',
+        ],
+        'allocation' => [
+            'amount' => '500.00',
+            'currency' => 'PHP',
+            'purpose' => 'Wave 51 campaign payout',
+        ],
+        'metadata' => [
+            'read_only' => true,
+            'mutates_campaign' => false,
+        ],
+    ]);
+
+    expect($draft->hasCampaignContext())->toBeTrue()
+        ->and($draft->template_key)->toBe('ofw-remittance')
+        ->and($draft->amount)->toBe('500.00')
+        ->and($draft->currency)->toBe('PHP')
+        ->and($draft->count)->toBe(1)
+        ->and($draft->recipient_reference)->toBe('BEN-WAVE-51')
+        ->and($draft->purpose)->toBe('Wave 51 campaign payout')
+        ->and($draft->feedback)->toMatchArray([
+            'mobile' => '09173011987',
+            'email' => 'beneficiary51@example.test',
+        ])
+        ->and($draft->campaign?->planning_key)->toBe('plan-wave-51')
+        ->and($draft->campaign?->execution_id)->toBe('exec-wave-51')
+        ->and($draft->campaign?->campaign_id)->toBe('campaign-wave-51')
+        ->and($draft->campaign?->audience_id)->toBe('audience-wave-51')
+        ->and($draft->campaign?->recipient_id)->toBe('recipient-wave-51')
+        ->and($draft->campaign?->source)->toBe('x-campaign')
+        ->and($draft->campaign?->metadata)->toMatchArray([
+            'read_only' => true,
+            'mutates_campaign' => false,
+        ])
+        ->and($draft->metadata['campaign'])->toMatchArray([
+            'template_key' => 'ofw-remittance',
+            'template_mapping_source' => 'campaign-template-intent',
+            'recipient_mapping_source' => 'campaign-recipient-context',
+        ])
+        ->and($draft->metadata)->not->toHaveKey('provider_payload')
+        ->and($draft->metadata)->not->toHaveKey('wallet')
+        ->and($draft->metadata)->not->toHaveKey('raw_payload')
+        ->and($draft->metadata)->not->toHaveKey('campaign_mutation');
+});
