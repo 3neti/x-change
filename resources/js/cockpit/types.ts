@@ -830,6 +830,7 @@ export type CockpitVoucherReadModel = {
     status: string;
     summary?: Record<string, unknown>;
     evidence_summary?: CockpitVoucherEvidenceSummary[];
+    distribution_links?: Record<string, unknown>;
     redactions?: CockpitReadModelRedactions;
     authorized?: boolean;
 };
@@ -957,6 +958,7 @@ export type CockpitDistributionWorkspaceReadModel = {
     authorized?: boolean;
     code?: string | null;
     summary?: Record<string, unknown>;
+    distribution_links?: Record<string, unknown>;
     share_assets?: CockpitDistributionWorkspaceItem[];
     channels?: CockpitDistributionWorkspaceItem[];
     print_templates?: CockpitDistributionWorkspaceItem[];

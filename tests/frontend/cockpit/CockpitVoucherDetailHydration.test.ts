@@ -93,6 +93,23 @@ const readModel = {
                 source: 'feedback-read-model',
             },
         ],
+        distribution_links: {
+            schema: 'x-change.cockpit.distribution-links.v1',
+            status: 'available',
+            available: true,
+            read_only: true,
+            redeem_url: 'https://example.test/x/claim/PC-HYDRATED-001/experience',
+            redeem_path: '/x/claim/PC-HYDRATED-001/experience',
+            source: 'x-change.claim.experience',
+            delivery_enabled: false,
+            redactions: {
+                payloads: 'distribution-links-only',
+                secret_claim_material_exposed: false,
+                provider_payloads_exposed: false,
+                wallet_data_exposed: false,
+                delivery_payloads_exposed: false,
+            },
+        },
         redactions: {
             payloads: 'sanitized-summary-only',
             excluded: [
@@ -179,6 +196,27 @@ describe('Cockpit Voucher Detail hydration', () => {
         expect(wrapper.text()).not.toContain('provider_payload');
         expect(wrapper.text()).not.toContain('raw_payload');
         expect(wrapper.text()).not.toContain('must-not-render');
+    });
+
+    it('renders the beneficiary Pay Code URL as a read-only distribution link', () => {
+        const wrapper = mount(VoucherDetail, {
+            props: {
+                context: { code: 'PC-HYDRATED-001' },
+                read_model: readModel,
+            },
+        });
+
+        const panel = wrapper.find('[data-testid="cockpit-voucher-detail-distribution-links-panel"]');
+        const link = wrapper.find('[data-testid="cockpit-voucher-detail-beneficiary-url-link"]');
+
+        expect(panel.exists()).toBe(true);
+        expect(panel.text()).toContain('Beneficiary Pay Code URL');
+        expect(panel.text()).toContain('https://example.test/x/claim/PC-HYDRATED-001/experience');
+        expect(panel.text()).toContain('/x/claim/PC-HYDRATED-001/experience');
+        expect(panel.text()).toContain('read-only');
+        expect(panel.text()).toContain('delivery disabled');
+        expect(panel.text()).toContain('distribution-links-only');
+        expect(link.attributes('href')).toBe('https://example.test/x/claim/PC-HYDRATED-001/experience');
     });
 
     it('keeps dependent read models explicitly not wired during voucher hydration', () => {
