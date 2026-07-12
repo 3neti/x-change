@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import VoucherDetail from '../../../resources/js/cockpit/pages/VoucherDetail.vue';
 import VoucherDetailRouteAdapter from '../../../resources/js/pages/x-change/cockpit/VoucherDetail.vue';
 
@@ -155,6 +155,10 @@ const readModel = {
 };
 
 describe('Cockpit Voucher Detail hydration', () => {
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
     it('hydrates voucher detail from sanitized read model summary', () => {
         const wrapper = mount(VoucherDetail, {
             props: {
@@ -217,6 +221,32 @@ describe('Cockpit Voucher Detail hydration', () => {
         expect(panel.text()).toContain('delivery disabled');
         expect(panel.text()).toContain('distribution-links-only');
         expect(link.attributes('href')).toBe('https://example.test/x/claim/PC-HYDRATED-001/experience');
+    });
+
+    it('copies the Voucher Detail beneficiary URL through the browser clipboard only', async () => {
+        const writeText = vi.fn().mockResolvedValue(undefined);
+
+        vi.stubGlobal('navigator', {
+            clipboard: {
+                writeText,
+            },
+        });
+        vi.stubGlobal('fetch', vi.fn());
+
+        const wrapper = mount(VoucherDetail, {
+            props: {
+                context: { code: 'PC-HYDRATED-001' },
+                read_model: readModel,
+            },
+        });
+
+        await wrapper.find('[data-testid="cockpit-manual-copy-button"]').trigger('click');
+        await Promise.resolve();
+
+        expect(writeText).toHaveBeenCalledWith('https://example.test/x/claim/PC-HYDRATED-001/experience');
+        expect(globalThis.fetch).not.toHaveBeenCalled();
+        expect(wrapper.find('[data-testid="cockpit-manual-copy-button"]').text()).toContain('Copied');
+        expect(wrapper.find('[data-testid="cockpit-manual-copy-status"]').text()).toContain('No delivery was sent');
     });
 
     it('keeps dependent read models explicitly not wired during voucher hydration', () => {

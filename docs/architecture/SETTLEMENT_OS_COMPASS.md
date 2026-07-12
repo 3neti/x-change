@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 55C in progress; manual copy component contract complete
+Current status: Cockpit Wave 55D in progress; Voucher Detail manual copy adoption complete
 Last updated: 2026-07-12
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-12
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 55C in progress; manual copy component contract complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 55D in progress; Voucher Detail manual copy adoption complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,9 @@ Last updated: 2026-07-12
 
 ### Current Cockpit Host Integration
 
+- Cockpit Wave 55C complete:
+  - Voucher Detail now uses the browser-local manual copy control for beneficiary Pay Code URLs.
+  - Report: [../ui-cockpit/reports/339-wave-55c-voucher-detail-manual-copy-adoption.md](../ui-cockpit/reports/339-wave-55c-voucher-detail-manual-copy-adoption.md).
 - Cockpit Wave 55B complete:
   - Added a reusable browser-local `CockpitManualCopyButton`.
   - Copying uses `navigator.clipboard.writeText`, exposes only local UI state, and does not call backend endpoints.
