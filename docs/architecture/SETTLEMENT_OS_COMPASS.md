@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 58C in progress; beneficiary URL copy acceptance decision recorded as Pass
+Current status: Cockpit Wave 58 complete; beneficiary URL manual copy accepted as Pass
 Last updated: 2026-07-12
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-12
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 58C in progress; beneficiary URL copy acceptance decision recorded as Pass | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 58 complete; beneficiary URL manual copy accepted as Pass | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,12 @@ Last updated: 2026-07-12
 
 ### Current Cockpit Host Integration
 
+- Cockpit Wave 58 complete:
+  - Manual beneficiary URL copy UX accepted as Pass for Voucher Detail and Distribution Workspace.
+  - Accepted evidence used Pay Code `6LGM` and copied `http://x-change-sandbox.test/x/claim/6LGM/experience` from both surfaces.
+  - Host-published Cockpit assets remain clean: checked 59, ok 59, stale 0, missing 0, extra 0.
+  - Report: [../ui-cockpit/reports/352-wave-58-beneficiary-url-copy-acceptance-closure.md](../ui-cockpit/reports/352-wave-58-beneficiary-url-copy-acceptance-closure.md).
+  - Next recommended slice: Cockpit Wave 59 — Manual Distribution Link Operational Guidance / Operator Help Text.
 - Cockpit Wave 58B complete:
   - Recorded manual beneficiary URL copy acceptance decision: Pass.
   - Acceptance is limited to manual copy UX and does not authorize delivery, persistence, journal, action, provider, voucher, wallet, or money-movement behavior.
