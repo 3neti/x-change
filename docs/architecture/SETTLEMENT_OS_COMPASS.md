@@ -33,8 +33,8 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 60 complete; manual guidance acceptance pending-human-guidance-intake
-Last updated: 2026-07-12
+Current status: Cockpit Wave 61A complete; Voucher Detail manual guidance accepted; Distribution Workspace guidance pending
+Last updated: 2026-07-13
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
@@ -42,7 +42,7 @@ Last updated: 2026-07-12
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 60 complete; manual guidance acceptance pending-human-guidance-intake | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 61A complete; Voucher Detail manual guidance accepted; Distribution Workspace guidance pending | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,10 @@ Last updated: 2026-07-12
 
 ### Current Cockpit Host Integration
 
+- Cockpit Wave 61A — Manual Guidance Voucher Detail Human Evidence Intake complete:
+  - Recorded human Pass evidence for Voucher Detail guidance using Pay Code `6LGM`.
+  - Current Wave 61 result is `partial-pass / distribution-workspace-pending`.
+  - Report: [../ui-cockpit/reports/361-wave-61a-manual-guidance-voucher-detail-human-evidence-intake.md](../ui-cockpit/reports/361-wave-61a-manual-guidance-voucher-detail-human-evidence-intake.md).
 - Cockpit Wave 60 — Manual Distribution Link Human Guidance Acceptance Closure complete:
   - Completed acceptance planning, evidence template, and decision policy for manual distribution guidance.
   - Current result is `pending-human-guidance-intake` because no completed human evidence record was supplied.

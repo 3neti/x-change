@@ -4,12 +4,17 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 61 — Manual Distribution Guidance Human Evidence Intake / Acceptance Decision
-Status: Wave 60 complete / guidance acceptance pending-human-guidance-intake
-Last updated: 2026-07-12
+Current slice: Cockpit Wave 61B — Manual Guidance Distribution Workspace Human Evidence Intake
+Status: Wave 61A complete / Voucher Detail accepted / Distribution Workspace pending
+Last updated: 2026-07-13
 
 ## Completed
 
+- Completed Cockpit Wave 61A — Manual Guidance Voucher Detail Human Evidence Intake:
+  - Recorded human Pass evidence for Voucher Detail guidance using Pay Code `6LGM`.
+  - Confirmed Voucher Detail shows manual distribution only, approved external workflow, recipient verification, no Cockpit delivery, no copy telemetry, no short links/QR assets, and sensitive settlement access material.
+  - Current Wave 61 result is `partial-pass / distribution-workspace-pending` because Distribution Workspace guidance evidence has not been supplied yet.
+  - Report: `reports/361-wave-61a-manual-guidance-voucher-detail-human-evidence-intake.md`.
 - Completed Cockpit Wave 60 — Manual Distribution Link Human Guidance Acceptance Closure:
   - Completed the manual guidance acceptance plan, human evidence template, and decision policy.
   - Closed the wave as `pending-human-guidance-intake` because no completed human evidence record was supplied.
