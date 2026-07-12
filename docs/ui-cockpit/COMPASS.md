@@ -4,12 +4,17 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 65B — Manual Distribution External Evidence Schema / Template
-Status: In progress / Wave 65A complete
+Current slice: Cockpit Wave 65C — Manual Distribution External Evidence Intake Closure
+Status: In progress / Wave 65B complete
 Last updated: 2026-07-13
 
 ## Completed
 
+- Completed Cockpit Wave 65B — Manual Distribution External Evidence Schema / Template:
+  - Defined a planning-only external evidence template and allowed states.
+  - Confirmed the template is not a database schema, request contract, upload endpoint, runtime DTO, model, migration, route, controller, journal record, feedback record, action record, campaign record, provider call, voucher mutation, wallet mutation, or money movement.
+  - Confirmed future evidence intake must default to redacted, operator-safe references only.
+  - Report: `reports/374-wave-65b-external-evidence-schema-template.md`.
 - Completed Cockpit Wave 65A — Manual Distribution External Evidence Intake Decision:
   - Decided to proceed only with an evidence-intake planning baseline.
   - Confirmed Wave 65 does not implement evidence persistence, upload endpoints, journal writes, feedback delivery, campaign dispatch, short links, QR assets, print artifacts, provider calls, voucher mutation, wallet mutation, or money movement.
