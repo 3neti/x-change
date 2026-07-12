@@ -2245,3 +2245,5 @@ Current boundary:
 - Cockpit Wave 43 next recommended wave: `Cockpit Wave 44 — Campaign Recipient Activity Context Navigation / Explorer Bridge`.
 - Cockpit Wave 44A result: Campaign Recipient Activity Context Navigation audit completed; report `reports/283-wave-44a-campaign-recipient-activity-context-navigation-audit.md`; next `Cockpit Wave 44B — Campaign Recipient Activity Explorer Link Hydration`.
 - Cockpit Wave 44A expected UI result: no UI change; this slice scopes recipient-aware activity navigation into the existing Explorer bridge while blocking campaign mutation, bulk issuance, delivery, lifecycle truth ownership, provider calls, wallet movement, and unsafe payload exposure.
+- Cockpit Wave 44B result: Campaign Recipient Activity Explorer link hydration completed; report `reports/284-wave-44b-campaign-recipient-activity-explorer-link-hydration.md`; next `Cockpit Wave 44C — Campaign Recipient Activity Navigation UI Hardening`.
+- Cockpit Wave 44B expected UI result: `/x/cockpit` campaign-attributed Operator Issuance Activity cards can show `Open in Explorer` with campaign-recipient query context and `Return to Campaign Dashboard`.

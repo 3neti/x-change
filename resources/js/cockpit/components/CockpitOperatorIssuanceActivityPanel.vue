@@ -72,6 +72,7 @@ type SafePresentation = {
     status: string;
     href?: string;
     explorerHref?: string;
+    campaignDashboardHref?: string;
     correlationId?: string;
     journalSummary?: SafeJournalSummary;
     actionSummary?: SafeActionSummary;
@@ -213,13 +214,11 @@ function sanitizePresentation(presentation: CockpitOperatorIssuanceActivityPrese
         return null;
     }
 
-    return {
+    const safePresentation: SafePresentation = {
         id,
         title,
         subtitle,
         status,
-        href: safeDetailHref(presentation.detail_href),
-        explorerHref: safeExplorerHref(presentation.detail_href),
         correlationId: stringValue(presentation.correlation_id),
         journalSummary: safeJournalSummary(presentation.metadata?.journal_handoff),
         actionSummary: safeActionSummary(presentation.metadata?.action_handoff),
@@ -231,6 +230,12 @@ function sanitizePresentation(presentation: CockpitOperatorIssuanceActivityPrese
             feedback: stringValue(presentation.handoffs?.feedback) ?? 'not_wired',
         },
     };
+
+    safePresentation.href = safeDetailHref(presentation.detail_href);
+    safePresentation.explorerHref = safeExplorerHref(safePresentation.href, safePresentation.campaignAttribution);
+    safePresentation.campaignDashboardHref = safeCampaignDashboardHref(safePresentation.campaignAttribution);
+
+    return safePresentation;
 }
 
 function safeCampaignAttribution(value: unknown): SafeCampaignAttribution | undefined {
@@ -406,9 +411,7 @@ function safeDetailHref(value: unknown): string | undefined {
     return href;
 }
 
-function safeExplorerHref(value: unknown): string | undefined {
-    const href = safeDetailHref(value);
-
+function safeExplorerHref(href: string | undefined, campaignAttribution?: SafeCampaignAttribution): string | undefined {
     if (!href) {
         return undefined;
     }
@@ -424,7 +427,41 @@ function safeExplorerHref(value: unknown): string | undefined {
         activity_source: 'operator_issuance_activity',
     });
 
+    appendCampaignAttributionParams(params, campaignAttribution);
+
     return `/x/cockpit/pay-codes?${params.toString()}`;
+}
+
+function safeCampaignDashboardHref(campaignAttribution?: SafeCampaignAttribution): string | undefined {
+    if (!campaignAttribution) {
+        return undefined;
+    }
+
+    const params = new URLSearchParams();
+    appendCampaignAttributionParams(params, campaignAttribution);
+
+    const query = params.toString();
+
+    return query === '' ? undefined : `/x/cockpit?${query}`;
+}
+
+function appendCampaignAttributionParams(params: URLSearchParams, campaignAttribution?: SafeCampaignAttribution): void {
+    if (!campaignAttribution || campaignAttribution.mutatesCampaign) {
+        return;
+    }
+
+    setParam(params, 'campaign_planning_key', campaignAttribution.planningKey);
+    setParam(params, 'campaign_execution_id', campaignAttribution.executionId);
+    setParam(params, 'campaign_id', campaignAttribution.campaignId);
+    setParam(params, 'campaign_audience_id', campaignAttribution.audienceId);
+    setParam(params, 'campaign_recipient_id', campaignAttribution.recipientId);
+    setParam(params, 'campaign_source', campaignAttribution.source);
+}
+
+function setParam(params: URLSearchParams, key: string, value?: string): void {
+    if (value) {
+        params.set(key, value);
+    }
 }
 
 function filterHrefWithout(filter: 'search' | 'status' | 'handoff'): string {
@@ -959,6 +996,14 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                         data-testid="cockpit-operator-issuance-activity-explorer-link"
                     >
                         Open in Explorer
+                    </a>
+                    <a
+                        v-if="presentation.campaignDashboardHref"
+                        :href="presentation.campaignDashboardHref"
+                        class="font-semibold text-sky-700 underline decoration-sky-300 underline-offset-4 hover:text-sky-950 dark:text-sky-200 dark:decoration-sky-600 dark:hover:text-white"
+                        data-testid="cockpit-operator-issuance-activity-campaign-dashboard-link"
+                    >
+                        Return to Campaign Dashboard
                     </a>
                 </div>
             </article>
