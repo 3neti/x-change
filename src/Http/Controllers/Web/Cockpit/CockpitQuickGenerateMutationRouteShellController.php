@@ -313,6 +313,11 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
             'recipient_id' => $recipientId,
             'source' => $this->stringValue(data_get($campaign, 'source')) ?? 'campaign_cockpit',
             'generated_code' => $result->code,
+            'template_key' => $this->stringValue(data_get($payload, 'metadata.custom.cockpit.template_key')),
+            'amount' => $this->stringValue(data_get($payload, 'cash.amount')),
+            'currency' => $this->stringValue(data_get($payload, 'cash.currency')),
+            'recipient_reference' => $this->stringValue(data_get($payload, 'feedback.mobile')),
+            'purpose' => $this->stringValue(data_get($payload, 'rider.message')),
             'redactions' => [
                 'payloads' => 'campaign-attribution-only',
                 'excluded' => [
@@ -322,6 +327,9 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                     'wallet',
                     'balance',
                     'raw_payload',
+                    'campaign_payload',
+                    'recipient_payload',
+                    'provider_payload',
                 ],
             ],
         ];
@@ -373,6 +381,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                     'enabled' => $campaignExplorerHref !== null,
                     'read_only' => true,
                     'reason' => 'Read-only campaign-aware Explorer context for the generated Pay Code.',
+                    'metadata' => $this->campaignNavigationMetadata($campaignAttribution),
                 ],
                 [
                     'key' => 'campaign_dashboard',
@@ -382,6 +391,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
                     'enabled' => $campaignDashboardHref !== null,
                     'read_only' => true,
                     'reason' => 'Read-only campaign-aware Dashboard context for the originating campaign.',
+                    'metadata' => $this->campaignNavigationMetadata($campaignAttribution),
                 ],
             ],
             'redactions' => [
@@ -401,6 +411,24 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         ];
     }
 
+    /**
+     * @param  array<string, mixed>  $campaignAttribution
+     * @return array<string, mixed>
+     */
+    protected function campaignNavigationMetadata(array $campaignAttribution): array
+    {
+        return array_filter([
+            'planning_key' => $campaignAttribution['planning_key'] ?? null,
+            'execution_id' => $campaignAttribution['execution_id'] ?? null,
+            'campaign_id' => $campaignAttribution['campaign_id'] ?? null,
+            'audience_id' => $campaignAttribution['audience_id'] ?? null,
+            'recipient_id' => $campaignAttribution['recipient_id'] ?? null,
+            'source' => $campaignAttribution['source'] ?? null,
+            'read_only' => true,
+            'mutates_campaign' => false,
+        ], fn (mixed $value): bool => $value !== null && $value !== '');
+    }
+
     protected function campaignExplorerHref(array $campaignAttribution, GeneratePayCodeResultData $result): ?string
     {
         if (($campaignAttribution['available'] ?? false) !== true || ! Route::has('x-change.cockpit.pay-codes.index')) {
@@ -410,6 +438,9 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         return route('x-change.cockpit.pay-codes.index', [
             'campaign_planning_key' => $campaignAttribution['planning_key'] ?? null,
             'campaign_execution_id' => $campaignAttribution['execution_id'] ?? null,
+            'campaign_id' => $campaignAttribution['campaign_id'] ?? null,
+            'campaign_audience_id' => $campaignAttribution['audience_id'] ?? null,
+            'campaign_recipient_id' => $campaignAttribution['recipient_id'] ?? null,
             'campaign_source' => $campaignAttribution['source'] ?? 'campaign_cockpit',
             'activity_code' => $result->code,
             'activity_source' => 'cockpit.quick-generate',
@@ -426,6 +457,9 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         return route('x-change.cockpit.dashboard', [
             'campaign_planning_key' => $campaignAttribution['planning_key'] ?? null,
             'campaign_execution_id' => $campaignAttribution['execution_id'] ?? null,
+            'campaign_id' => $campaignAttribution['campaign_id'] ?? null,
+            'campaign_audience_id' => $campaignAttribution['audience_id'] ?? null,
+            'campaign_recipient_id' => $campaignAttribution['recipient_id'] ?? null,
         ], false);
     }
 

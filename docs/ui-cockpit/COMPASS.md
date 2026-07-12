@@ -2221,3 +2221,5 @@ Current boundary:
 - Cockpit Wave 41 next recommended wave: `Cockpit Wave 42 — Campaign Recipient Quick Generate Submission Attribution / Result Closure`.
 - Cockpit Wave 42A result: Campaign Recipient Submission Attribution audit completed; report `reports/273-wave-42a-campaign-recipient-submission-attribution-audit.md`; next `Cockpit Wave 42B — Campaign Recipient Attribution Response Contract`.
 - Cockpit Wave 42A expected UI result: no UI change; this slice defines read-only recipient attribution scope after campaign-recipient Quick Generate submission while blocking campaign mutation, bulk issuance, delivery, and unsafe payload exposure.
+- Cockpit Wave 42B result: Campaign Recipient Attribution response contract completed; report `reports/274-wave-42b-campaign-recipient-attribution-response-contract.md`; next `Cockpit Wave 42C — Campaign Recipient Attribution UI Presentation`.
+- Cockpit Wave 42B expected UI result: no visible UI change yet; Quick Generate JSON responses now carry safe recipient submission facts and recipient-aware campaign return-link query parameters.

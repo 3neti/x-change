@@ -51,7 +51,7 @@ it('returns campaign attribution and campaign aware post issuance links after ca
 
     actingAsTestUser();
 
-    $this
+    $response = $this
         ->withHeaders([
             'Accept' => 'application/json',
             'X-Correlation-ID' => 'corr-wave-36b',
@@ -101,6 +101,11 @@ it('returns campaign attribution and campaign aware post issuance links after ca
         ->assertJsonPath('campaign_attribution.recipient_id', 'recipient-wave-36b')
         ->assertJsonPath('campaign_attribution.source', 'campaign_cockpit')
         ->assertJsonPath('campaign_attribution.generated_code', 'PC-WAVE-36B')
+        ->assertJsonPath('campaign_attribution.template_key', 'ofw-remittance')
+        ->assertJsonPath('campaign_attribution.amount', '500.00')
+        ->assertJsonPath('campaign_attribution.currency', 'PHP')
+        ->assertJsonPath('campaign_attribution.recipient_reference', '09173011987')
+        ->assertJsonPath('campaign_attribution.purpose', 'Campaign payout')
         ->assertJsonPath('campaign_attribution.redactions.payloads', 'campaign-attribution-only')
         ->assertJsonPath('post_issuance_navigation.items.2.key', 'campaign_explorer')
         ->assertJsonPath('post_issuance_navigation.items.2.label', 'Return to Campaign Explorer')
@@ -112,6 +117,7 @@ it('returns campaign attribution and campaign aware post issuance links after ca
         ->assertJsonPath('post_issuance_navigation.items.3.status', 'available')
         ->assertJsonPath('post_issuance_navigation.items.3.enabled', true)
         ->assertJsonPath('post_issuance_navigation.items.3.read_only', true)
+        ->assertJsonPath('post_issuance_navigation.items.3.metadata.recipient_id', 'recipient-wave-36b')
         ->assertJsonMissingPath('campaign_payload')
         ->assertJsonMissingPath('recipient_payload')
         ->assertJsonMissingPath('provider_payload')
@@ -119,7 +125,21 @@ it('returns campaign attribution and campaign aware post issuance links after ca
         ->assertJsonMissingPath('raw_payload')
         ->assertJsonMissing(['must-not-leak']);
 
-    expect($fakeGeneratePayCode->payloads)->toHaveCount(1)
+    $campaignExplorerHref = $response->json('post_issuance_navigation.items.2.href');
+    $campaignDashboardHref = $response->json('post_issuance_navigation.items.3.href');
+
+    expect($campaignExplorerHref)
+        ->toBeString()
+        ->toContain('campaign_id=campaign-wave-36b')
+        ->toContain('campaign_audience_id=audience-wave-36b')
+        ->toContain('campaign_recipient_id=recipient-wave-36b')
+        ->toContain('activity_code=PC-WAVE-36B')
+        ->and($campaignDashboardHref)
+        ->toBeString()
+        ->toContain('campaign_id=campaign-wave-36b')
+        ->toContain('campaign_audience_id=audience-wave-36b')
+        ->toContain('campaign_recipient_id=recipient-wave-36b')
+        ->and($fakeGeneratePayCode->payloads)->toHaveCount(1)
         ->and(data_get($fakeGeneratePayCode->payloads[0], 'metadata.campaign.planning_key'))->toBe('plan-wave-36b')
         ->and(data_get($fakeGeneratePayCode->payloads[0], 'metadata.campaign.source'))->toBe('campaign_cockpit');
 });
