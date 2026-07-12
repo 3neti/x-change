@@ -4,12 +4,16 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 63B — Manual Copy No-Backend-Interaction Regression Guard
-Status: In progress / Wave 63A complete
+Current slice: Cockpit Wave 63C — Manual Copy Operational Hardening Closure
+Status: In progress / Wave 63B complete
 Last updated: 2026-07-13
 
 ## Completed
 
+- Completed Cockpit Wave 63B — Manual Copy No-Backend-Interaction Regression Guard:
+  - Strengthened `CockpitManualCopyButton` frontend tests to prove manual copy does not call `fetch`, `navigator.sendBeacon`, or `XMLHttpRequest`.
+  - Preserved existing success, unavailable, failure, disabled, and no-backend-interaction coverage.
+  - Report: `reports/368-wave-63b-manual-copy-no-backend-interaction-regression-guard.md`.
 - Completed Cockpit Wave 63A — Manual Copy Operational Hardening Contract:
   - Defined hardening requirements for accepted manual copy: browser-local, non-persistent, non-delivery, non-telemetry, non-journaled, non-action-executing, non-provider-calling, non-voucher-mutating, non-wallet-mutating, non-artifact-generating, and non-money-moving.
   - Required regression guards against `fetch`, `navigator.sendBeacon`, and `XMLHttpRequest` backend interaction.
