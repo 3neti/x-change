@@ -71,6 +71,7 @@ type SafePresentation = {
     subtitle: string;
     status: string;
     href?: string;
+    distributionHref?: string;
     explorerHref?: string;
     campaignDashboardHref?: string;
     correlationId?: string;
@@ -231,8 +232,11 @@ function sanitizePresentation(presentation: CockpitOperatorIssuanceActivityPrese
         },
     };
 
-    safePresentation.href = safeDetailHref(presentation.detail_href);
-    safePresentation.explorerHref = safeExplorerHref(safePresentation.href, safePresentation.campaignAttribution);
+    const detailHref = safeDetailHref(presentation.detail_href);
+
+    safePresentation.href = safeDetailContextHref(detailHref, safePresentation.campaignAttribution);
+    safePresentation.distributionHref = safeDistributionHref(detailHref, safePresentation.campaignAttribution);
+    safePresentation.explorerHref = safeExplorerHref(detailHref, safePresentation.campaignAttribution);
     safePresentation.campaignDashboardHref = safeCampaignDashboardHref(safePresentation.campaignAttribution);
 
     return safePresentation;
@@ -411,6 +415,39 @@ function safeDetailHref(value: unknown): string | undefined {
     return href;
 }
 
+function safeDetailContextHref(href: string | undefined, campaignAttribution?: SafeCampaignAttribution): string | undefined {
+    if (!href) {
+        return undefined;
+    }
+
+    const params = new URLSearchParams();
+    appendCampaignAttributionParams(params, campaignAttribution);
+
+    const query = params.toString();
+
+    return query === '' ? href : `${href}?${query}`;
+}
+
+function safeDistributionHref(href: string | undefined, campaignAttribution?: SafeCampaignAttribution): string | undefined {
+    if (!href) {
+        return undefined;
+    }
+
+    const code = href.replace('/x/cockpit/pay-codes/', '').split('/')[0];
+
+    if (!code) {
+        return undefined;
+    }
+
+    const params = new URLSearchParams();
+    appendCampaignAttributionParams(params, campaignAttribution);
+
+    const query = params.toString();
+    const distributionHref = `/x/cockpit/pay-codes/${code}/distribution`;
+
+    return query === '' ? distributionHref : `${distributionHref}?${query}`;
+}
+
 function safeExplorerHref(href: string | undefined, campaignAttribution?: SafeCampaignAttribution): string | undefined {
     if (!href) {
         return undefined;
@@ -446,7 +483,7 @@ function safeCampaignDashboardHref(campaignAttribution?: SafeCampaignAttribution
 }
 
 function appendCampaignAttributionParams(params: URLSearchParams, campaignAttribution?: SafeCampaignAttribution): void {
-    if (!campaignAttribution || campaignAttribution.mutatesCampaign) {
+    if (!campaignAttribution || !campaignAttribution.readOnly || campaignAttribution.mutatesCampaign) {
         return;
     }
 
@@ -988,6 +1025,20 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                         data-testid="cockpit-operator-issuance-activity-link"
                     >
                         Open Pay Code
+                        <span v-if="presentation.campaignAttribution && !presentation.campaignAttribution.mutatesCampaign">
+                            · campaign context
+                        </span>
+                    </a>
+                    <a
+                        v-if="presentation.distributionHref"
+                        :href="presentation.distributionHref"
+                        class="font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 hover:text-slate-950 dark:text-slate-200 dark:decoration-slate-600 dark:hover:text-white"
+                        data-testid="cockpit-operator-issuance-activity-distribution-link"
+                    >
+                        Open Distribution workspace
+                        <span v-if="presentation.campaignAttribution && !presentation.campaignAttribution.mutatesCampaign">
+                            · campaign context
+                        </span>
                     </a>
                     <a
                         v-if="presentation.explorerHref"
