@@ -2203,3 +2203,7 @@ Current boundary:
 - Cockpit Wave 40C expected UI result: existing Campaign source-link flow can now prefill Quick Generate amount, recipient/reference, and purpose/message from campaign recipient context.
 - Cockpit Wave 40D result: Campaign recipient field browser/published asset verification completed; report `reports/266-wave-40d-campaign-recipient-field-browser-published-asset-verification.md`; `x-change:install --force` passed, asset drift is clean (`checked 58, ok 58`), and Playwright confirms the Campaign `Open Quick Generate` path still opens campaign-prefilled Quick Generate.
 - Cockpit Wave 40D expected UI result: no new component; existing Campaign source-link flow remains visible and browser-safe.
+- Cockpit Wave 40 result: Campaign Recipient-to-Issuance Draft Field Mapping closed; report `reports/267-wave-40-campaign-recipient-to-issuance-draft-field-mapping-closure.md`.
+- Cockpit Wave 40 completed: campaign recipient/payout aliases now normalize into existing Quick Generate draft fields and Campaign `Open Quick Generate` source-link construction while keeping mobile/email off the URL and explicit draft fields authoritative.
+- Cockpit Wave 40 expected UI result: no new component; existing Campaign source-link flow can now prefill Quick Generate amount, recipient/reference, and purpose/message from campaign recipient context.
+- Cockpit Wave 40 next recommended wave: `Cockpit Wave 41 — Campaign Recipient Source-Link Selection / Operator Entry Point`.
