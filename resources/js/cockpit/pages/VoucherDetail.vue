@@ -558,18 +558,18 @@ function integrationSummary(
                 data-testid="cockpit-voucher-detail-campaign-navigation-context"
             >
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-700 dark:text-indigo-300">
-                    Campaign recipient context
+                    Campaign context
                 </p>
                 <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                    Read-only Pay Code detail context
+                    Opened from campaign activity
                 </h3>
                 <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    This context was carried from a campaign-attributed activity link. It is presentation-only and does not mutate campaign state, issue Pay Codes, send feedback, write journal entries, call providers, or move money.
+                    This Pay Code is being inspected with campaign-recipient context preserved. These links only change the read-only Cockpit view; they do not update campaign state, issue Pay Codes, send feedback, write journal entries, call providers, or move money.
                 </p>
                 <dl class="mt-5 grid gap-3 text-sm md:grid-cols-3">
                     <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Planning key
+                            Planning
                         </dt>
                         <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
                             {{ campaignNavigationContext.planning_key }}
@@ -593,7 +593,7 @@ function integrationSummary(
                     </div>
                     <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Destination
+                            Current page
                         </dt>
                         <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
                             {{ campaignNavigationContext.destination }}
@@ -601,7 +601,7 @@ function integrationSummary(
                     </div>
                     <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Mutation boundary
+                            Safety
                         </dt>
                         <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
                             {{ campaignNavigationContext.mutation?.reason }}
@@ -609,7 +609,7 @@ function integrationSummary(
                     </div>
                     <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Redaction
+                            Payload visibility
                         </dt>
                         <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
                             {{ campaignNavigationContext.redactions?.payloads }}
@@ -623,7 +623,7 @@ function integrationSummary(
                         class="inline-flex items-center rounded-full border border-indigo-300 px-3 py-2 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-700 dark:text-indigo-200 dark:hover:bg-indigo-900/50"
                         data-testid="cockpit-voucher-detail-campaign-explorer-return-link"
                     >
-                        Return to Explorer · campaign context
+                        Back to Explorer · read-only
                     </a>
                     <a
                         v-if="campaignDashboardReturnHref"
@@ -631,7 +631,7 @@ function integrationSummary(
                         class="inline-flex items-center rounded-full border border-indigo-300 px-3 py-2 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-700 dark:text-indigo-200 dark:hover:bg-indigo-900/50"
                         data-testid="cockpit-voucher-detail-campaign-dashboard-return-link"
                     >
-                        Return to Campaign Dashboard · read-only
+                        Back to Campaign Dashboard · read-only
                     </a>
                 </div>
             </section>
