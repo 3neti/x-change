@@ -4,12 +4,17 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 60 — Manual Distribution Link Human Guidance Acceptance
-Status: Wave 59 complete
+Current slice: Cockpit Wave 60B — Manual Guidance Human Evidence Record Template
+Status: In progress / Wave 60A complete
 Last updated: 2026-07-12
 
 ## Completed
 
+- Completed Cockpit Wave 60A — Manual Distribution Link Human Guidance Acceptance Plan:
+  - Defined the human acceptance checklist for manual distribution guidance on Voucher Detail and Distribution Workspace.
+  - Required both surfaces to clearly state manual distribution only, approved external workflow, recipient verification, no Cockpit SMS/email/webhook/in-app/campaign delivery, no copy telemetry, no short links/QR assets, and sensitive settlement access material.
+  - Current result remains `pending-human-guidance-intake` until human evidence is supplied.
+  - Report: `reports/357-wave-60a-manual-distribution-link-human-guidance-acceptance-plan.md`.
 - Completed Cockpit Wave 59 — Manual Distribution Link Operational Guidance Closure:
   - Added operator-facing manual distribution guidance to both accepted beneficiary URL copy surfaces.
   - Voucher Detail and Distribution Workspace now state manual distribution only, approved external workflow, recipient verification, no Cockpit delivery, no copy telemetry, no short links/QR assets, and sensitive settlement access material.
