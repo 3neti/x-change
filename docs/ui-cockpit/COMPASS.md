@@ -2191,3 +2191,7 @@ Current boundary:
 - Cockpit Wave 39C expected UI result: existing Campaign Cockpit Adoption `Open Quick Generate` links can now open Quick Generate with a normalized template selection from campaign intent.
 - Cockpit Wave 39D result: Campaign template intent browser/published asset verification completed; report `reports/261-wave-39d-campaign-template-intent-browser-published-asset-verification.md`; `x-change:install --force` passed, asset drift is clean (`checked 58, ok 58`), and Playwright confirms the Campaign `Open Quick Generate` path still opens campaign-prefilled Quick Generate.
 - Cockpit Wave 39D expected UI result: no new component; existing Campaign source-link flow remains visible and browser-safe.
+- Cockpit Wave 39 result: Campaign Plan-to-Issuance Draft Template Mapping closed; report `reports/262-wave-39-campaign-plan-to-issuance-draft-template-mapping-closure.md`.
+- Cockpit Wave 39 completed: campaign product/template intent aliases now normalize into existing Quick Generate template keys in both campaign draft adapter and Campaign `Open Quick Generate` source-link construction, while explicit `template_key` remains authoritative.
+- Cockpit Wave 39 expected UI result: no new component; existing Campaign source-link flow can now preselect the correct Quick Generate template from campaign intent.
+- Cockpit Wave 39 next recommended wave: `Cockpit Wave 40 — Campaign Recipient-to-Issuance Draft Field Mapping`.
