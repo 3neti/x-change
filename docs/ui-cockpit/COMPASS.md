@@ -2219,3 +2219,5 @@ Current boundary:
 - Cockpit Wave 41 completed: campaign adapters can expose safe recipient-level Quick Generate entry points through `campaign_read_model.recipient_quick_generate_links`; the Campaign Cockpit Adoption panel renders them as `Recipient Quick Generate entry points`; selecting one opens existing Quick Generate with recipient context and no campaign mutation.
 - Cockpit Wave 41 expected UI result: `/x/cockpit` can show recipient-specific Quick Generate links under Campaign Cockpit Adoption when safe adapter metadata is present.
 - Cockpit Wave 41 next recommended wave: `Cockpit Wave 42 — Campaign Recipient Quick Generate Submission Attribution / Result Closure`.
+- Cockpit Wave 42A result: Campaign Recipient Submission Attribution audit completed; report `reports/273-wave-42a-campaign-recipient-submission-attribution-audit.md`; next `Cockpit Wave 42B — Campaign Recipient Attribution Response Contract`.
+- Cockpit Wave 42A expected UI result: no UI change; this slice defines read-only recipient attribution scope after campaign-recipient Quick Generate submission while blocking campaign mutation, bulk issuance, delivery, and unsafe payload exposure.
