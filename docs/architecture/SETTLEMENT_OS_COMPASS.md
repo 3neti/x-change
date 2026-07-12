@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 56D in progress; human clipboard UX evidence template complete
+Current status: Cockpit Wave 56 complete; next recommended Cockpit Wave 57 beneficiary URL copy human acceptance intake
 Last updated: 2026-07-12
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-12
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 56D in progress; human clipboard UX evidence template complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 56 complete; next recommended Cockpit Wave 57 beneficiary URL copy human acceptance intake | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,11 @@ Last updated: 2026-07-12
 
 ### Current Cockpit Host Integration
 
+- Cockpit Wave 56 complete:
+  - Manual clipboard UX acceptance plan, automated evidence guard, and human evidence template are ready.
+  - Host-published Cockpit assets remain clean: checked 59, ok 59, stale 0, missing 0, extra 0.
+  - Report: [../ui-cockpit/reports/345-wave-56-manual-clipboard-ux-acceptance-closure.md](../ui-cockpit/reports/345-wave-56-manual-clipboard-ux-acceptance-closure.md).
+  - Next recommended slice: Cockpit Wave 57 — Beneficiary URL Copy Human Acceptance Intake.
 - Cockpit Wave 56C complete:
   - Added the human clipboard UX evidence record template with Pass / Blocked / Fail criteria.
   - Report: [../ui-cockpit/reports/344-wave-56c-human-clipboard-ux-evidence-record-template.md](../ui-cockpit/reports/344-wave-56c-human-clipboard-ux-evidence-record-template.md).
