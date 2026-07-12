@@ -71,6 +71,14 @@ const cockpitDetailUrl = computed<string | null>(() => {
     return stringValue(dataGet(lastResponse.value, ['result', 'links', 'cockpit_detail']));
 });
 
+const beneficiaryRedeemUrl = computed<string | null>(() => {
+    return stringValue(dataGet(lastResponse.value, ['result', 'links', 'redeem']));
+});
+
+const beneficiaryRedeemPath = computed<string | null>(() => {
+    return stringValue(dataGet(lastResponse.value, ['result', 'links', 'redeem_path']));
+});
+
 const pricingPreflight = computed<CockpitQuickGenerateRuntimePricingPreflight | null>(() => {
     return objectValue(dataGet(lastResponse.value, ['preflight', 'pricing'])) as CockpitQuickGenerateRuntimePricingPreflight | null;
 });
@@ -502,6 +510,52 @@ function dataGet(source: unknown, path: string[]): unknown {
             <p class="mt-3 leading-5 text-slate-500 dark:text-slate-400">
                 No automatic redirect is performed. The operator chooses whether to refresh Cockpit data or open the generated Pay Code detail.
             </p>
+
+            <section
+                v-if="beneficiaryRedeemUrl || beneficiaryRedeemPath"
+                class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900/70 dark:bg-emerald-950/30"
+                data-testid="cockpit-quick-generate-beneficiary-url-panel"
+            >
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p class="font-semibold text-emerald-950 dark:text-emerald-50">
+                            Beneficiary Pay Code URL
+                        </p>
+                        <p class="mt-1 text-[11px] leading-4 text-emerald-800 dark:text-emerald-200">
+                            Operator-safe full URL from the existing issuance result. Showing this link does not send SMS, email, webhook, or campaign delivery.
+                        </p>
+                    </div>
+                    <span class="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800">
+                        read-only
+                    </span>
+                </div>
+                <dl class="mt-3 grid gap-2">
+                    <div v-if="beneficiaryRedeemUrl">
+                        <dt class="text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-700/80 dark:text-emerald-200/80">
+                            Full URL
+                        </dt>
+                        <dd class="mt-1 break-all font-mono text-[12px] font-semibold text-emerald-950 dark:text-emerald-50">
+                            <a
+                                :href="beneficiaryRedeemUrl"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="underline decoration-emerald-400 underline-offset-4"
+                                data-testid="cockpit-quick-generate-beneficiary-url-link"
+                            >
+                                {{ beneficiaryRedeemUrl }}
+                            </a>
+                        </dd>
+                    </div>
+                    <div v-if="beneficiaryRedeemPath">
+                        <dt class="text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-700/80 dark:text-emerald-200/80">
+                            Path
+                        </dt>
+                        <dd class="mt-1 break-all font-mono text-[12px] font-semibold text-emerald-950 dark:text-emerald-50">
+                            {{ beneficiaryRedeemPath }}
+                        </dd>
+                    </div>
+                </dl>
+            </section>
 
             <section
                 v-if="campaignAttributionAvailable"

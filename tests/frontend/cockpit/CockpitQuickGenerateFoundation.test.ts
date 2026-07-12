@@ -173,6 +173,8 @@ describe('Cockpit Quick Generate foundation', () => {
                 result: {
                     code: 'PC-UI-001',
                     links: {
+                        redeem: 'https://example.test/r/PC-UI-001',
+                        redeem_path: '/r/PC-UI-001',
                         cockpit_detail: '/x/cockpit/pay-codes/PC-UI-001',
                         cockpit_distribution: '/x/cockpit/pay-codes/PC-UI-001/distribution',
                     },
@@ -298,6 +300,11 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(JSON.stringify(payload)).not.toContain('wallet');
         expect(JSON.stringify(payload)).not.toContain('provider_payload');
         expect(wrapper.emitted('submitSuccess')).toHaveLength(1);
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-beneficiary-url-panel"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-beneficiary-url-panel"]').text()).toContain('Beneficiary Pay Code URL');
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-beneficiary-url-panel"]').text()).toContain('https://example.test/r/PC-UI-001');
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-beneficiary-url-panel"]').text()).toContain('/r/PC-UI-001');
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-beneficiary-url-link"]').attributes('href')).toBe('https://example.test/r/PC-UI-001');
         expect(wrapper.find('[data-testid="cockpit-quick-generate-result-link"]').attributes('href')).toBe('/x/cockpit/pay-codes/PC-UI-001');
         expect(wrapper.find('[data-testid="cockpit-quick-generate-post-issuance-navigation-panel"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="cockpit-quick-generate-post-issuance-link-detail"]').attributes('href')).toBe('/x/cockpit/pay-codes/PC-UI-001');
@@ -324,6 +331,8 @@ describe('Cockpit Quick Generate foundation', () => {
                 result: {
                     code: 'PC-CAMPAIGN-001',
                     links: {
+                        redeem: 'https://example.test/r/PC-CAMPAIGN-001',
+                        redeem_path: '/r/PC-CAMPAIGN-001',
                         cockpit_detail: '/x/cockpit/pay-codes/PC-CAMPAIGN-001',
                     },
                 },
@@ -470,6 +479,8 @@ describe('Cockpit Quick Generate foundation', () => {
         });
         await wrapper.vm.$nextTick();
 
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-beneficiary-url-panel"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-beneficiary-url-panel"]').text()).toContain('https://example.test/r/PC-CAMPAIGN-001');
         expect(wrapper.find('[data-testid="cockpit-quick-generate-campaign-attribution-panel"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="cockpit-quick-generate-campaign-attribution-panel"]').text()).toContain('Campaign attribution');
         expect(wrapper.find('[data-testid="cockpit-quick-generate-campaign-attribution-panel"]').text()).toContain('plan-35d');
