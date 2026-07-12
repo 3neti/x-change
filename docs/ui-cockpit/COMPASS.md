@@ -4,12 +4,23 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 61B — Manual Guidance Distribution Workspace Human Evidence Intake
-Status: Wave 61A complete / Voucher Detail accepted / Distribution Workspace pending
+Current slice: Cockpit Wave 62 — Manual Distribution Link Operational Readiness / Next Capability Decision
+Status: Wave 61 complete / manual distribution guidance accepted
 Last updated: 2026-07-13
 
 ## Completed
 
+- Completed Cockpit Wave 61 — Manual Distribution Guidance Acceptance Closure:
+  - Recorded final acceptance result: Pass.
+  - Accepted manual distribution guidance for Voucher Detail and Distribution Workspace.
+  - Accepted evidence used Pay Code `6LGM` and beneficiary URL `http://x-change-sandbox.test/x/claim/6LGM/experience`.
+  - Confirmed guidance acceptance does not authorize delivery, persistence, journal writes, action execution, provider calls, voucher mutation, wallet mutation, short-link generation, QR asset generation, or money movement.
+  - Next recommended checkpoint: Cockpit Wave 62 — Manual Distribution Link Operational Readiness / Next Capability Decision.
+  - Report: `reports/363-wave-61-manual-distribution-guidance-acceptance-closure.md`.
+- Completed Cockpit Wave 61B — Manual Guidance Distribution Workspace Human Evidence Intake:
+  - Recorded human Pass evidence for Distribution Workspace guidance using Pay Code `6LGM`.
+  - Confirmed Distribution Workspace shows manual distribution only, approved external workflow, recipient verification, no Cockpit delivery, no copy telemetry, no short links/QR assets, and sensitive settlement access material.
+  - Report: `reports/362-wave-61b-manual-guidance-distribution-workspace-human-evidence-intake.md`.
 - Completed Cockpit Wave 61A — Manual Guidance Voucher Detail Human Evidence Intake:
   - Recorded human Pass evidence for Voucher Detail guidance using Pay Code `6LGM`.
   - Confirmed Voucher Detail shows manual distribution only, approved external workflow, recipient verification, no Cockpit delivery, no copy telemetry, no short links/QR assets, and sensitive settlement access material.

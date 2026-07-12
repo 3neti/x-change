@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 61A complete; Voucher Detail manual guidance accepted; Distribution Workspace guidance pending
+Current status: Cockpit Wave 61 complete; manual distribution guidance accepted
 Last updated: 2026-07-13
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-13
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 61A complete; Voucher Detail manual guidance accepted; Distribution Workspace guidance pending | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 61 complete; manual distribution guidance accepted | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,13 @@ Last updated: 2026-07-13
 
 ### Current Cockpit Host Integration
 
+- Cockpit Wave 61 — Manual Distribution Guidance Acceptance Closure complete:
+  - Recorded final acceptance result: Pass.
+  - Accepted manual distribution guidance for Voucher Detail and Distribution Workspace using Pay Code `6LGM`.
+  - Report: [../ui-cockpit/reports/363-wave-61-manual-distribution-guidance-acceptance-closure.md](../ui-cockpit/reports/363-wave-61-manual-distribution-guidance-acceptance-closure.md).
+- Cockpit Wave 61B — Manual Guidance Distribution Workspace Human Evidence Intake complete:
+  - Recorded human Pass evidence for Distribution Workspace guidance using Pay Code `6LGM`.
+  - Report: [../ui-cockpit/reports/362-wave-61b-manual-guidance-distribution-workspace-human-evidence-intake.md](../ui-cockpit/reports/362-wave-61b-manual-guidance-distribution-workspace-human-evidence-intake.md).
 - Cockpit Wave 61A — Manual Guidance Voucher Detail Human Evidence Intake complete:
   - Recorded human Pass evidence for Voucher Detail guidance using Pay Code `6LGM`.
   - Current Wave 61 result is `partial-pass / distribution-workspace-pending`.
