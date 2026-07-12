@@ -2179,3 +2179,7 @@ Current boundary:
 - Cockpit Wave 38C expected UI result: no new component; this hardens the existing `Open Quick Generate` campaign source link when backed by real x-campaign DTO output.
 - Cockpit Wave 38D result: Campaign real adapter source link UI/browser verification completed; report `reports/256-wave-38d-campaign-real-adapter-source-link-ui-browser-verification.md`; `x-change:install --force` passed, asset drift is clean (`checked 58, ok 58`), and Playwright confirms `Open Quick Generate` opens campaign-prefilled Quick Generate.
 - Cockpit Wave 38D expected UI result: existing Campaign Cockpit Adoption `Open Quick Generate` link remains visible and opens Quick Generate with `Campaign context prefill`.
+- Cockpit Wave 38 result: Campaign Workspace Entry Point Real Adapter / x-campaign Source Context Adoption closed; report `reports/257-wave-38-campaign-workspace-entry-point-real-adapter-adoption-closure.md`.
+- Cockpit Wave 38 completed: x-change now consumes safe x-campaign summary metadata and real `CampaignCockpitSummaryData` camelCase fields as Campaign → Quick Generate source-link context, while explicit query values still win.
+- Cockpit Wave 38 expected UI result: no new component; existing Campaign Cockpit Adoption `Open Quick Generate` remains the visible bridge into campaign-prefilled Quick Generate.
+- Cockpit Wave 38 next recommended wave: `Cockpit Wave 39 — Campaign Plan-to-Issuance Draft Template Mapping`.
