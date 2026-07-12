@@ -996,6 +996,9 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                         data-testid="cockpit-operator-issuance-activity-explorer-link"
                     >
                         Open in Explorer
+                        <span v-if="presentation.campaignAttribution && !presentation.campaignAttribution.mutatesCampaign">
+                            · campaign context
+                        </span>
                     </a>
                     <a
                         v-if="presentation.campaignDashboardHref"
@@ -1004,6 +1007,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                         data-testid="cockpit-operator-issuance-activity-campaign-dashboard-link"
                     >
                         Return to Campaign Dashboard
+                        <span> · read-only</span>
                     </a>
                 </div>
             </article>

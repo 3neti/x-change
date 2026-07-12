@@ -813,8 +813,30 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-link"]').attributes('href')).toBe('/x/cockpit/pay-codes/PC-1234');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-explorer-link"]').attributes('href')).toBe('/x/cockpit/pay-codes?activity_code=PC-1234&activity_source=operator_issuance_activity&campaign_planning_key=plan-wave-43c&campaign_execution_id=exec-wave-43c&campaign_id=campaign-wave-43c&campaign_audience_id=audience-wave-43c&campaign_recipient_id=recipient-wave-43c&campaign_source=x_campaign_adapter');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-explorer-link"]').text()).toContain('Open in Explorer');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-explorer-link"]').text()).toContain('campaign context');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-campaign-dashboard-link"]').attributes('href')).toBe('/x/cockpit?campaign_planning_key=plan-wave-43c&campaign_execution_id=exec-wave-43c&campaign_id=campaign-wave-43c&campaign_audience_id=audience-wave-43c&campaign_recipient_id=recipient-wave-43c&campaign_source=x_campaign_adapter');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-campaign-dashboard-link"]').text()).toContain('Return to Campaign Dashboard');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-campaign-dashboard-link"]').text()).toContain('read-only');
+    });
+
+    it('does not propagate mutating campaign activity attribution into campaign navigation links', () => {
+        const unsafeActivityReadModel = structuredClone(operatorIssuanceActivityReadModel);
+        unsafeActivityReadModel.presentations[0].metadata.campaign_attribution.mutates_campaign = true;
+        unsafeActivityReadModel.presentations[0].metadata.campaign_attribution.read_only = false;
+
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                dashboard_read_model: dashboardReadModel,
+                operator_issuance_activity_read_model: unsafeActivityReadModel,
+            },
+        });
+
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-explorer-link"]').attributes('href')).toBe('/x/cockpit/pay-codes?activity_code=PC-1234&activity_source=operator_issuance_activity');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-explorer-link"]').text()).not.toContain('campaign context');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-campaign-dashboard-link"]').exists()).toBe(false);
+        expect(wrapper.text()).toContain('Campaign mutation: yes');
+        expect(wrapper.text()).toContain('Read-only: no');
+        expect(wrapper.text()).not.toContain('must-not-render');
     });
 
     it('renders read-only operator issuance activity search and filter controls', () => {
