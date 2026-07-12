@@ -322,6 +322,28 @@ const operatorIssuanceActivityReadModel = {
                         provider_payload: 'must-not-render',
                     },
                 },
+                campaign_attribution: {
+                    schema: 'x-change.cockpit.quick-generate-campaign-attribution.v1',
+                    status: 'available',
+                    read_only: true,
+                    mutates_campaign: false,
+                    planning_key: 'plan-wave-43c',
+                    execution_id: 'exec-wave-43c',
+                    campaign_id: 'campaign-wave-43c',
+                    audience_id: 'audience-wave-43c',
+                    recipient_id: 'recipient-wave-43c',
+                    source: 'x_campaign_adapter',
+                    generated_code: 'PC-1234',
+                    template_key: 'ofw-remittance',
+                    amount: '500.00',
+                    currency: 'PHP',
+                    recipient_reference: '09173011987',
+                    purpose: 'Campaign payout',
+                    provider_payload: 'must-not-render',
+                    raw_payload: 'must-not-render',
+                    wallet: 'must-not-render',
+                    recipient_secret: 'must-not-render',
+                },
                 provider_payload: 'must-not-render',
                 raw_payload: 'must-not-render',
                 wallet: 'must-not-render',
@@ -767,8 +789,23 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('Channel: in_app');
         expect(wrapper.text()).toContain('Planned deliveries: 1');
         expect(wrapper.text()).toContain('Source: test-feedback-handoff');
+        expect(wrapper.text()).toContain('Campaign attribution: available');
+        expect(wrapper.text()).toContain('Campaign: campaign-wave-43c');
+        expect(wrapper.text()).toContain('Audience: audience-wave-43c');
+        expect(wrapper.text()).toContain('Recipient: recipient-wave-43c');
+        expect(wrapper.text()).toContain('Recipient reference: 09173011987');
+        expect(wrapper.text()).toContain('Template: ofw-remittance');
+        expect(wrapper.text()).toContain('Amount: PHP 500.00');
+        expect(wrapper.text()).toContain('Generated Pay Code: PC-1234');
+        expect(wrapper.text()).toContain('Planning key: plan-wave-43c');
+        expect(wrapper.text()).toContain('Execution: exec-wave-43c');
+        expect(wrapper.text()).toContain('Source: x_campaign_adapter');
+        expect(wrapper.text()).toContain('Purpose: Campaign payout');
+        expect(wrapper.text()).toContain('Campaign mutation: no');
+        expect(wrapper.text()).toContain('Read-only: yes');
         expect(wrapper.text()).toContain('presentation-only');
         expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-card"]')).toHaveLength(1);
+        expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-campaign-attribution"]')).toHaveLength(1);
         expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-journal-summary"]')).toHaveLength(1);
         expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-journal-diagnostic"]')).toHaveLength(1);
         expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-action-summary"]')).toHaveLength(1);

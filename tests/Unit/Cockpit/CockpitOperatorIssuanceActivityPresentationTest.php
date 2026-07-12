@@ -129,3 +129,70 @@ it('adds read-only journal handoff diagnostics to presentation metadata', functi
         'raw_payloads_exposed' => false,
     ]);
 });
+
+it('presents safe campaign recipient attribution from activity metadata', function () {
+    $presenter = app(CockpitOperatorIssuanceActivityPresenterContract::class);
+
+    $presentation = $presenter->present(
+        activity: new CockpitOperatorIssuanceActivityItemData(
+            id: 'activity-1',
+            code: 'PC-WAVE-43C',
+            amount: '500.00',
+            currency: 'PHP',
+            status: 'issued',
+            issued_at: '2026-07-10T09:00:00+00:00',
+            route: 'x-change.cockpit.quick-generate.store',
+            correlation_id: 'corr-wave-43c',
+            detail_href: '/x/cockpit/pay-codes/PC-WAVE-43C',
+            metadata: [
+                'campaign_attribution' => [
+                    'schema' => 'x-change.cockpit.quick-generate-campaign-attribution.v1',
+                    'status' => 'available',
+                    'read_only' => true,
+                    'mutates_campaign' => false,
+                    'planning_key' => 'plan-wave-43c',
+                    'execution_id' => 'exec-wave-43c',
+                    'campaign_id' => 'campaign-wave-43c',
+                    'audience_id' => 'audience-wave-43c',
+                    'recipient_id' => 'recipient-wave-43c',
+                    'source' => 'x_campaign_adapter',
+                    'generated_code' => 'PC-WAVE-43C',
+                    'template_key' => 'ofw-remittance',
+                    'amount' => '500.00',
+                    'currency' => 'PHP',
+                    'recipient_reference' => '09173011987',
+                    'purpose' => 'Campaign payout',
+                    'provider_payload' => 'must-not-render',
+                    'raw_payload' => 'must-not-render',
+                    'wallet' => 'must-not-render',
+                ],
+            ],
+        ),
+        journal: new CockpitOperatorIssuanceActivityJournalHandoffResultData(activity_id: 'activity-1', correlation_id: 'corr-wave-43c'),
+        action: new CockpitOperatorIssuanceActivityActionHandoffResultData(activity_id: 'activity-1', correlation_id: 'corr-wave-43c'),
+        feedback: new CockpitOperatorIssuanceActivityFeedbackHandoffResultData(activity_id: 'activity-1', correlation_id: 'corr-wave-43c'),
+    );
+
+    expect($presentation->metadata['campaign_attribution'])
+        ->toMatchArray([
+            'schema' => 'x-change.cockpit.quick-generate-campaign-attribution.v1',
+            'status' => 'available',
+            'read_only' => true,
+            'mutates_campaign' => false,
+            'planning_key' => 'plan-wave-43c',
+            'execution_id' => 'exec-wave-43c',
+            'campaign_id' => 'campaign-wave-43c',
+            'audience_id' => 'audience-wave-43c',
+            'recipient_id' => 'recipient-wave-43c',
+            'source' => 'x_campaign_adapter',
+            'generated_code' => 'PC-WAVE-43C',
+            'template_key' => 'ofw-remittance',
+            'amount' => '500.00',
+            'currency' => 'PHP',
+            'recipient_reference' => '09173011987',
+            'purpose' => 'Campaign payout',
+        ])
+        ->not->toHaveKey('provider_payload')
+        ->not->toHaveKey('raw_payload')
+        ->not->toHaveKey('wallet');
+});

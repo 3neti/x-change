@@ -171,6 +171,26 @@ export type CockpitOperatorIssuanceActivityPresentation = {
             };
             [key: string]: unknown;
         };
+        campaign_attribution?: {
+            schema?: string | null;
+            status?: string | null;
+            read_only?: boolean | null;
+            mutates_campaign?: boolean | null;
+            planning_key?: string | null;
+            execution_id?: string | null;
+            campaign_id?: string | null;
+            audience_id?: string | null;
+            recipient_id?: string | null;
+            source?: string | null;
+            generated_code?: string | null;
+            template_key?: string | null;
+            amount?: string | number | null;
+            currency?: string | null;
+            recipient_reference?: string | number | null;
+            purpose?: string | null;
+            redactions?: Record<string, unknown>;
+            [key: string]: unknown;
+        };
         [key: string]: unknown;
     };
     [key: string]: unknown;

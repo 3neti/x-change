@@ -126,10 +126,11 @@ class DurableCockpitOperatorIssuanceActivityReadModelProvider
             idempotency_key: null,
             operator_id: $record->actor_id,
             detail_href: is_string($detailHref) ? $detailHref : null,
-            metadata: [
+            metadata: array_filter([
                 'source' => $record->source,
                 'durable_record' => true,
-            ],
+                'campaign_attribution' => $this->safeCampaignAttributionMetadata(data_get($record->metadata, 'campaign_attribution', [])),
+            ], fn (mixed $value): bool => $value !== []),
         );
     }
 
@@ -334,5 +335,35 @@ class DurableCockpitOperatorIssuanceActivityReadModelProvider
     private function nullableString(mixed $value): ?string
     {
         return is_string($value) && trim($value) !== '' ? $value : null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function safeCampaignAttributionMetadata(mixed $metadata): array
+    {
+        if (! is_array($metadata)) {
+            return [];
+        }
+
+        return array_filter(array_intersect_key($metadata, array_flip([
+            'schema',
+            'status',
+            'read_only',
+            'mutates_campaign',
+            'planning_key',
+            'execution_id',
+            'campaign_id',
+            'audience_id',
+            'recipient_id',
+            'source',
+            'generated_code',
+            'template_key',
+            'amount',
+            'currency',
+            'recipient_reference',
+            'purpose',
+            'redactions',
+        ])), fn (mixed $value): bool => $value !== null && $value !== '');
     }
 }
