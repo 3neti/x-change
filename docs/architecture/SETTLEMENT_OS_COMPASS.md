@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 62C in progress; manual distribution next-capability decision complete
+Current status: Cockpit Wave 62 complete; manual copy operational hardening selected
 Last updated: 2026-07-13
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-13
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 62C in progress; manual distribution next-capability decision complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 62 complete; manual copy operational hardening selected | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,11 @@ Last updated: 2026-07-13
 
 ### Current Cockpit Host Integration
 
+- Cockpit Wave 62 — Manual Distribution Operational Readiness Closure complete:
+  - Closed manual distribution readiness as `manual-copy-operational / automated-distribution-not-authorized`.
+  - Selected the next capability: `Manual copy operational hardening`.
+  - Host-published Cockpit assets remain clean: checked 59, ok 59, stale 0, missing 0, extra 0.
+  - Report: [../ui-cockpit/reports/366-wave-62-manual-distribution-operational-readiness-closure.md](../ui-cockpit/reports/366-wave-62-manual-distribution-operational-readiness-closure.md).
 - Cockpit Wave 62B — Manual Distribution Next Capability Decision Matrix complete:
   - Recommended manual copy operational hardening as the next capability.
   - Deferred copy telemetry, Cockpit-triggered delivery, campaign dispatch, short links, QR assets, and print artifacts.
