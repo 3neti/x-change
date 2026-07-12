@@ -247,4 +247,69 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).toContain('Distribution Workspace Runtime');
         expect(wrapper.find('[data-testid="cockpit-distribution-workspace-shell"]').exists()).toBe(true);
     });
+
+    it('renders safe campaign recipient context on distribution workspace without dispatch controls', () => {
+        const wrapper = mount(DistributionWorkspace, {
+            props: {
+                campaign_navigation_context: {
+                    schema: 'x-change.cockpit.campaign-navigation.v1',
+                    status: 'available',
+                    authorized: true,
+                    source: 'x_campaign_adapter',
+                    planning_key: 'plan-wave-46',
+                    execution_id: 'exec-wave-46',
+                    campaign_id: 'campaign-wave-46',
+                    audience_id: 'audience-wave-46',
+                    recipient_id: 'recipient-wave-46',
+                    destination: 'distribution_workspace',
+                    read_only: true,
+                    mutation: {
+                        enabled: false,
+                        status: 'blocked',
+                        reason: 'campaign-navigation-read-only',
+                    },
+                    redactions: {
+                        payloads: 'navigation-context-only',
+                    },
+                    provider_payload: 'must-not-render',
+                    raw_payload: 'must-not-render',
+                    wallet: 'must-not-render',
+                    mutation_route: '/must-not-render',
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="cockpit-distribution-campaign-navigation-context"]').exists()).toBe(true);
+        expect(wrapper.text()).toContain('Campaign recipient context');
+        expect(wrapper.text()).toContain('Read-only Distribution context');
+        expect(wrapper.text()).toContain('plan-wave-46');
+        expect(wrapper.text()).toContain('exec-wave-46');
+        expect(wrapper.text()).toContain('recipient-wave-46');
+        expect(wrapper.text()).toContain('distribution_workspace');
+        expect(wrapper.text()).toContain('campaign-navigation-read-only');
+        expect(wrapper.text()).toContain('navigation-context-only');
+        expect(wrapper.text()).not.toContain('must-not-render');
+        expect(wrapper.text()).not.toContain('provider_payload');
+        expect(wrapper.text()).not.toContain('raw_payload');
+        expect(wrapper.text()).not.toContain('wallet');
+        expect(wrapper.text()).not.toContain('/must-not-render');
+    });
+
+    it('does not render campaign context on distribution workspace for the wrong destination', () => {
+        const wrapper = mount(DistributionWorkspace, {
+            props: {
+                campaign_navigation_context: {
+                    status: 'available',
+                    authorized: true,
+                    planning_key: 'plan-wave-46',
+                    execution_id: 'exec-wave-46',
+                    destination: 'pay_code_detail',
+                    read_only: true,
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="cockpit-distribution-campaign-navigation-context"]').exists()).toBe(false);
+        expect(wrapper.text()).not.toContain('plan-wave-46');
+    });
 });

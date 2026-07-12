@@ -975,5 +975,6 @@ export type CockpitDistributionWorkspacePageProps = {
         policy?: string;
     };
     read_model?: CockpitReadModelBundle;
+    campaign_navigation_context?: CockpitCampaignNavigationContext;
     distribution_workspace_read_model?: CockpitDistributionWorkspaceReadModel;
 };
