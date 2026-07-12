@@ -35,6 +35,15 @@ const executionId = computed(() => stringValue(facts.value.execution_id) ?? 'No 
 const mutationReason = computed(() => stringValue(objectValue(model.value?.mutation).reason) ?? 'campaign-mutations-not-authorized');
 const unavailableReason = computed(() => stringValue(objectValue(model.value?.redactions).reason) ?? 'read-model-not-available');
 const quickGenerateLink = computed<CockpitCampaignQuickGenerateLink | null>(() => sanitizeQuickGenerateLink(model.value?.quick_generate_link));
+const recipientQuickGenerateLinks = computed<CockpitCampaignQuickGenerateLink[]>(() => {
+    if (!Array.isArray(model.value?.recipient_quick_generate_links)) {
+        return [];
+    }
+
+    return model.value.recipient_quick_generate_links
+        .map((link) => sanitizeQuickGenerateLink(link))
+        .filter((link): link is CockpitCampaignQuickGenerateLink => link !== null);
+});
 const explorerHref = computed(() => {
     const normalizedPlanningKey = stringValue(facts.value.planning_key);
     const normalizedExecutionId = stringValue(facts.value.execution_id);
@@ -235,6 +244,36 @@ function stringValue(value: unknown): string | undefined {
             <p class="mt-1">
                 {{ mutationReason }}
             </p>
+        </div>
+
+        <div
+            v-if="recipientQuickGenerateLinks.length > 0"
+            class="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950"
+            data-testid="cockpit-campaign-recipient-source-links"
+        >
+            <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">
+                Recipient Quick Generate entry points
+            </p>
+            <p class="mt-1 text-sm text-emerald-900 dark:text-emerald-100">
+                Select a recipient to prefill the existing Quick Generate handoff. Campaign state is not mutated.
+            </p>
+            <div class="mt-3 grid gap-2 md:grid-cols-2">
+                <a
+                    v-for="(link, index) in recipientQuickGenerateLinks"
+                    :key="link.recipient_id ?? link.href ?? index"
+                    :href="link.href ?? '#'"
+                    class="rounded-lg border border-emerald-200 bg-white px-3 py-3 text-sm text-emerald-950 transition hover:border-emerald-300 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900 dark:text-emerald-50"
+                    :data-testid="`cockpit-campaign-recipient-source-link-${index}`"
+                >
+                    <span class="block font-semibold">{{ link.label ?? 'Open Quick Generate' }}</span>
+                    <span class="mt-1 block text-emerald-800 dark:text-emerald-100">
+                        {{ link.draft?.recipient_reference ?? link.recipient_id ?? 'Recipient context' }}
+                    </span>
+                    <span class="mt-2 block text-xs text-emerald-700 dark:text-emerald-200">
+                        {{ link.read_only ? 'read-only prefill' : 'campaign context' }} · {{ link.source }}
+                    </span>
+                </a>
+            </div>
         </div>
 
         <div class="mt-5 grid gap-3 md:grid-cols-2">

@@ -212,6 +212,7 @@ export type CockpitCampaignReadModel = {
     facts?: Record<string, unknown>;
     mutation?: Record<string, unknown>;
     quick_generate_link?: CockpitCampaignQuickGenerateLink;
+    recipient_quick_generate_links?: CockpitCampaignQuickGenerateLink[];
     redactions?: CockpitReadModelRedactions;
     [key: string]: unknown;
 };

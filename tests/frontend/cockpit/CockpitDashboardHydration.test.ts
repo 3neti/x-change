@@ -126,6 +126,58 @@ const campaignReadModel = {
             payloads: 'campaign-source-link-query-only',
         },
     },
+    recipient_quick_generate_links: [
+        {
+            schema: 'x-change.cockpit.campaign-quick-generate-link.v1',
+            status: 'available',
+            enabled: true,
+            label: 'Generate for Ana',
+            href: 'http://localhost/x/cockpit/quick-generate?campaign_planning_key=campaign-plan-1&campaign_execution_id=execution-1&campaign_recipient_id=recipient-a&campaign_source=x_campaign_adapter&campaign_template_key=ofw-remittance&campaign_amount=500.00&campaign_currency=PHP&campaign_recipient_reference=BEN-A&campaign_purpose=Ana%20payout',
+            route: 'x-change.cockpit.quick-generate',
+            read_only: true,
+            mutates_campaign: false,
+            planning_key: 'campaign-plan-1',
+            execution_id: 'execution-1',
+            recipient_id: 'recipient-a',
+            source: 'x_campaign_adapter',
+            draft: {
+                template_key: 'ofw-remittance',
+                amount: '500.00',
+                currency: 'PHP',
+                recipient_reference: 'BEN-A',
+                purpose: 'Ana payout',
+                mobile: 'must-not-render',
+            },
+            redactions: {
+                payloads: 'campaign-recipient-source-link-query-only',
+            },
+        },
+        {
+            schema: 'x-change.cockpit.campaign-quick-generate-link.v1',
+            status: 'available',
+            enabled: true,
+            label: 'Generate for Ben',
+            href: 'http://localhost/x/cockpit/quick-generate?campaign_planning_key=campaign-plan-1&campaign_execution_id=execution-1&campaign_recipient_id=recipient-b&campaign_source=x_campaign_adapter&campaign_template_key=money-changer&campaign_amount=625.25&campaign_currency=PHP&campaign_recipient_reference=BEN-B&campaign_purpose=Ben%20payout',
+            route: 'x-change.cockpit.quick-generate',
+            read_only: true,
+            mutates_campaign: false,
+            planning_key: 'campaign-plan-1',
+            execution_id: 'execution-1',
+            recipient_id: 'recipient-b',
+            source: 'x_campaign_adapter',
+            draft: {
+                template_key: 'money-changer',
+                amount: '625.25',
+                currency: 'PHP',
+                recipient_reference: 'BEN-B',
+                purpose: 'Ben payout',
+                email: 'must-not-render',
+            },
+            redactions: {
+                payloads: 'campaign-recipient-source-link-query-only',
+            },
+        },
+    ],
     redactions: {
         payloads: 'campaign-cockpit-summary-only',
         routes_registered: false,
@@ -494,6 +546,35 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(quickGenerateLink.text()).toContain('Prefills the existing Quick Generate handoff');
         expect(quickGenerateLink.text()).toContain('read-only campaign context');
         expect(wrapper.text()).not.toContain('raw_payload');
+        expect(wrapper.text()).not.toContain('must-not-render');
+        expect(wrapper.find('[data-testid="cockpit-campaign-mutation-button"]').exists()).toBe(false);
+    });
+
+    it('renders read-only campaign recipient quick generate source links from the campaign read model', () => {
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                dashboard_read_model: dashboardReadModel,
+                campaign_read_model: campaignReadModel,
+            },
+        });
+
+        const recipientLinks = wrapper.find('[data-testid="cockpit-campaign-recipient-source-links"]');
+        const firstRecipientLink = wrapper.find('[data-testid="cockpit-campaign-recipient-source-link-0"]');
+        const secondRecipientLink = wrapper.find('[data-testid="cockpit-campaign-recipient-source-link-1"]');
+
+        expect(recipientLinks.exists()).toBe(true);
+        expect(recipientLinks.text()).toContain('Recipient Quick Generate entry points');
+        expect(recipientLinks.text()).toContain('Campaign state is not mutated');
+        expect(firstRecipientLink.exists()).toBe(true);
+        expect(firstRecipientLink.attributes('href')).toContain('/x/cockpit/quick-generate');
+        expect(firstRecipientLink.attributes('href')).toContain('campaign_recipient_id=recipient-a');
+        expect(firstRecipientLink.text()).toContain('Generate for Ana');
+        expect(firstRecipientLink.text()).toContain('BEN-A');
+        expect(secondRecipientLink.exists()).toBe(true);
+        expect(secondRecipientLink.attributes('href')).toContain('campaign_template_key=money-changer');
+        expect(secondRecipientLink.attributes('href')).toContain('campaign_recipient_reference=BEN-B');
+        expect(secondRecipientLink.text()).toContain('Generate for Ben');
+        expect(secondRecipientLink.text()).toContain('BEN-B');
         expect(wrapper.text()).not.toContain('must-not-render');
         expect(wrapper.find('[data-testid="cockpit-campaign-mutation-button"]').exists()).toBe(false);
     });
