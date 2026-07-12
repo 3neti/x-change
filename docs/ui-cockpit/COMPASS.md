@@ -2167,3 +2167,7 @@ Current boundary:
 - Cockpit Wave 37C expected UI result: `/x/cockpit` with campaign context can show `Open Quick Generate`, `Prefills the existing Quick Generate handoff`, and a read-only campaign context source link.
 - Cockpit Wave 37D result: Campaign Quick Generate source link browser/publish verification completed; report `reports/251-wave-37d-campaign-quick-generate-source-link-browser-publish-verification.md`; next `Cockpit Wave 37E — Campaign Context Source Link Generation Closure`.
 - Cockpit Wave 37D expected UI result: browser-verified `/x/cockpit?...campaign_*` shows `Open Quick Generate`; clicking it opens campaign-prefilled Quick Generate.
+- Cockpit Wave 37 result: Campaign Context Source Link Generation / Campaign Surface Entry Points closed; report `reports/252-wave-37-campaign-context-source-link-generation-closure.md`.
+- Cockpit Wave 37 completed: dashboard campaign context now hydrates and renders a safe `Open Quick Generate` link that opens Quick Generate with campaign prefill values, with no campaign mutation or unsafe payload exposure.
+- Cockpit Wave 37 expected UI result: campaign-context dashboard surfaces can bridge into Quick Generate through `Open Quick Generate` and show `Campaign context prefill` after navigation.
+- Cockpit Wave 37 next recommended wave: `Cockpit Wave 38 — Campaign Workspace Entry Point Real Adapter / x-campaign Source Context Adoption`.
