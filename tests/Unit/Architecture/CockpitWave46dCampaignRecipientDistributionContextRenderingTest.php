@@ -18,7 +18,7 @@ it('documents the campaign recipient distribution context rendering', function (
 
     expect($page)
         ->toContain('cockpit-distribution-campaign-navigation-context')
-        ->toContain('Read-only Distribution context')
+        ->toContain('Inspecting distribution from campaign activity')
         ->toContain("destination !== 'distribution_workspace'");
 
     expect($frontend)

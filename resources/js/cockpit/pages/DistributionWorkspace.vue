@@ -275,18 +275,18 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                 data-testid="cockpit-distribution-campaign-navigation-context"
             >
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-700 dark:text-indigo-300">
-                    Campaign recipient context
+                    Campaign context
                 </p>
                 <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                    Read-only Distribution context
+                    Inspecting distribution from campaign activity
                 </h3>
                 <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    This context was carried from a campaign-attributed activity link. It helps operators inspect distribution readiness without dispatching distribution, mutating campaigns, sending feedback, writing journal entries, calling providers, or moving money.
+                    This Distribution Workspace is being inspected with campaign-recipient context preserved. These links only move between read-only Cockpit views; they do not dispatch delivery, update campaign state, send feedback, write journal entries, call providers, or move money.
                 </p>
                 <dl class="mt-5 grid gap-3 text-sm md:grid-cols-3">
                     <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Planning key
+                            Planning
                         </dt>
                         <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
                             {{ campaignNavigationContext.planning_key }}
@@ -310,7 +310,7 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                     </div>
                     <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Destination
+                            Current page
                         </dt>
                         <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
                             {{ campaignNavigationContext.destination }}
@@ -318,7 +318,7 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                     </div>
                     <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Mutation boundary
+                            Safety
                         </dt>
                         <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
                             {{ campaignNavigationContext.mutation?.reason }}
@@ -326,7 +326,7 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                     </div>
                     <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Redaction
+                            Payload visibility
                         </dt>
                         <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
                             {{ campaignNavigationContext.redactions?.payloads }}
@@ -340,7 +340,7 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                         class="inline-flex items-center rounded-full border border-indigo-300 px-3 py-2 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-700 dark:text-indigo-200 dark:hover:bg-indigo-900/50"
                         data-testid="cockpit-distribution-campaign-detail-return-link"
                     >
-                        Return to Pay Code Detail · campaign context
+                        Back to Pay Code Detail · read-only
                     </a>
                     <a
                         v-if="campaignExplorerReturnHref"
@@ -348,7 +348,7 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                         class="inline-flex items-center rounded-full border border-indigo-300 px-3 py-2 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-700 dark:text-indigo-200 dark:hover:bg-indigo-900/50"
                         data-testid="cockpit-distribution-campaign-explorer-return-link"
                     >
-                        Return to Explorer · campaign context
+                        Back to Explorer · read-only
                     </a>
                     <a
                         v-if="campaignDashboardReturnHref"
@@ -356,7 +356,7 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                         class="inline-flex items-center rounded-full border border-indigo-300 px-3 py-2 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-700 dark:text-indigo-200 dark:hover:bg-indigo-900/50"
                         data-testid="cockpit-distribution-campaign-dashboard-return-link"
                     >
-                        Return to Campaign Dashboard · read-only
+                        Back to Campaign Dashboard · read-only
                     </a>
                 </div>
             </section>

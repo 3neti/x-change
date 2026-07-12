@@ -280,8 +280,9 @@ describe('Cockpit Distribution Workspace foundation', () => {
         });
 
         expect(wrapper.find('[data-testid="cockpit-distribution-campaign-navigation-context"]').exists()).toBe(true);
-        expect(wrapper.text()).toContain('Campaign recipient context');
-        expect(wrapper.text()).toContain('Read-only Distribution context');
+        expect(wrapper.text()).toContain('Campaign context');
+        expect(wrapper.text()).toContain('Inspecting distribution from campaign activity');
+        expect(wrapper.text()).toContain('only move between read-only Cockpit views');
         expect(wrapper.text()).toContain('plan-wave-46');
         expect(wrapper.text()).toContain('exec-wave-46');
         expect(wrapper.text()).toContain('recipient-wave-46');
@@ -289,10 +290,13 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).toContain('campaign-navigation-read-only');
         expect(wrapper.text()).toContain('navigation-context-only');
         expect(wrapper.find('[data-testid="cockpit-distribution-campaign-detail-return-link"]').attributes('href')).toBe('/x/cockpit/pay-codes/Not%20wired?campaign_planning_key=plan-wave-46&campaign_execution_id=exec-wave-46&campaign_id=campaign-wave-46&campaign_audience_id=audience-wave-46&campaign_recipient_id=recipient-wave-46&campaign_source=x_campaign_adapter');
-        expect(wrapper.find('[data-testid="cockpit-distribution-campaign-detail-return-link"]').text()).toContain('campaign context');
+        expect(wrapper.find('[data-testid="cockpit-distribution-campaign-detail-return-link"]').text()).toContain('Back to Pay Code Detail');
+        expect(wrapper.find('[data-testid="cockpit-distribution-campaign-detail-return-link"]').text()).toContain('read-only');
         expect(wrapper.find('[data-testid="cockpit-distribution-campaign-explorer-return-link"]').attributes('href')).toBe('/x/cockpit/pay-codes?campaign_planning_key=plan-wave-46&campaign_execution_id=exec-wave-46&campaign_id=campaign-wave-46&campaign_audience_id=audience-wave-46&campaign_recipient_id=recipient-wave-46&campaign_source=x_campaign_adapter&activity_code=Not+wired&activity_source=operator_issuance_activity');
-        expect(wrapper.find('[data-testid="cockpit-distribution-campaign-explorer-return-link"]').text()).toContain('campaign context');
+        expect(wrapper.find('[data-testid="cockpit-distribution-campaign-explorer-return-link"]').text()).toContain('Back to Explorer');
+        expect(wrapper.find('[data-testid="cockpit-distribution-campaign-explorer-return-link"]').text()).toContain('read-only');
         expect(wrapper.find('[data-testid="cockpit-distribution-campaign-dashboard-return-link"]').attributes('href')).toBe('/x/cockpit?campaign_planning_key=plan-wave-46&campaign_execution_id=exec-wave-46&campaign_id=campaign-wave-46&campaign_audience_id=audience-wave-46&campaign_recipient_id=recipient-wave-46&campaign_source=x_campaign_adapter');
+        expect(wrapper.find('[data-testid="cockpit-distribution-campaign-dashboard-return-link"]').text()).toContain('Back to Campaign Dashboard');
         expect(wrapper.find('[data-testid="cockpit-distribution-campaign-dashboard-return-link"]').text()).toContain('read-only');
         expect(wrapper.text()).not.toContain('must-not-render');
         expect(wrapper.text()).not.toContain('provider_payload');
