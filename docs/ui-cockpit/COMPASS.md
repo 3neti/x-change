@@ -4,12 +4,17 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 65 — Manual Distribution External Evidence Intake Decision
-Status: Wave 64 complete / operator runbook and workflow handoff boundary recorded
+Current slice: Cockpit Wave 65B — Manual Distribution External Evidence Schema / Template
+Status: In progress / Wave 65A complete
 Last updated: 2026-07-13
 
 ## Completed
 
+- Completed Cockpit Wave 65A — Manual Distribution External Evidence Intake Decision:
+  - Decided to proceed only with an evidence-intake planning baseline.
+  - Confirmed Wave 65 does not implement evidence persistence, upload endpoints, journal writes, feedback delivery, campaign dispatch, short links, QR assets, print artifacts, provider calls, voucher mutation, wallet mutation, or money movement.
+  - Current result: `planning-only / no-intake-runtime`.
+  - Report: `reports/373-wave-65a-external-evidence-intake-decision.md`.
 - Completed Cockpit Wave 64 — Manual Distribution Operator Runbook / Workflow Handoff Closure:
   - Closed Wave 64 with an operator runbook and explicit workflow handoff boundary.
   - Confirmed Cockpit owns URL display and browser-local copy only; approved external workflows own recipient verification, channel selection, message composition, message sending, delivery evidence, delivery records, channel audit, retry, and escalation.
