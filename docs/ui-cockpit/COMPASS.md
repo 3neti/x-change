@@ -2207,3 +2207,5 @@ Current boundary:
 - Cockpit Wave 40 completed: campaign recipient/payout aliases now normalize into existing Quick Generate draft fields and Campaign `Open Quick Generate` source-link construction while keeping mobile/email off the URL and explicit draft fields authoritative.
 - Cockpit Wave 40 expected UI result: no new component; existing Campaign source-link flow can now prefill Quick Generate amount, recipient/reference, and purpose/message from campaign recipient context.
 - Cockpit Wave 40 next recommended wave: `Cockpit Wave 41 — Campaign Recipient Source-Link Selection / Operator Entry Point`.
+- Cockpit Wave 41A result: Campaign Recipient Source-Link Selection audit completed; report `reports/268-wave-41a-campaign-recipient-source-link-selection-audit.md`; next `Cockpit Wave 41B — Campaign Recipient Source-Link Read Model Contract / Hydration`.
+- Cockpit Wave 41A expected UI result: no UI change; this slice defines safe recipient-level Campaign → Quick Generate entry-point scope while blocking campaign mutation, bulk issuance, delivery, provider calls, wallet movement, and unsafe payload exposure.
