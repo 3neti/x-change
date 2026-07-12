@@ -188,15 +188,17 @@ function buildPayload(): Record<string, unknown> {
     const mobile = recipientReference.value.trim();
     const message = purpose.value.trim();
     const campaign = campaignMetadata();
+    const validation = mobile === '' ? {} : { mobile };
+    const fields = mobile === '' ? [] : ['mobile'];
 
     return {
         cash: {
             amount: Number.isFinite(normalizedAmount) ? normalizedAmount : amount.value,
             currency: currency.value.trim() || 'PHP',
-            validation: {},
+            validation,
         },
         inputs: {
-            fields: [],
+            fields,
         },
         count: 1,
         feedback: {

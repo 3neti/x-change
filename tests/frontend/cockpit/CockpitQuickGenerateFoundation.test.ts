@@ -277,10 +277,12 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(payload.cash).toEqual({
             amount: 99.5,
             currency: 'PHP',
-            validation: {},
+            validation: {
+                mobile: '09173011987',
+            },
         });
         expect(payload.inputs).toEqual({
-            fields: [],
+            fields: ['mobile'],
         });
         expect(payload.count).toBe(1);
         expect(payload.feedback).toEqual({
@@ -438,7 +440,12 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(payload.cash).toEqual({
             amount: 500,
             currency: 'PHP',
-            validation: {},
+            validation: {
+                mobile: '09173011987',
+            },
+        });
+        expect(payload.inputs).toEqual({
+            fields: ['mobile'],
         });
         expect(payload.feedback).toEqual({
             mobile: '09173011987',
