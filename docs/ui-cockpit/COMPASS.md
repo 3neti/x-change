@@ -4,12 +4,16 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 56 — Manual Distribution Human Browser Verification / Clipboard UX Acceptance
-Status: Wave 55 complete
+Current slice: Cockpit Wave 56B — Automated Clipboard UX Evidence Guard
+Status: In progress / Wave 56A complete
 Last updated: 2026-07-12
 
 ## Completed
 
+- Completed Cockpit Wave 56A — Manual Clipboard UX Acceptance Plan:
+  - Defined the human browser verification checklist for Voucher Detail and Distribution Workspace beneficiary URL copy controls.
+  - Captures the expected visible URL, copy status, clipboard value, and no-side-effect constraints.
+  - Report: `reports/342-wave-56a-manual-clipboard-ux-acceptance-plan.md`.
 - Completed Cockpit Wave 55 — Manual Distribution Copy Closure:
   - Added browser-local manual copy affordances for beneficiary Pay Code URLs.
   - Voucher Detail and Distribution Workspace now render `Copy beneficiary URL` controls when URL read-model data is available.
