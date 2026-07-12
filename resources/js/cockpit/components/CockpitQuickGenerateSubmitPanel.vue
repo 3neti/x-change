@@ -552,6 +552,38 @@ function dataGet(source: unknown, path: string[]): unknown {
                             {{ displayValue(campaignAttribution?.generated_code) }}
                         </dd>
                     </div>
+                    <div>
+                        <dt class="text-amber-700/80 dark:text-amber-200/80">
+                            Recipient
+                        </dt>
+                        <dd class="font-semibold text-amber-950 dark:text-amber-50">
+                            {{ displayValue(campaignAttribution?.recipient_id) }}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-amber-700/80 dark:text-amber-200/80">
+                            Recipient reference
+                        </dt>
+                        <dd class="font-semibold text-amber-950 dark:text-amber-50">
+                            {{ displayValue(campaignAttribution?.recipient_reference) }}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-amber-700/80 dark:text-amber-200/80">
+                            Template
+                        </dt>
+                        <dd class="font-semibold text-amber-950 dark:text-amber-50">
+                            {{ displayValue(campaignAttribution?.template_key) }}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-amber-700/80 dark:text-amber-200/80">
+                            Amount
+                        </dt>
+                        <dd class="font-semibold text-amber-950 dark:text-amber-50">
+                            {{ displayValue(campaignAttribution?.currency) }} {{ displayValue(campaignAttribution?.amount) }}
+                        </dd>
+                    </div>
                 </dl>
             </section>
 

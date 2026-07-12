@@ -338,6 +338,11 @@ describe('Cockpit Quick Generate foundation', () => {
                     recipient_id: 'recipient-35d',
                     source: 'campaign_cockpit',
                     generated_code: 'PC-CAMPAIGN-001',
+                    template_key: 'ofw-remittance',
+                    amount: '500.00',
+                    currency: 'PHP',
+                    recipient_reference: '09173011987',
+                    purpose: 'Campaign payout',
                 },
                 post_issuance_navigation: {
                     schema: 'x-change.cockpit.quick-generate-post-issuance-navigation.v1',
@@ -347,7 +352,7 @@ describe('Cockpit Quick Generate foundation', () => {
                         {
                             key: 'campaign_explorer',
                             label: 'Return to Campaign Explorer',
-                            href: '/x/cockpit/pay-codes?campaign_planning_key=plan-35d&campaign_execution_id=exec-35d&campaign_source=campaign_cockpit&activity_code=PC-CAMPAIGN-001',
+                            href: '/x/cockpit/pay-codes?campaign_planning_key=plan-35d&campaign_execution_id=exec-35d&campaign_id=campaign-35d&campaign_audience_id=audience-35d&campaign_recipient_id=recipient-35d&campaign_source=campaign_cockpit&activity_code=PC-CAMPAIGN-001',
                             status: 'available',
                             enabled: true,
                             read_only: true,
@@ -355,7 +360,7 @@ describe('Cockpit Quick Generate foundation', () => {
                         {
                             key: 'campaign_dashboard',
                             label: 'Return to Campaign Dashboard',
-                            href: '/x/cockpit?campaign_planning_key=plan-35d&campaign_execution_id=exec-35d',
+                            href: '/x/cockpit?campaign_planning_key=plan-35d&campaign_execution_id=exec-35d&campaign_id=campaign-35d&campaign_audience_id=audience-35d&campaign_recipient_id=recipient-35d',
                             status: 'available',
                             enabled: true,
                             read_only: true,
@@ -462,8 +467,14 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.find('[data-testid="cockpit-quick-generate-campaign-attribution-panel"]').text()).toContain('Campaign attribution');
         expect(wrapper.find('[data-testid="cockpit-quick-generate-campaign-attribution-panel"]').text()).toContain('plan-35d');
         expect(wrapper.find('[data-testid="cockpit-quick-generate-campaign-attribution-panel"]').text()).toContain('PC-CAMPAIGN-001');
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-campaign-attribution-panel"]').text()).toContain('recipient-35d');
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-campaign-attribution-panel"]').text()).toContain('09173011987');
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-campaign-attribution-panel"]').text()).toContain('ofw-remittance');
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-campaign-attribution-panel"]').text()).toContain('PHP 500.00');
         expect(wrapper.find('[data-testid="cockpit-quick-generate-post-issuance-link-campaign_explorer"]').attributes('href')).toContain('campaign_planning_key=plan-35d');
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-post-issuance-link-campaign_explorer"]').attributes('href')).toContain('campaign_recipient_id=recipient-35d');
         expect(wrapper.find('[data-testid="cockpit-quick-generate-post-issuance-link-campaign_dashboard"]').attributes('href')).toContain('campaign_execution_id=exec-35d');
+        expect(wrapper.find('[data-testid="cockpit-quick-generate-post-issuance-link-campaign_dashboard"]').attributes('href')).toContain('campaign_recipient_id=recipient-35d');
         expect(JSON.stringify(payload)).not.toContain('campaign_payload');
         expect(JSON.stringify(payload)).not.toContain('provider_payload');
         expect(JSON.stringify(payload)).not.toContain('wallet');

@@ -629,6 +629,11 @@ export type CockpitQuickGenerateCampaignAttribution = {
     recipient_id?: string | null;
     source?: string | null;
     generated_code?: string | null;
+    template_key?: string | null;
+    amount?: string | number | null;
+    currency?: string | null;
+    recipient_reference?: string | null;
+    purpose?: string | null;
     redactions?: CockpitReadModelRedactions;
     [key: string]: unknown;
 };
