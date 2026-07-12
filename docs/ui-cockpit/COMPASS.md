@@ -2171,3 +2171,5 @@ Current boundary:
 - Cockpit Wave 37 completed: dashboard campaign context now hydrates and renders a safe `Open Quick Generate` link that opens Quick Generate with campaign prefill values, with no campaign mutation or unsafe payload exposure.
 - Cockpit Wave 37 expected UI result: campaign-context dashboard surfaces can bridge into Quick Generate through `Open Quick Generate` and show `Campaign context prefill` after navigation.
 - Cockpit Wave 37 next recommended wave: `Cockpit Wave 38 — Campaign Workspace Entry Point Real Adapter / x-campaign Source Context Adoption`.
+- Cockpit Wave 38A result: Campaign Workspace Entry Point real adapter audit completed; report `reports/253-wave-38a-campaign-workspace-entry-point-real-adapter-audit.md`; next `Cockpit Wave 38B — Campaign Adapter Source Context Normalization`.
+- Cockpit Wave 38A expected UI result: no UI change; this slice defines safe x-campaign metadata adoption for Quick Generate source links while blocking campaign mutation, bulk issuance, delivery, unsafe payload exposure, and bypassing `GeneratePayCode`.
