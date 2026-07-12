@@ -4,12 +4,18 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 64C — Manual Distribution Operator Runbook / Workflow Handoff Closure
-Status: In progress / Wave 64B complete
+Current slice: Cockpit Wave 65 — Manual Distribution External Evidence Intake Decision
+Status: Wave 64 complete / operator runbook and workflow handoff boundary recorded
 Last updated: 2026-07-13
 
 ## Completed
 
+- Completed Cockpit Wave 64 — Manual Distribution Operator Runbook / Workflow Handoff Closure:
+  - Closed Wave 64 with an operator runbook and explicit workflow handoff boundary.
+  - Confirmed Cockpit owns URL display and browser-local copy only; approved external workflows own recipient verification, channel selection, message composition, message sending, delivery evidence, delivery records, channel audit, retry, and escalation.
+  - Verified host-published Cockpit assets remain clean: checked 59, ok 59, stale 0, missing 0, extra 0.
+  - Next recommended checkpoint: Cockpit Wave 65 — Manual Distribution External Evidence Intake Decision.
+  - Report: `reports/372-wave-64-manual-distribution-operator-runbook-workflow-handoff-closure.md`.
 - Completed Cockpit Wave 64B — Manual Distribution Workflow Handoff Boundary:
   - Defined Cockpit responsibilities and approved external workflow responsibilities.
   - Confirmed copying the URL is not delivery, delivery confirmation, feedback state, campaign state, journal state, action state, lifecycle truth, or money movement.
