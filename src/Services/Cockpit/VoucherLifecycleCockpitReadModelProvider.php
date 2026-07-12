@@ -1123,7 +1123,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             'amount' => $draft->amount,
             'currency' => $draft->currency,
             'recipient_reference' => $draft->recipient_reference,
-            'purpose' => $draft->purpose,
+            'purpose' => $draft->purpose ?? $this->nullableString($draft->rider['message'] ?? null),
         ];
     }
 

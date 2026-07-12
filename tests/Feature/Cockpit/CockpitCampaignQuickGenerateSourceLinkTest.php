@@ -298,3 +298,78 @@ it('normalizes campaign adapter template intent into the quick generate source l
         ->toContain('campaign_source=x_campaign_adapter')
         ->not->toContain('template_intent');
 });
+
+it('normalizes campaign adapter recipient and payout fields into the quick generate source link', function (): void {
+    actingAsTestUser();
+
+    config(['x-change.cockpit.integrations.campaign.cockpit' => 'fake.wave40.campaign.cockpit']);
+    app()->instance('fake.wave40.campaign.cockpit', new class
+    {
+        /**
+         * @param  array<string, mixed>  $metadata
+         * @return array<string, mixed>
+         */
+        public function summary(
+            string $planningKey,
+            string $executionId,
+            string $operatorId,
+            string $channel = 'cockpit',
+            ?string $correlationId = null,
+            array $metadata = [],
+        ): array {
+            return [
+                'status' => 'ready',
+                'planning_key' => $planningKey,
+                'execution_id' => $executionId,
+                'operator_id' => $operatorId,
+                'metadata' => [
+                    'quick_generate_context' => [
+                        'campaign_id' => 'campaign-40c',
+                        'audience_id' => 'audience-40c',
+                        'recipient_id' => 'recipient-40c',
+                        'source' => 'x_campaign_adapter',
+                        'template_intent' => 'ofw_remittance',
+                        'recipient' => [
+                            'reference' => 'BEN-40C',
+                            'mobile_number' => '091700000040',
+                            'email_address' => 'beneficiary40@example.test',
+                        ],
+                        'payout' => [
+                            'amount' => '875.50',
+                            'currency' => 'PHP',
+                            'message' => 'Your campaign Pay Code is ready.',
+                        ],
+                    ],
+                ],
+            ];
+        }
+    });
+
+    $response = $this
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.dashboard', [
+            'campaign_planning_key' => 'plan-40c',
+            'campaign_execution_id' => 'exec-40c',
+        ]));
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('props.campaign_read_model.quick_generate_link.status', 'available')
+        ->assertJsonPath('props.campaign_read_model.quick_generate_link.draft.template_key', 'ofw-remittance')
+        ->assertJsonPath('props.campaign_read_model.quick_generate_link.draft.amount', '875.50')
+        ->assertJsonPath('props.campaign_read_model.quick_generate_link.draft.currency', 'PHP')
+        ->assertJsonPath('props.campaign_read_model.quick_generate_link.draft.recipient_reference', 'BEN-40C')
+        ->assertJsonPath('props.campaign_read_model.quick_generate_link.draft.purpose', 'Your campaign Pay Code is ready.')
+        ->assertJsonPath('props.campaign_read_model.quick_generate_link.mutates_campaign', false);
+
+    $href = $response->json('props.campaign_read_model.quick_generate_link.href');
+
+    expect($href)
+        ->toBeString()
+        ->toContain('campaign_template_key=ofw-remittance')
+        ->toContain('campaign_amount=875.50')
+        ->toContain('campaign_recipient_reference=BEN-40C')
+        ->toContain('campaign_purpose=Your%20campaign%20Pay%20Code%20is%20ready.')
+        ->not->toContain('beneficiary40%40example.test')
+        ->not->toContain('091700000040');
+});
