@@ -12,8 +12,10 @@ class DefaultCockpitCampaignIssuanceDraftAdapter implements CockpitCampaignIssua
 {
     public function fromCampaignContext(array $campaignContext): CockpitIssuanceDraftData
     {
+        $template = $this->template($campaignContext);
+
         return new CockpitIssuanceDraftData(
-            template_key: $this->string($campaignContext, 'template_key', 'ofw-remittance'),
+            template_key: $template['key'],
             amount: data_get($campaignContext, 'amount'),
             currency: $this->string($campaignContext, 'currency', 'PHP') ?? 'PHP',
             count: max(1, (int) data_get($campaignContext, 'count', 1)),
@@ -45,9 +47,95 @@ class DefaultCockpitCampaignIssuanceDraftAdapter implements CockpitCampaignIssua
             metadata: [
                 'campaign' => [
                     'source' => $this->string($campaignContext, 'source', 'x-campaign'),
+                    'template_intent' => $template['intent'],
+                    'template_key' => $template['key'],
+                    'template_mapping_source' => $template['source'],
                 ],
             ],
         );
+    }
+
+    /**
+     * @return array{key: string, intent: array<string, mixed>, source: string}
+     */
+    private function template(array $campaignContext): array
+    {
+        $explicit = $this->string($campaignContext, 'template_key');
+
+        if ($explicit !== null) {
+            return [
+                'key' => $explicit,
+                'intent' => $this->templateIntent($campaignContext),
+                'source' => 'explicit-template-key',
+            ];
+        }
+
+        return [
+            'key' => $this->templateKeyFromIntent($campaignContext) ?? 'ofw-remittance',
+            'intent' => $this->templateIntent($campaignContext),
+            'source' => 'campaign-template-intent',
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function templateIntent(array $campaignContext): array
+    {
+        return array_filter([
+            'template_intent' => data_get($campaignContext, 'template_intent'),
+            'product_key' => data_get($campaignContext, 'product_key'),
+            'product' => data_get($campaignContext, 'product'),
+            'template' => data_get($campaignContext, 'template'),
+            'program' => data_get($campaignContext, 'program'),
+        ], fn (mixed $value): bool => $value !== null && $value !== '');
+    }
+
+    private function templateKeyFromIntent(array $campaignContext): ?string
+    {
+        $candidates = [
+            $this->string($campaignContext, 'template_intent'),
+            $this->string($campaignContext, 'product_key'),
+            $this->string($campaignContext, 'product.key'),
+            $this->string($campaignContext, 'product.slug'),
+            $this->string($campaignContext, 'template.intent'),
+            $this->string($campaignContext, 'template.key'),
+            $this->string($campaignContext, 'template.profile'),
+            $this->string($campaignContext, 'program.type'),
+        ];
+
+        foreach ($candidates as $candidate) {
+            $normalized = $this->normalizeIntent($candidate);
+
+            if ($normalized !== null) {
+                return $normalized;
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeIntent(?string $intent): ?string
+    {
+        if ($intent === null) {
+            return null;
+        }
+
+        return match (str($intent)->lower()->replace(['_', ' '], '-')->toString()) {
+            'money-changer',
+            'cash',
+            'cash-out',
+            'branch-cash',
+            'branch-cash-out',
+            'branch-counter-cash-out' => 'money-changer',
+            'ofw-remittance',
+            'remittance',
+            'payout',
+            'campaign-payout' => 'ofw-remittance',
+            'settlement-envelope',
+            'settlement' => 'settlement-envelope',
+            default => null,
+        };
     }
 
     private function string(array $source, string $key, ?string $default = null): ?string

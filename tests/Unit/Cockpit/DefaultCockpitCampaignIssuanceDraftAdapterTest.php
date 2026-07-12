@@ -41,3 +41,33 @@ it('defaults campaign drafts to a safe campaign source without mutating campaign
         ->and($draft->template_key)->toBe('ofw-remittance')
         ->and($draft->count)->toBe(1);
 });
+
+it('normalizes campaign template intent aliases into quick generate template keys', function (array $campaignContext, string $expectedTemplate): void {
+    $draft = (new DefaultCockpitCampaignIssuanceDraftAdapter)->fromCampaignContext($campaignContext + [
+        'planning_key' => 'plan-39b',
+        'execution_id' => 'exec-39b',
+        'amount' => '500.00',
+    ]);
+
+    expect($draft->template_key)->toBe($expectedTemplate)
+        ->and($draft->metadata['campaign']['template_intent'])->toBe($campaignContext)
+        ->and($draft->metadata['campaign']['template_key'])->toBe($expectedTemplate)
+        ->and($draft->metadata['campaign']['template_mapping_source'])->toBe('campaign-template-intent');
+})->with([
+    'money changer product' => [['template_intent' => 'money_changer'], 'money-changer'],
+    'cash branch slug' => [['product_key' => 'branch-cash-out'], 'money-changer'],
+    'ofw remittance product' => [['product' => ['key' => 'ofw_remittance']], 'ofw-remittance'],
+    'remittance template profile' => [['template' => ['profile' => 'remittance']], 'ofw-remittance'],
+    'settlement envelope product' => [['template_intent' => 'settlement-envelope'], 'settlement-envelope'],
+]);
+
+it('preserves explicit cockpit template keys ahead of campaign template intent aliases', function (): void {
+    $draft = (new DefaultCockpitCampaignIssuanceDraftAdapter)->fromCampaignContext([
+        'template_key' => 'ofw-remittance',
+        'template_intent' => 'money_changer',
+        'amount' => '500.00',
+    ]);
+
+    expect($draft->template_key)->toBe('ofw-remittance')
+        ->and($draft->metadata['campaign']['template_mapping_source'])->toBe('explicit-template-key');
+});

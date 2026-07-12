@@ -2185,3 +2185,5 @@ Current boundary:
 - Cockpit Wave 38 next recommended wave: `Cockpit Wave 39 — Campaign Plan-to-Issuance Draft Template Mapping`.
 - Cockpit Wave 39A result: Campaign plan-to-issuance draft template mapping audit completed; report `reports/258-wave-39a-campaign-plan-to-issuance-draft-template-mapping-audit.md`; next `Cockpit Wave 39B — Campaign Template Intent Normalizer / Draft Adapter`.
 - Cockpit Wave 39A expected UI result: no UI change; this slice scopes safe campaign template intent normalization into existing Quick Generate draft paths.
+- Cockpit Wave 39B result: Campaign template intent normalizer/draft adapter completed; report `reports/259-wave-39b-campaign-template-intent-normalizer-draft-adapter.md`; `DefaultCockpitCampaignIssuanceDraftAdapter` maps safe campaign product/template intent aliases to existing Quick Generate template keys while preserving explicit `template_key` priority.
+- Cockpit Wave 39B expected UI result: no direct UI change; campaign-sourced Quick Generate forms can now receive normalized template keys from campaign intent.
