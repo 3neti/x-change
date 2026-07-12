@@ -2,8 +2,13 @@
 
 declare(strict_types=1);
 
+use Illuminate\Translation\ArrayLoader;
+use Illuminate\Translation\Translator;
+use Illuminate\Validation\Factory;
 use LBHurtado\XChange\Data\Cockpit\CockpitIssuanceCampaignContextData;
 use LBHurtado\XChange\Data\Cockpit\CockpitIssuanceDraftData;
+use LBHurtado\XChange\Http\Requests\GeneratePayCodeRequest;
+use LBHurtado\XChange\Services\Cockpit\DefaultCockpitCampaignIssuanceDraftAdapter;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitIssuanceDraftCompiler;
 use LBHurtado\XChange\Services\Cockpit\DefaultCockpitIssuanceTemplateRegistry;
 
@@ -105,4 +110,51 @@ it('uses template rider defaults when the draft has no message', function () {
 
     expect(data_get($payload, 'rider.message'))->toBe('Your Pay Code is ready.')
         ->and(data_get($payload, 'metadata.template.purpose'))->toBe('branch-counter-cash-out');
+});
+
+it('compiles a single campaign recipient draft into a GeneratePayCodeRequest compatible payload', function (): void {
+    $draft = (new DefaultCockpitCampaignIssuanceDraftAdapter)->fromCampaignContext([
+        'planning_key' => 'plan-wave-51',
+        'execution_id' => 'exec-wave-51',
+        'campaign_id' => 'campaign-wave-51',
+        'audience_id' => 'audience-wave-51',
+        'recipient_id' => 'recipient-wave-51',
+        'source' => 'x-campaign',
+        'template_intent' => 'campaign-payout',
+        'recipient' => [
+            'reference' => 'BEN-WAVE-51',
+            'mobile_number' => '09173011987',
+            'email_address' => 'beneficiary51@example.test',
+        ],
+        'allocation' => [
+            'amount' => '500.00',
+            'currency' => 'PHP',
+            'purpose' => 'Wave 51 campaign payout',
+        ],
+    ]);
+
+    $payload = (new DefaultCockpitIssuanceDraftCompiler(new DefaultCockpitIssuanceTemplateRegistry))->compile($draft);
+    $validator = (new Factory(new Translator(new ArrayLoader, 'en')))
+        ->make($payload, (new GeneratePayCodeRequest)->rules());
+
+    expect($validator->fails())->toBeFalse()
+        ->and(data_get($payload, 'cash.amount'))->toBe('500.00')
+        ->and(data_get($payload, 'cash.currency'))->toBe('PHP')
+        ->and(data_get($payload, 'cash.validation.mobile'))->toBe('09173011987')
+        ->and(data_get($payload, 'inputs.fields'))->toBe(['mobile'])
+        ->and(data_get($payload, 'feedback.mobile'))->toBe('09173011987')
+        ->and(data_get($payload, 'feedback.email'))->toBe('beneficiary51@example.test')
+        ->and(data_get($payload, 'rider.message'))->toBe('Wave 51 campaign payout')
+        ->and(data_get($payload, 'metadata.custom.cockpit.template_key'))->toBe('ofw-remittance')
+        ->and(data_get($payload, 'metadata.custom.cockpit.source'))->toBe('cockpit.issuance-draft')
+        ->and(data_get($payload, 'metadata.campaign.planning_key'))->toBe('plan-wave-51')
+        ->and(data_get($payload, 'metadata.campaign.execution_id'))->toBe('exec-wave-51')
+        ->and(data_get($payload, 'metadata.campaign.campaign_id'))->toBe('campaign-wave-51')
+        ->and(data_get($payload, 'metadata.campaign.audience_id'))->toBe('audience-wave-51')
+        ->and(data_get($payload, 'metadata.campaign.recipient_id'))->toBe('recipient-wave-51')
+        ->and(data_get($payload, 'metadata.campaign.source'))->toBe('x-campaign')
+        ->and($payload)->not->toHaveKey('provider_payload')
+        ->and($payload)->not->toHaveKey('wallet')
+        ->and($payload)->not->toHaveKey('raw_payload')
+        ->and($payload)->not->toHaveKey('campaign_mutation');
 });

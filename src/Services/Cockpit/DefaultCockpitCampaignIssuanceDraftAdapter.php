@@ -41,6 +41,12 @@ class DefaultCockpitCampaignIssuanceDraftAdapter implements CockpitCampaignIssua
             rider: [
                 'message' => $recipient['message'],
             ],
+            validation: array_filter([
+                'mobile' => $recipient['mobile'],
+            ], fn (mixed $value): bool => $value !== null && $value !== ''),
+            input_fields: array_values(array_filter([
+                $recipient['mobile'] !== null ? 'mobile' : null,
+            ])),
             metadata: [
                 'campaign' => [
                     'source' => $this->string($campaignContext, 'source', 'x-campaign'),

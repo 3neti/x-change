@@ -88,8 +88,28 @@ class DefaultCockpitIssuanceDraftCompiler implements CockpitIssuanceDraftCompile
                     'schema' => $draft->schema,
                 ],
             ],
-            'campaign' => $draft->campaign?->toArray(),
+            'campaign' => $this->campaign($draft),
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function campaign(CockpitIssuanceDraftData $draft): ?array
+    {
+        if ($draft->campaign === null) {
+            return null;
+        }
+
+        return [
+            'planning_key' => $draft->campaign->planning_key,
+            'execution_id' => $draft->campaign->execution_id,
+            'campaign_id' => $draft->campaign->campaign_id,
+            'audience_id' => $draft->campaign->audience_id,
+            'recipient_id' => $draft->campaign->recipient_id,
+            'source' => $draft->campaign->source,
+            'metadata' => $draft->campaign->metadata,
+        ];
     }
 
     private function template(CockpitIssuanceDraftData $draft): ?CockpitIssuanceTemplateProfileData

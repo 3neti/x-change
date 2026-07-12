@@ -178,6 +178,10 @@ it('characterizes a single campaign recipient as a quick generate issuance draft
             'mobile' => '09173011987',
             'email' => 'beneficiary51@example.test',
         ])
+        ->and($draft->validation)->toBe([
+            'mobile' => '09173011987',
+        ])
+        ->and($draft->input_fields)->toBe(['mobile'])
         ->and($draft->campaign?->planning_key)->toBe('plan-wave-51')
         ->and($draft->campaign?->execution_id)->toBe('exec-wave-51')
         ->and($draft->campaign?->campaign_id)->toBe('campaign-wave-51')
