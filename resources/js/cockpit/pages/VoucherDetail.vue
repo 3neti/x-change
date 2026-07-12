@@ -7,6 +7,7 @@ import CockpitVoucherOverviewPanel from '../components/CockpitVoucherOverviewPan
 import CockpitVoucherTimelinePanel from '../components/CockpitVoucherTimelinePanel.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
 import type {
+    CockpitCampaignNavigationContext,
     CockpitDependentReadModel,
     CockpitReadModelRedactions,
     CockpitVoucherAuditItem,
@@ -166,6 +167,43 @@ const integrationSummaries = computed(() => [
     integrationSummary('actions', 'Action CTAs', props.read_model?.actions, 'actions', 'actions'),
     integrationSummary('feedback', 'Feedback Deliveries', props.read_model?.feedback, 'deliveries', 'deliveries'),
 ]);
+const campaignNavigationContext = computed<CockpitCampaignNavigationContext | null>(() => {
+    const context = props.campaign_navigation_context;
+
+    if (!context?.authorized || context.read_only !== true) {
+        return null;
+    }
+
+    const planningKey = stringValue(context.planning_key);
+    const executionId = stringValue(context.execution_id);
+    const destination = stringValue(context.destination);
+
+    if (!planningKey || !executionId || destination !== 'pay_code_detail') {
+        return null;
+    }
+
+    return {
+        schema: stringValue(context.schema) ?? 'x-change.cockpit.campaign-navigation.v1',
+        status: stringValue(context.status) ?? 'available',
+        authorized: true,
+        source: stringValue(context.source) ?? 'campaign_cockpit',
+        planning_key: planningKey,
+        execution_id: executionId,
+        campaign_id: stringValue(context.campaign_id),
+        audience_id: stringValue(context.audience_id),
+        recipient_id: stringValue(context.recipient_id),
+        destination,
+        read_only: true,
+        mutation: {
+            enabled: false,
+            status: stringValue(objectValue(context.mutation)?.status) ?? 'blocked',
+            reason: stringValue(objectValue(context.mutation)?.reason) ?? 'campaign-navigation-read-only',
+        },
+        redactions: {
+            payloads: stringValue(context.redactions?.payloads) ?? 'navigation-context-only',
+        },
+    };
+});
 
 function stringValue(value: unknown): string | null {
     if (typeof value === 'string' && value.trim() !== '') {
@@ -468,6 +506,72 @@ function integrationSummary(
                     </div>
                 </dl>
             </div>
+
+            <section
+                v-if="campaignNavigationContext"
+                class="rounded-xl border border-indigo-200 bg-indigo-50 p-5 shadow-sm dark:border-indigo-900/70 dark:bg-indigo-950/40"
+                data-testid="cockpit-voucher-detail-campaign-navigation-context"
+            >
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-700 dark:text-indigo-300">
+                    Campaign recipient context
+                </p>
+                <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
+                    Read-only Pay Code detail context
+                </h3>
+                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    This context was carried from a campaign-attributed activity link. It is presentation-only and does not mutate campaign state, issue Pay Codes, send feedback, write journal entries, call providers, or move money.
+                </p>
+                <dl class="mt-5 grid gap-3 text-sm md:grid-cols-3">
+                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Planning key
+                        </dt>
+                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                            {{ campaignNavigationContext.planning_key }}
+                        </dd>
+                    </div>
+                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Execution
+                        </dt>
+                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                            {{ campaignNavigationContext.execution_id }}
+                        </dd>
+                    </div>
+                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Recipient
+                        </dt>
+                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                            {{ campaignNavigationContext.recipient_id ?? 'recipient pending' }}
+                        </dd>
+                    </div>
+                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Destination
+                        </dt>
+                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                            {{ campaignNavigationContext.destination }}
+                        </dd>
+                    </div>
+                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Mutation boundary
+                        </dt>
+                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                            {{ campaignNavigationContext.mutation?.reason }}
+                        </dd>
+                    </div>
+                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Redaction
+                        </dt>
+                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                            {{ campaignNavigationContext.redactions?.payloads }}
+                        </dd>
+                    </div>
+                </dl>
+            </section>
 
             <CockpitVoucherOverviewPanel :items="overviewItems" />
 
