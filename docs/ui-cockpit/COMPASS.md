@@ -4,12 +4,17 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 58B — Beneficiary URL Copy Acceptance Decision Record
-Status: In progress / Wave 58A complete
+Current slice: Cockpit Wave 58C — Beneficiary URL Copy Acceptance Compass Update
+Status: In progress / Wave 58B complete
 Last updated: 2026-07-12
 
 ## Completed
 
+- Completed Cockpit Wave 58B — Beneficiary URL Copy Acceptance Decision Record:
+  - Recorded acceptance decision: Pass.
+  - Acceptance applies only to manual beneficiary URL copy UX on Voucher Detail and Distribution Workspace.
+  - The decision does not authorize feedback delivery, campaign dispatch, copy event persistence, journal writes, action execution, provider calls, voucher mutation, wallet mutation, or money movement.
+  - Report: `reports/351-wave-58b-beneficiary-url-copy-acceptance-decision-record.md`.
 - Completed Cockpit Wave 58A — Beneficiary URL Copy Human Evidence Intake:
   - Recorded human evidence for Pay Code `6LGM`.
   - Voucher Detail and Distribution Workspace both copied `http://x-change-sandbox.test/x/claim/6LGM/experience`.
