@@ -4,12 +4,19 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 60D — Manual Guidance Pending Acceptance Status / Closure
-Status: In progress / Wave 60C complete
+Current slice: Cockpit Wave 61 — Manual Distribution Guidance Human Evidence Intake / Acceptance Decision
+Status: Wave 60 complete / guidance acceptance pending-human-guidance-intake
 Last updated: 2026-07-12
 
 ## Completed
 
+- Completed Cockpit Wave 60 — Manual Distribution Link Human Guidance Acceptance Closure:
+  - Completed the manual guidance acceptance plan, human evidence template, and decision policy.
+  - Closed the wave as `pending-human-guidance-intake` because no completed human evidence record was supplied.
+  - Verified host-published Cockpit assets remain clean: checked 59, ok 59, stale 0, missing 0, extra 0.
+  - No delivery, persistence, journal, action, provider, voucher, wallet, short-link, QR, or money-movement behavior was added or authorized.
+  - Next recommended checkpoint: Cockpit Wave 61 — Manual Distribution Guidance Human Evidence Intake / Acceptance Decision.
+  - Report: `reports/360-wave-60-manual-distribution-link-human-guidance-acceptance-closure.md`.
 - Completed Cockpit Wave 60C — Manual Guidance Acceptance Decision Policy:
   - Defined Pass, Blocked, Fail, and no-evidence decision rules for manual distribution guidance acceptance.
   - Confirmed no completed human evidence means the only valid status is `pending-human-guidance-intake`.
