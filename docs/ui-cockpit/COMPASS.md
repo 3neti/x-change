@@ -2213,3 +2213,5 @@ Current boundary:
 - Cockpit Wave 41B expected UI result: no visible UI change yet; `campaign_read_model.recipient_quick_generate_links` can now carry up to 10 safe recipient-specific Quick Generate source links for Vue rendering.
 - Cockpit Wave 41C result: Campaign Recipient Source-Link UI presentation completed; report `reports/270-wave-41c-campaign-recipient-source-link-ui-presentation.md`; next `Cockpit Wave 41D — Campaign Recipient Source-Link Publish / Browser Verification`.
 - Cockpit Wave 41C expected UI result: `/x/cockpit` can show a `Recipient Quick Generate entry points` card under Campaign Cockpit Adoption when safe recipient source links are present.
+- Cockpit Wave 41D result: Campaign Recipient Source-Link publish/browser verification completed; report `reports/271-wave-41d-campaign-recipient-source-link-publish-browser-verification.md`; next `Cockpit Wave 41E — Campaign Recipient Source-Link Selection Closure`.
+- Cockpit Wave 41D expected UI result: host-published Cockpit assets include the recipient entry-points section, and the existing Campaign `Open Quick Generate` browser path still opens campaign-prefilled Quick Generate.
