@@ -379,6 +379,14 @@ const contractSummaryItems = computed<Array<{ label: string; value: string }>>(
     },
 );
 
+const sanitizedInstructionPayload = computed<Record<string, unknown>>(() => {
+    return buildPayloadShape(true);
+});
+
+const sanitizedInstructionPayloadJson = computed<string>(() => {
+    return JSON.stringify(sanitizedInstructionPayload.value, null, 2);
+});
+
 async function submit(): Promise<void> {
     if (!canSubmit.value || processing.value || routeUrl.value === null) {
         return;
@@ -454,6 +462,10 @@ function refreshReadModel(): void {
 }
 
 function buildPayload(): Record<string, unknown> {
+    return buildPayloadShape(false);
+}
+
+function buildPayloadShape(redactSensitive: boolean): Record<string, unknown> {
     const normalizedAmount = Number(amount.value);
     const normalizedCount = Number(count.value);
     const campaign = campaignMetadata();
@@ -476,6 +488,14 @@ function buildPayload(): Record<string, unknown> {
             ? normalizedMinWithdrawal
             : null;
     }
+
+    const validation = { ...validationSummary.value };
+
+    if (redactSensitive && 'secret' in validation) {
+        validation.secret = '[redacted secret]';
+    }
+
+    cash.validation = validation;
 
     return {
         cash,
@@ -661,21 +681,6 @@ function dataGet(source: unknown, path: string[]): unknown {
             </span>
         </div>
 
-        <div class="mt-4 grid gap-3 text-xs sm:grid-cols-2 xl:grid-cols-4">
-            <div
-                v-for="item in contractSummaryItems.slice(0, 4)"
-                :key="item.label"
-                class="rounded-2xl border border-white/80 bg-white/80 p-3 shadow-sm ring-1 ring-slate-200/70 dark:border-slate-800 dark:bg-slate-950/80 dark:ring-slate-800"
-            >
-                <p class="font-medium text-slate-500 dark:text-slate-400">
-                    {{ item.label }}
-                </p>
-                <p class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                    {{ item.value }}
-                </p>
-            </div>
-        </div>
-
         <section
             v-if="campaignContextAvailable"
             class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-100"
@@ -738,7 +743,7 @@ function dataGet(source: unknown, path: string[]): unknown {
         </section>
 
         <div
-            class="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]"
+            class="mt-5 grid gap-4"
             data-testid="cockpit-voucher-instruction-builder"
         >
             <div class="grid gap-4">
@@ -1219,44 +1224,74 @@ function dataGet(source: unknown, path: string[]): unknown {
                     </div>
                 </section>
             </div>
+        </div>
 
-            <aside
-                class="h-fit rounded-2xl border border-slate-200 bg-slate-950 p-4 text-xs text-slate-300 shadow-sm dark:border-slate-800"
-                data-testid="cockpit-voucher-instruction-summary"
+        <section
+            class="mt-5 rounded-2xl border border-slate-200 bg-slate-950 p-4 text-xs text-slate-300 shadow-sm dark:border-slate-800"
+            data-testid="cockpit-voucher-instruction-summary"
+        >
+            <div
+                class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"
             >
-                <p
-                    class="font-semibold tracking-[0.22em] text-emerald-300 uppercase"
-                >
-                    Pay Code contract summary
-                </p>
-                <p class="mt-2 leading-5 text-slate-400">
-                    Operator preview of the payload sent to the existing
-                    issuance handoff.
-                </p>
-                <dl class="mt-4 grid gap-3">
-                    <div
-                        v-for="item in contractSummaryItems"
-                        :key="item.label"
-                        class="rounded-xl border border-white/10 bg-white/5 p-3"
+                <div>
+                    <p
+                        class="font-semibold tracking-[0.22em] text-emerald-300 uppercase"
                     >
-                        <dt class="text-slate-500">
-                            {{ item.label }}
-                        </dt>
-                        <dd class="mt-1 font-semibold text-slate-100">
-                            {{ item.value }}
-                        </dd>
-                    </div>
-                </dl>
+                        Pay Code contract summary
+                    </p>
+                    <p class="mt-2 leading-5 text-slate-400">
+                        Operator preview of the payload sent to the existing
+                        issuance handoff.
+                    </p>
+                </div>
                 <div
-                    class="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-3"
+                    class="rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-3 md:max-w-sm"
                 >
                     <p class="font-semibold text-emerald-200">Handoff route</p>
                     <p class="mt-1 break-all text-slate-300">
                         {{ routeName }} · {{ routeUrl ?? 'not available' }}
                     </p>
                 </div>
-            </aside>
-        </div>
+            </div>
+            <dl class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div
+                    v-for="item in contractSummaryItems"
+                    :key="item.label"
+                    class="min-w-0 rounded-xl border border-white/10 bg-white/5 p-3"
+                >
+                    <dt class="text-slate-500">
+                        {{ item.label }}
+                    </dt>
+                    <dd class="mt-1 font-semibold break-words text-slate-100">
+                        {{ item.value }}
+                    </dd>
+                </div>
+            </dl>
+
+            <details
+                class="mt-4 rounded-xl border border-white/10 bg-white/5 p-3"
+                data-testid="cockpit-quick-generate-engineering-preview"
+            >
+                <summary
+                    class="cursor-pointer text-sm font-semibold text-slate-100"
+                >
+                    Engineering Preview — sanitized instruction payload
+                </summary>
+                <p class="mt-2 text-xs leading-5 text-slate-400">
+                    This preview shows how the builder maps into
+                    <code>cash</code>, <code>inputs</code>,
+                    <code>validation</code>, <code>rider</code>,
+                    <code>feedback</code>, and <code>metadata</code>. Secrets
+                    are redacted; provider, wallet, journal, action, feedback
+                    delivery, and campaign mutation internals are not rendered.
+                </p>
+                <pre
+                    class="mt-3 max-h-96 overflow-auto rounded-xl border border-slate-800 bg-slate-950 p-3 text-[11px] leading-5 text-slate-200"
+                    data-testid="cockpit-quick-generate-engineering-preview-json"
+                    >{{ sanitizedInstructionPayloadJson }}</pre
+                >
+            </details>
+        </section>
 
         <button
             type="submit"
