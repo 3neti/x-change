@@ -733,6 +733,66 @@ const effectiveExpiry = computed<{
     };
 });
 
+const illustrativeFee = computed<number>(() => {
+    const normalizedAmount = Number(amount.value);
+
+    if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+        return 0;
+    }
+
+    if (settlementRail.value === 'PESONET') {
+        return 25;
+    }
+
+    return 10;
+});
+
+const feeStrategyLabel = computed<string>(() => {
+    if (feeStrategy.value === 'include') {
+        return 'Include fee inside Pay Code amount';
+    }
+
+    if (feeStrategy.value === 'add') {
+        return 'Add fee on top of amount';
+    }
+
+    return 'Issuer absorbs fee';
+});
+
+const feeStrategyPreview = computed<{
+    recipientAmount: string;
+    issuerCost: string;
+    note: string;
+}>(() => {
+    const normalizedAmount = Number(amount.value);
+    const safeAmount = Number.isFinite(normalizedAmount)
+        ? Math.max(normalizedAmount, 0)
+        : 0;
+    const fee = illustrativeFee.value;
+
+    if (feeStrategy.value === 'include') {
+        return {
+            recipientAmount: formatMoney(Math.max(safeAmount - fee, 0)),
+            issuerCost: formatMoney(safeAmount),
+            note: 'Illustrative only: fee is deducted from the visible amount.',
+        };
+    }
+
+    if (feeStrategy.value === 'add') {
+        return {
+            recipientAmount: formatMoney(safeAmount),
+            issuerCost: formatMoney(safeAmount + fee),
+            note: 'Illustrative only: fee is added to the issuer cost.',
+        };
+    }
+
+    return {
+        recipientAmount: formatMoney(safeAmount),
+        issuerCost: formatMoney(safeAmount + fee),
+        note: 'Illustrative only: issuer absorbs the estimated fee.',
+    };
+});
+
 const selectedInputFields = computed<string[]>(() => {
     const fields = new Set(selectedInputFieldValues.value);
 
@@ -1364,6 +1424,13 @@ function displayValue(value: unknown, fallback = 'not available'): string {
     return normalized ?? fallback;
 }
 
+function formatMoney(value: number): string {
+    return `${currency.value.trim() || 'PHP'} ${value.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    })}`;
+}
+
 function sanitizePostIssuanceNavigationItem(
     item: CockpitQuickGeneratePostIssuanceNavigationItem,
 ): CockpitQuickGeneratePostIssuanceNavigationItem | null {
@@ -1839,11 +1906,75 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     data-testid="cockpit-quick-generate-fee-strategy"
                                     :disabled="processing"
                                 >
-                                    <option value="absorb">absorb</option>
-                                    <option value="include">include</option>
-                                    <option value="add">add</option>
+                                    <option value="absorb">
+                                        Absorb — issuer pays fee
+                                    </option>
+                                    <option value="include">
+                                        Include — fee comes from amount
+                                    </option>
+                                    <option value="add">
+                                        Add — fee added on top
+                                    </option>
                                 </select>
                             </label>
+                            <div
+                                class="grid gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-950 lg:col-span-2 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-100"
+                                data-testid="cockpit-quick-generate-fee-preview"
+                            >
+                                <div
+                                    class="flex flex-wrap items-center justify-between gap-2"
+                                >
+                                    <p class="font-semibold">
+                                        {{ feeStrategyLabel }}
+                                    </p>
+                                    <span
+                                        class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-emerald-800 shadow-sm dark:bg-emerald-900/60 dark:text-emerald-100"
+                                    >
+                                        {{ feeStrategy }}
+                                    </span>
+                                </div>
+                                <div class="grid gap-2 sm:grid-cols-3">
+                                    <div>
+                                        <p
+                                            class="text-[11px] tracking-wide text-emerald-700 uppercase dark:text-emerald-300"
+                                        >
+                                            Estimated fee
+                                        </p>
+                                        <p class="font-semibold">
+                                            {{ formatMoney(illustrativeFee) }}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p
+                                            class="text-[11px] tracking-wide text-emerald-700 uppercase dark:text-emerald-300"
+                                        >
+                                            Recipient amount
+                                        </p>
+                                        <p class="font-semibold">
+                                            {{
+                                                feeStrategyPreview.recipientAmount
+                                            }}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p
+                                            class="text-[11px] tracking-wide text-emerald-700 uppercase dark:text-emerald-300"
+                                        >
+                                            Issuer cost
+                                        </p>
+                                        <p class="font-semibold">
+                                            {{ feeStrategyPreview.issuerCost }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <p
+                                    class="text-[11px] text-emerald-700 dark:text-emerald-300"
+                                >
+                                    {{ feeStrategyPreview.note }} No pricing or
+                                    provider quote service is called by this
+                                    preview.
+                                </p>
+                            </div>
                             <label
                                 class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
