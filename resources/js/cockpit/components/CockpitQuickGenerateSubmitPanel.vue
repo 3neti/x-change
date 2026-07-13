@@ -212,8 +212,12 @@ const timeWindowTimezone = ref('Asia/Manila');
 const timeLimitMinutes = ref('10');
 const timeTrackDuration = ref(true);
 const riderUrl = ref('');
+const riderRedirectTimeout = ref('');
 const riderSplash = ref('');
 const riderSplashTimeout = ref('3');
+const riderSplashMetaSanitized = ref(true);
+const riderSplashMetaProfile = ref('');
+const riderOgSource = ref('');
 const feedbackEmail = ref('');
 const feedbackMobile = ref(recipientReference.value);
 const feedbackWebhook = ref('');
@@ -230,6 +234,23 @@ const sliceMode = ref<'whole' | 'fixed' | 'open'>('whole');
 const slices = ref('1');
 const maxSlices = ref('2');
 const minWithdrawal = ref('0');
+const voucherType = ref<'redeemable' | 'payable' | 'settlement'>('redeemable');
+const targetAmount = ref('');
+const rulesMinPayment = ref('');
+const rulesMaxPayment = ref('');
+const rulesAllowOverpayment = ref(false);
+const rulesAutoCloseOnFullPayment = ref(true);
+const includeExecutionInstruction = ref(false);
+const executionSchema = ref('voucher.execution.v1');
+const executionDriver = ref('default');
+const executionMode = ref('');
+const executionPipeline = ref('');
+const executionFallback = ref('');
+const executionVisibility = ref('');
+const executionMetadata = ref('');
+const metadataFlowType = ref('');
+const metadataIssuerId = ref('');
+const metadataCollectionWalletId = ref('');
 const processing = ref(false);
 const lastStatus = ref('ready');
 const lastMessage = ref(
@@ -515,15 +536,32 @@ const feedbackSummary = computed<Record<string, unknown>>(() => {
 const riderSummary = computed<Record<string, unknown>>(() => {
     const message = purpose.value.trim();
     const url = riderUrl.value.trim();
+    const redirectTimeout = Number(riderRedirectTimeout.value);
     const splash = riderSplash.value.trim();
     const timeout = Number(riderSplashTimeout.value);
+    const htmlProfile = riderSplashMetaProfile.value.trim();
+    const ogSource = riderOgSource.value.trim();
 
     return {
         message: message === '' ? null : message,
         url: url === '' ? null : url,
+        redirect_timeout:
+            Number.isFinite(redirectTimeout) && redirectTimeout >= 0
+                ? redirectTimeout
+                : null,
         splash: splash === '' ? null : splash,
         splash_timeout:
             Number.isFinite(timeout) && timeout > 0 ? timeout : null,
+        splash_meta:
+            riderSplashMetaSanitized.value || htmlProfile !== ''
+                ? {
+                      sanitized: riderSplashMetaSanitized.value,
+                      ...(htmlProfile === ''
+                          ? {}
+                          : { html_profile: htmlProfile }),
+                  }
+                : null,
+        og_source: ogSource === '' ? null : ogSource,
     };
 });
 
@@ -617,6 +655,66 @@ const sanitizedInstructionPayload = computed<Record<string, unknown>>(() => {
 
 const sanitizedInstructionPayloadJson = computed<string>(() => {
     return JSON.stringify(sanitizedInstructionPayload.value, null, 2);
+});
+
+const settlementRulesSummary = computed<Record<string, unknown> | null>(() => {
+    const minPayment = Number(rulesMinPayment.value);
+    const maxPayment = Number(rulesMaxPayment.value);
+    const rules: Record<string, unknown> = {};
+
+    if (Number.isFinite(minPayment) && minPayment > 0) {
+        rules.min_payment = minPayment;
+    }
+
+    if (Number.isFinite(maxPayment) && maxPayment > 0) {
+        rules.max_payment = maxPayment;
+    }
+
+    if (rulesAllowOverpayment.value) {
+        rules.allow_overpayment = true;
+    }
+
+    if (rulesAutoCloseOnFullPayment.value) {
+        rules.auto_close_on_full_payment = true;
+    }
+
+    return Object.keys(rules).length > 0 ? rules : null;
+});
+
+const executionSummary = computed<Record<string, unknown> | null>(() => {
+    if (!includeExecutionInstruction.value) {
+        return null;
+    }
+
+    const pipeline = executionPipeline.value
+        .split(',')
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
+    const visibility = executionVisibility.value
+        .split(',')
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
+    const metadata = executionMetadata.value.trim();
+
+    return {
+        schema: executionSchema.value.trim() || 'voucher.execution.v1',
+        driver: executionDriver.value.trim() || 'default',
+        ...(executionMode.value.trim() === ''
+            ? {}
+            : { mode: executionMode.value.trim() }),
+        ...(pipeline.length === 0 ? {} : { pipeline }),
+        ...(executionFallback.value.trim() === ''
+            ? {}
+            : { fallback: executionFallback.value.trim() }),
+        ...(visibility.length === 0 ? {} : { visibility }),
+        ...(metadata === ''
+            ? {}
+            : {
+                  metadata: {
+                      operator_note: metadata,
+                  },
+              }),
+    };
 });
 
 async function submit(): Promise<void> {
@@ -808,6 +906,41 @@ function buildPayloadShape(redactSensitive: boolean): Record<string, unknown> {
 
     if (expiresAt.value.trim() !== '') {
         payload.expires_at = expiresAt.value.trim();
+    }
+
+    if (voucherType.value !== 'redeemable') {
+        payload.voucher_type = voucherType.value;
+    }
+
+    const normalizedTargetAmount = Number(targetAmount.value);
+
+    if (Number.isFinite(normalizedTargetAmount) && normalizedTargetAmount > 0) {
+        payload.target_amount = normalizedTargetAmount;
+    }
+
+    if (settlementRulesSummary.value !== null) {
+        payload.rules = settlementRulesSummary.value;
+    }
+
+    if (executionSummary.value !== null) {
+        payload.execution = executionSummary.value;
+    }
+
+    const flowType = metadataFlowType.value.trim();
+    const issuerId = metadataIssuerId.value.trim();
+    const collectionWalletId = metadataCollectionWalletId.value.trim();
+
+    if (flowType !== '') {
+        (payload.metadata as Record<string, unknown>).flow_type = flowType;
+    }
+
+    if (issuerId !== '') {
+        (payload.metadata as Record<string, unknown>).issuer_id = issuerId;
+    }
+
+    if (collectionWalletId !== '') {
+        (payload.metadata as Record<string, unknown>).collection_wallet_id =
+            collectionWalletId;
     }
 
     return payload;
@@ -1766,6 +1899,74 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 :disabled="processing"
                             />
                         </label>
+                        <details
+                            class="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/60"
+                            data-testid="cockpit-quick-generate-rider-advanced"
+                        >
+                            <summary
+                                class="cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300"
+                            >
+                                Advanced rider metadata
+                            </summary>
+                            <div
+                                class="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3"
+                            >
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Redirect timeout
+                                    <input
+                                        v-model="riderRedirectTimeout"
+                                        type="number"
+                                        min="0"
+                                        max="300"
+                                        step="1"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-rider-redirect-timeout"
+                                        :disabled="processing"
+                                    />
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Splash HTML profile
+                                    <input
+                                        v-model="riderSplashMetaProfile"
+                                        type="text"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-rider-splash-profile"
+                                        :disabled="processing"
+                                    />
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    OG source
+                                    <select
+                                        v-model="riderOgSource"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-rider-og-source"
+                                        :disabled="processing"
+                                    >
+                                        <option value="">Default</option>
+                                        <option value="message">message</option>
+                                        <option value="url">url</option>
+                                        <option value="splash">splash</option>
+                                    </select>
+                                </label>
+                                <label
+                                    class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300"
+                                >
+                                    <input
+                                        v-model="riderSplashMetaSanitized"
+                                        type="checkbox"
+                                        class="rounded border-slate-300"
+                                        :disabled="processing"
+                                    />
+                                    Splash content sanitized
+                                </label>
+                            </div>
+                        </details>
                     </div>
                 </section>
 
@@ -1906,6 +2107,320 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 :disabled="processing || sliceMode !== 'open'"
                             />
                         </label>
+                    </div>
+                </section>
+
+                <section
+                    class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
+                    data-testid="cockpit-quick-generate-advanced-contract-section"
+                >
+                    <div class="flex items-center gap-3">
+                        <span
+                            class="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100 text-sm font-bold text-violet-700 dark:bg-violet-900/60 dark:text-violet-200"
+                            >7</span
+                        >
+                        <div>
+                            <h4
+                                class="text-sm font-semibold text-slate-950 dark:text-slate-50"
+                            >
+                                Settlement, execution, and metadata
+                            </h4>
+                            <p
+                                class="text-xs text-slate-500 dark:text-slate-400"
+                            >
+                                Advanced DTO fields remain opt-in and do not
+                                change the default issuance handoff.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 grid gap-3">
+                        <details
+                            class="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/60"
+                        >
+                            <summary
+                                class="cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300"
+                            >
+                                Settlement fields
+                            </summary>
+                            <div
+                                class="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3"
+                            >
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Voucher type
+                                    <select
+                                        v-model="voucherType"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-voucher-type"
+                                        :disabled="processing"
+                                    >
+                                        <option value="redeemable">
+                                            redeemable
+                                        </option>
+                                        <option value="payable">payable</option>
+                                        <option value="settlement">
+                                            settlement
+                                        </option>
+                                    </select>
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Target amount
+                                    <input
+                                        v-model="targetAmount"
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-target-amount"
+                                        :disabled="
+                                            processing ||
+                                            voucherType === 'redeemable'
+                                        "
+                                    />
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Min payment
+                                    <input
+                                        v-model="rulesMinPayment"
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-rules-min-payment"
+                                        :disabled="
+                                            processing ||
+                                            voucherType === 'redeemable'
+                                        "
+                                    />
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Max payment
+                                    <input
+                                        v-model="rulesMaxPayment"
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        :disabled="
+                                            processing ||
+                                            voucherType === 'redeemable'
+                                        "
+                                    />
+                                </label>
+                                <label
+                                    class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300"
+                                >
+                                    <input
+                                        v-model="rulesAllowOverpayment"
+                                        type="checkbox"
+                                        class="rounded border-slate-300"
+                                        :disabled="
+                                            processing ||
+                                            voucherType === 'redeemable'
+                                        "
+                                    />
+                                    Allow overpayment
+                                </label>
+                                <label
+                                    class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300"
+                                >
+                                    <input
+                                        v-model="rulesAutoCloseOnFullPayment"
+                                        type="checkbox"
+                                        class="rounded border-slate-300"
+                                        :disabled="
+                                            processing ||
+                                            voucherType === 'redeemable'
+                                        "
+                                    />
+                                    Auto-close on full payment
+                                </label>
+                            </div>
+                        </details>
+
+                        <details
+                            class="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/60"
+                        >
+                            <summary
+                                class="cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300"
+                            >
+                                Execution instruction
+                            </summary>
+                            <div
+                                class="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3"
+                            >
+                                <label
+                                    class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300"
+                                >
+                                    <input
+                                        v-model="includeExecutionInstruction"
+                                        type="checkbox"
+                                        class="rounded border-slate-300"
+                                        data-testid="cockpit-quick-generate-include-execution"
+                                        :disabled="processing"
+                                    />
+                                    Include execution instruction
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Schema
+                                    <input
+                                        v-model="executionSchema"
+                                        type="text"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        :disabled="
+                                            processing ||
+                                            !includeExecutionInstruction
+                                        "
+                                    />
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Driver
+                                    <input
+                                        v-model="executionDriver"
+                                        type="text"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-execution-driver"
+                                        :disabled="
+                                            processing ||
+                                            !includeExecutionInstruction
+                                        "
+                                    />
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Mode
+                                    <input
+                                        v-model="executionMode"
+                                        type="text"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        :disabled="
+                                            processing ||
+                                            !includeExecutionInstruction
+                                        "
+                                    />
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Pipeline
+                                    <input
+                                        v-model="executionPipeline"
+                                        type="text"
+                                        placeholder="comma-separated step keys"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-execution-pipeline"
+                                        :disabled="
+                                            processing ||
+                                            !includeExecutionInstruction
+                                        "
+                                    />
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Fallback
+                                    <input
+                                        v-model="executionFallback"
+                                        type="text"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        :disabled="
+                                            processing ||
+                                            !includeExecutionInstruction
+                                        "
+                                    />
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Visibility
+                                    <input
+                                        v-model="executionVisibility"
+                                        type="text"
+                                        placeholder="comma-separated visibility keys"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        :disabled="
+                                            processing ||
+                                            !includeExecutionInstruction
+                                        "
+                                    />
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 lg:col-span-2 dark:text-slate-300"
+                                >
+                                    Execution metadata note
+                                    <input
+                                        v-model="executionMetadata"
+                                        type="text"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        :disabled="
+                                            processing ||
+                                            !includeExecutionInstruction
+                                        "
+                                    />
+                                </label>
+                            </div>
+                        </details>
+
+                        <details
+                            class="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/60"
+                        >
+                            <summary
+                                class="cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300"
+                            >
+                                Metadata fields
+                            </summary>
+                            <div
+                                class="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3"
+                            >
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Flow type
+                                    <input
+                                        v-model="metadataFlowType"
+                                        type="text"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-metadata-flow-type"
+                                        :disabled="processing"
+                                    />
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Issuer ID
+                                    <input
+                                        v-model="metadataIssuerId"
+                                        type="text"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        :disabled="processing"
+                                    />
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Collection wallet ID
+                                    <input
+                                        v-model="metadataCollectionWalletId"
+                                        type="text"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        :disabled="processing"
+                                    />
+                                </label>
+                            </div>
+                        </details>
                     </div>
                 </section>
             </div>
