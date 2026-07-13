@@ -693,6 +693,46 @@ const effectiveTtl = computed<string>(() => {
     return expiryPreset.value === 'none' ? '' : expiryPreset.value;
 });
 
+const effectiveExpiry = computed<{
+    source: 'none' | 'preset' | 'ttl_override' | 'absolute_expires_at';
+    label: string;
+    payload: Record<string, string>;
+}>(() => {
+    const absoluteExpiresAt = expiresAt.value.trim();
+
+    if (absoluteExpiresAt !== '') {
+        return {
+            source: 'absolute_expires_at',
+            label: `Absolute expiry: ${absoluteExpiresAt}`,
+            payload: { expires_at: absoluteExpiresAt },
+        };
+    }
+
+    const advancedTtl = ttl.value.trim();
+
+    if (advancedTtl !== '') {
+        return {
+            source: 'ttl_override',
+            label: `Raw TTL override: ${advancedTtl}`,
+            payload: { ttl: advancedTtl },
+        };
+    }
+
+    if (effectiveTtl.value !== '') {
+        return {
+            source: 'preset',
+            label: `Expiry preset: ${effectiveTtl.value}`,
+            payload: { ttl: effectiveTtl.value },
+        };
+    }
+
+    return {
+        source: 'none',
+        label: 'No expiry payload will be submitted.',
+        payload: {},
+    };
+});
+
 const selectedInputFields = computed<string[]>(() => {
     const fields = new Set(selectedInputFieldValues.value);
 
@@ -1195,16 +1235,16 @@ function buildPayloadShape(redactSensitive: boolean): Record<string, unknown> {
         payload.mask = mask.value.trim();
     }
 
-    if (effectiveTtl.value !== '') {
-        payload.ttl = effectiveTtl.value;
-    }
-
     if (startsAt.value.trim() !== '') {
         payload.starts_at = startsAt.value.trim();
     }
 
-    if (expiresAt.value.trim() !== '') {
-        payload.expires_at = expiresAt.value.trim();
+    if (effectiveExpiry.value.payload.ttl) {
+        payload.ttl = effectiveExpiry.value.payload.ttl;
+    }
+
+    if (effectiveExpiry.value.payload.expires_at) {
+        payload.expires_at = effectiveExpiry.value.payload.expires_at;
     }
 
     if (voucherType.value !== 'redeemable') {
@@ -1668,8 +1708,37 @@ function dataGet(source: unknown, path: string[]): unknown {
                         <summary
                             class="cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300"
                         >
-                            Advanced generation and cash fields
+                            Advanced contract controls
                         </summary>
+                        <div
+                            class="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
+                            data-testid="cockpit-quick-generate-effective-expiry"
+                        >
+                            <div
+                                class="flex flex-wrap items-start justify-between gap-2"
+                            >
+                                <div>
+                                    <p class="font-semibold">
+                                        Effective expiry
+                                    </p>
+                                    <p class="mt-1">
+                                        {{ effectiveExpiry.label }}
+                                    </p>
+                                </div>
+                                <span
+                                    class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-amber-800 shadow-sm dark:bg-amber-900/60 dark:text-amber-100"
+                                >
+                                    {{ effectiveExpiry.source }}
+                                </span>
+                            </div>
+                            <p
+                                class="mt-2 text-[11px] text-amber-800 dark:text-amber-200"
+                            >
+                                Precedence: Exact expires at wins over raw TTL;
+                                raw TTL wins over the primary expiry preset.
+                                When exact expiry is set, TTL is not submitted.
+                            </p>
+                        </div>
                         <div class="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3">
                             <label
                                 class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
@@ -1699,7 +1768,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <label
                                 class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
-                                TTL
+                                Raw TTL override
                                 <input
                                     v-model="ttl"
                                     type="text"
@@ -1708,6 +1777,12 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     data-testid="cockpit-quick-generate-ttl"
                                     :disabled="processing"
                                 />
+                                <span
+                                    class="text-[11px] font-normal text-slate-500 dark:text-slate-400"
+                                >
+                                    ISO-8601 duration override. Example: P1D or
+                                    PT12H.
+                                </span>
                             </label>
                             <label
                                 class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
@@ -1724,7 +1799,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <label
                                 class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
-                                Expires at
+                                Exact expires at
                                 <input
                                     v-model="expiresAt"
                                     type="datetime-local"
@@ -1732,6 +1807,12 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     data-testid="cockpit-quick-generate-expires-at"
                                     :disabled="processing"
                                 />
+                                <span
+                                    class="text-[11px] font-normal text-slate-500 dark:text-slate-400"
+                                >
+                                    Absolute expiry. When filled, it dominates
+                                    TTL and expiry preset.
+                                </span>
                             </label>
                             <label
                                 class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
