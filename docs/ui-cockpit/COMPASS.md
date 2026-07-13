@@ -4,12 +4,19 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 69 — Manual Distribution External Evidence Review / Handoff Plan
-Status: Wave 68 complete / validation and retention planning complete; runtime still blocked
+Current slice: Cockpit Wave 70 — Manual Distribution External Evidence Attachment / Storage Decision
+Status: Wave 69 complete / review and handoff planning complete; runtime still blocked
 Last updated: 2026-07-13
 
 ## Completed
 
+- Completed Cockpit Wave 69 — Manual Distribution External Evidence Review / Handoff Plan:
+  - Defined planning-only review workflow and handoff boundaries for future manual distribution external evidence intake.
+  - Confirmed external evidence remains operator-submitted review evidence, not voucher lifecycle truth, x-feedback delivery truth, x-journal authority, x-action completion, x-campaign state, provider settlement truth, wallet truth, or money movement truth.
+  - Defined future review states, reviewer permissions, package handoff boundaries, and escalation cases.
+  - Confirmed no evidence review routes, controllers, queues, state machines, approval/rejection/correction handlers, journal writers, feedback writers, action completion handlers, campaign mutation handlers, provider calls, voucher mutation, wallet mutation, or money movement were added.
+  - Next recommended checkpoint: Cockpit Wave 70 — Manual Distribution External Evidence Attachment / Storage Decision.
+  - Report: `reports/385-wave-69-external-evidence-review-handoff-plan.md`.
 - Completed Cockpit Wave 68 — Manual Distribution External Evidence Validation / Retention Closure:
   - Closed Wave 68 as `validation-retention-planned / runtime-still-blocked`.
   - Completed planning-only validation and retention baselines for future manual distribution external evidence intake.
