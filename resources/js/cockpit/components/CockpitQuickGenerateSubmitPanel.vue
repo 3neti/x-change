@@ -29,6 +29,136 @@ const emit = defineEmits<{
     submitError: [error: Record<string, unknown>];
 }>();
 
+type VoucherInstructionCoverageStatus =
+    | 'editable'
+    | 'defaulted'
+    | 'advanced'
+    | 'preview-only';
+
+type VoucherInstructionCoverageGroup = {
+    key: string;
+    label: string;
+    fields: Array<{
+        key: string;
+        status: VoucherInstructionCoverageStatus;
+    }>;
+};
+
+const voucherInstructionCoverageGroups: VoucherInstructionCoverageGroup[] = [
+    {
+        key: 'cash',
+        label: 'cash',
+        fields: [
+            { key: 'cash.amount', status: 'editable' },
+            { key: 'cash.currency', status: 'editable' },
+            { key: 'cash.settlement_rail', status: 'advanced' },
+            { key: 'cash.fee_strategy', status: 'advanced' },
+            { key: 'cash.slice_mode', status: 'editable' },
+            { key: 'cash.slices', status: 'advanced' },
+            { key: 'cash.max_slices', status: 'editable' },
+            { key: 'cash.min_withdrawal', status: 'editable' },
+            { key: 'cash.type', status: 'advanced' },
+            { key: 'cash.mandates', status: 'advanced' },
+        ],
+    },
+    {
+        key: 'cash_validation',
+        label: 'cash.validation',
+        fields: [
+            { key: 'cash.validation.secret', status: 'editable' },
+            { key: 'cash.validation.mobile', status: 'editable' },
+            { key: 'cash.validation.payable', status: 'editable' },
+            { key: 'cash.validation.country', status: 'editable' },
+            { key: 'cash.validation.location', status: 'editable' },
+            { key: 'cash.validation.radius', status: 'editable' },
+            { key: 'cash.validation.mobile_verification', status: 'advanced' },
+        ],
+    },
+    {
+        key: 'inputs',
+        label: 'inputs',
+        fields: [{ key: 'inputs.fields', status: 'editable' }],
+    },
+    {
+        key: 'feedback',
+        label: 'feedback',
+        fields: [
+            { key: 'feedback.email', status: 'editable' },
+            { key: 'feedback.mobile', status: 'editable' },
+            { key: 'feedback.webhook', status: 'editable' },
+        ],
+    },
+    {
+        key: 'rider',
+        label: 'rider',
+        fields: [
+            { key: 'rider.message', status: 'editable' },
+            { key: 'rider.url', status: 'editable' },
+            { key: 'rider.redirect_timeout', status: 'advanced' },
+            { key: 'rider.splash', status: 'editable' },
+            { key: 'rider.splash_timeout', status: 'editable' },
+            { key: 'rider.splash_meta', status: 'advanced' },
+            { key: 'rider.og_source', status: 'advanced' },
+        ],
+    },
+    {
+        key: 'validation',
+        label: 'validation',
+        fields: [
+            { key: 'validation.signature', status: 'advanced' },
+            { key: 'validation.selfie', status: 'editable' },
+            { key: 'validation.location', status: 'editable' },
+            { key: 'validation.otp', status: 'editable' },
+            { key: 'validation.face_match', status: 'advanced' },
+            { key: 'validation.time', status: 'advanced' },
+        ],
+    },
+    {
+        key: 'generation',
+        label: 'generation',
+        fields: [
+            { key: 'count', status: 'editable' },
+            { key: 'prefix', status: 'advanced' },
+            { key: 'mask', status: 'advanced' },
+            { key: 'ttl', status: 'advanced' },
+            { key: 'starts_at', status: 'advanced' },
+            { key: 'expires_at', status: 'advanced' },
+        ],
+    },
+    {
+        key: 'settlement',
+        label: 'settlement',
+        fields: [
+            { key: 'voucher_type', status: 'advanced' },
+            { key: 'target_amount', status: 'advanced' },
+            { key: 'rules', status: 'advanced' },
+        ],
+    },
+    {
+        key: 'execution',
+        label: 'execution',
+        fields: [
+            { key: 'execution.schema', status: 'defaulted' },
+            { key: 'execution.driver', status: 'defaulted' },
+            { key: 'execution.mode', status: 'advanced' },
+            { key: 'execution.pipeline', status: 'advanced' },
+            { key: 'execution.fallback', status: 'advanced' },
+            { key: 'execution.visibility', status: 'advanced' },
+            { key: 'execution.metadata', status: 'advanced' },
+        ],
+    },
+    {
+        key: 'metadata',
+        label: 'metadata',
+        fields: [
+            { key: 'metadata.flow_type', status: 'defaulted' },
+            { key: 'metadata.issuer_id', status: 'preview-only' },
+            { key: 'metadata.collection_wallet_id', status: 'preview-only' },
+            { key: 'metadata.campaign', status: 'preview-only' },
+        ],
+    },
+];
+
 const selectedTemplate = ref(
     stringValue(props.campaignContext?.draft?.template_key) ??
         stringValue(props.draftContract?.template_key) ??
@@ -742,6 +872,62 @@ function dataGet(source: unknown, path: string[]): unknown {
                     </dd>
                 </div>
             </dl>
+        </section>
+
+        <section
+            class="mt-5 rounded-2xl border border-slate-200 bg-white/80 p-4 text-xs text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-300"
+            data-testid="cockpit-voucher-instruction-coverage"
+        >
+            <div
+                class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"
+            >
+                <div>
+                    <p
+                        class="font-semibold tracking-[0.2em] text-slate-500 uppercase dark:text-slate-400"
+                    >
+                        VoucherInstruction DTO coverage
+                    </p>
+                    <h4
+                        class="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50"
+                    >
+                        Fields represented on this page
+                    </h4>
+                    <p class="mt-1 leading-5">
+                        This coverage map keeps the operator UI aligned with the
+                        voucher-owned DTO. Advanced fields are visible here even
+                        when their editors remain collapsed or defaulted.
+                    </p>
+                </div>
+                <span
+                    class="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-800"
+                >
+                    read-only coverage map
+                </span>
+            </div>
+
+            <div class="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+                <div
+                    v-for="group in voucherInstructionCoverageGroups"
+                    :key="group.key"
+                    class="min-w-0 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900/70"
+                >
+                    <p class="font-semibold text-slate-950 dark:text-slate-50">
+                        {{ group.label }}
+                    </p>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        <span
+                            v-for="field in group.fields"
+                            :key="field.key"
+                            class="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300"
+                        >
+                            {{ field.key }}
+                            <span class="text-slate-400">
+                                · {{ field.status }}
+                            </span>
+                        </span>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <div
