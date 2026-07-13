@@ -4,12 +4,19 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 68 — Manual Distribution External Evidence Validation / Retention Plan
-Status: Wave 67 complete / authorization and redaction planning complete; runtime still blocked
+Current slice: Cockpit Wave 68B — Manual Distribution External Evidence Retention Plan
+Status: In progress / Wave 68A complete
 Last updated: 2026-07-13
 
 ## Completed
 
+- Completed Cockpit Wave 68A — Manual Distribution External Evidence Validation Plan:
+  - Defined planning-only validation posture for future manual distribution external evidence intake.
+  - Recorded reject-by-default validation for allowlisted, operator-safe, scoped, redacted, and reviewable evidence facts.
+  - Defined candidate request concepts, field validation rules, rejected values, and planning-only evidence states.
+  - Confirmed no evidence request classes, routes, controllers, forms, persistence, uploads, state transition handlers, journal writes, feedback mutation, action completion, campaign mutation, provider calls, voucher mutation, wallet mutation, or money movement were added.
+  - Next recommended checkpoint: Cockpit Wave 68B — Manual Distribution External Evidence Retention Plan.
+  - Report: `reports/382-wave-68a-external-evidence-validation-plan.md`.
 - Completed Cockpit Wave 67 — Manual Distribution External Evidence Authorization / Redaction Closure:
   - Closed Wave 67 as `authorization-redaction-planned / runtime-still-blocked`.
   - Completed planning-only authorization and redaction baselines for future manual distribution external evidence intake.
