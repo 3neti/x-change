@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import CockpitManualCopyButton from './CockpitManualCopyButton.vue';
 import type {
     CockpitQuickGenerateCampaignAttribution,
@@ -48,6 +48,35 @@ type VoucherInputFieldOption = {
     value: string;
     label: string;
     helper: string;
+};
+
+type QuickGenerateTemplateDefaults = {
+    amount: string;
+    currency: string;
+    count: string;
+    payee: string;
+    purpose: string;
+    inputFields: string[];
+    expiryPreset: 'none' | 'P12H' | 'P1D' | 'P3D' | 'P7D' | 'custom';
+    requireMobileValidation: boolean;
+    requirePayableValidation: boolean;
+    requireCountryValidation: boolean;
+    verificationKyc: boolean;
+    verificationOtp: boolean;
+    verificationSelfie: boolean;
+    feedbackMobile: string;
+    feedbackEmail: string;
+    feedbackWebhook: string;
+    riderUrl: string;
+    riderSplash: string;
+    riderSplashTimeout: string;
+    sliceMode: 'whole' | 'fixed' | 'open';
+    maxSlices: string;
+    minWithdrawal: string;
+    voucherType: 'redeemable' | 'payable' | 'settlement';
+    targetAmount: string;
+    includeExecutionInstruction: boolean;
+    executionDriver: string;
 };
 
 const voucherInputFieldOptions: VoucherInputFieldOption[] = [
@@ -112,6 +141,96 @@ const voucherInputFieldOptions: VoucherInputFieldOption[] = [
         helper: 'Beneficiary selfie evidence.',
     },
 ];
+
+const quickGenerateTemplateDefaults: Record<
+    string,
+    QuickGenerateTemplateDefaults
+> = {
+    'money-changer': {
+        amount: '25',
+        currency: 'PHP',
+        count: '1',
+        payee: 'CASH',
+        purpose: 'Branch counter cash-out',
+        inputFields: ['reference_code'],
+        expiryPreset: 'P1D',
+        requireMobileValidation: false,
+        requirePayableValidation: false,
+        requireCountryValidation: true,
+        verificationKyc: false,
+        verificationOtp: false,
+        verificationSelfie: false,
+        feedbackMobile: '',
+        feedbackEmail: '',
+        feedbackWebhook: '',
+        riderUrl: '',
+        riderSplash: 'Present this Pay Code at the counter.',
+        riderSplashTimeout: '3',
+        sliceMode: 'whole',
+        maxSlices: '1',
+        minWithdrawal: '0',
+        voucherType: 'redeemable',
+        targetAmount: '',
+        includeExecutionInstruction: false,
+        executionDriver: 'default',
+    },
+    'ofw-remittance': {
+        amount: '500',
+        currency: 'PHP',
+        count: '1',
+        payee: '09170000000',
+        purpose: 'OFW remittance payout',
+        inputFields: ['mobile', 'name', 'reference_code'],
+        expiryPreset: 'P3D',
+        requireMobileValidation: true,
+        requirePayableValidation: false,
+        requireCountryValidation: true,
+        verificationKyc: true,
+        verificationOtp: true,
+        verificationSelfie: false,
+        feedbackMobile: '09170000000',
+        feedbackEmail: '',
+        feedbackWebhook: '',
+        riderUrl: '',
+        riderSplash: 'Your remittance Pay Code is ready.',
+        riderSplashTimeout: '5',
+        sliceMode: 'whole',
+        maxSlices: '1',
+        minWithdrawal: '0',
+        voucherType: 'redeemable',
+        targetAmount: '',
+        includeExecutionInstruction: false,
+        executionDriver: 'default',
+    },
+    'settlement-envelope': {
+        amount: '1000',
+        currency: 'PHP',
+        count: '1',
+        payee: 'CASH',
+        purpose: 'Settlement envelope readiness check',
+        inputFields: ['name', 'signature', 'kyc'],
+        expiryPreset: 'P7D',
+        requireMobileValidation: false,
+        requirePayableValidation: false,
+        requireCountryValidation: true,
+        verificationKyc: true,
+        verificationOtp: false,
+        verificationSelfie: true,
+        feedbackMobile: '',
+        feedbackEmail: '',
+        feedbackWebhook: '',
+        riderUrl: '',
+        riderSplash: 'Settlement envelope requires readiness approval.',
+        riderSplashTimeout: '5',
+        sliceMode: 'open',
+        maxSlices: '3',
+        minWithdrawal: '100',
+        voucherType: 'settlement',
+        targetAmount: '1000',
+        includeExecutionInstruction: true,
+        executionDriver: 'settlement_envelope',
+    },
+};
 
 const voucherInstructionCoverageGroups: VoucherInstructionCoverageGroup[] = [
     {
@@ -327,6 +446,55 @@ const lastMessage = ref(
     'Submit will call the existing x-change issuance handoff route.',
 );
 const lastResponse = ref<Record<string, unknown> | null>(null);
+
+watch(selectedTemplate, (templateKey): void => {
+    applyTemplateDefaults(templateKey);
+});
+
+function applyTemplateDefaults(templateKey: string): void {
+    const defaults = quickGenerateTemplateDefaults[templateKey];
+
+    if (!defaults) {
+        return;
+    }
+
+    amount.value = defaults.amount;
+    currency.value = defaults.currency;
+    count.value = defaults.count;
+    recipientReference.value = defaults.payee;
+    purpose.value = defaults.purpose;
+    selectedInputFieldValues.value = [...defaults.inputFields];
+    expiryPreset.value = defaults.expiryPreset;
+    expiryCustomDays.value = '';
+    ttl.value = '';
+    requireMobileValidation.value = defaults.requireMobileValidation;
+    requirePayableValidation.value = defaults.requirePayableValidation;
+    requireCountryValidation.value = defaults.requireCountryValidation;
+    verificationKyc.value = defaults.verificationKyc;
+    verificationOtp.value = defaults.verificationOtp;
+    verificationSelfie.value = defaults.verificationSelfie;
+    feedbackMobile.value = defaults.feedbackMobile;
+    feedbackEmail.value = defaults.feedbackEmail;
+    feedbackWebhook.value = defaults.feedbackWebhook;
+    riderUrl.value = defaults.riderUrl;
+    riderSplash.value = defaults.riderSplash;
+    riderSplashTimeout.value = defaults.riderSplashTimeout;
+    sliceMode.value = defaults.sliceMode;
+    maxSlices.value = defaults.maxSlices;
+    minWithdrawal.value = defaults.minWithdrawal;
+    voucherType.value = defaults.voucherType;
+    targetAmount.value = defaults.targetAmount;
+    includeExecutionInstruction.value = defaults.includeExecutionInstruction;
+    executionDriver.value = defaults.executionDriver;
+    executionPipeline.value =
+        defaults.executionDriver === 'settlement_envelope'
+            ? 'readiness, authorize, execute'
+            : '';
+    metadataFlowType.value = templateKey;
+    lastStatus.value = 'ready';
+    lastMessage.value = `${selectedTemplateName.value} defaults applied. Submit will call the existing x-change issuance handoff route.`;
+    lastResponse.value = null;
+}
 
 const routeUrl = computed<string | null>(() =>
     stringValue(props.mutationContract?.route_url),
