@@ -916,6 +916,14 @@ const effectiveMandates = computed<string[]>(() => {
     return [...new Set([...selectedMandates.value, ...mandates])];
 });
 
+const effectiveMandatesDisplay = computed<string>(() => {
+    if (effectiveMandates.value.length === 0) {
+        return 'No mandates selected';
+    }
+
+    return effectiveMandates.value.join(', ');
+});
+
 const selectedInputFields = computed<string[]>(() => {
     const fields = new Set(selectedInputFieldValues.value);
 
@@ -2243,6 +2251,32 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         not listed above.
                                     </span>
                                 </label>
+                                <details
+                                    class="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950"
+                                    data-testid="cockpit-quick-generate-mandates-preview"
+                                >
+                                    <summary
+                                        class="cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300"
+                                    >
+                                        Mandates payload preview
+                                    </summary>
+                                    <div class="mt-2 grid gap-2">
+                                        <p
+                                            class="text-[11px] leading-snug text-slate-500 dark:text-slate-400"
+                                        >
+                                            Reactive comma-delimited preview of
+                                            the exact mandate keys that will be
+                                            submitted as
+                                            <code>cash.mandates</code>.
+                                        </p>
+                                        <div
+                                            class="rounded-lg border border-slate-200 bg-white p-3 font-mono text-xs break-words text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+                                            data-testid="cockpit-quick-generate-mandates-preview-value"
+                                        >
+                                            {{ effectiveMandatesDisplay }}
+                                        </div>
+                                    </div>
+                                </details>
                             </div>
                         </div>
                     </details>
