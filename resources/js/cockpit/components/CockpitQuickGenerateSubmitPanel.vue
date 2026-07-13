@@ -198,6 +198,19 @@ const requireLocationValidation = ref(false);
 const verificationKyc = ref(false);
 const verificationOtp = ref(false);
 const verificationSelfie = ref(false);
+const signatureRequired = ref(false);
+const signatureFailure = ref<'block' | 'warn'>('block');
+const selfieFailure = ref<'block' | 'warn'>('block');
+const otpFailure = ref<'block' | 'warn'>('block');
+const faceMatchRequired = ref(false);
+const faceMatchFailure = ref<'block' | 'warn'>('block');
+const faceMatchConfidence = ref('0.75');
+const timeValidationEnabled = ref(false);
+const timeWindowStart = ref('09:00');
+const timeWindowEnd = ref('17:00');
+const timeWindowTimezone = ref('Asia/Manila');
+const timeLimitMinutes = ref('10');
+const timeTrackDuration = ref(true);
 const riderUrl = ref('');
 const riderSplash = ref('');
 const riderSplashTimeout = ref('3');
@@ -404,6 +417,76 @@ const validationSummary = computed<Record<string, unknown>>(() => {
         ...(requireCountryValidation.value ? { country: 'PH' } : {}),
         ...(requireLocationValidation.value
             ? { location: 'required', radius: '100' }
+            : {}),
+        ...(verificationOtp.value ? { mobile_verification: 'otp' } : {}),
+    };
+});
+
+const structuredValidationSummary = computed<Record<string, unknown>>(() => {
+    const confidence = Number(faceMatchConfidence.value);
+    const limitMinutes = Number(timeLimitMinutes.value);
+
+    return {
+        ...(signatureRequired.value
+            ? {
+                  signature: {
+                      required: true,
+                      on_failure: signatureFailure.value,
+                  },
+              }
+            : {}),
+        ...(verificationSelfie.value
+            ? {
+                  selfie: {
+                      required: true,
+                      on_failure: selfieFailure.value,
+                  },
+              }
+            : {}),
+        ...(requireLocationValidation.value
+            ? {
+                  location: {
+                      required: true,
+                      target_lat: 0,
+                      target_lng: 0,
+                      radius_meters: 100,
+                      on_failure: 'block',
+                  },
+              }
+            : {}),
+        ...(verificationOtp.value
+            ? {
+                  otp: {
+                      required: true,
+                      on_failure: otpFailure.value,
+                  },
+              }
+            : {}),
+        ...(faceMatchRequired.value
+            ? {
+                  face_match: {
+                      required: true,
+                      on_failure: faceMatchFailure.value,
+                      min_confidence: Number.isFinite(confidence)
+                          ? confidence
+                          : 0.75,
+                  },
+              }
+            : {}),
+        ...(timeValidationEnabled.value
+            ? {
+                  time: {
+                      window: {
+                          start_time: timeWindowStart.value,
+                          end_time: timeWindowEnd.value,
+                          timezone: timeWindowTimezone.value,
+                      },
+                      limit_minutes: Number.isFinite(limitMinutes)
+                          ? limitMinutes
+                          : null,
+                      track_duration: timeTrackDuration.value,
+                  },
+              }
             : {}),
     };
 });
@@ -681,6 +764,7 @@ function buildPayloadShape(redactSensitive: boolean): Record<string, unknown> {
                 : 1,
         feedback: feedbackSummary.value,
         rider: riderSummary.value,
+        validation: structuredValidationSummary.value,
         metadata: {
             ...(campaign === null ? {} : { campaign }),
             ...(sliceMode.value === 'open'
@@ -1412,6 +1496,201 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 Selfie evidence
                             </label>
                         </div>
+                        <details
+                            class="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/60"
+                            data-testid="cockpit-quick-generate-validation-advanced"
+                        >
+                            <summary
+                                class="cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300"
+                            >
+                                Structured validation rules
+                            </summary>
+                            <div
+                                class="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3"
+                            >
+                                <label
+                                    class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300"
+                                >
+                                    <input
+                                        v-model="signatureRequired"
+                                        type="checkbox"
+                                        class="rounded border-slate-300"
+                                        data-testid="cockpit-quick-generate-signature-required"
+                                        :disabled="processing"
+                                    />
+                                    Signature required
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Signature failure
+                                    <select
+                                        v-model="signatureFailure"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        :disabled="
+                                            processing || !signatureRequired
+                                        "
+                                    >
+                                        <option value="block">block</option>
+                                        <option value="warn">warn</option>
+                                    </select>
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    OTP failure
+                                    <select
+                                        v-model="otpFailure"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        :disabled="
+                                            processing || !verificationOtp
+                                        "
+                                    >
+                                        <option value="block">block</option>
+                                        <option value="warn">warn</option>
+                                    </select>
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Selfie failure
+                                    <select
+                                        v-model="selfieFailure"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        :disabled="
+                                            processing || !verificationSelfie
+                                        "
+                                    >
+                                        <option value="block">block</option>
+                                        <option value="warn">warn</option>
+                                    </select>
+                                </label>
+                                <label
+                                    class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300"
+                                >
+                                    <input
+                                        v-model="faceMatchRequired"
+                                        type="checkbox"
+                                        class="rounded border-slate-300"
+                                        data-testid="cockpit-quick-generate-face-match-required"
+                                        :disabled="processing"
+                                    />
+                                    Face match required
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Face match confidence
+                                    <input
+                                        v-model="faceMatchConfidence"
+                                        type="number"
+                                        min="0"
+                                        max="1"
+                                        step="0.01"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-face-match-confidence"
+                                        :disabled="
+                                            processing || !faceMatchRequired
+                                        "
+                                    />
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Face match failure
+                                    <select
+                                        v-model="faceMatchFailure"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        :disabled="
+                                            processing || !faceMatchRequired
+                                        "
+                                    >
+                                        <option value="block">block</option>
+                                        <option value="warn">warn</option>
+                                    </select>
+                                </label>
+                                <label
+                                    class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300"
+                                >
+                                    <input
+                                        v-model="timeValidationEnabled"
+                                        type="checkbox"
+                                        class="rounded border-slate-300"
+                                        data-testid="cockpit-quick-generate-time-validation-enabled"
+                                        :disabled="processing"
+                                    />
+                                    Time validation
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Start time
+                                    <input
+                                        v-model="timeWindowStart"
+                                        type="time"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        :disabled="
+                                            processing || !timeValidationEnabled
+                                        "
+                                    />
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    End time
+                                    <input
+                                        v-model="timeWindowEnd"
+                                        type="time"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        :disabled="
+                                            processing || !timeValidationEnabled
+                                        "
+                                    />
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Timezone
+                                    <input
+                                        v-model="timeWindowTimezone"
+                                        type="text"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        :disabled="
+                                            processing || !timeValidationEnabled
+                                        "
+                                    />
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Limit minutes
+                                    <input
+                                        v-model="timeLimitMinutes"
+                                        type="number"
+                                        min="1"
+                                        max="1440"
+                                        step="1"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        :disabled="
+                                            processing || !timeValidationEnabled
+                                        "
+                                    />
+                                </label>
+                                <label
+                                    class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300"
+                                >
+                                    <input
+                                        v-model="timeTrackDuration"
+                                        type="checkbox"
+                                        class="rounded border-slate-300"
+                                        :disabled="
+                                            processing || !timeValidationEnabled
+                                        "
+                                    />
+                                    Track duration
+                                </label>
+                            </div>
+                        </details>
                     </div>
                 </section>
 
