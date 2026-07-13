@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 71 complete; external evidence runtime readiness reviewed and implementation deferred
+Current status: Manual distribution external evidence planning track complete; runtime deferred
 Last updated: 2026-07-13
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-13
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 71 complete; external evidence runtime readiness reviewed and implementation deferred | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | External evidence planning track complete; runtime deferred; next capability selection pending | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,11 @@ Last updated: 2026-07-13
 
 ### Current Cockpit Host Integration
 
+- Cockpit Wave 72 — Manual Distribution External Evidence Runtime Implementation Decision complete:
+  - Closed the external evidence planning track as `planning-track-complete / runtime-deferred`.
+  - Confirmed no runtime evidence intake routes, controllers, forms, tables, migrations, models, DTOs, repositories, services, policies, storage, package writers, mutations, provider calls, voucher mutation, wallet mutation, or money movement were added.
+  - Host-published Cockpit assets remain clean: checked 59, ok 59, stale 0, missing 0, extra 0.
+  - Report: [../ui-cockpit/reports/388-wave-72-external-evidence-runtime-implementation-decision.md](../ui-cockpit/reports/388-wave-72-external-evidence-runtime-implementation-decision.md).
 - Cockpit Wave 71 — Manual Distribution External Evidence Runtime Readiness Closure complete:
   - Recorded `not-runtime-ready / defer-runtime-implementation`.
   - Host-published Cockpit assets remain clean: checked 59, ok 59, stale 0, missing 0, extra 0.

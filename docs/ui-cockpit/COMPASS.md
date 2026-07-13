@@ -4,12 +4,21 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 72 — Manual Distribution External Evidence Runtime Implementation Decision
-Status: Wave 71 complete / runtime readiness reviewed; implementation deferred
+Current slice: Cockpit Next Capability Selection — Feedback delivery, campaign dispatch, short links, QR assets, print artifacts, or external evidence runtime authorization
+Status: Manual distribution external evidence planning track complete / runtime deferred
 Last updated: 2026-07-13
 
 ## Completed
 
+- Completed Cockpit Wave 72 — Manual Distribution External Evidence Runtime Implementation Decision:
+  - Closed the manual distribution external evidence planning track.
+  - Recorded decision: `planning-track-complete / runtime-deferred`.
+  - Confirmed runtime implementation is not authorized.
+  - Defined the only acceptable future first runtime candidate as structured, redacted, text-only external evidence intake if separately approved.
+  - Confirmed no runtime evidence routes, controllers, forms, tables, migrations, models, DTOs, repositories, services, policies, storage, journal writers, feedback mutation, action completion, campaign mutation, attachments, screenshots, file uploads, provider calls, voucher mutation, wallet mutation, or money movement were added.
+  - Verified host-published Cockpit assets remain clean: checked 59, ok 59, stale 0, missing 0, extra 0.
+  - Next recommended checkpoint: Cockpit Next Capability Selection — Feedback delivery, campaign dispatch, short links, QR assets, print artifacts, or external evidence runtime authorization.
+  - Report: `reports/388-wave-72-external-evidence-runtime-implementation-decision.md`.
 - Completed Cockpit Wave 71 — Manual Distribution External Evidence Runtime Readiness Closure:
   - Recorded decision: `not-runtime-ready / defer-runtime-implementation`.
   - Confirmed the allowed future runtime candidate remains structured, redacted, text-only external evidence intake.
