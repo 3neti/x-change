@@ -4,12 +4,20 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 68C — Manual Distribution External Evidence Validation / Retention Closure
-Status: In progress / Wave 68B complete
+Current slice: Cockpit Wave 69 — Manual Distribution External Evidence Review / Handoff Plan
+Status: Wave 68 complete / validation and retention planning complete; runtime still blocked
 Last updated: 2026-07-13
 
 ## Completed
 
+- Completed Cockpit Wave 68 — Manual Distribution External Evidence Validation / Retention Closure:
+  - Closed Wave 68 as `validation-retention-planned / runtime-still-blocked`.
+  - Completed planning-only validation and retention baselines for future manual distribution external evidence intake.
+  - Confirmed review workflow, attachment policy, malware scanning policy, journal handoff, x-feedback correlation, x-action continuation, x-campaign attribution, abuse/mistaken-disclosure runbook, rollback/migration plan, database schema decision, storage disk decision, and queue/job decision remain unresolved.
+  - Confirmed no evidence request classes, routes, controllers, forms, text areas, upload controls, tables, migrations, models, repositories, storage disks, purge jobs, archival jobs, restore flows, state transition handlers, attachment storage, screenshot storage, raw transcript storage, journal handoff persistence, feedback mutation, action completion, campaign mutation, provider calls, voucher mutation, wallet mutation, or money movement were added.
+  - Verified host-published Cockpit assets remain clean: checked 59, ok 59, stale 0, missing 0, extra 0.
+  - Next recommended checkpoint: Cockpit Wave 69 — Manual Distribution External Evidence Review / Handoff Plan.
+  - Report: `reports/384-wave-68-external-evidence-validation-retention-closure.md`.
 - Completed Cockpit Wave 68B — Manual Distribution External Evidence Retention Plan:
   - Defined planning-only retention and purge posture for future manual distribution external evidence intake.
   - Recorded `do-not-store-until-retention-policy-is-approved`.
