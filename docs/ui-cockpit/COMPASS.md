@@ -4,12 +4,19 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 68B — Manual Distribution External Evidence Retention Plan
-Status: In progress / Wave 68A complete
+Current slice: Cockpit Wave 68C — Manual Distribution External Evidence Validation / Retention Closure
+Status: In progress / Wave 68B complete
 Last updated: 2026-07-13
 
 ## Completed
 
+- Completed Cockpit Wave 68B — Manual Distribution External Evidence Retention Plan:
+  - Defined planning-only retention and purge posture for future manual distribution external evidence intake.
+  - Recorded `do-not-store-until-retention-policy-is-approved`.
+  - Defined candidate retention classes, rejected retention classes, purge rules, and read-model rules.
+  - Confirmed no evidence tables, models, migrations, repositories, storage disks, file retention, purge jobs, archival jobs, restore flows, attachment storage, screenshot storage, raw transcript storage, journal handoff persistence, feedback mutation, action completion, campaign mutation, provider calls, voucher mutation, wallet mutation, or money movement were added.
+  - Next recommended checkpoint: Cockpit Wave 68C — Manual Distribution External Evidence Validation / Retention Closure.
+  - Report: `reports/383-wave-68b-external-evidence-retention-plan.md`.
 - Completed Cockpit Wave 68A — Manual Distribution External Evidence Validation Plan:
   - Defined planning-only validation posture for future manual distribution external evidence intake.
   - Recorded reject-by-default validation for allowlisted, operator-safe, scoped, redacted, and reviewable evidence facts.

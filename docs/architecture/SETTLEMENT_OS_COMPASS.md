@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 68B in progress; external evidence validation plan complete
+Current status: Cockpit Wave 68C in progress; external evidence validation and retention plans complete
 Last updated: 2026-07-13
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-13
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 68B in progress; external evidence validation plan complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 68C in progress; external evidence validation and retention plans complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,10 @@ Last updated: 2026-07-13
 
 ### Current Cockpit Host Integration
 
+- Cockpit Wave 68B — Manual Distribution External Evidence Retention Plan complete:
+  - Defined `do-not-store-until-retention-policy-is-approved` posture for future evidence intake.
+  - Confirmed no evidence tables, models, migrations, repositories, storage, purge jobs, archive jobs, restore flows, handoff persistence, mutations, provider calls, voucher mutation, wallet mutation, or money movement were added.
+  - Report: [../ui-cockpit/reports/383-wave-68b-external-evidence-retention-plan.md](../ui-cockpit/reports/383-wave-68b-external-evidence-retention-plan.md).
 - Cockpit Wave 68A — Manual Distribution External Evidence Validation Plan complete:
   - Defined reject-by-default validation posture for future evidence intake.
   - Confirmed no evidence request classes, routes, controllers, forms, persistence, uploads, state handlers, handoffs, mutations, provider calls, voucher mutation, wallet mutation, or money movement were added.
