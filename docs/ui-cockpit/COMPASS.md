@@ -4,12 +4,19 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 67B — Manual Distribution External Evidence Redaction Plan
-Status: In progress / Wave 67A complete
+Current slice: Cockpit Wave 67C — Manual Distribution External Evidence Authorization / Redaction Closure
+Status: In progress / Wave 67B complete
 Last updated: 2026-07-13
 
 ## Completed
 
+- Completed Cockpit Wave 67B — Manual Distribution External Evidence Redaction Plan:
+  - Defined planning-only redaction posture for future manual distribution external evidence intake.
+  - Recorded operator-safe-by-default handling for beneficiary URLs, Pay Codes, recipient references, delivery references, provider message IDs, operator notes, attachments, screenshots, webhook payloads, credentials, tokens, wallet details, bank details, and provider internals.
+  - Confirmed future presentation must render redacted evidence summaries only and mark operator-submitted external evidence as review evidence, not lifecycle truth.
+  - Confirmed no evidence text areas, upload controls, attachment upload, screenshot upload, raw transcript storage, raw provider payload storage, raw webhook payload storage, unmasked recipient display, evidence persistence, journal writes, feedback mutation, action completion, campaign mutation, provider calls, voucher mutation, wallet mutation, or money movement were added.
+  - Next recommended checkpoint: Cockpit Wave 67C — Manual Distribution External Evidence Authorization / Redaction Closure.
+  - Report: `reports/380-wave-67b-external-evidence-redaction-plan.md`.
 - Completed Cockpit Wave 67A — Manual Distribution External Evidence Authorization Plan:
   - Defined planning-only authorization gates for future manual distribution external evidence intake.
   - Recorded deny-by-default posture for evidence intake until operator identity, Cockpit access, create/view/review permissions, tenant scope, campaign scope, Pay Code scope, role scope, redaction scope, and audit visibility are explicit.

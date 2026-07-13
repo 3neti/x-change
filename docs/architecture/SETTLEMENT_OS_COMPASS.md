@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 67B in progress; external evidence authorization plan complete
+Current status: Cockpit Wave 67C in progress; external evidence authorization and redaction plans complete
 Last updated: 2026-07-13
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-13
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 67B in progress; external evidence authorization plan complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 67C in progress; external evidence authorization and redaction plans complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,10 @@ Last updated: 2026-07-13
 
 ### Current Cockpit Host Integration
 
+- Cockpit Wave 67B — Manual Distribution External Evidence Redaction Plan complete:
+  - Defined operator-safe-by-default redaction posture for future evidence intake.
+  - Confirmed no runtime evidence form, upload, storage, handoff, mutation, provider call, voucher mutation, wallet mutation, or money movement was added.
+  - Report: [../ui-cockpit/reports/380-wave-67b-external-evidence-redaction-plan.md](../ui-cockpit/reports/380-wave-67b-external-evidence-redaction-plan.md).
 - Cockpit Wave 67A — Manual Distribution External Evidence Authorization Plan complete:
   - Defined deny-by-default authorization gates for future evidence intake.
   - Confirmed no runtime evidence intake surface, persistence, handoff, mutation, provider call, voucher mutation, wallet mutation, or money movement was added.
