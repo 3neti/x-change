@@ -1060,31 +1060,31 @@ function dataGet(source: unknown, path: string[]): unknown {
                     </div>
                     <div class="mt-4 grid gap-3">
                         <label
-                            class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                         >
                             Purpose/message
                             <textarea
                                 v-model="purpose"
                                 rows="2"
-                                class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                 data-testid="cockpit-quick-generate-submit-purpose"
                                 :disabled="processing"
                             />
                         </label>
-                        <div class="grid gap-3 md:grid-cols-2">
+                        <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
                             <label
-                                class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
                                 Rider URL
                                 <input
                                     v-model="riderUrl"
                                     type="url"
-                                    class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                    class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                     :disabled="processing"
                                 />
                             </label>
                             <label
-                                class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
                                 Splash timeout
                                 <input
@@ -1092,19 +1092,19 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     type="number"
                                     min="0"
                                     step="1"
-                                    class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                    class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                     :disabled="processing"
                                 />
                             </label>
                         </div>
                         <label
-                            class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                         >
                             Splash text
                             <input
                                 v-model="riderSplash"
                                 type="text"
-                                class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                 :disabled="processing"
                             />
                         </label>
