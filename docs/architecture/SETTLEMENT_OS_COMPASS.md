@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 69 complete; external evidence review and handoff planning complete; runtime still blocked
+Current status: Cockpit Wave 70 complete; external evidence attachments blocked and text-only evidence-first decision recorded
 Last updated: 2026-07-13
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-13
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 69 complete; external evidence review and handoff planning complete; runtime still blocked | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 70 complete; external evidence attachments blocked and text-only evidence-first decision recorded | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,10 @@ Last updated: 2026-07-13
 
 ### Current Cockpit Host Integration
 
+- Cockpit Wave 70 — Manual Distribution External Evidence Attachment / Storage Decision complete:
+  - Recorded `attachments-blocked / text-only-evidence-first`.
+  - Confirmed no file upload controls, attachment models/tables/migrations, storage disks, scanners, preview generators, evidence storage, mutations, provider calls, voucher mutation, wallet mutation, or money movement were added.
+  - Report: [../ui-cockpit/reports/386-wave-70-external-evidence-attachment-storage-decision.md](../ui-cockpit/reports/386-wave-70-external-evidence-attachment-storage-decision.md).
 - Cockpit Wave 69 — Manual Distribution External Evidence Review / Handoff Plan complete:
   - Defined planning-only review workflow and package handoff boundaries.
   - Confirmed no review routes, controllers, queues, state machines, package writers, mutations, provider calls, voucher mutation, wallet mutation, or money movement were added.

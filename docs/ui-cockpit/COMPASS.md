@@ -4,12 +4,20 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 70 — Manual Distribution External Evidence Attachment / Storage Decision
-Status: Wave 69 complete / review and handoff planning complete; runtime still blocked
+Current slice: Cockpit Wave 71 — Manual Distribution External Evidence Runtime Readiness Closure
+Status: Wave 70 complete / attachments blocked and text-only evidence-first decision recorded
 Last updated: 2026-07-13
 
 ## Completed
 
+- Completed Cockpit Wave 70 — Manual Distribution External Evidence Attachment / Storage Decision:
+  - Recorded decision: `attachments-blocked / text-only-evidence-first`.
+  - Confirmed attachments and screenshots remain blocked.
+  - Confirmed no evidence storage disk is authorized.
+  - Defined that any future first runtime shape should be structured, redacted, text-only evidence.
+  - Confirmed no file upload controls, attachment DTOs, models, tables, migrations, storage disks, file scanners, image redaction services, preview generators, file purge jobs, evidence storage, journal handoff persistence, feedback mutation, action completion, campaign mutation, provider calls, voucher mutation, wallet mutation, or money movement were added.
+  - Next recommended checkpoint: Cockpit Wave 71 — Manual Distribution External Evidence Runtime Readiness Closure.
+  - Report: `reports/386-wave-70-external-evidence-attachment-storage-decision.md`.
 - Completed Cockpit Wave 69 — Manual Distribution External Evidence Review / Handoff Plan:
   - Defined planning-only review workflow and handoff boundaries for future manual distribution external evidence intake.
   - Confirmed external evidence remains operator-submitted review evidence, not voucher lifecycle truth, x-feedback delivery truth, x-journal authority, x-action completion, x-campaign state, provider settlement truth, wallet truth, or money movement truth.
