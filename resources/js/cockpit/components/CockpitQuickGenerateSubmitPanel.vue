@@ -93,49 +93,14 @@ type QuickGenerateTemplateDefaults = {
 
 const voucherInputFieldOptions: VoucherInputFieldOption[] = [
     {
-        value: 'mobile',
-        label: 'Mobile number',
-        helper: 'Beneficiary mobile or GCash-style reference.',
-    },
-    {
-        value: 'email',
-        label: 'Email address',
-        helper: 'Beneficiary email collected during claim.',
-    },
-    {
-        value: 'reference_code',
-        label: 'Reference code',
-        helper: 'External or branch-provided claim reference.',
-    },
-    {
         value: 'signature',
         label: 'Signature',
         helper: 'Beneficiary signature evidence.',
     },
     {
-        value: 'kyc',
-        label: 'Identity verification (KYC)',
-        helper: 'Identity verification evidence.',
-    },
-    {
-        value: 'name',
-        label: 'Full name',
-        helper: 'Beneficiary legal or display name.',
-    },
-    {
-        value: 'address',
-        label: 'Residential address',
-        helper: 'Beneficiary address details.',
-    },
-    {
-        value: 'birth_date',
-        label: 'Birth date',
-        helper: 'Beneficiary birth date.',
-    },
-    {
-        value: 'gross_monthly_income',
-        label: 'Gross monthly income',
-        helper: 'Financial profile input where required.',
+        value: 'selfie',
+        label: 'Selfie Photo',
+        helper: 'Beneficiary selfie evidence.',
     },
     {
         value: 'location',
@@ -148,10 +113,60 @@ const voucherInputFieldOptions: VoucherInputFieldOption[] = [
         helper: 'One-time-passcode input.',
     },
     {
-        value: 'selfie',
-        label: 'Selfie photo',
-        helper: 'Beneficiary selfie evidence.',
+        value: 'kyc',
+        label: 'KYC',
+        helper: 'Identity verification evidence.',
     },
+    {
+        value: 'reference_code',
+        label: 'Reference Code',
+        helper: 'External or branch-provided claim reference.',
+    },
+    {
+        value: 'name',
+        label: 'Full Name',
+        helper: 'Beneficiary legal or display name.',
+    },
+    {
+        value: 'address',
+        label: 'Address',
+        helper: 'Beneficiary address details.',
+    },
+    {
+        value: 'birth_date',
+        label: 'Birthdate',
+        helper: 'Beneficiary birth date.',
+    },
+    {
+        value: 'gross_monthly_income',
+        label: 'Gross Monthly Income',
+        helper: 'Financial profile input where required.',
+    },
+    {
+        value: 'mobile',
+        label: 'Mobile Number',
+        helper: 'Beneficiary mobile or GCash-style reference.',
+    },
+    {
+        value: 'email',
+        label: 'Email Address',
+        helper: 'Beneficiary email collected during claim.',
+    },
+];
+
+const voucherInputFieldPayloadOrder = [
+    'mobile',
+    'email',
+    'reference_code',
+    'signature',
+    'kyc',
+    'name',
+    'address',
+    'birth_date',
+    'gross_monthly_income',
+    'location',
+    'otp',
+    'selfie',
 ];
 
 const cashTypeOptions: CashTypeOption[] = [
@@ -935,9 +950,7 @@ const selectedInputFields = computed<string[]>(() => {
         fields.add('email');
     }
 
-    return voucherInputFieldOptions
-        .map((option) => option.value)
-        .filter((field) => fields.has(field));
+    return voucherInputFieldPayloadOrder.filter((field) => fields.has(field));
 });
 
 const validationSummary = computed<Record<string, unknown>>(() => {
