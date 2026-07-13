@@ -204,7 +204,17 @@ const riderSplashTimeout = ref('3');
 const feedbackEmail = ref('');
 const feedbackMobile = ref(recipientReference.value);
 const feedbackWebhook = ref('');
-const sliceMode = ref<'whole' | 'open'>('whole');
+const prefix = ref('');
+const mask = ref('');
+const ttl = ref('');
+const startsAt = ref('');
+const expiresAt = ref('');
+const settlementRail = ref('');
+const feeStrategy = ref<'absorb' | 'include' | 'add'>('absorb');
+const cashType = ref('');
+const mandates = ref('');
+const sliceMode = ref<'whole' | 'fixed' | 'open'>('whole');
+const slices = ref('1');
 const maxSlices = ref('2');
 const minWithdrawal = ref('0');
 const processing = ref(false);
@@ -435,13 +445,20 @@ const riderSummary = computed<Record<string, unknown>>(() => {
 });
 
 const sliceSummary = computed<Record<string, unknown>>(() => {
+    const fixed = Number(slices.value);
     const max = Number(maxSlices.value);
     const minimum = Number(minWithdrawal.value);
 
     if (sliceMode.value !== 'open') {
         return {
-            mode: 'whole',
-            max_slices: 1,
+            mode: sliceMode.value,
+            slices:
+                sliceMode.value === 'fixed' &&
+                Number.isFinite(fixed) &&
+                fixed > 0
+                    ? Math.round(fixed)
+                    : null,
+            max_slices: sliceMode.value === 'whole' ? 1 : null,
             min_withdrawal: null,
         };
     }
@@ -601,6 +618,7 @@ function buildPayloadShape(redactSensitive: boolean): Record<string, unknown> {
     const normalizedAmount = Number(amount.value);
     const normalizedCount = Number(count.value);
     const campaign = campaignMetadata();
+    const normalizedSlices = Number(sliceSummary.value.slices);
     const normalizedMaxSlices = Number(sliceSummary.value.max_slices);
     const normalizedMinWithdrawal = Number(sliceSummary.value.min_withdrawal);
     const cash: Record<string, unknown> = {
@@ -610,6 +628,28 @@ function buildPayloadShape(redactSensitive: boolean): Record<string, unknown> {
         currency: currency.value.trim() || 'PHP',
         validation: validationSummary.value,
     };
+
+    if (settlementRail.value.trim() !== '') {
+        cash.settlement_rail = settlementRail.value.trim();
+    }
+
+    cash.fee_strategy = feeStrategy.value;
+
+    if (cashType.value.trim() !== '') {
+        cash.type = cashType.value.trim();
+    }
+
+    if (mandates.value.trim() !== '') {
+        cash.mandates = mandates.value
+            .split(',')
+            .map((mandate) => mandate.trim())
+            .filter((mandate) => mandate.length > 0);
+    }
+
+    if (sliceMode.value === 'fixed') {
+        cash.slice_mode = 'fixed';
+        cash.slices = Number.isFinite(normalizedSlices) ? normalizedSlices : 1;
+    }
 
     if (sliceMode.value === 'open') {
         cash.slice_mode = 'open';
@@ -629,7 +669,7 @@ function buildPayloadShape(redactSensitive: boolean): Record<string, unknown> {
 
     cash.validation = validation;
 
-    return {
+    const payload: Record<string, unknown> = {
         cash,
         inputs: {
             fields: selectedInputFields.value,
@@ -665,6 +705,28 @@ function buildPayloadShape(redactSensitive: boolean): Record<string, unknown> {
             },
         },
     };
+
+    if (prefix.value.trim() !== '') {
+        payload.prefix = prefix.value.trim();
+    }
+
+    if (mask.value.trim() !== '') {
+        payload.mask = mask.value.trim();
+    }
+
+    if (ttl.value.trim() !== '') {
+        payload.ttl = ttl.value.trim();
+    }
+
+    if (startsAt.value.trim() !== '') {
+        payload.starts_at = startsAt.value.trim();
+    }
+
+    if (expiresAt.value.trim() !== '') {
+        payload.expires_at = expiresAt.value.trim();
+    }
+
+    return payload;
 }
 
 function campaignMetadata(): Record<string, unknown> | null {
@@ -1021,6 +1083,135 @@ function dataGet(source: unknown, path: string[]): unknown {
                             />
                         </label>
                     </div>
+                    <details
+                        class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/60"
+                        data-testid="cockpit-quick-generate-generation-advanced"
+                    >
+                        <summary
+                            class="cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300"
+                        >
+                            Advanced generation and cash fields
+                        </summary>
+                        <div class="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3">
+                            <label
+                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                            >
+                                Prefix
+                                <input
+                                    v-model="prefix"
+                                    type="text"
+                                    class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                    data-testid="cockpit-quick-generate-prefix"
+                                    :disabled="processing"
+                                />
+                            </label>
+                            <label
+                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                            >
+                                Mask
+                                <input
+                                    v-model="mask"
+                                    type="text"
+                                    placeholder="****"
+                                    class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                    data-testid="cockpit-quick-generate-mask"
+                                    :disabled="processing"
+                                />
+                            </label>
+                            <label
+                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                            >
+                                TTL
+                                <input
+                                    v-model="ttl"
+                                    type="text"
+                                    placeholder="P1D"
+                                    class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                    data-testid="cockpit-quick-generate-ttl"
+                                    :disabled="processing"
+                                />
+                            </label>
+                            <label
+                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                            >
+                                Starts at
+                                <input
+                                    v-model="startsAt"
+                                    type="datetime-local"
+                                    class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                    data-testid="cockpit-quick-generate-starts-at"
+                                    :disabled="processing"
+                                />
+                            </label>
+                            <label
+                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                            >
+                                Expires at
+                                <input
+                                    v-model="expiresAt"
+                                    type="datetime-local"
+                                    class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                    data-testid="cockpit-quick-generate-expires-at"
+                                    :disabled="processing"
+                                />
+                            </label>
+                            <label
+                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                            >
+                                Settlement rail
+                                <select
+                                    v-model="settlementRail"
+                                    class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                    data-testid="cockpit-quick-generate-settlement-rail"
+                                    :disabled="processing"
+                                >
+                                    <option value="">Default</option>
+                                    <option value="INSTAPAY">INSTAPAY</option>
+                                    <option value="PESONET">PESONET</option>
+                                </select>
+                            </label>
+                            <label
+                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                            >
+                                Fee strategy
+                                <select
+                                    v-model="feeStrategy"
+                                    class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                    data-testid="cockpit-quick-generate-fee-strategy"
+                                    :disabled="processing"
+                                >
+                                    <option value="absorb">absorb</option>
+                                    <option value="include">include</option>
+                                    <option value="add">add</option>
+                                </select>
+                            </label>
+                            <label
+                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                            >
+                                Cash type
+                                <input
+                                    v-model="cashType"
+                                    type="text"
+                                    class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                    data-testid="cockpit-quick-generate-cash-type"
+                                    :disabled="processing"
+                                />
+                            </label>
+                            <label
+                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 lg:col-span-3 dark:text-slate-300"
+                            >
+                                Mandates
+                                <input
+                                    v-model="mandates"
+                                    type="text"
+                                    placeholder="comma-separated mandate keys"
+                                    class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                    data-testid="cockpit-quick-generate-mandates"
+                                    :disabled="processing"
+                                />
+                            </label>
+                        </div>
+                    </details>
                 </section>
 
                 <section
@@ -1392,8 +1583,23 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 :disabled="processing"
                             >
                                 <option value="whole">Whole amount</option>
+                                <option value="fixed">Fixed slices</option>
                                 <option value="open">Open slices</option>
                             </select>
+                        </label>
+                        <label
+                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                        >
+                            Fixed slices
+                            <input
+                                v-model="slices"
+                                type="number"
+                                min="1"
+                                step="1"
+                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                data-testid="cockpit-quick-generate-fixed-slices"
+                                :disabled="processing || sliceMode !== 'fixed'"
+                            />
                         </label>
                         <label
                             class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
