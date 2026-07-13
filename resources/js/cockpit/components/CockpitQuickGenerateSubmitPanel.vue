@@ -44,6 +44,75 @@ type VoucherInstructionCoverageGroup = {
     }>;
 };
 
+type VoucherInputFieldOption = {
+    value: string;
+    label: string;
+    helper: string;
+};
+
+const voucherInputFieldOptions: VoucherInputFieldOption[] = [
+    {
+        value: 'mobile',
+        label: 'Mobile number',
+        helper: 'Beneficiary mobile or GCash-style reference.',
+    },
+    {
+        value: 'email',
+        label: 'Email address',
+        helper: 'Beneficiary email collected during claim.',
+    },
+    {
+        value: 'reference_code',
+        label: 'Reference code',
+        helper: 'External or branch-provided claim reference.',
+    },
+    {
+        value: 'signature',
+        label: 'Signature',
+        helper: 'Beneficiary signature evidence.',
+    },
+    {
+        value: 'kyc',
+        label: 'Identity verification (KYC)',
+        helper: 'Identity verification evidence.',
+    },
+    {
+        value: 'name',
+        label: 'Full name',
+        helper: 'Beneficiary legal or display name.',
+    },
+    {
+        value: 'address',
+        label: 'Residential address',
+        helper: 'Beneficiary address details.',
+    },
+    {
+        value: 'birth_date',
+        label: 'Birth date',
+        helper: 'Beneficiary birth date.',
+    },
+    {
+        value: 'gross_monthly_income',
+        label: 'Gross monthly income',
+        helper: 'Financial profile input where required.',
+    },
+    {
+        value: 'location',
+        label: 'Location',
+        helper: 'Location capture during claim.',
+    },
+    {
+        value: 'otp',
+        label: 'OTP',
+        helper: 'One-time-passcode input.',
+    },
+    {
+        value: 'selfie',
+        label: 'Selfie photo',
+        helper: 'Beneficiary selfie evidence.',
+    },
+];
+
 const voucherInstructionCoverageGroups: VoucherInstructionCoverageGroup[] = [
     {
         key: 'cash',
@@ -186,10 +255,7 @@ const purpose = ref(
         '',
 );
 const count = ref('1');
-const requireMobileInput = ref(true);
-const requireFullNameInput = ref(false);
-const requireBankAccountInput = ref(false);
-const requireEmailInput = ref(false);
+const selectedInputFieldValues = ref<string[]>(['mobile']);
 const validationSecret = ref('');
 const requireMobileValidation = ref(true);
 const requirePayableValidation = ref(false);
@@ -406,25 +472,19 @@ const selectedTemplateName = computed<string>(() => {
 });
 
 const selectedInputFields = computed<string[]>(() => {
-    const fields = [];
+    const fields = new Set(selectedInputFieldValues.value);
 
-    if (requireMobileInput.value || recipientReference.value.trim() !== '') {
-        fields.push('mobile');
+    if (recipientReference.value.trim() !== '') {
+        fields.add('mobile');
     }
 
-    if (requireFullNameInput.value) {
-        fields.push('name');
+    if (feedbackEmail.value.trim() !== '') {
+        fields.add('email');
     }
 
-    if (requireBankAccountInput.value) {
-        fields.push('bank_account');
-    }
-
-    if (requireEmailInput.value || feedbackEmail.value.trim() !== '') {
-        fields.push('email');
-    }
-
-    return fields;
+    return voucherInputFieldOptions
+        .map((option) => option.value)
+        .filter((field) => fields.has(field));
 });
 
 const validationSummary = computed<Record<string, unknown>>(() => {
@@ -1466,50 +1526,30 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 :disabled="processing"
                             />
                         </label>
-                        <div class="grid gap-2 sm:grid-cols-2">
+                        <div
+                            class="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3"
+                            data-testid="cockpit-quick-generate-input-fields"
+                        >
                             <label
+                                v-for="field in voucherInputFieldOptions"
+                                :key="field.value"
                                 class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300"
                             >
                                 <input
-                                    v-model="requireMobileInput"
+                                    v-model="selectedInputFieldValues"
                                     type="checkbox"
+                                    :value="field.value"
                                     class="rounded border-slate-300"
                                     :disabled="processing"
                                 />
-                                Mobile number
-                            </label>
-                            <label
-                                class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300"
-                            >
-                                <input
-                                    v-model="requireFullNameInput"
-                                    type="checkbox"
-                                    class="rounded border-slate-300"
-                                    :disabled="processing"
-                                />
-                                Full name
-                            </label>
-                            <label
-                                class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300"
-                            >
-                                <input
-                                    v-model="requireBankAccountInput"
-                                    type="checkbox"
-                                    class="rounded border-slate-300"
-                                    :disabled="processing"
-                                />
-                                Bank or wallet account
-                            </label>
-                            <label
-                                class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300"
-                            >
-                                <input
-                                    v-model="requireEmailInput"
-                                    type="checkbox"
-                                    class="rounded border-slate-300"
-                                    :disabled="processing"
-                                />
-                                Email address
+                                <span>
+                                    <span class="block">{{ field.label }}</span>
+                                    <span
+                                        class="mt-0.5 block text-[11px] font-normal text-slate-500 dark:text-slate-400"
+                                    >
+                                        {{ field.value }} · {{ field.helper }}
+                                    </span>
+                                </span>
                             </label>
                         </div>
                     </div>
