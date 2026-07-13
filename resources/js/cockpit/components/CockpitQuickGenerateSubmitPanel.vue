@@ -1514,18 +1514,6 @@ function dataGet(source: unknown, path: string[]): unknown {
                         </div>
                     </div>
                     <div class="mt-4 grid gap-3">
-                        <label
-                            class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
-                        >
-                            Recipient mobile/reference
-                            <input
-                                v-model="recipientReference"
-                                type="text"
-                                class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                data-testid="cockpit-quick-generate-submit-recipient"
-                                :disabled="processing"
-                            />
-                        </label>
                         <div
                             class="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3"
                             data-testid="cockpit-quick-generate-input-fields"
@@ -1557,6 +1545,7 @@ function dataGet(source: unknown, path: string[]): unknown {
 
                 <section
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
+                    data-testid="cockpit-quick-generate-validation-section"
                 >
                     <div class="flex items-center gap-3">
                         <span
@@ -1578,6 +1567,25 @@ function dataGet(source: unknown, path: string[]): unknown {
                         </div>
                     </div>
                     <div class="mt-4 grid gap-3">
+                        <label
+                            class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                        >
+                            Expected recipient mobile/reference
+                            <input
+                                v-model="recipientReference"
+                                type="text"
+                                class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                data-testid="cockpit-quick-generate-submit-recipient"
+                                :disabled="processing"
+                            />
+                            <span
+                                class="text-[11px] font-normal text-slate-500 dark:text-slate-400"
+                            >
+                                Used as validation context. Select Mobile number
+                                in Claim inputs only when the claimant must
+                                provide a mobile value during claim.
+                            </span>
+                        </label>
                         <label
                             class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                         >
