@@ -4,12 +4,19 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 71 — Manual Distribution External Evidence Runtime Readiness Closure
-Status: Wave 70 complete / attachments blocked and text-only evidence-first decision recorded
+Current slice: Cockpit Wave 72 — Manual Distribution External Evidence Runtime Implementation Decision
+Status: Wave 71 complete / runtime readiness reviewed; implementation deferred
 Last updated: 2026-07-13
 
 ## Completed
 
+- Completed Cockpit Wave 71 — Manual Distribution External Evidence Runtime Readiness Closure:
+  - Recorded decision: `not-runtime-ready / defer-runtime-implementation`.
+  - Confirmed the allowed future runtime candidate remains structured, redacted, text-only external evidence intake.
+  - Confirmed runtime remains blocked by missing database schema, request/response contract, storage disk, queue/job strategy, review UI, reviewer role/policy implementation, journal handoff adapter, x-feedback correlation adapter, x-action continuation adapter, x-campaign attribution adapter, incident runbook implementation, and rollback/migration plan.
+  - Verified host-published Cockpit assets remain clean: checked 59, ok 59, stale 0, missing 0, extra 0.
+  - Next recommended checkpoint: Cockpit Wave 72 — Manual Distribution External Evidence Runtime Implementation Decision.
+  - Report: `reports/387-wave-71-external-evidence-runtime-readiness-closure.md`.
 - Completed Cockpit Wave 70 — Manual Distribution External Evidence Attachment / Storage Decision:
   - Recorded decision: `attachments-blocked / text-only-evidence-first`.
   - Confirmed attachments and screenshots remain blocked.
