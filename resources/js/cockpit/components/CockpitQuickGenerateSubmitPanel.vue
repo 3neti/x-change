@@ -290,6 +290,10 @@ const feedbackWebhook = ref('');
 const prefix = ref('');
 const mask = ref('');
 const ttl = ref('');
+const expiryPreset = ref<'none' | 'P12H' | 'P1D' | 'P3D' | 'P7D' | 'custom'>(
+    'none',
+);
+const expiryCustomDays = ref('');
 const startsAt = ref('');
 const expiresAt = ref('');
 const settlementRail = ref('');
@@ -471,10 +475,60 @@ const selectedTemplateName = computed<string>(() => {
     );
 });
 
+const normalizedPayee = computed<string>(() => {
+    const normalized = recipientReference.value.trim();
+
+    return normalized.toUpperCase() === 'CASH' ? '' : normalized;
+});
+
+const payeeType = computed<'anyone' | 'mobile' | 'vendor'>(() => {
+    const normalized = recipientReference.value.trim();
+
+    if (normalized === '' || normalized.toUpperCase() === 'CASH') {
+        return 'anyone';
+    }
+
+    if (/^(\+|09|639|63)/.test(normalized)) {
+        return 'mobile';
+    }
+
+    return 'vendor';
+});
+
+const payeeHelpText = computed<string>(() => {
+    if (payeeType.value === 'mobile') {
+        return `Restricted to mobile number: ${normalizedPayee.value}`;
+    }
+
+    if (payeeType.value === 'vendor') {
+        return `Restricted to vendor alias: ${normalizedPayee.value}`;
+    }
+
+    return 'Blank or CASH means anyone can claim subject to the other validation gates.';
+});
+
+const effectiveTtl = computed<string>(() => {
+    const advancedTtl = ttl.value.trim();
+
+    if (advancedTtl !== '') {
+        return advancedTtl;
+    }
+
+    if (expiryPreset.value === 'custom') {
+        const customDays = Number(expiryCustomDays.value);
+
+        return Number.isFinite(customDays) && customDays > 0
+            ? `P${Math.round(customDays)}D`
+            : '';
+    }
+
+    return expiryPreset.value === 'none' ? '' : expiryPreset.value;
+});
+
 const selectedInputFields = computed<string[]>(() => {
     const fields = new Set(selectedInputFieldValues.value);
 
-    if (recipientReference.value.trim() !== '') {
+    if (payeeType.value === 'mobile') {
         fields.add('mobile');
     }
 
@@ -488,13 +542,19 @@ const selectedInputFields = computed<string[]>(() => {
 });
 
 const validationSummary = computed<Record<string, unknown>>(() => {
-    const mobile = recipientReference.value.trim();
     const secret = validationSecret.value.trim();
 
     return {
         ...(secret === '' ? {} : { secret }),
-        ...(requireMobileValidation.value && mobile !== '' ? { mobile } : {}),
-        ...(requirePayableValidation.value ? { payable: 'required' } : {}),
+        ...(requireMobileValidation.value && payeeType.value === 'mobile'
+            ? { mobile: normalizedPayee.value }
+            : {}),
+        ...(payeeType.value === 'vendor'
+            ? { payable: normalizedPayee.value }
+            : {}),
+        ...(requirePayableValidation.value && payeeType.value === 'anyone'
+            ? { payable: 'required' }
+            : {}),
         ...(requireCountryValidation.value ? { country: 'PH' } : {}),
         ...(requireLocationValidation.value
             ? { location: 'required', radius: '100' }
@@ -659,6 +719,17 @@ const contractSummaryItems = computed<Array<{ label: string; value: string }>>(
             {
                 label: 'Money',
                 value: `${currency.value.trim() || 'PHP'} ${amount.value || '0'} × ${count.value || '1'}`,
+            },
+            {
+                label: 'Payee',
+                value:
+                    payeeType.value === 'anyone'
+                        ? 'anyone'
+                        : `${payeeType.value}: ${normalizedPayee.value}`,
+            },
+            {
+                label: 'Expiry',
+                value: effectiveTtl.value === '' ? 'none' : effectiveTtl.value,
             },
             {
                 label: 'Claim inputs',
@@ -956,8 +1027,8 @@ function buildPayloadShape(redactSensitive: boolean): Record<string, unknown> {
         payload.mask = mask.value.trim();
     }
 
-    if (ttl.value.trim() !== '') {
-        payload.ttl = ttl.value.trim();
+    if (effectiveTtl.value !== '') {
+        payload.ttl = effectiveTtl.value;
     }
 
     if (startsAt.value.trim() !== '') {
@@ -1286,17 +1357,18 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <h4
                                 class="text-sm font-semibold text-slate-950 dark:text-slate-50"
                             >
-                                Money and quantity
+                                Money, payee, and expiry
                             </h4>
                             <p
                                 class="text-xs text-slate-500 dark:text-slate-400"
                             >
-                                Amount, currency, template, and number of Pay
-                                Codes.
+                                CreateV2-inspired primary controls for amount,
+                                payee validation, expiry, template, and
+                                quantity.
                             </p>
                         </div>
                     </div>
-                    <div class="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
+                    <div class="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
                         <label
                             class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                         >
@@ -1336,26 +1408,87 @@ function dataGet(source: unknown, path: string[]): unknown {
                             class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                         >
                             Amount
-                            <input
-                                v-model="amount"
-                                type="number"
-                                min="0.01"
-                                step="0.01"
-                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                data-testid="cockpit-quick-generate-submit-amount"
-                                :disabled="processing"
-                            />
+                            <div class="flex min-w-0 rounded-xl shadow-sm">
+                                <span
+                                    class="inline-flex items-center rounded-l-xl border border-r-0 border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
+                                >
+                                    ₱
+                                </span>
+                                <input
+                                    v-model="amount"
+                                    type="number"
+                                    min="0.01"
+                                    step="0.01"
+                                    class="w-full min-w-0 border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                    data-testid="cockpit-quick-generate-submit-amount"
+                                    :disabled="processing"
+                                />
+                                <input
+                                    v-model="currency"
+                                    type="text"
+                                    class="w-24 min-w-0 rounded-r-xl border border-l-0 border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 uppercase dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                                    data-testid="cockpit-quick-generate-submit-currency"
+                                    :disabled="processing"
+                                />
+                            </div>
                         </label>
 
                         <label
                             class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                         >
-                            Currency
+                            Payee
                             <input
-                                v-model="currency"
+                                v-model="recipientReference"
                                 type="text"
+                                placeholder="CASH, 0917..., or vendor alias"
                                 class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                data-testid="cockpit-quick-generate-submit-currency"
+                                data-testid="cockpit-quick-generate-submit-recipient"
+                                :disabled="processing"
+                            />
+                            <span
+                                class="text-[11px] font-normal text-slate-500 dark:text-slate-400"
+                                data-testid="cockpit-quick-generate-payee-help"
+                            >
+                                {{ payeeHelpText }}
+                            </span>
+                        </label>
+
+                        <label
+                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                        >
+                            Expiry
+                            <select
+                                v-model="expiryPreset"
+                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                data-testid="cockpit-quick-generate-expiry-preset"
+                                :disabled="processing"
+                            >
+                                <option value="none">No preset expiry</option>
+                                <option value="P12H">12 hours</option>
+                                <option value="P1D">1 day</option>
+                                <option value="P3D">3 days</option>
+                                <option value="P7D">7 days</option>
+                                <option value="custom">Custom days</option>
+                            </select>
+                            <span
+                                class="text-[11px] font-normal text-slate-500 dark:text-slate-400"
+                            >
+                                Advanced TTL overrides this preset when filled.
+                            </span>
+                        </label>
+
+                        <label
+                            v-if="expiryPreset === 'custom'"
+                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                        >
+                            Custom expiry days
+                            <input
+                                v-model="expiryCustomDays"
+                                type="number"
+                                min="1"
+                                step="1"
+                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                data-testid="cockpit-quick-generate-expiry-custom-days"
                                 :disabled="processing"
                             />
                         </label>
@@ -1567,25 +1700,26 @@ function dataGet(source: unknown, path: string[]): unknown {
                         </div>
                     </div>
                     <div class="mt-4 grid gap-3">
-                        <label
-                            class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                        <div
+                            class="rounded-xl border border-violet-100 bg-violet-50 p-3 text-xs text-violet-900 dark:border-violet-900/60 dark:bg-violet-950/40 dark:text-violet-100"
+                            data-testid="cockpit-quick-generate-payee-interpretation"
                         >
-                            Expected recipient mobile/reference
-                            <input
-                                v-model="recipientReference"
-                                type="text"
-                                class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                data-testid="cockpit-quick-generate-submit-recipient"
-                                :disabled="processing"
-                            />
-                            <span
-                                class="text-[11px] font-normal text-slate-500 dark:text-slate-400"
+                            <p class="font-semibold">
+                                Payee validation interpretation
+                            </p>
+                            <p class="mt-1">
+                                {{ payeeHelpText }}
+                            </p>
+                            <p
+                                class="mt-1 text-violet-700 dark:text-violet-300"
                             >
-                                Used as validation context. Select Mobile number
-                                in Claim inputs only when the claimant must
-                                provide a mobile value during claim.
-                            </span>
-                        </label>
+                                Mobile payees map to
+                                <code>cash.validation.mobile</code>; vendor
+                                aliases map to
+                                <code>cash.validation.payable</code>; blank or
+                                CASH remains unrestricted by payee.
+                            </p>
+                        </div>
                         <label
                             class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                         >
