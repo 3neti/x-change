@@ -72,6 +72,7 @@ const riderUrl = ref('');
 const riderSplash = ref('');
 const riderSplashTimeout = ref('3');
 const feedbackEmail = ref('');
+const feedbackMobile = ref(recipientReference.value);
 const feedbackWebhook = ref('');
 const sliceMode = ref<'whole' | 'open'>('whole');
 const maxSlices = ref('2');
@@ -276,7 +277,8 @@ const verificationSummary = computed<string[]>(() => {
 });
 
 const feedbackSummary = computed<Record<string, unknown>>(() => {
-    const mobile = recipientReference.value.trim();
+    const mobile =
+        feedbackMobile.value.trim() || recipientReference.value.trim();
     const email = feedbackEmail.value.trim();
     const webhook = feedbackWebhook.value.trim();
 
@@ -769,7 +771,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                             </p>
                         </div>
                     </div>
-                    <div class="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+                    <div class="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
                         <label
                             class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                         >
@@ -1142,6 +1144,18 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 v-model="feedbackEmail"
                                 type="email"
                                 class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                :disabled="processing"
+                            />
+                        </label>
+                        <label
+                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                        >
+                            Feedback mobile
+                            <input
+                                v-model="feedbackMobile"
+                                type="tel"
+                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                data-testid="cockpit-quick-generate-feedback-mobile"
                                 :disabled="processing"
                             />
                         </label>
