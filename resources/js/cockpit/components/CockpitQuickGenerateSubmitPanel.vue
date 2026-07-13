@@ -769,14 +769,14 @@ function dataGet(source: unknown, path: string[]): unknown {
                             </p>
                         </div>
                     </div>
-                    <div class="mt-4 grid gap-3 md:grid-cols-2">
+                    <div class="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
                         <label
-                            class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                         >
                             Template
                             <select
                                 v-model="selectedTemplate"
-                                class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                 data-testid="cockpit-quick-generate-submit-template"
                                 :disabled="processing"
                             >
@@ -791,7 +791,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                         </label>
 
                         <label
-                            class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                         >
                             Quantity
                             <input
@@ -799,14 +799,14 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 type="number"
                                 min="1"
                                 step="1"
-                                class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                 data-testid="cockpit-quick-generate-submit-count"
                                 :disabled="processing"
                             />
                         </label>
 
                         <label
-                            class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                         >
                             Amount
                             <input
@@ -814,20 +814,20 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 type="number"
                                 min="0.01"
                                 step="0.01"
-                                class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                 data-testid="cockpit-quick-generate-submit-amount"
                                 :disabled="processing"
                             />
                         </label>
 
                         <label
-                            class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                         >
                             Currency
                             <input
                                 v-model="currency"
                                 type="text"
-                                class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                 data-testid="cockpit-quick-generate-submit-currency"
                                 :disabled="processing"
                             />
