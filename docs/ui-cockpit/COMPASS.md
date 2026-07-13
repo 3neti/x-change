@@ -4,12 +4,18 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 66C — Manual Distribution External Evidence Runtime Decision Closure
-Status: In progress / Wave 66B complete
+Current slice: Cockpit Wave 67 — Manual Distribution External Evidence Authorization / Redaction Plan
+Status: Wave 66 complete / external evidence runtime blocked pending preconditions
 Last updated: 2026-07-13
 
 ## Completed
 
+- Completed Cockpit Wave 66 — Manual Distribution External Evidence Runtime Decision Closure:
+  - Closed runtime decision as `runtime-blocked / preconditions-required`.
+  - Confirmed no evidence forms, routes, controllers, migrations, models, DTOs, storage, journal handoff, feedback correlation, action completion, campaign attribution, provider calls, voucher mutation, wallet mutation, or money movement were added.
+  - Verified host-published Cockpit assets remain clean: checked 59, ok 59, stale 0, missing 0, extra 0.
+  - Next recommended checkpoint: Cockpit Wave 67 — Manual Distribution External Evidence Authorization / Redaction Plan.
+  - Report: `reports/378-wave-66-external-evidence-runtime-decision-closure.md`.
 - Completed Cockpit Wave 66B — Manual Distribution External Evidence Runtime Preconditions:
   - Defined runtime preconditions for evidence intake.
   - Recorded decision: `runtime-blocked / preconditions-required`.
