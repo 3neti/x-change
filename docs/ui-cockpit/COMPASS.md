@@ -4,12 +4,20 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 67C — Manual Distribution External Evidence Authorization / Redaction Closure
-Status: In progress / Wave 67B complete
+Current slice: Cockpit Wave 68 — Manual Distribution External Evidence Validation / Retention Plan
+Status: Wave 67 complete / authorization and redaction planning complete; runtime still blocked
 Last updated: 2026-07-13
 
 ## Completed
 
+- Completed Cockpit Wave 67 — Manual Distribution External Evidence Authorization / Redaction Closure:
+  - Closed Wave 67 as `authorization-redaction-planned / runtime-still-blocked`.
+  - Completed planning-only authorization and redaction baselines for future manual distribution external evidence intake.
+  - Confirmed validation contract, request/response contract, retention and purge policy, review workflow, attachment policy, malware scanning policy, journal handoff, x-feedback correlation, x-action continuation, x-campaign attribution, abuse/mistaken-disclosure runbook, and rollback/migration plan remain unresolved.
+  - Confirmed no evidence forms, text areas, upload controls, routes, controllers, policies, migrations, tables, models, DTOs, storage, journal handoff, feedback correlation, action completion, campaign attribution, provider calls, voucher mutation, wallet mutation, or money movement were added.
+  - Verified host-published Cockpit assets remain clean: checked 59, ok 59, stale 0, missing 0, extra 0.
+  - Next recommended checkpoint: Cockpit Wave 68 — Manual Distribution External Evidence Validation / Retention Plan.
+  - Report: `reports/381-wave-67-external-evidence-authorization-redaction-closure.md`.
 - Completed Cockpit Wave 67B — Manual Distribution External Evidence Redaction Plan:
   - Defined planning-only redaction posture for future manual distribution external evidence intake.
   - Recorded operator-safe-by-default handling for beneficiary URLs, Pay Codes, recipient references, delivery references, provider message IDs, operator notes, attachments, screenshots, webhook payloads, credentials, tokens, wallet details, bank details, and provider internals.
