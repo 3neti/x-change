@@ -50,6 +50,18 @@ type VoucherInputFieldOption = {
     helper: string;
 };
 
+type CashTypeOption = {
+    value: string;
+    label: string;
+    helper: string;
+};
+
+type MandateOption = {
+    value: string;
+    label: string;
+    helper: string;
+};
+
 type QuickGenerateTemplateDefaults = {
     amount: string;
     currency: string;
@@ -139,6 +151,77 @@ const voucherInputFieldOptions: VoucherInputFieldOption[] = [
         value: 'selfie',
         label: 'Selfie photo',
         helper: 'Beneficiary selfie evidence.',
+    },
+];
+
+const cashTypeOptions: CashTypeOption[] = [
+    {
+        value: 'default',
+        label: 'Default cash contract',
+        helper: 'Omit cash.type and let the voucher package use its default cash behavior.',
+    },
+    {
+        value: 'cash',
+        label: 'Cash',
+        helper: 'Standard claimable cash Pay Code.',
+    },
+    {
+        value: 'disbursement',
+        label: 'Disbursement',
+        helper: 'Operator-issued payout contract for a known beneficiary or route.',
+    },
+    {
+        value: 'claimable_cash',
+        label: 'Claimable cash',
+        helper: 'Explicit claim-first cash contract.',
+    },
+    {
+        value: 'settlement_cash',
+        label: 'Settlement cash',
+        helper: 'Settlement-oriented cash contract; execution still remains voucher-owned.',
+    },
+    {
+        value: 'custom',
+        label: 'Custom key',
+        helper: 'Use only when an upstream contract defines the cash type key.',
+    },
+];
+
+const mandateOptions: MandateOption[] = [
+    {
+        value: 'branch-release',
+        label: 'Branch release',
+        helper: 'Operator or branch counter release is required.',
+    },
+    {
+        value: 'counter-check',
+        label: 'Counter check',
+        helper: 'Counter staff must verify the Pay Code before release.',
+    },
+    {
+        value: 'kyc-required',
+        label: 'KYC required',
+        helper: 'Identity evidence is expected before execution.',
+    },
+    {
+        value: 'otp-required',
+        label: 'OTP required',
+        helper: 'One-time passcode verification is expected.',
+    },
+    {
+        value: 'manual-review',
+        label: 'Manual review',
+        helper: 'A human review step is expected before completion.',
+    },
+    {
+        value: 'recipient-match',
+        label: 'Recipient match',
+        helper: 'Claim data should match the intended recipient.',
+    },
+    {
+        value: 'settlement-readiness',
+        label: 'Settlement readiness',
+        helper: 'Settlement readiness must be confirmed before execution.',
     },
 ];
 
@@ -417,8 +500,10 @@ const startsAt = ref('');
 const expiresAt = ref('');
 const settlementRail = ref('');
 const feeStrategy = ref<'absorb' | 'include' | 'add'>('absorb');
-const cashType = ref('');
-const mandates = ref('');
+const cashType = ref('default');
+const customCashType = ref('');
+const selectedMandates = ref<string[]>([]);
+const customMandates = ref('');
 const sliceMode = ref<'whole' | 'fixed' | 'open'>('whole');
 const slices = ref('1');
 const maxSlices = ref('2');
@@ -479,6 +564,16 @@ function applyTemplateDefaults(templateKey: string): void {
     riderUrl.value = defaults.riderUrl;
     riderSplash.value = defaults.riderSplash;
     riderSplashTimeout.value = defaults.riderSplashTimeout;
+    cashType.value =
+        defaults.executionDriver === 'settlement_envelope'
+            ? 'settlement_cash'
+            : 'default';
+    customCashType.value = '';
+    selectedMandates.value =
+        defaults.executionDriver === 'settlement_envelope'
+            ? ['settlement-readiness', 'manual-review']
+            : [];
+    customMandates.value = '';
     sliceMode.value = defaults.sliceMode;
     maxSlices.value = defaults.maxSlices;
     minWithdrawal.value = defaults.minWithdrawal;
@@ -791,6 +886,34 @@ const feeStrategyPreview = computed<{
         issuerCost: formatMoney(safeAmount + fee),
         note: 'Illustrative only: issuer absorbs the estimated fee.',
     };
+});
+
+const effectiveCashType = computed<string>(() => {
+    if (cashType.value === 'custom') {
+        return customCashType.value.trim();
+    }
+
+    if (cashType.value === 'default') {
+        return '';
+    }
+
+    return cashType.value;
+});
+
+const cashTypeHelper = computed<string>(() => {
+    return (
+        cashTypeOptions.find((option) => option.value === cashType.value)
+            ?.helper ?? 'Select how cash.type should be represented.'
+    );
+});
+
+const effectiveMandates = computed<string[]>(() => {
+    const mandates = customMandates.value
+        .split(',')
+        .map((mandate) => mandate.trim())
+        .filter((mandate) => mandate.length > 0);
+
+    return [...new Set([...selectedMandates.value, ...mandates])];
 });
 
 const selectedInputFields = computed<string[]>(() => {
@@ -1215,15 +1338,12 @@ function buildPayloadShape(redactSensitive: boolean): Record<string, unknown> {
 
     cash.fee_strategy = feeStrategy.value;
 
-    if (cashType.value.trim() !== '') {
-        cash.type = cashType.value.trim();
+    if (effectiveCashType.value !== '') {
+        cash.type = effectiveCashType.value;
     }
 
-    if (mandates.value.trim() !== '') {
-        cash.mandates = mandates.value
-            .split(',')
-            .map((mandate) => mandate.trim())
-            .filter((mandate) => mandate.length > 0);
+    if (effectiveMandates.value.length > 0) {
+        cash.mandates = effectiveMandates.value;
     }
 
     if (sliceMode.value === 'fixed') {
@@ -1806,11 +1926,13 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 When exact expiry is set, TTL is not submitted.
                             </p>
                         </div>
-                        <div class="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3">
+                        <div
+                            class="mt-3 grid grid-cols-1 items-start gap-3 lg:grid-cols-3"
+                        >
                             <label
-                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                class="grid min-w-0 content-start gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
-                                Prefix
+                                <span class="leading-none">Prefix</span>
                                 <input
                                     v-model="prefix"
                                     type="text"
@@ -1818,11 +1940,16 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     data-testid="cockpit-quick-generate-prefix"
                                     :disabled="processing"
                                 />
+                                <span
+                                    class="min-h-8 text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
+                                >
+                                    Optional Pay Code prefix.
+                                </span>
                             </label>
                             <label
-                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                class="grid min-w-0 content-start gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
-                                Mask
+                                <span class="leading-none">Mask</span>
                                 <input
                                     v-model="mask"
                                     type="text"
@@ -1831,11 +1958,18 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     data-testid="cockpit-quick-generate-mask"
                                     :disabled="processing"
                                 />
+                                <span
+                                    class="min-h-8 text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
+                                >
+                                    Optional generated-code mask.
+                                </span>
                             </label>
                             <label
-                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                class="grid min-w-0 content-start gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
-                                Raw TTL override
+                                <span class="leading-none"
+                                    >Raw TTL override</span
+                                >
                                 <input
                                     v-model="ttl"
                                     type="text"
@@ -1845,16 +1979,16 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     :disabled="processing"
                                 />
                                 <span
-                                    class="text-[11px] font-normal text-slate-500 dark:text-slate-400"
+                                    class="min-h-8 text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
                                 >
                                     ISO-8601 duration override. Example: P1D or
                                     PT12H.
                                 </span>
                             </label>
                             <label
-                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                class="grid min-w-0 content-start gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
-                                Starts at
+                                <span class="leading-none">Starts at</span>
                                 <input
                                     v-model="startsAt"
                                     type="datetime-local"
@@ -1862,11 +1996,18 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     data-testid="cockpit-quick-generate-starts-at"
                                     :disabled="processing"
                                 />
+                                <span
+                                    class="min-h-8 text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
+                                >
+                                    Optional activation timestamp.
+                                </span>
                             </label>
                             <label
-                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                class="grid min-w-0 content-start gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
-                                Exact expires at
+                                <span class="leading-none"
+                                    >Exact expires at</span
+                                >
                                 <input
                                     v-model="expiresAt"
                                     type="datetime-local"
@@ -1875,16 +2016,18 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     :disabled="processing"
                                 />
                                 <span
-                                    class="text-[11px] font-normal text-slate-500 dark:text-slate-400"
+                                    class="min-h-8 text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
                                 >
                                     Absolute expiry. When filled, it dominates
                                     TTL and expiry preset.
                                 </span>
                             </label>
                             <label
-                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                class="grid min-w-0 content-start gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
-                                Settlement rail
+                                <span class="leading-none"
+                                    >Settlement rail</span
+                                >
                                 <select
                                     v-model="settlementRail"
                                     class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
@@ -1895,11 +2038,17 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     <option value="INSTAPAY">INSTAPAY</option>
                                     <option value="PESONET">PESONET</option>
                                 </select>
+                                <span
+                                    class="min-h-8 text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
+                                >
+                                    Optional routing hint; providers are not
+                                    called here.
+                                </span>
                             </label>
                             <label
-                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                class="grid min-w-0 content-start gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
-                                Fee strategy
+                                <span class="leading-none">Fee strategy</span>
                                 <select
                                     v-model="feeStrategy"
                                     class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
@@ -1916,9 +2065,15 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         Add — fee added on top
                                     </option>
                                 </select>
+                                <span
+                                    class="min-h-8 text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
+                                >
+                                    Controls operator-visible fee interpretation
+                                    only.
+                                </span>
                             </label>
                             <div
-                                class="grid gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-950 lg:col-span-2 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-100"
+                                class="grid gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-950 lg:col-span-3 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-100"
                                 data-testid="cockpit-quick-generate-fee-preview"
                             >
                                 <div
@@ -1976,30 +2131,119 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 </p>
                             </div>
                             <label
-                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                class="grid min-w-0 content-start gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
-                                Cash type
-                                <input
+                                <span class="leading-none">Cash type</span>
+                                <select
                                     v-model="cashType"
-                                    type="text"
                                     class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                     data-testid="cockpit-quick-generate-cash-type"
                                     :disabled="processing"
-                                />
+                                >
+                                    <option
+                                        v-for="option in cashTypeOptions"
+                                        :key="option.value"
+                                        :value="option.value"
+                                    >
+                                        {{ option.label }}
+                                    </option>
+                                </select>
+                                <span
+                                    class="min-h-8 text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
+                                    data-testid="cockpit-quick-generate-cash-type-helper"
+                                >
+                                    {{ cashTypeHelper }}
+                                </span>
                             </label>
                             <label
-                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 lg:col-span-3 dark:text-slate-300"
+                                v-if="cashType === 'custom'"
+                                class="grid min-w-0 content-start gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
-                                Mandates
+                                <span class="leading-none"
+                                    >Custom cash type key</span
+                                >
                                 <input
-                                    v-model="mandates"
+                                    v-model="customCashType"
                                     type="text"
-                                    placeholder="comma-separated mandate keys"
+                                    placeholder="custom_cash_key"
                                     class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                    data-testid="cockpit-quick-generate-mandates"
+                                    data-testid="cockpit-quick-generate-custom-cash-type"
                                     :disabled="processing"
                                 />
+                                <span
+                                    class="min-h-8 text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
+                                >
+                                    Submitted as cash.type when filled.
+                                </span>
                             </label>
+                            <div
+                                class="grid min-w-0 gap-2 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-700 lg:col-span-3 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                                data-testid="cockpit-quick-generate-mandate-options"
+                            >
+                                <div>
+                                    <p
+                                        class="leading-none font-semibold text-slate-800 dark:text-slate-100"
+                                    >
+                                        Mandates
+                                    </p>
+                                    <p
+                                        class="mt-1 text-[11px] leading-snug text-slate-500 dark:text-slate-400"
+                                    >
+                                        Choose expected contract obligations.
+                                        These are submitted as cash.mandates;
+                                        Cockpit does not enforce them directly.
+                                    </p>
+                                </div>
+                                <div class="grid gap-2 md:grid-cols-2">
+                                    <label
+                                        v-for="option in mandateOptions"
+                                        :key="option.value"
+                                        class="flex min-w-0 items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2 dark:border-slate-800 dark:bg-slate-950"
+                                    >
+                                        <input
+                                            v-model="selectedMandates"
+                                            type="checkbox"
+                                            :value="option.value"
+                                            class="mt-0.5 h-4 w-4 rounded border-slate-300 text-sky-600"
+                                            :data-testid="`cockpit-quick-generate-mandate-${option.value}`"
+                                            :disabled="processing"
+                                        />
+                                        <span class="grid gap-0.5">
+                                            <span
+                                                class="text-xs font-semibold text-slate-800 dark:text-slate-100"
+                                            >
+                                                {{ option.label }}
+                                            </span>
+                                            <span
+                                                class="text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
+                                            >
+                                                {{ option.helper }}
+                                            </span>
+                                        </span>
+                                    </label>
+                                </div>
+                                <label
+                                    class="grid min-w-0 content-start gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    <span class="leading-none"
+                                        >Additional mandate keys</span
+                                    >
+                                    <input
+                                        v-model="customMandates"
+                                        type="text"
+                                        placeholder="comma-separated custom keys"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-mandates"
+                                        :disabled="processing"
+                                    />
+                                    <span
+                                        class="min-h-8 text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
+                                    >
+                                        Optional escape hatch for contract keys
+                                        not listed above.
+                                    </span>
+                                </label>
+                            </div>
                         </div>
                     </details>
                 </section>
