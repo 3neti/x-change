@@ -4,12 +4,18 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 67 — Manual Distribution External Evidence Authorization / Redaction Plan
-Status: Wave 66 complete / external evidence runtime blocked pending preconditions
+Current slice: Cockpit Wave 67B — Manual Distribution External Evidence Redaction Plan
+Status: In progress / Wave 67A complete
 Last updated: 2026-07-13
 
 ## Completed
 
+- Completed Cockpit Wave 67A — Manual Distribution External Evidence Authorization Plan:
+  - Defined planning-only authorization gates for future manual distribution external evidence intake.
+  - Recorded deny-by-default posture for evidence intake until operator identity, Cockpit access, create/view/review permissions, tenant scope, campaign scope, Pay Code scope, role scope, redaction scope, and audit visibility are explicit.
+  - Confirmed no evidence submission forms, upload controls, routes, controllers, policies, tables, models, DTOs, storage, journal writes, feedback mutation, action completion, campaign mutation, provider calls, voucher mutation, wallet mutation, or money movement were added.
+  - Next recommended checkpoint: Cockpit Wave 67B — Manual Distribution External Evidence Redaction Plan.
+  - Report: `reports/379-wave-67a-external-evidence-authorization-plan.md`.
 - Completed Cockpit Wave 66 — Manual Distribution External Evidence Runtime Decision Closure:
   - Closed runtime decision as `runtime-blocked / preconditions-required`.
   - Confirmed no evidence forms, routes, controllers, migrations, models, DTOs, storage, journal handoff, feedback correlation, action completion, campaign attribution, provider calls, voucher mutation, wallet mutation, or money movement were added.
