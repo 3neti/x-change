@@ -4,12 +4,17 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Wave 66 — Manual Distribution External Evidence Runtime Decision
-Status: Wave 65 complete / planning-only evidence intake baseline recorded
+Current slice: Cockpit Wave 66B — Manual Distribution External Evidence Runtime Preconditions
+Status: In progress / Wave 66A complete
 Last updated: 2026-07-13
 
 ## Completed
 
+- Completed Cockpit Wave 66A — Manual Distribution External Evidence Runtime Readiness Audit:
+  - Audited runtime readiness for external evidence intake.
+  - Recorded result: `not-ready-for-runtime`.
+  - Identified unresolved authorization, tenant scope, redaction, retention, review, journal handoff, x-feedback correlation, x-action continuation, campaign attribution, attachment, and disclosure-handling policies.
+  - Report: `reports/376-wave-66a-external-evidence-runtime-readiness-audit.md`.
 - Completed Cockpit Wave 65 — Manual Distribution External Evidence Intake Closure:
   - Closed Wave 65 as `planning-only / no-intake-runtime`.
   - Recorded an external evidence intake decision and planning-only template.

@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Host Integration Readiness
-Current status: Cockpit Wave 65 complete; planning-only external evidence intake baseline recorded
+Current status: Cockpit Wave 66B in progress; external evidence runtime readiness audit complete
 Last updated: 2026-07-13
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-13
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Cockpit Wave 65 complete; planning-only external evidence intake baseline recorded | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Cockpit Wave 66B in progress; external evidence runtime readiness audit complete | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,9 @@ Last updated: 2026-07-13
 
 ### Current Cockpit Host Integration
 
+- Cockpit Wave 66A — Manual Distribution External Evidence Runtime Readiness Audit complete:
+  - Recorded external evidence intake as `not-ready-for-runtime`.
+  - Report: [../ui-cockpit/reports/376-wave-66a-external-evidence-runtime-readiness-audit.md](../ui-cockpit/reports/376-wave-66a-external-evidence-runtime-readiness-audit.md).
 - Cockpit Wave 65 — Manual Distribution External Evidence Intake Closure complete:
   - Closed external evidence intake as planning-only with no runtime persistence or intake surface.
   - Host-published Cockpit assets remain clean: checked 59, ok 59, stale 0, missing 0, extra 0.
