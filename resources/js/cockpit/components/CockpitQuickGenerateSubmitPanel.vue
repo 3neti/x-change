@@ -4497,14 +4497,21 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
                                     Minimum Withdrawal
-                                    <span class="relative block">
+                                    <div
+                                        class="flex min-w-0 rounded-xl shadow-sm"
+                                    >
+                                        <span
+                                            class="inline-flex items-center rounded-l-xl border border-r-0 border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
+                                        >
+                                            ₱
+                                        </span>
                                         <input
                                             v-model="minWithdrawal"
                                             type="number"
                                             min="0"
                                             step="0.01"
                                             inputmode="decimal"
-                                            class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 pr-16 text-center text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                            class="w-full min-w-0 border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                             data-testid="cockpit-quick-generate-min-withdrawal"
                                             :disabled="
                                                 processing ||
@@ -4512,11 +4519,12 @@ function dataGet(source: unknown, path: string[]): unknown {
                                             "
                                         />
                                         <span
-                                            class="pointer-events-none absolute inset-y-1 right-1 flex items-center rounded-lg bg-slate-100 px-2 text-[10px] font-semibold tracking-wide text-slate-500 uppercase dark:bg-slate-800 dark:text-slate-300"
+                                            class="inline-flex w-24 min-w-0 items-center justify-center rounded-r-xl border border-l-0 border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 uppercase dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                                            data-testid="cockpit-quick-generate-min-withdrawal-currency"
                                         >
                                             {{ currency || 'PHP' }}
                                         </span>
-                                    </span>
+                                    </div>
                                     <span
                                         class="text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
                                     >
