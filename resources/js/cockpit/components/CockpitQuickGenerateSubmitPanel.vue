@@ -1044,6 +1044,49 @@ const structuredValidationSummary = computed<Record<string, unknown>>(() => {
     };
 });
 
+const validationPreviewLabels: Record<string, string> = {
+    secret: 'secret configured',
+    mobile: 'match mobile number',
+    payable: 'require payable / vendor alias',
+    country: 'country: PH',
+    location: 'location radius',
+    radius: 'radius: 100',
+    mobile_verification: 'OTP mobile verification',
+};
+
+const structuredValidationPreviewLabels: Record<string, string> = {
+    signature: 'signature required',
+    selfie: 'selfie required',
+    location: 'location evidence required',
+    otp: 'OTP required',
+    face_match: 'face match required',
+    time: 'claim time window',
+};
+
+const validationPreviewDisplay = computed<string>(() => {
+    const labels = Object.keys(validationSummary.value).map(
+        (key) => validationPreviewLabels[key] ?? key,
+    );
+
+    if (labels.length === 0) {
+        return 'No cash validation rules selected';
+    }
+
+    return [...new Set(labels)].join(', ');
+});
+
+const structuredValidationPreviewDisplay = computed<string>(() => {
+    const labels = Object.keys(structuredValidationSummary.value).map(
+        (key) => structuredValidationPreviewLabels[key] ?? key,
+    );
+
+    if (labels.length === 0) {
+        return 'No structured verification rules selected';
+    }
+
+    return labels.join(', ');
+});
+
 const verificationSummary = computed<string[]>(() => {
     return [
         verificationKyc.value ? 'kyc' : null,
@@ -2365,122 +2408,243 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <p
                                 class="text-xs text-slate-500 dark:text-slate-400"
                             >
-                                Validation maps into cash validation.
-                                Verification stays operator intent metadata.
+                                Basic claim checks map to cash validation.
+                                Evidence and advanced policies map to
+                                verification intent.
                             </p>
                         </div>
                     </div>
                     <div class="mt-4 grid gap-3">
                         <div
-                            class="rounded-xl border border-violet-100 bg-violet-50 p-3 text-xs text-violet-900 dark:border-violet-900/60 dark:bg-violet-950/40 dark:text-violet-100"
-                            data-testid="cockpit-quick-generate-payee-interpretation"
+                            class="grid gap-3 rounded-xl border border-violet-100 bg-violet-50 p-3 text-xs text-violet-900 dark:border-violet-900/60 dark:bg-violet-950/40 dark:text-violet-100"
+                            data-testid="cockpit-quick-generate-recipient-match-group"
                         >
-                            <p class="font-semibold">
-                                Payee validation interpretation
-                            </p>
-                            <p class="mt-1">
-                                {{ payeeHelpText }}
-                            </p>
-                            <p
-                                class="mt-1 text-violet-700 dark:text-violet-300"
+                            <div>
+                                <p class="font-semibold">Recipient Match</p>
+                                <p class="mt-1">
+                                    Match claim data against the intended payee
+                                    when the Pay Code should be restricted to a
+                                    mobile number or payable alias.
+                                </p>
+                            </div>
+                            <div
+                                class="rounded-lg border border-violet-200 bg-white/70 p-3 dark:border-violet-900/60 dark:bg-violet-950/40"
+                                data-testid="cockpit-quick-generate-payee-interpretation"
                             >
-                                Mobile payees map to
-                                <code>cash.validation.mobile</code>; vendor
-                                aliases map to
-                                <code>cash.validation.payable</code>; blank or
-                                CASH remains unrestricted by payee.
-                            </p>
+                                <p class="font-semibold">
+                                    Payee validation interpretation
+                                </p>
+                                <p class="mt-1">
+                                    {{ payeeHelpText }}
+                                </p>
+                                <p
+                                    class="mt-1 text-violet-700 dark:text-violet-300"
+                                >
+                                    Mobile payees map to
+                                    <code>cash.validation.mobile</code>; vendor
+                                    aliases map to
+                                    <code>cash.validation.payable</code>; blank
+                                    or CASH remains unrestricted by payee.
+                                </p>
+                            </div>
+                            <div class="grid gap-2 sm:grid-cols-2">
+                                <label
+                                    class="flex items-start gap-2 rounded-xl border border-violet-200 bg-white/70 p-3 text-xs font-medium text-violet-900 dark:border-violet-900/60 dark:bg-violet-950/40 dark:text-violet-100"
+                                >
+                                    <input
+                                        v-model="requireMobileValidation"
+                                        type="checkbox"
+                                        class="mt-0.5 rounded border-violet-300"
+                                        :disabled="processing"
+                                    />
+                                    <span class="grid gap-0.5">
+                                        <span>Match Mobile Number</span>
+                                        <span
+                                            class="text-[11px] leading-snug font-normal text-violet-700 dark:text-violet-300"
+                                        >
+                                            Adds
+                                            <code>cash.validation.mobile</code>
+                                            when the payee is mobile.
+                                        </span>
+                                    </span>
+                                </label>
+                                <label
+                                    class="flex items-start gap-2 rounded-xl border border-violet-200 bg-white/70 p-3 text-xs font-medium text-violet-900 dark:border-violet-900/60 dark:bg-violet-950/40 dark:text-violet-100"
+                                >
+                                    <input
+                                        v-model="requirePayableValidation"
+                                        type="checkbox"
+                                        class="mt-0.5 rounded border-violet-300"
+                                        :disabled="processing"
+                                    />
+                                    <span class="grid gap-0.5">
+                                        <span
+                                            >Require Payable / Vendor
+                                            Alias</span
+                                        >
+                                        <span
+                                            class="text-[11px] leading-snug font-normal text-violet-700 dark:text-violet-300"
+                                        >
+                                            Adds
+                                            <code>cash.validation.payable</code>
+                                            for unrestricted payees.
+                                        </span>
+                                    </span>
+                                </label>
+                                <label
+                                    class="flex items-start gap-2 rounded-xl border border-violet-200 bg-white/70 p-3 text-xs font-medium text-violet-900 dark:border-violet-900/60 dark:bg-violet-950/40 dark:text-violet-100"
+                                >
+                                    <input
+                                        v-model="requireCountryValidation"
+                                        type="checkbox"
+                                        class="mt-0.5 rounded border-violet-300"
+                                        :disabled="processing"
+                                    />
+                                    <span class="grid gap-0.5">
+                                        <span>Require Country: PH</span>
+                                        <span
+                                            class="text-[11px] leading-snug font-normal text-violet-700 dark:text-violet-300"
+                                        >
+                                            Adds
+                                            <code>cash.validation.country</code>
+                                            as PH.
+                                        </span>
+                                    </span>
+                                </label>
+                                <label
+                                    class="flex items-start gap-2 rounded-xl border border-violet-200 bg-white/70 p-3 text-xs font-medium text-violet-900 dark:border-violet-900/60 dark:bg-violet-950/40 dark:text-violet-100"
+                                >
+                                    <input
+                                        v-model="requireLocationValidation"
+                                        type="checkbox"
+                                        class="mt-0.5 rounded border-violet-300"
+                                        :disabled="processing"
+                                    />
+                                    <span class="grid gap-0.5">
+                                        <span>Require Location Radius</span>
+                                        <span
+                                            class="text-[11px] leading-snug font-normal text-violet-700 dark:text-violet-300"
+                                        >
+                                            Adds location and radius checks to
+                                            cash validation.
+                                        </span>
+                                    </span>
+                                </label>
+                            </div>
                         </div>
-                        <label
-                            class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                        <div
+                            class="grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/60"
+                            data-testid="cockpit-quick-generate-secret-group"
                         >
-                            Claim secret / passphrase
-                            <input
-                                v-model="validationSecret"
-                                type="text"
-                                class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                data-testid="cockpit-quick-generate-validation-secret"
-                                :disabled="processing"
-                            />
-                        </label>
-                        <div class="grid gap-2 sm:grid-cols-2">
                             <label
-                                class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300"
+                                class="grid gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
+                                <span>Claim Secret / Branch PIN</span>
                                 <input
-                                    v-model="requireMobileValidation"
-                                    type="checkbox"
-                                    class="rounded border-slate-300"
+                                    v-model="validationSecret"
+                                    type="text"
+                                    class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                    data-testid="cockpit-quick-generate-validation-secret"
                                     :disabled="processing"
                                 />
-                                Match recipient mobile
+                                <span
+                                    class="text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
+                                >
+                                    Use for branch PINs, release codes, or
+                                    manual verification passphrases. Preview
+                                    shows only that a secret is configured.
+                                </span>
                             </label>
-                            <label
-                                class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300"
-                            >
-                                <input
-                                    v-model="requirePayableValidation"
-                                    type="checkbox"
-                                    class="rounded border-slate-300"
-                                    :disabled="processing"
-                                />
-                                Payable-only validation
-                            </label>
-                            <label
-                                class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300"
-                            >
-                                <input
-                                    v-model="requireCountryValidation"
-                                    type="checkbox"
-                                    class="rounded border-slate-300"
-                                    :disabled="processing"
-                                />
-                                PH country gate
-                            </label>
-                            <label
-                                class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300"
-                            >
-                                <input
-                                    v-model="requireLocationValidation"
-                                    type="checkbox"
-                                    class="rounded border-slate-300"
-                                    :disabled="processing"
-                                />
-                                Location radius gate
-                            </label>
-                            <label
-                                class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300"
-                            >
-                                <input
-                                    v-model="verificationKyc"
-                                    type="checkbox"
-                                    class="rounded border-slate-300"
-                                    :disabled="processing"
-                                />
-                                KYC evidence
-                            </label>
-                            <label
-                                class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300"
-                            >
-                                <input
-                                    v-model="verificationOtp"
-                                    type="checkbox"
-                                    class="rounded border-slate-300"
-                                    :disabled="processing"
-                                />
-                                OTP confirmation
-                            </label>
-                            <label
-                                class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300"
-                            >
-                                <input
-                                    v-model="verificationSelfie"
-                                    type="checkbox"
-                                    class="rounded border-slate-300"
-                                    :disabled="processing"
-                                />
-                                Selfie evidence
-                            </label>
+                        </div>
+                        <div
+                            class="grid gap-2 rounded-xl border border-sky-100 bg-sky-50 p-3 text-xs text-sky-900 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-100"
+                            data-testid="cockpit-quick-generate-evidence-required-group"
+                        >
+                            <div>
+                                <p class="font-semibold">Evidence Required</p>
+                                <p class="mt-1">
+                                    These switches describe evidence expected in
+                                    the claim journey. Cockpit does not perform
+                                    KYC, OTP delivery, selfie capture, or
+                                    signature verification here.
+                                </p>
+                            </div>
+                            <div class="grid gap-2 sm:grid-cols-2">
+                                <label
+                                    class="flex items-start gap-2 rounded-xl border border-sky-200 bg-white/70 p-3 text-xs font-medium text-sky-900 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-100"
+                                >
+                                    <input
+                                        v-model="verificationKyc"
+                                        type="checkbox"
+                                        class="mt-0.5 rounded border-sky-300"
+                                        :disabled="processing"
+                                    />
+                                    <span class="grid gap-0.5">
+                                        <span>KYC</span>
+                                        <span
+                                            class="text-[11px] leading-snug font-normal text-sky-700 dark:text-sky-300"
+                                        >
+                                            Identity evidence is expected.
+                                        </span>
+                                    </span>
+                                </label>
+                                <label
+                                    class="flex items-start gap-2 rounded-xl border border-sky-200 bg-white/70 p-3 text-xs font-medium text-sky-900 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-100"
+                                >
+                                    <input
+                                        v-model="verificationOtp"
+                                        type="checkbox"
+                                        class="mt-0.5 rounded border-sky-300"
+                                        :disabled="processing"
+                                    />
+                                    <span class="grid gap-0.5">
+                                        <span>OTP</span>
+                                        <span
+                                            class="text-[11px] leading-snug font-normal text-sky-700 dark:text-sky-300"
+                                        >
+                                            One-time passcode confirmation is
+                                            expected.
+                                        </span>
+                                    </span>
+                                </label>
+                                <label
+                                    class="flex items-start gap-2 rounded-xl border border-sky-200 bg-white/70 p-3 text-xs font-medium text-sky-900 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-100"
+                                >
+                                    <input
+                                        v-model="verificationSelfie"
+                                        type="checkbox"
+                                        class="mt-0.5 rounded border-sky-300"
+                                        :disabled="processing"
+                                    />
+                                    <span class="grid gap-0.5">
+                                        <span>Selfie</span>
+                                        <span
+                                            class="text-[11px] leading-snug font-normal text-sky-700 dark:text-sky-300"
+                                        >
+                                            Selfie evidence is expected.
+                                        </span>
+                                    </span>
+                                </label>
+                                <label
+                                    class="flex items-start gap-2 rounded-xl border border-sky-200 bg-white/70 p-3 text-xs font-medium text-sky-900 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-100"
+                                >
+                                    <input
+                                        v-model="signatureRequired"
+                                        type="checkbox"
+                                        class="mt-0.5 rounded border-sky-300"
+                                        data-testid="cockpit-quick-generate-signature-required"
+                                        :disabled="processing"
+                                    />
+                                    <span class="grid gap-0.5">
+                                        <span>Require Signature</span>
+                                        <span
+                                            class="text-[11px] leading-snug font-normal text-sky-700 dark:text-sky-300"
+                                        >
+                                            Signature evidence is expected.
+                                        </span>
+                                    </span>
+                                </label>
+                            </div>
                         </div>
                         <details
                             class="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/60"
@@ -2489,23 +2653,11 @@ function dataGet(source: unknown, path: string[]): unknown {
                             <summary
                                 class="cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300"
                             >
-                                Structured validation rules
+                                Advanced verification rules
                             </summary>
                             <div
                                 class="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3"
                             >
-                                <label
-                                    class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300"
-                                >
-                                    <input
-                                        v-model="signatureRequired"
-                                        type="checkbox"
-                                        class="rounded border-slate-300"
-                                        data-testid="cockpit-quick-generate-signature-required"
-                                        :disabled="processing"
-                                    />
-                                    Signature required
-                                </label>
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
@@ -2561,12 +2713,12 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         data-testid="cockpit-quick-generate-face-match-required"
                                         :disabled="processing"
                                     />
-                                    Face match required
+                                    Face Match Required
                                 </label>
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Face match confidence
+                                    Face Match Confidence
                                     <input
                                         v-model="faceMatchConfidence"
                                         type="number"
@@ -2583,7 +2735,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Face match failure
+                                    Face Match Failure
                                     <select
                                         v-model="faceMatchFailure"
                                         class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
@@ -2605,7 +2757,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         data-testid="cockpit-quick-generate-time-validation-enabled"
                                         :disabled="processing"
                                     />
-                                    Time validation
+                                    Restrict Claim Time Window
                                 </label>
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
@@ -2673,9 +2825,58 @@ function dataGet(source: unknown, path: string[]): unknown {
                                             processing || !timeValidationEnabled
                                         "
                                     />
-                                    Track duration
+                                    Track Duration
                                 </label>
                             </div>
+                        </details>
+                        <details
+                            class="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/60"
+                            data-testid="cockpit-quick-generate-validation-preview"
+                        >
+                            <summary
+                                class="cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300"
+                            >
+                                Validation Payload Preview
+                            </summary>
+                            <div class="mt-3 grid gap-2 sm:grid-cols-2">
+                                <div
+                                    class="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950"
+                                >
+                                    <p
+                                        class="text-[11px] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                                    >
+                                        cash.validation
+                                    </p>
+                                    <p
+                                        class="mt-1 font-mono text-xs break-words text-slate-800 dark:text-slate-100"
+                                        data-testid="cockpit-quick-generate-cash-validation-preview-value"
+                                    >
+                                        {{ validationPreviewDisplay }}
+                                    </p>
+                                </div>
+                                <div
+                                    class="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950"
+                                >
+                                    <p
+                                        class="text-[11px] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                                    >
+                                        validation
+                                    </p>
+                                    <p
+                                        class="mt-1 font-mono text-xs break-words text-slate-800 dark:text-slate-100"
+                                        data-testid="cockpit-quick-generate-structured-validation-preview-value"
+                                    >
+                                        {{ structuredValidationPreviewDisplay }}
+                                    </p>
+                                </div>
+                            </div>
+                            <p
+                                class="mt-2 text-[11px] leading-snug text-slate-500 dark:text-slate-400"
+                            >
+                                This preview shows rule names only. Secret
+                                values, provider payloads, and verification
+                                evidence are not displayed.
+                            </p>
                         </details>
                     </div>
                 </section>
