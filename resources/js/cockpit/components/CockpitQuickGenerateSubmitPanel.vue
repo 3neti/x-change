@@ -4458,7 +4458,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         type="number"
                                         min="1"
                                         step="1"
-                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                         data-testid="cockpit-quick-generate-fixed-slices"
                                         :disabled="
                                             processing || sliceMode !== 'fixed'
@@ -4474,7 +4474,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         type="number"
                                         min="1"
                                         step="1"
-                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                         data-testid="cockpit-quick-generate-max-slices"
                                         :disabled="
                                             processing || sliceMode !== 'open'
@@ -4490,7 +4490,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         type="number"
                                         min="0"
                                         step="0.01"
-                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                         data-testid="cockpit-quick-generate-min-withdrawal"
                                         :disabled="
                                             processing || sliceMode !== 'open'
