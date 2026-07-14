@@ -2,6 +2,7 @@
 import { router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import CockpitManualCopyButton from './CockpitManualCopyButton.vue';
+import CockpitPhoneInput from './CockpitPhoneInput.vue';
 import type {
     CockpitQuickGenerateCampaignAttribution,
     CockpitQuickGenerateCampaignContext,
@@ -3847,16 +3848,10 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
                                 Feedback mobile
-                                <input
+                                <CockpitPhoneInput
                                     v-model="feedbackMobile"
-                                    type="tel"
-                                    class="w-full min-w-0 rounded-xl border bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:bg-slate-900 dark:text-slate-50"
-                                    :class="
-                                        feedbackMobileError
-                                            ? 'border-rose-300 dark:border-rose-700'
-                                            : 'border-slate-200 dark:border-slate-800'
-                                    "
-                                    data-testid="cockpit-quick-generate-feedback-mobile"
+                                    :error="feedbackMobileError"
+                                    input-test-id="cockpit-quick-generate-feedback-mobile"
                                     :disabled="processing"
                                 />
                                 <span
