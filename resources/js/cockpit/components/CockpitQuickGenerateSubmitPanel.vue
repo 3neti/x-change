@@ -549,7 +549,9 @@ const timeTrackDuration = ref(true);
 const riderUrl = ref('');
 const riderUrlPreset = ref('');
 const riderRedirectTimeout = ref('');
+const riderSplashHeadline = ref('');
 const riderSplash = ref('');
+const riderSplashCtaText = ref('');
 const riderSplashTimeout = ref('3');
 const riderSplashMetaSanitized = ref(true);
 const riderSplashMetaProfile = ref('');
@@ -631,7 +633,9 @@ function applyTemplateDefaults(templateKey: string): void {
     feedbackWebhook.value = defaults.feedbackWebhook;
     riderUrl.value = defaults.riderUrl;
     riderUrlPreset.value = '';
+    riderSplashHeadline.value = '';
     riderSplash.value = defaults.riderSplash;
+    riderSplashCtaText.value = '';
     riderSplashTimeout.value = defaults.riderSplashTimeout;
     cashType.value =
         defaults.executionDriver === 'settlement_envelope'
@@ -1178,11 +1182,38 @@ function applyRiderUrlPreset(): void {
     riderUrl.value = selectedRiderUrlPreset.value.url;
 }
 
+function escapeHtml(value: string): string {
+    return value
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+
+const riderSplashContent = computed<string>(() => {
+    const headline = riderSplashHeadline.value.trim();
+    const body = riderSplash.value.trim();
+    const cta = riderSplashCtaText.value.trim();
+
+    if (headline === '' && cta === '') {
+        return body;
+    }
+
+    return [
+        headline === '' ? null : `<h1>${escapeHtml(headline)}</h1>`,
+        body === '' ? null : `<p>${escapeHtml(body)}</p>`,
+        cta === '' ? null : `<p><strong>${escapeHtml(cta)}</strong></p>`,
+    ]
+        .filter((item): item is string => item !== null)
+        .join('\n');
+});
+
 const riderSummary = computed<Record<string, unknown>>(() => {
     const message = purpose.value.trim();
     const url = riderUrl.value.trim();
     const redirectTimeout = Number(riderRedirectTimeout.value);
-    const splash = riderSplash.value.trim();
+    const splash = riderSplashContent.value.trim();
     const timeout = Number(riderSplashTimeout.value);
     const htmlProfile = riderSplashMetaProfile.value.trim();
     const ogSource = riderOgSource.value.trim();
@@ -3048,32 +3079,109 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 </label>
                             </div>
                         </div>
-                        <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                            <label
-                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
-                            >
-                                Splash timeout
-                                <input
-                                    v-model="riderSplashTimeout"
-                                    type="number"
-                                    min="0"
-                                    step="1"
-                                    class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                    :disabled="processing"
-                                />
-                            </label>
-                        </div>
-                        <label
-                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                        <div
+                            class="grid gap-3 rounded-xl border border-orange-100 bg-orange-50 p-3 text-xs text-orange-950 dark:border-orange-900/60 dark:bg-orange-950/40 dark:text-orange-100"
+                            data-testid="cockpit-quick-generate-rider-splash-builder"
                         >
-                            Splash text
-                            <input
-                                v-model="riderSplash"
-                                type="text"
-                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                :disabled="processing"
-                            />
-                        </label>
+                            <div>
+                                <p class="font-semibold">Splash Page Builder</p>
+                                <p
+                                    class="mt-1 text-orange-800 dark:text-orange-200"
+                                >
+                                    Compose the beneficiary-facing splash shown
+                                    around the claim journey. Preview is local;
+                                    no delivery or external rendering occurs.
+                                </p>
+                            </div>
+                            <div class="grid gap-3 lg:grid-cols-2">
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
+                                >
+                                    Splash Headline
+                                    <input
+                                        v-model="riderSplashHeadline"
+                                        type="text"
+                                        class="w-full min-w-0 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-orange-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-rider-splash-headline"
+                                        :disabled="processing"
+                                    />
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
+                                >
+                                    CTA Button Text
+                                    <input
+                                        v-model="riderSplashCtaText"
+                                        type="text"
+                                        class="w-full min-w-0 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-orange-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-rider-splash-cta-text"
+                                        :disabled="processing"
+                                    />
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 lg:col-span-2 dark:text-orange-100"
+                                >
+                                    Splash Body
+                                    <textarea
+                                        v-model="riderSplash"
+                                        rows="3"
+                                        class="w-full min-w-0 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-orange-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-rider-splash-body"
+                                        :disabled="processing"
+                                    />
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
+                                >
+                                    Splash Timeout
+                                    <input
+                                        v-model="riderSplashTimeout"
+                                        type="number"
+                                        min="0"
+                                        step="1"
+                                        class="w-full min-w-0 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-orange-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                        :disabled="processing"
+                                    />
+                                </label>
+                                <div
+                                    class="rounded-xl border border-orange-200 bg-white p-3 dark:border-orange-900/60 dark:bg-slate-950"
+                                    data-testid="cockpit-quick-generate-rider-splash-preview"
+                                >
+                                    <p
+                                        class="text-[11px] font-semibold tracking-wide text-orange-700 uppercase dark:text-orange-300"
+                                    >
+                                        Local splash preview
+                                    </p>
+                                    <div class="mt-2 grid gap-1">
+                                        <p
+                                            v-if="
+                                                riderSplashHeadline.trim() !==
+                                                ''
+                                            "
+                                            class="text-sm font-bold text-slate-950 dark:text-slate-50"
+                                        >
+                                            {{ riderSplashHeadline }}
+                                        </p>
+                                        <p
+                                            class="text-xs leading-snug whitespace-pre-line text-slate-700 dark:text-slate-300"
+                                        >
+                                            {{
+                                                riderSplash.trim() ||
+                                                'No splash body yet.'
+                                            }}
+                                        </p>
+                                        <p
+                                            v-if="
+                                                riderSplashCtaText.trim() !== ''
+                                            "
+                                            class="mt-2 inline-flex w-fit rounded-full bg-orange-100 px-3 py-1 text-[11px] font-semibold text-orange-800 dark:bg-orange-900/60 dark:text-orange-100"
+                                        >
+                                            {{ riderSplashCtaText }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <details
                             class="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/60"
                             data-testid="cockpit-quick-generate-rider-advanced"
