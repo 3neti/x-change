@@ -4452,50 +4452,77 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Fixed slices
+                                    Fixed Slices
                                     <input
                                         v-model="slices"
                                         type="number"
                                         min="1"
                                         step="1"
+                                        inputmode="numeric"
                                         class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                         data-testid="cockpit-quick-generate-fixed-slices"
                                         :disabled="
                                             processing || sliceMode !== 'fixed'
                                         "
                                     />
+                                    <span
+                                        class="text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
+                                    >
+                                        Number of equal claim portions.
+                                    </span>
                                 </label>
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Max open claims
+                                    Max Open Claims
                                     <input
                                         v-model="maxSlices"
                                         type="number"
                                         min="1"
                                         step="1"
+                                        inputmode="numeric"
                                         class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
                                         data-testid="cockpit-quick-generate-max-slices"
                                         :disabled="
                                             processing || sliceMode !== 'open'
                                         "
                                     />
+                                    <span
+                                        class="text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
+                                    >
+                                        Maximum allowed claims for Open Slice.
+                                    </span>
                                 </label>
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Minimum withdrawal
-                                    <input
-                                        v-model="minWithdrawal"
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                        data-testid="cockpit-quick-generate-min-withdrawal"
-                                        :disabled="
-                                            processing || sliceMode !== 'open'
-                                        "
-                                    />
+                                    Minimum Withdrawal
+                                    <span class="relative block">
+                                        <input
+                                            v-model="minWithdrawal"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            inputmode="decimal"
+                                            class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 pr-16 text-center text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                            data-testid="cockpit-quick-generate-min-withdrawal"
+                                            :disabled="
+                                                processing ||
+                                                sliceMode !== 'open'
+                                            "
+                                        />
+                                        <span
+                                            class="pointer-events-none absolute inset-y-1 right-1 flex items-center rounded-lg bg-slate-100 px-2 text-[10px] font-semibold tracking-wide text-slate-500 uppercase dark:bg-slate-800 dark:text-slate-300"
+                                        >
+                                            {{ currency || 'PHP' }}
+                                        </span>
+                                    </span>
+                                    <span
+                                        class="text-[11px] leading-snug font-normal text-slate-500 dark:text-slate-400"
+                                    >
+                                        Smallest claim amount, shown in
+                                        {{ currency || 'PHP' }}.
+                                    </span>
                                 </label>
                             </div>
                             <p
