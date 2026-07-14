@@ -69,6 +69,14 @@ type RiderUrlPreset = {
     helper: string;
 };
 
+type RiderOgPreview = {
+    source: 'default' | 'message' | 'url' | 'splash';
+    label: string;
+    title: string;
+    description: string;
+    reference: string;
+};
+
 type QuickGenerateTemplateDefaults = {
     amount: string;
     currency: string;
@@ -1207,6 +1215,72 @@ const riderSplashContent = computed<string>(() => {
     ]
         .filter((item): item is string => item !== null)
         .join('\n');
+});
+
+const riderOgPreview = computed<RiderOgPreview>(() => {
+    const source =
+        riderOgSource.value === 'message' ||
+        riderOgSource.value === 'url' ||
+        riderOgSource.value === 'splash'
+            ? riderOgSource.value
+            : 'default';
+    const message = purpose.value.trim();
+    const url = riderUrl.value.trim();
+    const splashHeadline = riderSplashHeadline.value.trim();
+    const splashBody = riderSplash.value.trim();
+    const splashCta = riderSplashCtaText.value.trim();
+
+    if (source === 'message') {
+        return {
+            source,
+            label: 'Message preview',
+            title: message === '' ? 'No message yet' : message,
+            description:
+                'Beneficiary preview is based on the rider message/purpose.',
+            reference: 'rider.message',
+        };
+    }
+
+    if (source === 'url') {
+        return {
+            source,
+            label: 'CTA URL preview',
+            title: url === '' ? 'No CTA URL yet' : url,
+            description:
+                'Beneficiary preview is based on the selected CTA destination.',
+            reference: 'rider.url',
+        };
+    }
+
+    if (source === 'splash') {
+        return {
+            source,
+            label: 'Splash preview',
+            title:
+                splashHeadline === ''
+                    ? splashBody || 'No splash content yet'
+                    : splashHeadline,
+            description:
+                splashCta === ''
+                    ? splashBody || 'Splash body is empty.'
+                    : `${splashBody || 'Splash body is empty.'} · ${splashCta}`,
+            reference: 'rider.splash',
+        };
+    }
+
+    return {
+        source,
+        label: 'Default preview',
+        title:
+            splashHeadline ||
+            message ||
+            (url === '' ? 'Default beneficiary preview' : url),
+        description:
+            splashBody ||
+            message ||
+            'Cockpit will submit only operator-safe rider fields.',
+        reference: 'rider.og_source: default',
+    };
 });
 
 const riderSummary = computed<Record<string, unknown>>(() => {
@@ -3182,6 +3256,72 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 </div>
                             </div>
                         </div>
+                        <div
+                            class="grid gap-3 rounded-xl border border-sky-100 bg-sky-50 p-3 text-xs text-sky-950 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-100"
+                            data-testid="cockpit-quick-generate-rider-og-preview"
+                        >
+                            <div
+                                class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between"
+                            >
+                                <div>
+                                    <p class="font-semibold">OG Preview</p>
+                                    <p
+                                        class="mt-1 text-sky-800 dark:text-sky-200"
+                                    >
+                                        Local preview only. Cockpit does not
+                                        fetch external Open Graph metadata or
+                                        generate social share assets here.
+                                    </p>
+                                </div>
+                                <label
+                                    class="grid min-w-48 gap-1 text-xs font-medium text-sky-950 dark:text-sky-100"
+                                >
+                                    OG Source
+                                    <select
+                                        v-model="riderOgSource"
+                                        class="w-full min-w-0 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-sky-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-rider-og-source"
+                                        :disabled="processing"
+                                    >
+                                        <option value="">Default</option>
+                                        <option value="message">Message</option>
+                                        <option value="url">CTA URL</option>
+                                        <option value="splash">Splash</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <div
+                                class="rounded-xl border border-sky-200 bg-white p-3 dark:border-sky-900/60 dark:bg-slate-950"
+                            >
+                                <div
+                                    class="flex flex-wrap items-center gap-2 text-[11px] font-semibold tracking-wide text-sky-700 uppercase dark:text-sky-300"
+                                >
+                                    <span>{{ riderOgPreview.label }}</span>
+                                    <span
+                                        class="rounded-full bg-sky-100 px-2 py-0.5 text-sky-800 dark:bg-sky-900/60 dark:text-sky-100"
+                                    >
+                                        {{ riderOgPreview.reference }}
+                                    </span>
+                                </div>
+                                <p
+                                    class="mt-2 text-sm font-bold text-slate-950 dark:text-slate-50"
+                                >
+                                    {{ riderOgPreview.title }}
+                                </p>
+                                <p
+                                    class="mt-1 text-xs leading-snug text-slate-700 dark:text-slate-300"
+                                >
+                                    {{ riderOgPreview.description }}
+                                </p>
+                                <p
+                                    class="mt-2 text-[11px] text-sky-800 dark:text-sky-200"
+                                >
+                                    No external OG fetch, scraping, upload,
+                                    delivery, short-link generation, or claim
+                                    runtime mutation occurs.
+                                </p>
+                            </div>
+                        </div>
                         <details
                             class="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/60"
                             data-testid="cockpit-quick-generate-rider-advanced"
@@ -3192,7 +3332,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 Advanced rider metadata
                             </summary>
                             <div
-                                class="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3"
+                                class="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2"
                             >
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
@@ -3220,22 +3360,6 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         data-testid="cockpit-quick-generate-rider-splash-profile"
                                         :disabled="processing"
                                     />
-                                </label>
-                                <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
-                                >
-                                    OG source
-                                    <select
-                                        v-model="riderOgSource"
-                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                        data-testid="cockpit-quick-generate-rider-og-source"
-                                        :disabled="processing"
-                                    >
-                                        <option value="">Default</option>
-                                        <option value="message">message</option>
-                                        <option value="url">url</option>
-                                        <option value="splash">splash</option>
-                                    </select>
                                 </label>
                                 <label
                                     class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300"
