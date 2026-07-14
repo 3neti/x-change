@@ -1229,11 +1229,8 @@ const riderSplashPreviewIsHtml = computed<boolean>(() => {
     return looksLikeHtml(riderSplash.value.trim());
 });
 
-const riderSplashPreviewDocument = computed<string>(() => {
-    const body = riderSplashPreviewIsHtml.value
-        ? riderSplashContent.value
-        : `<p>${escapeHtml(riderSplashContent.value || 'No splash body yet.')}</p>`;
-
+function buildSandboxedPreviewDocument(content: string): string {
+    const body = content.trim() === '' ? '<p>No splash body yet.</p>' : content;
     return `<!doctype html>
 <html>
 <head>
@@ -1271,6 +1268,24 @@ img { max-width: 100%; height: auto; }
 .mb-3 { margin-bottom: .75rem; }
 .mb-8 { margin-bottom: 2rem; }
 h1, h2, h3, p { margin-top: 0; }
+body > p:last-child strong {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 9999;
+    display: inline-flex;
+    max-width: calc(100% - 2rem);
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: rgba(249, 115, 22, .94);
+    color: #fff;
+    padding: .55rem .9rem;
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,.35), 0 4px 6px -4px rgba(0,0,0,.35);
+    font-size: .8125rem;
+    line-height: 1.25rem;
+    text-align: center;
+}
 @media (min-width: 640px) {
     .sm\\:text-sm { font-size: .875rem; line-height: 1.25rem; }
     .sm\\:text-2xl { font-size: 1.5rem; line-height: 2rem; }
@@ -1282,6 +1297,14 @@ h1, h2, h3, p { margin-top: 0; }
 ${body}
 </body>
 </html>`;
+}
+
+const riderSplashPreviewDocument = computed<string>(() => {
+    const body = riderSplashPreviewIsHtml.value
+        ? riderSplashContent.value
+        : `<p>${escapeHtml(riderSplashContent.value || 'No splash body yet.')}</p>`;
+
+    return buildSandboxedPreviewDocument(body);
 });
 
 const riderOgPreview = computed<RiderOgPreview>(() => {
@@ -1348,6 +1371,26 @@ const riderOgPreview = computed<RiderOgPreview>(() => {
             'Cockpit will submit only operator-safe rider fields.',
         reference: 'rider.og_source: default',
     };
+});
+
+const riderOgPreviewSource = computed<RiderOgPreview['source']>(() => {
+    return riderOgPreview.value.source;
+});
+
+const riderOgPreviewUsesSplashRender = computed<boolean>(() => {
+    return (
+        (riderOgPreviewSource.value === 'default' ||
+            riderOgPreviewSource.value === 'splash') &&
+        riderSplashContent.value.trim() !== ''
+    );
+});
+
+const riderOgPreviewDocument = computed<string>(() => {
+    return buildSandboxedPreviewDocument(
+        riderOgPreviewUsesSplashRender.value
+            ? riderSplashContent.value
+            : `<h1>${escapeHtml(riderOgPreview.value.title)}</h1><p>${escapeHtml(riderOgPreview.value.description)}</p>`,
+    );
 });
 
 const riderSummary = computed<Record<string, unknown>>(() => {
@@ -3234,7 +3277,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     no delivery or external rendering occurs.
                                 </p>
                             </div>
-                            <div class="grid gap-3 lg:grid-cols-2">
+                            <div class="grid gap-3 lg:grid-cols-3">
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
                                 >
@@ -3260,7 +3303,20 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     />
                                 </label>
                                 <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 lg:col-span-2 dark:text-orange-100"
+                                    class="grid min-w-0 content-start gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
+                                >
+                                    Splash Timeout
+                                    <input
+                                        v-model="riderSplashTimeout"
+                                        type="number"
+                                        min="0"
+                                        step="1"
+                                        class="h-10 w-full min-w-0 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-orange-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                        :disabled="processing"
+                                    />
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 lg:col-span-3 dark:text-orange-100"
                                 >
                                     Splash Body
                                     <textarea
@@ -3271,21 +3327,8 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         :disabled="processing"
                                     />
                                 </label>
-                                <label
-                                    class="grid min-w-0 gap-1 text-xs font-medium text-orange-950 dark:text-orange-100"
-                                >
-                                    Splash Timeout
-                                    <input
-                                        v-model="riderSplashTimeout"
-                                        type="number"
-                                        min="0"
-                                        step="1"
-                                        class="w-full min-w-0 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-orange-900/60 dark:bg-slate-900 dark:text-slate-50"
-                                        :disabled="processing"
-                                    />
-                                </label>
                                 <div
-                                    class="rounded-xl border border-orange-200 bg-white p-3 dark:border-orange-900/60 dark:bg-slate-950"
+                                    class="rounded-xl border border-orange-200 bg-white p-3 lg:col-span-3 dark:border-orange-900/60 dark:bg-slate-950"
                                     data-testid="cockpit-quick-generate-rider-splash-preview"
                                 >
                                     <p
@@ -3387,16 +3430,13 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         {{ riderOgPreview.reference }}
                                     </span>
                                 </div>
-                                <p
-                                    class="mt-2 text-sm font-bold text-slate-950 dark:text-slate-50"
-                                >
-                                    {{ riderOgPreview.title }}
-                                </p>
-                                <p
-                                    class="mt-1 text-xs leading-snug text-slate-700 dark:text-slate-300"
-                                >
-                                    {{ riderOgPreview.description }}
-                                </p>
+                                <iframe
+                                    title="Sandboxed local OG preview"
+                                    sandbox=""
+                                    class="mt-2 h-64 w-full rounded-lg border border-sky-200 bg-slate-950 dark:border-sky-900/60"
+                                    data-testid="cockpit-quick-generate-rider-og-html-preview"
+                                    :srcdoc="riderOgPreviewDocument"
+                                />
                                 <p
                                     class="mt-2 text-[11px] text-sky-800 dark:text-sky-200"
                                 >
