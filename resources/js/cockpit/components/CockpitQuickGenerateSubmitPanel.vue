@@ -81,6 +81,16 @@ type RiderOgPreview = {
 };
 
 type FeedbackChannel = 'email' | 'mobile' | 'webhook';
+type SliceMode = 'whole' | 'fixed' | 'open' | 'named';
+
+type NamedClaimSlice = {
+    id: string;
+    amount: string;
+    description: string;
+    tag: string;
+    claim_on: string;
+    claim_by: string;
+};
 
 type QuickGenerateTemplateDefaults = {
     amount: string;
@@ -102,7 +112,7 @@ type QuickGenerateTemplateDefaults = {
     riderUrl: string;
     riderSplash: string;
     riderSplashTimeout: string;
-    sliceMode: 'whole' | 'fixed' | 'open';
+    sliceMode: SliceMode;
     maxSlices: string;
     minWithdrawal: string;
     voucherType: 'redeemable' | 'payable' | 'settlement';
@@ -595,10 +605,11 @@ const cashType = ref('default');
 const customCashType = ref('');
 const selectedMandates = ref<string[]>([]);
 const customMandates = ref('');
-const sliceMode = ref<'whole' | 'fixed' | 'open'>('whole');
+const sliceMode = ref<SliceMode>('whole');
 const slices = ref('1');
 const maxSlices = ref('2');
 const minWithdrawal = ref('0');
+const namedClaimSlices = ref<NamedClaimSlice[]>([]);
 const voucherType = ref<'redeemable' | 'payable' | 'settlement'>('redeemable');
 const targetAmount = ref('');
 const rulesMinPayment = ref('');
@@ -625,6 +636,12 @@ const lastResponse = ref<Record<string, unknown> | null>(null);
 
 watch(selectedTemplate, (templateKey): void => {
     applyTemplateDefaults(templateKey);
+});
+
+watch(sliceMode, (mode): void => {
+    if (mode === 'named' && namedClaimSlices.value.length === 0) {
+        seedNamedClaimSlices();
+    }
 });
 
 function applyTemplateDefaults(templateKey: string): void {
@@ -671,6 +688,7 @@ function applyTemplateDefaults(templateKey: string): void {
     sliceMode.value = defaults.sliceMode;
     maxSlices.value = defaults.maxSlices;
     minWithdrawal.value = defaults.minWithdrawal;
+    namedClaimSlices.value = [];
     voucherType.value = defaults.voucherType;
     targetAmount.value = defaults.targetAmount;
     includeExecutionInstruction.value = defaults.includeExecutionInstruction;
@@ -787,7 +805,8 @@ const canSubmit = computed<boolean>(() => {
         props.mutationContract?.runtime_enabled === true &&
         routeUrl.value !== null &&
         allowedMethods.value.includes('POST') &&
-        feedbackValid.value
+        feedbackValid.value &&
+        namedClaimSliceValidationMessage.value === null
     );
 });
 
@@ -1521,10 +1540,96 @@ const riderSummary = computed<Record<string, unknown>>(() => {
     };
 });
 
+const normalizedNamedClaimSlices = computed(() => {
+    if (sliceMode.value !== 'named') {
+        return [];
+    }
+
+    const source =
+        namedClaimSlices.value.length > 0
+            ? namedClaimSlices.value
+            : defaultNamedClaimSlices();
+
+    return source.map((slice, index) => ({
+        id: slice.id || namedClaimSliceId(index),
+        amount: Number(slice.amount || 0),
+        description:
+            slice.description.trim() ||
+            (source.length === 1 ? 'Whole amount' : `Slice ${index + 1}`),
+        tag: slice.tag.trim() || null,
+        claim_on: slice.claim_on.trim() || null,
+        claim_by: slice.claim_by.trim() || null,
+    }));
+});
+
+const namedClaimSliceTotal = computed<number>(() => {
+    return normalizedNamedClaimSlices.value.reduce(
+        (total, slice) => total + Number(slice.amount || 0),
+        0,
+    );
+});
+
+const namedClaimSliceRemaining = computed<number>(() => {
+    const normalizedAmount = Number(amount.value);
+
+    return Number(
+        (
+            (Number.isFinite(normalizedAmount) ? normalizedAmount : 0) -
+            namedClaimSliceTotal.value
+        ).toFixed(2),
+    );
+});
+
+const namedClaimSliceValidationMessage = computed<string | null>(() => {
+    if (sliceMode.value !== 'named') {
+        return null;
+    }
+
+    const normalizedAmount = Number(amount.value);
+
+    if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+        return 'Enter a Pay Code amount before configuring named slices.';
+    }
+
+    if (normalizedNamedClaimSlices.value.length === 0) {
+        return 'Add at least one named slice.';
+    }
+
+    if (normalizedNamedClaimSlices.value.some((slice) => slice.amount <= 0)) {
+        return 'Each named slice must have an amount greater than zero.';
+    }
+
+    if (Math.abs(namedClaimSliceRemaining.value) >= 0.01) {
+        return 'Named slice amounts must equal the Pay Code amount.';
+    }
+
+    return null;
+});
+
 const sliceSummary = computed<Record<string, unknown>>(() => {
     const fixed = Number(slices.value);
     const max = Number(maxSlices.value);
     const minimum = Number(minWithdrawal.value);
+
+    if (sliceMode.value === 'named') {
+        const minimumNamedSliceAmount = Math.min(
+            ...normalizedNamedClaimSlices.value.map((slice) => slice.amount),
+        );
+
+        return {
+            mode: 'named',
+            max_slices: normalizedNamedClaimSlices.value.length,
+            min_withdrawal:
+                Number.isFinite(minimumNamedSliceAmount) &&
+                minimumNamedSliceAmount > 0
+                    ? minimumNamedSliceAmount
+                    : null,
+            slices: normalizedNamedClaimSlices.value,
+            total: namedClaimSliceTotal.value,
+            remaining: namedClaimSliceRemaining.value,
+            validation_message: namedClaimSliceValidationMessage.value,
+        };
+    }
 
     if (sliceMode.value !== 'open') {
         return {
@@ -1608,9 +1713,13 @@ const contractSummaryItems = computed<Array<{ label: string; value: string }>>(
             {
                 label: 'Slices',
                 value:
-                    sliceMode.value === 'open'
-                        ? `open · max ${sliceSummary.value.max_slices}`
-                        : 'whole amount',
+                    sliceMode.value === 'named'
+                        ? `named · ${normalizedNamedClaimSlices.value.length} slices · ${currency.value.trim() || 'PHP'} ${namedClaimSliceTotal.value.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+                        : sliceMode.value === 'open'
+                          ? `open · max ${sliceSummary.value.max_slices}`
+                          : sliceMode.value === 'fixed'
+                            ? `fixed · ${sliceSummary.value.slices ?? 1}`
+                            : 'whole amount',
             },
         ];
     },
@@ -1806,6 +1915,12 @@ function buildPayloadShape(redactSensitive: boolean): Record<string, unknown> {
             : null;
     }
 
+    if (sliceMode.value === 'named') {
+        cash.slice_mode = 'open';
+        cash.max_slices = normalizedNamedClaimSlices.value.length;
+        cash.min_withdrawal = sliceSummary.value.min_withdrawal;
+    }
+
     const validation = { ...validationSummary.value };
 
     if (redactSensitive && 'secret' in validation) {
@@ -1835,6 +1950,16 @@ function buildPayloadShape(redactSensitive: boolean): Record<string, unknown> {
                           mode: 'open',
                           selection: 'operator',
                           enforced: false,
+                      },
+                  }
+                : {}),
+            ...(sliceMode.value === 'named'
+                ? {
+                      slices: normalizedNamedClaimSlices.value,
+                      slice_policy: {
+                          mode: 'named',
+                          selection: 'one_or_many',
+                          enforced: true,
                       },
                   }
                 : {}),
@@ -2085,6 +2210,97 @@ function toggleFeedbackChannel(
 
     setFeedbackValue(channel, fallback);
     autoFilledFeedback.value[channel] = fallback;
+}
+
+function namedClaimSliceId(index: number): string {
+    return `slice_${index + 1}`;
+}
+
+function defaultNamedClaimSlices(): NamedClaimSlice[] {
+    const normalizedAmount = Number(amount.value);
+    const firstAmount =
+        Number.isFinite(normalizedAmount) && normalizedAmount > 0
+            ? String(Number((normalizedAmount / 2).toFixed(2)))
+            : '';
+    const secondAmount =
+        Number.isFinite(normalizedAmount) && normalizedAmount > 0
+            ? String(
+                  Number((normalizedAmount - Number(firstAmount)).toFixed(2)),
+              )
+            : '';
+
+    return [
+        {
+            id: 'slice_1',
+            amount: firstAmount,
+            description: 'First release',
+            tag: '',
+            claim_on: '',
+            claim_by: '',
+        },
+        {
+            id: 'slice_2',
+            amount: secondAmount,
+            description: 'Second release',
+            tag: '',
+            claim_on: '',
+            claim_by: '',
+        },
+    ];
+}
+
+function seedNamedClaimSlices(): void {
+    namedClaimSlices.value = defaultNamedClaimSlices();
+}
+
+function addNamedClaimSlice(): void {
+    const nextIndex = namedClaimSlices.value.length;
+
+    namedClaimSlices.value = [
+        ...namedClaimSlices.value,
+        {
+            id: namedClaimSliceId(nextIndex),
+            amount: '',
+            description: `Slice ${nextIndex + 1}`,
+            tag: '',
+            claim_on: '',
+            claim_by: '',
+        },
+    ];
+}
+
+function removeNamedClaimSlice(index: number): void {
+    if (namedClaimSlices.value.length <= 1) {
+        return;
+    }
+
+    namedClaimSlices.value = namedClaimSlices.value
+        .filter((_, sliceIndex) => sliceIndex !== index)
+        .map((slice, sliceIndex) => ({
+            ...slice,
+            id: slice.id || namedClaimSliceId(sliceIndex),
+        }));
+}
+
+function updateNamedClaimSlice(
+    index: number,
+    key: keyof NamedClaimSlice,
+    value: string,
+): void {
+    namedClaimSlices.value = namedClaimSlices.value.map((slice, sliceIndex) =>
+        sliceIndex === index ? { ...slice, [key]: value } : slice,
+    );
+}
+
+function setSliceMode(mode: string): void {
+    if (
+        mode === 'whole' ||
+        mode === 'fixed' ||
+        mode === 'open' ||
+        mode === 'named'
+    ) {
+        sliceMode.value = mode;
+    }
 }
 
 function objectValue(value: unknown): Record<string, unknown> | null {
@@ -3946,61 +4162,399 @@ function dataGet(source: unknown, path: string[]): unknown {
                             </p>
                         </div>
                     </div>
-                    <div class="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
-                        <label
-                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                    <div class="mt-4 grid gap-4">
+                        <div
+                            class="grid grid-cols-1 gap-2 lg:grid-cols-4"
+                            data-testid="cockpit-quick-generate-slice-mode-cards"
                         >
-                            Slice policy
-                            <select
-                                v-model="sliceMode"
-                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                            <button
+                                v-for="option in [
+                                    {
+                                        value: 'whole',
+                                        label: 'Whole amount',
+                                        helper: 'One claim consumes the full Pay Code.',
+                                    },
+                                    {
+                                        value: 'fixed',
+                                        label: 'Fixed slices',
+                                        helper: 'Split into equal numbered slices.',
+                                    },
+                                    {
+                                        value: 'open',
+                                        label: 'Open amount',
+                                        helper: 'Allow partial withdrawals up to a max count.',
+                                    },
+                                    {
+                                        value: 'named',
+                                        label: 'Named claim slices',
+                                        helper: 'Operator-defined slices shown during claim.',
+                                    },
+                                ]"
+                                :key="option.value"
+                                type="button"
+                                class="rounded-xl border p-3 text-left text-xs transition"
+                                :class="
+                                    sliceMode === option.value
+                                        ? 'border-cyan-400 bg-cyan-50 text-cyan-950 ring-2 ring-cyan-100 dark:border-cyan-500 dark:bg-cyan-950/40 dark:text-cyan-100 dark:ring-cyan-950'
+                                        : 'border-slate-200 bg-white text-slate-600 hover:border-cyan-200 hover:bg-cyan-50/50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-cyan-900'
+                                "
                                 :disabled="processing"
+                                :data-testid="`cockpit-quick-generate-slice-mode-${option.value}`"
+                                @click="setSliceMode(option.value)"
                             >
-                                <option value="whole">Whole amount</option>
-                                <option value="fixed">Fixed slices</option>
-                                <option value="open">Open slices</option>
-                            </select>
-                        </label>
-                        <label
-                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                <span class="block font-semibold">
+                                    {{ option.label }}
+                                </span>
+                                <span class="mt-1 block leading-snug">
+                                    {{ option.helper }}
+                                </span>
+                            </button>
+                        </div>
+
+                        <div
+                            class="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/60"
                         >
-                            Fixed slices
-                            <input
-                                v-model="slices"
-                                type="number"
-                                min="1"
-                                step="1"
-                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                data-testid="cockpit-quick-generate-fixed-slices"
-                                :disabled="processing || sliceMode !== 'fixed'"
-                            />
-                        </label>
-                        <label
-                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                            <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Fixed slices
+                                    <input
+                                        v-model="slices"
+                                        type="number"
+                                        min="1"
+                                        step="1"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-fixed-slices"
+                                        :disabled="
+                                            processing || sliceMode !== 'fixed'
+                                        "
+                                    />
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Max open claims
+                                    <input
+                                        v-model="maxSlices"
+                                        type="number"
+                                        min="1"
+                                        step="1"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-max-slices"
+                                        :disabled="
+                                            processing || sliceMode !== 'open'
+                                        "
+                                    />
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Minimum withdrawal
+                                    <input
+                                        v-model="minWithdrawal"
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-min-withdrawal"
+                                        :disabled="
+                                            processing || sliceMode !== 'open'
+                                        "
+                                    />
+                                </label>
+                            </div>
+                            <p
+                                class="text-[11px] leading-snug text-slate-500 dark:text-slate-400"
+                            >
+                                Fixed and open amount settings are submitted as
+                                cash slice instructions. Named claim slices use
+                                open-slice cash semantics plus named metadata.
+                            </p>
+                        </div>
+
+                        <div
+                            v-if="sliceMode === 'named'"
+                            class="rounded-xl border border-cyan-200 bg-cyan-50/70 p-3 dark:border-cyan-900/60 dark:bg-cyan-950/30"
+                            data-testid="cockpit-quick-generate-named-slices-panel"
                         >
-                            Max slices
-                            <input
-                                v-model="maxSlices"
-                                type="number"
-                                min="1"
-                                step="1"
-                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                :disabled="processing || sliceMode !== 'open'"
-                            />
-                        </label>
-                        <label
-                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                            <div
+                                class="flex flex-wrap items-start justify-between gap-3"
+                            >
+                                <div>
+                                    <p
+                                        class="text-xs font-semibold text-cyan-950 dark:text-cyan-100"
+                                    >
+                                        Named claim slices
+                                    </p>
+                                    <p
+                                        class="mt-1 text-[11px] text-cyan-800 dark:text-cyan-200"
+                                    >
+                                        These become selectable claim slices for
+                                        the beneficiary. Amounts must total the
+                                        Pay Code amount.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    class="rounded-full border border-cyan-200 bg-white px-3 py-1.5 text-xs font-semibold text-cyan-800 shadow-sm hover:bg-cyan-50 disabled:opacity-50 dark:border-cyan-800 dark:bg-slate-950 dark:text-cyan-100"
+                                    data-testid="cockpit-quick-generate-add-named-slice"
+                                    :disabled="processing"
+                                    @click="addNamedClaimSlice"
+                                >
+                                    Add slice
+                                </button>
+                            </div>
+
+                            <div class="mt-3 grid gap-3">
+                                <div
+                                    v-for="(slice, index) in namedClaimSlices"
+                                    :key="slice.id || index"
+                                    class="rounded-xl border border-cyan-100 bg-white p-3 shadow-sm dark:border-cyan-900/50 dark:bg-slate-950"
+                                    :data-testid="`cockpit-quick-generate-named-slice-${index}`"
+                                >
+                                    <div
+                                        class="mb-3 flex items-center justify-between gap-3"
+                                    >
+                                        <p
+                                            class="text-xs font-semibold text-slate-900 dark:text-slate-100"
+                                        >
+                                            Slice {{ index + 1 }}
+                                        </p>
+                                        <button
+                                            type="button"
+                                            class="text-[11px] font-semibold text-rose-600 disabled:text-slate-400 dark:text-rose-300"
+                                            :data-testid="`cockpit-quick-generate-remove-named-slice-${index}`"
+                                            :disabled="
+                                                processing ||
+                                                namedClaimSlices.length <= 1
+                                            "
+                                            @click="
+                                                removeNamedClaimSlice(index)
+                                            "
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
+                                    <div
+                                        class="grid grid-cols-1 gap-3 lg:grid-cols-6"
+                                    >
+                                        <label
+                                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 lg:col-span-1 dark:text-slate-300"
+                                        >
+                                            Amount
+                                            <input
+                                                :value="slice.amount"
+                                                type="number"
+                                                min="0.01"
+                                                step="0.01"
+                                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                                :data-testid="`cockpit-quick-generate-named-slice-${index}-amount`"
+                                                :disabled="processing"
+                                                @input="
+                                                    updateNamedClaimSlice(
+                                                        index,
+                                                        'amount',
+                                                        (
+                                                            $event.target as HTMLInputElement
+                                                        ).value,
+                                                    )
+                                                "
+                                            />
+                                        </label>
+                                        <label
+                                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 lg:col-span-2 dark:text-slate-300"
+                                        >
+                                            Description
+                                            <input
+                                                :value="slice.description"
+                                                type="text"
+                                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                                :data-testid="`cockpit-quick-generate-named-slice-${index}-description`"
+                                                :disabled="processing"
+                                                @input="
+                                                    updateNamedClaimSlice(
+                                                        index,
+                                                        'description',
+                                                        (
+                                                            $event.target as HTMLInputElement
+                                                        ).value,
+                                                    )
+                                                "
+                                            />
+                                        </label>
+                                        <label
+                                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 lg:col-span-1 dark:text-slate-300"
+                                        >
+                                            Tag
+                                            <input
+                                                :value="slice.tag"
+                                                type="text"
+                                                placeholder="food"
+                                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                                :data-testid="`cockpit-quick-generate-named-slice-${index}-tag`"
+                                                :disabled="processing"
+                                                @input="
+                                                    updateNamedClaimSlice(
+                                                        index,
+                                                        'tag',
+                                                        (
+                                                            $event.target as HTMLInputElement
+                                                        ).value,
+                                                    )
+                                                "
+                                            />
+                                        </label>
+                                        <label
+                                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 lg:col-span-1 dark:text-slate-300"
+                                        >
+                                            Claim on
+                                            <input
+                                                :value="slice.claim_on"
+                                                type="date"
+                                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                                :data-testid="`cockpit-quick-generate-named-slice-${index}-claim-on`"
+                                                :disabled="processing"
+                                                @input="
+                                                    updateNamedClaimSlice(
+                                                        index,
+                                                        'claim_on',
+                                                        (
+                                                            $event.target as HTMLInputElement
+                                                        ).value,
+                                                    )
+                                                "
+                                            />
+                                        </label>
+                                        <label
+                                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 lg:col-span-1 dark:text-slate-300"
+                                        >
+                                            Claim by
+                                            <input
+                                                :value="slice.claim_by"
+                                                type="date"
+                                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
+                                                :data-testid="`cockpit-quick-generate-named-slice-${index}-claim-by`"
+                                                :disabled="processing"
+                                                @input="
+                                                    updateNamedClaimSlice(
+                                                        index,
+                                                        'claim_by',
+                                                        (
+                                                            $event.target as HTMLInputElement
+                                                        ).value,
+                                                    )
+                                                "
+                                            />
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-3 grid gap-2 text-xs lg:grid-cols-3">
+                                <div
+                                    class="rounded-lg bg-white p-3 dark:bg-slate-950"
+                                >
+                                    <p
+                                        class="text-[11px] text-slate-500 dark:text-slate-400"
+                                    >
+                                        Slice total
+                                    </p>
+                                    <p
+                                        class="mt-1 font-semibold text-slate-950 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-named-slices-total"
+                                    >
+                                        {{ currency || 'PHP' }}
+                                        {{
+                                            namedClaimSliceTotal.toLocaleString(
+                                                'en-US',
+                                                {
+                                                    minimumFractionDigits: 2,
+                                                    maximumFractionDigits: 2,
+                                                },
+                                            )
+                                        }}
+                                    </p>
+                                </div>
+                                <div
+                                    class="rounded-lg bg-white p-3 dark:bg-slate-950"
+                                >
+                                    <p
+                                        class="text-[11px] text-slate-500 dark:text-slate-400"
+                                    >
+                                        Remaining
+                                    </p>
+                                    <p
+                                        class="mt-1 font-semibold"
+                                        :class="
+                                            Math.abs(namedClaimSliceRemaining) <
+                                            0.01
+                                                ? 'text-emerald-700 dark:text-emerald-300'
+                                                : 'text-rose-700 dark:text-rose-300'
+                                        "
+                                        data-testid="cockpit-quick-generate-named-slices-remaining"
+                                    >
+                                        {{ currency || 'PHP' }}
+                                        {{
+                                            namedClaimSliceRemaining.toLocaleString(
+                                                'en-US',
+                                                {
+                                                    minimumFractionDigits: 2,
+                                                    maximumFractionDigits: 2,
+                                                },
+                                            )
+                                        }}
+                                    </p>
+                                </div>
+                                <div
+                                    class="rounded-lg bg-white p-3 dark:bg-slate-950"
+                                >
+                                    <p
+                                        class="text-[11px] text-slate-500 dark:text-slate-400"
+                                    >
+                                        Payload mode
+                                    </p>
+                                    <p
+                                        class="mt-1 font-semibold text-cyan-800 dark:text-cyan-200"
+                                    >
+                                        open cash + named metadata
+                                    </p>
+                                </div>
+                            </div>
+                            <p
+                                v-if="namedClaimSliceValidationMessage"
+                                class="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-2 text-xs text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-200"
+                                data-testid="cockpit-quick-generate-named-slices-error"
+                            >
+                                {{ namedClaimSliceValidationMessage }}
+                            </p>
+                        </div>
+
+                        <div
+                            class="grid gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950 lg:grid-cols-3 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
+                            data-testid="cockpit-quick-generate-availability-summary"
                         >
-                            Minimum withdrawal
-                            <input
-                                v-model="minWithdrawal"
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                :disabled="processing || sliceMode !== 'open'"
-                            />
-                        </label>
+                            <div>
+                                <p class="font-semibold">Availability window</p>
+                                <p class="mt-1 text-[11px]">
+                                    Starts:
+                                    {{ startsAt || 'immediate' }}
+                                </p>
+                            </div>
+                            <div>
+                                <p class="font-semibold">Effective expiry</p>
+                                <p class="mt-1 text-[11px]">
+                                    {{ effectiveExpiry.label }}
+                                </p>
+                            </div>
+                            <div>
+                                <p class="font-semibold">Precedence</p>
+                                <p class="mt-1 text-[11px]">
+                                    Exact expiry wins over TTL; TTL wins over
+                                    preset.
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
