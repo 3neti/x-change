@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
-import CockpitManualCopyButton from './CockpitManualCopyButton.vue';
-import CockpitPhoneInput from './CockpitPhoneInput.vue';
 import type {
     CockpitQuickGenerateCampaignAttribution,
     CockpitQuickGenerateCampaignContext,
@@ -17,6 +15,8 @@ import type {
     CockpitQuickGenerateRuntimePricingPreflight,
     CockpitQuickGenerateTemplate,
 } from '../types';
+import CockpitManualCopyButton from './CockpitManualCopyButton.vue';
+import CockpitPhoneInput from './CockpitPhoneInput.vue';
 
 const props = defineProps<{
     mutationContract?: CockpitQuickGenerateMutationContract;
@@ -91,6 +91,8 @@ type NamedClaimSlice = {
     claim_on: string;
     claim_by: string;
 };
+
+const wholeSliceDescription = 'Whole Amount';
 
 type QuickGenerateTemplateDefaults = {
     amount: string;
@@ -607,9 +609,9 @@ const selectedMandates = ref<string[]>([]);
 const customMandates = ref('');
 const sliceMode = ref<SliceMode>('whole');
 const slices = ref('1');
-const maxSlices = ref('2');
-const minWithdrawal = ref('0');
-const namedClaimSlices = ref<NamedClaimSlice[]>([]);
+const maxSlices = ref('1');
+const minWithdrawal = ref(amount.value);
+const namedClaimSlices = ref<NamedClaimSlice[]>(defaultWholeNamedClaimSlices());
 const voucherType = ref<'redeemable' | 'payable' | 'settlement'>('redeemable');
 const targetAmount = ref('');
 const rulesMinPayment = ref('');
@@ -638,9 +640,25 @@ watch(selectedTemplate, (templateKey): void => {
     applyTemplateDefaults(templateKey);
 });
 
-watch(sliceMode, (mode): void => {
-    if (mode === 'named' && namedClaimSlices.value.length === 0) {
-        seedNamedClaimSlices();
+watch(amount, (): void => {
+    if (sliceMode.value === 'whole') {
+        configureWholeAmountSlices();
+    }
+
+    if (sliceMode.value === 'fixed') {
+        redistributeFixedNamedClaimSlices(fixedSliceCount());
+    }
+});
+
+watch(slices, (): void => {
+    if (sliceMode.value !== 'fixed') {
+        return;
+    }
+
+    const count = fixedSliceCount();
+
+    if (count !== namedClaimSlices.value.length) {
+        redistributeFixedNamedClaimSlices(count);
     }
 });
 
@@ -685,10 +703,7 @@ function applyTemplateDefaults(templateKey: string): void {
             ? ['settlement-readiness', 'manual-review']
             : [];
     customMandates.value = '';
-    sliceMode.value = defaults.sliceMode;
-    maxSlices.value = defaults.maxSlices;
-    minWithdrawal.value = defaults.minWithdrawal;
-    namedClaimSlices.value = [];
+    applyTemplateSliceDefaults(defaults);
     voucherType.value = defaults.voucherType;
     targetAmount.value = defaults.targetAmount;
     includeExecutionInstruction.value = defaults.includeExecutionInstruction;
@@ -1346,6 +1361,7 @@ const riderSplashPreviewIsHtml = computed<boolean>(() => {
 
 function buildSandboxedPreviewDocument(content: string): string {
     const body = content.trim() === '' ? '<p>No splash body yet.</p>' : content;
+
     return `<!doctype html>
 <html>
 <head>
@@ -1541,21 +1557,19 @@ const riderSummary = computed<Record<string, unknown>>(() => {
 });
 
 const normalizedNamedClaimSlices = computed(() => {
-    if (sliceMode.value !== 'named') {
-        return [];
-    }
-
     const source =
         namedClaimSlices.value.length > 0
             ? namedClaimSlices.value
-            : defaultNamedClaimSlices();
+            : defaultWholeNamedClaimSlices();
 
     return source.map((slice, index) => ({
         id: slice.id || namedClaimSliceId(index),
         amount: Number(slice.amount || 0),
         description:
             slice.description.trim() ||
-            (source.length === 1 ? 'Whole amount' : `Slice ${index + 1}`),
+            (source.length === 1
+                ? wholeSliceDescription
+                : defaultFixedSliceDescription(index)),
         tag: slice.tag.trim() || null,
         claim_on: slice.claim_on.trim() || null,
         claim_by: slice.claim_by.trim() || null,
@@ -2216,32 +2230,28 @@ function namedClaimSliceId(index: number): string {
     return `slice_${index + 1}`;
 }
 
-function defaultNamedClaimSlices(): NamedClaimSlice[] {
+function normalizedPayCodeAmount(): number {
     const normalizedAmount = Number(amount.value);
-    const firstAmount =
-        Number.isFinite(normalizedAmount) && normalizedAmount > 0
-            ? String(Number((normalizedAmount / 2).toFixed(2)))
-            : '';
-    const secondAmount =
-        Number.isFinite(normalizedAmount) && normalizedAmount > 0
-            ? String(
-                  Number((normalizedAmount - Number(firstAmount)).toFixed(2)),
-              )
-            : '';
 
+    return Number.isFinite(normalizedAmount) && normalizedAmount > 0
+        ? normalizedAmount
+        : 0;
+}
+
+function formatSliceAmount(value: number): string {
+    return String(Number(value.toFixed(2)));
+}
+
+function defaultFixedSliceDescription(index: number): string {
+    return `Slice ${index + 1}`;
+}
+
+function defaultWholeNamedClaimSlices(): NamedClaimSlice[] {
     return [
         {
             id: 'slice_1',
-            amount: firstAmount,
-            description: 'First release',
-            tag: '',
-            claim_on: '',
-            claim_by: '',
-        },
-        {
-            id: 'slice_2',
-            amount: secondAmount,
-            description: 'Second release',
+            amount: formatSliceAmount(normalizedPayCodeAmount()),
+            description: wholeSliceDescription,
             tag: '',
             claim_on: '',
             claim_by: '',
@@ -2249,24 +2259,161 @@ function defaultNamedClaimSlices(): NamedClaimSlice[] {
     ];
 }
 
-function seedNamedClaimSlices(): void {
-    namedClaimSlices.value = defaultNamedClaimSlices();
+function equalFixedNamedClaimSlices(count: number): NamedClaimSlice[] {
+    const safeCount = Math.max(1, Math.round(count));
+    const normalizedAmount = Number(amount.value);
+    const total =
+        Number.isFinite(normalizedAmount) && normalizedAmount > 0
+            ? normalizedAmount
+            : 0;
+    const base = Number((total / safeCount).toFixed(2));
+    let allocated = 0;
+
+    return Array.from({ length: safeCount }, (_, index) => {
+        const isLast = index === safeCount - 1;
+        const sliceAmount = isLast
+            ? Number((total - allocated).toFixed(2))
+            : base;
+
+        allocated = Number((allocated + sliceAmount).toFixed(2));
+
+        return {
+            id: namedClaimSliceId(index),
+            amount: formatSliceAmount(sliceAmount),
+            description: defaultFixedSliceDescription(index),
+            tag: '',
+            claim_on: '',
+            claim_by: '',
+        };
+    });
+}
+
+function configureWholeAmountSlices(): void {
+    sliceMode.value = 'whole';
+    slices.value = '1';
+    maxSlices.value = '1';
+    minWithdrawal.value = formatSliceAmount(normalizedPayCodeAmount());
+    namedClaimSlices.value = defaultWholeNamedClaimSlices();
+}
+
+function fixedSliceCount(): number {
+    const normalizedSlices = Number(slices.value);
+
+    return Number.isFinite(normalizedSlices) && normalizedSlices > 0
+        ? Math.round(normalizedSlices)
+        : Math.max(1, namedClaimSlices.value.length);
+}
+
+function applyTemplateSliceDefaults(
+    defaults: QuickGenerateTemplateDefaults,
+): void {
+    if (defaults.sliceMode === 'open') {
+        sliceMode.value = 'open';
+        slices.value = '1';
+        maxSlices.value = defaults.maxSlices;
+        minWithdrawal.value =
+            defaults.minWithdrawal === ''
+                ? formatSliceAmount(normalizedPayCodeAmount())
+                : defaults.minWithdrawal;
+        namedClaimSlices.value = defaultWholeNamedClaimSlices();
+
+        return;
+    }
+
+    configureWholeAmountSlices();
+}
+
+function redistributeFixedNamedClaimSlices(count: number): void {
+    const safeCount = Math.max(1, Math.round(count));
+
+    sliceMode.value = 'fixed';
+    slices.value = String(safeCount);
+    maxSlices.value = '1';
+    minWithdrawal.value = formatSliceAmount(normalizedPayCodeAmount());
+    namedClaimSlices.value = equalFixedNamedClaimSlices(safeCount);
+}
+
+function namedClaimSliceHasCustomMetadata(slice: NamedClaimSlice): boolean {
+    return (
+        slice.tag.trim() !== '' ||
+        slice.claim_on.trim() !== '' ||
+        slice.claim_by.trim() !== ''
+    );
+}
+
+function namedClaimSliceAmountEquals(
+    slice: NamedClaimSlice,
+    value: number,
+): boolean {
+    return Math.abs(Number(slice.amount || 0) - value) < 0.01;
+}
+
+function namedClaimSlicesAreEqualFixed(): boolean {
+    if (namedClaimSlices.value.length < 1) {
+        return false;
+    }
+
+    const total = namedClaimSlices.value.reduce(
+        (sum, slice) => sum + Number(slice.amount || 0),
+        0,
+    );
+
+    if (Math.abs(total - normalizedPayCodeAmount()) >= 0.01) {
+        return false;
+    }
+
+    const firstAmount = Number(namedClaimSlices.value[0]?.amount || 0);
+
+    return namedClaimSlices.value.every((slice, index) => {
+        return (
+            namedClaimSliceAmountEquals(slice, firstAmount) &&
+            slice.description.trim() === defaultFixedSliceDescription(index) &&
+            !namedClaimSliceHasCustomMetadata(slice)
+        );
+    });
+}
+
+function reconcileSliceModeFromNamedClaimSlices(): void {
+    const firstSlice = namedClaimSlices.value[0];
+
+    if (
+        namedClaimSlices.value.length === 1 &&
+        firstSlice !== undefined &&
+        namedClaimSliceAmountEquals(firstSlice, normalizedPayCodeAmount()) &&
+        firstSlice.description.trim() === wholeSliceDescription &&
+        !namedClaimSliceHasCustomMetadata(firstSlice)
+    ) {
+        sliceMode.value = 'whole';
+        slices.value = '1';
+        maxSlices.value = '1';
+        minWithdrawal.value = formatSliceAmount(normalizedPayCodeAmount());
+
+        return;
+    }
+
+    if (namedClaimSlicesAreEqualFixed()) {
+        sliceMode.value = 'fixed';
+        slices.value = String(namedClaimSlices.value.length);
+        maxSlices.value = '1';
+        minWithdrawal.value = formatSliceAmount(normalizedPayCodeAmount());
+
+        return;
+    }
+
+    sliceMode.value = 'named';
+    slices.value = String(Math.max(1, namedClaimSlices.value.length));
+    maxSlices.value = String(Math.max(1, namedClaimSlices.value.length));
+    minWithdrawal.value = formatSliceAmount(
+        Math.min(
+            ...normalizedNamedClaimSlices.value.map((slice) => slice.amount),
+        ),
+    );
 }
 
 function addNamedClaimSlice(): void {
-    const nextIndex = namedClaimSlices.value.length;
+    const nextCount = Math.max(2, namedClaimSlices.value.length + 1);
 
-    namedClaimSlices.value = [
-        ...namedClaimSlices.value,
-        {
-            id: namedClaimSliceId(nextIndex),
-            amount: '',
-            description: `Slice ${nextIndex + 1}`,
-            tag: '',
-            claim_on: '',
-            claim_by: '',
-        },
-    ];
+    redistributeFixedNamedClaimSlices(nextCount);
 }
 
 function removeNamedClaimSlice(index: number): void {
@@ -2280,6 +2427,7 @@ function removeNamedClaimSlice(index: number): void {
             ...slice,
             id: slice.id || namedClaimSliceId(sliceIndex),
         }));
+    reconcileSliceModeFromNamedClaimSlices();
 }
 
 function updateNamedClaimSlice(
@@ -2290,16 +2438,39 @@ function updateNamedClaimSlice(
     namedClaimSlices.value = namedClaimSlices.value.map((slice, sliceIndex) =>
         sliceIndex === index ? { ...slice, [key]: value } : slice,
     );
+    reconcileSliceModeFromNamedClaimSlices();
 }
 
 function setSliceMode(mode: string): void {
-    if (
-        mode === 'whole' ||
-        mode === 'fixed' ||
-        mode === 'open' ||
-        mode === 'named'
-    ) {
-        sliceMode.value = mode;
+    if (mode === 'whole') {
+        configureWholeAmountSlices();
+
+        return;
+    }
+
+    if (mode === 'fixed') {
+        redistributeFixedNamedClaimSlices(fixedSliceCount());
+
+        return;
+    }
+
+    if (mode === 'open') {
+        sliceMode.value = 'open';
+        maxSlices.value = maxSlices.value === '' ? '1' : maxSlices.value;
+        minWithdrawal.value =
+            minWithdrawal.value === ''
+                ? formatSliceAmount(normalizedPayCodeAmount())
+                : minWithdrawal.value;
+
+        return;
+    }
+
+    if (mode === 'named') {
+        sliceMode.value = 'named';
+
+        if (namedClaimSlices.value.length === 0) {
+            namedClaimSlices.value = defaultWholeNamedClaimSlices();
+        }
     }
 }
 
@@ -4274,7 +4445,6 @@ function dataGet(source: unknown, path: string[]): unknown {
                         </div>
 
                         <div
-                            v-if="sliceMode === 'named'"
                             class="rounded-xl border border-cyan-200 bg-cyan-50/70 p-3 dark:border-cyan-900/60 dark:bg-cyan-950/30"
                             data-testid="cockpit-quick-generate-named-slices-panel"
                         >
@@ -4285,14 +4455,16 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     <p
                                         class="text-xs font-semibold text-cyan-950 dark:text-cyan-100"
                                     >
-                                        Named claim slices
+                                        Claim slice builder
                                     </p>
                                     <p
                                         class="mt-1 text-[11px] text-cyan-800 dark:text-cyan-200"
                                     >
-                                        These become selectable claim slices for
-                                        the beneficiary. Amounts must total the
-                                        Pay Code amount.
+                                        These rows drive the selected mode:
+                                        Whole Amount for one full slice, Fixed
+                                        Slices for equal default rows, and Named
+                                        claim slices when you customize labels,
+                                        dates, tags, or amounts.
                                     </p>
                                 </div>
                                 <button
@@ -4517,7 +4689,15 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     <p
                                         class="mt-1 font-semibold text-cyan-800 dark:text-cyan-200"
                                     >
-                                        open cash + named metadata
+                                        {{
+                                            sliceMode === 'whole'
+                                                ? 'whole amount'
+                                                : sliceMode === 'fixed'
+                                                  ? 'fixed cash slices'
+                                                  : sliceMode === 'open'
+                                                    ? 'open cash slices'
+                                                    : 'open cash + named metadata'
+                                        }}
                                     </p>
                                 </div>
                             </div>
