@@ -62,6 +62,13 @@ type MandateOption = {
     helper: string;
 };
 
+type RiderUrlPreset = {
+    value: string;
+    label: string;
+    url: string;
+    helper: string;
+};
+
 type QuickGenerateTemplateDefaults = {
     amount: string;
     currency: string;
@@ -237,6 +244,51 @@ const mandateOptions: MandateOption[] = [
         value: 'settlement-readiness',
         label: 'Settlement readiness',
         helper: 'Settlement readiness must be confirmed before execution.',
+    },
+];
+
+const riderUrlPresets: RiderUrlPreset[] = [
+    {
+        value: '',
+        label: 'None',
+        url: '',
+        helper: 'No CTA destination URL.',
+    },
+    {
+        value: 'branch-instructions',
+        label: 'Branch Instructions',
+        url: 'https://example.com/branch-instructions',
+        helper: 'Common branch counter or manual release instructions.',
+    },
+    {
+        value: 'promo-page',
+        label: 'Promo / Ad Page',
+        url: 'https://example.com/promo',
+        helper: 'Marketing or campaign landing page.',
+    },
+    {
+        value: 'support-page',
+        label: 'Support / Help Page',
+        url: 'https://example.com/support',
+        helper: 'Beneficiary support and help instructions.',
+    },
+    {
+        value: 'kyc-instructions',
+        label: 'KYC Instructions',
+        url: 'https://example.com/kyc-instructions',
+        helper: 'Identity-verification instructions.',
+    },
+    {
+        value: 'remittance-status',
+        label: 'Remittance Status',
+        url: 'https://example.com/remittance-status',
+        helper: 'Status page for remittance-style payouts.',
+    },
+    {
+        value: 'custom',
+        label: 'Custom URL',
+        url: '',
+        helper: 'Type a custom destination URL below.',
     },
 ];
 
@@ -495,6 +547,7 @@ const timeWindowTimezone = ref('Asia/Manila');
 const timeLimitMinutes = ref('10');
 const timeTrackDuration = ref(true);
 const riderUrl = ref('');
+const riderUrlPreset = ref('');
 const riderRedirectTimeout = ref('');
 const riderSplash = ref('');
 const riderSplashTimeout = ref('3');
@@ -577,6 +630,7 @@ function applyTemplateDefaults(templateKey: string): void {
     feedbackEmail.value = defaults.feedbackEmail;
     feedbackWebhook.value = defaults.feedbackWebhook;
     riderUrl.value = defaults.riderUrl;
+    riderUrlPreset.value = '';
     riderSplash.value = defaults.riderSplash;
     riderSplashTimeout.value = defaults.riderSplashTimeout;
     cashType.value =
@@ -1107,6 +1161,22 @@ const feedbackSummary = computed<Record<string, unknown>>(() => {
         webhook: webhook === '' ? null : webhook,
     };
 });
+
+const selectedRiderUrlPreset = computed<RiderUrlPreset>(() => {
+    return (
+        riderUrlPresets.find(
+            (preset) => preset.value === riderUrlPreset.value,
+        ) ?? riderUrlPresets[0]
+    );
+});
+
+function applyRiderUrlPreset(): void {
+    if (selectedRiderUrlPreset.value.value === 'custom') {
+        return;
+    }
+
+    riderUrl.value = selectedRiderUrlPreset.value.url;
+}
 
 const riderSummary = computed<Record<string, unknown>>(() => {
     const message = purpose.value.trim();
@@ -2916,18 +2986,69 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 :disabled="processing"
                             />
                         </label>
+                        <div
+                            class="grid gap-3 rounded-xl border border-amber-100 bg-amber-50 p-3 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
+                            data-testid="cockpit-quick-generate-rider-cta-section"
+                        >
+                            <div>
+                                <p class="font-semibold">CTA / Destination</p>
+                                <p
+                                    class="mt-1 text-amber-800 dark:text-amber-200"
+                                >
+                                    Choose a frequent beneficiary destination or
+                                    type a custom URL. This still maps only to
+                                    <code>rider.url</code>.
+                                </p>
+                            </div>
+                            <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-amber-950 dark:text-amber-100"
+                                >
+                                    Frequently Used CTA
+                                    <select
+                                        v-model="riderUrlPreset"
+                                        class="w-full min-w-0 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-amber-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-rider-url-preset"
+                                        :disabled="processing"
+                                        @change="applyRiderUrlPreset"
+                                    >
+                                        <option
+                                            v-for="preset in riderUrlPresets"
+                                            :key="preset.value"
+                                            :value="preset.value"
+                                        >
+                                            {{ preset.label }}
+                                        </option>
+                                    </select>
+                                    <span
+                                        class="text-[11px] leading-snug font-normal text-amber-800 dark:text-amber-200"
+                                        data-testid="cockpit-quick-generate-rider-url-preset-helper"
+                                    >
+                                        {{ selectedRiderUrlPreset.helper }}
+                                    </span>
+                                </label>
+                                <label
+                                    class="grid min-w-0 gap-1 text-xs font-medium text-amber-950 dark:text-amber-100"
+                                >
+                                    CTA URL
+                                    <input
+                                        v-model="riderUrl"
+                                        type="url"
+                                        class="w-full min-w-0 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-amber-900/60 dark:bg-slate-900 dark:text-slate-50"
+                                        data-testid="cockpit-quick-generate-rider-url"
+                                        :disabled="processing"
+                                    />
+                                    <span
+                                        class="text-[11px] leading-snug font-normal text-amber-800 dark:text-amber-200"
+                                    >
+                                        The claim experience can redirect or
+                                        point the beneficiary to this
+                                        destination.
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
                         <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                            <label
-                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
-                            >
-                                Rider URL
-                                <input
-                                    v-model="riderUrl"
-                                    type="url"
-                                    class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                    :disabled="processing"
-                                />
-                            </label>
                             <label
                                 class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
