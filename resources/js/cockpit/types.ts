@@ -722,6 +722,16 @@ export type CockpitQuickGenerateReadModel = {
 
 export type CockpitQuickGeneratePageProps = {
     quick_generate_read_model?: CockpitQuickGenerateReadModel;
+    feedback_defaults?: CockpitQuickGenerateFeedbackDefaults;
+};
+
+export type CockpitQuickGenerateFeedbackDefaults = {
+    schema?: string;
+    email?: string | null;
+    mobile?: string | null;
+    webhook?: string | null;
+    source?: string;
+    read_only?: boolean;
 };
 
 export type CockpitPayCodeExplorerFilter = {

@@ -6,6 +6,7 @@ import type {
     CockpitQuickGenerateCampaignAttribution,
     CockpitQuickGenerateCampaignContext,
     CockpitQuickGenerateDraftContract,
+    CockpitQuickGenerateFeedbackDefaults,
     CockpitQuickGenerateMutationContract,
     CockpitQuickGeneratePostIssuanceNavigation,
     CockpitQuickGeneratePostIssuanceNavigationItem,
@@ -20,6 +21,7 @@ const props = defineProps<{
     mutationContract?: CockpitQuickGenerateMutationContract;
     draftContract?: CockpitQuickGenerateDraftContract;
     campaignContext?: CockpitQuickGenerateCampaignContext;
+    feedbackDefaults?: CockpitQuickGenerateFeedbackDefaults;
     templates: CockpitQuickGenerateTemplate[];
 }>();
 
@@ -76,6 +78,8 @@ type RiderOgPreview = {
     description: string;
     reference: string;
 };
+
+type FeedbackChannel = 'email' | 'mobile' | 'webhook';
 
 type QuickGenerateTemplateDefaults = {
     amount: string;
@@ -567,6 +571,14 @@ const riderOgSource = ref('');
 const feedbackEmail = ref('');
 const feedbackMobile = ref(recipientReference.value);
 const feedbackWebhook = ref('');
+const feedbackEmailEnabled = ref(false);
+const feedbackMobileEnabled = ref(false);
+const feedbackWebhookEnabled = ref(false);
+const autoFilledFeedback = ref<Record<FeedbackChannel, string | null>>({
+    email: null,
+    mobile: null,
+    webhook: null,
+});
 const prefix = ref('');
 const mask = ref('');
 const ttl = ref('');
@@ -688,11 +700,81 @@ const allowedMethods = computed<string[]>(() => {
         .filter((method) => method.length > 0);
 });
 
+const defaultFeedbackEmail = computed<string>(
+    () =>
+        stringValue(props.feedbackDefaults?.email)?.trim().toLowerCase() ?? '',
+);
+const defaultFeedbackMobile = computed<string>(() =>
+    normalizePhilippineMobile(
+        stringValue(props.feedbackDefaults?.mobile) ?? '',
+    ),
+);
+const defaultFeedbackWebhook = computed<string>(
+    () => stringValue(props.feedbackDefaults?.webhook)?.trim() ?? '',
+);
+
+const feedbackEmailError = computed<string | null>(() => {
+    const email = feedbackEmail.value.trim();
+
+    if (email === '') {
+        return feedbackEmailEnabled.value
+            ? 'Email feedback is selected. Enter a valid email address.'
+            : null;
+    }
+
+    return isValidEmail(email) ? null : 'Enter a valid email address.';
+});
+
+const normalizedFeedbackMobile = computed<string>(() =>
+    normalizePhilippineMobile(feedbackMobile.value),
+);
+
+const feedbackMobileError = computed<string | null>(() => {
+    const mobile = feedbackMobile.value.trim();
+
+    if (mobile === '') {
+        return feedbackMobileEnabled.value
+            ? 'SMS feedback is selected. Enter a Philippine mobile number.'
+            : null;
+    }
+
+    return normalizedFeedbackMobile.value === ''
+        ? 'Use a valid PH mobile number, e.g. 09173011987 or +639173011987.'
+        : null;
+});
+
+const feedbackWebhookError = computed<string | null>(() => {
+    const webhook = feedbackWebhook.value.trim();
+
+    if (webhook === '') {
+        return feedbackWebhookEnabled.value
+            ? 'Webhook feedback is selected. Enter a webhook URL.'
+            : null;
+    }
+
+    return isValidWebhookUrl(webhook)
+        ? null
+        : 'Use an http(s) webhook URL. javascript:, data:, and mailto: are blocked.';
+});
+
+const feedbackValidationErrors = computed<string[]>(() => {
+    return [
+        feedbackEmailError.value,
+        feedbackMobileError.value,
+        feedbackWebhookError.value,
+    ].filter((error): error is string => error !== null);
+});
+
+const feedbackValid = computed<boolean>(() => {
+    return feedbackValidationErrors.value.length === 0;
+});
+
 const canSubmit = computed<boolean>(() => {
     return (
         props.mutationContract?.runtime_enabled === true &&
         routeUrl.value !== null &&
-        allowedMethods.value.includes('POST')
+        allowedMethods.value.includes('POST') &&
+        feedbackValid.value
     );
 });
 
@@ -1163,8 +1245,9 @@ const verificationSummary = computed<string[]>(() => {
 
 const feedbackSummary = computed<Record<string, unknown>>(() => {
     const mobile =
-        feedbackMobile.value.trim() || recipientReference.value.trim();
-    const email = feedbackEmail.value.trim();
+        normalizedFeedbackMobile.value ||
+        normalizePhilippineMobile(recipientReference.value);
+    const email = feedbackEmail.value.trim().toLowerCase();
     const webhook = feedbackWebhook.value.trim();
 
     return {
@@ -1879,6 +1962,109 @@ function stringValue(value: unknown): string | null {
     const normalized = String(value).trim();
 
     return normalized === '' ? null : normalized;
+}
+
+function isValidEmail(value: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function normalizePhilippineMobile(value: string): string {
+    const normalized = value.trim().replace(/[\s().-]+/g, '');
+
+    if (/^\+639\d{9}$/.test(normalized)) {
+        return normalized;
+    }
+
+    if (/^639\d{9}$/.test(normalized)) {
+        return `+${normalized}`;
+    }
+
+    if (/^09\d{9}$/.test(normalized)) {
+        return `+63${normalized.slice(1)}`;
+    }
+
+    if (/^9\d{9}$/.test(normalized)) {
+        return `+63${normalized}`;
+    }
+
+    return '';
+}
+
+function isValidWebhookUrl(value: string): boolean {
+    try {
+        const url = new URL(value.trim());
+
+        return url.protocol === 'https:' || url.protocol === 'http:';
+    } catch {
+        return false;
+    }
+}
+
+function feedbackValue(channel: FeedbackChannel): string {
+    if (channel === 'email') {
+        return feedbackEmail.value.trim().toLowerCase();
+    }
+
+    if (channel === 'mobile') {
+        return normalizePhilippineMobile(feedbackMobile.value);
+    }
+
+    return feedbackWebhook.value.trim();
+}
+
+function defaultFeedbackValue(channel: FeedbackChannel): string {
+    if (channel === 'email') {
+        return defaultFeedbackEmail.value;
+    }
+
+    if (channel === 'mobile') {
+        return defaultFeedbackMobile.value;
+    }
+
+    return defaultFeedbackWebhook.value;
+}
+
+function setFeedbackValue(channel: FeedbackChannel, value: string): void {
+    if (channel === 'email') {
+        feedbackEmail.value = value;
+
+        return;
+    }
+
+    if (channel === 'mobile') {
+        feedbackMobile.value = value;
+
+        return;
+    }
+
+    feedbackWebhook.value = value;
+}
+
+function toggleFeedbackChannel(
+    channel: FeedbackChannel,
+    enabled: boolean,
+): void {
+    const current = feedbackValue(channel);
+    const lastAuto = autoFilledFeedback.value[channel];
+
+    if (!enabled) {
+        if (lastAuto !== null && current === lastAuto) {
+            setFeedbackValue(channel, '');
+        }
+
+        autoFilledFeedback.value[channel] = null;
+
+        return;
+    }
+
+    const fallback = defaultFeedbackValue(channel);
+
+    if (fallback === '') {
+        return;
+    }
+
+    setFeedbackValue(channel, fallback);
+    autoFilledFeedback.value[channel] = fallback;
 }
 
 function objectValue(value: unknown): Record<string, unknown> | null {
@@ -3523,41 +3709,204 @@ function dataGet(source: unknown, path: string[]): unknown {
                             </p>
                         </div>
                     </div>
-                    <div class="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
-                        <label
-                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                    <div
+                        class="mt-4 grid gap-3"
+                        data-testid="cockpit-quick-generate-feedback-channels"
+                    >
+                        <div
+                            class="grid gap-2 rounded-xl border border-violet-100 bg-violet-50 p-3 text-xs text-violet-950 dark:border-violet-900/60 dark:bg-violet-950/40 dark:text-violet-100"
                         >
-                            Feedback email
-                            <input
-                                v-model="feedbackEmail"
-                                type="email"
-                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                :disabled="processing"
-                            />
-                        </label>
-                        <label
-                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
-                        >
-                            Feedback mobile
-                            <input
-                                v-model="feedbackMobile"
-                                type="tel"
-                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                data-testid="cockpit-quick-generate-feedback-mobile"
-                                :disabled="processing"
-                            />
-                        </label>
-                        <label
-                            class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
-                        >
-                            Feedback webhook
-                            <input
-                                v-model="feedbackWebhook"
-                                type="url"
-                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
-                                :disabled="processing"
-                            />
-                        </label>
+                            <p class="font-semibold">
+                                Quick-fill feedback recipients
+                            </p>
+                            <p class="text-violet-800 dark:text-violet-200">
+                                Select a channel to populate it from the
+                                authenticated operator defaults. Values remain
+                                editable and are saved only as feedback intent;
+                                Cockpit does not deliver messages here.
+                            </p>
+                            <div class="grid gap-2 lg:grid-cols-3">
+                                <label
+                                    class="flex items-start gap-2 rounded-lg border border-violet-200 bg-white p-2 dark:border-violet-900/60 dark:bg-slate-950"
+                                >
+                                    <input
+                                        v-model="feedbackEmailEnabled"
+                                        type="checkbox"
+                                        class="mt-0.5 rounded border-violet-300"
+                                        data-testid="cockpit-quick-generate-feedback-email-toggle"
+                                        :disabled="processing"
+                                        @change="
+                                            toggleFeedbackChannel(
+                                                'email',
+                                                feedbackEmailEnabled,
+                                            )
+                                        "
+                                    />
+                                    <span>
+                                        <span class="font-semibold"
+                                            >Use my email</span
+                                        >
+                                        <span
+                                            class="block text-[11px] text-violet-700 dark:text-violet-200"
+                                        >
+                                            {{
+                                                defaultFeedbackEmail ||
+                                                'No operator email available'
+                                            }}
+                                        </span>
+                                    </span>
+                                </label>
+                                <label
+                                    class="flex items-start gap-2 rounded-lg border border-violet-200 bg-white p-2 dark:border-violet-900/60 dark:bg-slate-950"
+                                >
+                                    <input
+                                        v-model="feedbackMobileEnabled"
+                                        type="checkbox"
+                                        class="mt-0.5 rounded border-violet-300"
+                                        data-testid="cockpit-quick-generate-feedback-mobile-toggle"
+                                        :disabled="processing"
+                                        @change="
+                                            toggleFeedbackChannel(
+                                                'mobile',
+                                                feedbackMobileEnabled,
+                                            )
+                                        "
+                                    />
+                                    <span>
+                                        <span class="font-semibold"
+                                            >Use my mobile</span
+                                        >
+                                        <span
+                                            class="block text-[11px] text-violet-700 dark:text-violet-200"
+                                        >
+                                            {{
+                                                defaultFeedbackMobile ||
+                                                'No operator mobile available'
+                                            }}
+                                        </span>
+                                    </span>
+                                </label>
+                                <label
+                                    class="flex items-start gap-2 rounded-lg border border-violet-200 bg-white p-2 dark:border-violet-900/60 dark:bg-slate-950"
+                                >
+                                    <input
+                                        v-model="feedbackWebhookEnabled"
+                                        type="checkbox"
+                                        class="mt-0.5 rounded border-violet-300"
+                                        data-testid="cockpit-quick-generate-feedback-webhook-toggle"
+                                        :disabled="processing"
+                                        @change="
+                                            toggleFeedbackChannel(
+                                                'webhook',
+                                                feedbackWebhookEnabled,
+                                            )
+                                        "
+                                    />
+                                    <span>
+                                        <span class="font-semibold"
+                                            >Use operator webhook</span
+                                        >
+                                        <span
+                                            class="block truncate text-[11px] text-violet-700 dark:text-violet-200"
+                                        >
+                                            {{
+                                                defaultFeedbackWebhook ||
+                                                'No default webhook available'
+                                            }}
+                                        </span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                            <label
+                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                            >
+                                Feedback email
+                                <input
+                                    v-model="feedbackEmail"
+                                    type="email"
+                                    class="w-full min-w-0 rounded-xl border bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:bg-slate-900 dark:text-slate-50"
+                                    :class="
+                                        feedbackEmailError
+                                            ? 'border-rose-300 dark:border-rose-700'
+                                            : 'border-slate-200 dark:border-slate-800'
+                                    "
+                                    data-testid="cockpit-quick-generate-feedback-email"
+                                    :disabled="processing"
+                                />
+                                <span
+                                    v-if="feedbackEmailError"
+                                    class="text-[11px] font-normal text-rose-600 dark:text-rose-300"
+                                    data-testid="cockpit-quick-generate-feedback-email-error"
+                                >
+                                    {{ feedbackEmailError }}
+                                </span>
+                            </label>
+                            <label
+                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
+                            >
+                                Feedback mobile
+                                <input
+                                    v-model="feedbackMobile"
+                                    type="tel"
+                                    class="w-full min-w-0 rounded-xl border bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:bg-slate-900 dark:text-slate-50"
+                                    :class="
+                                        feedbackMobileError
+                                            ? 'border-rose-300 dark:border-rose-700'
+                                            : 'border-slate-200 dark:border-slate-800'
+                                    "
+                                    data-testid="cockpit-quick-generate-feedback-mobile"
+                                    :disabled="processing"
+                                />
+                                <span
+                                    v-if="feedbackMobileError"
+                                    class="text-[11px] font-normal text-rose-600 dark:text-rose-300"
+                                    data-testid="cockpit-quick-generate-feedback-mobile-error"
+                                >
+                                    {{ feedbackMobileError }}
+                                </span>
+                                <span
+                                    v-else-if="normalizedFeedbackMobile !== ''"
+                                    class="text-[11px] font-normal text-emerald-700 dark:text-emerald-300"
+                                    data-testid="cockpit-quick-generate-feedback-mobile-normalized"
+                                >
+                                    Normalized:
+                                    {{ normalizedFeedbackMobile }}
+                                </span>
+                            </label>
+                            <label
+                                class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 lg:col-span-2 dark:text-slate-300"
+                            >
+                                Feedback webhook
+                                <input
+                                    v-model="feedbackWebhook"
+                                    type="url"
+                                    class="w-full min-w-0 rounded-xl border bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:bg-slate-900 dark:text-slate-50"
+                                    :class="
+                                        feedbackWebhookError
+                                            ? 'border-rose-300 dark:border-rose-700'
+                                            : 'border-slate-200 dark:border-slate-800'
+                                    "
+                                    data-testid="cockpit-quick-generate-feedback-webhook"
+                                    :disabled="processing"
+                                />
+                                <span
+                                    v-if="feedbackWebhookError"
+                                    class="text-[11px] font-normal text-rose-600 dark:text-rose-300"
+                                    data-testid="cockpit-quick-generate-feedback-webhook-error"
+                                >
+                                    {{ feedbackWebhookError }}
+                                </span>
+                                <span
+                                    v-else
+                                    class="text-[11px] font-normal text-slate-500 dark:text-slate-400"
+                                >
+                                    Generated defaults are editable. No webhook
+                                    receiver route is registered by this UI.
+                                </span>
+                            </label>
+                        </div>
                     </div>
                 </section>
 
