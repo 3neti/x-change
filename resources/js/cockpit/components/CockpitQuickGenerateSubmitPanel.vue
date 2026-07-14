@@ -770,6 +770,18 @@ const feedbackValid = computed<boolean>(() => {
     return feedbackValidationErrors.value.length === 0;
 });
 
+watch(feedbackEmail, (): void => {
+    feedbackEmailEnabled.value = feedbackMatchesDefault('email');
+});
+
+watch(feedbackMobile, (): void => {
+    feedbackMobileEnabled.value = feedbackMatchesDefault('mobile');
+});
+
+watch(feedbackWebhook, (): void => {
+    feedbackWebhookEnabled.value = feedbackMatchesDefault('webhook');
+});
+
 const canSubmit = computed<boolean>(() => {
     return (
         props.mutationContract?.runtime_enabled === true &&
@@ -2023,6 +2035,13 @@ function defaultFeedbackValue(channel: FeedbackChannel): string {
     }
 
     return defaultFeedbackWebhook.value;
+}
+
+function feedbackMatchesDefault(channel: FeedbackChannel): boolean {
+    const current = feedbackValue(channel);
+    const fallback = defaultFeedbackValue(channel);
+
+    return current !== '' && fallback !== '' && current === fallback;
 }
 
 function setFeedbackValue(channel: FeedbackChannel, value: string): void {
@@ -3726,9 +3745,9 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 editable and are saved only as feedback intent;
                                 Cockpit does not deliver messages here.
                             </p>
-                            <div class="grid gap-2 lg:grid-cols-3">
+                            <div class="grid gap-2 lg:grid-cols-2">
                                 <label
-                                    class="flex items-start gap-2 rounded-lg border border-violet-200 bg-white p-2 dark:border-violet-900/60 dark:bg-slate-950"
+                                    class="flex items-start gap-2 rounded-lg border border-violet-200 bg-white p-2 lg:row-start-2 dark:border-violet-900/60 dark:bg-slate-950"
                                 >
                                     <input
                                         v-model="feedbackEmailEnabled"
@@ -3803,12 +3822,12 @@ function dataGet(source: unknown, path: string[]): unknown {
                                             )
                                         "
                                     />
-                                    <span>
+                                    <span class="min-w-0">
                                         <span class="font-semibold"
                                             >Use operator webhook</span
                                         >
                                         <span
-                                            class="block truncate text-[11px] text-violet-700 dark:text-violet-200"
+                                            class="block text-[11px] break-all text-violet-700 dark:text-violet-200"
                                         >
                                             {{
                                                 defaultFeedbackWebhook ||
