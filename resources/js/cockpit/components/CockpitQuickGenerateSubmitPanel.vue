@@ -1199,6 +1199,10 @@ function escapeHtml(value: string): string {
         .replaceAll("'", '&#039;');
 }
 
+function looksLikeHtml(value: string): boolean {
+    return /<\/?[a-z][\s\S]*>/i.test(value);
+}
+
 const riderSplashContent = computed<string>(() => {
     const headline = riderSplashHeadline.value.trim();
     const body = riderSplash.value.trim();
@@ -1210,11 +1214,74 @@ const riderSplashContent = computed<string>(() => {
 
     return [
         headline === '' ? null : `<h1>${escapeHtml(headline)}</h1>`,
-        body === '' ? null : `<p>${escapeHtml(body)}</p>`,
+        body === ''
+            ? null
+            : looksLikeHtml(body)
+              ? body
+              : `<p>${escapeHtml(body)}</p>`,
         cta === '' ? null : `<p><strong>${escapeHtml(cta)}</strong></p>`,
     ]
         .filter((item): item is string => item !== null)
         .join('\n');
+});
+
+const riderSplashPreviewIsHtml = computed<boolean>(() => {
+    return looksLikeHtml(riderSplash.value.trim());
+});
+
+const riderSplashPreviewDocument = computed<string>(() => {
+    const body = riderSplashPreviewIsHtml.value
+        ? riderSplashContent.value
+        : `<p>${escapeHtml(riderSplashContent.value || 'No splash body yet.')}</p>`;
+
+    return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; font-src data:; base-uri 'none'; form-action 'none';" />
+<style>
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; background: #020617; color: #f8fafc; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+body { padding: 0; }
+img { max-width: 100%; height: auto; }
+.text-center { text-align: center; }
+.mx-auto { margin-left: auto; margin-right: auto; }
+.relative { position: relative; }
+.absolute { position: absolute; }
+.inset-0 { inset: 0; }
+.pointer-events-none { pointer-events: none; }
+.flex { display: flex; }
+.items-center { align-items: center; }
+.justify-end { justify-content: flex-end; }
+.overflow-hidden { overflow: hidden; }
+.rounded-lg { border-radius: 0.5rem; }
+.shadow-lg { box-shadow: 0 10px 15px -3px rgba(0,0,0,.3), 0 4px 6px -4px rgba(0,0,0,.3); }
+.bg-black { background: #000; }
+.text-white { color: #fff; }
+.font-serif { font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif; }
+.font-normal { font-weight: 400; }
+.italic { font-style: italic; }
+.tracking-wide { letter-spacing: .025em; }
+.tracking-widest { letter-spacing: .1em; }
+.text-xs { font-size: .75rem; line-height: 1rem; }
+.text-sm { font-size: .875rem; line-height: 1.25rem; }
+.text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+.text-2xl { font-size: 1.5rem; line-height: 2rem; }
+.mb-3 { margin-bottom: .75rem; }
+.mb-8 { margin-bottom: 2rem; }
+h1, h2, h3, p { margin-top: 0; }
+@media (min-width: 640px) {
+    .sm\\:text-sm { font-size: .875rem; line-height: 1.25rem; }
+    .sm\\:text-2xl { font-size: 1.5rem; line-height: 2rem; }
+    .sm\\:text-4xl { font-size: 2.25rem; line-height: 2.5rem; }
+}
+</style>
+</head>
+<body>
+${body}
+</body>
+</html>`;
 });
 
 const riderOgPreview = computed<RiderOgPreview>(() => {
@@ -3226,32 +3293,49 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     >
                                         Local splash preview
                                     </p>
+                                    <p
+                                        class="mt-1 text-[11px] leading-snug text-orange-800 dark:text-orange-200"
+                                    >
+                                        HTML is rendered in a sandboxed preview
+                                        iframe when tags are detected.
+                                    </p>
                                     <div class="mt-2 grid gap-1">
-                                        <p
-                                            v-if="
-                                                riderSplashHeadline.trim() !==
-                                                ''
-                                            "
-                                            class="text-sm font-bold text-slate-950 dark:text-slate-50"
-                                        >
-                                            {{ riderSplashHeadline }}
-                                        </p>
-                                        <p
-                                            class="text-xs leading-snug whitespace-pre-line text-slate-700 dark:text-slate-300"
-                                        >
-                                            {{
-                                                riderSplash.trim() ||
-                                                'No splash body yet.'
-                                            }}
-                                        </p>
-                                        <p
-                                            v-if="
-                                                riderSplashCtaText.trim() !== ''
-                                            "
-                                            class="mt-2 inline-flex w-fit rounded-full bg-orange-100 px-3 py-1 text-[11px] font-semibold text-orange-800 dark:bg-orange-900/60 dark:text-orange-100"
-                                        >
-                                            {{ riderSplashCtaText }}
-                                        </p>
+                                        <iframe
+                                            v-if="riderSplashPreviewIsHtml"
+                                            title="Sandboxed local splash HTML preview"
+                                            sandbox=""
+                                            class="h-80 w-full rounded-lg border border-orange-200 bg-slate-950 dark:border-orange-900/60"
+                                            data-testid="cockpit-quick-generate-rider-splash-html-preview"
+                                            :srcdoc="riderSplashPreviewDocument"
+                                        />
+                                        <template v-else>
+                                            <p
+                                                v-if="
+                                                    riderSplashHeadline.trim() !==
+                                                    ''
+                                                "
+                                                class="text-sm font-bold text-slate-950 dark:text-slate-50"
+                                            >
+                                                {{ riderSplashHeadline }}
+                                            </p>
+                                            <p
+                                                class="text-xs leading-snug whitespace-pre-line text-slate-700 dark:text-slate-300"
+                                            >
+                                                {{
+                                                    riderSplash.trim() ||
+                                                    'No splash body yet.'
+                                                }}
+                                            </p>
+                                            <p
+                                                v-if="
+                                                    riderSplashCtaText.trim() !==
+                                                    ''
+                                                "
+                                                class="mt-2 inline-flex w-fit rounded-full bg-orange-100 px-3 py-1 text-[11px] font-semibold text-orange-800 dark:bg-orange-900/60 dark:text-orange-100"
+                                            >
+                                                {{ riderSplashCtaText }}
+                                            </p>
+                                        </template>
                                     </div>
                                 </div>
                             </div>
