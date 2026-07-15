@@ -307,3 +307,14 @@ Execution Engine migration slices 0–9 are now scaffolded. Next work should be 
 - No execution behavior, journal writing, action execution, feedback delivery, provider call, voucher mutation, wallet access, or money movement was added.
 - Report: `reports/013-cockpit-execution-handoff-profile-projection.md`.
 - Next recommended slice: durable action/feedback handoff evidence projection decision.
+
+## 2026-07-15 Update — Durable Action / Feedback Handoff Evidence Decision
+
+- Added explicit durable-evidence decision metadata to Cockpit execution handoff profiles.
+- Decision: Cockpit may project `journal = recorded` from x-journal, but must not project exact `action = composed` or `feedback = planned` from runtime configuration alone.
+- Reason: the x-journal `execution.result.recorded` entry is persisted before action and feedback handoffs run, so it cannot truthfully contain final action/feedback handoff results.
+- Configured x-action/x-feedback remain visible as `enabled_not_projected`.
+- Durable evidence now records action/feedback as `deferred` until a future x-action read model, x-feedback read model, journal event, durable handoff evidence record, or post-pipeline summary event exists.
+- No new journal event, action execution, feedback delivery, Cockpit mutation, provider call, voucher mutation, wallet access, or money movement was added.
+- Report: `reports/014-durable-action-feedback-handoff-evidence-decision.md`.
+- Next recommended slice: durable handoff evidence source selection.

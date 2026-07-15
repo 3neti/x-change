@@ -457,6 +457,7 @@ class OptionalCockpitIntegrationReadModels
                 'sends_feedback' => false,
                 'moves_money' => false,
             ],
+            'durable_evidence' => $this->durableHandoffEvidenceDecision($targets),
         ];
     }
 
@@ -465,6 +466,49 @@ class OptionalCockpitIntegrationReadModels
         return config("x-change.execution_result_handoffs.{$key}") === $enabledValue
             ? $enabledStatus
             : 'not_wired';
+    }
+
+    /**
+     * @param  array<string, string>  $targets
+     * @return array<string, array<string, mixed>>
+     */
+    private function durableHandoffEvidenceDecision(array $targets): array
+    {
+        return [
+            'journal' => [
+                'status' => 'projected',
+                'source' => 'x-journal.execution.result.recorded',
+                'durable' => true,
+                'reason' => 'The Cockpit activity row is projected from a persisted execution journal entry.',
+            ],
+            'action' => [
+                'status' => $targets['action'] === 'not_wired' ? 'not_wired' : 'deferred',
+                'source' => null,
+                'durable' => false,
+                'reason' => $targets['action'] === 'not_wired'
+                    ? 'x-action execution-result handoff is not configured.'
+                    : 'x-action handoff evidence is not persisted in the execution.result.recorded journal entry.',
+                'required_source' => 'future x-action read model, journal event, or durable handoff evidence record',
+            ],
+            'feedback' => [
+                'status' => $targets['feedback'] === 'not_wired' ? 'not_wired' : 'deferred',
+                'source' => null,
+                'durable' => false,
+                'reason' => $targets['feedback'] === 'not_wired'
+                    ? 'x-feedback execution-result handoff is not configured.'
+                    : 'x-feedback handoff evidence is not persisted in the execution.result.recorded journal entry.',
+                'required_source' => 'future x-feedback read model, journal event, or durable handoff evidence record',
+            ],
+            'cockpit_activity' => [
+                'status' => $targets['cockpit_activity'] === 'not_wired' ? 'not_wired' : 'deferred',
+                'source' => null,
+                'durable' => false,
+                'reason' => $targets['cockpit_activity'] === 'not_wired'
+                    ? 'Execution-result Cockpit activity handoff is not configured.'
+                    : 'Execution-result Cockpit activity handoff evidence is not projected from durable activity storage yet.',
+                'required_source' => 'future durable Cockpit activity record',
+            ],
+        ];
     }
 
     private function actionSubject(CockpitReadModelQueryData $query): mixed

@@ -69,7 +69,13 @@ it('projects x-journal execution result records into cockpit dashboard activity'
         ->and($executionActivity['metadata']['execution_handoff_profile']['performed_side_effect_targets'])->toBe(['journal'])
         ->and($executionActivity['metadata']['execution_handoff_profile']['projection']['read_only'])->toBeTrue()
         ->and($executionActivity['metadata']['execution_handoff_profile']['projection']['executes_actions'])->toBeFalse()
-        ->and($executionActivity['metadata']['execution_handoff_profile']['projection']['sends_feedback'])->toBeFalse();
+        ->and($executionActivity['metadata']['execution_handoff_profile']['projection']['sends_feedback'])->toBeFalse()
+        ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['journal']['status'])->toBe('projected')
+        ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['journal']['durable'])->toBeTrue()
+        ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['action']['status'])->toBe('not_wired')
+        ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['action']['durable'])->toBeFalse()
+        ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['feedback']['status'])->toBe('not_wired')
+        ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['feedback']['durable'])->toBeFalse();
 });
 
 it('projects combined execution handoff profile status into cockpit dashboard activity', function () {
@@ -125,5 +131,21 @@ it('projects combined execution handoff profile status into cockpit dashboard ac
             'executes_actions' => false,
             'sends_feedback' => false,
             'moves_money' => false,
-        ]);
+        ])
+        ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['journal'])->toBe([
+            'status' => 'projected',
+            'source' => 'x-journal.execution.result.recorded',
+            'durable' => true,
+            'reason' => 'The Cockpit activity row is projected from a persisted execution journal entry.',
+        ])
+        ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['action']['status'])->toBe('deferred')
+        ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['action']['source'])->toBeNull()
+        ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['action']['durable'])->toBeFalse()
+        ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['action']['required_source'])
+        ->toBe('future x-action read model, journal event, or durable handoff evidence record')
+        ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['feedback']['status'])->toBe('deferred')
+        ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['feedback']['source'])->toBeNull()
+        ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['feedback']['durable'])->toBeFalse()
+        ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['feedback']['required_source'])
+        ->toBe('future x-feedback read model, journal event, or durable handoff evidence record');
 });

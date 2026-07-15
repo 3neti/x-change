@@ -4,12 +4,20 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Cockpit Next Capability Selection — Feedback delivery, campaign dispatch, short links, QR assets, print artifacts, or external evidence runtime authorization
-Status: Manual distribution external evidence planning track complete / runtime deferred
-Last updated: 2026-07-13
+Current slice: Execution Integration Slice 7 — Durable action/feedback handoff evidence projection decision
+Status: Cockpit execution activity projection remains read-only; action/feedback durable evidence deferred
+Last updated: 2026-07-15
 
 ## Completed
 
+- Completed Execution Integration Slice 7 — Durable action/feedback handoff evidence projection decision:
+  - Added `durable_evidence` metadata to Cockpit execution handoff profiles.
+  - Confirmed Cockpit may project durable x-journal execution evidence from `execution.result.recorded`.
+  - Confirmed Cockpit must not project exact x-action/x-feedback handoff results until durable evidence exists.
+  - Configured x-action/x-feedback remain visible only as `enabled_not_projected` with durable evidence status `deferred`.
+  - No Cockpit mutation, journal write, action execution, feedback delivery, provider call, voucher mutation, wallet access, or money movement was added.
+  - Report: `../architecture/execution-engine/reports/014-durable-action-feedback-handoff-evidence-decision.md`.
+  - Next recommended checkpoint: Execution Integration Slice 8 — Durable handoff evidence source selection.
 - Completed Cockpit Wave 72 — Manual Distribution External Evidence Runtime Implementation Decision:
   - Closed the manual distribution external evidence planning track.
   - Recorded decision: `planning-track-complete / runtime-deferred`.

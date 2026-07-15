@@ -2146,3 +2146,13 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - The projection remains read-only and does not execute actions, send feedback, write journal entries, call providers, mutate vouchers, or move money.
 - Verification report: `execution-engine/reports/013-cockpit-execution-handoff-profile-projection.md`.
 - Next integration level: durable action/feedback handoff evidence projection decision.
+
+## 2026-07-15 Update — Durable Action / Feedback Handoff Evidence Decision
+
+- Cockpit execution activity profiles now include a `durable_evidence` decision block per handoff target.
+- x-journal execution evidence remains durable and projected.
+- x-action and x-feedback are not projected as exact durable outcomes yet; configured handoffs remain `enabled_not_projected` with durable evidence status `deferred`.
+- This prevents Cockpit from overstating transient lifecycle JSON results as persisted operator evidence.
+- Future integration must select a durable source before Cockpit can show exact action/feedback handoff outcomes: x-action read model, x-feedback read model, journal event, durable handoff evidence record, or post-pipeline summary journal event.
+- Verification report: `execution-engine/reports/014-durable-action-feedback-handoff-evidence-decision.md`.
+- Next integration level: durable handoff evidence source selection.
