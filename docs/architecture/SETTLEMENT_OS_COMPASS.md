@@ -2165,3 +2165,13 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - The selected path keeps x-journal as the system log while preserving x-action as workflow continuation planning and x-feedback as communication planning.
 - Verification report: `execution-engine/reports/015-durable-handoff-evidence-source-selection.md`.
 - Next integration level: post-pipeline handoff summary journal event contract.
+
+## 2026-07-15 Update — Post-Pipeline Handoff Summary Journal Event Contract
+
+- Defined the safe payload contract for future `execution.handoff.summary.recorded` journal entries.
+- Added mapper/data classes in x-change for converting completed execution handoff summaries into journal-ready payloads.
+- The contract can carry journal, action, feedback, and Cockpit handoff evidence without making x-action or x-feedback lifecycle truth owners.
+- Sensitive metadata is redacted before it can become journal payload.
+- No writer or runtime event emission was added yet.
+- Verification report: `execution-engine/reports/016-post-pipeline-handoff-summary-journal-event-contract.md`.
+- Next integration level: post-pipeline handoff summary x-journal writer boundary.

@@ -330,3 +330,14 @@ Execution Engine migration slices 0–9 are now scaffolded. Next work should be 
 - This is a source-selection slice only; no new journal writer, action execution, feedback delivery, Cockpit mutation, provider call, voucher mutation, wallet access, or money movement was added.
 - Report: `reports/015-durable-handoff-evidence-source-selection.md`.
 - Next recommended slice: post-pipeline handoff summary journal event contract.
+
+## 2026-07-15 Update — Post-Pipeline Handoff Summary Journal Event Contract
+
+- Added `ExecutionResultHandoffSummaryJournalPayloadData`.
+- Added `ExecutionResultHandoffSummaryJournalPayloadMapper`.
+- Defined the future post-pipeline event contract for `execution.handoff.summary.recorded`.
+- The payload includes execution ID, voucher code, correlation ID, aggregate handoff profile, and safe journal/action/feedback/Cockpit handoff evidence.
+- The mapper redacts raw provider payloads, raw handoff payloads, wallet/funding data, recipient secrets, OTPs, transport secrets, auth headers, tokens, and other unsafe transport fields.
+- No journal writer, event recording, action execution, feedback delivery, Cockpit mutation, provider call, voucher mutation, wallet access, or money movement was added.
+- Report: `reports/016-post-pipeline-handoff-summary-journal-event-contract.md`.
+- Next recommended slice: post-pipeline handoff summary x-journal writer boundary.

@@ -4,12 +4,19 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Execution Integration Slice 8 — Durable handoff evidence source selection
-Status: Cockpit execution activity projection remains read-only; post-pipeline summary journal event selected but not implemented
+Current slice: Execution Integration Slice 9 — Post-pipeline handoff summary journal event contract
+Status: Cockpit execution activity projection remains read-only; summary journal event contract defined but not written
 Last updated: 2026-07-15
 
 ## Completed
 
+- Completed Execution Integration Slice 9 — Post-pipeline handoff summary journal event contract:
+  - Added safe payload contract and mapper for future `execution.handoff.summary.recorded` journal entries.
+  - The contract can carry completed journal/action/feedback/Cockpit handoff evidence after the handoff pipeline finishes.
+  - The mapper redacts raw handoff payloads, provider payloads, wallet/funding data, recipient secrets, OTPs, transport secrets, auth headers, and tokens.
+  - Confirmed no journal writer, Cockpit mutation, action execution, feedback delivery, provider call, voucher mutation, wallet access, or money movement was added.
+  - Report: `../architecture/execution-engine/reports/016-post-pipeline-handoff-summary-journal-event-contract.md`.
+  - Next recommended checkpoint: Execution Integration Slice 10 — Post-pipeline handoff summary x-journal writer boundary.
 - Completed Execution Integration Slice 8 — Durable handoff evidence source selection:
   - Selected `post_pipeline_summary_journal_event` as the first future durable source for exact action/feedback handoff evidence.
   - Selected future event type `execution.handoff.summary.recorded`.
