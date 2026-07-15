@@ -676,6 +676,74 @@ describe('Cockpit Quick Generate foundation', () => {
         vi.unstubAllGlobals();
     });
 
+    it('renders server validation errors as a structured correction panel', async () => {
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: false,
+            json: vi.fn().mockResolvedValue({
+                message: 'The given data was invalid.',
+                errors: {
+                    'cash.amount': ['The amount must be at least 1.'],
+                    'feedback.email': ['Enter a valid email address.'],
+                },
+            }),
+        });
+
+        vi.stubGlobal('fetch', fetchMock);
+        vi.stubGlobal('crypto', {
+            randomUUID: () => 'cockpit-ui-idempotency-validation',
+        });
+
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                draftContract: {
+                    template_key: 'money-changer',
+                    amount: '25',
+                    currency: 'PHP',
+                    recipient_reference: '',
+                    purpose: '',
+                },
+                mutationContract: {
+                    runtime_enabled: true,
+                    route: 'x-change.cockpit.quick-generate.store',
+                    route_url: '/x/cockpit/quick-generate',
+                    allowed_methods: ['GET', 'POST'],
+                },
+            },
+        });
+
+        await wrapper
+            .find('[data-testid="cockpit-quick-generate-submit-panel"]')
+            .trigger('submit');
+        await Promise.resolve();
+        await Promise.resolve();
+        await wrapper.vm.$nextTick();
+
+        const errors = wrapper.find(
+            '[data-testid="cockpit-quick-generate-submission-errors"]',
+        );
+
+        expect(errors.exists()).toBe(true);
+        expect(errors.text()).toContain('Fix these fields before generating');
+        expect(errors.text()).toContain('Cash Amount');
+        expect(errors.text()).toContain('The amount must be at least 1.');
+        expect(errors.text()).toContain('Feedback Email');
+        expect(errors.text()).toContain('Enter a valid email address.');
+        expect(wrapper.text()).toContain(
+            'Quick Generate needs a few fields corrected before issuance.',
+        );
+        expect(wrapper.emitted('submitError')).toHaveLength(1);
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-productized-result-card"]',
+                )
+                .exists(),
+        ).toBe(false);
+
+        vi.unstubAllGlobals();
+    });
+
     it('reflects fixed slice-builder rows in the engineering preview without submitting named metadata', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {

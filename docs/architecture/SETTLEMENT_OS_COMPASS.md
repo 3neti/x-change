@@ -2302,3 +2302,10 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - The active Quick Generate form/result workflow is now visually prioritized.
 - Verification report: `../ui-cockpit/reports/406-quick-generate-productization-wave-2-slice-7-primary-workflow-hierarchy.md`.
 - Boundary remains unchanged: no execution-engine behavior, provider calls, wallet movement, journal writes, x-action execution, x-feedback delivery, campaign mutation, claim UX mutation, public API change, or issuance behavior change was added.
+
+## 2026-07-16 Update — Quick Generate Productization Wave 2 Slice 8 — Inline Error Readability
+
+- Quick Generate failed submission payloads now render structured field-level correction guidance.
+- Laravel-style `errors` payloads are normalized into operator-readable field names and messages.
+- Verification report: `../ui-cockpit/reports/407-quick-generate-productization-wave-2-slice-8-inline-error-readability.md`.
+- Boundary remains unchanged: no validation rule, execution-engine behavior, provider call, wallet movement, journal write, x-action execution, x-feedback delivery, campaign mutation, claim UX behavior, public API behavior, or issuance behavior changed.
