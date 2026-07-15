@@ -5829,6 +5829,12 @@ function dataGet(source: unknown, path: string[]): unknown {
                     </div>
 
                     <div class="flex flex-wrap gap-2">
+                        <CockpitManualCopyButton
+                            v-if="beneficiaryClaimUrl"
+                            :value="beneficiaryClaimUrl"
+                            label="Copy claim URL"
+                            data-testid="cockpit-quick-generate-primary-copy-control"
+                        />
                         <a
                             v-if="beneficiaryClaimUrl"
                             :href="beneficiaryClaimUrl"

@@ -477,6 +477,20 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toContain('Primary next step');
         expect(
             wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-primary-next-actions"]',
+                )
+                .text(),
+        ).toContain('Copy claim URL');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-primary-next-actions"]',
+                )
+                .text(),
+        ).toContain('Browser-local copy only. No delivery will be sent.');
+        expect(
+            wrapper
                 .find('[data-testid="cockpit-quick-generate-primary-claim-link"]')
                 .attributes('href'),
         ).toBe('https://example.test/r/PC-UI-001');

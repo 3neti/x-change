@@ -2309,3 +2309,10 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Laravel-style `errors` payloads are normalized into operator-readable field names and messages.
 - Verification report: `../ui-cockpit/reports/407-quick-generate-productization-wave-2-slice-8-inline-error-readability.md`.
 - Boundary remains unchanged: no validation rule, execution-engine behavior, provider call, wallet movement, journal write, x-action execution, x-feedback delivery, campaign mutation, claim UX behavior, public API behavior, or issuance behavior changed.
+
+## 2026-07-16 Update — Quick Generate Productization Wave 2 Slice 9 — Primary Claim URL Copy
+
+- The primary Quick Generate result card now exposes browser-local `Copy claim URL` directly beside the open/inspect actions.
+- Operators no longer need to scroll into the lower detail section just to copy the beneficiary claim URL.
+- Verification report: `../ui-cockpit/reports/408-quick-generate-productization-wave-2-slice-9-primary-claim-url-copy.md`.
+- Boundary remains unchanged: no delivery, short-link, QR, journal, action, provider, wallet, voucher, campaign, claim UX, public API, or execution behavior changed.
