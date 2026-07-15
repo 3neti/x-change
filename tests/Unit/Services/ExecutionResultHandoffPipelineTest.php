@@ -45,7 +45,19 @@ it('reports not wired handoffs without blocking execution result handling', func
         ->and($summary->results['feedback']->status)->toBe('not_wired')
         ->and($summary->results['cockpit_activity']->status)->toBe('not_wired')
         ->and($summary->toReportArray()['journal']['execution_id'])->toBe('exec-001')
-        ->and($summary->toReportArray()['journal']['voucher_code'])->toBe('PC-HANDOFF');
+        ->and($summary->toReportArray()['journal']['voucher_code'])->toBe('PC-HANDOFF')
+        ->and($summary->toReportArray()['profile'])->toBe([
+            'targets' => [
+                'journal' => 'not_wired',
+                'action' => 'not_wired',
+                'feedback' => 'not_wired',
+                'cockpit_activity' => 'not_wired',
+            ],
+            'active_targets' => [],
+            'performed_side_effect_targets' => [],
+            'failed_targets' => [],
+            'non_blocking' => true,
+        ]);
 });
 
 it('captures handoff exceptions as failed non blocking results', function () {

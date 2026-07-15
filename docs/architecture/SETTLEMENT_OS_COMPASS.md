@@ -2126,3 +2126,13 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Lifecycle scenario JSON can now report `execution.handoffs.feedback.status = planned`.
 - Verification report: `execution-engine/reports/011-execution-result-x-feedback-handoff.md`.
 - Next integration level: combined execution-result handoff profile/reporting hardening.
+
+## 2026-07-15 Update — Combined Execution Result Handoff Profile
+
+- `ExecutionResultHandoffSummaryData` now reports an aggregate `profile` section for lifecycle JSON consumers.
+- The profile exposes target statuses, active targets, side-effecting targets, failed targets, and non-blocking status.
+- A combined lifecycle scenario test now enables x-journal, x-action, and x-feedback together and proves the result remains non-blocking.
+- Current combined profile behavior: journal is `recorded`, action is `composed`, feedback is `planned`, Cockpit activity remains `not_wired`.
+- Only x-journal performs a side effect in this profile; x-action remains presentation-only and x-feedback remains prepare-only.
+- Verification report: `execution-engine/reports/012-combined-execution-result-handoff-profile.md`.
+- Next integration level: Cockpit read-model projection for combined execution handoff status.

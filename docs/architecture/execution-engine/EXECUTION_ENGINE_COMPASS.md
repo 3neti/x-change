@@ -279,3 +279,19 @@ Execution Engine migration slices 0–9 are now scaffolded. Next work should be 
 - Lifecycle scenario coverage proves `execution.handoffs.feedback.status = planned` can appear in JSON output while `performed_side_effect = false`.
 - Report: `reports/011-execution-result-x-feedback-handoff.md`.
 - Next recommended slice: combined execution-result handoff profile/reporting hardening.
+
+## 2026-07-15 Update — Combined Execution Result Handoff Profile
+
+- Hardened `ExecutionResultHandoffSummaryData::toReportArray()` with aggregate handoff profile reporting.
+- The profile includes target statuses, active targets, side-effecting targets, failed targets, and non-blocking status.
+- Added lifecycle coverage for x-journal + x-action + x-feedback enabled together.
+- Verified combined profile:
+  - `journal = recorded`
+  - `action = composed`
+  - `feedback = planned`
+  - `cockpit_activity = not_wired`
+  - `performed_side_effect_targets = [journal]`
+  - `failed_targets = []`
+- The combined profile remains post-execution and non-blocking; it does not alter voucher execution status.
+- Report: `reports/012-combined-execution-result-handoff-profile.md`.
+- Next recommended slice: Cockpit read-model projection for combined execution handoff status.

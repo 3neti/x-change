@@ -26,6 +26,8 @@ class ExecutionResultHandoffSummaryData extends Data
      */
     public function toReportArray(): array
     {
+        $statuses = $this->statuses();
+
         return [
             'schema' => $this->schema,
             'status' => $this->status,
@@ -33,6 +35,13 @@ class ExecutionResultHandoffSummaryData extends Data
             'voucher_code' => $this->voucher_code,
             'correlation_id' => $this->correlation_id,
             'blocks_execution' => $this->blocks_execution,
+            'profile' => [
+                'targets' => $statuses,
+                'active_targets' => $this->activeTargets($statuses),
+                'performed_side_effect_targets' => $this->performedSideEffectTargets(),
+                'failed_targets' => $this->failedTargets($statuses),
+                'non_blocking' => ! $this->blocks_execution,
+            ],
             'journal' => $this->resultFor('journal'),
             'action' => $this->resultFor('action'),
             'feedback' => $this->resultFor('feedback'),
@@ -50,5 +59,55 @@ class ExecutionResultHandoffSummaryData extends Data
         return $result instanceof ExecutionResultHandoffResultData
             ? $result->toArray()
             : null;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function statuses(): array
+    {
+        return collect($this->results)
+            ->mapWithKeys(fn (ExecutionResultHandoffResultData $result, string $key): array => [
+                $key => $result->status,
+            ])
+            ->all();
+    }
+
+    /**
+     * @param  array<string, string>  $statuses
+     * @return array<int, string>
+     */
+    private function activeTargets(array $statuses): array
+    {
+        return collect($statuses)
+            ->reject(fn (string $status): bool => $status === 'not_wired')
+            ->keys()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function performedSideEffectTargets(): array
+    {
+        return collect($this->results)
+            ->filter(fn (ExecutionResultHandoffResultData $result): bool => $result->performed_side_effect)
+            ->keys()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<string, string>  $statuses
+     * @return array<int, string>
+     */
+    private function failedTargets(array $statuses): array
+    {
+        return collect($statuses)
+            ->filter(fn (string $status): bool => str_starts_with($status, 'failed'))
+            ->keys()
+            ->values()
+            ->all();
     }
 }
