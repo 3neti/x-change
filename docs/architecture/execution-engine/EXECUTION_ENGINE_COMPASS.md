@@ -318,3 +318,15 @@ Execution Engine migration slices 0–9 are now scaffolded. Next work should be 
 - No new journal event, action execution, feedback delivery, Cockpit mutation, provider call, voucher mutation, wallet access, or money movement was added.
 - Report: `reports/014-durable-action-feedback-handoff-evidence-decision.md`.
 - Next recommended slice: durable handoff evidence source selection.
+
+## 2026-07-15 Update — Durable Handoff Evidence Source Selection
+
+- Selected the first durable source for exact action/feedback handoff evidence: `post_pipeline_summary_journal_event`.
+- Selected target event type: `execution.handoff.summary.recorded`.
+- Added config keys:
+  - `x-change.execution_result_handoffs.durable_evidence_source`
+  - `x-change.execution_result_handoffs.durable_evidence_event_type`
+- Cockpit durable evidence metadata now exposes the selected source with `selected_not_implemented`, `writes_now = false`, and `read_only = true`.
+- This is a source-selection slice only; no new journal writer, action execution, feedback delivery, Cockpit mutation, provider call, voucher mutation, wallet access, or money movement was added.
+- Report: `reports/015-durable-handoff-evidence-source-selection.md`.
+- Next recommended slice: post-pipeline handoff summary journal event contract.

@@ -147,5 +147,70 @@ it('projects combined execution handoff profile status into cockpit dashboard ac
         ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['feedback']['source'])->toBeNull()
         ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['feedback']['durable'])->toBeFalse()
         ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['feedback']['required_source'])
-        ->toBe('future x-feedback read model, journal event, or durable handoff evidence record');
+        ->toBe('future x-feedback read model, journal event, or durable handoff evidence record')
+        ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['action']['selected_source'])->toBe([
+            'source' => 'post_pipeline_summary_journal_event',
+            'status' => 'selected_not_implemented',
+            'event_type' => 'execution.handoff.summary.recorded',
+            'reason' => 'Selected source for future durable action/feedback handoff evidence projection.',
+            'writes_now' => false,
+            'read_only' => true,
+        ])
+        ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['feedback']['selected_source'])->toBe([
+            'source' => 'post_pipeline_summary_journal_event',
+            'status' => 'selected_not_implemented',
+            'event_type' => 'execution.handoff.summary.recorded',
+            'reason' => 'Selected source for future durable action/feedback handoff evidence projection.',
+            'writes_now' => false,
+            'read_only' => true,
+        ]);
+});
+
+it('projects configured durable handoff evidence source selection without writing evidence', function () {
+    config([
+        'x-change.execution_result_handoffs.action' => 'x-action',
+        'x-change.execution_result_handoffs.feedback' => 'x-feedback',
+        'x-change.execution_result_handoffs.durable_evidence_source' => 'post_pipeline_summary_journal_event',
+        'x-change.execution_result_handoffs.durable_evidence_event_type' => 'execution.handoff.summary.recorded',
+    ]);
+
+    app()->forgetInstance(ExecutionResultActionHandoffContract::class);
+    app()->forgetInstance(ExecutionResultFeedbackHandoffContract::class);
+
+    $exitCode = Artisan::call('xchange:lifecycle:run', [
+        'scenario' => 'execution_settlement_envelope_contract_demo',
+        '--json' => true,
+    ]);
+
+    $scenario = json_decode(Artisan::output(), true);
+
+    actingAsTestUser();
+
+    $response = $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.dashboard'))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/cockpit/Dashboard');
+
+    $activities = data_get($response->json(), 'props.dashboard_read_model.activity', []);
+    $executionActivity = collect($activities)->firstWhere(
+        'id',
+        'execution-'.data_get($scenario, 'execution.execution_id'),
+    );
+
+    expect($exitCode)->toBe(0)
+        ->and($executionActivity)->toBeArray()
+        ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['action']['status'])->toBe('deferred')
+        ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['action']['selected_source']['source'])
+        ->toBe('post_pipeline_summary_journal_event')
+        ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['action']['selected_source']['event_type'])
+        ->toBe('execution.handoff.summary.recorded')
+        ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['action']['selected_source']['writes_now'])
+        ->toBeFalse()
+        ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['feedback']['status'])->toBe('deferred')
+        ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['feedback']['selected_source']['source'])
+        ->toBe('post_pipeline_summary_journal_event')
+        ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['feedback']['selected_source']['event_type'])
+        ->toBe('execution.handoff.summary.recorded')
+        ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['feedback']['selected_source']['writes_now'])
+        ->toBeFalse();
 });

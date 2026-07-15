@@ -474,6 +474,8 @@ class OptionalCockpitIntegrationReadModels
      */
     private function durableHandoffEvidenceDecision(array $targets): array
     {
+        $sourceSelection = $this->durableHandoffEvidenceSourceSelection();
+
         return [
             'journal' => [
                 'status' => 'projected',
@@ -489,6 +491,7 @@ class OptionalCockpitIntegrationReadModels
                     ? 'x-action execution-result handoff is not configured.'
                     : 'x-action handoff evidence is not persisted in the execution.result.recorded journal entry.',
                 'required_source' => 'future x-action read model, journal event, or durable handoff evidence record',
+                'selected_source' => $sourceSelection,
             ],
             'feedback' => [
                 'status' => $targets['feedback'] === 'not_wired' ? 'not_wired' : 'deferred',
@@ -498,6 +501,7 @@ class OptionalCockpitIntegrationReadModels
                     ? 'x-feedback execution-result handoff is not configured.'
                     : 'x-feedback handoff evidence is not persisted in the execution.result.recorded journal entry.',
                 'required_source' => 'future x-feedback read model, journal event, or durable handoff evidence record',
+                'selected_source' => $sourceSelection,
             ],
             'cockpit_activity' => [
                 'status' => $targets['cockpit_activity'] === 'not_wired' ? 'not_wired' : 'deferred',
@@ -507,7 +511,28 @@ class OptionalCockpitIntegrationReadModels
                     ? 'Execution-result Cockpit activity handoff is not configured.'
                     : 'Execution-result Cockpit activity handoff evidence is not projected from durable activity storage yet.',
                 'required_source' => 'future durable Cockpit activity record',
+                'selected_source' => $sourceSelection,
             ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function durableHandoffEvidenceSourceSelection(): array
+    {
+        $source = $this->nonEmptyString(config('x-change.execution_result_handoffs.durable_evidence_source'))
+            ?? 'post_pipeline_summary_journal_event';
+        $eventType = $this->nonEmptyString(config('x-change.execution_result_handoffs.durable_evidence_event_type'))
+            ?? 'execution.handoff.summary.recorded';
+
+        return [
+            'source' => $source,
+            'status' => 'selected_not_implemented',
+            'event_type' => $eventType,
+            'reason' => 'Selected source for future durable action/feedback handoff evidence projection.',
+            'writes_now' => false,
+            'read_only' => true,
         ];
     }
 

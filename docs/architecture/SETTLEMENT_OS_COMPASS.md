@@ -2156,3 +2156,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Future integration must select a durable source before Cockpit can show exact action/feedback handoff outcomes: x-action read model, x-feedback read model, journal event, durable handoff evidence record, or post-pipeline summary journal event.
 - Verification report: `execution-engine/reports/014-durable-action-feedback-handoff-evidence-decision.md`.
 - Next integration level: durable handoff evidence source selection.
+
+## 2026-07-15 Update — Durable Handoff Evidence Source Selection
+
+- Selected `post_pipeline_summary_journal_event` as the first durable source for exact execution handoff evidence.
+- Selected future event type `execution.handoff.summary.recorded`.
+- Cockpit read models now expose this source selection as read-only metadata with `selected_not_implemented`; no evidence is written yet.
+- The selected path keeps x-journal as the system log while preserving x-action as workflow continuation planning and x-feedback as communication planning.
+- Verification report: `execution-engine/reports/015-durable-handoff-evidence-source-selection.md`.
+- Next integration level: post-pipeline handoff summary journal event contract.

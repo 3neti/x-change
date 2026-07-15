@@ -4,12 +4,19 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Execution Integration Slice 7 — Durable action/feedback handoff evidence projection decision
-Status: Cockpit execution activity projection remains read-only; action/feedback durable evidence deferred
+Current slice: Execution Integration Slice 8 — Durable handoff evidence source selection
+Status: Cockpit execution activity projection remains read-only; post-pipeline summary journal event selected but not implemented
 Last updated: 2026-07-15
 
 ## Completed
 
+- Completed Execution Integration Slice 8 — Durable handoff evidence source selection:
+  - Selected `post_pipeline_summary_journal_event` as the first future durable source for exact action/feedback handoff evidence.
+  - Selected future event type `execution.handoff.summary.recorded`.
+  - Cockpit execution activity durable evidence metadata now exposes the selected source as read-only `selected_not_implemented`.
+  - Confirmed no journal writer, Cockpit mutation, action execution, feedback delivery, provider call, voucher mutation, wallet access, or money movement was added.
+  - Report: `../architecture/execution-engine/reports/015-durable-handoff-evidence-source-selection.md`.
+  - Next recommended checkpoint: Execution Integration Slice 9 — Post-pipeline handoff summary journal event contract.
 - Completed Execution Integration Slice 7 — Durable action/feedback handoff evidence projection decision:
   - Added `durable_evidence` metadata to Cockpit execution handoff profiles.
   - Confirmed Cockpit may project durable x-journal execution evidence from `execution.result.recorded`.

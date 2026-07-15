@@ -210,6 +210,15 @@ return [
         'available_cockpit_activity_handoffs' => [
             'null' => NullExecutionResultCockpitActivityHandoff::class,
         ],
+
+        'durable_evidence_source' => env(
+            'XCHANGE_EXECUTION_RESULT_HANDOFF_EVIDENCE_SOURCE',
+            'post_pipeline_summary_journal_event',
+        ),
+        'durable_evidence_event_type' => env(
+            'XCHANGE_EXECUTION_RESULT_HANDOFF_EVIDENCE_EVENT_TYPE',
+            'execution.handoff.summary.recorded',
+        ),
     ],
 
     'terminology' => [
