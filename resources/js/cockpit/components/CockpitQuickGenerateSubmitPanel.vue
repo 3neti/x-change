@@ -983,6 +983,73 @@ const generationSummary = computed<
     ];
 });
 
+const downstreamHandoffSummary = computed<
+    Array<{ label: string; status: string; detail: string }>
+>(() => {
+    return [
+        {
+            label: 'Journal',
+            status:
+                stringValue(
+                    dataGet(lastResponse.value, [
+                        'activity',
+                        'journal_handoff_status',
+                    ]),
+                ) ??
+                stringValue(
+                    dataGet(lastResponse.value, [
+                        'activity',
+                        'metadata',
+                        'journal_handoff',
+                        'status',
+                    ]),
+                ) ??
+                'not wired',
+            detail: 'Journal evidence remains separately configured.',
+        },
+        {
+            label: 'Action',
+            status:
+                stringValue(
+                    dataGet(lastResponse.value, [
+                        'activity',
+                        'action_handoff_status',
+                    ]),
+                ) ??
+                stringValue(
+                    dataGet(lastResponse.value, [
+                        'activity',
+                        'metadata',
+                        'action_handoff',
+                        'status',
+                    ]),
+                ) ??
+                'not wired',
+            detail: 'Action continuation remains presentation-only unless explicitly enabled.',
+        },
+        {
+            label: 'Feedback',
+            status:
+                stringValue(
+                    dataGet(lastResponse.value, [
+                        'activity',
+                        'feedback_handoff_status',
+                    ]),
+                ) ??
+                stringValue(
+                    dataGet(lastResponse.value, [
+                        'activity',
+                        'metadata',
+                        'feedback_handoff',
+                        'status',
+                    ]),
+                ) ??
+                'not wired',
+            detail: 'Feedback delivery is not sent by this result card.',
+        },
+    ];
+});
+
 const pricingPreflight =
     computed<CockpitQuickGenerateRuntimePricingPreflight | null>(() => {
         return objectValue(
@@ -5782,6 +5849,61 @@ function dataGet(source: unknown, path: string[]): unknown {
                             {{ displayValue(fundingPreflight.sync_status) }}
                         </p>
                     </section>
+                </div>
+
+                <div
+                    v-if="activityRuntime"
+                    class="mt-4 rounded-xl border border-emerald-200 bg-white/80 p-3 dark:border-emerald-900/70 dark:bg-slate-950/60"
+                    data-testid="cockpit-quick-generate-primary-handoff-status"
+                >
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <p
+                                class="text-[11px] font-semibold tracking-[0.18em] text-emerald-700 uppercase dark:text-emerald-300"
+                            >
+                                Downstream handoff status
+                            </p>
+                            <p
+                                class="mt-1 text-sm font-semibold text-emerald-950 dark:text-emerald-50"
+                            >
+                                Activity:
+                                {{ displayValue(activityRuntime.status) }}
+                            </p>
+                        </div>
+                        <span
+                            class="w-fit rounded-full bg-emerald-100 px-2 py-1 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-200"
+                        >
+                            {{
+                                activityRuntime.presentation_only === true
+                                    ? 'presentation-only'
+                                    : 'runtime'
+                            }}
+                        </span>
+                    </div>
+
+                    <dl class="mt-3 grid gap-2 md:grid-cols-3">
+                        <div
+                            v-for="handoff in downstreamHandoffSummary"
+                            :key="handoff.label"
+                            class="rounded-lg border border-emerald-100 bg-emerald-50/70 p-2 dark:border-emerald-900/70 dark:bg-emerald-950/30"
+                        >
+                            <dt
+                                class="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300"
+                            >
+                                {{ handoff.label }}
+                            </dt>
+                            <dd
+                                class="mt-1 font-semibold text-emerald-950 dark:text-emerald-50"
+                            >
+                                {{ handoff.status }}
+                            </dd>
+                            <p
+                                class="mt-1 text-[11px] leading-4 text-emerald-800 dark:text-emerald-200"
+                            >
+                                {{ handoff.detail }}
+                            </p>
+                        </div>
+                    </dl>
                 </div>
             </section>
 

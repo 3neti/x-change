@@ -2277,3 +2277,11 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Funding summary shows safe balance, status, authority, and sync status.
 - Verification report: `../ui-cockpit/reports/403-quick-generate-productization-slice-4-financial-readiness.md`.
 - Boundary remains unchanged: no pricing calculation, wallet query, fund reservation, provider call, journal write, action execution, feedback delivery, campaign mutation, or execution behavior change was added.
+
+## 2026-07-15 Update — Quick Generate Productization Slice 5 — Activity Status and Downstream Handoff Clarity
+
+- The primary Quick Generate result card now renders downstream handoff status when activity runtime metadata is available.
+- It shows activity status plus journal, action, and feedback handoff states.
+- Missing handoff states are shown as `not wired` instead of implying work happened.
+- Verification report: `../ui-cockpit/reports/404-quick-generate-productization-slice-5-activity-handoff-status.md`.
+- Boundary remains unchanged: no journal write, action execution, feedback delivery, provider call, wallet mutation, voucher mutation, or execution behavior change was added.

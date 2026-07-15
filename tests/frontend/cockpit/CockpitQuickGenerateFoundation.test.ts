@@ -287,6 +287,9 @@ describe('Cockpit Quick Generate foundation', () => {
                     schema: 'x-change.cockpit.operator-issuance-activity.v1',
                     status: 'recording-attempted-after-issuance',
                     presentation_only: true,
+                    journal_handoff_status: 'not_wired',
+                    action_handoff_status: 'not_wired',
+                    feedback_handoff_status: 'not_wired',
                 },
             }),
         });
@@ -487,6 +490,34 @@ describe('Cockpit Quick Generate foundation', () => {
                 )
                 .text(),
         ).toContain('PHP 10000');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-primary-handoff-status"]',
+                )
+                .text(),
+        ).toContain('Downstream handoff status');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-primary-handoff-status"]',
+                )
+                .text(),
+        ).toContain('presentation-only');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-primary-handoff-status"]',
+                )
+                .text(),
+        ).toContain('Journal');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-primary-handoff-status"]',
+                )
+                .text(),
+        ).toContain('Feedback delivery is not sent by this result card.');
         expect(
             wrapper
                 .find(
