@@ -2107,3 +2107,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Activity rows expose only operator-safe fields: voucher code, execution ID, driver, status, timestamp, and `source: execution`.
 - This closes the immediate visual loop from Execution Engine result → x-journal record → Cockpit activity evidence.
 - Next integration level: x-action continuation planning from execution results, then x-feedback notification intent planning.
+
+## 2026-07-15 Update — x-action Execution Result Handoff
+
+- `ExecutionResultActionHandoffContract` can now be configured to use x-action via `XCHANGE_EXECUTION_RESULT_ACTION_HANDOFF=x-action`.
+- The handoff composes presentation-only continuation hints for `execution.result.recorded`.
+- The handoff does not execute actions, authorize actions, persist action runs, write journal entries, send feedback, call providers, mutate vouchers, or move money.
+- Lifecycle scenario JSON can now report `execution.handoffs.action.status = composed` when an x-action rule matches the execution result.
+- Verification report: `execution-engine/reports/010-execution-result-x-action-handoff.md`.
+- Next integration level: x-feedback notification intent planning from execution results.

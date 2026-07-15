@@ -69,6 +69,7 @@ use LBHurtado\XChange\Services\DisburseFlowStarterService;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultActionHandoff;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultCockpitActivityHandoff;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultFeedbackHandoff;
+use LBHurtado\XChange\Services\Execution\XActionExecutionResultActionHandoff;
 use LBHurtado\XChange\Services\Execution\XJournalExecutionResultJournalHandoff;
 use LBHurtado\XChange\Services\LedgerPooledProviderTopology;
 use LBHurtado\XChange\Services\ManualProviderTopology;
@@ -199,6 +200,7 @@ return [
         ],
         'available_action_handoffs' => [
             'null' => NullExecutionResultActionHandoff::class,
+            'x-action' => XActionExecutionResultActionHandoff::class,
         ],
         'available_feedback_handoffs' => [
             'null' => NullExecutionResultFeedbackHandoff::class,

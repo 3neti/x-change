@@ -257,3 +257,14 @@ Execution Engine migration slices 0–9 are now scaffolded. Next work should be 
 - The journal entry is an audit/event side effect after execution, not an execution prerequisite.
 - Handoff failures are still reported as `failed_non_blocking`; they do not mutate voucher execution status, provider reconciliation, or money movement.
 - Next recommended slice: Cockpit execution activity projection from the execution-result handoff summary, so operators can see recorded execution evidence.
+
+## 2026-07-15 Update — x-action Execution Result Handoff
+
+- Added `XActionExecutionResultActionHandoff` as an optional execution-result consumer.
+- Config opt-in: `x-change.execution_result_handoffs.action = x-action`.
+- Event/state key: `execution.result.recorded`.
+- The handoff creates only presentation-time continuation plans through x-action `ActionHostComposerContract`.
+- It does not execute actions, authorize actions, persist action runs, write journal entries, send feedback, call providers, mutate vouchers, or move money.
+- Lifecycle scenario coverage proves `execution.handoffs.action.status = composed` can appear in JSON output when a matching x-action workflow action is registered.
+- Report: `reports/010-execution-result-x-action-handoff.md`.
+- Next recommended slice: x-feedback notification intent planning from execution results.

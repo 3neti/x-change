@@ -701,10 +701,15 @@ class XChangeServiceProvider extends ServiceProvider
             return $app->make($service);
         });
 
-        $this->app->bind(
-            ExecutionResultActionHandoffContract::class,
-            NullExecutionResultActionHandoff::class,
-        );
+        $this->app->bind(ExecutionResultActionHandoffContract::class, function ($app) {
+            $service = $this->executionResultHandoffService(
+                'action',
+                'available_action_handoffs',
+                NullExecutionResultActionHandoff::class,
+            );
+
+            return $app->make($service);
+        });
 
         $this->app->bind(
             ExecutionResultFeedbackHandoffContract::class,
