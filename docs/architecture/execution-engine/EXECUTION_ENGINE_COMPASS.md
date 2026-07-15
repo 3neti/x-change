@@ -268,3 +268,14 @@ Execution Engine migration slices 0–9 are now scaffolded. Next work should be 
 - Lifecycle scenario coverage proves `execution.handoffs.action.status = composed` can appear in JSON output when a matching x-action workflow action is registered.
 - Report: `reports/010-execution-result-x-action-handoff.md`.
 - Next recommended slice: x-feedback notification intent planning from execution results.
+
+## 2026-07-15 Update — x-feedback Execution Result Handoff
+
+- Added `XFeedbackExecutionResultFeedbackHandoff` as an optional execution-result consumer.
+- Config opt-in: `x-change.execution_result_handoffs.feedback = x-feedback`.
+- Event/intent key: `execution.result.recorded`.
+- The handoff uses x-feedback `FeedbackDispatchPreparerContract` only, constrained to `prepare_only` planning.
+- It does not dispatch feedback, call delivery providers, persist feedback records, write journal entries, execute actions, call providers, mutate vouchers, or move money.
+- Lifecycle scenario coverage proves `execution.handoffs.feedback.status = planned` can appear in JSON output while `performed_side_effect = false`.
+- Report: `reports/011-execution-result-x-feedback-handoff.md`.
+- Next recommended slice: combined execution-result handoff profile/reporting hardening.

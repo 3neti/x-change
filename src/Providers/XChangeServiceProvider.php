@@ -711,10 +711,15 @@ class XChangeServiceProvider extends ServiceProvider
             return $app->make($service);
         });
 
-        $this->app->bind(
-            ExecutionResultFeedbackHandoffContract::class,
-            NullExecutionResultFeedbackHandoff::class,
-        );
+        $this->app->bind(ExecutionResultFeedbackHandoffContract::class, function ($app) {
+            $service = $this->executionResultHandoffService(
+                'feedback',
+                'available_feedback_handoffs',
+                NullExecutionResultFeedbackHandoff::class,
+            );
+
+            return $app->make($service);
+        });
 
         $this->app->bind(
             ExecutionResultCockpitActivityHandoffContract::class,

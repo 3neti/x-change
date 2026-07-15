@@ -2116,3 +2116,13 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Lifecycle scenario JSON can now report `execution.handoffs.action.status = composed` when an x-action rule matches the execution result.
 - Verification report: `execution-engine/reports/010-execution-result-x-action-handoff.md`.
 - Next integration level: x-feedback notification intent planning from execution results.
+
+## 2026-07-15 Update — x-feedback Execution Result Handoff
+
+- `ExecutionResultFeedbackHandoffContract` can now be configured to use x-feedback via `XCHANGE_EXECUTION_RESULT_FEEDBACK_HANDOFF=x-feedback`.
+- The handoff prepares an operator-safe `execution.result.recorded` feedback intent and in-app delivery plan.
+- The handoff does not dispatch feedback, call delivery providers, persist feedback records, write journal entries, execute actions, call providers, mutate vouchers, or move money.
+- x-feedback remains communication planning state only; execution/journal/domain packages remain lifecycle truth.
+- Lifecycle scenario JSON can now report `execution.handoffs.feedback.status = planned`.
+- Verification report: `execution-engine/reports/011-execution-result-x-feedback-handoff.md`.
+- Next integration level: combined execution-result handoff profile/reporting hardening.

@@ -70,6 +70,7 @@ use LBHurtado\XChange\Services\Execution\NullExecutionResultActionHandoff;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultCockpitActivityHandoff;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultFeedbackHandoff;
 use LBHurtado\XChange\Services\Execution\XActionExecutionResultActionHandoff;
+use LBHurtado\XChange\Services\Execution\XFeedbackExecutionResultFeedbackHandoff;
 use LBHurtado\XChange\Services\Execution\XJournalExecutionResultJournalHandoff;
 use LBHurtado\XChange\Services\LedgerPooledProviderTopology;
 use LBHurtado\XChange\Services\ManualProviderTopology;
@@ -204,6 +205,7 @@ return [
         ],
         'available_feedback_handoffs' => [
             'null' => NullExecutionResultFeedbackHandoff::class,
+            'x-feedback' => XFeedbackExecutionResultFeedbackHandoff::class,
         ],
         'available_cockpit_activity_handoffs' => [
             'null' => NullExecutionResultCockpitActivityHandoff::class,
