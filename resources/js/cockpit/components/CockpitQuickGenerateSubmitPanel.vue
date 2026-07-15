@@ -5687,6 +5687,102 @@ function dataGet(source: unknown, path: string[]): unknown {
                         </a>
                     </div>
                 </div>
+
+                <div
+                    v-if="pricingPreflight || fundingPreflight"
+                    class="mt-4 grid gap-3 lg:grid-cols-2"
+                    data-testid="cockpit-quick-generate-primary-financial-readiness"
+                >
+                    <section
+                        v-if="pricingPreflight"
+                        class="rounded-xl border border-emerald-200 bg-white/80 p-3 dark:border-emerald-900/70 dark:bg-slate-950/60"
+                    >
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p
+                                    class="text-[11px] font-semibold tracking-[0.18em] text-emerald-700 uppercase dark:text-emerald-300"
+                                >
+                                    Pricing summary
+                                </p>
+                                <p
+                                    class="mt-1 text-xl font-semibold text-emerald-950 dark:text-emerald-50"
+                                >
+                                    {{
+                                        displayValue(
+                                            pricingPreflight.currency,
+                                            'PHP',
+                                        )
+                                    }}
+                                    {{
+                                        displayValue(
+                                            pricingPreflight.total,
+                                            '0',
+                                        )
+                                    }}
+                                </p>
+                            </div>
+                            <span
+                                class="rounded-full bg-emerald-100 px-2 py-1 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-200"
+                            >
+                                {{ displayValue(pricingPreflight.status) }}
+                            </span>
+                        </div>
+                        <p
+                            class="mt-2 text-[11px] leading-4 text-emerald-800 dark:text-emerald-200"
+                        >
+                            Base fee:
+                            {{ displayValue(pricingPreflight.base_fee, '0') }} ·
+                            Blocking:
+                            {{ pricingPreflight.blocking === true ? 'yes' : 'no' }}
+                        </p>
+                    </section>
+
+                    <section
+                        v-if="fundingPreflight"
+                        class="rounded-xl border border-emerald-200 bg-white/80 p-3 dark:border-emerald-900/70 dark:bg-slate-950/60"
+                    >
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p
+                                    class="text-[11px] font-semibold tracking-[0.18em] text-emerald-700 uppercase dark:text-emerald-300"
+                                >
+                                    Funding summary
+                                </p>
+                                <p
+                                    class="mt-1 text-xl font-semibold text-emerald-950 dark:text-emerald-50"
+                                >
+                                    {{
+                                        displayValue(
+                                            fundingPreflight.authoritative
+                                                ?.currency,
+                                            'PHP',
+                                        )
+                                    }}
+                                    {{
+                                        displayValue(
+                                            fundingPreflight.authoritative
+                                                ?.balance,
+                                            'not available',
+                                        )
+                                    }}
+                                </p>
+                            </div>
+                            <span
+                                class="rounded-full bg-emerald-100 px-2 py-1 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-200"
+                            >
+                                {{ displayValue(fundingPreflight.status) }}
+                            </span>
+                        </div>
+                        <p
+                            class="mt-2 text-[11px] leading-4 text-emerald-800 dark:text-emerald-200"
+                        >
+                            Authority:
+                            {{ displayValue(fundingPreflight.authority) }} ·
+                            Sync:
+                            {{ displayValue(fundingPreflight.sync_status) }}
+                        </p>
+                    </section>
+                </div>
             </section>
 
             <div class="mt-3 flex flex-wrap gap-2">

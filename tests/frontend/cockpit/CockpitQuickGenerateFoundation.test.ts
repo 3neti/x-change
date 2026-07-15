@@ -462,6 +462,34 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(
             wrapper
                 .find(
+                    '[data-testid="cockpit-quick-generate-primary-financial-readiness"]',
+                )
+                .text(),
+        ).toContain('Pricing summary');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-primary-financial-readiness"]',
+                )
+                .text(),
+        ).toContain('PHP 1.75');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-primary-financial-readiness"]',
+                )
+                .text(),
+        ).toContain('Funding summary');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-primary-financial-readiness"]',
+                )
+                .text(),
+        ).toContain('PHP 10000');
+        expect(
+            wrapper
+                .find(
                     '[data-testid="cockpit-quick-generate-beneficiary-url-panel"]',
                 )
                 .exists(),

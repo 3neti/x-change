@@ -2269,3 +2269,11 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Operators can see the full beneficiary claim URL and use `Open claim URL` or `Inspect Pay Code` actions from the primary result card.
 - Verification report: `../ui-cockpit/reports/402-quick-generate-productization-slice-3-beneficiary-url-actions.md`.
 - Boundary remains unchanged: the actions are read-only navigation/copy aids and do not send feedback, dispatch campaigns, create short links, generate QR assets, write journal entries, execute actions, call providers, mutate wallets, mutate vouchers, or alter execution behavior.
+
+## 2026-07-15 Update — Quick Generate Productization Slice 4 — Pricing and Funding Summary Readability
+
+- The primary Quick Generate result card now renders readable pricing and funding summaries when operator-safe preflight data is present.
+- Pricing summary shows total, status, base fee, and blocking state.
+- Funding summary shows safe balance, status, authority, and sync status.
+- Verification report: `../ui-cockpit/reports/403-quick-generate-productization-slice-4-financial-readiness.md`.
+- Boundary remains unchanged: no pricing calculation, wallet query, fund reservation, provider call, journal write, action execution, feedback delivery, campaign mutation, or execution behavior change was added.
