@@ -406,3 +406,19 @@ Execution Engine migration slices 0–9 are now scaffolded. Next work should be 
 - No execution behavior, journal writing, action execution, feedback delivery, provider call, voucher mutation, wallet access, or money movement was added.
 - Report: `reports/021-cockpit-durable-summary-projection-ui-surfacing.md`.
 - Next recommended slice: Cockpit published asset sync and browser verification for durable summary projection UI.
+
+## 2026-07-15 Update — Cockpit Durable Summary Projection Publish / Browser Verification
+
+- Published the Cockpit durable projection UI into the host app with `php artisan x-change:install --force`.
+- Verified published asset drift with `php artisan x-change:doctor --assets --json`.
+- Asset doctor result: `checked 60, ok 60, stale 0, missing 0, extra 0`.
+- Added Playwright browser verification for `/x/cockpit` using safe local x-journal fixture rows:
+  - `execution.result.recorded`
+  - `execution.handoff.summary.recorded`
+- The browser test verifies the Recent Activity projection block displays:
+  - `Durable summary evidence`
+  - `durable_summary_evidence_available`
+  - `Targets: journal, action, feedback, handoff_summary_journal`
+- No execution behavior, journal writing from Cockpit, action execution, feedback delivery, provider call, voucher mutation, wallet access, or money movement was added.
+- Report: `reports/022-cockpit-durable-summary-projection-publish-browser-verification.md`.
+- Next recommended slice: Execution Integration Slice 16 — close the current execution integration wave or choose the next integration target.

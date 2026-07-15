@@ -2227,3 +2227,13 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - This makes the Execution → Journal → Action/Feedback planning → Summary Journal → Cockpit evidence loop visible to operators without authorizing new mutations.
 - Verification report: `execution-engine/reports/021-cockpit-durable-summary-projection-ui-surfacing.md`.
 - Next integration level: publish assets and verify the UI in the host browser surface.
+
+## 2026-07-15 Update — Execution Integration Slice 15 — Cockpit Durable Summary Projection Publish / Browser Verification
+
+- Published the x-change Cockpit package assets into the host app.
+- Published asset drift is clean: `checked 60, ok 60, stale 0, missing 0, extra 0`.
+- Added browser verification for the durable execution projection block on `/x/cockpit`.
+- The verified host UI displays `Durable summary evidence`, `durable_summary_evidence_available`, and projected targets from persisted x-journal evidence.
+- This closes the visible host-surface loop for the current execution-result handoff chain without adding Cockpit mutation authority.
+- Verification report: `execution-engine/reports/022-cockpit-durable-summary-projection-publish-browser-verification.md`.
+- Next integration level: close the current execution integration wave or select the next target intentionally.

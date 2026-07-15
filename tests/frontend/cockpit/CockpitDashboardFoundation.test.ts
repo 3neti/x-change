@@ -70,5 +70,30 @@ describe('Cockpit dashboard foundation widgets', () => {
         expect(wrapper.text()).toContain('Delivery status is communication state, not lifecycle truth.');
         expect(wrapper.findAll('[data-testid="cockpit-activity-item"]')).toHaveLength(3);
     });
-});
 
+    it('renders durable execution handoff summary projection evidence when supplied', () => {
+        const wrapper = mount(CockpitRecentActivityPanel, {
+            props: {
+                items: [
+                    {
+                        id: 'execution-exec-playwright-projection',
+                        label: 'Execution recorded for PC-PROJECTION',
+                        description: 'settlement_envelope succeeded · exec-playwright-projection',
+                        timestamp: '2026-07-15T10:00:00+08:00',
+                        source: 'execution',
+                        projection_badge: 'Durable summary evidence',
+                        projection_status: 'durable_summary_evidence_available',
+                        projection_detail: 'Action and feedback statuses are projected from x-journal execution.handoff.summary.recorded.',
+                        projection_targets: ['journal', 'action', 'feedback', 'handoff_summary_journal'],
+                    },
+                ],
+            },
+        });
+
+        expect(wrapper.find('[data-testid="cockpit-activity-projection-status"]').exists()).toBe(true);
+        expect(wrapper.text()).toContain('Durable summary evidence');
+        expect(wrapper.text()).toContain('durable_summary_evidence_available');
+        expect(wrapper.text()).toContain('Action and feedback statuses are projected from x-journal execution.handoff.summary.recorded.');
+        expect(wrapper.text()).toContain('Targets: journal, action, feedback, handoff_summary_journal');
+    });
+});
