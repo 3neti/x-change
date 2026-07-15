@@ -72,6 +72,7 @@ use LBHurtado\XChange\Services\Execution\NullExecutionResultFeedbackHandoff;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultHandoffSummaryJournalWriter;
 use LBHurtado\XChange\Services\Execution\XActionExecutionResultActionHandoff;
 use LBHurtado\XChange\Services\Execution\XFeedbackExecutionResultFeedbackHandoff;
+use LBHurtado\XChange\Services\Execution\XJournalExecutionResultHandoffSummaryJournalWriter;
 use LBHurtado\XChange\Services\Execution\XJournalExecutionResultJournalHandoff;
 use LBHurtado\XChange\Services\LedgerPooledProviderTopology;
 use LBHurtado\XChange\Services\ManualProviderTopology;
@@ -215,6 +216,7 @@ return [
         ],
         'available_summary_journal_writers' => [
             'null' => NullExecutionResultHandoffSummaryJournalWriter::class,
+            'x-journal' => XJournalExecutionResultHandoffSummaryJournalWriter::class,
         ],
 
         'durable_evidence_source' => env(

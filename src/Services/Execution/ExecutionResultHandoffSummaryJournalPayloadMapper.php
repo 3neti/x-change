@@ -72,6 +72,7 @@ class ExecutionResultHandoffSummaryJournalPayloadMapper
             $summary->execution_id ?? '',
             $summary->voucher_code ?? '',
             $summary->correlation_id ?? '',
+            hash('sha256', json_encode($summary->toReportArray(), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES)),
         ]));
     }
 

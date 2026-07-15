@@ -2184,3 +2184,13 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Lifecycle/report consumers can now see `execution.handoffs.handoff_summary_journal.status`.
 - Verification report: `execution-engine/reports/017-post-pipeline-handoff-summary-writer-boundary.md`.
 - Next integration level: concrete x-journal post-pipeline handoff summary writer.
+
+## 2026-07-15 Update — Concrete x-journal Handoff Summary Writer
+
+- x-change can now write durable post-pipeline execution handoff summaries to x-journal when `XCHANGE_EXECUTION_RESULT_HANDOFF_SUMMARY_JOURNAL_WRITER=x-journal` is enabled.
+- The new event is `execution.handoff.summary.recorded`.
+- This event is the durable Settlement OS evidence source for exact post-pipeline journal/action/feedback/Cockpit handoff statuses.
+- The writer is non-blocking, idempotent, and records only sanitized handoff evidence.
+- Default runtime behavior remains unchanged unless the writer is explicitly configured.
+- Verification report: `execution-engine/reports/018-concrete-x-journal-handoff-summary-writer.md`.
+- Next integration level: Cockpit read-model projection of post-pipeline summary journal evidence.

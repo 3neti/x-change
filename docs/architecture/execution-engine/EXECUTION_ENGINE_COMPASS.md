@@ -353,3 +353,15 @@ Execution Engine migration slices 0–9 are now scaffolded. Next work should be 
 - No concrete x-journal summary event writer, journal write, action execution, feedback delivery, Cockpit mutation, provider call, voucher mutation, wallet access, or money movement was added.
 - Report: `reports/017-post-pipeline-handoff-summary-writer-boundary.md`.
 - Next recommended slice: concrete x-journal post-pipeline handoff summary writer.
+
+## 2026-07-15 Update — Concrete x-journal Handoff Summary Writer
+
+- Added `XJournalExecutionResultHandoffSummaryJournalWriter`.
+- Registered explicit config option `x-change.execution_result_handoffs.summary_journal_writer = x-journal`.
+- The concrete writer records `execution.handoff.summary.recorded` into x-journal after journal/action/feedback/Cockpit activity handoffs finish.
+- The summary event carries sanitized aggregate handoff evidence, including exact post-pipeline action and feedback statuses once they have actually run.
+- The writer remains non-blocking and returns `failed_non_blocking` if x-journal recording fails.
+- Replaying the same sanitized summary is idempotent and returns the existing x-journal entry.
+- Default behavior remains null/not-wired unless the writer is explicitly configured.
+- Report: `reports/018-concrete-x-journal-handoff-summary-writer.md`.
+- Next recommended slice: Cockpit projection of `execution.handoff.summary.recorded` durable evidence.

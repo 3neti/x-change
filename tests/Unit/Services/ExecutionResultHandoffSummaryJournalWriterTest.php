@@ -9,7 +9,12 @@ use LBHurtado\XChange\Contracts\ExecutionResultHandoffPipelineContract;
 use LBHurtado\XChange\Contracts\ExecutionResultHandoffSummaryJournalWriterContract;
 use LBHurtado\XChange\Data\Execution\ExecutionResultHandoffResultData;
 use LBHurtado\XChange\Data\Execution\ExecutionResultHandoffSummaryData;
+use LBHurtado\XChange\Services\Execution\ExecutionResultHandoffSummaryJournalPayloadMapper;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultHandoffSummaryJournalWriter;
+use LBHurtado\XChange\Services\Execution\XJournalExecutionResultHandoffSummaryJournalWriter;
+use LBHurtado\XJournal\Data\ExecutionJournalEntryData;
+use LBHurtado\XJournal\Models\ExecutionJournalEntry;
+use LBHurtado\XJournal\Services\ExecutionJournalRecorder;
 use Propaganistas\LaravelPhone\PhoneNumber;
 
 it('binds the post pipeline handoff summary journal writer to a null non blocking default', function () {
@@ -77,6 +82,37 @@ it('invokes the post pipeline summary writer after all execution result handoffs
         ->and($summary->results['handoff_summary_journal']->status)->toBe('captured_by_fake_writer')
         ->and($summary->toReportArray()['handoff_summary_journal']['status'])->toBe('captured_by_fake_writer')
         ->and($summary->toReportArray()['profile']['targets']['handoff_summary_journal'])->toBe('captured_by_fake_writer');
+});
+
+it('reports x-journal summary writer failures as non blocking', function () {
+    $writer = new XJournalExecutionResultHandoffSummaryJournalWriter(
+        mapper: app(ExecutionResultHandoffSummaryJournalPayloadMapper::class),
+        recorder: new class extends ExecutionJournalRecorder
+        {
+            public function __construct() {}
+
+            public function record(ExecutionJournalEntryData $entry): ExecutionJournalEntry
+            {
+                throw new RuntimeException('journal unavailable');
+            }
+        },
+    );
+
+    $result = $writer->write(
+        new ExecutionResultHandoffSummaryData(
+            execution_id: 'exec-summary-writer-failure',
+            voucher_code: 'PC-SUMMARY-WRITER-FAILURE',
+            correlation_id: 'corr-summary-writer-failure',
+        ),
+    );
+
+    expect($result->target)->toBe('handoff_summary_journal')
+        ->and($result->status)->toBe('failed_non_blocking')
+        ->and($result->blocking)->toBeFalse()
+        ->and($result->performed_side_effect)->toBeFalse()
+        ->and($result->source)->toBe('x-journal-execution-handoff-summary-writer')
+        ->and($result->metadata['event_type'])->toBe('execution.handoff.summary.recorded')
+        ->and($result->metadata['exception'])->toBe(RuntimeException::class);
 });
 
 function executionResultHandoffSummaryWriterResult(): ExecutionResultData
