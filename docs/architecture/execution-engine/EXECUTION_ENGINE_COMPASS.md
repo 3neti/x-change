@@ -392,3 +392,17 @@ Execution Engine migration slices 0–9 are now scaffolded. Next work should be 
 - This remains a reporting-only slice. It does not execute actions, send feedback, write additional journal entries, call providers, mutate vouchers, access wallets, or move money.
 - Report: `reports/020-lifecycle-durable-summary-projection-reporting.md`.
 - Next recommended slice: Cockpit execution activity UI surfacing for durable summary projection status.
+
+## 2026-07-15 Update — Cockpit Durable Summary Projection UI Surfacing
+
+- Cockpit dashboard activity rows now expose optional operator-visible projection fields:
+  - `projection_badge`
+  - `projection_status`
+  - `projection_detail`
+  - `projection_targets`
+- Recent Activity now renders a read-only evidence block when these fields are present.
+- Durable summary rows display `Durable summary evidence` and `durable_summary_evidence_available`.
+- The display is backed by `execution.handoff.summary.recorded`; runtime-only rows still avoid overstating action/feedback durability.
+- No execution behavior, journal writing, action execution, feedback delivery, provider call, voucher mutation, wallet access, or money movement was added.
+- Report: `reports/021-cockpit-durable-summary-projection-ui-surfacing.md`.
+- Next recommended slice: Cockpit published asset sync and browser verification for durable summary projection UI.

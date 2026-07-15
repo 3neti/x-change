@@ -164,6 +164,15 @@ function sanitizeActivityItem(item: CockpitActivityItem): CockpitActivityItem | 
         description,
         timestamp,
         source,
+        projection_badge: stringValue(item.projection_badge),
+        projection_status: stringValue(item.projection_status),
+        projection_detail: stringValue(item.projection_detail),
+        projection_targets: Array.isArray(item.projection_targets)
+            ? item.projection_targets
+                  .map((target) => stringValue(target))
+                  .filter((target): target is string => target !== undefined)
+            : undefined,
+        metadata: typeof item.metadata === 'object' && item.metadata !== null ? item.metadata : undefined,
     };
 }
 

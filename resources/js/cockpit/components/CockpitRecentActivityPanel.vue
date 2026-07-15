@@ -39,8 +39,33 @@ defineProps<{
                 <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
                     {{ item.timestamp }}
                 </p>
+                <div
+                    v-if="item.projection_status"
+                    class="mt-3 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100"
+                    data-testid="cockpit-activity-projection-status"
+                >
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="rounded-full bg-white px-2 py-0.5 font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-900 dark:text-emerald-100">
+                            {{ item.projection_badge ?? 'Execution evidence' }}
+                        </span>
+                        <span class="font-semibold">
+                            {{ item.projection_status }}
+                        </span>
+                    </div>
+                    <p
+                        v-if="item.projection_detail"
+                        class="mt-2 leading-5 text-emerald-800 dark:text-emerald-200"
+                    >
+                        {{ item.projection_detail }}
+                    </p>
+                    <p
+                        v-if="item.projection_targets?.length"
+                        class="mt-2 text-emerald-700 dark:text-emerald-300"
+                    >
+                        Targets: {{ item.projection_targets.join(', ') }}
+                    </p>
+                </div>
             </article>
         </div>
     </section>
 </template>
-

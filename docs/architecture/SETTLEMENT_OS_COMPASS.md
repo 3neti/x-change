@@ -2219,3 +2219,11 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - This did not add new execution, journal, action, feedback, provider, wallet, campaign, or Cockpit mutation behavior.
 - Verification report: `execution-engine/reports/020-lifecycle-durable-summary-projection-reporting.md`.
 - Next integration level: decide whether Cockpit UI should visibly surface durable summary projection status in Recent Activity.
+
+## 2026-07-15 Update — Cockpit Durable Summary Projection UI Surfacing
+
+- Cockpit Recent Activity now has a visible read-only evidence block for durable execution handoff summary projection.
+- The block shows projection badge, status, detail, and projected targets when the row is backed by `execution.handoff.summary.recorded`.
+- This makes the Execution → Journal → Action/Feedback planning → Summary Journal → Cockpit evidence loop visible to operators without authorizing new mutations.
+- Verification report: `execution-engine/reports/021-cockpit-durable-summary-projection-ui-surfacing.md`.
+- Next integration level: publish assets and verify the UI in the host browser surface.

@@ -273,6 +273,15 @@ it('projects durable post pipeline handoff summary evidence into cockpit dashboa
     expect($exitCode)->toBe(0)
         ->and($summaryEntry->payload['execution_id'])->toBe(data_get($scenario, 'execution.execution_id'))
         ->and($executionActivity)->toBeArray()
+        ->and($executionActivity['projection_badge'])->toBe('Durable summary evidence')
+        ->and($executionActivity['projection_status'])->toBe('durable_summary_evidence_available')
+        ->and($executionActivity['projection_detail'])->toBe('Action and feedback statuses are projected from x-journal execution.handoff.summary.recorded.')
+        ->and($executionActivity['projection_targets'])->toBe([
+            'journal',
+            'action',
+            'feedback',
+            'handoff_summary_journal',
+        ])
         ->and($profile['targets'])->toBe([
             'journal' => 'recorded',
             'action' => 'composed',

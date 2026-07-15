@@ -412,23 +412,67 @@ class OptionalCockpitIntegrationReadModels
             return null;
         }
 
+        $handoffProfile = $this->executionHandoffProfile(
+            entry: $entry,
+            summaryEntry: $this->matchingHandoffSummaryEntry(
+                entries: $entries,
+                executionId: $executionId,
+                voucherCode: $voucherCode,
+            ),
+        );
+        $projectionStatus = $this->executionProjectionStatus($handoffProfile);
+
         return new CockpitDashboardActivityData(
             id: 'execution-'.$executionId,
             label: 'Execution recorded for '.$voucherCode,
             description: $driver.' '.$status.' · '.$executionId,
             timestamp: $timestamp,
             source: 'execution',
+            projection_badge: $projectionStatus['badge'],
+            projection_status: $projectionStatus['status'],
+            projection_detail: $projectionStatus['detail'],
+            projection_targets: $this->stringList($handoffProfile['active_targets'] ?? []),
             metadata: [
-                'execution_handoff_profile' => $this->executionHandoffProfile(
-                    entry: $entry,
-                    summaryEntry: $this->matchingHandoffSummaryEntry(
-                        entries: $entries,
-                        executionId: $executionId,
-                        voucherCode: $voucherCode,
-                    ),
-                ),
+                'execution_handoff_profile' => $handoffProfile,
             ],
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $handoffProfile
+     * @return array{badge: string, status: string, detail: string}
+     */
+    private function executionProjectionStatus(array $handoffProfile): array
+    {
+        $projectionSource = $this->nonEmptyString(data_get($handoffProfile, 'projection.source'));
+        $actionEvidence = $this->nonEmptyString(data_get($handoffProfile, 'durable_evidence.action.status'));
+        $feedbackEvidence = $this->nonEmptyString(data_get($handoffProfile, 'durable_evidence.feedback.status'));
+
+        if (
+            $projectionSource === 'x-journal.execution.handoff.summary.recorded'
+            && $actionEvidence === 'projected'
+            && $feedbackEvidence === 'projected'
+        ) {
+            return [
+                'badge' => 'Durable summary evidence',
+                'status' => 'durable_summary_evidence_available',
+                'detail' => 'Action and feedback statuses are projected from x-journal execution.handoff.summary.recorded.',
+            ];
+        }
+
+        if ($projectionSource === 'x-journal.execution.result.recorded') {
+            return [
+                'badge' => 'Journal evidence',
+                'status' => 'runtime_handoff_profile_only',
+                'detail' => 'Execution is journaled; action and feedback statuses require durable post-pipeline evidence.',
+            ];
+        }
+
+        return [
+            'badge' => 'Execution evidence',
+            'status' => 'projection_pending',
+            'detail' => 'Execution evidence is available without durable handoff summary projection.',
+        ];
     }
 
     /**

@@ -54,6 +54,11 @@ export type CockpitActivityItem = {
     description: string;
     timestamp: string;
     source: 'execution' | 'journal' | 'action' | 'feedback' | 'system';
+    projection_badge?: string;
+    projection_status?: string;
+    projection_detail?: string;
+    projection_targets?: string[];
+    metadata?: Record<string, unknown>;
 };
 
 export type CockpitDashboardReadModel = {
