@@ -765,6 +765,54 @@ describe('Cockpit Quick Generate foundation', () => {
         vi.unstubAllGlobals();
     });
 
+    it('renders a contract builder checklist with reactive section statuses', async () => {
+        const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
+            props: {
+                templates: cockpitQuickGenerateTemplates,
+                mutationContract: {
+                    runtime_enabled: true,
+                    route: 'x-change.cockpit.quick-generate.store',
+                    route_url: '/x/cockpit/quick-generate',
+                    allowed_methods: ['POST'],
+                },
+            },
+        });
+
+        const checklist = wrapper.find(
+            '[data-testid="cockpit-quick-generate-contract-builder-checklist"]',
+        );
+
+        expect(checklist.exists()).toBe(true);
+        expect(checklist.text()).toContain('Contract Builder Checklist');
+        expect(checklist.text()).toContain('Money');
+        expect(checklist.text()).toContain('Claim Inputs');
+        expect(checklist.text()).toContain('Validation');
+        expect(checklist.text()).toContain('Rider');
+        expect(checklist.text()).toContain('Feedback');
+        expect(checklist.text()).toContain('Slices');
+        expect(checklist.text()).toContain('Execution');
+        expect(
+            wrapper.findAll(
+                '[data-testid="cockpit-quick-generate-contract-builder-check"]',
+            ),
+        ).toHaveLength(7);
+        expect(checklist.text()).toContain('PHP 25 × 1');
+        expect(checklist.text()).toContain('Implicit default execution.');
+
+        await wrapper
+            .find('[data-testid="cockpit-quick-generate-feedback-email"]')
+            .setValue('not-an-email');
+        await wrapper.vm.$nextTick();
+
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-contract-builder-checklist"]',
+                )
+                .text(),
+        ).toContain('Enter a valid email address.');
+    });
+
     it('reflects fixed slice-builder rows in the engineering preview without submitting named metadata', async () => {
         const wrapper = mount(CockpitQuickGenerateSubmitPanel, {
             props: {

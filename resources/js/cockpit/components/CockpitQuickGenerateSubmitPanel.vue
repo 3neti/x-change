@@ -47,6 +47,13 @@ type VoucherInstructionCoverageGroup = {
     }>;
 };
 
+type ContractBuilderChecklistItem = {
+    key: string;
+    label: string;
+    status: 'ready' | 'optional' | 'needs-review';
+    summary: string;
+};
+
 type VoucherInputFieldOption = {
     value: string;
     label: string;
@@ -1143,6 +1150,96 @@ const selectedTemplateName = computed<string>(() => {
             (template) => template.key === selectedTemplate.value,
         )?.name ?? selectedTemplate.value
     );
+});
+
+const contractBuilderChecklist = computed<ContractBuilderChecklistItem[]>(() => {
+    const amountValue = Number(amount.value);
+    const hasMoney = Number.isFinite(amountValue) && amountValue > 0;
+    const validationKeys = Object.keys(validationSummary.value);
+    const feedbackChannels = [
+        feedbackEmail.value.trim() === '' ? null : 'email',
+        normalizedFeedbackMobile.value === '' ? null : 'mobile',
+        feedbackWebhook.value.trim() === '' ? null : 'webhook',
+    ].filter((channel): channel is string => channel !== null);
+
+    return [
+        {
+            key: 'money',
+            label: 'Money',
+            status: hasMoney ? 'ready' : 'needs-review',
+            summary: hasMoney
+                ? `${currency.value || 'PHP'} ${amount.value || '0'} × ${count.value || '1'}`
+                : 'Amount is required before issuance.',
+        },
+        {
+            key: 'inputs',
+            label: 'Claim Inputs',
+            status:
+                selectedInputFields.value.length > 0 ? 'ready' : 'needs-review',
+            summary:
+                selectedInputFields.value.length > 0
+                    ? selectedInputFields.value.join(', ')
+                    : 'No beneficiary inputs selected.',
+        },
+        {
+            key: 'validation',
+            label: 'Validation',
+            status: validationKeys.length > 0 ? 'ready' : 'optional',
+            summary:
+                validationKeys.length > 0
+                    ? validationKeys.join(', ')
+                    : 'No cash validation rules selected.',
+        },
+        {
+            key: 'rider',
+            label: 'Rider',
+            status:
+                purpose.value.trim() !== '' ||
+                riderUrl.value.trim() !== '' ||
+                riderSplash.value.trim() !== ''
+                    ? 'ready'
+                    : 'optional',
+            summary:
+                purpose.value.trim() !== '' ||
+                riderUrl.value.trim() !== '' ||
+                riderSplash.value.trim() !== ''
+                    ? 'Beneficiary experience configured.'
+                    : 'No CTA or splash content configured.',
+        },
+        {
+            key: 'feedback',
+            label: 'Feedback',
+            status: feedbackValid.value
+                ? feedbackChannels.length > 0
+                    ? 'ready'
+                    : 'optional'
+                : 'needs-review',
+            summary: !feedbackValid.value
+                ? feedbackValidationErrors.value.join(' ')
+                : feedbackChannels.length > 0
+                  ? feedbackChannels.join(', ')
+                  : 'No feedback channels selected.',
+        },
+        {
+            key: 'slices',
+            label: 'Slices',
+            status:
+                namedClaimSliceValidationMessage.value === null
+                    ? 'ready'
+                    : 'needs-review',
+            summary:
+                namedClaimSliceValidationMessage.value ??
+                `${sliceSummary.value.mode ?? sliceMode.value}`,
+        },
+        {
+            key: 'execution',
+            label: 'Execution',
+            status: includeExecutionInstruction.value ? 'ready' : 'optional',
+            summary: includeExecutionInstruction.value
+                ? `${executionDriver.value || 'default'} · ${executionSchema.value || 'voucher.execution.v1'}`
+                : 'Implicit default execution.',
+        },
+    ];
 });
 
 const normalizedPayee = computed<string>(() => {
@@ -3132,6 +3229,73 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 'campaign_cockpit',
                             )
                         }}
+                    </dd>
+                </div>
+            </dl>
+        </section>
+
+        <section
+            class="mt-5 rounded-2xl border border-emerald-200 bg-white/85 p-4 text-xs text-slate-700 shadow-sm dark:border-emerald-900/70 dark:bg-slate-950/80 dark:text-slate-300"
+            data-testid="cockpit-quick-generate-contract-builder-checklist"
+        >
+            <div
+                class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"
+            >
+                <div>
+                    <p
+                        class="font-semibold tracking-[0.2em] text-emerald-700 uppercase dark:text-emerald-300"
+                    >
+                        Contract Builder Checklist
+                    </p>
+                    <h4
+                        class="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50"
+                    >
+                        Review the instruction contract before generation
+                    </h4>
+                    <p class="mt-1 max-w-3xl leading-5">
+                        This checklist summarizes the current builder state only.
+                        It does not validate against providers, reserve funds,
+                        deliver feedback, execute actions, or run voucher drivers.
+                    </p>
+                </div>
+                <span
+                    class="w-fit rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800"
+                >
+                    operator review
+                </span>
+            </div>
+
+            <dl class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div
+                    v-for="item in contractBuilderChecklist"
+                    :key="item.key"
+                    class="rounded-xl border p-3"
+                    :class="
+                        item.status === 'needs-review'
+                            ? 'border-rose-200 bg-rose-50 dark:border-rose-900/70 dark:bg-rose-950/30'
+                            : item.status === 'ready'
+                              ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-900/70 dark:bg-emerald-950/30'
+                              : 'border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/60'
+                    "
+                    data-testid="cockpit-quick-generate-contract-builder-check"
+                >
+                    <dt
+                        class="flex items-center justify-between gap-2 text-[11px] font-semibold tracking-[0.14em] uppercase"
+                        :class="
+                            item.status === 'needs-review'
+                                ? 'text-rose-700 dark:text-rose-300'
+                                : item.status === 'ready'
+                                  ? 'text-emerald-700 dark:text-emerald-300'
+                                  : 'text-slate-500 dark:text-slate-400'
+                        "
+                    >
+                        <span>{{ item.label }}</span>
+                        <span>{{ item.status }}</span>
+                    </dt>
+                    <dd
+                        class="mt-2 text-sm font-semibold break-words text-slate-950 dark:text-slate-50"
+                    >
+                        {{ item.summary }}
                     </dd>
                 </div>
             </dl>

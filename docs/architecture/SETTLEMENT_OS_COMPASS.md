@@ -2339,3 +2339,10 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Build note: third-party Rolldown pure-annotation warnings from `reka-ui/@vueuse` were emitted, but the build completed successfully.
 - Closure report: `../ui-cockpit/reports/411-quick-generate-productization-wave-2-closure.md`.
 - Next target should be selected explicitly: Quick Generate Contract Builder Completion, Pay Code Detail Productization, or Pay Code Explorer Productization.
+
+## 2026-07-16 Update — Quick Generate Contract Builder Completion Slice 1 — Builder Checklist
+
+- Started Quick Generate Contract Builder Completion.
+- The builder now shows an operator-facing readiness checklist for Money, Claim Inputs, Validation, Rider, Feedback, Slices, and Execution.
+- Verification report: `../ui-cockpit/reports/412-quick-generate-contract-builder-completion-slice-1-checklist.md`.
+- Boundary remains unchanged: the checklist summarizes existing state only and does not add provider validation, wallet reservation, journal writes, action execution, feedback delivery, campaign mutation, claim UX mutation, voucher mutation, public API behavior, or execution behavior.
