@@ -138,9 +138,10 @@ class OptionalCockpitIntegrationReadModels
         try {
             $result = $service->read($this->executionJournalQuery($query));
             $payload = $this->redact($this->arrayValue($result));
+            $entries = $this->listValue($payload['entries'] ?? []);
 
-            return collect($this->listValue($payload['entries'] ?? []))
-                ->map(fn (array $entry): ?CockpitDashboardActivityData => $this->executionActivity($entry))
+            return collect($entries)
+                ->map(fn (array $entry): ?CockpitDashboardActivityData => $this->executionActivity($entry, $entries))
                 ->filter()
                 ->values()
                 ->all();
@@ -337,8 +338,7 @@ class OptionalCockpitIntegrationReadModels
                 ]),
                 query: new $retrievalClass(
                     correlationId: $query->correlationId,
-                    eventType: 'execution.result.recorded',
-                    limit: 3,
+                    limit: 10,
                     order: 'desc',
                 ),
                 visibilityProfile: new $profileClass(
@@ -374,8 +374,7 @@ class OptionalCockpitIntegrationReadModels
             ],
             'query' => [
                 'correlation_id' => $query->correlationId,
-                'event_type' => 'execution.result.recorded',
-                'limit' => 3,
+                'limit' => 10,
                 'order' => 'desc',
             ],
             'visibility_profile' => ['name' => 'redacted'],
@@ -384,7 +383,11 @@ class OptionalCockpitIntegrationReadModels
         ];
     }
 
-    private function executionActivity(array $entry): ?CockpitDashboardActivityData
+    /**
+     * @param  array<string, mixed>  $entry
+     * @param  array<int, array<string, mixed>>  $entries
+     */
+    private function executionActivity(array $entry, array $entries): ?CockpitDashboardActivityData
     {
         $payload = $this->arrayValue($entry['payload'] ?? []);
         $references = $this->arrayValue($entry['references'] ?? []);
@@ -416,7 +419,14 @@ class OptionalCockpitIntegrationReadModels
             timestamp: $timestamp,
             source: 'execution',
             metadata: [
-                'execution_handoff_profile' => $this->executionHandoffProfile($entry),
+                'execution_handoff_profile' => $this->executionHandoffProfile(
+                    entry: $entry,
+                    summaryEntry: $this->matchingHandoffSummaryEntry(
+                        entries: $entries,
+                        executionId: $executionId,
+                        voucherCode: $voucherCode,
+                    ),
+                ),
             ],
         );
     }
@@ -425,8 +435,12 @@ class OptionalCockpitIntegrationReadModels
      * @param  array<string, mixed>  $entry
      * @return array<string, mixed>
      */
-    private function executionHandoffProfile(array $entry): array
+    private function executionHandoffProfile(array $entry, ?array $summaryEntry = null): array
     {
+        if ($summaryEntry !== null) {
+            return $this->durableSummaryExecutionHandoffProfile($summaryEntry);
+        }
+
         $targets = [
             'journal' => 'recorded',
             'action' => $this->configuredExecutionHandoffStatus('action', 'x-action', 'enabled_not_projected'),
@@ -459,6 +473,110 @@ class OptionalCockpitIntegrationReadModels
             ],
             'durable_evidence' => $this->durableHandoffEvidenceDecision($targets),
         ];
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $entries
+     * @return array<string, mixed>|null
+     */
+    private function matchingHandoffSummaryEntry(array $entries, string $executionId, string $voucherCode): ?array
+    {
+        $eventType = $this->nonEmptyString(config('x-change.execution_result_handoffs.durable_evidence_event_type'))
+            ?? 'execution.handoff.summary.recorded';
+
+        return collect($entries)
+            ->first(function (array $entry) use ($eventType, $executionId, $voucherCode): bool {
+                $payload = $this->arrayValue($entry['payload'] ?? []);
+                $references = $this->arrayValue($entry['references'] ?? []);
+
+                return ($this->nonEmptyString($entry['event_type'] ?? null) === $eventType)
+                    && (($this->nonEmptyString($payload['execution_id'] ?? null) ?? $this->nonEmptyString($references['execution_id'] ?? null)) === $executionId)
+                    && (($this->nonEmptyString($payload['voucher_code'] ?? null) ?? $this->nonEmptyString($references['voucher_code'] ?? null)) === $voucherCode);
+            });
+    }
+
+    /**
+     * @param  array<string, mixed>  $summaryEntry
+     * @return array<string, mixed>
+     */
+    private function durableSummaryExecutionHandoffProfile(array $summaryEntry): array
+    {
+        $payload = $this->arrayValue($summaryEntry['payload'] ?? []);
+        $profile = $this->arrayValue($payload['profile'] ?? []);
+        $targets = $this->stringMap($profile['targets'] ?? []);
+        $targets['handoff_summary_journal'] = 'recorded';
+        $activeTargets = $this->stringList($profile['active_targets'] ?? []);
+        $performedSideEffectTargets = $this->stringList($profile['performed_side_effect_targets'] ?? []);
+
+        if (! in_array('handoff_summary_journal', $activeTargets, true)) {
+            $activeTargets[] = 'handoff_summary_journal';
+        }
+
+        if (! in_array('handoff_summary_journal', $performedSideEffectTargets, true)) {
+            $performedSideEffectTargets[] = 'handoff_summary_journal';
+        }
+
+        return [
+            'schema' => 'x-change.cockpit.execution-handoff-profile.v1',
+            'targets' => $targets,
+            'active_targets' => $activeTargets,
+            'performed_side_effect_targets' => $performedSideEffectTargets,
+            'failed_targets' => $this->stringList($profile['failed_targets'] ?? []),
+            'non_blocking' => (bool) ($profile['non_blocking'] ?? true),
+            'projection' => [
+                'source' => 'x-journal.execution.handoff.summary.recorded',
+                'action_feedback_evidence' => 'durable-summary-journal-event',
+                'read_only' => true,
+                'executes_actions' => false,
+                'sends_feedback' => false,
+                'moves_money' => false,
+            ],
+            'durable_evidence' => $this->durableSummaryHandoffEvidence($summaryEntry, $targets),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $summaryEntry
+     * @param  array<string, string>  $targets
+     * @return array<string, array<string, mixed>>
+     */
+    private function durableSummaryHandoffEvidence(array $summaryEntry, array $targets): array
+    {
+        $referenceNumber = $this->nullableString($summaryEntry['reference_number'] ?? null);
+        $eventType = $this->nonEmptyString($summaryEntry['event_type'] ?? null) ?? 'execution.handoff.summary.recorded';
+
+        $evidence = $this->durableHandoffEvidenceDecision($targets + [
+            'journal' => 'recorded',
+            'action' => 'not_wired',
+            'feedback' => 'not_wired',
+            'cockpit_activity' => 'not_wired',
+        ]);
+
+        foreach (['action', 'feedback', 'cockpit_activity'] as $target) {
+            if (($targets[$target] ?? 'not_wired') === 'not_wired') {
+                continue;
+            }
+
+            $evidence[$target] = [
+                'status' => 'projected',
+                'source' => 'x-journal.execution.handoff.summary.recorded',
+                'durable' => true,
+                'event_type' => $eventType,
+                'reference_number' => $referenceNumber,
+                'reason' => 'Projected from a persisted post-pipeline execution handoff summary journal entry.',
+            ];
+        }
+
+        $evidence['handoff_summary_journal'] = [
+            'status' => 'projected',
+            'source' => 'x-journal.execution.handoff.summary.recorded',
+            'durable' => true,
+            'event_type' => $eventType,
+            'reference_number' => $referenceNumber,
+            'reason' => 'The post-pipeline handoff summary itself is persisted in x-journal.',
+        ];
+
+        return $evidence;
     }
 
     private function configuredExecutionHandoffStatus(string $key, string $enabledValue, string $enabledStatus): string
@@ -713,6 +831,15 @@ class OptionalCockpitIntegrationReadModels
         return $payload[$snakeKey] ?? $payload[$camelKey] ?? null;
     }
 
+    private function nullableString(mixed $value): ?string
+    {
+        if (is_scalar($value) && trim((string) $value) !== '') {
+            return (string) $value;
+        }
+
+        return null;
+    }
+
     private function nonEmptyString(?string $value): ?string
     {
         $normalized = trim((string) $value);
@@ -741,6 +868,37 @@ class OptionalCockpitIntegrationReadModels
             fn (mixed $item): ?array => $this->arrayValue($item) ?: null,
             $value,
         )));
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function stringMap(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return collect($value)
+            ->filter(fn (mixed $item, mixed $key): bool => is_string($key) && is_scalar($item))
+            ->map(fn (mixed $item): string => (string) $item)
+            ->all();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function stringList(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return collect($value)
+            ->filter(fn (mixed $item): bool => is_scalar($item))
+            ->map(fn (mixed $item): string => (string) $item)
+            ->values()
+            ->all();
     }
 
     /**

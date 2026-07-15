@@ -3,8 +3,17 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Route;
+use LBHurtado\XAction\Contracts\ActionRegistryContract;
+use LBHurtado\XAction\Contracts\WorkflowActionContract;
+use LBHurtado\XAction\Data\ActionContextData;
+use LBHurtado\XAction\Data\ActionData;
+use LBHurtado\XAction\Data\ActionSubjectData;
+use LBHurtado\XAction\Data\ActionTargetData;
 use LBHurtado\XChange\Contracts\ExecutionResultActionHandoffContract;
 use LBHurtado\XChange\Contracts\ExecutionResultFeedbackHandoffContract;
+use LBHurtado\XChange\Contracts\ExecutionResultHandoffPipelineContract;
+use LBHurtado\XChange\Contracts\ExecutionResultHandoffSummaryJournalWriterContract;
 use LBHurtado\XChange\Contracts\ExecutionResultJournalHandoffContract;
 use LBHurtado\XChange\Tests\Fakes\User as FakeLifecycleUser;
 use LBHurtado\XJournal\Models\ExecutionJournalEntry;
@@ -214,3 +223,120 @@ it('projects configured durable handoff evidence source selection without writin
         ->and($executionActivity['metadata']['execution_handoff_profile']['durable_evidence']['feedback']['selected_source']['writes_now'])
         ->toBeFalse();
 });
+
+it('projects durable post pipeline handoff summary evidence into cockpit dashboard activity', function () {
+    config([
+        'x-change.execution_result_handoffs.action' => 'x-action',
+        'x-change.execution_result_handoffs.feedback' => 'x-feedback',
+        'x-change.execution_result_handoffs.summary_journal_writer' => 'x-journal',
+        'x-change.execution_result_handoffs.durable_evidence_source' => 'post_pipeline_summary_journal_event',
+        'x-change.execution_result_handoffs.durable_evidence_event_type' => 'execution.handoff.summary.recorded',
+    ]);
+
+    app()->forgetInstance(ExecutionResultActionHandoffContract::class);
+    app()->forgetInstance(ExecutionResultFeedbackHandoffContract::class);
+    app()->forgetInstance(ExecutionResultHandoffPipelineContract::class);
+    app()->forgetInstance(ExecutionResultHandoffSummaryJournalWriterContract::class);
+
+    Route::get('/x/cockpit/pay-codes/{code}', fn (string $code): string => $code)
+        ->name('x-change.cockpit.pay-codes.show');
+
+    app(ActionRegistryContract::class)->register(
+        'execution.result.recorded',
+        new CockpitDurableSummaryWorkflowAction,
+    );
+
+    $exitCode = Artisan::call('xchange:lifecycle:run', [
+        'scenario' => 'execution_settlement_envelope_contract_demo',
+        '--json' => true,
+    ]);
+
+    $scenario = json_decode(Artisan::output(), true);
+    $summaryEntry = ExecutionJournalEntry::query()
+        ->where('event_type', 'execution.handoff.summary.recorded')
+        ->sole();
+
+    actingAsTestUser();
+
+    $response = $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.dashboard'))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/cockpit/Dashboard');
+
+    $activities = data_get($response->json(), 'props.dashboard_read_model.activity', []);
+    $executionActivity = collect($activities)->firstWhere(
+        'id',
+        'execution-'.data_get($scenario, 'execution.execution_id'),
+    );
+    $profile = $executionActivity['metadata']['execution_handoff_profile'];
+
+    expect($exitCode)->toBe(0)
+        ->and($summaryEntry->payload['execution_id'])->toBe(data_get($scenario, 'execution.execution_id'))
+        ->and($executionActivity)->toBeArray()
+        ->and($profile['targets'])->toBe([
+            'journal' => 'recorded',
+            'action' => 'composed',
+            'feedback' => 'planned',
+            'cockpit_activity' => 'not_wired',
+            'handoff_summary_journal' => 'recorded',
+        ])
+        ->and($profile['active_targets'])->toBe([
+            'journal',
+            'action',
+            'feedback',
+            'handoff_summary_journal',
+        ])
+        ->and($profile['performed_side_effect_targets'])->toBe([
+            'journal',
+            'handoff_summary_journal',
+        ])
+        ->and($profile['projection']['source'])->toBe('x-journal.execution.handoff.summary.recorded')
+        ->and($profile['projection']['action_feedback_evidence'])->toBe('durable-summary-journal-event')
+        ->and($profile['durable_evidence']['action']['status'])->toBe('projected')
+        ->and($profile['durable_evidence']['action']['source'])->toBe('x-journal.execution.handoff.summary.recorded')
+        ->and($profile['durable_evidence']['action']['durable'])->toBeTrue()
+        ->and($profile['durable_evidence']['action']['event_type'])->toBe('execution.handoff.summary.recorded')
+        ->and($profile['durable_evidence']['feedback']['status'])->toBe('projected')
+        ->and($profile['durable_evidence']['feedback']['source'])->toBe('x-journal.execution.handoff.summary.recorded')
+        ->and($profile['durable_evidence']['feedback']['durable'])->toBeTrue()
+        ->and($profile['durable_evidence']['feedback']['event_type'])->toBe('execution.handoff.summary.recorded')
+        ->and($profile['durable_evidence']['handoff_summary_journal']['status'])->toBe('projected')
+        ->and($profile['durable_evidence']['handoff_summary_journal']['reference_number'])->toBe($summaryEntry->reference_number);
+});
+
+class CockpitDurableSummaryWorkflowAction implements WorkflowActionContract
+{
+    public function key(): string
+    {
+        return 'execution.pay-code.inspect.durable-summary';
+    }
+
+    public function supports(ActionSubjectData $subject, ActionContextData $context): bool
+    {
+        return $subject->type === 'execution_result'
+            && $context->feature_profile === 'execution'
+            && $context->hasCapability('cockpit.pay-code.open')
+            && $subject->get('attributes.voucher_code') !== null;
+    }
+
+    public function toActionData(ActionSubjectData $subject, ActionContextData $context): ActionData
+    {
+        return new ActionData(
+            key: $this->key(),
+            label: 'Inspect Pay Code',
+            target: new ActionTargetData(
+                type: ActionTargetData::TypeRoute,
+                route: 'x-change.cockpit.pay-codes.show',
+                parameters: ['code' => (string) $subject->get('attributes.voucher_code')],
+            ),
+            intent: 'inspect',
+            description: 'Open the Pay Code detail screen for read-only execution follow-up.',
+            surface: 'cockpit',
+            permissions: ['cockpit.pay-code.open'],
+            meta: [
+                'read_only' => true,
+                'executes_action' => false,
+            ],
+        );
+    }
+}

@@ -2194,3 +2194,18 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Default runtime behavior remains unchanged unless the writer is explicitly configured.
 - Verification report: `execution-engine/reports/018-concrete-x-journal-handoff-summary-writer.md`.
 - Next integration level: Cockpit read-model projection of post-pipeline summary journal evidence.
+
+## 2026-07-15 Update — Cockpit Handoff Summary Evidence Projection
+
+- Cockpit can now consume the durable post-pipeline summary event as read-only execution activity evidence.
+- `execution.handoff.summary.recorded` lets Cockpit project exact action and feedback handoff statuses after those handoffs have actually run.
+- This closes the immediate durable evidence loop:
+  - Execution Engine result
+  - x-journal execution result event
+  - x-action continuation planning
+  - x-feedback delivery planning
+  - x-journal post-pipeline handoff summary event
+  - Cockpit read-only activity projection
+- The integration remains non-blocking and read-only from Cockpit.
+- Verification report: `execution-engine/reports/019-cockpit-handoff-summary-evidence-projection.md`.
+- Next integration level: lifecycle scenario reporting profile for durable summary projection.

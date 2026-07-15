@@ -365,3 +365,17 @@ Execution Engine migration slices 0–9 are now scaffolded. Next work should be 
 - Default behavior remains null/not-wired unless the writer is explicitly configured.
 - Report: `reports/018-concrete-x-journal-handoff-summary-writer.md`.
 - Next recommended slice: Cockpit projection of `execution.handoff.summary.recorded` durable evidence.
+
+## 2026-07-15 Update — Cockpit Handoff Summary Evidence Projection
+
+- Cockpit execution activity read models now query correlated x-journal execution events so they can join `execution.result.recorded` with `execution.handoff.summary.recorded`.
+- Dashboard activity rows still render only execution result rows.
+- When a matching summary event exists, Cockpit projects exact durable post-pipeline handoff statuses from x-journal:
+  - `journal = recorded`
+  - `action = composed`
+  - `feedback = planned`
+  - `handoff_summary_journal = recorded`
+- Without a matching summary event, Cockpit preserves the previous runtime-config-only projection behavior.
+- The projection is read-only and does not execute actions, send feedback, write journal entries, call providers, mutate vouchers, or move money.
+- Report: `reports/019-cockpit-handoff-summary-evidence-projection.md`.
+- Next recommended slice: lifecycle scenario reporting profile for durable summary projection.
