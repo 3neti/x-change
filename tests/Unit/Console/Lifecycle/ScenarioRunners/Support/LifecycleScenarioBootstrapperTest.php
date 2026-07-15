@@ -28,6 +28,15 @@ it('builds lifecycle input from scenario values', function () {
             'metadata' => [
                 'flow_type' => 'disbursable',
             ],
+            'execution' => [
+                'schema' => 'voucher.execution.v1',
+                'driver' => 'stored_value',
+                'metadata' => [
+                    'stored_value' => [
+                        'reference' => 'SV-LIFECYCLE',
+                    ],
+                ],
+            ],
         ],
         issuerId: 1,
         walletId: 1,
@@ -43,6 +52,9 @@ it('builds lifecycle input from scenario values', function () {
         ->and(data_get($input, 'cash.validation.secret'))->toBe('secret123')
         ->and(data_get($input, 'inputs.fields'))->toBe(['signature'])
         ->and(data_get($input, 'metadata.flow_type'))->toBe('disbursable')
+        ->and(data_get($input, 'execution.schema'))->toBe('voucher.execution.v1')
+        ->and(data_get($input, 'execution.driver'))->toBe('stored_value')
+        ->and(data_get($input, 'execution.metadata.stored_value.reference'))->toBe('SV-LIFECYCLE')
         ->and(data_get($input, '_meta.idempotency_key'))->toBe('lifecycle-test-key');
 });
 

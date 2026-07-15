@@ -1514,5 +1514,155 @@ return [
                 ],
             ],
         ],
+
+        'execution_settlement_envelope_contract_demo' => [
+            'label' => 'Execution Engine Settlement Envelope Contract Demo',
+            'description' => 'Issues a voucher with canonical settlement_envelope execution metadata and executes it through the voucher-owned engine using the x-change gateway adapter.',
+            'category' => 'execution-engine',
+            'tags' => ['execution-engine', 'settlement-envelope', 'contract'],
+            'mode' => 'execution_engine_contract_demo',
+            'amount' => 100,
+            'currency' => 'PHP',
+            'cash' => [
+                'settlement_rail' => 'INSTAPAY',
+                'fee_strategy' => 'absorb',
+                'validation' => [
+                    'country' => 'PH',
+                ],
+            ],
+            'inputs' => [
+                'fields' => ['mobile'],
+            ],
+            'metadata' => [
+                'flow_type' => 'settlement',
+                'settlement_driver' => 'philhealth-bst',
+            ],
+            'execution' => [
+                'schema' => 'voucher.execution.v1',
+                'driver' => 'settlement_envelope',
+                'metadata' => [
+                    'settlement_envelope' => [
+                        'reference' => 'ENV-LIFECYCLE-001',
+                        'driver' => 'philhealth-bst',
+                        'readiness_gate' => 'settleable',
+                        'child_generation' => 'from_envelope',
+                        'auto_redeem_children' => false,
+                        'fallback_to_claim' => true,
+                        'payload' => [
+                            'patient_name' => 'Juan Dela Cruz',
+                            'patient_mobile' => '09171234567',
+                        ],
+                        'checklist' => [
+                            'amount_verified' => true,
+                        ],
+                    ],
+                ],
+            ],
+            'execution_runtime' => [
+                'operation' => [
+                    'operation' => 'execute',
+                ],
+            ],
+        ],
+
+        'execution_stored_value_contract_demo' => [
+            'label' => 'Execution Engine Stored Value Contract Demo',
+            'description' => 'Issues a voucher with canonical stored_value execution metadata and exercises activate/spend through the voucher-owned engine using the x-change gateway adapter.',
+            'category' => 'execution-engine',
+            'tags' => ['execution-engine', 'stored-value', 'contract'],
+            'mode' => 'execution_engine_contract_demo',
+            'amount' => 100,
+            'currency' => 'PHP',
+            'cash' => [
+                'settlement_rail' => 'INSTAPAY',
+                'fee_strategy' => 'absorb',
+                'validation' => [
+                    'country' => 'PH',
+                ],
+            ],
+            'inputs' => [
+                'fields' => ['mobile'],
+            ],
+            'execution' => [
+                'schema' => 'voucher.execution.v1',
+                'driver' => 'stored_value',
+                'metadata' => [
+                    'stored_value' => [
+                        'reference' => 'SV-LIFECYCLE-001',
+                        'initial_balance' => 10000,
+                        'max_balance' => 10000,
+                        'replenishable' => true,
+                        'otp_required_above' => 5000,
+                    ],
+                ],
+            ],
+            'execution_runtime' => [
+                'sequence' => [
+                    [
+                        'operation' => 'activate',
+                    ],
+                    [
+                        'operation' => 'spend',
+                        'amount' => 2500,
+                        'merchant_reference' => 'TRAIN-001',
+                    ],
+                ],
+            ],
+        ],
+
+        'execution_engine_basic_cash_live_transfer' => [
+            'label' => 'Execution Engine Basic Cash Live Transfer',
+            'description' => 'Issues a basic cash Pay Code with an explicit x_change_live_cash execution instruction and executes it through the voucher-owned engine into the existing x-change live payout path.',
+            'category' => 'execution-engine',
+            'tags' => ['execution-engine', 'cash', 'live-provider', 'netbank', 'gcash'],
+            'mode' => 'execution_engine_contract_demo',
+            'amount' => 12.50,
+            'currency' => 'PHP',
+            'cash' => [
+                'settlement_rail' => 'INSTAPAY',
+                'fee_strategy' => 'absorb',
+                'validation' => [
+                    'country' => 'PH',
+                ],
+            ],
+            'inputs' => [
+                'fields' => [],
+            ],
+            'feedback' => [],
+            'execution' => [
+                'schema' => 'voucher.execution.v1',
+                'driver' => 'x_change_live_cash',
+                'metadata' => [
+                    'x_change_live_cash' => [
+                        'claim_owner' => 'x-change',
+                        'provider' => 'netbank',
+                        'settlement_rail' => 'INSTAPAY',
+                    ],
+                ],
+            ],
+            'execution_runtime' => [
+                'live_provider' => true,
+                'operation' => [
+                    'operation' => 'claim_transfer',
+                    'claim' => [
+                        'mobile' => env('XCHANGE_LIFECYCLE_TURNKEY_MOBILE', env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987')),
+                        'recipient_country' => 'PH',
+                        'bank_account' => [
+                            'bank_code' => env('XCHANGE_LIFECYCLE_BANK_CODE', 'GXCHPHM2XXX'),
+                            'account_number' => env('XCHANGE_LIFECYCLE_ACCOUNT_NUMBER', '09173011987'),
+                        ],
+                        'inputs' => [],
+                    ],
+                    'poll' => [
+                        'timeout' => 180,
+                        'poll' => 10,
+                        'accept_pending' => false,
+                    ],
+                ],
+            ],
+            'expect' => [
+                'tariffs' => ['cash'],
+            ],
+        ],
     ],
 ];

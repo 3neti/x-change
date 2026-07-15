@@ -17,6 +17,7 @@ final class ScenarioRunnerRegistry
             'sequential_claims',
             'settlement_envelope_evaluation',
             'settlement_three_party_flow',
+            'execution_engine_contract_demo',
             'live_provider_verification',
         ], true);
     }
@@ -29,6 +30,7 @@ final class ScenarioRunnerRegistry
             'sequential_claims' => app(SequentialClaimsScenarioRunner::class),
             'settlement_envelope_evaluation' => app(SettlementEnvelopeEvaluationScenarioRunner::class),
             'settlement_three_party_flow' => app(SettlementThreePartyScenarioRunner::class),
+            'execution_engine_contract_demo' => app(ExecutionEngineContractScenarioRunner::class),
             'live_provider_verification' => app(LiveProviderVerificationScenarioRunner::class),
             default => throw new RuntimeException("No lifecycle scenario runner registered for mode [{$mode}]."),
         };

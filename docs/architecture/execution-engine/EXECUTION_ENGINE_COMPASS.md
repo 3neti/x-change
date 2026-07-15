@@ -111,6 +111,10 @@ Last updated: 2026-06-29
 - Slice 9 introduces a generic opt-in pipeline runtime. Drivers may assemble modular execution steps, but the central engine still only resolves and executes drivers.
 - Pipeline steps can be registered as instances, class strings, or closures through `ExecutionPipelineStepRegistry`.
 - Pipeline execution short-circuits when a step finalizes `ExecutionPipelineStateData::$result`.
+- 2026-07-15 integration discovery: explicit execution schema rejection now happens at `ExecutionInstructionData` construction; only `voucher.execution.v1` is currently accepted.
+- 2026-07-15 integration discovery: voucher drivers accept canonical nested metadata under `execution.metadata.settlement_envelope` and `execution.metadata.stored_value`, with legacy flat metadata fallback retained.
+- 2026-07-15 integration discovery: x-change now binds concrete gateway adapters for `SettlementEnvelopeExecutionGateway` and `StoredValueExecutionGateway`; these prove the integration seam but are not yet production provider/ledger implementations.
+- 2026-07-15 lifecycle verification: `execution_settlement_envelope_contract_demo` and `execution_stored_value_contract_demo` issue through x-change and execute through voucher `ExecutionEngine`, returning correlated execution results in JSON.
 
 ## Risks
 
@@ -135,6 +139,7 @@ Last updated: 2026-06-29
 - Slice 9 is infrastructure only. Existing drivers are not yet decomposed into pipeline steps, so there is no production driver using modular blocks by default.
 - Pipeline step naming/versioning needs the same production hardening as driver instruction metadata before issued vouchers depend on explicit step lists.
 - Pipeline steps can encode side effects; concrete step registration must maintain fail-closed behavior before money movement or voucher mutation.
+- Slice-level execution semantics are not yet typed in voucher. Current x-change/Cockpit named-slice metadata is only issuance/presentation guidance. If future execution drivers directly execute named, scheduled, condition-gated, open-spend, stored-value-like, or per-slice-balance rows, voucher should introduce a typed slice instruction contract before that behavior is production-capable.
 
 ## Architectural Decisions
 
@@ -182,6 +187,12 @@ Last updated: 2026-06-29
 - Slice 9 introduces modular execution pipelines as opt-in driver infrastructure, not a replacement for `ExecutionEngine`.
 - Slice 9 keeps the execution path as `ExecutionEngine -> ExecutionDriverRegistry -> ExecutionDriverContract`; drivers may then use `ExecutionPipelineRuntime` internally.
 - Slice 9 does not migrate existing drivers into pipeline steps and does not introduce provider, wallet, x-journal, claim UX, or persistence behavior.
+- Future executable slice policy belongs in voucher, not x-change or cash, when slices control execution consequences. Cash/provider packages should supply rail constraints, minimum disbursement policy, and money mechanics behind gateways; x-change should supply templates, Cockpit UX, campaign context, and beneficiary presentation.
+- Candidate future voucher-owned contracts for that work include `VoucherSliceInstructionData` or `ExecutionSliceInstructionData`, `SliceExecutionPolicyData`, and `SliceExecutionResultData`. These remain future proposals until introduced test-first in an authorized voucher execution slice.
+- The Quick Generate settlement/execution/metadata architecture note in `../../ui-cockpit/quick-generate-settlement-execution-metadata.md` records how x-change currently prepares optional execution instructions for voucher without becoming the execution runtime.
+- x-change gateway binding strategy is now concrete for contract-demo purposes: x-change owns adapter bindings in `XChangeServiceProvider`; voucher continues to own engine, driver contracts, registry, and execution result shape.
+- Canonical production metadata baselines are nested and driver-specific: `execution.metadata.settlement_envelope` and `execution.metadata.stored_value`.
+- Executable slice instructions remain deferred. Current named slices stay x-change/Cockpit metadata until a future voucher execution slice introduces typed voucher-owned slice contracts.
 
 ## Test Coverage Status
 
@@ -195,6 +206,7 @@ Last updated: 2026-06-29
 - Settlement-envelope driver: completed with gateway-seam tests for load, readiness, lock, child generation, auto-redemption, fallback claim-voucher generation, registry resolution, and stored-value absence.
 - Stored-value driver: completed with gateway-seam tests for activation, no-disbursement ownership claim, spend, over-balance rejection, OTP threshold rejection, replenishment, max-balance rejection, registry resolution, and no stored-value voucher species.
 - Driver-composed runtime: completed with tests for step registry registration, unknown-step failure, ordered execution, container/closure resolution, result short-circuiting, fake driver composition, singleton booting, autoloading, and central-engine isolation.
+- Integration contract demo: completed with x-change tests for gateway bindings, lifecycle bootstrapper execution payload preservation, runner resolution, settlement-envelope lifecycle execution, and stored-value activate/spend lifecycle execution.
 - Architecture invariants: x-change now has an executable guard preventing production imports of concrete voucher generation/redemption actions.
 - Feature/regression: current voucher and x-change suites cover issuance, redemption, claim, withdrawal, provider failure, and reconciliation.
 - Verification: voucher full suite is green as of 2026-06-29 with 381 passed and 28 skipped; x-change package full suite is green with 970 passed and 5 skipped.
@@ -205,10 +217,22 @@ Execution Engine migration slices 0–9 are now scaffolded. Next work should be 
 
 ## Open Questions
 
-- Concrete settlement-envelope gateway binding location: x-change service provider, settlement-envelope package provider, or a dedicated integration package.
-- Exact instruction metadata shape for production settlement-envelope authority vouchers beyond the current `metadata.envelope_reference`, `metadata.auto_redeem_children`, and `metadata.fallback_to_claim` scaffold.
-- Concrete stored-value gateway binding location: wallet package provider, cash package provider, x-change provider, or a dedicated integration package.
-- Exact production instruction metadata shape for stored-value operations beyond the current `metadata.stored_value_reference`, `metadata.replenishable`, `metadata.max_balance`, `metadata.otp_required_above`, and `context.meta.operation` scaffold.
+- Whether settlement-envelope gateway binding should remain in x-change for production or move into a settlement-envelope integration package after provider metadata and recovery behavior are hardened.
+- Exact production settlement-envelope metadata fields beyond the current nested baseline: `reference`, `driver`, `readiness_gate`, `child_generation`, `auto_redeem_children`, `fallback_to_claim`, `payload`, `documents`, and `checklist`.
+- Whether stored-value gateway binding should remain in x-change for production or move into cash/wallet/dedicated integration once ledger mutation policy is finalized.
+- Exact production stored-value metadata fields beyond the current nested baseline: `reference`, `initial_balance`, `max_balance`, `replenishable`, and `otp_required_above`.
 - Whether existing `settlement_envelope` and `stored_value` drivers should be decomposed into concrete pipeline steps or remain hand-composed until production behavior stabilizes.
 - Production naming/versioning policy for explicit pipeline step lists.
 - Whether execution results should be persisted by voucher directly or only consumed by the future x-journal layer remains deferred.
+- Exact production shape and timing for voucher-owned executable slice instructions, including purpose labels, unlock conditions, start/end windows, fixed/open/stored-value-like spend semantics, per-slice balances, and per-slice execution results.
+- Exact x-change integration slice sequence for binding production settlement-envelope and stored-value gateways while keeping provider, wallet, and cash mechanics outside the voucher execution engine.
+
+## 2026-07-15 Update — Live Cash Transfer Demonstration Path
+
+- Added an x-change-contributed voucher execution driver key: `x_change_live_cash`.
+- The driver is registered into voucher's `ExecutionDriverRegistry` by `XChangeServiceProvider`.
+- The live transfer path is now demonstrable as `ExecutionEngine -> x_change_live_cash driver -> voucher default compatibility redemption -> x-change payout/reconciliation poller`.
+- New lifecycle scenario: `execution_engine_basic_cash_live_transfer`.
+- The scenario requires both `--live-provider` and the existing live-provider lifecycle setting before it can perform provider side effects.
+- This proves explicit execution instructions can drive a live cash payout without making voucher own provider-specific NetBank/GCash behavior.
+- Remaining boundary: this is a live demonstration bridge, not a migration of all cash redemption flows to driver-composed execution.

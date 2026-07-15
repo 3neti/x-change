@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use LBHurtado\XChange\Lifecycle\Runners\DefaultClaimScenarioRunner;
+use LBHurtado\XChange\Lifecycle\Runners\ExecutionEngineContractScenarioRunner;
 use LBHurtado\XChange\Lifecycle\Runners\ScenarioRunnerResolver;
 use LBHurtado\XChange\Lifecycle\Runners\SequentialClaimsScenarioRunner;
 use LBHurtado\XChange\Lifecycle\Runners\SettlementEnvelopeEvaluationScenarioRunner;
@@ -48,6 +49,15 @@ it('resolves settlement three party mode', function () {
 
     expect($resolution->mode)->toBe('settlement_three_party_flow')
         ->and($resolution->runner)->toBeInstanceOf(SettlementThreePartyScenarioRunner::class);
+});
+
+it('resolves execution engine contract demo mode', function () {
+    $resolution = app(ScenarioRunnerResolver::class)->resolve([
+        'mode' => 'execution_engine_contract_demo',
+    ]);
+
+    expect($resolution->mode)->toBe('execution_engine_contract_demo')
+        ->and($resolution->runner)->toBeInstanceOf(ExecutionEngineContractScenarioRunner::class);
 });
 
 it('throws when no runner is registered for mode', function () {

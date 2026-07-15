@@ -105,6 +105,20 @@ final class LifecycleScenarioEngine
             );
         }
 
+        if ($this->requiresLiveProvider($scenario) && ! $options->liveProvider) {
+            return $this->liveProviderRefusal(
+                scenarioKey: $scenarioKey,
+                message: 'This lifecycle scenario requires the --live-provider option.',
+            );
+        }
+
+        if ($this->requiresLiveProvider($scenario) && ! $this->settings->allowsLiveProviderScenarios()) {
+            return $this->liveProviderRefusal(
+                scenarioKey: $scenarioKey,
+                message: 'Live provider lifecycle scenarios are disabled by runtime settings.',
+            );
+        }
+
         if (
             ! in_array($mode, ['turnkey_onboarding', 'live_provider_verification'], true)
             && $output->isJson()
@@ -242,6 +256,14 @@ final class LifecycleScenarioEngine
             exitCode: $result->exitCode,
             payload: $payload,
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $scenario
+     */
+    private function requiresLiveProvider(array $scenario): bool
+    {
+        return (bool) data_get($scenario, 'execution_runtime.live_provider', false);
     }
 
     /**

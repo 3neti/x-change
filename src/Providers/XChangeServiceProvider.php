@@ -26,8 +26,11 @@ use LBHurtado\EmiPaynamicsConstellation\Contracts\PendingOtpStore;
 use LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider;
 use LBHurtado\PaymentGateway\Contracts\WalletProxy;
 use LBHurtado\ReportRegistry\Contracts\ReportResolverInterface;
+use LBHurtado\Voucher\Contracts\SettlementEnvelopeExecutionGateway;
+use LBHurtado\Voucher\Contracts\StoredValueExecutionGateway;
 use LBHurtado\Voucher\Events\VoucherDisbursementFailed;
 use LBHurtado\Voucher\Events\VoucherDisbursementSucceeded;
+use LBHurtado\Voucher\Services\ExecutionDriverRegistry;
 use LBHurtado\XChange\Actions\Auth\AuthenticateMobileFirstUser;
 use LBHurtado\XChange\Actions\Auth\CreateNewMobileFirstUser;
 use LBHurtado\XChange\Console\Commands\Claim\LoadPayCodeRedemptionCompletionContextCommand;
@@ -84,6 +87,7 @@ use LBHurtado\XChange\Contracts\DisbursementStatusFetcherContract;
 use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Contracts\EventLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\EventStoreContract;
+use LBHurtado\XChange\Contracts\ExecutionCashDisbursementPollerContract;
 use LBHurtado\XChange\Contracts\PayCodePresentationResolverContract;
 use LBHurtado\XChange\Contracts\PricelistServiceContract;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
@@ -185,6 +189,10 @@ use LBHurtado\XChange\Services\DefaultWithdrawalProcessorService;
 use LBHurtado\XChange\Services\DefaultWithdrawalValidationService;
 use LBHurtado\XChange\Services\DefaultXChangeOnboardingGateway;
 use LBHurtado\XChange\Services\EventLifecycleService;
+use LBHurtado\XChange\Services\Execution\LifecycleExecutionCashDisbursementPoller;
+use LBHurtado\XChange\Services\Execution\XChangeLiveCashExecutionDriver;
+use LBHurtado\XChange\Services\Execution\XChangeSettlementEnvelopeExecutionGateway;
+use LBHurtado\XChange\Services\Execution\XChangeStoredValueExecutionGateway;
 use LBHurtado\XChange\Services\InstructionBackedPricingService;
 use LBHurtado\XChange\Services\NullClaimApprovalNotificationService;
 use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
@@ -652,6 +660,25 @@ class XChangeServiceProvider extends ServiceProvider
             SettlementEnvelopeReadinessContract::class,
             SettlementEnvelopeReadinessService::class,
         );
+
+        $this->app->bind(
+            SettlementEnvelopeExecutionGateway::class,
+            XChangeSettlementEnvelopeExecutionGateway::class,
+        );
+
+        $this->app->singleton(
+            StoredValueExecutionGateway::class,
+            XChangeStoredValueExecutionGateway::class,
+        );
+
+        $this->app->bind(
+            ExecutionCashDisbursementPollerContract::class,
+            LifecycleExecutionCashDisbursementPoller::class,
+        );
+
+        $this->app
+            ->make(ExecutionDriverRegistry::class)
+            ->register('x_change_live_cash', XChangeLiveCashExecutionDriver::class);
 
         $this->app->bind(
             SettlementReadinessGateContract::class,

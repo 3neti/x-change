@@ -822,10 +822,13 @@ ExecutionDriverContract
 - Settlement Envelope is a participant/readiness gate/authorization structure, not the execution engine.
 - Stored Value is driver behavior, not a new voucher species.
 - Driver-composed runtime is opt-in driver infrastructure, not a replacement for the central `ExecutionEngine`.
+- Slice-level contract semantics belong in voucher once slices affect execution, authorization, timing, spend, balance, or per-slice outcomes. x-change may present and submit named-slice UX metadata for now, but executable slice policy should not become a Cockpit-only or x-change-only contract.
+- Cash owns money mechanics and provider/rail constraints; voucher owns portable executable contract semantics. If future slices model purpose-specific, scheduled, condition-gated, open-spend, stored-value-like, or per-slice-result behavior, the likely home is a voucher-owned typed slice instruction contract, with cash/provider packages supplying constraints and execution gateways.
 
 ## Program Risks
 
 - Package boundaries can blur as integration pressure increases. Record boundary decisions before implementation.
+- Current Cockpit named-slice metadata is presentation/issuance guidance, not a voucher-owned execution DTO. If future execution drivers directly execute slice rows, the lack of a voucher-owned slice instruction contract can blur boundaries between x-change UX metadata, cash disbursement mechanics, and voucher execution semantics.
 - Execution result persistence is still deferred; x-journal must be designed without forcing voucher to depend on journal storage.
 - x-journal append-only enforcement is currently model-event based; direct database mutation protection is not yet addressed.
 - x-journal integrity hashes are deterministic but unsigned; signature strategy remains open for future verification phases.
@@ -2048,3 +2051,34 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Cockpit Quick Generate UX Slice 7A — Rider CTA destination presets: implemented on 2026-07-14; Quick Generate Rider controls now expose local frequent CTA URL presets that populate `rider.url` without adding persistence, external URL history, delivery, redirect execution, or claim runtime changes. Verification: package assets published, asset drift clean, Vite build passed, focused Playwright tests passed. No Settlement OS behavior or mutation boundary changed.
 - Cockpit Quick Generate UX Slice 7B — Rider Splash Page Builder: implemented on 2026-07-14; Quick Generate Rider controls now expose a local splash builder and preview that composes headline/body/CTA text into the existing `rider.splash` contract while preserving all existing runtime boundaries. Verification: package assets published, asset drift clean, Vite build passed, focused Playwright tests passed. No Settlement OS behavior or mutation boundary changed.
 - Cockpit Quick Generate UX Slice 7C — Rider OG Preview and Advanced Metadata Polish: implemented on 2026-07-14; Quick Generate Rider controls now expose a local OG preview for default/message/CTA URL/splash source choices while continuing to submit only the existing `rider.og_source` metadata. Verification: package assets published, asset drift clean, Vite build passed, focused Playwright tests passed. No Settlement OS behavior, delivery path, external OG fetch, claim runtime, or mutation boundary changed.
+- Cockpit Quick Generate slice-policy boundary decision: recorded on 2026-07-15; current named slices remain x-change/Cockpit issuance metadata normalized into existing voucher-compatible cash/open-slice semantics. A future Pay Code that directly executes scheduled, purpose-specific, condition-gated, open-spend, stored-value-like, or per-slice-balance rows should introduce a voucher-owned typed slice instruction contract before production execution. Candidate future voucher DTOs include `VoucherSliceInstructionData` or `ExecutionSliceInstructionData`, `SliceExecutionPolicyData`, and `SliceExecutionResultData`. Cash/provider packages should provide minimum-disbursement and rail mechanics; x-change should continue to own operator UX, templates, campaign prefill, and presentation.
+- Cockpit Quick Generate settlement/execution/metadata documentation: recorded on 2026-07-15 in [../ui-cockpit/quick-generate-settlement-execution-metadata.md](../ui-cockpit/quick-generate-settlement-execution-metadata.md). The note documents current card payload mapping, current voucher Execution OS capability, and remaining gaps: concrete gateway bindings, driver pipeline decomposition, execution result persistence/journaling, visibility enforcement, schema negotiation, production metadata shapes, and future voucher-owned executable slice instructions.
+- Execution Engine contract concretization: implemented on 2026-07-15 across voucher and x-change. Voucher now rejects unsupported explicit execution schemas, accepts canonical nested `settlement_envelope` and `stored_value` metadata, and x-change binds concrete gateway adapters for `SettlementEnvelopeExecutionGateway` and `StoredValueExecutionGateway`. Lifecycle scenarios `execution_settlement_envelope_contract_demo` and `execution_stored_value_contract_demo` demonstrate voucher-owned `ExecutionEngine` execution through x-change gateway bindings and return `execution_id`, driver, status, events, and metadata in JSON output. Remaining production work: replace stored-value in-memory gateway with wallet/cash ledger-backed behavior, harden settlement-envelope provider metadata/locking/recovery, decide driver pipeline decomposition, and keep typed executable slice DTOs deferred until slices become execution units.
+
+## Historical Architecture Test Guard Notes
+
+- Current wave: Host Integration Readiness.
+- Wave 5 — x-campaign complete through Phase 15.
+- x-change Cockpit navigation hardening adds route-aware sidebar availability.
+- published asset drift guard complete.
+- x-change Host Integration Slice 1 — Read-only Campaign Cockpit Adoption.
+- Completed through Host Integration Slice 1I.
+- host applications should remain dumb and should not duplicate Cockpit integration wiring.
+- Mutation route scaffolding remains unauthorized.
+- x-change Cockpit Mutation Wave 3J — Durable Activity Runtime Opt-In Configuration; see `../ui-cockpit/reports/072-durable-activity-runtime-opt-in-configuration.md`.
+- x-change Cockpit Mutation Wave 4B — Durable Activity Journal Handoff Contract / Null Runtime Configuration; see `../ui-cockpit/reports/078-durable-activity-journal-handoff-contract-null-runtime-configuration.md`.
+- Cockpit Wave 23 — Runtime Profile Operator Acceptance Closure / Next Runtime Decision: Runtime Profile is accepted as a read-only operator diagnostics surface; runtime mutation remains blocked; next `Cockpit Wave 24 — Operator Activity Search / Filter Runtime Readiness`.
+- Cockpit Wave 26 complete: `../ui-cockpit/reports/198-wave-26-operator-activity-filter-browser-acceptance.md`; explicit no-match copy; no mutation/provider/wallet/journal/action/feedback execution scope changed; next `Cockpit Wave 27 — Operator Activity Filter UX Refinement / Multi-Select Decision`.
+- Cockpit Wave 27 complete: `../ui-cockpit/reports/200-wave-27-operator-activity-filter-ux-refinement-closure.md`; visible multi-select controls remain deferred; no mutation/provider/wallet/journal/action/feedback execution scope changed; next `Cockpit Wave 28 — Operator Activity Filter Browser Acceptance / Next Runtime Decision`.
+- Cockpit Wave 28 complete: `../ui-cockpit/reports/203-wave-28-operator-activity-filter-acceptance-closure.md`; Close the Operator Activity filter hardening sequence for now; next `Cockpit Wave 29 — Pay Code Explorer Runtime Parity / Activity Navigation Bridge`.
+- Cockpit Wave 29 complete: `../ui-cockpit/reports/205-wave-29-pay-code-explorer-activity-bridge-closure.md`; Operator activity cards can now bridge into Pay Code Explorer; next `Cockpit Wave 30 — Pay Code Explorer Functional Read Model Parity / Legacy Index Comparison`.
+- Cockpit Wave 30 complete: `../ui-cockpit/reports/212-wave-30-pay-code-explorer-functional-parity-closure.md`; read-only search/status filters; next `Cockpit Wave 31 — Pay Code Explorer Detail Navigation / Row Action Runtime Parity`.
+- Cockpit Wave 31 complete: `../ui-cockpit/reports/218-wave-31-pay-code-explorer-row-action-runtime-parity-closure.md`; next `Cockpit Wave 32 — Voucher Detail Functional Parity / Evidence Surface Hardening`.
+
+## 2026-07-15 Update — Execution Engine Live Transfer Demonstration
+
+- x-change now contributes an explicit `x_change_live_cash` execution driver to voucher's registry.
+- New guarded lifecycle scenario: `execution_engine_basic_cash_live_transfer`.
+- The scenario proves a voucher execution instruction can route through voucher `ExecutionEngine` and still use x-change's live payout/reconciliation boundary for NetBank/GCash transfers.
+- Live execution requires `--live-provider` and the existing live-provider lifecycle setting.
+- This does not migrate all basic cash flows and does not make voucher own provider behavior.
