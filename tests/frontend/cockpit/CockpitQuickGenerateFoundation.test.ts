@@ -155,6 +155,29 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toContain('Authorization Gate Baseline');
     });
 
+    it('can render a non-diagnostic disclosure for operator reference content', () => {
+        const wrapper = mount(CockpitDiagnosticsDisclosure, {
+            props: {
+                title: 'Template and runtime reference',
+                summary: 'Use the Quick Generate form below.',
+                eyebrow: 'Reference guide',
+                actionLabel: 'Show template reference',
+            },
+            slots: {
+                default:
+                    '<div data-testid="reference-slot">Template Selector</div>',
+            },
+        });
+
+        expect(wrapper.text()).toContain('Reference guide');
+        expect(wrapper.text()).toContain('Template and runtime reference');
+        expect(wrapper.text()).toContain('Show template reference');
+        expect(wrapper.text()).not.toContain('Engineering history');
+        expect(
+            wrapper.find('[data-testid="reference-slot"]').text(),
+        ).toContain('Template Selector');
+    });
+
     it('renders the issuance boundary plan without a mutation form', () => {
         const wrapper = mount(CockpitIssuanceBoundaryPanel);
 

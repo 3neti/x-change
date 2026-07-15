@@ -2294,3 +2294,11 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - No further Quick Generate productization work should proceed implicitly.
 - Next recommended target: Quick Generate Manual Browser Acceptance / Visual Feedback Intake.
 - Boundary remains unchanged: no execution-engine behavior, provider calls, wallet movement, journal writes, x-action execution, x-feedback delivery, campaign mutation, claim UX mutation, or public API changes were added.
+
+## 2026-07-16 Update — Quick Generate Productization Wave 2 Slice 7 — Primary Workflow Hierarchy
+
+- Started Quick Generate Productization Wave 2 from manual browser feedback.
+- The passive template/runtime reference cards are now collapsed under a `Reference guide` disclosure.
+- The active Quick Generate form/result workflow is now visually prioritized.
+- Verification report: `../ui-cockpit/reports/406-quick-generate-productization-wave-2-slice-7-primary-workflow-hierarchy.md`.
+- Boundary remains unchanged: no execution-engine behavior, provider calls, wallet movement, journal writes, x-action execution, x-feedback delivery, campaign mutation, claim UX mutation, public API change, or issuance behavior change was added.

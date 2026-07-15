@@ -1133,14 +1133,21 @@ function stringValue(value: unknown): string | null {
                 </p>
             </div>
 
-            <div class="grid gap-4 xl:grid-cols-2">
-                <CockpitTemplateSelector
-                    :templates="templates"
-                    :selected-key="templates[0]?.key"
-                />
+            <CockpitDiagnosticsDisclosure
+                title="Template and runtime reference"
+                summary="These read-only cards describe the available product templates and runtime inputs. Use the Quick Generate form below for the active operator workflow."
+                eyebrow="Reference guide"
+                action-label="Show template reference"
+            >
+                <div class="grid gap-4 xl:grid-cols-2">
+                    <CockpitTemplateSelector
+                        :templates="templates"
+                        :selected-key="templates[0]?.key"
+                    />
 
-                <CockpitRuntimeInputPanel :inputs="runtimeInputs" />
-            </div>
+                    <CockpitRuntimeInputPanel :inputs="runtimeInputs" />
+                </div>
+            </CockpitDiagnosticsDisclosure>
 
             <div class="space-y-4">
                 <CockpitQuickGenerateSubmitPanel
