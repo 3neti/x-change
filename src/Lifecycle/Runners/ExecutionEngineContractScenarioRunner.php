@@ -9,12 +9,15 @@ use LBHurtado\Contact\Models\Contact;
 use LBHurtado\Voucher\Data\ExecutionContextData;
 use LBHurtado\Voucher\Data\ExecutionResultData;
 use LBHurtado\Voucher\Services\ExecutionEngine;
+use LBHurtado\XChange\Contracts\ExecutionResultHandoffPipelineContract;
+use LBHurtado\XChange\Data\Execution\ExecutionResultHandoffSummaryData;
 use Propaganistas\LaravelPhone\PhoneNumber;
 
 final class ExecutionEngineContractScenarioRunner implements ScenarioRunnerContract
 {
     public function __construct(
         private readonly ExecutionEngine $engine,
+        private readonly ExecutionResultHandoffPipelineContract $handoffs,
     ) {}
 
     public function run(ScenarioRunContext $context): ScenarioRunResult
@@ -22,20 +25,21 @@ final class ExecutionEngineContractScenarioRunner implements ScenarioRunnerContr
         $executions = [];
 
         foreach ($this->operations($context) as $operation) {
-            $result = $this->engine->execute(
-                ExecutionContextData::fromRedemption(
-                    voucher: $context->voucher,
-                    contact: $this->contactFor($context),
-                    voucherCode: (string) $context->voucher->code,
-                    meta: $operation,
-                    correlation: [
-                        'scenario' => $context->scenarioKey,
-                        'idempotency_key' => $context->idempotencyKey,
-                    ],
-                ),
+            $executionContext = ExecutionContextData::fromRedemption(
+                voucher: $context->voucher,
+                contact: $this->contactFor($context),
+                voucherCode: (string) $context->voucher->code,
+                meta: $operation,
+                correlation: [
+                    'scenario' => $context->scenarioKey,
+                    'idempotency_key' => $context->idempotencyKey,
+                ],
             );
 
-            $executions[] = $this->formatResult($result, $operation);
+            $result = $this->engine->execute($executionContext);
+            $handoffs = $this->handoffs->process($result, $executionContext);
+
+            $executions[] = $this->formatResult($result, $operation, $handoffs);
         }
 
         $successful = collect($executions)
@@ -95,8 +99,11 @@ final class ExecutionEngineContractScenarioRunner implements ScenarioRunnerContr
      * @param  array<string, mixed>  $operation
      * @return array<string, mixed>
      */
-    private function formatResult(ExecutionResultData $result, array $operation): array
-    {
+    private function formatResult(
+        ExecutionResultData $result,
+        array $operation,
+        ExecutionResultHandoffSummaryData $handoffs,
+    ): array {
         return [
             'operation' => (string) ($operation['operation'] ?? 'execute'),
             'execution_id' => $result->execution_id,
@@ -109,6 +116,7 @@ final class ExecutionEngineContractScenarioRunner implements ScenarioRunnerContr
             'reconciliation' => $result->reconciliation,
             'children' => $result->children,
             'metadata' => $result->metadata,
+            'handoffs' => $handoffs->toReportArray(),
         ];
     }
 

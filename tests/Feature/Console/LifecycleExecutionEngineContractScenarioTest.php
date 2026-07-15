@@ -42,6 +42,11 @@ it('runs settlement envelope execution through the voucher engine and x-change g
         ->and(data_get($json, 'execution.events'))->toContain('settlement_envelope.locked')
         ->and(data_get($json, 'execution.metadata.envelope_reference'))->toBe('ENV-LIFECYCLE-001')
         ->and(data_get($json, 'execution_instruction.metadata.settlement_envelope.reference'))->toBe('ENV-LIFECYCLE-001')
+        ->and(data_get($json, 'execution.handoffs.blocks_execution'))->toBeFalse()
+        ->and(data_get($json, 'execution.handoffs.journal.status'))->toBe('not_wired')
+        ->and(data_get($json, 'execution.handoffs.action.status'))->toBe('not_wired')
+        ->and(data_get($json, 'execution.handoffs.feedback.status'))->toBe('not_wired')
+        ->and(data_get($json, 'execution.handoffs.cockpit_activity.status'))->toBe('not_wired')
         ->and(data_get($json, 'contract_boundary.gateway_owner'))->toBe('x-change');
 });
 
@@ -66,6 +71,11 @@ it('runs stored value activation and spend through the voucher engine and x-chan
         ->and(data_get($json, 'executions.1.events'))->toContain('stored_value.spent')
         ->and(data_get($json, 'executions.1.metadata.spent_amount'))->toBe(2500)
         ->and(data_get($json, 'executions.1.metadata.remaining_balance'))->toBe(7500)
+        ->and(data_get($json, 'executions.1.handoffs.blocks_execution'))->toBeFalse()
+        ->and(data_get($json, 'executions.1.handoffs.journal.status'))->toBe('not_wired')
+        ->and(data_get($json, 'executions.1.handoffs.action.status'))->toBe('not_wired')
+        ->and(data_get($json, 'executions.1.handoffs.feedback.status'))->toBe('not_wired')
+        ->and(data_get($json, 'executions.1.handoffs.cockpit_activity.status'))->toBe('not_wired')
         ->and(data_get($json, 'execution_instruction.metadata.stored_value.reference'))->toBe('SV-LIFECYCLE-001')
         ->and(data_get($json, 'contract_boundary.wallet_side_effects'))->toBe('not-performed');
 });

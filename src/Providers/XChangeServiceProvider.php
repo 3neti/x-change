@@ -88,6 +88,11 @@ use LBHurtado\XChange\Contracts\DisbursementStatusResolverContract;
 use LBHurtado\XChange\Contracts\EventLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\EventStoreContract;
 use LBHurtado\XChange\Contracts\ExecutionCashDisbursementPollerContract;
+use LBHurtado\XChange\Contracts\ExecutionResultActionHandoffContract;
+use LBHurtado\XChange\Contracts\ExecutionResultCockpitActivityHandoffContract;
+use LBHurtado\XChange\Contracts\ExecutionResultFeedbackHandoffContract;
+use LBHurtado\XChange\Contracts\ExecutionResultHandoffPipelineContract;
+use LBHurtado\XChange\Contracts\ExecutionResultJournalHandoffContract;
 use LBHurtado\XChange\Contracts\PayCodePresentationResolverContract;
 use LBHurtado\XChange\Contracts\PricelistServiceContract;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
@@ -189,7 +194,12 @@ use LBHurtado\XChange\Services\DefaultWithdrawalProcessorService;
 use LBHurtado\XChange\Services\DefaultWithdrawalValidationService;
 use LBHurtado\XChange\Services\DefaultXChangeOnboardingGateway;
 use LBHurtado\XChange\Services\EventLifecycleService;
+use LBHurtado\XChange\Services\Execution\ExecutionResultHandoffPipeline;
 use LBHurtado\XChange\Services\Execution\LifecycleExecutionCashDisbursementPoller;
+use LBHurtado\XChange\Services\Execution\NullExecutionResultActionHandoff;
+use LBHurtado\XChange\Services\Execution\NullExecutionResultCockpitActivityHandoff;
+use LBHurtado\XChange\Services\Execution\NullExecutionResultFeedbackHandoff;
+use LBHurtado\XChange\Services\Execution\NullExecutionResultJournalHandoff;
 use LBHurtado\XChange\Services\Execution\XChangeLiveCashExecutionDriver;
 use LBHurtado\XChange\Services\Execution\XChangeSettlementEnvelopeExecutionGateway;
 use LBHurtado\XChange\Services\Execution\XChangeStoredValueExecutionGateway;
@@ -674,6 +684,31 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->bind(
             ExecutionCashDisbursementPollerContract::class,
             LifecycleExecutionCashDisbursementPoller::class,
+        );
+
+        $this->app->bind(
+            ExecutionResultHandoffPipelineContract::class,
+            ExecutionResultHandoffPipeline::class,
+        );
+
+        $this->app->bind(
+            ExecutionResultJournalHandoffContract::class,
+            NullExecutionResultJournalHandoff::class,
+        );
+
+        $this->app->bind(
+            ExecutionResultActionHandoffContract::class,
+            NullExecutionResultActionHandoff::class,
+        );
+
+        $this->app->bind(
+            ExecutionResultFeedbackHandoffContract::class,
+            NullExecutionResultFeedbackHandoff::class,
+        );
+
+        $this->app->bind(
+            ExecutionResultCockpitActivityHandoffContract::class,
+            NullExecutionResultCockpitActivityHandoff::class,
         );
 
         $this->app

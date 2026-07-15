@@ -236,3 +236,12 @@ Execution Engine migration slices 0–9 are now scaffolded. Next work should be 
 - The scenario requires both `--live-provider` and the existing live-provider lifecycle setting before it can perform provider side effects.
 - This proves explicit execution instructions can drive a live cash payout without making voucher own provider-specific NetBank/GCash behavior.
 - Remaining boundary: this is a live demonstration bridge, not a migration of all cash redemption flows to driver-composed execution.
+
+## 2026-07-15 Update — Execution Result Handoff Pipeline Baseline
+
+- Added an x-change-owned, non-blocking execution-result handoff pipeline.
+- The pipeline receives voucher `ExecutionResultData` plus `ExecutionContextData` after driver execution completes.
+- Default handoffs are null and report `not_wired` for journal, action, feedback, and Cockpit activity.
+- Handoff exceptions are captured as `failed_non_blocking`; they do not alter execution status or reverse provider side effects.
+- `ExecutionEngineContractScenarioRunner` now includes `handoffs` in every formatted execution result.
+- This is the correct scaffold before wiring x-journal, x-action, x-feedback, and Cockpit as execution-result consumers.
