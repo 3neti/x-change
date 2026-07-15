@@ -15,6 +15,7 @@ use LBHurtado\XChange\Services\Execution\ExecutionResultHandoffPipeline;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultActionHandoff;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultCockpitActivityHandoff;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultFeedbackHandoff;
+use LBHurtado\XChange\Services\Execution\NullExecutionResultHandoffSummaryJournalWriter;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultJournalHandoff;
 use Propaganistas\LaravelPhone\PhoneNumber;
 
@@ -52,6 +53,7 @@ it('reports not wired handoffs without blocking execution result handling', func
                 'action' => 'not_wired',
                 'feedback' => 'not_wired',
                 'cockpit_activity' => 'not_wired',
+                'handoff_summary_journal' => 'not_wired',
             ],
             'active_targets' => [],
             'performed_side_effect_targets' => [],
@@ -72,6 +74,7 @@ it('captures handoff exceptions as failed non blocking results', function () {
         action: new NullExecutionResultActionHandoff,
         feedback: new NullExecutionResultFeedbackHandoff,
         cockpitActivity: new NullExecutionResultCockpitActivityHandoff,
+        summaryJournalWriter: new NullExecutionResultHandoffSummaryJournalWriter,
     );
 
     $summary = $pipeline->process(

@@ -2175,3 +2175,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - No writer or runtime event emission was added yet.
 - Verification report: `execution-engine/reports/016-post-pipeline-handoff-summary-journal-event-contract.md`.
 - Next integration level: post-pipeline handoff summary x-journal writer boundary.
+
+## 2026-07-15 Update — Post-Pipeline Handoff Summary Writer Boundary
+
+- Added the x-change runtime boundary for writing post-pipeline execution handoff summaries.
+- The pipeline now calls a configurable `ExecutionResultHandoffSummaryJournalWriterContract` after journal/action/feedback/Cockpit activity handoffs finish.
+- The default writer is null, non-blocking, and side-effect-free; no summary journal entry is written unless a later concrete writer is explicitly enabled.
+- Lifecycle/report consumers can now see `execution.handoffs.handoff_summary_journal.status`.
+- Verification report: `execution-engine/reports/017-post-pipeline-handoff-summary-writer-boundary.md`.
+- Next integration level: concrete x-journal post-pipeline handoff summary writer.

@@ -65,6 +65,7 @@ it('reports combined journal action and feedback execution result handoffs witho
             'action' => 'composed',
             'feedback' => 'planned',
             'cockpit_activity' => 'not_wired',
+            'handoff_summary_journal' => 'not_wired',
         ])
         ->and(data_get($json, 'execution.handoffs.profile.active_targets'))->toBe([
             'journal',
@@ -83,7 +84,9 @@ it('reports combined journal action and feedback execution result handoffs witho
         ->and(data_get($json, 'execution.handoffs.feedback.status'))->toBe('planned')
         ->and(data_get($json, 'execution.handoffs.feedback.performed_side_effect'))->toBeFalse()
         ->and(data_get($json, 'execution.handoffs.feedback.metadata.delivery_boundary'))->toBe('prepare_only')
-        ->and(data_get($json, 'execution.handoffs.cockpit_activity.status'))->toBe('not_wired');
+        ->and(data_get($json, 'execution.handoffs.cockpit_activity.status'))->toBe('not_wired')
+        ->and(data_get($json, 'execution.handoffs.handoff_summary_journal.status'))->toBe('not_wired')
+        ->and(data_get($json, 'execution.handoffs.handoff_summary_journal.performed_side_effect'))->toBeFalse();
 });
 
 class CombinedLifecycleExecutionResultWorkflowAction implements WorkflowActionContract

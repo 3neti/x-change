@@ -92,6 +92,7 @@ use LBHurtado\XChange\Contracts\ExecutionResultActionHandoffContract;
 use LBHurtado\XChange\Contracts\ExecutionResultCockpitActivityHandoffContract;
 use LBHurtado\XChange\Contracts\ExecutionResultFeedbackHandoffContract;
 use LBHurtado\XChange\Contracts\ExecutionResultHandoffPipelineContract;
+use LBHurtado\XChange\Contracts\ExecutionResultHandoffSummaryJournalWriterContract;
 use LBHurtado\XChange\Contracts\ExecutionResultJournalHandoffContract;
 use LBHurtado\XChange\Contracts\PayCodePresentationResolverContract;
 use LBHurtado\XChange\Contracts\PricelistServiceContract;
@@ -199,6 +200,7 @@ use LBHurtado\XChange\Services\Execution\LifecycleExecutionCashDisbursementPolle
 use LBHurtado\XChange\Services\Execution\NullExecutionResultActionHandoff;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultCockpitActivityHandoff;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultFeedbackHandoff;
+use LBHurtado\XChange\Services\Execution\NullExecutionResultHandoffSummaryJournalWriter;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultJournalHandoff;
 use LBHurtado\XChange\Services\Execution\XChangeLiveCashExecutionDriver;
 use LBHurtado\XChange\Services\Execution\XChangeSettlementEnvelopeExecutionGateway;
@@ -690,6 +692,16 @@ class XChangeServiceProvider extends ServiceProvider
             ExecutionResultHandoffPipelineContract::class,
             ExecutionResultHandoffPipeline::class,
         );
+
+        $this->app->bind(ExecutionResultHandoffSummaryJournalWriterContract::class, function ($app) {
+            $service = $this->executionResultHandoffService(
+                'summary_journal_writer',
+                'available_summary_journal_writers',
+                NullExecutionResultHandoffSummaryJournalWriter::class,
+            );
+
+            return $app->make($service);
+        });
 
         $this->app->bind(ExecutionResultJournalHandoffContract::class, function ($app) {
             $service = $this->executionResultHandoffService(

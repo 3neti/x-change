@@ -46,6 +46,7 @@ class ExecutionResultHandoffSummaryData extends Data
             'action' => $this->resultFor('action'),
             'feedback' => $this->resultFor('feedback'),
             'cockpit_activity' => $this->resultFor('cockpit_activity'),
+            'handoff_summary_journal' => $this->resultFor('handoff_summary_journal'),
         ];
     }
 

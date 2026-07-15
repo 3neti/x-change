@@ -69,6 +69,7 @@ use LBHurtado\XChange\Services\DisburseFlowStarterService;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultActionHandoff;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultCockpitActivityHandoff;
 use LBHurtado\XChange\Services\Execution\NullExecutionResultFeedbackHandoff;
+use LBHurtado\XChange\Services\Execution\NullExecutionResultHandoffSummaryJournalWriter;
 use LBHurtado\XChange\Services\Execution\XActionExecutionResultActionHandoff;
 use LBHurtado\XChange\Services\Execution\XFeedbackExecutionResultFeedbackHandoff;
 use LBHurtado\XChange\Services\Execution\XJournalExecutionResultJournalHandoff;
@@ -195,6 +196,8 @@ return [
             ?: null,
         'cockpit_activity' => env('XCHANGE_EXECUTION_RESULT_COCKPIT_ACTIVITY_HANDOFF')
             ?: null,
+        'summary_journal_writer' => env('XCHANGE_EXECUTION_RESULT_HANDOFF_SUMMARY_JOURNAL_WRITER')
+            ?: null,
 
         'available_journal_handoffs' => [
             'x-journal' => XJournalExecutionResultJournalHandoff::class,
@@ -209,6 +212,9 @@ return [
         ],
         'available_cockpit_activity_handoffs' => [
             'null' => NullExecutionResultCockpitActivityHandoff::class,
+        ],
+        'available_summary_journal_writers' => [
+            'null' => NullExecutionResultHandoffSummaryJournalWriter::class,
         ],
 
         'durable_evidence_source' => env(

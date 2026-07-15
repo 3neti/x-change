@@ -10,6 +10,7 @@ use LBHurtado\XChange\Contracts\ExecutionResultActionHandoffContract;
 use LBHurtado\XChange\Contracts\ExecutionResultCockpitActivityHandoffContract;
 use LBHurtado\XChange\Contracts\ExecutionResultFeedbackHandoffContract;
 use LBHurtado\XChange\Contracts\ExecutionResultHandoffPipelineContract;
+use LBHurtado\XChange\Contracts\ExecutionResultHandoffSummaryJournalWriterContract;
 use LBHurtado\XChange\Contracts\ExecutionResultJournalHandoffContract;
 use LBHurtado\XChange\Data\Execution\ExecutionResultHandoffResultData;
 use LBHurtado\XChange\Data\Execution\ExecutionResultHandoffSummaryData;
@@ -22,6 +23,7 @@ class ExecutionResultHandoffPipeline implements ExecutionResultHandoffPipelineCo
         private readonly ExecutionResultActionHandoffContract $action,
         private readonly ExecutionResultFeedbackHandoffContract $feedback,
         private readonly ExecutionResultCockpitActivityHandoffContract $cockpitActivity,
+        private readonly ExecutionResultHandoffSummaryJournalWriterContract $summaryJournalWriter,
     ) {}
 
     public function process(ExecutionResultData $result, ExecutionContextData $context): ExecutionResultHandoffSummaryData
@@ -33,12 +35,44 @@ class ExecutionResultHandoffPipeline implements ExecutionResultHandoffPipelineCo
             'cockpit_activity' => $this->attempt('cockpit_activity', fn (): ExecutionResultHandoffResultData => $this->cockpitActivity->handoff($result, $context), $result, $context),
         ];
 
-        return new ExecutionResultHandoffSummaryData(
+        $summary = new ExecutionResultHandoffSummaryData(
             execution_id: $result->execution_id,
             voucher_code: $context->voucherCode,
             correlation_id: $this->correlationId($context),
             results: $results,
         );
+
+        return new ExecutionResultHandoffSummaryData(
+            execution_id: $summary->execution_id,
+            voucher_code: $summary->voucher_code,
+            correlation_id: $summary->correlation_id,
+            results: [
+                ...$summary->results,
+                'handoff_summary_journal' => $this->attemptSummaryJournalWrite($summary),
+            ],
+        );
+    }
+
+    private function attemptSummaryJournalWrite(ExecutionResultHandoffSummaryData $summary): ExecutionResultHandoffResultData
+    {
+        try {
+            return $this->summaryJournalWriter->write($summary);
+        } catch (Throwable $exception) {
+            return new ExecutionResultHandoffResultData(
+                target: 'handoff_summary_journal',
+                status: 'failed_non_blocking',
+                execution_id: $summary->execution_id,
+                voucher_code: $summary->voucher_code,
+                correlation_id: $summary->correlation_id,
+                blocking: false,
+                performed_side_effect: false,
+                source: 'execution-result-handoff-pipeline',
+                reason: 'Post-pipeline execution handoff summary journal write failed without blocking the completed execution result.',
+                metadata: [
+                    'exception' => $exception::class,
+                ],
+            );
+        }
     }
 
     private function attempt(string $target, callable $handoff, ExecutionResultData $result, ExecutionContextData $context): ExecutionResultHandoffResultData

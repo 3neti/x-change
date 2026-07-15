@@ -341,3 +341,15 @@ Execution Engine migration slices 0–9 are now scaffolded. Next work should be 
 - No journal writer, event recording, action execution, feedback delivery, Cockpit mutation, provider call, voucher mutation, wallet access, or money movement was added.
 - Report: `reports/016-post-pipeline-handoff-summary-journal-event-contract.md`.
 - Next recommended slice: post-pipeline handoff summary x-journal writer boundary.
+
+## 2026-07-15 Update — Post-Pipeline Handoff Summary Writer Boundary
+
+- Added `ExecutionResultHandoffSummaryJournalWriterContract`.
+- Added `NullExecutionResultHandoffSummaryJournalWriter`.
+- Added config seam `x-change.execution_result_handoffs.summary_journal_writer`.
+- `ExecutionResultHandoffPipeline` now invokes the summary writer after journal/action/feedback/Cockpit activity handoffs finish.
+- The summary writer result is exposed as `handoff_summary_journal` in both the aggregate handoff profile and `ExecutionResultHandoffSummaryData::toReportArray()`.
+- Default behavior remains `not_wired`, non-blocking, and side-effect-free.
+- No concrete x-journal summary event writer, journal write, action execution, feedback delivery, Cockpit mutation, provider call, voucher mutation, wallet access, or money movement was added.
+- Report: `reports/017-post-pipeline-handoff-summary-writer-boundary.md`.
+- Next recommended slice: concrete x-journal post-pipeline handoff summary writer.
