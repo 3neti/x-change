@@ -2262,3 +2262,10 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Historical architecture diagnostics are now labeled as `Engineering history` and collapsed behind `Show diagnostic history`.
 - Verification report: `../ui-cockpit/reports/401-quick-generate-productization-slice-2-diagnostic-history-demotion.md`.
 - Boundary remains unchanged: no provider calls, wallet movement, journal writes, x-action execution, x-feedback delivery, campaign mutation, claim UX mutation, public API change, or execution behavior change was added.
+
+## 2026-07-15 Update — Quick Generate Productization Slice 3 — Beneficiary URL and Post-Issuance Actions Polish
+
+- The Quick Generate result card now exposes the primary next operator action directly.
+- Operators can see the full beneficiary claim URL and use `Open claim URL` or `Inspect Pay Code` actions from the primary result card.
+- Verification report: `../ui-cockpit/reports/402-quick-generate-productization-slice-3-beneficiary-url-actions.md`.
+- Boundary remains unchanged: the actions are read-only navigation/copy aids and do not send feedback, dispatch campaigns, create short links, generate QR assets, write journal entries, execute actions, call providers, mutate wallets, mutate vouchers, or alter execution behavior.

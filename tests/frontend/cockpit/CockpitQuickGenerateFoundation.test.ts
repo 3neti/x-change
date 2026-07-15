@@ -445,6 +445,23 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(
             wrapper
                 .find(
+                    '[data-testid="cockpit-quick-generate-primary-next-actions"]',
+                )
+                .text(),
+        ).toContain('Primary next step');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-quick-generate-primary-claim-link"]')
+                .attributes('href'),
+        ).toBe('https://example.test/r/PC-UI-001');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-quick-generate-primary-detail-link"]')
+                .attributes('href'),
+        ).toBe('/x/cockpit/pay-codes/PC-UI-001');
+        expect(
+            wrapper
+                .find(
                     '[data-testid="cockpit-quick-generate-beneficiary-url-panel"]',
                 )
                 .exists(),
