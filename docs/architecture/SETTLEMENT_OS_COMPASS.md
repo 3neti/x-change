@@ -2346,3 +2346,10 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - The builder now shows an operator-facing readiness checklist for Money, Claim Inputs, Validation, Rider, Feedback, Slices, and Execution.
 - Verification report: `../ui-cockpit/reports/412-quick-generate-contract-builder-completion-slice-1-checklist.md`.
 - Boundary remains unchanged: the checklist summarizes existing state only and does not add provider validation, wallet reservation, journal writes, action execution, feedback delivery, campaign mutation, claim UX mutation, voucher mutation, public API behavior, or execution behavior.
+
+## 2026-07-16 Update — Quick Generate Contract Builder Completion Slice 2 — Section Navigation
+
+- The Contract Builder Checklist now acts as a section navigator for the long Quick Generate instruction form.
+- Anchors cover Money, Claim Inputs, Validation, Rider, Feedback, Slices, and Execution.
+- Verification report: `../ui-cockpit/reports/413-quick-generate-contract-builder-completion-slice-2-section-navigation.md`.
+- Boundary remains unchanged: frontend navigation only; no payload or runtime semantics changed.

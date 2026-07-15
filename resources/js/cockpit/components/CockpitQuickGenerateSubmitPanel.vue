@@ -50,6 +50,7 @@ type VoucherInstructionCoverageGroup = {
 type ContractBuilderChecklistItem = {
     key: string;
     label: string;
+    target: string;
     status: 'ready' | 'optional' | 'needs-review';
     summary: string;
 };
@@ -1166,6 +1167,7 @@ const contractBuilderChecklist = computed<ContractBuilderChecklistItem[]>(() => 
         {
             key: 'money',
             label: 'Money',
+            target: '#quick-generate-contract-money',
             status: hasMoney ? 'ready' : 'needs-review',
             summary: hasMoney
                 ? `${currency.value || 'PHP'} ${amount.value || '0'} × ${count.value || '1'}`
@@ -1174,6 +1176,7 @@ const contractBuilderChecklist = computed<ContractBuilderChecklistItem[]>(() => 
         {
             key: 'inputs',
             label: 'Claim Inputs',
+            target: '#quick-generate-contract-inputs',
             status:
                 selectedInputFields.value.length > 0 ? 'ready' : 'needs-review',
             summary:
@@ -1184,6 +1187,7 @@ const contractBuilderChecklist = computed<ContractBuilderChecklistItem[]>(() => 
         {
             key: 'validation',
             label: 'Validation',
+            target: '#quick-generate-contract-validation',
             status: validationKeys.length > 0 ? 'ready' : 'optional',
             summary:
                 validationKeys.length > 0
@@ -1193,6 +1197,7 @@ const contractBuilderChecklist = computed<ContractBuilderChecklistItem[]>(() => 
         {
             key: 'rider',
             label: 'Rider',
+            target: '#quick-generate-contract-rider',
             status:
                 purpose.value.trim() !== '' ||
                 riderUrl.value.trim() !== '' ||
@@ -1209,6 +1214,7 @@ const contractBuilderChecklist = computed<ContractBuilderChecklistItem[]>(() => 
         {
             key: 'feedback',
             label: 'Feedback',
+            target: '#quick-generate-contract-feedback',
             status: feedbackValid.value
                 ? feedbackChannels.length > 0
                     ? 'ready'
@@ -1223,6 +1229,7 @@ const contractBuilderChecklist = computed<ContractBuilderChecklistItem[]>(() => 
         {
             key: 'slices',
             label: 'Slices',
+            target: '#quick-generate-contract-slices',
             status:
                 namedClaimSliceValidationMessage.value === null
                     ? 'ready'
@@ -1234,6 +1241,7 @@ const contractBuilderChecklist = computed<ContractBuilderChecklistItem[]>(() => 
         {
             key: 'execution',
             label: 'Execution',
+            target: '#quick-generate-contract-execution',
             status: includeExecutionInstruction.value ? 'ready' : 'optional',
             summary: includeExecutionInstruction.value
                 ? `${executionDriver.value || 'default'} · ${executionSchema.value || 'voucher.execution.v1'}`
@@ -3289,7 +3297,13 @@ function dataGet(source: unknown, path: string[]): unknown {
                                   : 'text-slate-500 dark:text-slate-400'
                         "
                     >
-                        <span>{{ item.label }}</span>
+                        <a
+                            :href="item.target"
+                            class="underline decoration-current/30 underline-offset-4 hover:decoration-current"
+                            data-testid="cockpit-quick-generate-contract-builder-jump"
+                        >
+                            {{ item.label }}
+                        </a>
                         <span>{{ item.status }}</span>
                     </dt>
                     <dd
@@ -3363,6 +3377,7 @@ function dataGet(source: unknown, path: string[]): unknown {
         >
             <div class="grid gap-4">
                 <section
+                    id="quick-generate-contract-money"
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                 >
                     <div class="flex items-center gap-3">
@@ -3897,6 +3912,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                 </section>
 
                 <section
+                    id="quick-generate-contract-inputs"
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                 >
                     <div class="flex items-center gap-3">
@@ -3949,6 +3965,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                 </section>
 
                 <section
+                    id="quick-generate-contract-validation"
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                     data-testid="cockpit-quick-generate-validation-section"
                 >
@@ -4440,6 +4457,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                 </section>
 
                 <section
+                    id="quick-generate-contract-rider"
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                 >
                     <div class="flex items-center gap-3">
@@ -4775,6 +4793,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                 </section>
 
                 <section
+                    id="quick-generate-contract-feedback"
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                 >
                     <div class="flex items-center gap-3">
@@ -4992,6 +5011,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                 </section>
 
                 <section
+                    id="quick-generate-contract-slices"
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                 >
                     <div class="flex items-center gap-3">
@@ -5499,6 +5519,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                 </section>
 
                 <section
+                    id="quick-generate-contract-execution"
                     class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                     data-testid="cockpit-quick-generate-advanced-contract-section"
                 >

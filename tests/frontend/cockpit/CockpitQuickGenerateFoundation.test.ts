@@ -796,6 +796,27 @@ describe('Cockpit Quick Generate foundation', () => {
                 '[data-testid="cockpit-quick-generate-contract-builder-check"]',
             ),
         ).toHaveLength(7);
+        expect(
+            wrapper
+                .findAll(
+                    '[data-testid="cockpit-quick-generate-contract-builder-jump"]',
+                )
+                .map((link) => link.attributes('href')),
+        ).toEqual([
+            '#quick-generate-contract-money',
+            '#quick-generate-contract-inputs',
+            '#quick-generate-contract-validation',
+            '#quick-generate-contract-rider',
+            '#quick-generate-contract-feedback',
+            '#quick-generate-contract-slices',
+            '#quick-generate-contract-execution',
+        ]);
+        expect(
+            wrapper.find('#quick-generate-contract-money').exists(),
+        ).toBe(true);
+        expect(
+            wrapper.find('#quick-generate-contract-execution').exists(),
+        ).toBe(true);
         expect(checklist.text()).toContain('PHP 25 × 1');
         expect(checklist.text()).toContain('Implicit default execution.');
 
