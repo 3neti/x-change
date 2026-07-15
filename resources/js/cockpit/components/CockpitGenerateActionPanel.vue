@@ -7,33 +7,25 @@ defineProps<{
 
 <template>
     <section
-        class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+        class="rounded-xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm dark:border-emerald-900/70 dark:bg-emerald-950/30"
         data-testid="cockpit-generate-action-panel"
     >
-        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-            Generate Action
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
+            Issuance handoff status
         </p>
-        <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-            Existing issuance handoff
+        <h3 class="mt-2 text-lg font-semibold text-emerald-950 dark:text-emerald-50">
+            Quick Generate uses the existing GeneratePayCode path
         </h3>
-        <p class="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Quick Generate now submits through the approved Cockpit mutation route, which hands
-            off to the existing x-change GeneratePayCode action. This panel is informational;
-            use the form above to generate a Pay Code.
+        <p class="mt-3 text-sm leading-6 text-emerald-800 dark:text-emerald-200">
+            The form above is the only operator submit control on this page. It
+            hands off to the existing x-change issuance action and then renders
+            an operator-safe result, claim URL, preflight summaries, and
+            activity status.
         </p>
 
-        <button
-            type="button"
-            :disabled="!enabled"
-            class="mt-5 w-full rounded-lg bg-slate-950 px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 dark:bg-slate-100 dark:text-slate-950 dark:disabled:bg-slate-800 dark:disabled:text-slate-400"
-            data-testid="cockpit-generate-button"
-        >
-            {{ runtimeEnabled ? 'Use Quick Generate form above' : 'Generate Pay Code' }}
-        </button>
-
-        <ul class="mt-4 space-y-2 text-xs text-slate-500 dark:text-slate-400">
+        <ul class="mt-4 grid gap-2 text-xs text-emerald-800 dark:text-emerald-200 sm:grid-cols-2">
             <li>Issuance owner remains GeneratePayCode</li>
-            <li>Pricing and funding preflights are informational</li>
+            <li>Result panel is the primary operator feedback</li>
             <li>Journal, action, and feedback handoffs remain separately gated</li>
             <li>No raw payloads, wallet internals, or provider payloads are rendered</li>
         </ul>

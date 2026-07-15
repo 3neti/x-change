@@ -72,12 +72,11 @@ describe('Cockpit Quick Generate hydration', () => {
         });
 
         const text = wrapper.text();
-        const button = wrapper.find('[data-testid="cockpit-generate-button"]');
         const submitButton = wrapper.find('[data-testid="cockpit-quick-generate-submit-button"]');
 
         expect(text).not.toContain('must-not-render');
         expect(text).not.toContain('funding_source');
-        expect(button.attributes('disabled')).toBeDefined();
+        expect(wrapper.find('[data-testid="cockpit-generate-button"]').exists()).toBe(false);
         expect(submitButton.attributes('disabled')).toBeUndefined();
     });
 

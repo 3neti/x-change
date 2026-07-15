@@ -104,22 +104,25 @@ describe('Cockpit Quick Generate foundation', () => {
             },
         });
 
-        const button = wrapper.find('[data-testid="cockpit-generate-button"]');
-
-        expect(button.attributes('disabled')).toBeDefined();
-        expect(wrapper.text()).toContain('Existing issuance handoff');
-        expect(wrapper.text()).toContain('Use Quick Generate form above');
+        expect(
+            wrapper.find('[data-testid="cockpit-generate-button"]').exists(),
+        ).toBe(false);
+        expect(wrapper.text()).toContain('Issuance handoff status');
+        expect(wrapper.text()).toContain(
+            'Quick Generate uses the existing GeneratePayCode path',
+        );
+        expect(wrapper.text()).toContain(
+            'The form above is the only operator submit control',
+        );
         expect(wrapper.text()).toContain(
             'Issuance owner remains GeneratePayCode',
         );
         expect(wrapper.text()).toContain(
-            'Pricing and funding preflights are informational',
+            'Result panel is the primary operator feedback',
         );
         expect(wrapper.text()).toContain(
             'Journal, action, and feedback handoffs remain separately gated',
         );
-
-        await button.trigger('click');
 
         expect(wrapper.emitted()).toEqual({});
     });
@@ -142,11 +145,11 @@ describe('Cockpit Quick Generate foundation', () => {
                 .find('[data-testid="cockpit-diagnostics-disclosure"]')
                 .exists(),
         ).toBe(true);
-        expect(wrapper.text()).toContain('Diagnostics');
+        expect(wrapper.text()).toContain('Engineering history');
         expect(wrapper.text()).toContain(
             'Architecture history and gate diagnostics',
         );
-        expect(wrapper.text()).toContain('Show architecture history');
+        expect(wrapper.text()).toContain('Show diagnostic history');
         expect(
             wrapper.find('[data-testid="diagnostic-slot"]').text(),
         ).toContain('Authorization Gate Baseline');
@@ -1658,7 +1661,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('Template Selector');
         expect(wrapper.text()).toContain('Runtime Inputs');
         expect(wrapper.text()).toContain('Pricing and Funding');
-        expect(wrapper.text()).toContain('Generate Action');
+        expect(wrapper.text()).toContain('Issuance handoff status');
         expect(wrapper.find('[aria-current="page"]').text()).toContain(
             'Quick Generate',
         );

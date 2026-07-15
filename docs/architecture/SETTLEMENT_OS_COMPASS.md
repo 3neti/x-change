@@ -2254,3 +2254,11 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - The card summarizes generated Pay Code, beneficiary URL readiness, pricing preflight status, funding preflight status, and activity runtime status.
 - Verification report: `../ui-cockpit/reports/400-quick-generate-productization-slice-1-result-panel-diagnostic-demotion-plan.md`.
 - Boundary remains unchanged: no provider calls, wallet movement, journal writes, x-action execution, x-feedback delivery, campaign mutation, claim UX mutation, public API change, or execution behavior change was added.
+
+## 2026-07-15 Update — Quick Generate Productization Slice 2 — Diagnostic History Demotion and Primary Workflow Copy Cleanup
+
+- The secondary Generate Action panel is now an operator-safe `Issuance handoff status` note.
+- The disabled-looking secondary button was removed so the form remains the only operator submit control.
+- Historical architecture diagnostics are now labeled as `Engineering history` and collapsed behind `Show diagnostic history`.
+- Verification report: `../ui-cockpit/reports/401-quick-generate-productization-slice-2-diagnostic-history-demotion.md`.
+- Boundary remains unchanged: no provider calls, wallet movement, journal writes, x-action execution, x-feedback delivery, campaign mutation, claim UX mutation, public API change, or execution behavior change was added.

@@ -14,7 +14,7 @@ defineProps<{
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                        Diagnostics
+                        Engineering history
                     </p>
                     <h3 class="mt-1 text-sm font-semibold text-slate-950 dark:text-slate-50">
                         {{ title }}
@@ -25,7 +25,7 @@ defineProps<{
                 </div>
 
                 <span class="rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 dark:border-slate-700 dark:text-slate-300">
-                    Show architecture history
+                    Show diagnostic history
                 </span>
             </div>
         </summary>
