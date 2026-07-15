@@ -2090,3 +2090,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Default handoffs are null/non-mutating for journal, action, feedback, and Cockpit activity.
 - Lifecycle execution-contract scenario reports now include `execution.handoffs` so future live scenarios can show journal/action/feedback/Cockpit status without making those packages hard dependencies.
 - Next integration level: replace null handoffs one-by-one with x-journal event recording, x-action continuation planning, x-feedback notification intent/delivery planning, and Cockpit execution activity projection.
+
+## 2026-07-15 Update — x-journal Execution Result Handoff
+
+- `ExecutionResultJournalHandoffContract` can now be configured to use x-journal via `XCHANGE_EXECUTION_RESULT_JOURNAL_HANDOFF=x-journal`.
+- The handoff records `execution.result.recorded` into x-journal through `ExecutionJournalRecorder`.
+- The payload includes `execution_id`, voucher code, driver, status, events, failure, provider references, sanitized reconciliation, children, and sanitized metadata.
+- Raw provider payloads, raw reconciliation payloads, unmasked account numbers, wallet internals, recipient secrets, and OTP metadata are not written to the journal payload.
+- The handoff remains non-blocking: execution remains authoritative and successful even if x-journal handoff fails.
+- Safe lifecycle verification showed `execution.handoffs.journal.status = recorded` with reference number `ERN-2026-000000001`.

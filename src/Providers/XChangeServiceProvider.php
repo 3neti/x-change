@@ -691,10 +691,15 @@ class XChangeServiceProvider extends ServiceProvider
             ExecutionResultHandoffPipeline::class,
         );
 
-        $this->app->bind(
-            ExecutionResultJournalHandoffContract::class,
-            NullExecutionResultJournalHandoff::class,
-        );
+        $this->app->bind(ExecutionResultJournalHandoffContract::class, function ($app) {
+            $service = $this->executionResultHandoffService(
+                'journal',
+                'available_journal_handoffs',
+                NullExecutionResultJournalHandoff::class,
+            );
+
+            return $app->make($service);
+        });
 
         $this->app->bind(
             ExecutionResultActionHandoffContract::class,
@@ -1255,6 +1260,26 @@ class XChangeServiceProvider extends ServiceProvider
         }
 
         $available = config("x-change.cockpit.operator_issuance_activity.{$availableKey}", []);
+
+        if (is_array($available) && is_string($available[$configured] ?? null)) {
+            return $available[$configured];
+        }
+
+        return $configured;
+    }
+
+    protected function executionResultHandoffService(
+        string $configuredKey,
+        string $availableKey,
+        string $fallback,
+    ): string {
+        $configured = config("x-change.execution_result_handoffs.{$configuredKey}");
+
+        if (! is_string($configured) || trim($configured) === '') {
+            return $fallback;
+        }
+
+        $available = config("x-change.execution_result_handoffs.{$availableKey}", []);
 
         if (is_array($available) && is_string($available[$configured] ?? null)) {
             return $available[$configured];

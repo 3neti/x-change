@@ -66,6 +66,10 @@ use LBHurtado\XChange\Services\DefaultWithdrawalProcessorService;
 use LBHurtado\XChange\Services\DefaultWithdrawalValidationService;
 use LBHurtado\XChange\Services\DefaultXChangeOnboardingGateway;
 use LBHurtado\XChange\Services\DisburseFlowStarterService;
+use LBHurtado\XChange\Services\Execution\NullExecutionResultActionHandoff;
+use LBHurtado\XChange\Services\Execution\NullExecutionResultCockpitActivityHandoff;
+use LBHurtado\XChange\Services\Execution\NullExecutionResultFeedbackHandoff;
+use LBHurtado\XChange\Services\Execution\XJournalExecutionResultJournalHandoff;
 use LBHurtado\XChange\Services\LedgerPooledProviderTopology;
 use LBHurtado\XChange\Services\ManualProviderTopology;
 use LBHurtado\XChange\Services\NullClaimOtpChallengeService;
@@ -177,6 +181,30 @@ return [
             'feedback' => [
                 'console' => env('XCHANGE_COCKPIT_FEEDBACK_CONSOLE'),
             ],
+        ],
+    ],
+
+    'execution_result_handoffs' => [
+        'journal' => env('XCHANGE_EXECUTION_RESULT_JOURNAL_HANDOFF')
+            ?: null,
+        'action' => env('XCHANGE_EXECUTION_RESULT_ACTION_HANDOFF')
+            ?: null,
+        'feedback' => env('XCHANGE_EXECUTION_RESULT_FEEDBACK_HANDOFF')
+            ?: null,
+        'cockpit_activity' => env('XCHANGE_EXECUTION_RESULT_COCKPIT_ACTIVITY_HANDOFF')
+            ?: null,
+
+        'available_journal_handoffs' => [
+            'x-journal' => XJournalExecutionResultJournalHandoff::class,
+        ],
+        'available_action_handoffs' => [
+            'null' => NullExecutionResultActionHandoff::class,
+        ],
+        'available_feedback_handoffs' => [
+            'null' => NullExecutionResultFeedbackHandoff::class,
+        ],
+        'available_cockpit_activity_handoffs' => [
+            'null' => NullExecutionResultCockpitActivityHandoff::class,
         ],
     ],
 

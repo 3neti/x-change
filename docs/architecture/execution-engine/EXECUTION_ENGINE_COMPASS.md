@@ -245,3 +245,13 @@ Execution Engine migration slices 0–9 are now scaffolded. Next work should be 
 - Handoff exceptions are captured as `failed_non_blocking`; they do not alter execution status or reverse provider side effects.
 - `ExecutionEngineContractScenarioRunner` now includes `handoffs` in every formatted execution result.
 - This is the correct scaffold before wiring x-journal, x-action, x-feedback, and Cockpit as execution-result consumers.
+
+## 2026-07-15 Update — x-journal Execution Result Handoff
+
+- Added `XJournalExecutionResultJournalHandoff` as the first real execution-result consumer.
+- Added `ExecutionResultJournalPayloadMapper` to convert voucher `ExecutionResultData` into a sanitized x-journal entry payload.
+- Config opt-in: `x-change.execution_result_handoffs.journal = x-journal`.
+- Event type: `execution.result.recorded`.
+- The journal entry is an audit/event side effect after execution, not an execution prerequisite.
+- Handoff failures are still reported as `failed_non_blocking`; they do not mutate voucher execution status, provider reconciliation, or money movement.
+- Next recommended slice: Cockpit execution activity projection from the execution-result handoff summary, so operators can see recorded execution evidence.
