@@ -37,6 +37,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
     ): JsonResponse {
         $payload = $request->validated();
         $payload = $this->normalizePayloadForIssuance($payload);
+        $validatedPayload = $payload;
         $key = $idempotency->extractKey($request);
         $correlationId = $request->header((string) config('x-change.api.correlation.header', 'X-Correlation-ID'));
         $issuerId = $request->user()?->getAuthIdentifier();
@@ -48,7 +49,7 @@ class CockpitQuickGenerateMutationRouteShellController extends Controller
         );
         $this->ensureDraftIsValid($draftValidator->validate($draft));
 
-        $payload = $draftCompiler->compile($draft);
+        $payload = array_replace_recursive($validatedPayload, $draftCompiler->compile($draft));
         $payload['_meta'] = [
             'idempotency_key' => $key,
             'correlation_id' => is_string($correlationId) ? $correlationId : null,

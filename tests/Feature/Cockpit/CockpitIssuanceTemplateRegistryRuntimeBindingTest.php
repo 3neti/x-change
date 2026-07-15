@@ -10,5 +10,5 @@ it('binds the cockpit issuance template registry contract', function () {
 
     expect($registry)->toBeInstanceOf(DefaultCockpitIssuanceTemplateRegistry::class)
         ->and($registry->resolve('money-changer')?->enabled)->toBeTrue()
-        ->and($registry->resolve('settlement-envelope')?->enabled)->toBeFalse();
+        ->and($registry->resolve('settlement-envelope')?->enabled)->toBeTrue();
 });

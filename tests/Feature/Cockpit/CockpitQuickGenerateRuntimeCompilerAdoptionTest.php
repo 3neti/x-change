@@ -97,7 +97,87 @@ it('uses the quick generate draft factory validator and compiler before existing
         ->and(data_get($fakeGeneratePayCode->payloads[0], '_meta.correlation_id'))->toBe('corr-wave-10b');
 });
 
-it('fails closed before issuance when the quick generate draft template is not enabled', function () {
+it('preserves settlement envelope advanced instruction fields through the existing issuance handoff', function () {
+    $fakeGeneratePayCode = new class extends GeneratePayCode
+    {
+        /**
+         * @var array<int, array<string, mixed>>
+         */
+        public array $payloads = [];
+
+        public function __construct() {}
+
+        /**
+         * @param  array<string, mixed>  $input
+         */
+        public function handle(array $input): GeneratePayCodeResultData
+        {
+            $this->payloads[] = $input;
+
+            return new GeneratePayCodeResultData(
+                voucher_id: 12346,
+                code: 'PC-SETTLEMENT-ENVELOPE',
+                amount: $input['cash']['amount'],
+                currency: $input['cash']['currency'],
+                issuer: new IssuerData(id: data_get($input, 'metadata.issuer_id')),
+                cost: new PricingEstimateData(currency: 'PHP', base_fee: 1.25, total: 1.25),
+                wallet: ['balance_before' => 100000, 'balance_after' => 99000],
+                debit: new DebitData(id: 988, amount: 1000),
+                links: new PayCodeLinksData(
+                    redeem: 'https://example.test/r/PC-SETTLEMENT-ENVELOPE',
+                    redeem_path: '/r/PC-SETTLEMENT-ENVELOPE',
+                ),
+            );
+        }
+    };
+
+    app()->instance(GeneratePayCode::class, $fakeGeneratePayCode);
+
+    actingAsTestUser();
+
+    $this->withHeaders([
+        'Accept' => 'application/json',
+        'X-Correlation-ID' => 'corr-settlement-envelope-preview',
+        'Idempotency-Key' => 'idem-settlement-envelope-preview',
+    ])
+        ->post(route('x-change.cockpit.quick-generate.store'), settlementEnvelopeQuickGeneratePreviewPayload())
+        ->assertCreated()
+        ->assertJsonPath('result.code', 'PC-SETTLEMENT-ENVELOPE');
+
+    expect($fakeGeneratePayCode->payloads)->toHaveCount(1)
+        ->and(data_get($fakeGeneratePayCode->payloads[0], 'metadata.custom.cockpit.template_key'))->toBe('settlement-envelope')
+        ->and(data_get($fakeGeneratePayCode->payloads[0], 'cash.type'))->toBe('settlement_cash')
+        ->and(data_get($fakeGeneratePayCode->payloads[0], 'cash.mandates'))->toBe(['settlement-readiness', 'manual-review'])
+        ->and(data_get($fakeGeneratePayCode->payloads[0], 'cash.slice_mode'))->toBe('open')
+        ->and(data_get($fakeGeneratePayCode->payloads[0], 'cash.max_slices'))->toBe(1)
+        ->and(data_get($fakeGeneratePayCode->payloads[0], 'cash.min_withdrawal'))->toBe(25)
+        ->and(data_get($fakeGeneratePayCode->payloads[0], 'provider'))->toBe('manual')
+        ->and(data_get($fakeGeneratePayCode->payloads[0], 'ttl'))->toBe('P7D')
+        ->and(data_get($fakeGeneratePayCode->payloads[0], 'voucher_type'))->toBe('settlement')
+        ->and(data_get($fakeGeneratePayCode->payloads[0], 'target_amount'))->toBe(1000)
+        ->and(data_get($fakeGeneratePayCode->payloads[0], 'rules.auto_close_on_full_payment'))->toBeTrue()
+        ->and(data_get($fakeGeneratePayCode->payloads[0], 'validation.selfie.required'))->toBeTrue()
+        ->and(data_get($fakeGeneratePayCode->payloads[0], 'execution.schema'))->toBe('voucher.execution.v1')
+        ->and(data_get($fakeGeneratePayCode->payloads[0], 'execution.driver'))->toBe('settlement_envelope')
+        ->and(data_get($fakeGeneratePayCode->payloads[0], 'execution.pipeline'))->toBe(['readiness', 'authorize', 'execute']);
+});
+
+it('issues a settlement envelope quick generate payload through the real issuance path', function () {
+    actingAsTestUser();
+
+    $this->withHeaders([
+        'Accept' => 'application/json',
+        'X-Correlation-ID' => 'corr-real-settlement-envelope-preview',
+        'Idempotency-Key' => 'idem-real-settlement-envelope-preview',
+    ])
+        ->post(route('x-change.cockpit.quick-generate.store'), settlementEnvelopeQuickGeneratePreviewPayload())
+        ->assertCreated()
+        ->assertJsonPath('status', 'issued')
+        ->assertJsonPath('result.currency', 'PHP')
+        ->assertJsonPath('result.amount', 1000);
+});
+
+it('fails closed before issuance when the quick generate draft template is unknown', function () {
     $fakeGeneratePayCode = new class extends GeneratePayCode
     {
         public bool $called = false;
@@ -144,7 +224,7 @@ it('fails closed before issuance when the quick generate draft template is not e
             'metadata' => [
                 'custom' => [
                     'cockpit' => [
-                        'template_key' => 'settlement-envelope',
+                        'template_key' => 'imaginary-template',
                     ],
                 ],
             ],
@@ -154,3 +234,93 @@ it('fails closed before issuance when the quick generate draft template is not e
 
     expect($fakeGeneratePayCode->called)->toBeFalse();
 });
+
+/**
+ * @return array<string, mixed>
+ */
+function settlementEnvelopeQuickGeneratePreviewPayload(): array
+{
+    return [
+        'cash' => [
+            'amount' => 1000,
+            'currency' => 'PHP',
+            'validation' => [
+                'country' => 'PH',
+            ],
+            'fee_strategy' => 'absorb',
+            'type' => 'settlement_cash',
+            'mandates' => [
+                'settlement-readiness',
+                'manual-review',
+            ],
+            'slice_mode' => 'open',
+            'max_slices' => 1,
+            'min_withdrawal' => 25,
+        ],
+        'provider' => 'manual',
+        'inputs' => [
+            'fields' => [
+                'signature',
+                'kyc',
+                'name',
+            ],
+            'requirements' => [
+                'kyc',
+                'selfie',
+            ],
+        ],
+        'count' => 1,
+        'feedback' => [
+            'mobile' => null,
+            'email' => null,
+            'webhook' => null,
+        ],
+        'rider' => [
+            'message' => 'Settlement envelope readiness check',
+            'url' => null,
+            'redirect_timeout' => 0,
+            'splash' => 'Settlement envelope requires readiness approval.',
+            'splash_timeout' => 5,
+            'splash_meta' => [
+                'sanitized' => true,
+            ],
+            'og_source' => null,
+        ],
+        'validation' => [
+            'selfie' => [
+                'required' => true,
+                'on_failure' => 'block',
+            ],
+        ],
+        'metadata' => [
+            'slice_policy' => [
+                'mode' => 'open',
+                'selection' => 'operator',
+                'enforced' => false,
+            ],
+            'custom' => [
+                'cockpit' => [
+                    'template_key' => 'settlement-envelope',
+                    'source' => 'cockpit.quick-generate',
+                    'builder' => 'guided-voucher-instruction-builder',
+                ],
+            ],
+            'flow_type' => 'settlement-envelope',
+        ],
+        'ttl' => 'P7D',
+        'voucher_type' => 'settlement',
+        'target_amount' => 1000,
+        'rules' => [
+            'auto_close_on_full_payment' => true,
+        ],
+        'execution' => [
+            'schema' => 'voucher.execution.v1',
+            'driver' => 'settlement_envelope',
+            'pipeline' => [
+                'readiness',
+                'authorize',
+                'execute',
+            ],
+        ],
+    ];
+}

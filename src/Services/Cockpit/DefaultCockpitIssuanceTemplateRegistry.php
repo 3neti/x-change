@@ -40,7 +40,6 @@ class DefaultCockpitIssuanceTemplateRegistry implements CockpitIssuanceTemplateR
                 key: 'settlement-envelope',
                 name: 'Settlement Envelope',
                 profile: 'settlement',
-                enabled: false,
                 metadata: ['purpose' => 'settlement-envelope-deferred'],
             ),
         ];

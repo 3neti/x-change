@@ -23,7 +23,19 @@ it('accepts a known enabled issuance draft template', function () {
         ->and($result->metadata['template_resolved'])->toBeTrue();
 });
 
-it('rejects unknown and disabled templates before issuance', function (string $template, string $error) {
+it('accepts the settlement envelope issuance draft template exposed by quick generate', function () {
+    $result = cockpitDraftValidator()->validate(new CockpitIssuanceDraftData(
+        template_key: 'settlement-envelope',
+        amount: 1000,
+        currency: 'PHP',
+    ));
+
+    expect($result->valid)->toBeTrue()
+        ->and($result->errors)->toBe([])
+        ->and($result->metadata['template_enabled'])->toBeTrue();
+});
+
+it('rejects unknown templates before issuance', function (string $template, string $error) {
     $result = cockpitDraftValidator()->validate(new CockpitIssuanceDraftData(
         template_key: $template,
         amount: 25,
@@ -33,7 +45,6 @@ it('rejects unknown and disabled templates before issuance', function (string $t
         ->and($result->errors)->toContain($error);
 })->with([
     ['imaginary-template', 'template_unknown'],
-    ['settlement-envelope', 'template_disabled'],
 ]);
 
 it('rejects missing amount before compiling for issuance', function () {

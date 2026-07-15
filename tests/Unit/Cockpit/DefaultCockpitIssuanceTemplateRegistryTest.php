@@ -15,11 +15,12 @@ it('resolves known cockpit issuance template profiles', function () {
         ->and($profile?->metadata['purpose'])->toBe('remittance');
 });
 
-it('keeps unsupported future templates disabled instead of executable by default', function () {
+it('exposes settlement envelope as an executable quick generate template', function () {
     $profile = (new DefaultCockpitIssuanceTemplateRegistry)->resolve('settlement-envelope');
 
     expect($profile)->not->toBeNull()
-        ->and($profile?->enabled)->toBeFalse();
+        ->and($profile?->enabled)->toBeTrue()
+        ->and($profile?->profile)->toBe('settlement');
 });
 
 it('returns null for unknown template keys', function () {
