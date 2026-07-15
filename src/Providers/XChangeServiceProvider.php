@@ -94,6 +94,7 @@ use LBHurtado\XChange\Contracts\ExecutionResultFeedbackHandoffContract;
 use LBHurtado\XChange\Contracts\ExecutionResultHandoffPipelineContract;
 use LBHurtado\XChange\Contracts\ExecutionResultHandoffSummaryJournalWriterContract;
 use LBHurtado\XChange\Contracts\ExecutionResultJournalHandoffContract;
+use LBHurtado\XChange\Contracts\MinimumWithdrawalPolicyResolverContract;
 use LBHurtado\XChange\Contracts\PayCodePresentationResolverContract;
 use LBHurtado\XChange\Contracts\PricelistServiceContract;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
@@ -166,6 +167,7 @@ use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityReposi
 use LBHurtado\XChange\Services\Cockpit\NullCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\OptionalCockpitIntegrationReadModels;
 use LBHurtado\XChange\Services\Cockpit\VoucherLifecycleCockpitReadModelProvider;
+use LBHurtado\XChange\Services\ConfigMinimumWithdrawalPolicyResolver;
 use LBHurtado\XChange\Services\ConfigProviderTopologyResolver;
 use LBHurtado\XChange\Services\ConfigVendorRegistry;
 use LBHurtado\XChange\Services\DefaultApprovalWorkflowService;
@@ -250,6 +252,7 @@ class XChangeServiceProvider extends ServiceProvider
         $this->registerServices();
         $this->registerIntegrations();
         $this->registerServiceContracts();
+        $this->registerMinimumWithdrawalPolicyResolver();
         $this->registerIntegrationContracts();
         $this->registerReportDriverSource();
 
@@ -888,6 +891,21 @@ class XChangeServiceProvider extends ServiceProvider
         if (! $this->app->bound(ProviderFundingPolicyContract::class)) {
             $this->app->singleton(ProviderFundingPolicyContract::class, function ($app) {
                 return $app->make(config('x-change.services.provider_funding_policy', ProviderAwareFundingPolicy::class));
+            });
+        }
+    }
+
+    protected function registerMinimumWithdrawalPolicyResolver(): void
+    {
+        if (! $this->app->bound('x-change.services.minimum_withdrawal_policy')) {
+            $this->app->singleton('x-change.services.minimum_withdrawal_policy', function ($app) {
+                return $app->make(ConfigMinimumWithdrawalPolicyResolver::class);
+            });
+        }
+
+        if (! $this->app->bound(MinimumWithdrawalPolicyResolverContract::class)) {
+            $this->app->singleton(MinimumWithdrawalPolicyResolverContract::class, function ($app) {
+                return $app->make('x-change.services.minimum_withdrawal_policy');
             });
         }
     }
