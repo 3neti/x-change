@@ -64,6 +64,10 @@ it('records only operator-safe issuance activity facts after a fresh quick gener
                 'source' => 'x-change.cockpit',
                 'presentation_only' => true,
                 'recorder' => 'cockpit.operator-issuance-activity.v1',
+                'draft_status' => 'compiled',
+                'pricing_preflight_status' => 'unavailable',
+                'funding_preflight_status' => 'checked',
+                'activity_schema' => 'x-change.cockpit.operator-issuance-activity.v1',
             ],
         ])
         ->and($recorder->records[0]['id'])->toBeString()->not->toBeEmpty()

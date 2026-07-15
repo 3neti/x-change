@@ -24,14 +24,16 @@ const integrationBundle = {
             {
                 id: 'journal-basic-cash',
                 event_type: 'voucher.generated',
-                summary: 'basic_cash generated a Pay Code for local validation.',
+                summary:
+                    'basic_cash generated a Pay Code for local validation.',
                 occurred_at: '2026-07-09T10:00:00+08:00',
                 raw_payload: 'SECRET-SCENARIO-PAYLOAD',
             },
             {
                 id: 'journal-open-slices',
                 event_type: 'voucher.slice.redeemed',
-                summary: 'divisible_open_three_slices_enforced_interval recorded a slice checkpoint.',
+                summary:
+                    'divisible_open_three_slices_enforced_interval recorded a slice checkpoint.',
                 occurred_at: '2026-07-09T10:05:00+08:00',
                 provider_payload: 'SECRET-SCENARIO-PAYLOAD',
             },
@@ -126,7 +128,8 @@ const dashboardReadModel = {
         {
             id: 'scenario-basic-cash',
             label: 'basic_cash',
-            description: 'Scenario output available as sanitized Cockpit summary.',
+            description:
+                'Scenario output available as sanitized Cockpit summary.',
             timestamp: '2026-07-09T10:00:00+08:00',
             source: 'system',
             raw_payload: 'SECRET-SCENARIO-PAYLOAD',
@@ -134,7 +137,8 @@ const dashboardReadModel = {
         {
             id: 'scenario-open-slices',
             label: 'divisible_open_three_slices_enforced_interval',
-            description: 'Open slice interval checkpoints available as sanitized Cockpit summary.',
+            description:
+                'Open slice interval checkpoints available as sanitized Cockpit summary.',
             timestamp: '2026-07-09T10:05:00+08:00',
             source: 'journal',
             provider_payload: 'SECRET-SCENARIO-PAYLOAD',
@@ -229,12 +233,16 @@ describe('Cockpit read-only UI/UX scenario validation checkpoint', () => {
 
         expect(wrapper.text()).toContain('Local Scenarios');
         expect(wrapper.text()).toContain('basic_cash');
-        expect(wrapper.text()).toContain('divisible_open_three_slices_enforced_interval');
+        expect(wrapper.text()).toContain(
+            'divisible_open_three_slices_enforced_interval',
+        );
         expect(wrapper.text()).toContain('Integration Summary');
         expect(wrapper.text()).toContain('journal-evidence-summary-only');
         expect(wrapper.text()).toContain('safe-action-host-summary-only');
         expect(wrapper.text()).toContain('communication-delivery-summary-only');
-        expect(wrapper.findAll('[data-testid="cockpit-integration-summary-card"]')).toHaveLength(3);
+        expect(
+            wrapper.findAll('[data-testid="cockpit-integration-summary-card"]'),
+        ).toHaveLength(3);
         expectNoUnsafeText(wrapper.text());
     });
 
@@ -246,15 +254,21 @@ describe('Cockpit read-only UI/UX scenario validation checkpoint', () => {
             },
         });
 
-        const search = wrapper.find('[data-testid="cockpit-pay-code-search-input"]');
+        const search = wrapper.find(
+            '[data-testid="cockpit-pay-code-search-input"]',
+        );
 
         expect(wrapper.text()).toContain('PC-BASIC-CASH-001');
         expect(wrapper.text()).toContain('PC-OPEN-SLICES-001');
         expect(wrapper.text()).toContain('basic_cash');
-        expect(wrapper.text()).toContain('divisible_open_three_slices_enforced_interval');
-        expect(search.element).toHaveProperty('readOnly', true);
-        expect(wrapper.findAll('[data-testid="cockpit-pay-code-row"]')).toHaveLength(2);
-        expect(wrapper.find('form').exists()).toBe(false);
+        expect(wrapper.text()).toContain(
+            'divisible_open_three_slices_enforced_interval',
+        );
+        expect(search.element).toHaveProperty('readOnly', false);
+        expect(
+            wrapper.findAll('[data-testid="cockpit-pay-code-row"]'),
+        ).toHaveLength(2);
+        expect(wrapper.find('form').exists()).toBe(true);
         expectNoUnsafeText(wrapper.text());
     });
 
@@ -271,10 +285,17 @@ describe('Cockpit read-only UI/UX scenario validation checkpoint', () => {
         expect(wrapper.text()).toContain('Journal: voucher.generated');
         expect(wrapper.text()).toContain('Review basic_cash');
         expect(wrapper.text()).toContain('SMS');
-        expect(wrapper.text()).toContain('Feedback delivery remains read-only from Cockpit.');
-        expect(wrapper.text()).toContain('Action execution remains disabled from Cockpit.');
-        expect(wrapper.findAll('[data-testid="cockpit-voucher-integration-summary-card"]')).toHaveLength(3);
+        expect(wrapper.text()).toContain(
+            'Feedback delivery remains read-only from Cockpit.',
+        );
+        expect(wrapper.text()).toContain(
+            'Action execution remains disabled from Cockpit.',
+        );
+        expect(
+            wrapper.findAll(
+                '[data-testid="cockpit-voucher-integration-summary-card"]',
+            ),
+        ).toHaveLength(3);
         expectNoUnsafeText(wrapper.text());
     });
 });
-

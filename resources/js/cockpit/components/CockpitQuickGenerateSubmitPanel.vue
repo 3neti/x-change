@@ -92,8 +92,25 @@ type NamedClaimSlice = {
     claim_by: string;
 };
 
+type NormalizedNamedClaimSlice = {
+    id: string;
+    amount: number;
+    description: string;
+    tag: string | null;
+    claim_on: string | null;
+    claim_by: string | null;
+};
+
 const wholeSliceDescription = 'Whole Amount';
 const openSliceDescription = 'Open Slice';
+const issuerDefaultMinimumWithdrawal = 25;
+const providerMinimumWithdrawalByCurrency: Record<
+    string,
+    Record<string, number>
+> = {
+    netbank: { PHP: 5 },
+    paynamics: { PHP: 50 },
+};
 
 type QuickGenerateTemplateDefaults = {
     amount: string;
@@ -118,6 +135,7 @@ type QuickGenerateTemplateDefaults = {
     sliceMode: SliceMode;
     maxSlices: string;
     minWithdrawal: string;
+    provider: string;
     voucherType: 'redeemable' | 'payable' | 'settlement';
     targetAmount: string;
     includeExecutionInstruction: boolean;
@@ -344,7 +362,8 @@ const quickGenerateTemplateDefaults: Record<
         riderSplashTimeout: '3',
         sliceMode: 'whole',
         maxSlices: '1',
-        minWithdrawal: '0',
+        minWithdrawal: '25',
+        provider: 'netbank',
         voucherType: 'redeemable',
         targetAmount: '',
         includeExecutionInstruction: false,
@@ -372,7 +391,8 @@ const quickGenerateTemplateDefaults: Record<
         riderSplashTimeout: '5',
         sliceMode: 'whole',
         maxSlices: '1',
-        minWithdrawal: '0',
+        minWithdrawal: '25',
+        provider: 'paynamics',
         voucherType: 'redeemable',
         targetAmount: '',
         includeExecutionInstruction: false,
@@ -401,6 +421,7 @@ const quickGenerateTemplateDefaults: Record<
         sliceMode: 'open',
         maxSlices: '3',
         minWithdrawal: '100',
+        provider: 'manual',
         voucherType: 'settlement',
         targetAmount: '1000',
         includeExecutionInstruction: true,
@@ -603,6 +624,10 @@ const expiryCustomDays = ref('');
 const startsAt = ref('');
 const expiresAt = ref('');
 const settlementRail = ref('');
+const provider = ref(
+    quickGenerateTemplateDefaults[selectedTemplate.value]?.provider ??
+        'netbank',
+);
 const feeStrategy = ref<'absorb' | 'include' | 'add'>('absorb');
 const cashType = ref('default');
 const customCashType = ref('');
@@ -611,7 +636,7 @@ const customMandates = ref('');
 const sliceMode = ref<SliceMode>('whole');
 const slices = ref('1');
 const maxSlices = ref('1');
-const minWithdrawal = ref(amount.value);
+const minWithdrawal = ref(String(issuerDefaultMinimumWithdrawal));
 const namedClaimSlices = ref<NamedClaimSlice[]>(defaultWholeNamedClaimSlices());
 const voucherType = ref<'redeemable' | 'payable' | 'settlement'>('redeemable');
 const targetAmount = ref('');
@@ -642,6 +667,20 @@ watch(selectedTemplate, (templateKey): void => {
 });
 
 watch(amount, (): void => {
+    if (sliceMode.value === 'whole') {
+        configureWholeAmountSlices();
+    }
+
+    if (sliceMode.value === 'fixed') {
+        redistributeFixedNamedClaimSlices(fixedSliceCount());
+    }
+
+    if (sliceMode.value === 'open') {
+        configureOpenAmountSlice();
+    }
+});
+
+watch([currency, provider], (): void => {
     if (sliceMode.value === 'whole') {
         configureWholeAmountSlices();
     }
@@ -692,6 +731,7 @@ function applyTemplateDefaults(templateKey: string): void {
     feedbackMobile.value = defaults.feedbackMobile;
     feedbackEmail.value = defaults.feedbackEmail;
     feedbackWebhook.value = defaults.feedbackWebhook;
+    provider.value = defaults.provider;
     riderUrl.value = defaults.riderUrl;
     riderUrlPreset.value = '';
     riderSplashHeadline.value = '';
@@ -1561,7 +1601,7 @@ const riderSummary = computed<Record<string, unknown>>(() => {
     };
 });
 
-const normalizedNamedClaimSlices = computed(() => {
+const normalizedNamedClaimSlices = computed<NormalizedNamedClaimSlice[]>(() => {
     const source =
         namedClaimSlices.value.length > 0
             ? namedClaimSlices.value
@@ -1599,15 +1639,96 @@ const namedClaimSliceRemaining = computed<number>(() => {
     );
 });
 
-const namedClaimSliceValidationMessage = computed<string | null>(() => {
-    if (sliceMode.value !== 'named') {
-        return null;
+const providerMinimumWithdrawal = computed<number | null>(() => {
+    const normalizedProvider = provider.value.trim().toLowerCase();
+    const normalizedCurrency = (currency.value.trim() || 'PHP').toUpperCase();
+
+    return (
+        providerMinimumWithdrawalByCurrency[normalizedProvider]?.[
+            normalizedCurrency
+        ] ?? null
+    );
+});
+
+const minimumWithdrawalFloor = computed<number>(() => {
+    return Math.max(
+        issuerDefaultMinimumWithdrawal,
+        providerMinimumWithdrawal.value ?? 0,
+    );
+});
+
+const minimumWithdrawalPolicySource = computed<string>(() => {
+    if (
+        providerMinimumWithdrawal.value !== null &&
+        providerMinimumWithdrawal.value > issuerDefaultMinimumWithdrawal
+    ) {
+        return provider.value.trim().toLowerCase() || 'provider';
     }
 
+    return 'issuer default';
+});
+
+const maxValidClaimCount = computed<number>(() => {
+    const amount = normalizedPayCodeAmount();
+    const minimum = minimumWithdrawalFloor.value;
+
+    if (amount <= 0 || minimum <= 0) {
+        return 1;
+    }
+
+    return Math.max(1, Math.floor(amount / minimum));
+});
+
+const addSliceDisabledReason = computed<string | null>(() => {
+    const nextCount = Math.max(2, namedClaimSlices.value.length + 1);
+    const nextAmount = normalizedPayCodeAmount() / nextCount;
+
+    if (nextAmount + 0.0001 < minimumWithdrawalFloor.value) {
+        return `Adding another slice would create ${currency.value || 'PHP'} ${formatSliceAmount(nextAmount)} claims, below the ${currency.value || 'PHP'} ${formatSliceAmount(minimumWithdrawalFloor.value)} effective minimum.`;
+    }
+
+    return null;
+});
+
+const addSliceDisabled = computed<boolean>(() => {
+    return processing.value || addSliceDisabledReason.value !== null;
+});
+
+const namedClaimSliceValidationMessage = computed<string | null>(() => {
     const normalizedAmount = Number(amount.value);
 
     if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
-        return 'Enter a Pay Code amount before configuring named slices.';
+        return sliceMode.value === 'whole'
+            ? null
+            : 'Enter a Pay Code amount before configuring slices.';
+    }
+
+    if (sliceMode.value === 'fixed') {
+        const count = fixedSliceCount();
+        const computedAmount = count > 0 ? normalizedAmount / count : 0;
+
+        if (computedAmount + 0.0001 < minimumWithdrawalFloor.value) {
+            return `${count} fixed slices would create ${currency.value || 'PHP'} ${formatSliceAmount(computedAmount)} claims, below the ${currency.value || 'PHP'} ${formatSliceAmount(minimumWithdrawalFloor.value)} effective minimum.`;
+        }
+
+        return null;
+    }
+
+    if (sliceMode.value === 'open') {
+        const minimum = Number(minWithdrawal.value);
+
+        if (
+            Number.isFinite(minimum) &&
+            minimum + 0.0001 < minimumWithdrawalFloor.value
+        ) {
+            return `Minimum Withdrawal must be at least ${currency.value || 'PHP'} ${formatSliceAmount(minimumWithdrawalFloor.value)}.`;
+        }
+
+        return null;
+    }
+
+    if (sliceMode.value !== 'named') {
+        return null;
     }
 
     if (normalizedNamedClaimSlices.value.length === 0) {
@@ -1616,6 +1737,14 @@ const namedClaimSliceValidationMessage = computed<string | null>(() => {
 
     if (normalizedNamedClaimSlices.value.some((slice) => slice.amount <= 0)) {
         return 'Each named slice must have an amount greater than zero.';
+    }
+
+    if (
+        normalizedNamedClaimSlices.value.some(
+            (slice) => slice.amount + 0.0001 < minimumWithdrawalFloor.value,
+        )
+    ) {
+        return `Each named slice must be at least ${currency.value || 'PHP'} ${formatSliceAmount(minimumWithdrawalFloor.value)}.`;
     }
 
     if (Math.abs(namedClaimSliceRemaining.value) >= 0.01) {
@@ -1669,6 +1798,75 @@ const sliceSummary = computed<Record<string, unknown>>(() => {
         max_slices: Number.isFinite(max) && max > 0 ? Math.round(max) : 2,
         min_withdrawal:
             Number.isFinite(minimum) && minimum > 0 ? minimum : null,
+    };
+});
+
+const slicePlanRows = computed<Array<Record<string, unknown>>>(() => {
+    return normalizedNamedClaimSlices.value.map((slice) => {
+        const row: Record<string, unknown> = {
+            id: slice.id,
+            amount: slice.amount,
+            description: slice.description,
+        };
+
+        if (slice.tag !== null) {
+            row.tag = slice.tag;
+        }
+
+        if (slice.claim_on !== null) {
+            row.claim_on = slice.claim_on;
+        }
+
+        if (slice.claim_by !== null) {
+            row.claim_by = slice.claim_by;
+        }
+
+        return row;
+    });
+});
+
+const canonicalSlicePlan = computed<Record<string, unknown>>(() => {
+    const normalizedSlices = Number(sliceSummary.value.slices);
+    const normalizedMaxSlices = Number(sliceSummary.value.max_slices);
+    const normalizedMinWithdrawal = Number(sliceSummary.value.min_withdrawal);
+    const maxClaims =
+        sliceMode.value === 'fixed'
+            ? Number.isFinite(normalizedSlices)
+                ? normalizedSlices
+                : slicePlanRows.value.length
+            : sliceMode.value === 'open'
+              ? Number.isFinite(normalizedMaxSlices)
+                  ? normalizedMaxSlices
+                  : 1
+              : sliceMode.value === 'named'
+                ? slicePlanRows.value.length
+                : 1;
+    const minimumWithdrawal =
+        sliceMode.value === 'open' || sliceMode.value === 'named'
+            ? Number.isFinite(normalizedMinWithdrawal)
+                ? normalizedMinWithdrawal
+                : minimumWithdrawalFloor.value
+            : minimumWithdrawalFloor.value;
+
+    return {
+        schema: 'x-change.cockpit.slice-plan.v1',
+        mode: sliceMode.value,
+        cash_mode:
+            sliceMode.value === 'named'
+                ? 'open'
+                : sliceMode.value === 'whole'
+                  ? null
+                  : sliceMode.value,
+        currency: currency.value.trim() || 'PHP',
+        total_amount: normalizedPayCodeAmount(),
+        row_total: namedClaimSliceTotal.value,
+        remaining: namedClaimSliceRemaining.value,
+        max_claims: maxClaims,
+        min_withdrawal: minimumWithdrawal,
+        effective_minimum: minimumWithdrawalFloor.value,
+        policy_source: minimumWithdrawalPolicySource.value,
+        validation_message: namedClaimSliceValidationMessage.value,
+        rows: slicePlanRows.value,
     };
 });
 
@@ -1950,6 +2148,9 @@ function buildPayloadShape(redactSensitive: boolean): Record<string, unknown> {
 
     const payload: Record<string, unknown> = {
         cash,
+        ...(provider.value.trim() === ''
+            ? {}
+            : { provider: provider.value.trim() }),
         inputs: {
             fields: selectedInputFields.value,
             requirements: verificationSummary.value,
@@ -1988,6 +2189,7 @@ function buildPayloadShape(redactSensitive: boolean): Record<string, unknown> {
                     source: 'cockpit.quick-generate',
                     builder: 'guided-voucher-instruction-builder',
                     contract_summary: contractSummaryItems.value,
+                    slice_plan: canonicalSlicePlan.value,
                     ...(campaign === null
                         ? {}
                         : { campaign_context: 'read-model-prefill' }),
@@ -2326,7 +2528,7 @@ function configureWholeAmountSlices(): void {
     sliceMode.value = 'whole';
     slices.value = '1';
     maxSlices.value = '1';
-    minWithdrawal.value = formatSliceAmount(normalizedPayCodeAmount());
+    minWithdrawal.value = formatSliceAmount(minimumWithdrawalFloor.value);
     namedClaimSlices.value = defaultWholeNamedClaimSlices();
 }
 
@@ -2334,7 +2536,7 @@ function configureOpenAmountSlice(): void {
     sliceMode.value = 'open';
     slices.value = '1';
     maxSlices.value = '1';
-    minWithdrawal.value = formatSliceAmount(normalizedPayCodeAmount());
+    minWithdrawal.value = formatSliceAmount(minimumWithdrawalFloor.value);
     namedClaimSlices.value = defaultOpenNamedClaimSlices();
 }
 
@@ -2351,11 +2553,23 @@ function applyTemplateSliceDefaults(
 ): void {
     if (defaults.sliceMode === 'open') {
         configureOpenAmountSlice();
+        minWithdrawal.value = formatSliceAmount(
+            Math.max(
+                Number(defaults.minWithdrawal || 0),
+                minimumWithdrawalFloor.value,
+            ),
+        );
 
         return;
     }
 
     configureWholeAmountSlices();
+    minWithdrawal.value = formatSliceAmount(
+        Math.max(
+            Number(defaults.minWithdrawal || 0),
+            minimumWithdrawalFloor.value,
+        ),
+    );
 }
 
 function redistributeFixedNamedClaimSlices(count: number): void {
@@ -2364,7 +2578,7 @@ function redistributeFixedNamedClaimSlices(count: number): void {
     sliceMode.value = 'fixed';
     slices.value = String(safeCount);
     maxSlices.value = String(safeCount);
-    minWithdrawal.value = formatSliceAmount(normalizedPayCodeAmount());
+    minWithdrawal.value = formatSliceAmount(minimumWithdrawalFloor.value);
     namedClaimSlices.value = equalFixedNamedClaimSlices(safeCount);
 }
 
@@ -2421,7 +2635,7 @@ function reconcileSliceModeFromNamedClaimSlices(): void {
         sliceMode.value = 'open';
         slices.value = '1';
         maxSlices.value = '1';
-        minWithdrawal.value = formatSliceAmount(normalizedPayCodeAmount());
+        minWithdrawal.value = formatSliceAmount(minimumWithdrawalFloor.value);
 
         return;
     }
@@ -2436,7 +2650,7 @@ function reconcileSliceModeFromNamedClaimSlices(): void {
         sliceMode.value = 'whole';
         slices.value = '1';
         maxSlices.value = '1';
-        minWithdrawal.value = formatSliceAmount(normalizedPayCodeAmount());
+        minWithdrawal.value = formatSliceAmount(minimumWithdrawalFloor.value);
 
         return;
     }
@@ -2445,7 +2659,7 @@ function reconcileSliceModeFromNamedClaimSlices(): void {
         sliceMode.value = 'fixed';
         slices.value = String(namedClaimSlices.value.length);
         maxSlices.value = String(namedClaimSlices.value.length);
-        minWithdrawal.value = formatSliceAmount(normalizedPayCodeAmount());
+        minWithdrawal.value = formatSliceAmount(minimumWithdrawalFloor.value);
 
         return;
     }
@@ -2461,6 +2675,10 @@ function reconcileSliceModeFromNamedClaimSlices(): void {
 }
 
 function addNamedClaimSlice(): void {
+    if (addSliceDisabled.value) {
+        return;
+    }
+
     const nextCount = Math.max(2, namedClaimSlices.value.length + 1);
 
     redistributeFixedNamedClaimSlices(nextCount);
@@ -4457,6 +4675,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         v-model="slices"
                                         type="number"
                                         min="1"
+                                        :max="maxValidClaimCount"
                                         step="1"
                                         inputmode="numeric"
                                         class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
@@ -4479,6 +4698,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         v-model="maxSlices"
                                         type="number"
                                         min="1"
+                                        :max="maxValidClaimCount"
                                         step="1"
                                         inputmode="numeric"
                                         class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
@@ -4509,7 +4729,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         <input
                                             v-model="minWithdrawal"
                                             type="number"
-                                            min="0"
+                                            :min="minimumWithdrawalFloor"
                                             step="0.01"
                                             inputmode="decimal"
                                             class="w-full min-w-0 border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50"
@@ -4533,6 +4753,38 @@ function dataGet(source: unknown, path: string[]): unknown {
                                         {{ currency || 'PHP' }}.
                                     </span>
                                 </label>
+                            </div>
+                            <div
+                                class="grid gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-[11px] leading-snug text-emerald-900 lg:grid-cols-3 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100"
+                                data-testid="cockpit-quick-generate-minimum-withdrawal-policy"
+                            >
+                                <p>
+                                    <span class="font-semibold"
+                                        >Effective Minimum</span
+                                    >
+                                    <span class="block">
+                                        {{ currency || 'PHP' }}
+                                        {{
+                                            formatSliceAmount(
+                                                minimumWithdrawalFloor,
+                                            )
+                                        }}
+                                    </span>
+                                </p>
+                                <p>
+                                    <span class="font-semibold">Source</span>
+                                    <span class="block capitalize">
+                                        {{ minimumWithdrawalPolicySource }}
+                                    </span>
+                                </p>
+                                <p>
+                                    <span class="font-semibold"
+                                        >Max Valid Claims</span
+                                    >
+                                    <span class="block">
+                                        {{ maxValidClaimCount }}
+                                    </span>
+                                </p>
                             </div>
                             <p
                                 class="text-[11px] leading-snug text-slate-500 dark:text-slate-400"
@@ -4570,12 +4822,19 @@ function dataGet(source: unknown, path: string[]): unknown {
                                     type="button"
                                     class="rounded-full border border-cyan-200 bg-white px-3 py-1.5 text-xs font-semibold text-cyan-800 shadow-sm hover:bg-cyan-50 disabled:opacity-50 dark:border-cyan-800 dark:bg-slate-950 dark:text-cyan-100"
                                     data-testid="cockpit-quick-generate-add-named-slice"
-                                    :disabled="processing"
+                                    :disabled="addSliceDisabled"
                                     @click="addNamedClaimSlice"
                                 >
                                     Add slice
                                 </button>
                             </div>
+                            <p
+                                v-if="addSliceDisabledReason"
+                                class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
+                                data-testid="cockpit-quick-generate-add-slice-warning"
+                            >
+                                {{ addSliceDisabledReason }}
+                            </p>
 
                             <div class="mt-3 grid gap-3">
                                 <div

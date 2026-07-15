@@ -11,21 +11,25 @@ import {
 } from '../../../resources/js/cockpit/payCodeExplorerDefaults';
 
 describe('Cockpit Pay Code Explorer foundation', () => {
-    it('renders read-only search without navigation or submit behavior', async () => {
+    it('renders read-only search filtering controls without mutation behavior', async () => {
         const wrapper = mount(CockpitPayCodeSearchBar, {
             props: {
                 query: 'PC-READY',
             },
         });
 
-        const input = wrapper.find('[data-testid="cockpit-pay-code-search-input"]');
+        const input = wrapper.find(
+            '[data-testid="cockpit-pay-code-search-input"]',
+        );
 
-        expect(input.element).toHaveProperty('readOnly', true);
+        expect(input.element).toHaveProperty('readOnly', false);
         expect(input.element).toHaveProperty('value', 'PC-READY');
-        expect(wrapper.find('form').exists()).toBe(false);
-        expect(wrapper.text()).toContain('read-only until a host query endpoint');
+        expect(wrapper.find('form').exists()).toBe(true);
+        expect(wrapper.text()).toContain(
+            'Filters use read-only GET navigation.',
+        );
 
-        expect(wrapper.find('[type="submit"]').exists()).toBe(false);
+        expect(wrapper.find('[type="submit"]').exists()).toBe(true);
     });
 
     it('renders filter builder placeholders without applying host queries', () => {
@@ -39,8 +43,12 @@ describe('Cockpit Pay Code Explorer foundation', () => {
         expect(wrapper.text()).toContain('Status');
         expect(wrapper.text()).toContain('Template');
         expect(wrapper.text()).toContain('Risk');
-        expect(wrapper.text()).toContain('Filtering is presentation-only until a host query API is wired.');
-        expect(wrapper.findAll('[data-testid="cockpit-pay-code-filter"]')).toHaveLength(3);
+        expect(wrapper.text()).toContain(
+            'Filtering is presentation-only until a host query API is wired.',
+        );
+        expect(
+            wrapper.findAll('[data-testid="cockpit-pay-code-filter"]'),
+        ).toHaveLength(3);
     });
 
     it('renders result rows and disabled row actions without hidden mutations', async () => {
@@ -55,10 +63,16 @@ describe('Cockpit Pay Code Explorer foundation', () => {
         expect(wrapper.text()).toContain('PC-READY-001');
         expect(wrapper.text()).toContain('PC-PENDING-002');
         expect(wrapper.text()).toContain('PC-SETTLE-003');
-        expect(wrapper.findAll('[data-testid="cockpit-pay-code-row"]')).toHaveLength(3);
-        expect(wrapper.findAll('[data-testid="cockpit-pay-code-row-action"]')).toHaveLength(9);
+        expect(
+            wrapper.findAll('[data-testid="cockpit-pay-code-row"]'),
+        ).toHaveLength(3);
+        expect(wrapper.text()).toContain('View details');
+        expect(wrapper.text()).toContain('Open timeline');
+        expect(wrapper.text()).toContain('Notify recipient');
 
-        for (const action of wrapper.findAll('[data-testid="cockpit-pay-code-row-action"]')) {
+        for (const action of wrapper.findAll(
+            '[data-testid="cockpit-pay-code-row-action-disabled"]',
+        )) {
             expect(action.attributes('disabled')).toBeDefined();
             expect(action.attributes('title')).toBeTruthy();
         }
@@ -67,12 +81,18 @@ describe('Cockpit Pay Code Explorer foundation', () => {
     it('renders the full explorer page with active navigation and side-effect boundaries', () => {
         const wrapper = mount(PayCodeExplorer);
 
-        expect(wrapper.find('[data-testid="cockpit-pay-code-explorer-shell"]').exists()).toBe(true);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-explorer-shell"]')
+                .exists(),
+        ).toBe(true);
         expect(wrapper.text()).toContain('Pay Code Explorer Foundation');
         expect(wrapper.text()).toContain('Search');
         expect(wrapper.text()).toContain('Filter Builder');
         expect(wrapper.text()).toContain('Results');
-        expect(wrapper.find('[aria-current="page"]').text()).toContain('Pay Codes');
+        expect(wrapper.find('[aria-current="page"]').text()).toContain(
+            'Pay Codes',
+        );
         expect(wrapper.text()).toContain('does not mutate vouchers');
         expect(wrapper.text()).toContain('execute drivers');
         expect(wrapper.text()).toContain('approve claims');

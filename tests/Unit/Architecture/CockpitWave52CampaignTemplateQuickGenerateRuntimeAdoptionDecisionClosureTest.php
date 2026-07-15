@@ -27,6 +27,6 @@ it('documents campaign template quick generate runtime adoption decision closure
         ->toContain('Cockpit Wave 52 complete')
         ->toContain('Cockpit Wave 53 — Campaign Quick Generate Full URL / Distribution Link Readiness')
         ->and($hostComponent)
-        ->toContain('const validation = mobile ===')
-        ->toContain('const fields = mobile ===');
+        ->toContain('const validationSummary = computed')
+        ->toContain('const selectedInputFields = computed');
 });

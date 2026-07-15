@@ -59,6 +59,63 @@ it('normalizes named slices into open-slice compatible issuance metadata', funct
         ->and(data_get($payload, 'metadata.custom.named_slices.0.description'))->toBe('Buy Product 1');
 });
 
+it('leaves fixed and open slice payloads unchanged when executable named slices are absent', function (array $payload) {
+    $normalized = app(NamedVoucherSliceService::class)->normalizeIssuancePayload($payload);
+
+    expect($normalized)->toBe($payload)
+        ->and(data_get($normalized, 'metadata.custom.named_slices'))->toBeNull();
+})->with([
+    'fixed slices' => [[
+        'cash' => [
+            'amount' => 100,
+            'currency' => 'PHP',
+            'slice_mode' => 'fixed',
+            'slices' => 4,
+        ],
+        'metadata' => [
+            'custom' => [
+                'cockpit' => [
+                    'slice_plan' => [
+                        'mode' => 'fixed',
+                        'rows' => [
+                            ['id' => 'slice_1', 'amount' => 25],
+                            ['id' => 'slice_2', 'amount' => 25],
+                            ['id' => 'slice_3', 'amount' => 25],
+                            ['id' => 'slice_4', 'amount' => 25],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]],
+    'open slices' => [[
+        'cash' => [
+            'amount' => 100,
+            'currency' => 'PHP',
+            'slice_mode' => 'open',
+            'max_slices' => 3,
+            'min_withdrawal' => 30,
+        ],
+        'metadata' => [
+            'slice_policy' => [
+                'mode' => 'open',
+                'selection' => 'operator',
+                'enforced' => false,
+            ],
+            'custom' => [
+                'cockpit' => [
+                    'slice_plan' => [
+                        'mode' => 'open',
+                        'rows' => [
+                            ['id' => 'slice_1', 'amount' => 100],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]],
+]);
+
 it('rejects named slices that do not add up to the voucher amount', function () {
     app(NamedVoucherSliceService::class)->normalizeIssuancePayload([
         'cash' => [
@@ -73,6 +130,24 @@ it('rejects named slices that do not add up to the voucher amount', function () 
         ],
     ]);
 })->throws(ValidationException::class, 'Named slice amounts must equal the Pay Code amount.');
+
+it('rejects named slices below the configured effective minimum withdrawal', function () {
+    config()->set('x-change.minimum_withdrawal.default', 25.00);
+
+    app(NamedVoucherSliceService::class)->normalizeIssuancePayload([
+        'provider' => 'manual',
+        'cash' => [
+            'amount' => 100,
+            'currency' => 'PHP',
+        ],
+        'metadata' => [
+            'slices' => [
+                ['amount' => 80],
+                ['amount' => 20],
+            ],
+        ],
+    ]);
+})->throws(ValidationException::class, 'Named slice amount must be at least PHP 25.00.');
 
 it('derives claim amount from selected named slices', function () {
     $voucher = namedSliceVoucher([

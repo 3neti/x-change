@@ -150,6 +150,7 @@ it('carries the distribution workspace read model contract without executable be
                     'metadata' => [],
                 ],
             ],
+            'distribution_links' => [],
             'redactions' => [
                 'payloads' => 'distribution-read-model-summary-only',
                 'raw_payloads_exposed' => false,

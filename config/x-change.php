@@ -9,6 +9,7 @@ use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Contracts\IdempotencyStoreContract;
 use LBHurtado\XChange\Contracts\IssuerOnboardingContract;
 use LBHurtado\XChange\Contracts\IssuerResolverContract;
+use LBHurtado\XChange\Contracts\MinimumWithdrawalPolicyResolverContract;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
 use LBHurtado\XChange\Contracts\ProviderAccountLinkRepositoryContract;
@@ -40,6 +41,7 @@ use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRe
 use LBHurtado\XChange\Services\Cockpit\XActionCockpitOperatorIssuanceActivityActionHandoff;
 use LBHurtado\XChange\Services\Cockpit\XFeedbackCockpitOperatorIssuanceActivityFeedbackHandoff;
 use LBHurtado\XChange\Services\Cockpit\XJournalCockpitOperatorIssuanceActivityJournalHandoff;
+use LBHurtado\XChange\Services\ConfigMinimumWithdrawalPolicyResolver;
 use LBHurtado\XChange\Services\ConfigProviderRuntimeSettingsResolver;
 use LBHurtado\XChange\Services\ConfigProviderTopologyResolver;
 use LBHurtado\XChange\Services\ContextUserResolver;
@@ -255,6 +257,7 @@ return [
         'provider_provisioning_manager' => DefaultProviderProvisioningManager::class,
         'provider_readiness_guard' => DefaultProviderReadinessGuard::class,
         'provider_funding_policy' => ProviderAwareFundingPolicy::class,
+        'minimum_withdrawal_policy' => ConfigMinimumWithdrawalPolicyResolver::class,
         'wallet_provisioning' => DefaultWalletProvisioningService::class,
         'issuer_resolver' => DefaultIssuerResolver::class,
         'redemption_flow_preparation' => DefaultRedemptionFlowPreparationService::class,
@@ -292,8 +295,24 @@ return [
         ProviderProvisioningManagerContract::class => 'provider_provisioning_manager',
         ProviderReadinessGuardContract::class => 'provider_readiness_guard',
         ProviderFundingPolicyContract::class => 'provider_funding_policy',
+        MinimumWithdrawalPolicyResolverContract::class => 'minimum_withdrawal_policy',
         WalletProvisioningContract::class => 'wallet_provisioning',
         IssuerResolverContract::class => 'issuer_resolver',
+    ],
+
+    'minimum_withdrawal' => [
+        'default' => (float) env('XCHANGE_MINIMUM_WITHDRAWAL_DEFAULT', 25.00),
+
+        'providers' => [
+            'netbank' => [
+                'PHP' => (float) env('XCHANGE_MINIMUM_WITHDRAWAL_NETBANK_PHP', 5.00),
+            ],
+            'paynamics' => [
+                'PHP' => (float) env('XCHANGE_MINIMUM_WITHDRAWAL_PAYNAMICS_PHP', 50.00),
+            ],
+        ],
+
+        'rails' => [],
     ],
 
     'funding' => [

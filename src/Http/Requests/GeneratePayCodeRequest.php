@@ -6,10 +6,12 @@ namespace LBHurtado\XChange\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use LBHurtado\XChange\Http\Requests\Concerns\SanitizesRiderSplashHtml;
+use LBHurtado\XChange\Http\Requests\Concerns\ValidatesMinimumWithdrawalPolicy;
 
 class GeneratePayCodeRequest extends FormRequest
 {
     use SanitizesRiderSplashHtml;
+    use ValidatesMinimumWithdrawalPolicy;
 
     public function authorize(): bool
     {
@@ -59,6 +61,7 @@ class GeneratePayCodeRequest extends FormRequest
             'rider.og_source' => ['nullable'],
 
             'count' => ['nullable', 'integer', 'min:1'],
+            'provider' => ['nullable', 'string', 'max:80'],
             'prefix' => ['nullable', 'string'],
             'mask' => ['nullable', 'string'],
             'ttl' => ['nullable'],

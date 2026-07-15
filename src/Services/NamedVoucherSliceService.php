@@ -8,6 +8,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Contracts\MinimumWithdrawalPolicyResolverContract;
 use LBHurtado\XChange\Models\VoucherClaim;
 
 class NamedVoucherSliceService
@@ -33,6 +34,8 @@ class NamedVoucherSliceService
                 'metadata.slices' => 'Named slice amounts must equal the Pay Code amount.',
             ]);
         }
+
+        app(MinimumWithdrawalPolicyResolverContract::class)->assertIssuancePayload($payload);
 
         data_forget($payload, 'metadata.slices');
         data_forget($payload, 'metadata.slice_policy');
