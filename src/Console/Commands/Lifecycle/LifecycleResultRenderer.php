@@ -86,6 +86,8 @@ final class LifecycleResultRenderer
             ));
         }
 
+        $this->renderExecutionProjectionProfile($command, $payload);
+
         if (isset($payload['estimate']) && is_array($payload['estimate'])) {
             $this->renderEstimateSummary($command, $payload['estimate']);
         }
@@ -141,6 +143,30 @@ final class LifecycleResultRenderer
             $label,
             is_scalar($value) ? (string) $value : (json_encode($value) ?: 'n/a')
         ));
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function renderExecutionProjectionProfile(Command $command, array $payload): void
+    {
+        $profile = data_get($payload, 'execution.projection_profile');
+
+        if (! is_array($profile)) {
+            return;
+        }
+
+        $command->line('Execution Projection: '.(string) ($profile['status'] ?? 'n/a'));
+        $command->line('Cockpit Projection Source: '.(string) data_get($profile, 'cockpit_projection.source', 'n/a'));
+
+        $targets = data_get($profile, 'projected_targets');
+
+        if (is_array($targets) && $targets !== []) {
+            $command->line('Projected Targets: '.implode(', ', array_map(
+                static fn (mixed $target): string => is_scalar($target) ? (string) $target : 'unknown',
+                $targets,
+            )));
+        }
     }
 
     /**

@@ -117,7 +117,97 @@ final class ExecutionEngineContractScenarioRunner implements ScenarioRunnerContr
             'children' => $result->children,
             'metadata' => $result->metadata,
             'handoffs' => $handoffs->toReportArray(),
+            'projection_profile' => $this->projectionProfile($handoffs),
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function projectionProfile(ExecutionResultHandoffSummaryData $handoffs): array
+    {
+        $report = $handoffs->toReportArray();
+        $summaryJournal = data_get($report, 'handoff_summary_journal');
+        $summaryStatus = is_array($summaryJournal)
+            ? (string) ($summaryJournal['status'] ?? 'not_wired')
+            : 'not_wired';
+        $summaryRecorded = $summaryStatus === 'recorded';
+        $targets = $this->stringMap(data_get($report, 'profile.targets'));
+        $projectedTargets = $this->stringList(data_get($report, 'profile.active_targets'));
+        $sideEffectTargets = $this->stringList(data_get($report, 'profile.performed_side_effect_targets'));
+
+        return [
+            'schema' => 'x-change.execution-projection-profile.v1',
+            'status' => $summaryRecorded
+                ? 'durable_summary_evidence_available'
+                : 'runtime_handoff_profile_only',
+            'execution_id' => $handoffs->execution_id,
+            'voucher_code' => $handoffs->voucher_code,
+            'correlation_id' => $handoffs->correlation_id,
+            'targets' => $targets,
+            'projected_targets' => $projectedTargets,
+            'performed_side_effect_targets' => $sideEffectTargets,
+            'failed_targets' => $this->stringList(data_get($report, 'profile.failed_targets')),
+            'cockpit_projection' => [
+                'source' => $summaryRecorded
+                    ? 'x-journal.execution.handoff.summary.recorded'
+                    : 'execution.handoffs.profile',
+                'summary_event_type' => $summaryRecorded
+                    ? 'execution.handoff.summary.recorded'
+                    : null,
+                'summary_reference_number' => is_array($summaryJournal)
+                    ? $this->nullableString(data_get($summaryJournal, 'metadata.reference_number'))
+                    : null,
+                'read_only' => true,
+                'mutates_execution' => false,
+                'writes_journal' => false,
+                'sends_feedback' => false,
+                'executes_action' => false,
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function stringMap(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return collect($value)
+            ->mapWithKeys(fn (mixed $item, mixed $key): array => [
+                (string) $key => is_scalar($item) ? (string) $item : '',
+            ])
+            ->all();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function stringList(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return collect($value)
+            ->filter(fn (mixed $item): bool => is_scalar($item) && trim((string) $item) !== '')
+            ->map(fn (mixed $item): string => (string) $item)
+            ->values()
+            ->all();
+    }
+
+    private function nullableString(mixed $value): ?string
+    {
+        if (! is_scalar($value)) {
+            return null;
+        }
+
+        $string = trim((string) $value);
+
+        return $string === '' ? null : $string;
     }
 
     /**

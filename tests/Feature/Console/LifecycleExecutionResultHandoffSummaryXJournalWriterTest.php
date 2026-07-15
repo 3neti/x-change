@@ -107,6 +107,49 @@ it('records a sanitized post pipeline execution handoff summary into x-journal',
         ->and($summaryEntry->payload['feedback']['metadata'])->not->toHaveKey('transport_secret');
 });
 
+it('reports durable handoff summary projection readiness in lifecycle json and human output', function () {
+    $jsonExitCode = Artisan::call('xchange:lifecycle:run', [
+        'scenario' => 'execution_settlement_envelope_contract_demo',
+        '--json' => true,
+    ]);
+
+    $json = json_decode(Artisan::output(), true);
+
+    expect($jsonExitCode)->toBe(0)
+        ->and(data_get($json, 'execution.projection_profile.schema'))->toBe('x-change.execution-projection-profile.v1')
+        ->and(data_get($json, 'execution.projection_profile.status'))->toBe('durable_summary_evidence_available')
+        ->and(data_get($json, 'execution.projection_profile.cockpit_projection.source'))->toBe('x-journal.execution.handoff.summary.recorded')
+        ->and(data_get($json, 'execution.projection_profile.cockpit_projection.summary_event_type'))->toBe('execution.handoff.summary.recorded')
+        ->and(data_get($json, 'execution.projection_profile.cockpit_projection.read_only'))->toBeTrue()
+        ->and(data_get($json, 'execution.projection_profile.targets'))->toBe([
+            'journal' => 'recorded',
+            'action' => 'composed',
+            'feedback' => 'planned',
+            'cockpit_activity' => 'not_wired',
+            'handoff_summary_journal' => 'recorded',
+        ])
+        ->and(data_get($json, 'execution.projection_profile.projected_targets'))->toBe([
+            'journal',
+            'action',
+            'feedback',
+            'handoff_summary_journal',
+        ])
+        ->and(data_get($json, 'execution.projection_profile.performed_side_effect_targets'))->toBe([
+            'journal',
+            'handoff_summary_journal',
+        ]);
+
+    $humanExitCode = Artisan::call('xchange:lifecycle:run', [
+        'scenario' => 'execution_settlement_envelope_contract_demo',
+    ]);
+    $humanOutput = Artisan::output();
+
+    expect($humanExitCode)->toBe(0)
+        ->and($humanOutput)->toContain('Execution Projection: durable_summary_evidence_available')
+        ->and($humanOutput)->toContain('Cockpit Projection Source: x-journal.execution.handoff.summary.recorded')
+        ->and($humanOutput)->toContain('Projected Targets: journal, action, feedback, handoff_summary_journal');
+});
+
 it('replays the same x-journal handoff summary idempotently', function () {
     $summary = new ExecutionResultHandoffSummaryData(
         execution_id: 'exec-summary-idempotent',

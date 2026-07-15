@@ -379,3 +379,16 @@ Execution Engine migration slices 0–9 are now scaffolded. Next work should be 
 - The projection is read-only and does not execute actions, send feedback, write journal entries, call providers, mutate vouchers, or move money.
 - Report: `reports/019-cockpit-handoff-summary-evidence-projection.md`.
 - Next recommended slice: lifecycle scenario reporting profile for durable summary projection.
+
+## 2026-07-15 Update — Lifecycle Durable Summary Projection Reporting
+
+- Lifecycle execution scenario output now includes `execution.projection_profile`.
+- The profile makes Cockpit projection readiness explicit instead of requiring humans or tooling to infer it from nested `execution.handoffs`.
+- When the post-pipeline summary journal writer records `execution.handoff.summary.recorded`, the scenario reports `durable_summary_evidence_available`.
+- Human CLI output now includes:
+  - `Execution Projection`
+  - `Cockpit Projection Source`
+  - `Projected Targets`
+- This remains a reporting-only slice. It does not execute actions, send feedback, write additional journal entries, call providers, mutate vouchers, access wallets, or move money.
+- Report: `reports/020-lifecycle-durable-summary-projection-reporting.md`.
+- Next recommended slice: Cockpit execution activity UI surfacing for durable summary projection status.

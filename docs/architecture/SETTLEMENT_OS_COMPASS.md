@@ -2209,3 +2209,13 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - The integration remains non-blocking and read-only from Cockpit.
 - Verification report: `execution-engine/reports/019-cockpit-handoff-summary-evidence-projection.md`.
 - Next integration level: lifecycle scenario reporting profile for durable summary projection.
+
+## 2026-07-15 Update — Lifecycle Durable Summary Projection Reporting
+
+- Lifecycle scenario reports now expose an explicit `execution.projection_profile` for execution-result handoff evidence.
+- This lets operators and tooling see whether Cockpit has durable summary evidence available from `x-journal.execution.handoff.summary.recorded`.
+- The reporting profile closes the current demonstration loop from execution result to journal/action/feedback handoff summary to Cockpit-readable evidence.
+- Human CLI output now surfaces the projection status, source, and projected targets.
+- This did not add new execution, journal, action, feedback, provider, wallet, campaign, or Cockpit mutation behavior.
+- Verification report: `execution-engine/reports/020-lifecycle-durable-summary-projection-reporting.md`.
+- Next integration level: decide whether Cockpit UI should visibly surface durable summary projection status in Recent Activity.
