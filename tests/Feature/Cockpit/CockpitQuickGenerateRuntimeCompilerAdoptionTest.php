@@ -174,7 +174,11 @@ it('issues a settlement envelope quick generate payload through the real issuanc
         ->assertCreated()
         ->assertJsonPath('status', 'issued')
         ->assertJsonPath('result.currency', 'PHP')
-        ->assertJsonPath('result.amount', 1000);
+        ->assertJsonPath('result.amount', 1000)
+        ->assertJsonPath('result.links.redeem_path', fn (string $path): bool => str_starts_with($path, '/x/claim/'))
+        ->assertJsonPath('result.links.redeem_path', fn (string $path): bool => str_ends_with($path, '/experience'))
+        ->assertJsonPath('result.links.redeem', fn (string $url): bool => str_contains($url, '/x/claim/'))
+        ->assertJsonPath('result.links.redeem', fn (string $url): bool => str_ends_with($url, '/experience'));
 });
 
 it('fails closed before issuance when the quick generate draft template is unknown', function () {

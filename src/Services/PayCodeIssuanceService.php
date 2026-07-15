@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Services;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 use LBHurtado\Voucher\Contracts\GeneratesVouchers;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
@@ -91,6 +92,10 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
 
     protected function redeemPath(string $code): string
     {
+        if (Route::has('x-change.claim.experience')) {
+            return route('x-change.claim.experience', ['code' => $code], false);
+        }
+
         $path = trim((string) config('x-change.routes.paths.redeem', 'disburse'), '/');
 
         return '/'.$path.'?code='.urlencode($code);

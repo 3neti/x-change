@@ -45,6 +45,8 @@ it('generates a pay code end to end and debits the issuer wallet', function () {
 
     expect($result->links->redeem)->toContain($result->code);
     expect($result->links->redeem_path)->toContain($result->code);
+    expect($result->links->redeem)->toBe("https://example.test/x/claim/{$result->code}/experience");
+    expect($result->links->redeem_path)->toBe("/x/claim/{$result->code}/experience");
 
     $wallet->refresh();
 
