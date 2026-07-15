@@ -193,6 +193,7 @@ Last updated: 2026-06-29
 - x-change gateway binding strategy is now concrete for contract-demo purposes: x-change owns adapter bindings in `XChangeServiceProvider`; voucher continues to own engine, driver contracts, registry, and execution result shape.
 - Canonical production metadata baselines are nested and driver-specific: `execution.metadata.settlement_envelope` and `execution.metadata.stored_value`.
 - Executable slice instructions remain deferred. Current named slices stay x-change/Cockpit metadata until a future voucher execution slice introduces typed voucher-owned slice contracts.
+- Execution Integration Slice 2 — Cockpit execution activity projection completed on 2026-07-15: x-change Cockpit can now read x-journal `execution.result.recorded` entries and project them into dashboard Recent Activity as read-only execution evidence. This uses the existing Cockpit/x-journal reader seam and does not make Cockpit an execution surface or a journal writer.
 
 ## Test Coverage Status
 
@@ -207,6 +208,7 @@ Last updated: 2026-06-29
 - Stored-value driver: completed with gateway-seam tests for activation, no-disbursement ownership claim, spend, over-balance rejection, OTP threshold rejection, replenishment, max-balance rejection, registry resolution, and no stored-value voucher species.
 - Driver-composed runtime: completed with tests for step registry registration, unknown-step failure, ordered execution, container/closure resolution, result short-circuiting, fake driver composition, singleton booting, autoloading, and central-engine isolation.
 - Integration contract demo: completed with x-change tests for gateway bindings, lifecycle bootstrapper execution payload preservation, runner resolution, settlement-envelope lifecycle execution, and stored-value activate/spend lifecycle execution.
+- Execution result projection: completed with a Cockpit feature test proving a lifecycle execution with x-journal handoff appears in dashboard activity as an operator-safe execution row.
 - Architecture invariants: x-change now has an executable guard preventing production imports of concrete voucher generation/redemption actions.
 - Feature/regression: current voucher and x-change suites cover issuance, redemption, claim, withdrawal, provider failure, and reconciliation.
 - Verification: voucher full suite is green as of 2026-06-29 with 381 passed and 28 skipped; x-change package full suite is green with 970 passed and 5 skipped.

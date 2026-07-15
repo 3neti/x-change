@@ -342,7 +342,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                     severity: 'watch',
                 ),
             ],
-            activity: $this->dashboardActivity($rows),
+            activity: $this->dashboardActivity($rows, $query),
             redactions: [
                 'payloads' => 'sanitized-dashboard-summary-only',
                 'excluded' => $this->excludedPayloadKeys(),
@@ -1661,9 +1661,9 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
      * @param  Collection<int, array<string, mixed>>  $rows
      * @return array<int, CockpitDashboardActivityData>
      */
-    private function dashboardActivity($rows): array
+    private function dashboardActivity($rows, CockpitReadModelQueryData $query): array
     {
-        return $rows
+        $voucherActivity = $rows
             ->map(fn (array $row): array => [
                 'code' => $this->summaryCode($row, ''),
                 'display_status' => $this->stringValue($row['display_status'] ?? null, $this->summaryStatus($row)),
@@ -1685,6 +1685,15 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 timestamp: $row['timestamp'],
                 source: 'system',
             ))
+            ->values()
+            ->all();
+
+        return collect([
+            ...($this->integrations?->executionActivities($query) ?? []),
+            ...$voucherActivity,
+        ])
+            ->sortByDesc(fn (CockpitDashboardActivityData $activity): string => $activity->timestamp)
+            ->take(5)
             ->values()
             ->all();
     }

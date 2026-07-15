@@ -10,6 +10,7 @@ use JsonSerializable;
 use LBHurtado\XChange\Contracts\CockpitRedactorContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitActionReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitCampaignReadModelData;
+use LBHurtado\XChange\Data\Cockpit\CockpitDashboardActivityData;
 use LBHurtado\XChange\Data\Cockpit\CockpitFeedbackReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitJournalReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitReadModelQueryData;
@@ -120,6 +121,31 @@ class OptionalCockpitIntegrationReadModels
             );
         } catch (Throwable $exception) {
             return $this->feedbackUnavailable('read-model-unavailable', $exception);
+        }
+    }
+
+    /**
+     * @return array<int, CockpitDashboardActivityData>
+     */
+    public function executionActivities(CockpitReadModelQueryData $query): array
+    {
+        $service = $this->resolveOptionalService('journal.reader');
+
+        if ($service === null || ! method_exists($service, 'read')) {
+            return [];
+        }
+
+        try {
+            $result = $service->read($this->executionJournalQuery($query));
+            $payload = $this->redact($this->arrayValue($result));
+
+            return collect($this->listValue($payload['entries'] ?? []))
+                ->map(fn (array $entry): ?CockpitDashboardActivityData => $this->executionActivity($entry))
+                ->filter()
+                ->values()
+                ->all();
+        } catch (Throwable) {
+            return [];
         }
     }
 
@@ -287,6 +313,109 @@ class OptionalCockpitIntegrationReadModels
             'context' => ['code' => $query->code],
             'metadata' => ['source' => 'x-change.cockpit'],
         ];
+    }
+
+    private function executionJournalQuery(CockpitReadModelQueryData $query): mixed
+    {
+        $actorClass = $this->fqcn('XJournal', 'Data\\JournalAccessActorData');
+        $retrievalClass = $this->fqcn('XJournal', 'Data\\JournalRetrievalQueryData');
+        $profileClass = $this->fqcn('XJournal', 'Data\\JournalVisibilityProfileData');
+        $queryClass = $this->fqcn('XJournal', 'Data\\CockpitJournalQueryData');
+
+        if (
+            class_exists($actorClass)
+            && class_exists($retrievalClass)
+            && class_exists($profileClass)
+            && class_exists($queryClass)
+        ) {
+            return new $queryClass(
+                actor: $actorClass::fromArray([
+                    'id' => $query->operatorId,
+                    'type' => 'operator',
+                    'permissions' => ['x-journal.view'],
+                    'metadata' => ['source' => 'x-change.cockpit.execution-activity'],
+                ]),
+                query: new $retrievalClass(
+                    correlationId: $query->correlationId,
+                    eventType: 'execution.result.recorded',
+                    limit: 3,
+                    order: 'desc',
+                ),
+                visibilityProfile: new $profileClass(
+                    name: 'redacted',
+                    redactPayloadKeys: [
+                        'raw',
+                        'raw_payload',
+                        'provider_payload',
+                        'wallet',
+                        'funding_source',
+                        'account_number',
+                        'otp',
+                        'secret',
+                    ],
+                ),
+                context: [
+                    'source' => 'x-change.cockpit',
+                    'surface' => 'dashboard.execution_activity',
+                ],
+                metadata: [
+                    'source' => 'x-change.cockpit',
+                    'integration' => 'cockpit.execution_activity',
+                    'read_only' => true,
+                ],
+            );
+        }
+
+        return [
+            'actor' => [
+                'id' => $query->operatorId,
+                'type' => 'operator',
+                'permissions' => ['x-journal.view'],
+            ],
+            'query' => [
+                'correlation_id' => $query->correlationId,
+                'event_type' => 'execution.result.recorded',
+                'limit' => 3,
+                'order' => 'desc',
+            ],
+            'visibility_profile' => ['name' => 'redacted'],
+            'context' => ['source' => 'x-change.cockpit', 'surface' => 'dashboard.execution_activity'],
+            'metadata' => ['source' => 'x-change.cockpit', 'integration' => 'cockpit.execution_activity', 'read_only' => true],
+        ];
+    }
+
+    private function executionActivity(array $entry): ?CockpitDashboardActivityData
+    {
+        $payload = $this->arrayValue($entry['payload'] ?? []);
+        $references = $this->arrayValue($entry['references'] ?? []);
+        $metadata = $this->arrayValue($entry['metadata'] ?? []);
+        $eventType = $this->nonEmptyString($entry['event_type'] ?? null);
+
+        if ($eventType !== 'execution.result.recorded') {
+            return null;
+        }
+
+        $executionId = $this->nonEmptyString($payload['execution_id'] ?? null)
+            ?? $this->nonEmptyString($references['execution_id'] ?? null);
+        $voucherCode = $this->nonEmptyString($payload['voucher_code'] ?? null)
+            ?? $this->nonEmptyString($references['voucher_code'] ?? null);
+        $status = $this->nonEmptyString($payload['status'] ?? null) ?? 'recorded';
+        $driver = $this->nonEmptyString($payload['driver'] ?? null)
+            ?? $this->nonEmptyString($metadata['driver'] ?? null)
+            ?? 'execution';
+        $timestamp = $this->nonEmptyString($entry['occurred_at'] ?? null);
+
+        if ($executionId === null || $voucherCode === null || $timestamp === null) {
+            return null;
+        }
+
+        return new CockpitDashboardActivityData(
+            id: 'execution-'.$executionId,
+            label: 'Execution recorded for '.$voucherCode,
+            description: $driver.' '.$status.' · '.$executionId,
+            timestamp: $timestamp,
+            source: 'execution',
+        );
     }
 
     private function actionSubject(CockpitReadModelQueryData $query): mixed

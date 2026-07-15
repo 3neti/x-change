@@ -2099,3 +2099,11 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Raw provider payloads, raw reconciliation payloads, unmasked account numbers, wallet internals, recipient secrets, and OTP metadata are not written to the journal payload.
 - The handoff remains non-blocking: execution remains authoritative and successful even if x-journal handoff fails.
 - Safe lifecycle verification showed `execution.handoffs.journal.status = recorded` with reference number `ERN-2026-000000001`.
+
+## 2026-07-15 Update — Cockpit Execution Activity Projection
+
+- Cockpit dashboard read models now project x-journal `execution.result.recorded` entries into the existing read-only Recent Activity panel.
+- The projection reads through `CockpitJournalReader`; Cockpit does not execute drivers, write journal entries, call providers, send feedback, execute actions, or move money.
+- Activity rows expose only operator-safe fields: voucher code, execution ID, driver, status, timestamp, and `source: execution`.
+- This closes the immediate visual loop from Execution Engine result → x-journal record → Cockpit activity evidence.
+- Next integration level: x-action continuation planning from execution results, then x-feedback notification intent planning.
