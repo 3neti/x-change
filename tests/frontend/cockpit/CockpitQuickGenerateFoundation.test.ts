@@ -386,6 +386,62 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(
             wrapper
                 .find(
+                    '[data-testid="cockpit-quick-generate-productized-result-card"]',
+                )
+                .exists(),
+        ).toBe(true);
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-productized-result-card"]',
+                )
+                .text(),
+        ).toContain('Generation complete');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-productized-result-card"]',
+                )
+                .text(),
+        ).toContain('Pay Code PC-UI-001');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-productized-result-card"]',
+                )
+                .text(),
+        ).toContain('ready to copy');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-productized-result-card"]',
+                )
+                .text(),
+        ).toContain('estimated');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-productized-result-card"]',
+                )
+                .text(),
+        ).toContain('checked');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-productized-result-card"]',
+                )
+                .text(),
+        ).toContain('recording-attempted-after-issuance');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-productized-result-card"]',
+                )
+                .text(),
+        ).toContain('without sending feedback');
+        expect(
+            wrapper
+                .find(
                     '[data-testid="cockpit-quick-generate-beneficiary-url-panel"]',
                 )
                 .exists(),
