@@ -415,7 +415,56 @@ class OptionalCockpitIntegrationReadModels
             description: $driver.' '.$status.' · '.$executionId,
             timestamp: $timestamp,
             source: 'execution',
+            metadata: [
+                'execution_handoff_profile' => $this->executionHandoffProfile($entry),
+            ],
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $entry
+     * @return array<string, mixed>
+     */
+    private function executionHandoffProfile(array $entry): array
+    {
+        $targets = [
+            'journal' => 'recorded',
+            'action' => $this->configuredExecutionHandoffStatus('action', 'x-action', 'enabled_not_projected'),
+            'feedback' => $this->configuredExecutionHandoffStatus('feedback', 'x-feedback', 'enabled_not_projected'),
+            'cockpit_activity' => $this->configuredExecutionHandoffStatus('cockpit_activity', 'database', 'enabled_not_projected'),
+        ];
+
+        return [
+            'schema' => 'x-change.cockpit.execution-handoff-profile.v1',
+            'targets' => $targets,
+            'active_targets' => collect($targets)
+                ->reject(fn (string $status): bool => $status === 'not_wired')
+                ->keys()
+                ->values()
+                ->all(),
+            'performed_side_effect_targets' => ['journal'],
+            'failed_targets' => collect($targets)
+                ->filter(fn (string $status): bool => str_starts_with($status, 'failed'))
+                ->keys()
+                ->values()
+                ->all(),
+            'non_blocking' => true,
+            'projection' => [
+                'source' => 'x-journal.execution.result.recorded',
+                'action_feedback_evidence' => 'runtime-config-only',
+                'read_only' => true,
+                'executes_actions' => false,
+                'sends_feedback' => false,
+                'moves_money' => false,
+            ],
+        ];
+    }
+
+    private function configuredExecutionHandoffStatus(string $key, string $enabledValue, string $enabledStatus): string
+    {
+        return config("x-change.execution_result_handoffs.{$key}") === $enabledValue
+            ? $enabledStatus
+            : 'not_wired';
     }
 
     private function actionSubject(CockpitReadModelQueryData $query): mixed

@@ -2136,3 +2136,13 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Only x-journal performs a side effect in this profile; x-action remains presentation-only and x-feedback remains prepare-only.
 - Verification report: `execution-engine/reports/012-combined-execution-result-handoff-profile.md`.
 - Next integration level: Cockpit read-model projection for combined execution handoff status.
+
+## 2026-07-15 Update — Cockpit Execution Handoff Profile Projection
+
+- Cockpit dashboard execution activity rows now expose safe `metadata.execution_handoff_profile`.
+- The profile is projected from x-journal execution evidence plus current runtime handoff configuration.
+- Confirmed journal evidence is shown as `journal = recorded`.
+- Configured action/feedback handoffs are shown as `enabled_not_projected` until durable action/feedback evidence is available.
+- The projection remains read-only and does not execute actions, send feedback, write journal entries, call providers, mutate vouchers, or move money.
+- Verification report: `execution-engine/reports/013-cockpit-execution-handoff-profile-projection.md`.
+- Next integration level: durable action/feedback handoff evidence projection decision.

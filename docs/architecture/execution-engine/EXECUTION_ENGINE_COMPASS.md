@@ -295,3 +295,15 @@ Execution Engine migration slices 0–9 are now scaffolded. Next work should be 
 - The combined profile remains post-execution and non-blocking; it does not alter voucher execution status.
 - Report: `reports/012-combined-execution-result-handoff-profile.md`.
 - Next recommended slice: Cockpit read-model projection for combined execution handoff status.
+
+## 2026-07-15 Update — Cockpit Execution Handoff Profile Projection
+
+- Extended x-journal-backed Cockpit execution activity rows with safe `metadata.execution_handoff_profile`.
+- The projection distinguishes confirmed evidence from configured runtime status:
+  - `journal = recorded` is backed by an x-journal `execution.result.recorded` entry.
+  - `action = enabled_not_projected` means x-action is configured, but no durable action evidence is projected from the entry.
+  - `feedback = enabled_not_projected` means x-feedback is configured, but no durable feedback evidence is projected from the entry.
+- Added dashboard feature coverage for default and combined configured profiles.
+- No execution behavior, journal writing, action execution, feedback delivery, provider call, voucher mutation, wallet access, or money movement was added.
+- Report: `reports/013-cockpit-execution-handoff-profile-projection.md`.
+- Next recommended slice: durable action/feedback handoff evidence projection decision.
