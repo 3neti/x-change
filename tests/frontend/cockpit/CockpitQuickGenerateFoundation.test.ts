@@ -250,8 +250,8 @@ describe('Cockpit Quick Generate foundation', () => {
                 result: {
                     code: 'PC-UI-001',
                     links: {
-                        redeem: 'https://example.test/r/PC-UI-001',
-                        redeem_path: '/r/PC-UI-001',
+                        redeem: 'https://example.test/x/claim/PC-UI-001/experience',
+                        redeem_path: '/x/claim/PC-UI-001/experience',
                         cockpit_detail: '/x/cockpit/pay-codes/PC-UI-001',
                         cockpit_distribution:
                             '/x/cockpit/pay-codes/PC-UI-001/distribution',
@@ -493,7 +493,14 @@ describe('Cockpit Quick Generate foundation', () => {
             wrapper
                 .find('[data-testid="cockpit-quick-generate-primary-claim-link"]')
                 .attributes('href'),
-        ).toBe('https://example.test/r/PC-UI-001');
+        ).toBe('https://example.test/x/claim/PC-UI-001/experience');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-primary-claim-route-source"]',
+                )
+                .text(),
+        ).toContain('Claim experience URL');
         expect(
             wrapper
                 .find('[data-testid="cockpit-quick-generate-primary-detail-link"]')
@@ -575,21 +582,21 @@ describe('Cockpit Quick Generate foundation', () => {
                     '[data-testid="cockpit-quick-generate-beneficiary-url-panel"]',
                 )
                 .text(),
-        ).toContain('https://example.test/r/PC-UI-001');
+        ).toContain('https://example.test/x/claim/PC-UI-001/experience');
         expect(
             wrapper
                 .find(
                     '[data-testid="cockpit-quick-generate-beneficiary-url-panel"]',
                 )
                 .text(),
-        ).toContain('/r/PC-UI-001');
+        ).toContain('/x/claim/PC-UI-001/experience');
         expect(
             wrapper
                 .find(
                     '[data-testid="cockpit-quick-generate-beneficiary-url-link"]',
                 )
                 .attributes('href'),
-        ).toBe('https://example.test/r/PC-UI-001');
+        ).toBe('https://example.test/x/claim/PC-UI-001/experience');
         expect(
             wrapper
                 .find('[data-testid="cockpit-quick-generate-result-link"]')

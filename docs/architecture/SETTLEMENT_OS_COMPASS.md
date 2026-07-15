@@ -2316,3 +2316,10 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Operators no longer need to scroll into the lower detail section just to copy the beneficiary claim URL.
 - Verification report: `../ui-cockpit/reports/408-quick-generate-productization-wave-2-slice-9-primary-claim-url-copy.md`.
 - Boundary remains unchanged: no delivery, short-link, QR, journal, action, provider, wallet, voucher, campaign, claim UX, public API, or execution behavior changed.
+
+## 2026-07-16 Update — Quick Generate Productization Wave 2 Slice 10 — Claim Experience URL Source
+
+- The primary Quick Generate result card now shows whether the generated beneficiary link is the new claim experience URL or the legacy disburse URL.
+- This helps manual browser acceptance confirm `/x/claim/{code}/experience` adoption without reading backend payloads.
+- Verification report: `../ui-cockpit/reports/409-quick-generate-productization-wave-2-slice-10-claim-experience-url-source.md`.
+- Boundary remains unchanged: no URL generation, issuance, claim UX, delivery, provider, wallet, journal, action, feedback, campaign, voucher, public API, or execution behavior changed.

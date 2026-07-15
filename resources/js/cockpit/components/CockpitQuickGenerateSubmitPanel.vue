@@ -920,6 +920,20 @@ const beneficiaryClaimUrl = computed<string | null>(() => {
     return `${window.location.origin}${beneficiaryRedeemPath.value}`;
 });
 
+const beneficiaryClaimRouteLabel = computed<string>(() => {
+    const value = beneficiaryClaimUrl.value ?? beneficiaryRedeemPath.value ?? '';
+
+    if (value.includes('/x/claim/') && value.includes('/experience')) {
+        return 'Claim experience URL';
+    }
+
+    if (value.includes('/disburse')) {
+        return 'Legacy disburse URL';
+    }
+
+    return 'Beneficiary URL';
+});
+
 const generationStatusLabel = computed<string>(() => {
     if (resultCode.value !== null) {
         return 'Generation complete';
@@ -5818,6 +5832,13 @@ function dataGet(source: unknown, path: string[]): unknown {
                             class="mt-1 font-mono text-[11px] break-all text-emerald-800 dark:text-emerald-200"
                         >
                             {{ beneficiaryClaimUrl }}
+                        </p>
+                        <p
+                            v-if="beneficiaryClaimUrl || beneficiaryRedeemPath"
+                            class="mt-2 inline-flex rounded-full bg-emerald-100 px-2 py-1 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-200"
+                            data-testid="cockpit-quick-generate-primary-claim-route-source"
+                        >
+                            {{ beneficiaryClaimRouteLabel }}
                         </p>
                         <p
                             v-else
