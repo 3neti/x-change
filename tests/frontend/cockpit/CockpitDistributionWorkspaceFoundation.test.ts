@@ -346,6 +346,108 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.find('[data-testid="cockpit-distribution-primary-explorer-link"]').attributes('href')).toBe('/x/cockpit/pay-codes');
     });
 
+    it('summarizes channel and artifact readiness without dispatch controls', () => {
+        const wrapper = mount(DistributionWorkspace, {
+            props: {
+                context: { code: 'PC-DIST-001' },
+                distribution_workspace_read_model: {
+                    schema: 'x-change.cockpit.distribution-workspace.v1',
+                    status: 'available',
+                    authorized: true,
+                    code: 'PC-DIST-001',
+                    summary: {
+                        code: 'PC-DIST-001',
+                        display_status: 'ready',
+                    },
+                    distribution_links: {
+                        schema: 'x-change.cockpit.distribution-links.v1',
+                        status: 'available',
+                        available: true,
+                        read_only: true,
+                        redeem_url: 'https://example.test/x/claim/PC-DIST-001/experience',
+                        redeem_path: '/x/claim/PC-DIST-001/experience',
+                        source: 'x-change.claim.experience',
+                        delivery_enabled: false,
+                        redactions: { payloads: 'distribution-links-only' },
+                    },
+                    channels: [
+                        {
+                            key: 'sms',
+                            label: 'SMS',
+                            status: 'not_wired',
+                            description: 'SMS delivery state must come from x-feedback.',
+                            read_only: true,
+                            available: false,
+                            source: 'feedback-read-model',
+                        },
+                    ],
+                    print_templates: [
+                        {
+                            key: 'receipt-card',
+                            label: 'Receipt card',
+                            status: 'planned',
+                            description: 'Receipt card output remains preview-only.',
+                            read_only: true,
+                            available: false,
+                            source: 'distribution-policy',
+                        },
+                    ],
+                    actions: [
+                        {
+                            key: 'send-now',
+                            label: 'Send now',
+                            status: 'blocked',
+                            description: 'Distribution dispatch is not authorized from Cockpit.',
+                            read_only: true,
+                            available: false,
+                            source: 'mutation-boundary',
+                        },
+                    ],
+                    share_assets: [
+                        {
+                            key: 'copy-text',
+                            label: 'Copy text',
+                            status: 'preview',
+                            description: 'Operator-safe Pay Code copy text can be displayed.',
+                            read_only: true,
+                            available: true,
+                            source: 'voucher-summary',
+                        },
+                        {
+                            key: 'qr',
+                            label: 'QR asset',
+                            status: 'deferred',
+                            description: 'QR generation remains disabled.',
+                            read_only: true,
+                            available: false,
+                            source: 'distribution-policy',
+                        },
+                    ],
+                    redactions: {
+                        payloads: 'distribution-read-model-summary-only',
+                    },
+                },
+            },
+        });
+
+        const readiness = wrapper.find('[data-testid="cockpit-distribution-channel-artifact-readiness"]');
+        const items = readiness.findAll('[data-testid="cockpit-distribution-channel-artifact-readiness-item"]');
+
+        expect(readiness.exists()).toBe(true);
+        expect(readiness.text()).toContain('Channel and artifact readiness');
+        expect(readiness.text()).toContain('no dispatch');
+        expect(readiness.text()).toContain('Channels');
+        expect(readiness.text()).toContain('1 planned');
+        expect(readiness.text()).toContain('Operator Actions');
+        expect(readiness.text()).toContain('1 blocked');
+        expect(readiness.text()).toContain('Print Assets');
+        expect(readiness.text()).toContain('1 preview');
+        expect(readiness.text()).toContain('Share Assets');
+        expect(readiness.text()).toContain('2 display');
+        expect(readiness.text()).toContain('does not send messages');
+        expect(items).toHaveLength(4);
+    });
+
     it('copies the Distribution Workspace beneficiary URL through the browser clipboard only', async () => {
         const writeText = vi.fn().mockResolvedValue(undefined);
 
