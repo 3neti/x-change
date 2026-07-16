@@ -486,6 +486,30 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.findAll('[data-testid="cockpit-operator-focus-item"]')).toHaveLength(3);
     });
 
+    it('orders dashboard sections around operator generation and execution evidence first', () => {
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                dashboard_read_model: dashboardReadModel,
+                operator_issuance_activity_read_model: operatorIssuanceActivityReadModel,
+            },
+        });
+
+        const text = wrapper.text();
+        const operatorFocusIndex = text.indexOf('Operator Focus');
+        const issuanceIndex = text.indexOf('Issuance Activity');
+        const executionIndex = text.indexOf('Execution Activity');
+        const integrationIndex = text.indexOf('Integration Summary');
+        const liquidityIndex = text.indexOf('Liquidity Center');
+        const campaignIndex = text.indexOf('Campaign Cockpit Adoption');
+
+        expect(operatorFocusIndex).toBeGreaterThan(-1);
+        expect(issuanceIndex).toBeGreaterThan(operatorFocusIndex);
+        expect(executionIndex).toBeGreaterThan(issuanceIndex);
+        expect(integrationIndex).toBeGreaterThan(executionIndex);
+        expect(liquidityIndex).toBeGreaterThan(integrationIndex);
+        expect(campaignIndex).toBeGreaterThan(liquidityIndex);
+    });
+
     it('does not render unsafe dashboard payload values', () => {
         const wrapper = mount(CockpitDashboard, {
             props: {

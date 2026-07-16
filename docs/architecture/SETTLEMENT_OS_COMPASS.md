@@ -2532,3 +2532,17 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Cleaned nearby placeholder wording: `Redemption status` and `Risk signals`.
 - Verification report: `../ui-cockpit/reports/434-dashboard-activity-rationalization-slice-1-rename-copy.md`.
 - Boundary remains unchanged: no read-model behavior, activity storage behavior, filters, lifecycle truth, execution behavior, journal writes, x-action execution, x-feedback delivery, provider calls, campaign mutation, voucher mutation, wallet movement, public API behavior, or unsafe payload exposure changed.
+
+## 2026-07-16 Update — Dashboard Activity Rationalization Slice 2 — Reorder Dashboard Sections
+
+- Reordered `/x/cockpit` around the active operator workflow:
+  - Operator Focus;
+  - Issuance Activity;
+  - Execution Activity;
+  - Integration Summary;
+  - Liquidity Center;
+  - Redemption/Risk panels;
+  - Campaign Cockpit Adoption.
+- Added frontend coverage for the intended section order.
+- Verification report: `../ui-cockpit/reports/435-dashboard-activity-rationalization-slice-2-section-order.md`.
+- Boundary remains unchanged: no read-model behavior, activity storage behavior, filters, lifecycle truth, execution behavior, journal writes, x-action execution, x-feedback delivery, provider calls, campaign mutation, voucher mutation, wallet movement, public API behavior, or unsafe payload exposure changed.

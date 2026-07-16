@@ -4,12 +4,18 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Dashboard Activity Rationalization Slice 1 — Rename Panels and Copy
-Status: Dashboard activity concepts are renamed as Issuance Activity and Execution Activity
+Current slice: Dashboard Activity Rationalization Slice 2 — Reorder Dashboard Sections
+Status: Dashboard now groups operator focus, issuance activity, and execution activity before secondary panels
 Last updated: 2026-07-16
 
 ## Completed
 
+- Completed Dashboard Activity Rationalization Slice 2 — Reorder Dashboard Sections:
+  - Reordered `/x/cockpit` so operator focus, issuance activity, and execution activity sit before integration, liquidity, risk/redemption, and campaign panels.
+  - Locked the order with frontend coverage.
+  - Confirmed this is layout-only and does not alter read models, activity storage, filters, lifecycle truth, execution, journal, action, feedback, provider, campaign, voucher, wallet, public API, or unsafe payload behavior.
+  - Report: `reports/435-dashboard-activity-rationalization-slice-2-section-order.md`.
+  - Next recommended checkpoint: Dashboard Activity Rationalization Slice 3 — Distinct activity concept tests.
 - Completed Dashboard Activity Rationalization Slice 1 — Rename Panels and Copy:
   - Renamed `Operator Issuance Activity` to `Issuance Activity`.
   - Renamed `Quick Generate evidence` to `Generated Pay Codes`.

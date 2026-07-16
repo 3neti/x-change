@@ -428,8 +428,6 @@ function integrationSourceLabel(key: string): string {
                 </div>
             </section>
 
-            <CockpitLiquidityHero :metrics="metrics" />
-
             <section
                 class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 data-testid="cockpit-operator-focus-panel"
@@ -483,9 +481,9 @@ function integrationSourceLabel(key: string): string {
                 </div>
             </section>
 
-            <CockpitCampaignAdoptionPanel :read-model="props.campaign_read_model" />
-
             <CockpitOperatorIssuanceActivityPanel :read-model="props.operator_issuance_activity_read_model" />
+
+            <CockpitRecentActivityPanel :items="activity" />
 
             <section
                 class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
@@ -550,6 +548,8 @@ function integrationSourceLabel(key: string): string {
                 </div>
             </section>
 
+            <CockpitLiquidityHero :metrics="metrics" />
+
             <div class="grid gap-4 xl:grid-cols-3">
                 <CockpitRedemptionPipeline
                     class="xl:col-span-2"
@@ -558,7 +558,7 @@ function integrationSourceLabel(key: string): string {
                 <CockpitRiskExpiryPanel :signals="riskSignals" />
             </div>
 
-            <CockpitRecentActivityPanel :items="activity" />
+            <CockpitCampaignAdoptionPanel :read-model="props.campaign_read_model" />
         </section>
     </CockpitLayout>
 </template>
