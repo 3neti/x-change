@@ -4,12 +4,18 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Dashboard Activity Rationalization Slice 2 — Reorder Dashboard Sections
-Status: Dashboard now groups operator focus, issuance activity, and execution activity before secondary panels
+Current slice: Dashboard Activity Rationalization Slice 3 — Distinct Activity Concept Tests
+Status: Frontend coverage now proves Issuance Activity and Execution Activity remain separate dashboard concepts
 Last updated: 2026-07-16
 
 ## Completed
 
+- Completed Dashboard Activity Rationalization Slice 3 — Distinct Activity Concept Tests:
+  - Added frontend coverage proving `Issuance Activity` renders generated Pay Code activity and excludes execution evidence.
+  - Added frontend coverage proving `Execution Activity` renders execution projection evidence and excludes generated Pay Code activity.
+  - Confirmed this is test hardening only and does not alter UI behavior, read models, activity storage, filters, lifecycle truth, execution, journal, action, feedback, provider, campaign, voucher, wallet, public API, or unsafe payload behavior.
+  - Report: `reports/436-dashboard-activity-rationalization-slice-3-distinct-concepts.md`.
+  - Next recommended checkpoint: Dashboard Activity Rationalization Slice 4 — Host publish / verification.
 - Completed Dashboard Activity Rationalization Slice 2 — Reorder Dashboard Sections:
   - Reordered `/x/cockpit` so operator focus, issuance activity, and execution activity sit before integration, liquidity, risk/redemption, and campaign panels.
   - Locked the order with frontend coverage.

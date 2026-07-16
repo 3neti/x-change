@@ -510,6 +510,42 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(campaignIndex).toBeGreaterThan(liquidityIndex);
     });
 
+    it('keeps issuance activity distinct from execution activity evidence', () => {
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                dashboard_read_model: {
+                    ...dashboardReadModel,
+                    activity: [
+                        {
+                            id: 'execution-result-1',
+                            label: 'Execution recorded for PC-EXEC-001',
+                            description: 'settlement_envelope succeeded · exec-001',
+                            timestamp: '2026-07-16T08:00:00+08:00',
+                            source: 'execution',
+                            projection_badge: 'Journal evidence',
+                            projection_status: 'runtime_handoff_profile_only',
+                        },
+                    ],
+                },
+                operator_issuance_activity_read_model: operatorIssuanceActivityReadModel,
+            },
+        });
+
+        const issuancePanel = wrapper.find('[data-testid="cockpit-operator-issuance-activity-panel"]');
+        const executionPanel = wrapper.find('[data-testid="cockpit-recent-activity-panel"]');
+
+        expect(issuancePanel.exists()).toBe(true);
+        expect(executionPanel.exists()).toBe(true);
+        expect(issuancePanel.text()).toContain('Issuance Activity');
+        expect(issuancePanel.text()).toContain('Generated Pay Codes');
+        expect(issuancePanel.text()).toContain('Pay Code PC-1234 issued');
+        expect(issuancePanel.text()).not.toContain('Execution recorded for PC-EXEC-001');
+        expect(executionPanel.text()).toContain('Execution Activity');
+        expect(executionPanel.text()).toContain('Execution evidence');
+        expect(executionPanel.text()).toContain('Execution recorded for PC-EXEC-001');
+        expect(executionPanel.text()).not.toContain('Pay Code PC-1234 issued');
+    });
+
     it('does not render unsafe dashboard payload values', () => {
         const wrapper = mount(CockpitDashboard, {
             props: {

@@ -2546,3 +2546,11 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Added frontend coverage for the intended section order.
 - Verification report: `../ui-cockpit/reports/435-dashboard-activity-rationalization-slice-2-section-order.md`.
 - Boundary remains unchanged: no read-model behavior, activity storage behavior, filters, lifecycle truth, execution behavior, journal writes, x-action execution, x-feedback delivery, provider calls, campaign mutation, voucher mutation, wallet movement, public API behavior, or unsafe payload exposure changed.
+
+## 2026-07-16 Update — Dashboard Activity Rationalization Slice 3 — Distinct Activity Concept Tests
+
+- Added frontend coverage proving generated Pay Code activity and execution evidence remain separate dashboard concepts.
+- The test asserts `Issuance Activity` contains generated Pay Code activity and excludes execution projection evidence.
+- The test asserts `Execution Activity` contains execution projection evidence and excludes generated Pay Code activity.
+- Verification report: `../ui-cockpit/reports/436-dashboard-activity-rationalization-slice-3-distinct-concepts.md`.
+- Boundary remains unchanged: no UI behavior, read-model behavior, activity storage behavior, filters, lifecycle truth, execution behavior, journal writes, x-action execution, x-feedback delivery, provider calls, campaign mutation, voucher mutation, wallet movement, public API behavior, or unsafe payload exposure changed.
