@@ -316,6 +316,33 @@ const activityReadiness = computed(() => {
     };
 });
 
+const operatorFocusItems = computed(() => [
+    {
+        key: 'generate',
+        label: 'Generate a Pay Code',
+        status: 'available',
+        description: 'Use Quick Generate when you need a new template-first Pay Code.',
+        href: '/x/cockpit/quick-generate',
+        action: 'Open Quick Generate',
+    },
+    {
+        key: 'inspect',
+        label: 'Inspect Pay Codes',
+        status: `${metricValue('pay-codes-visible') ?? '0'} visible`,
+        description: 'Review sanitized lifecycle state, claim URL readiness, and distribution guidance.',
+        href: '/x/cockpit/pay-codes',
+        action: 'Open Explorer',
+    },
+    {
+        key: 'attention',
+        label: 'Review attention queue',
+        status: metricValue('needs-attention') ?? riskSignals.value[0]?.value ?? 'pending',
+        description: 'Start with expired or awaiting-approval summaries. This guidance does not mutate lifecycle truth.',
+        href: '/x/cockpit/pay-codes?status=expired',
+        action: 'Review now',
+    },
+]);
+
 function integrationSourceLabel(key: string): string {
     if (key === 'journal') {
         return 'x-journal evidence source';
@@ -402,6 +429,59 @@ function integrationSourceLabel(key: string): string {
             </section>
 
             <CockpitLiquidityHero :metrics="metrics" />
+
+            <section
+                class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-operator-focus-panel"
+            >
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                            Operator Focus
+                        </p>
+                        <h3 class="mt-2 text-xl font-semibold text-slate-950 dark:text-slate-50">
+                            Next safe actions
+                        </h3>
+                        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                            These are navigation and inspection actions only. They do not execute money movement,
+                            dispatch feedback, write journal entries, run action continuations, or mutate campaign state.
+                        </p>
+                    </div>
+                    <span class="inline-flex rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:border-slate-700 dark:text-slate-300">
+                        safe navigation
+                    </span>
+                </div>
+
+                <div class="mt-5 grid gap-3 lg:grid-cols-3">
+                    <article
+                        v-for="item in operatorFocusItems"
+                        :key="item.key"
+                        class="rounded-xl border border-slate-200 p-4 dark:border-slate-800"
+                        data-testid="cockpit-operator-focus-item"
+                    >
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="font-semibold text-slate-950 dark:text-slate-50">
+                                    {{ item.label }}
+                                </p>
+                                <p class="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                    {{ item.status }}
+                                </p>
+                            </div>
+                            <a
+                                :href="item.href"
+                                class="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                                data-testid="cockpit-operator-focus-link"
+                            >
+                                {{ item.action }}
+                            </a>
+                        </div>
+                        <p class="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                            {{ item.description }}
+                        </p>
+                    </article>
+                </div>
+            </section>
 
             <CockpitCampaignAdoptionPanel :read-model="props.campaign_read_model" />
 

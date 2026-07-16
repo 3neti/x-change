@@ -459,6 +459,33 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(panel.text()).not.toContain('raw_payload');
     });
 
+    it('renders operator focus guidance as safe navigation only', () => {
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                dashboard_read_model: dashboardReadModel,
+            },
+        });
+
+        const panel = wrapper.find('[data-testid="cockpit-operator-focus-panel"]');
+        const links = wrapper.findAll('[data-testid="cockpit-operator-focus-link"]');
+
+        expect(panel.exists()).toBe(true);
+        expect(panel.text()).toContain('Operator Focus');
+        expect(panel.text()).toContain('Next safe actions');
+        expect(panel.text()).toContain('Generate a Pay Code');
+        expect(panel.text()).toContain('Inspect Pay Codes');
+        expect(panel.text()).toContain('Review attention queue');
+        expect(panel.text()).toContain('safe navigation');
+        expect(panel.text()).toContain('They do not execute money movement');
+        expect(panel.text()).toContain('4 visible');
+        expect(panel.text()).toContain('1 sanitized summaries');
+        expect(links).toHaveLength(3);
+        expect(links[0].attributes('href')).toBe('/x/cockpit/quick-generate');
+        expect(links[1].attributes('href')).toBe('/x/cockpit/pay-codes');
+        expect(links[2].attributes('href')).toBe('/x/cockpit/pay-codes?status=expired');
+        expect(wrapper.findAll('[data-testid="cockpit-operator-focus-item"]')).toHaveLength(3);
+    });
+
     it('does not render unsafe dashboard payload values', () => {
         const wrapper = mount(CockpitDashboard, {
             props: {
