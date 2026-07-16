@@ -7,11 +7,11 @@ describe('Cockpit dashboard shell baseline', () => {
         const wrapper = mount(CockpitDashboard);
 
         expect(wrapper.find('[data-testid="cockpit-dashboard-shell"]').exists()).toBe(true);
-        expect(wrapper.text()).toContain('Cockpit Dashboard Foundation');
+        expect(wrapper.text()).toContain('Settlement OS Operating Overview');
         expect(wrapper.text()).toContain('Liquidity Center');
         expect(wrapper.text()).toContain('Redemption Pipeline');
         expect(wrapper.text()).toContain('Risk and Expiry');
-        expect(wrapper.text()).toContain('Recent Activity');
+        expect(wrapper.text()).toContain('Execution Activity');
         expect(wrapper.find('[data-testid="cockpit-liquidity-hero"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="cockpit-redemption-pipeline"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="cockpit-risk-expiry-panel"]').exists()).toBe(true);

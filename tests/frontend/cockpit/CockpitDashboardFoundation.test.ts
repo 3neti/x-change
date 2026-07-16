@@ -34,7 +34,7 @@ describe('Cockpit dashboard foundation widgets', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Lifecycle visibility placeholder');
+        expect(wrapper.text()).toContain('Redemption status');
         expect(wrapper.text()).toContain('Issued');
         expect(wrapper.text()).toContain('Claim Started');
         expect(wrapper.text()).toContain('Reconciled');
@@ -49,7 +49,7 @@ describe('Cockpit dashboard foundation widgets', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Attention queue placeholder');
+        expect(wrapper.text()).toContain('Risk signals');
         expect(wrapper.text()).toContain('Expiring Today');
         expect(wrapper.text()).toContain('Funding Runway');
         expect(wrapper.text()).toContain('Stuck Settlements');
@@ -63,7 +63,7 @@ describe('Cockpit dashboard foundation widgets', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Redaction-aware activity placeholder');
+        expect(wrapper.text()).toContain('Execution evidence');
         expect(wrapper.text()).toContain('Execution activity');
         expect(wrapper.text()).toContain('Journal activity');
         expect(wrapper.text()).toContain('Feedback activity');

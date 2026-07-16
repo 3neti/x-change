@@ -4,12 +4,22 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Dashboard Activity Density Cleanup Slice 2 — Host Publish / Closure
-Status: Dashboard Activity Density Cleanup is closed after host publish, drift verification, focused frontend test, and host build
+Current slice: Dashboard Activity Rationalization Slice 1 — Rename Panels and Copy
+Status: Dashboard activity concepts are renamed as Issuance Activity and Execution Activity
 Last updated: 2026-07-16
 
 ## Completed
 
+- Completed Dashboard Activity Rationalization Slice 1 — Rename Panels and Copy:
+  - Renamed `Operator Issuance Activity` to `Issuance Activity`.
+  - Renamed `Quick Generate evidence` to `Generated Pay Codes`.
+  - Renamed `Recent Activity` to `Execution Activity`.
+  - Renamed `Redaction-aware activity placeholder` to `Execution evidence`.
+  - Renamed `Lifecycle visibility placeholder` to `Redemption status`.
+  - Renamed `Attention queue placeholder` to `Risk signals`.
+  - Confirmed this is copy/presentation only and does not alter read models, activity storage, filters, lifecycle truth, execution, journal, action, feedback, provider, campaign, voucher, wallet, public API, or unsafe payload behavior.
+  - Report: `reports/434-dashboard-activity-rationalization-slice-1-rename-copy.md`.
+  - Next recommended checkpoint: Dashboard Activity Rationalization Slice 2 — Reorder dashboard sections.
 - Completed Dashboard Activity Density Cleanup Slice 2 — Host Publish / Closure:
   - Published package Cockpit assets into the host app.
   - Verified published asset drift is clean: `checked 60, ok 60, stale 0, missing 0, extra 0`.

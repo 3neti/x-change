@@ -855,7 +855,7 @@ describe('Cockpit dashboard read model hydration', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Operator Issuance Activity');
+        expect(wrapper.text()).toContain('Issuance Activity');
         expect(wrapper.text()).toContain('Pay Code PC-1234 issued');
         expect(wrapper.text()).toContain('PHP 100.00 issued through Quick Generate');
         expect(wrapper.text()).toContain('corr-1');
@@ -1047,7 +1047,7 @@ describe('Cockpit dashboard read model hydration', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Operator Issuance Activity');
+        expect(wrapper.text()).toContain('Issuance Activity');
         expect(wrapper.text()).toContain('No operator issuance activity available');
         expect(wrapper.text()).toContain('Activity recording is not wired yet.');
         expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-card"]')).toHaveLength(0);

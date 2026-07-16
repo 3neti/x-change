@@ -2523,3 +2523,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Closure report: `../ui-cockpit/reports/433-dashboard-activity-density-cleanup-publish-closure.md`.
 - The wave remains UI-density presentation only: no activity storage behavior, filters, lifecycle truth, journal writes, x-action execution, x-feedback delivery, provider calls, campaign mutation, voucher mutation, wallet movement, public API behavior, execution behavior, or unsafe payload exposure changed.
 - Next recommended checkpoint: manual browser acceptance for the updated `/x/cockpit` activity density, then choose the next page-specific target.
+
+## 2026-07-16 Update — Dashboard Activity Rationalization Slice 1 — Rename Panels and Copy
+
+- Started Dashboard Activity Rationalization.
+- Renamed the generated Pay Code stream to `Issuance Activity` / `Generated Pay Codes`.
+- Renamed the execution projection stream to `Execution Activity` / `Execution evidence`.
+- Cleaned nearby placeholder wording: `Redemption status` and `Risk signals`.
+- Verification report: `../ui-cockpit/reports/434-dashboard-activity-rationalization-slice-1-rename-copy.md`.
+- Boundary remains unchanged: no read-model behavior, activity storage behavior, filters, lifecycle truth, execution behavior, journal writes, x-action execution, x-feedback delivery, provider calls, campaign mutation, voucher mutation, wallet movement, public API behavior, or unsafe payload exposure changed.

@@ -12,10 +12,10 @@ defineProps<{
         data-testid="cockpit-recent-activity-panel"
     >
         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-            Recent Activity
+            Execution Activity
         </p>
         <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-            Redaction-aware activity placeholder
+            Execution evidence
         </h3>
 
         <div class="mt-5 space-y-3">
