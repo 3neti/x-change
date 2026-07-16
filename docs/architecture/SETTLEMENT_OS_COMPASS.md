@@ -2604,3 +2604,10 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Detail disclosures still appear when real connected evidence exists.
 - UI report: `../ui-cockpit/reports/442-dashboard-issuance-activity-detail-disclosure-cleanup.md`.
 - Boundary remains unchanged: presentation-only dashboard cleanup; no read-model, journal, action, feedback, provider, campaign, voucher, wallet, public API, lifecycle truth, or execution behavior changed.
+
+## 2026-07-16 Update — Cockpit Dashboard Integration Summary Consolidation
+
+- `/x/cockpit` Connected Services cards now show source, status, and count first.
+- Payload policy and readiness details are still available behind `Connection details`.
+- UI report: `../ui-cockpit/reports/443-dashboard-integration-summary-consolidation.md`.
+- Boundary remains unchanged: presentation-only dashboard cleanup; no read-model, journal, action, feedback, provider, campaign, voucher, wallet, public API, lifecycle truth, or execution behavior changed.

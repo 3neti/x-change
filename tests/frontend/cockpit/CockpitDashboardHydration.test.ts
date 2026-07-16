@@ -830,6 +830,10 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).not.toContain('communication-delivery-summary-only');
         expect(wrapper.text()).not.toContain('must-not-render');
         expect(wrapper.findAll('[data-testid="cockpit-integration-summary-card"]')).toHaveLength(3);
+        expect(wrapper.findAll('[data-testid="cockpit-integration-summary-details"]')).toHaveLength(3);
+        expect(wrapper.text()).toContain('Connection details');
+        expect(wrapper.text()).toContain('Payload policy');
+        expect(wrapper.text()).toContain('Display readiness');
         expect(wrapper.find('[data-testid="cockpit-activity-readiness-summary"]').exists()).toBe(true);
     });
 

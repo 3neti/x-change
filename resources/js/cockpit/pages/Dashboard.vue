@@ -553,26 +553,44 @@ function integrationSourceLabel(key: string): string {
                         class="rounded-lg border border-slate-200 p-4 dark:border-slate-800"
                         data-testid="cockpit-integration-summary-card"
                     >
-                        <div class="flex items-center justify-between gap-3">
-                            <p class="font-semibold text-slate-950 dark:text-slate-50">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="font-semibold text-slate-950 dark:text-slate-50">
                                 {{ summary.label }}
-                            </p>
+                                </p>
+                                <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                    {{ integrationSourceLabel(summary.key) }}
+                                </p>
+                            </div>
                             <span class="inline-flex min-h-6 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-slate-100 px-2 py-1 text-center text-xs font-semibold leading-none text-slate-700 dark:bg-slate-800 dark:text-slate-200">
                                 {{ displayStatus(summary.status) }}
                             </span>
                         </div>
-                        <p class="mt-3 text-2xl font-semibold text-slate-950 dark:text-slate-50">
+                        <p class="mt-4 text-2xl font-semibold text-slate-950 dark:text-slate-50">
                             {{ summary.count }}
                         </p>
-                        <p class="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            {{ integrationSourceLabel(summary.key) }}
-                        </p>
-                        <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                            {{ displayStatus(summary.policy) }}
-                        </p>
-                        <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                            {{ displayStatus(summary.reason) }}
-                        </p>
+                        <details
+                            class="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:bg-slate-950 dark:text-slate-300"
+                            data-testid="cockpit-integration-summary-details"
+                        >
+                            <summary class="cursor-pointer font-semibold text-slate-700 dark:text-slate-200">
+                                Connection details
+                            </summary>
+                            <dl class="mt-3 space-y-2">
+                                <div>
+                                    <dt class="font-semibold text-slate-700 dark:text-slate-200">
+                                        Payload policy
+                                    </dt>
+                                    <dd>{{ displayStatus(summary.policy) }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="font-semibold text-slate-700 dark:text-slate-200">
+                                        Display readiness
+                                    </dt>
+                                    <dd>{{ displayStatus(summary.reason) }}</dd>
+                                </div>
+                            </dl>
+                        </details>
                     </article>
                 </div>
             </section>

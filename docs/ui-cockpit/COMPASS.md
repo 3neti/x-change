@@ -2842,3 +2842,10 @@ Current boundary:
 - Detail disclosures remain available when connected evidence exists, such as journal entry identifiers, action hints/runs, feedback plans/channels, diagnostics, or confirmed side-effect status.
 - Verification report: `reports/442-dashboard-issuance-activity-detail-disclosure-cleanup.md`.
 - Boundary remains unchanged: no read-model behavior, durable activity storage behavior, filters, lifecycle truth, execution behavior, journal writes, x-action execution, x-feedback delivery, provider calls, campaign mutation, voucher mutation, wallet movement, public API behavior, or unsafe payload exposure changed.
+
+## 2026-07-16 Update — Dashboard Integration Summary Consolidation
+
+- Consolidated `/x/cockpit` Connected Services cards so visible content prioritizes source label, status, and count.
+- Moved payload policy and readiness internals behind a collapsed `Connection details` disclosure.
+- Verification report: `reports/443-dashboard-integration-summary-consolidation.md`.
+- Boundary remains unchanged: no read-model behavior, durable activity storage behavior, filters, lifecycle truth, execution behavior, journal writes, x-action execution, x-feedback delivery, provider calls, campaign mutation, voucher mutation, wallet movement, public API behavior, or unsafe payload exposure changed.
