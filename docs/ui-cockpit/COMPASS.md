@@ -2834,3 +2834,11 @@ Current boundary:
 - `reports/195-wave-23-next-runtime-decision-record.md`.
 - runtime configuration mutation is not authorized from Cockpit.
 - Cockpit Wave 24 — Operator Activity Search / Filter Runtime Readiness.
+
+## 2026-07-16 Update — Dashboard Issuance Activity Detail Disclosure Cleanup
+
+- Cleaned `/x/cockpit` Issuance Activity cards so disconnected journal/action/feedback handoffs no longer render empty detail disclosures.
+- Status badges remain visible as operator-readable summaries (`Journal: Not connected`, `Action: Not connected`, `Feedback: Not connected`).
+- Detail disclosures remain available when connected evidence exists, such as journal entry identifiers, action hints/runs, feedback plans/channels, diagnostics, or confirmed side-effect status.
+- Verification report: `reports/442-dashboard-issuance-activity-detail-disclosure-cleanup.md`.
+- Boundary remains unchanged: no read-model behavior, durable activity storage behavior, filters, lifecycle truth, execution behavior, journal writes, x-action execution, x-feedback delivery, provider calls, campaign mutation, voucher mutation, wallet movement, public API behavior, or unsafe payload exposure changed.

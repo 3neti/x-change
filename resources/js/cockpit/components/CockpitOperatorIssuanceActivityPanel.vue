@@ -440,6 +440,36 @@ function safeJournalSummary(value: unknown): SafeJournalSummary | undefined {
     };
 }
 
+function hasJournalDetails(summary?: SafeJournalSummary): boolean {
+    return Boolean(
+        summary?.journalEntryId
+        || summary?.referenceNumber
+        || summary?.eventType
+        || summary?.diagnostic
+        || summary?.writesJournal === true,
+    );
+}
+
+function hasActionDetails(summary?: SafeActionSummary): boolean {
+    return Boolean(
+        summary?.actionHintId
+        || summary?.actionRunId
+        || summary?.suggestedAction
+        || summary?.executesAction === true,
+    );
+}
+
+function hasFeedbackDetails(summary?: SafeFeedbackSummary): boolean {
+    return Boolean(
+        summary?.feedbackIntentId
+        || summary?.deliveryPlanId
+        || summary?.deliveryReceiptId
+        || summary?.channel
+        || summary?.plannedDeliveries
+        || summary?.sendsFeedback === true,
+    );
+}
+
 function safeJournalDiagnostic(value: unknown): SafeJournalDiagnostic | undefined {
     if (!isPlainObject(value)) {
         return undefined;
@@ -927,7 +957,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                 </details>
 
                 <details
-                    v-if="presentation.journalSummary"
+                    v-if="hasJournalDetails(presentation.journalSummary)"
                     class="mt-4 rounded-lg bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-950 dark:text-slate-300"
                     data-testid="cockpit-operator-issuance-activity-journal-summary"
                 >
@@ -994,7 +1024,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                 </details>
 
                 <details
-                    v-if="presentation.actionSummary"
+                    v-if="hasActionDetails(presentation.actionSummary)"
                     class="mt-4 rounded-lg bg-indigo-50 p-3 text-xs text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200"
                     data-testid="cockpit-operator-issuance-activity-action-summary"
                 >
@@ -1042,7 +1072,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                 </details>
 
                 <details
-                    v-if="presentation.feedbackSummary"
+                    v-if="hasFeedbackDetails(presentation.feedbackSummary)"
                     class="mt-4 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
                     data-testid="cockpit-operator-issuance-activity-feedback-summary"
                 >

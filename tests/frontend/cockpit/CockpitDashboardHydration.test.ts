@@ -953,6 +953,9 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).not.toContain('journal: recorded');
         expect(wrapper.text()).not.toContain('action: composed');
         expect(wrapper.text()).not.toContain('feedback: planned');
+        expect(wrapper.text()).toContain('Journal status details');
+        expect(wrapper.text()).toContain('Action status details');
+        expect(wrapper.text()).toContain('Feedback status details');
         expect(wrapper.text()).toContain('Journal entry: journal-entry-1');
         expect(wrapper.text()).toContain('Writes journal: yes');
         expect(wrapper.text()).toContain('Source: test-journal-handoff');
@@ -1006,6 +1009,50 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-campaign-dashboard-link"]').attributes('href')).toBe('/x/cockpit?campaign_planning_key=plan-wave-43c&campaign_execution_id=exec-wave-43c&campaign_id=campaign-wave-43c&campaign_audience_id=audience-wave-43c&campaign_recipient_id=recipient-wave-43c&campaign_source=x_campaign_adapter');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-campaign-dashboard-link"]').text()).toContain('Return to Campaign Dashboard');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-campaign-dashboard-link"]').text()).toContain('read-only');
+    });
+
+    it('hides empty disconnected activity handoff details while preserving status badges', () => {
+        const disconnectedReadModel = structuredClone(operatorIssuanceActivityReadModel);
+        disconnectedReadModel.presentations[0].handoffs = {
+            journal: 'not_wired',
+            action: 'not_wired',
+            feedback: 'not_wired',
+        };
+        disconnectedReadModel.presentations[0].metadata.journal_handoff = {
+            status: 'not_wired',
+            writes_journal: false,
+            source: 'durable-operator-issuance-activity-read-model',
+            reason: 'Journal handoff status is projected from durable Cockpit activity storage.',
+        };
+        disconnectedReadModel.presentations[0].metadata.action_handoff = {
+            status: 'not_wired',
+            executes_action: false,
+            source: 'durable-operator-issuance-activity-read-model',
+            reason: 'Action handoff status is projected from durable Cockpit activity storage.',
+        };
+        disconnectedReadModel.presentations[0].metadata.feedback_handoff = {
+            status: 'not_wired',
+            sends_feedback: false,
+            source: 'durable-operator-issuance-activity-read-model',
+            reason: 'Feedback handoff status is projected from durable Cockpit activity storage.',
+        };
+
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                dashboard_read_model: dashboardReadModel,
+                operator_issuance_activity_read_model: disconnectedReadModel,
+            },
+        });
+
+        expect(wrapper.text()).toContain('Journal: Not connected');
+        expect(wrapper.text()).toContain('Action: Not connected');
+        expect(wrapper.text()).toContain('Feedback: Not connected');
+        expect(wrapper.text()).not.toContain('Journal status details');
+        expect(wrapper.text()).not.toContain('Action status details');
+        expect(wrapper.text()).not.toContain('Feedback status details');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-journal-summary"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-action-summary"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-feedback-summary"]').exists()).toBe(false);
     });
 
     it('does not propagate mutating campaign activity attribution into campaign navigation links', () => {

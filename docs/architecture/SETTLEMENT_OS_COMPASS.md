@@ -2596,3 +2596,11 @@ Workstream compasses remain the source of detailed slice history. This Compass s
   - `missing-campaign-context` → `No campaign selected`.
 - Verification report: `../ui-cockpit/reports/438-dashboard-operator-copy-cleanup-friendly-status-labels.md`.
 - Boundary remains unchanged: no read-model behavior, activity storage behavior, filters, lifecycle truth, execution behavior, journal writes, x-action execution, x-feedback delivery, provider calls, campaign mutation, voucher mutation, wallet movement, public API behavior, or unsafe payload exposure changed.
+
+## 2026-07-16 Update — Cockpit Dashboard Issuance Activity Detail Disclosure Cleanup
+
+- `/x/cockpit` now suppresses empty Issuance Activity handoff detail disclosures when journal/action/feedback are simply not connected.
+- Top-level handoff badges remain visible for quick operator scanning.
+- Detail disclosures still appear when real connected evidence exists.
+- UI report: `../ui-cockpit/reports/442-dashboard-issuance-activity-detail-disclosure-cleanup.md`.
+- Boundary remains unchanged: presentation-only dashboard cleanup; no read-model, journal, action, feedback, provider, campaign, voucher, wallet, public API, lifecycle truth, or execution behavior changed.
