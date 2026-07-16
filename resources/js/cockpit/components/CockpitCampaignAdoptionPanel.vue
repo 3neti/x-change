@@ -212,13 +212,13 @@ function displayStatus(value: string): string {
         <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                    Campaign Cockpit Adoption
+                    Campaigns
                 </p>
                 <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
                     {{ campaignName }}
                 </h3>
                 <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                    {{ isAvailable ? recipientCount : 'Read-only boundary' }}
+                    {{ isAvailable ? recipientCount : 'No campaign selected' }}
                 </p>
             </div>
 
@@ -288,7 +288,7 @@ function displayStatus(value: string): string {
 
         <div class="mt-5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
             <p class="font-semibold">
-                Mutation blocked
+                Campaign changes
             </p>
             <p class="mt-1">
                 {{ mutationReason }}

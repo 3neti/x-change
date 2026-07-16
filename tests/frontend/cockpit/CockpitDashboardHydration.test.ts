@@ -509,8 +509,8 @@ describe('Cockpit dashboard read model hydration', () => {
         const issuanceIndex = text.indexOf('Issuance Activity');
         const executionIndex = text.indexOf('Settlement Activity');
         const integrationIndex = text.indexOf('Connected Services');
-        const liquidityIndex = text.indexOf('Liquidity Center');
-        const campaignIndex = text.indexOf('Campaign Cockpit Adoption');
+        const liquidityIndex = text.indexOf('Funding Overview');
+        const campaignIndex = text.indexOf('Campaigns');
 
         expect(operatorFocusIndex).toBeGreaterThan(-1);
         expect(issuanceIndex).toBeGreaterThan(operatorFocusIndex);
@@ -598,9 +598,9 @@ describe('Cockpit dashboard read model hydration', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Pending wallet read model');
-        expect(wrapper.text()).toContain('No provider call in Slice 2');
-        expect(wrapper.text()).toContain('Journal facts require authorization and redaction before display.');
+        expect(wrapper.text()).toContain('Summary not connected');
+        expect(wrapper.text()).toContain('No provider call from dashboard');
+        expect(wrapper.text()).toContain('Audit facts require authorization and redaction before display.');
     });
 
     it('forwards route adapter props into the cockpit dashboard page', () => {
@@ -623,7 +623,7 @@ describe('Cockpit dashboard read model hydration', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Campaign Cockpit Adoption');
+        expect(wrapper.text()).toContain('Campaigns');
         expect(wrapper.text()).toContain('Food Aid July');
         expect(wrapper.text()).toContain('250 recipients');
         expect(wrapper.text()).toContain('campaign-plan-1');
@@ -676,11 +676,11 @@ describe('Cockpit dashboard read model hydration', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Campaign Cockpit Adoption');
+        expect(wrapper.text()).toContain('Campaigns');
         expect(wrapper.text()).toContain('Campaign summary not connected');
         expect(wrapper.text()).toContain('No campaign selected');
         expect(wrapper.text()).not.toContain('missing-campaign-context');
-        expect(wrapper.text()).toContain('Read-only boundary');
+        expect(wrapper.text()).toContain('No campaign selected');
     });
 
     it('forwards campaign route adapter props into the cockpit dashboard page', () => {

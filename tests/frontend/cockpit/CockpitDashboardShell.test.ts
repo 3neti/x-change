@@ -8,9 +8,9 @@ describe('Cockpit dashboard shell baseline', () => {
 
         expect(wrapper.find('[data-testid="cockpit-dashboard-shell"]').exists()).toBe(true);
         expect(wrapper.text()).toContain('Settlement OS Operating Overview');
-        expect(wrapper.text()).toContain('Liquidity Center');
-        expect(wrapper.text()).toContain('Redemption Pipeline');
-        expect(wrapper.text()).toContain('Risk and Expiry');
+        expect(wrapper.text()).toContain('Funding Overview');
+        expect(wrapper.text()).toContain('Claim Progress');
+        expect(wrapper.text()).toContain('Attention Queue');
         expect(wrapper.text()).toContain('Settlement Activity');
         expect(wrapper.find('[data-testid="cockpit-liquidity-hero"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="cockpit-redemption-pipeline"]').exists()).toBe(true);
@@ -35,8 +35,8 @@ describe('Cockpit dashboard shell baseline', () => {
         expect(wrapper.findAll('[data-testid="cockpit-pipeline-stage"]')).toHaveLength(7);
         expect(wrapper.findAll('[data-testid="cockpit-risk-signal"]')).toHaveLength(3);
         expect(wrapper.findAll('[data-testid="cockpit-activity-item"]')).toHaveLength(3);
-        expect(wrapper.text()).toContain('Pending wallet read model');
-        expect(wrapper.text()).toContain('No provider call in Slice 2');
-        expect(wrapper.text()).toContain('Journal facts require authorization and redaction before display.');
+        expect(wrapper.text()).toContain('Summary not connected');
+        expect(wrapper.text()).toContain('No provider call from dashboard');
+        expect(wrapper.text()).toContain('Audit facts require authorization and redaction before display.');
     });
 });

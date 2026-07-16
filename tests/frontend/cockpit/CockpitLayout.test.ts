@@ -81,21 +81,21 @@ describe('Cockpit shell layout baseline', () => {
         expect(wrapper.text()).toContain('Operating as: Treasury Operations');
     });
 
-    it('keeps the balance HUD as supplied read-model text', () => {
+    it('keeps the balance HUD as supplied summary text', () => {
         const wrapper = mount(CockpitBalanceHud, {
             props: {
                 balances: [
                     {
                         key: 'available',
                         label: 'Available To Issue',
-                        value: 'Pending read model',
+                        value: 'Summary not connected',
                     },
                 ],
             },
         });
 
         expect(wrapper.text()).toContain('Available To Issue');
-        expect(wrapper.text()).toContain('Pending read model');
+        expect(wrapper.text()).toContain('Summary not connected');
         expect(wrapper.findAll('[data-testid="cockpit-balance-metric"]')).toHaveLength(1);
     });
 });

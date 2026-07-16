@@ -14,14 +14,14 @@ defineProps<{
         <div class="flex items-start justify-between gap-4">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                    Redemption Pipeline
+                    Claim Progress
                 </p>
                 <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                    Redemption status
+                    Claim and redemption status
                 </h3>
             </div>
             <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                No execution
+                Read-only
             </span>
         </div>
 

@@ -19,7 +19,7 @@ describe('Cockpit dashboard foundation widgets', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Money position comes first');
+        expect(wrapper.text()).toContain('Balance and funding position');
         expect(wrapper.text()).toContain('Internal Balance');
         expect(wrapper.text()).toContain('Live Balance');
         expect(wrapper.text()).toContain('Reserved Funds');
@@ -36,11 +36,11 @@ describe('Cockpit dashboard foundation widgets', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Redemption status');
+        expect(wrapper.text()).toContain('Claim and redemption status');
         expect(wrapper.text()).toContain('Issued');
         expect(wrapper.text()).toContain('Claim Started');
         expect(wrapper.text()).toContain('Reconciled');
-        expect(wrapper.text()).toContain('No execution');
+        expect(wrapper.text()).toContain('Read-only');
         expect(wrapper.findAll('[data-testid="cockpit-pipeline-stage"]')).toHaveLength(7);
     });
 
@@ -51,7 +51,7 @@ describe('Cockpit dashboard foundation widgets', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Risk signals');
+        expect(wrapper.text()).toContain('Items needing review');
         expect(wrapper.text()).toContain('Expiring Today');
         expect(wrapper.text()).toContain('Funding Runway');
         expect(wrapper.text()).toContain('Stuck Settlements');
@@ -66,7 +66,7 @@ describe('Cockpit dashboard foundation widgets', () => {
         });
 
         expect(wrapper.text()).toContain('Recent settlement events');
-        expect(wrapper.text()).toContain('Execution activity');
+        expect(wrapper.text()).toContain('Settlement activity');
         expect(wrapper.text()).toContain('Journal activity');
         expect(wrapper.text()).toContain('Feedback activity');
         expect(wrapper.text()).toContain('Delivery status is communication state, not lifecycle truth.');

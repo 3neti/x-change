@@ -9,29 +9,29 @@ export const cockpitDashboardMetrics: CockpitDashboardMetric[] = [
     {
         key: 'internal-balance',
         label: 'Internal Balance',
-        value: 'Pending wallet read model',
-        helper: 'Read-only placeholder',
+        value: 'Summary not connected',
+        helper: 'Waiting for balance source',
         tone: 'neutral',
     },
     {
         key: 'live-balance',
         label: 'Live Balance',
-        value: 'Pending provider read model',
-        helper: 'No provider call in Slice 2',
+        value: 'Provider not connected',
+        helper: 'No provider call from dashboard',
         tone: 'neutral',
     },
     {
         key: 'reserved-funds',
         label: 'Reserved Funds',
-        value: 'Pending reservation model',
+        value: 'Reservation summary not connected',
         helper: 'No money movement',
         tone: 'warning',
     },
     {
         key: 'available-to-issue',
         label: 'Available To Issue',
-        value: 'Pending funding policy',
-        helper: 'Presentation only',
+        value: 'Funding policy not connected',
+        helper: 'Read-only',
         tone: 'healthy',
     },
 ];
@@ -50,19 +50,19 @@ export const cockpitRiskSignals: CockpitRiskSignal[] = [
     {
         key: 'expiring-today',
         label: 'Expiring Today',
-        value: 'Pending expiry read model',
+        value: 'Expiry summary not connected',
         severity: 'watch',
     },
     {
         key: 'funding-runway',
         label: 'Funding Runway',
-        value: 'Pending liquidity forecast',
+        value: 'Liquidity forecast not connected',
         severity: 'warning',
     },
     {
         key: 'stuck-settlements',
         label: 'Stuck Settlements',
-        value: 'Pending settlement read model',
+        value: 'Settlement summary not connected',
         severity: 'critical',
     },
 ];
@@ -70,15 +70,15 @@ export const cockpitRiskSignals: CockpitRiskSignal[] = [
 export const cockpitRecentActivityItems: CockpitActivityItem[] = [
     {
         id: 'execution-read-model',
-        label: 'Execution activity',
-        description: 'Execution outcome summaries require host read-model wiring.',
+        label: 'Settlement activity',
+        description: 'Settlement outcome summaries are not connected yet.',
         timestamp: 'Deferred',
         source: 'execution',
     },
     {
         id: 'journal-read-model',
         label: 'Journal activity',
-        description: 'Journal facts require authorization and redaction before display.',
+        description: 'Audit facts require authorization and redaction before display.',
         timestamp: 'Deferred',
         source: 'journal',
     },
@@ -90,4 +90,3 @@ export const cockpitRecentActivityItems: CockpitActivityItem[] = [
         source: 'feedback',
     },
 ];
-

@@ -12,6 +12,14 @@ const severityClass = (severity: CockpitRiskSignal['severity']): string => {
         critical: 'border-rose-200 bg-rose-50 text-rose-950 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-100',
     }[severity];
 };
+
+const severityLabel = (severity: CockpitRiskSignal['severity']): string => {
+    return {
+        watch: 'Watch',
+        warning: 'Warning',
+        critical: 'Critical',
+    }[severity];
+};
 </script>
 
 <template>
@@ -20,10 +28,10 @@ const severityClass = (severity: CockpitRiskSignal['severity']): string => {
         data-testid="cockpit-risk-expiry-panel"
     >
         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-            Risk and Expiry
+            Attention Queue
         </p>
         <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-            Risk signals
+            Items needing review
         </h3>
 
         <div class="mt-5 space-y-3">
@@ -39,7 +47,7 @@ const severityClass = (severity: CockpitRiskSignal['severity']): string => {
                 <div class="flex items-center justify-between gap-3">
                     <p class="text-sm font-semibold">{{ signal.label }}</p>
                     <span class="text-[0.65rem] font-semibold uppercase tracking-wide">
-                        {{ signal.severity }}
+                        {{ severityLabel(signal.severity) }}
                     </span>
                 </div>
                 <p class="mt-1 text-sm opacity-80">

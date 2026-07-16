@@ -62,6 +62,12 @@ Last updated: 2026-07-13
 
 ### Current Cockpit Host Integration
 
+- Cockpit Dashboard Header and Secondary Panels Copy Polish complete:
+  - Replaced header balance defaults and secondary dashboard panel headings with operator-facing copy.
+  - Replaced remaining dashboard fallback `Pending ...` phrases with not-connected summaries.
+  - Title-cased risk severity labels.
+  - Confirmed no read-model, storage, filter contract, lifecycle, execution, journal, action, feedback, provider, campaign, voucher, wallet, public API, or unsafe-payload behavior changed.
+  - Report: [../ui-cockpit/reports/441-dashboard-header-secondary-panels-copy-polish.md](../ui-cockpit/reports/441-dashboard-header-secondary-panels-copy-polish.md).
 - Cockpit Dashboard Operator Language Polish — Evidence and Integration Panels complete:
   - Replaced dashboard evidence and integration-panel copy with operator-facing labels.
   - Renamed execution activity presentation to settlement activity presentation.

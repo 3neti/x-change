@@ -15,14 +15,14 @@ defineProps<{
         <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                    Liquidity Center
+                    Funding Overview
                 </p>
                 <h2 class="mt-2 text-2xl font-semibold text-slate-950 dark:text-slate-50">
-                    Money position comes first
+                    Balance and funding position
                 </h2>
                 <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    This read-only foundation shows where balance, reservation, funding runway,
-                    and available-to-issue read models will land. It does not query wallets,
+                    This read-only section shows balance, reservation, funding runway,
+                    and available-to-issue summaries when connected. It does not query wallets,
                     call bank providers, reserve funds, or move money.
                 </p>
             </div>

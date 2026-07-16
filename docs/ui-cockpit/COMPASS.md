@@ -4,12 +4,24 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Dashboard Operator Language Polish — Evidence and Integration Panels
-Status: Dashboard evidence and service panels use operator-facing language
+Current slice: Dashboard Header and Secondary Panels Copy Polish
+Status: Dashboard header, funding, claim, attention, and campaign panels use operator-facing language
 Last updated: 2026-07-16
 
 ## Completed
 
+- Completed Dashboard Header and Secondary Panels Copy Polish:
+  - Replaced header balance defaults with `Summary not connected` and `Provider not connected`.
+  - Renamed `Dashboard Productization` to `Operator Dashboard`.
+  - Renamed `Liquidity Center` to `Funding Overview`.
+  - Renamed `Redemption Pipeline` to `Claim Progress`.
+  - Renamed `Risk and Expiry` to `Attention Queue`.
+  - Renamed `Campaign Cockpit Adoption` to `Campaigns`.
+  - Replaced remaining dashboard fallback `Pending ...` phrases with operator-facing not-connected copy.
+  - Title-cased risk severity labels.
+  - Confirmed this is presentation-only and does not alter read models, activity storage, filters, lifecycle truth, execution, journal, action, feedback, provider, campaign, voucher, wallet, public API, or unsafe payload behavior.
+  - Report: `reports/441-dashboard-header-secondary-panels-copy-polish.md`.
+  - Next recommended checkpoint: Manual browser acceptance for `/x/cockpit`, then select the next page-specific productization target.
 - Completed Dashboard Operator Language Polish — Evidence and Integration Panels:
   - Renamed dashboard `Execution Activity` to `Settlement Activity`.
   - Renamed `Execution evidence` to `Recent settlement events`.
