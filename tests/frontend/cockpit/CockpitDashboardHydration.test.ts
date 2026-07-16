@@ -507,7 +507,7 @@ describe('Cockpit dashboard read model hydration', () => {
         const text = wrapper.text();
         const operatorFocusIndex = text.indexOf('Operator Focus');
         const issuanceIndex = text.indexOf('Issuance Activity');
-        const executionIndex = text.indexOf('Settlement Activity');
+        const executionIndex = text.indexOf('System Activity');
         const integrationIndex = text.indexOf('Connected Services');
         const liquidityIndex = text.indexOf('Funding Overview');
         const campaignIndex = text.indexOf('Campaigns');
@@ -550,8 +550,9 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(issuancePanel.text()).toContain('Generated Pay Codes');
         expect(issuancePanel.text()).toContain('Pay Code PC-1234 issued');
         expect(issuancePanel.text()).not.toContain('Execution recorded for PC-EXEC-001');
-        expect(executionPanel.text()).toContain('Settlement Activity');
-        expect(executionPanel.text()).toContain('Recent settlement events');
+        expect(executionPanel.text()).toContain('System Activity');
+        expect(executionPanel.text()).toContain('Recent operating evidence');
+        expect(executionPanel.text()).toContain('does not execute follow-up work');
         expect(executionPanel.text()).toContain('Execution recorded for PC-EXEC-001');
         expect(executionPanel.text()).not.toContain('Pay Code PC-1234 issued');
     });

@@ -11,7 +11,7 @@ describe('Cockpit dashboard shell baseline', () => {
         expect(wrapper.text()).toContain('Funding Overview');
         expect(wrapper.text()).toContain('Claim Progress');
         expect(wrapper.text()).toContain('Attention Queue');
-        expect(wrapper.text()).toContain('Settlement Activity');
+        expect(wrapper.text()).toContain('System Activity');
         expect(wrapper.find('[data-testid="cockpit-liquidity-hero"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="cockpit-redemption-pipeline"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="cockpit-risk-expiry-panel"]').exists()).toBe(true);

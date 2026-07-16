@@ -53,11 +53,14 @@ function displayTarget(value: string): string {
         data-testid="cockpit-recent-activity-panel"
     >
         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-            Settlement Activity
+            System Activity
         </p>
         <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-            Recent settlement events
+            Recent operating evidence
         </h3>
+        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+            Read-only activity from execution, journal, action, feedback, and system summaries. This panel does not execute follow-up work.
+        </p>
 
         <div class="mt-5 space-y-3">
             <article
@@ -103,7 +106,7 @@ function displayTarget(value: string): string {
                         v-if="item.projection_targets?.length"
                         class="mt-2 text-emerald-700 dark:text-emerald-300"
                     >
-                        Evidence sources: {{ item.projection_targets.map(displayTarget).join(', ') }}
+                        Read from: {{ item.projection_targets.map(displayTarget).join(', ') }}
                     </p>
                 </div>
             </article>
