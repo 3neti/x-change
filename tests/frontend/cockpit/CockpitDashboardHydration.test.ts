@@ -769,7 +769,7 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.find('[data-testid="cockpit-campaign-mutation-button"]').exists()).toBe(false);
     });
 
-    it('renders journal action and feedback integration summary cards from the read model bundle', () => {
+    it('renders journal action and feedback integration summary cards from the read model bundle', async () => {
         const wrapper = mount(CockpitDashboard, {
             props: {
                 dashboard_read_model: dashboardReadModel,
@@ -822,22 +822,28 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('Feedback Deliveries');
         expect(wrapper.text()).toContain('Notification source');
         expect(wrapper.text()).toContain('1 deliveries');
-        expect(wrapper.text()).toContain('Journal Evidence Summary Only');
-        expect(wrapper.text()).toContain('Safe Action Host Summary Only');
-        expect(wrapper.text()).toContain('Communication Delivery Summary Only');
         expect(wrapper.text()).not.toContain('journal-evidence-summary-only');
         expect(wrapper.text()).not.toContain('safe-action-host-summary-only');
         expect(wrapper.text()).not.toContain('communication-delivery-summary-only');
+        expect(wrapper.text()).not.toContain('Payload policy');
+        expect(wrapper.text()).not.toContain('Display readiness');
+        expect(wrapper.text()).not.toContain('Journal Evidence Summary Only');
+        expect(wrapper.text()).not.toContain('Safe Action Host Summary Only');
+        expect(wrapper.text()).not.toContain('Communication Delivery Summary Only');
         expect(wrapper.text()).not.toContain('must-not-render');
         expect(wrapper.findAll('[data-testid="cockpit-integration-summary-card"]')).toHaveLength(3);
-        expect(wrapper.findAll('[data-testid="cockpit-integration-summary-details"]')).toHaveLength(3);
+        expect(wrapper.findAll('[data-testid="cockpit-integration-summary-details-toggle"]')).toHaveLength(3);
+        expect(wrapper.findAll('[data-testid="cockpit-integration-summary-details"]')).toHaveLength(0);
         expect(wrapper.text()).toContain('Connection details');
+        await wrapper.findAll('[data-testid="cockpit-integration-summary-details-toggle"]')[0].trigger('click');
+        expect(wrapper.findAll('[data-testid="cockpit-integration-summary-details"]')).toHaveLength(1);
         expect(wrapper.text()).toContain('Payload policy');
         expect(wrapper.text()).toContain('Display readiness');
+        expect(wrapper.text()).toContain('Journal Evidence Summary Only');
         expect(wrapper.find('[data-testid="cockpit-activity-readiness-summary"]').exists()).toBe(true);
     });
 
-    it('renders integration unavailable reasons without exception messages', () => {
+    it('renders integration unavailable reasons without exception messages', async () => {
         const wrapper = mount(CockpitDashboard, {
             props: {
                 dashboard_read_model: dashboardReadModel,
@@ -860,12 +866,14 @@ describe('Cockpit dashboard read model hydration', () => {
 
         expect(wrapper.text()).toContain('Journal Evidence');
         expect(wrapper.text()).toContain('Unavailable');
+        expect(wrapper.text()).not.toContain('Read Model Unavailable');
+        await wrapper.findAll('[data-testid="cockpit-integration-summary-details-toggle"]')[0].trigger('click');
         expect(wrapper.text()).toContain('Read Model Unavailable');
         expect(wrapper.text()).not.toContain('RuntimeException');
         expect(wrapper.text()).not.toContain('must-not-render');
     });
 
-    it('keeps operator integration summaries authorization and redaction safe', () => {
+    it('keeps operator integration summaries authorization and redaction safe', async () => {
         const wrapper = mount(CockpitDashboard, {
             props: {
                 dashboard_read_model: dashboardReadModel,
@@ -927,6 +935,12 @@ describe('Cockpit dashboard read model hydration', () => {
         });
 
         expect(wrapper.text()).toContain('Connected Services');
+        expect(wrapper.text()).not.toContain('Journal Evidence Summary Only');
+        expect(wrapper.text()).not.toContain('Safe Action Host Summary Only');
+        expect(wrapper.text()).not.toContain('Communication Delivery Summary Only');
+        for (const toggle of wrapper.findAll('[data-testid="cockpit-integration-summary-details-toggle"]')) {
+            await toggle.trigger('click');
+        }
         expect(wrapper.text()).toContain('Journal Evidence Summary Only');
         expect(wrapper.text()).toContain('Safe Action Host Summary Only');
         expect(wrapper.text()).toContain('Communication Delivery Summary Only');

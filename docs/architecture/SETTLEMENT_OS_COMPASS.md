@@ -2611,3 +2611,10 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Payload policy and readiness details are still available behind `Connection details`.
 - UI report: `../ui-cockpit/reports/443-dashboard-integration-summary-consolidation.md`.
 - Boundary remains unchanged: presentation-only dashboard cleanup; no read-model, journal, action, feedback, provider, campaign, voucher, wallet, public API, lifecycle truth, or execution behavior changed.
+
+## 2026-07-17 Update — Cockpit Dashboard Connected Services Disclosure Fix
+
+- `/x/cockpit` Connected Services details now use Vue-controlled toggles instead of native `<details>`.
+- Technical payload/readiness rows are no longer rendered in the default dashboard scrape.
+- UI report: `../ui-cockpit/reports/444-dashboard-connected-services-disclosure-fix.md`.
+- Boundary remains unchanged: presentation-only dashboard cleanup; no read-model, journal, action, feedback, provider, campaign, voucher, wallet, public API, lifecycle truth, or execution behavior changed.

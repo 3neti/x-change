@@ -223,7 +223,7 @@ function expectNoUnsafeText(text: string): void {
 }
 
 describe('Cockpit read-only UI/UX scenario validation checkpoint', () => {
-    it('renders local scenario summaries on the dashboard without unsafe payloads', () => {
+    it('renders local scenario summaries on the dashboard without unsafe payloads', async () => {
         const wrapper = mount(CockpitDashboard, {
             props: {
                 dashboard_read_model: dashboardReadModel,
@@ -237,6 +237,12 @@ describe('Cockpit read-only UI/UX scenario validation checkpoint', () => {
             'divisible_open_three_slices_enforced_interval',
         );
         expect(wrapper.text()).toContain('Connected Services');
+        expect(wrapper.text()).not.toContain('Journal Evidence Summary Only');
+        expect(wrapper.text()).not.toContain('Safe Action Host Summary Only');
+        expect(wrapper.text()).not.toContain('Communication Delivery Summary Only');
+        for (const toggle of wrapper.findAll('[data-testid="cockpit-integration-summary-details-toggle"]')) {
+            await toggle.trigger('click');
+        }
         expect(wrapper.text()).toContain('Journal Evidence Summary Only');
         expect(wrapper.text()).toContain('Safe Action Host Summary Only');
         expect(wrapper.text()).toContain('Communication Delivery Summary Only');

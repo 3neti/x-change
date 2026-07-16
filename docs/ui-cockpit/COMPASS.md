@@ -2849,3 +2849,11 @@ Current boundary:
 - Moved payload policy and readiness internals behind a collapsed `Connection details` disclosure.
 - Verification report: `reports/443-dashboard-integration-summary-consolidation.md`.
 - Boundary remains unchanged: no read-model behavior, durable activity storage behavior, filters, lifecycle truth, execution behavior, journal writes, x-action execution, x-feedback delivery, provider calls, campaign mutation, voucher mutation, wallet movement, public API behavior, or unsafe payload exposure changed.
+
+## 2026-07-17 Update — Dashboard Connected Services Disclosure Fix
+
+- Replaced native Connected Services `<details>` with Vue-controlled toggles so technical rows are not rendered in the default dashboard scrape.
+- `Connection details` remains visible as the operator affordance.
+- Payload policy and display readiness rows render only after opening a specific service card toggle.
+- Verification report: `reports/444-dashboard-connected-services-disclosure-fix.md`.
+- Boundary remains unchanged: no read-model behavior, durable activity storage behavior, filters, lifecycle truth, execution behavior, journal writes, x-action execution, x-feedback delivery, provider calls, campaign mutation, voucher mutation, wallet movement, public API behavior, or unsafe payload exposure changed.
