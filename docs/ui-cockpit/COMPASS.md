@@ -4,12 +4,19 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Dashboard Productization Slice 1 — Operating Summary
-Status: Dashboard now starts with a read-only operating summary and safe operator navigation
+Current slice: Dashboard Productization Slice 2 — Integration and Activity Readiness
+Status: Dashboard now explains journal/action/feedback readiness and durable activity availability
 Last updated: 2026-07-16
 
 ## Completed
 
+- Completed Dashboard Productization Slice 2 — Integration and Activity Readiness:
+  - The dashboard integration panel now explains journal/action/feedback readiness in operator language.
+  - Each integration card identifies its owning source: x-journal, x-action, or x-feedback.
+  - Added an activity readiness summary that distinguishes available durable operator activity from not-wired activity storage.
+  - Confirmed this remains read-model presentation only and does not write journal entries, execute actions, send feedback, mutate vouchers, execute drivers, call providers, dispatch campaigns, move wallet funds, or expose unsafe payloads.
+  - Report: `reports/429-dashboard-productization-slice-2-integration-activity-readiness.md`.
+  - Next recommended checkpoint: Dashboard Productization Slice 3 — Operator focus and next-safe-actions guidance.
 - Completed Dashboard Productization Slice 1 — Operating Summary:
   - `/x/cockpit` now starts with a `Settlement OS Operating Overview`.
   - Added a primary operating summary for Pay Codes, Quick Generate, and Needs Attention.

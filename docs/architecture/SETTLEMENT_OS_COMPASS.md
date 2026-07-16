@@ -2474,3 +2474,11 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Added a journal/action/feedback read-model availability status derived from existing read-model summaries.
 - Verification report: `../ui-cockpit/reports/428-dashboard-productization-slice-1-operating-summary.md`.
 - Boundary remains unchanged: no voucher mutation, driver execution, journal write, x-action execution, x-feedback delivery, provider call, wallet movement, campaign dispatch, lifecycle truth change, public API behavior, execution behavior, or unsafe payload exposure changed.
+
+## 2026-07-16 Update — Dashboard Productization Slice 2 — Integration and Activity Readiness
+
+- The Dashboard integration section now explains journal/action/feedback readiness using operator-facing language.
+- Integration cards identify their owning source: x-journal evidence, x-action continuation, and x-feedback delivery.
+- Added an activity readiness summary showing whether durable operator issuance activity is available or not wired.
+- Verification report: `../ui-cockpit/reports/429-dashboard-productization-slice-2-integration-activity-readiness.md`.
+- Boundary remains unchanged: no journal write, x-action execution, x-feedback delivery, voucher mutation, driver execution, provider call, wallet movement, campaign dispatch, lifecycle truth change, public API behavior, execution behavior, or unsafe payload exposure changed.

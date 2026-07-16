@@ -661,6 +661,7 @@ describe('Cockpit dashboard read model hydration', () => {
         const wrapper = mount(CockpitDashboard, {
             props: {
                 dashboard_read_model: dashboardReadModel,
+                operator_issuance_activity_read_model: operatorIssuanceActivityReadModel,
                 read_model: {
                     journal: {
                         status: 'available',
@@ -696,17 +697,25 @@ describe('Cockpit dashboard read model hydration', () => {
         });
 
         expect(wrapper.text()).toContain('Integration Summary');
+        expect(wrapper.text()).toContain('Journal · Action · Feedback readiness');
+        expect(wrapper.text()).toContain('Journal, action, and feedback read models are available for read-only dashboard display.');
+        expect(wrapper.text()).toContain('Durable activity read model available');
+        expect(wrapper.text()).toContain('Quick Generate activity can be inspected as operator-safe presentation evidence.');
         expect(wrapper.text()).toContain('Journal Evidence');
+        expect(wrapper.text()).toContain('x-journal evidence source');
         expect(wrapper.text()).toContain('1 entries');
         expect(wrapper.text()).toContain('Action CTAs');
+        expect(wrapper.text()).toContain('x-action continuation source');
         expect(wrapper.text()).toContain('1 actions');
         expect(wrapper.text()).toContain('Feedback Deliveries');
+        expect(wrapper.text()).toContain('x-feedback delivery source');
         expect(wrapper.text()).toContain('1 deliveries');
         expect(wrapper.text()).toContain('journal-evidence-summary-only');
         expect(wrapper.text()).toContain('safe-action-host-summary-only');
         expect(wrapper.text()).toContain('communication-delivery-summary-only');
         expect(wrapper.text()).not.toContain('must-not-render');
         expect(wrapper.findAll('[data-testid="cockpit-integration-summary-card"]')).toHaveLength(3);
+        expect(wrapper.find('[data-testid="cockpit-activity-readiness-summary"]').exists()).toBe(true);
     });
 
     it('renders integration unavailable reasons without exception messages', () => {

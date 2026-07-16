@@ -285,6 +285,48 @@ function integrationSummary(
         reason: stringValue((model?.redactions as CockpitReadModelRedactions | undefined)?.reason) ?? 'read-model-ready',
     };
 }
+
+const integrationReadinessNote = computed(() => {
+    const availableCount = integrationSummaries.value.filter((summary) => summary.status === 'available').length;
+
+    if (availableCount === integrationSummaries.value.length) {
+        return 'Journal, action, and feedback read models are available for read-only dashboard display.';
+    }
+
+    if (availableCount > 0) {
+        return 'Some integration read models are available; unavailable systems stay visibly not wired.';
+    }
+
+    return 'Integration cards are placeholders until journal, action, and feedback read models are configured.';
+});
+
+const activityReadiness = computed(() => {
+    if (props.operator_issuance_activity_read_model?.authorized === true) {
+        return {
+            status: stringValue(props.operator_issuance_activity_read_model.status) ?? 'available',
+            label: 'Durable activity read model available',
+            description: 'Quick Generate activity can be inspected as operator-safe presentation evidence.',
+        };
+    }
+
+    return {
+        status: stringValue(props.operator_issuance_activity_read_model?.status) ?? 'not_wired',
+        label: 'Activity recording not wired',
+        description: 'Quick Generate can still issue Pay Codes; activity evidence appears after durable activity storage is enabled.',
+    };
+});
+
+function integrationSourceLabel(key: string): string {
+    if (key === 'journal') {
+        return 'x-journal evidence source';
+    }
+
+    if (key === 'actions') {
+        return 'x-action continuation source';
+    }
+
+    return 'x-feedback delivery source';
+}
 </script>
 
 <template>
@@ -369,12 +411,34 @@ function integrationSummary(
                 class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 data-testid="cockpit-integration-summary-panel"
             >
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                    Integration Summary
-                </p>
-                <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                    Journal · Action · Feedback
-                </h3>
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                            Integration Summary
+                        </p>
+                        <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
+                            Journal · Action · Feedback readiness
+                        </h3>
+                        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                            {{ integrationReadinessNote }}
+                        </p>
+                    </div>
+
+                    <div
+                        class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
+                        data-testid="cockpit-activity-readiness-summary"
+                    >
+                        <p class="font-semibold uppercase tracking-wide">
+                            {{ activityReadiness.status }}
+                        </p>
+                        <p class="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+                            {{ activityReadiness.label }}
+                        </p>
+                        <p class="mt-1 max-w-xs leading-5">
+                            {{ activityReadiness.description }}
+                        </p>
+                    </div>
+                </div>
                 <div class="mt-5 grid gap-3 md:grid-cols-3">
                     <article
                         v-for="summary in integrationSummaries"
@@ -392,6 +456,9 @@ function integrationSummary(
                         </div>
                         <p class="mt-3 text-2xl font-semibold text-slate-950 dark:text-slate-50">
                             {{ summary.count }}
+                        </p>
+                        <p class="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            {{ integrationSourceLabel(summary.key) }}
                         </p>
                         <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
                             {{ summary.policy }}
