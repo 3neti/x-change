@@ -15,20 +15,19 @@ defineProps<{
         <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                    Funding Overview
+                    Funding Status
                 </p>
                 <h2 class="mt-2 text-2xl font-semibold text-slate-950 dark:text-slate-50">
-                    Balance and funding position
+                    Funding readiness
                 </h2>
                 <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    This read-only section shows balance, reservation, funding runway,
-                    and available-to-issue summaries when connected. It does not query wallets,
-                    call bank providers, reserve funds, or move money.
+                    Read-only funding posture for issuance planning. Wallet lookups,
+                    reservations, provider calls, and money movement stay outside this dashboard.
                 </p>
             </div>
 
             <span class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:border-slate-700 dark:text-slate-300">
-                Balance summary not connected yet
+                Balance summary not connected
             </span>
         </div>
 

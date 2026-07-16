@@ -2872,3 +2872,18 @@ Current boundary:
 - Added read-only boundary copy clarifying that the panel does not execute follow-up work.
 - Verification report: `reports/446-dashboard-system-activity-copy-polish.md`.
 - Boundary remains unchanged: no read-model behavior, durable activity storage behavior, lifecycle truth, execution behavior, journal writes, x-action execution, x-feedback delivery, provider calls, campaign mutation, voucher mutation, wallet movement, public API behavior, or unsafe payload exposure changed.
+
+## 2026-07-17 Update — Dashboard Lower Status Panel Copy Polish
+
+- Renamed the lower dashboard panels to operator-facing labels:
+  - `Funding Overview` → `Funding Status`.
+  - `Claim Progress` → `Claim Status`.
+  - `Attention Queue` → `Review Queue`.
+- Reworded panel subtitles and status badges:
+  - `Balance and funding position` → `Funding readiness`.
+  - `Balance summary not connected yet` → `Balance summary not connected`.
+  - `Claim and redemption status` → `Claim lifecycle summary`.
+  - `Items needing review` → `Items that may need attention`.
+- Added read-only boundary copy to the funding, claim, and review panels.
+- Verification report: `reports/447-dashboard-lower-status-panel-copy-polish.md`.
+- Boundary remains unchanged: no read-model behavior, wallet/provider calls, funding reservation, voucher mutation, claim approval, redemption, execution, reconciliation, journal writes, x-action execution, x-feedback delivery, campaign behavior, public API behavior, or unsafe payload exposure changed.

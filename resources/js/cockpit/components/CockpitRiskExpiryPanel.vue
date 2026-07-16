@@ -28,11 +28,14 @@ const severityLabel = (severity: CockpitRiskSignal['severity']): string => {
         data-testid="cockpit-risk-expiry-panel"
     >
         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-            Attention Queue
+            Review Queue
         </p>
         <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-            Items needing review
+            Items that may need attention
         </h3>
+        <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+            Read-only signals for operator triage. Review actions remain outside this dashboard.
+        </p>
 
         <div class="mt-5 space-y-3">
             <article

@@ -509,7 +509,7 @@ describe('Cockpit dashboard read model hydration', () => {
         const issuanceIndex = text.indexOf('Issuance Activity');
         const executionIndex = text.indexOf('System Activity');
         const integrationIndex = text.indexOf('Connected Services');
-        const liquidityIndex = text.indexOf('Funding Overview');
+        const liquidityIndex = text.indexOf('Funding Status');
         const campaignIndex = text.indexOf('Campaigns');
 
         expect(operatorFocusIndex).toBeGreaterThan(-1);

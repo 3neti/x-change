@@ -14,11 +14,14 @@ defineProps<{
         <div class="flex items-start justify-between gap-4">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                    Claim Progress
+                    Claim Status
                 </p>
                 <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                    Claim and redemption status
+                    Claim lifecycle summary
                 </h3>
+                <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    Sanitized claim counts only. This panel does not approve, redeem, execute, or reconcile Pay Codes.
+                </p>
             </div>
             <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                 Read-only

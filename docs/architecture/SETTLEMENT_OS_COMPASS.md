@@ -2632,3 +2632,13 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Projection target copy now uses `Read from`.
 - UI report: `../ui-cockpit/reports/446-dashboard-system-activity-copy-polish.md`.
 - Boundary remains unchanged: presentation-only dashboard cleanup; no read-model, journal, action, feedback, provider, campaign, voucher, wallet, public API, lifecycle truth, or execution behavior changed.
+
+## 2026-07-17 Update — Cockpit Dashboard Lower Status Panel Copy Polish
+
+- `/x/cockpit` lower dashboard panels now use operator-facing status labels:
+  - `Funding Status`;
+  - `Claim Status`;
+  - `Review Queue`.
+- Funding, claim, and review copy now explains the read-only boundary without scaffolding language.
+- UI report: `../ui-cockpit/reports/447-dashboard-lower-status-panel-copy-polish.md`.
+- Boundary remains unchanged: presentation-only dashboard cleanup; no read-model, journal, action, feedback, provider, campaign, voucher, wallet, public API, lifecycle truth, funding reservation, redemption, reconciliation, or execution behavior changed.

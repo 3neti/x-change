@@ -8,9 +8,9 @@ describe('Cockpit dashboard shell baseline', () => {
 
         expect(wrapper.find('[data-testid="cockpit-dashboard-shell"]').exists()).toBe(true);
         expect(wrapper.text()).toContain('Settlement OS Operating Overview');
-        expect(wrapper.text()).toContain('Funding Overview');
-        expect(wrapper.text()).toContain('Claim Progress');
-        expect(wrapper.text()).toContain('Attention Queue');
+        expect(wrapper.text()).toContain('Funding Status');
+        expect(wrapper.text()).toContain('Claim Status');
+        expect(wrapper.text()).toContain('Review Queue');
         expect(wrapper.text()).toContain('System Activity');
         expect(wrapper.find('[data-testid="cockpit-liquidity-hero"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="cockpit-redemption-pipeline"]').exists()).toBe(true);

@@ -19,12 +19,13 @@ describe('Cockpit dashboard foundation widgets', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Balance and funding position');
+        expect(wrapper.text()).toContain('Funding readiness');
+        expect(wrapper.text()).toContain('Wallet lookups, reservations, provider calls, and money movement stay outside this dashboard.');
         expect(wrapper.text()).toContain('Internal Balance');
         expect(wrapper.text()).toContain('Live Balance');
         expect(wrapper.text()).toContain('Reserved Funds');
         expect(wrapper.text()).toContain('Available To Issue');
-        expect(wrapper.text()).toContain('Balance summary not connected yet');
+        expect(wrapper.text()).toContain('Balance summary not connected');
         expect(wrapper.text()).not.toContain('Read model pending');
         expect(wrapper.findAll('[data-testid="cockpit-dashboard-metric-card"]')).toHaveLength(4);
     });
@@ -36,7 +37,8 @@ describe('Cockpit dashboard foundation widgets', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Claim and redemption status');
+        expect(wrapper.text()).toContain('Claim lifecycle summary');
+        expect(wrapper.text()).toContain('This panel does not approve, redeem, execute, or reconcile Pay Codes.');
         expect(wrapper.text()).toContain('Issued');
         expect(wrapper.text()).toContain('Claim Started');
         expect(wrapper.text()).toContain('Reconciled');
@@ -51,7 +53,8 @@ describe('Cockpit dashboard foundation widgets', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Items needing review');
+        expect(wrapper.text()).toContain('Items that may need attention');
+        expect(wrapper.text()).toContain('Review actions remain outside this dashboard.');
         expect(wrapper.text()).toContain('Expiring Today');
         expect(wrapper.text()).toContain('Funding Runway');
         expect(wrapper.text()).toContain('Stuck Settlements');
