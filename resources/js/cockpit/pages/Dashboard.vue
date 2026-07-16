@@ -319,14 +319,14 @@ const integrationReadinessNote = computed(() => {
     const availableCount = integrationSummaries.value.filter((summary) => summary.status === 'available').length;
 
     if (availableCount === integrationSummaries.value.length) {
-        return 'Journal, action, and feedback read models are available for read-only dashboard display.';
+        return 'Audit, follow-up, and notification summaries are available for read-only display.';
     }
 
     if (availableCount > 0) {
-        return 'Some summaries are connected; unavailable systems stay visibly marked as not connected.';
+        return 'Some service summaries are connected; unavailable services stay visibly marked as not connected.';
     }
 
-    return 'Integration cards are placeholders until journal, action, and feedback read models are configured.';
+    return 'Service cards stay as placeholders until audit, follow-up, and notification summaries are connected.';
 });
 
 const activityReadiness = computed(() => {
@@ -334,14 +334,14 @@ const activityReadiness = computed(() => {
         return {
             status: stringValue(props.operator_issuance_activity_read_model.status) ?? 'available',
             label: 'Durable activity read model available',
-            description: 'Quick Generate activity can be inspected as operator-safe presentation evidence.',
+            description: 'Quick Generate activity can be inspected as an operator-safe summary.',
         };
     }
 
     return {
         status: stringValue(props.operator_issuance_activity_read_model?.status) ?? 'not_wired',
         label: 'Activity recording not connected',
-        description: 'Quick Generate can still issue Pay Codes; activity evidence appears after durable activity storage is enabled.',
+        description: 'Quick Generate can still issue Pay Codes; activity summaries appear after durable activity storage is enabled.',
     };
 });
 
@@ -374,14 +374,14 @@ const operatorFocusItems = computed(() => [
 
 function integrationSourceLabel(key: string): string {
     if (key === 'journal') {
-        return 'x-journal evidence source';
+        return 'Audit trail source';
     }
 
     if (key === 'actions') {
-        return 'x-action continuation source';
+        return 'Follow-up action source';
     }
 
-    return 'x-feedback delivery source';
+    return 'Notification source';
 }
 </script>
 
@@ -521,10 +521,10 @@ function integrationSourceLabel(key: string): string {
                 <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                            Integration Summary
+                            Connected Services
                         </p>
                         <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                            Journal · Action · Feedback readiness
+                            Audit, follow-up, and notification status
                         </h3>
                         <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
                             {{ integrationReadinessNote }}

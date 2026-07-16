@@ -507,8 +507,8 @@ describe('Cockpit dashboard read model hydration', () => {
         const text = wrapper.text();
         const operatorFocusIndex = text.indexOf('Operator Focus');
         const issuanceIndex = text.indexOf('Issuance Activity');
-        const executionIndex = text.indexOf('Execution Activity');
-        const integrationIndex = text.indexOf('Integration Summary');
+        const executionIndex = text.indexOf('Settlement Activity');
+        const integrationIndex = text.indexOf('Connected Services');
         const liquidityIndex = text.indexOf('Liquidity Center');
         const campaignIndex = text.indexOf('Campaign Cockpit Adoption');
 
@@ -550,8 +550,8 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(issuancePanel.text()).toContain('Generated Pay Codes');
         expect(issuancePanel.text()).toContain('Pay Code PC-1234 issued');
         expect(issuancePanel.text()).not.toContain('Execution recorded for PC-EXEC-001');
-        expect(executionPanel.text()).toContain('Execution Activity');
-        expect(executionPanel.text()).toContain('Execution evidence');
+        expect(executionPanel.text()).toContain('Settlement Activity');
+        expect(executionPanel.text()).toContain('Recent settlement events');
         expect(executionPanel.text()).toContain('Execution recorded for PC-EXEC-001');
         expect(executionPanel.text()).not.toContain('Pay Code PC-1234 issued');
     });
@@ -808,19 +808,19 @@ describe('Cockpit dashboard read model hydration', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Integration Summary');
-        expect(wrapper.text()).toContain('Journal · Action · Feedback readiness');
-        expect(wrapper.text()).toContain('Journal, action, and feedback read models are available for read-only dashboard display.');
+        expect(wrapper.text()).toContain('Connected Services');
+        expect(wrapper.text()).toContain('Audit, follow-up, and notification status');
+        expect(wrapper.text()).toContain('Audit, follow-up, and notification summaries are available for read-only display.');
         expect(wrapper.text()).toContain('Durable activity read model available');
-        expect(wrapper.text()).toContain('Quick Generate activity can be inspected as operator-safe presentation evidence.');
+        expect(wrapper.text()).toContain('Quick Generate activity can be inspected as an operator-safe summary.');
         expect(wrapper.text()).toContain('Journal Evidence');
-        expect(wrapper.text()).toContain('x-journal evidence source');
+        expect(wrapper.text()).toContain('Audit trail source');
         expect(wrapper.text()).toContain('1 entries');
         expect(wrapper.text()).toContain('Action CTAs');
-        expect(wrapper.text()).toContain('x-action continuation source');
+        expect(wrapper.text()).toContain('Follow-up action source');
         expect(wrapper.text()).toContain('1 actions');
         expect(wrapper.text()).toContain('Feedback Deliveries');
-        expect(wrapper.text()).toContain('x-feedback delivery source');
+        expect(wrapper.text()).toContain('Notification source');
         expect(wrapper.text()).toContain('1 deliveries');
         expect(wrapper.text()).toContain('Journal Evidence Summary Only');
         expect(wrapper.text()).toContain('Safe Action Host Summary Only');
@@ -922,7 +922,7 @@ describe('Cockpit dashboard read model hydration', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Integration Summary');
+        expect(wrapper.text()).toContain('Connected Services');
         expect(wrapper.text()).toContain('Journal Evidence Summary Only');
         expect(wrapper.text()).toContain('Safe Action Host Summary Only');
         expect(wrapper.text()).toContain('Communication Delivery Summary Only');

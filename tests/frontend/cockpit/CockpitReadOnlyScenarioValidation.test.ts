@@ -236,10 +236,10 @@ describe('Cockpit read-only UI/UX scenario validation checkpoint', () => {
         expect(wrapper.text()).toContain(
             'divisible_open_three_slices_enforced_interval',
         );
-        expect(wrapper.text()).toContain('Integration Summary');
-        expect(wrapper.text()).toContain('journal-evidence-summary-only');
-        expect(wrapper.text()).toContain('safe-action-host-summary-only');
-        expect(wrapper.text()).toContain('communication-delivery-summary-only');
+        expect(wrapper.text()).toContain('Connected Services');
+        expect(wrapper.text()).toContain('Journal Evidence Summary Only');
+        expect(wrapper.text()).toContain('Safe Action Host Summary Only');
+        expect(wrapper.text()).toContain('Communication Delivery Summary Only');
         expect(
             wrapper.findAll('[data-testid="cockpit-integration-summary-card"]'),
         ).toHaveLength(3);

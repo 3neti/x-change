@@ -62,6 +62,13 @@ Last updated: 2026-07-13
 
 ### Current Cockpit Host Integration
 
+- Cockpit Dashboard Operator Language Polish — Evidence and Integration Panels complete:
+  - Replaced dashboard evidence and integration-panel copy with operator-facing labels.
+  - Renamed execution activity presentation to settlement activity presentation.
+  - Replaced internal target/source wording with evidence-source and service-source wording.
+  - Corrected campaign API capitalization in operator labels.
+  - Confirmed no read-model, storage, filter contract, lifecycle, execution, journal, action, feedback, provider, campaign, voucher, wallet, public API, or unsafe-payload behavior changed.
+  - Report: [../ui-cockpit/reports/440-dashboard-operator-language-evidence-integration-panels.md](../ui-cockpit/reports/440-dashboard-operator-language-evidence-integration-panels.md).
 - Cockpit Dashboard Final Copy Polish — Replace Remaining Engineering Tokens complete:
   - Replaced visible dashboard engineering tokens with operator-facing copy.
   - Converted visible activity filter copy from handoff language to follow-up status language while preserving existing query parameter names and raw contract values.

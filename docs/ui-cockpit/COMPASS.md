@@ -4,12 +4,23 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Dashboard Final Copy Polish — Replace Remaining Engineering Tokens
-Status: Dashboard engineering tokens and variable-height action pills have been cleaned up
+Current slice: Dashboard Operator Language Polish — Evidence and Integration Panels
+Status: Dashboard evidence and service panels use operator-facing language
 Last updated: 2026-07-16
 
 ## Completed
 
+- Completed Dashboard Operator Language Polish — Evidence and Integration Panels:
+  - Renamed dashboard `Execution Activity` to `Settlement Activity`.
+  - Renamed `Execution evidence` to `Recent settlement events`.
+  - Replaced `Targets` with `Evidence sources` in settlement activity projection details.
+  - Renamed `Integration Summary` to `Connected Services`.
+  - Renamed `Journal · Action · Feedback readiness` to `Audit, follow-up, and notification status`.
+  - Replaced package/source labels with operator-facing source labels: `Audit trail source`, `Follow-up action source`, and `Notification source`.
+  - Corrected campaign `API` capitalization in generated operator labels.
+  - Confirmed this is presentation-only and does not alter read models, activity storage, filters, lifecycle truth, execution, journal, action, feedback, provider, campaign, voucher, wallet, public API, or unsafe payload behavior.
+  - Report: `reports/440-dashboard-operator-language-evidence-integration-panels.md`.
+  - Next recommended checkpoint: Manual browser acceptance for `/x/cockpit`, then select the next page-specific productization target.
 - Completed Dashboard Final Copy Polish — Replace Remaining Engineering Tokens:
   - Replaced visible `not_wired`, `not-loaded`, `read-model-ready`, `durable_summary_evidence_available`, `runtime_handoff_profile_only`, `campaign-mutations-not-authorized`, and raw campaign snake-case labels with operator-facing copy.
   - Renamed visible activity filter copy from handoff language to follow-up status language while preserving existing query parameter names and raw contract values.

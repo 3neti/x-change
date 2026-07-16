@@ -40,7 +40,7 @@ function displayStatus(value: string | undefined): string {
 
 function displayTarget(value: string): string {
     if (value === 'handoff_summary_journal') {
-        return 'handoff summary journal';
+        return 'handoff summary';
     }
 
     return value.replaceAll('_', ' ');
@@ -53,10 +53,10 @@ function displayTarget(value: string): string {
         data-testid="cockpit-recent-activity-panel"
     >
         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-            Execution Activity
+            Settlement Activity
         </p>
         <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-            Execution evidence
+            Recent settlement events
         </h3>
 
         <div class="mt-5 space-y-3">
@@ -87,7 +87,7 @@ function displayTarget(value: string): string {
                 >
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="inline-flex min-h-5 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-white px-2 py-0.5 text-center font-semibold uppercase leading-none tracking-wide text-emerald-700 dark:bg-emerald-900 dark:text-emerald-100">
-                            {{ item.projection_badge ?? 'Execution evidence' }}
+                            {{ item.projection_badge ?? 'Settlement evidence' }}
                         </span>
                         <span class="font-semibold">
                             {{ displayStatus(item.projection_status) }}
@@ -103,7 +103,7 @@ function displayTarget(value: string): string {
                         v-if="item.projection_targets?.length"
                         class="mt-2 text-emerald-700 dark:text-emerald-300"
                     >
-                        Targets: {{ item.projection_targets.map(displayTarget).join(', ') }}
+                        Evidence sources: {{ item.projection_targets.map(displayTarget).join(', ') }}
                     </p>
                 </div>
             </article>

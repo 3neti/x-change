@@ -65,7 +65,7 @@ describe('Cockpit dashboard foundation widgets', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Execution evidence');
+        expect(wrapper.text()).toContain('Recent settlement events');
         expect(wrapper.text()).toContain('Execution activity');
         expect(wrapper.text()).toContain('Journal activity');
         expect(wrapper.text()).toContain('Feedback activity');
@@ -97,6 +97,6 @@ describe('Cockpit dashboard foundation widgets', () => {
         expect(wrapper.text()).toContain('Summary evidence available');
         expect(wrapper.text()).not.toContain('durable_summary_evidence_available');
         expect(wrapper.text()).toContain('Action and feedback statuses are projected from x-journal execution.handoff.summary.recorded.');
-        expect(wrapper.text()).toContain('Targets: journal, action, feedback, handoff summary journal');
+        expect(wrapper.text()).toContain('Evidence sources: journal, action, feedback, handoff summary');
     });
 });
