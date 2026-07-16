@@ -2401,3 +2401,11 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Closure report: `../ui-cockpit/reports/419-pay-code-detail-productization-publish-closure.md`.
 - The wave remains presentation-only: no voucher mutation, execution-driver invocation, journal write, x-action execution, x-feedback delivery, provider call, wallet movement, campaign dispatch, claim UX behavior, public API behavior, or unsafe payload exposure was added.
 - Next recommended wave: Distribution Workspace Productization.
+
+## 2026-07-16 Update — Distribution Workspace Productization Slice 1 — Primary Manual Distribution Summary
+
+- Started Distribution Workspace Productization.
+- `/x/cockpit/pay-codes/{code}/distribution` now starts with a primary manual distribution summary.
+- The summary shows claim URL readiness, delivery disabled state, artifact deferral, payload policy, and safe navigation/copy actions.
+- Verification report: `../ui-cockpit/reports/420-distribution-workspace-productization-slice-1-primary-summary.md`.
+- Boundary remains unchanged: no feedback delivery, campaign dispatch, short-link creation, QR generation, print artifact generation, voucher mutation, driver execution, journal write, provider call, wallet movement, claim UX behavior, public API behavior, or execution behavior changed.

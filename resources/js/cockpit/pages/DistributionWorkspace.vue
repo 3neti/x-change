@@ -49,6 +49,47 @@ const distributionLinksPolicy = computed(() => {
     return stringValue(linkRedactions?.payloads) ?? 'distribution-links-only';
 });
 const distributionLinksAvailable = computed(() => beneficiaryRedeemUrl.value !== null || beneficiaryRedeemPath.value !== null);
+const detailHref = computed(() => `/x/cockpit/pay-codes/${encodeURIComponent(code.value)}`);
+const explorerHref = computed(() => '/x/cockpit/pay-codes');
+const primaryDistributionStep = computed(() => {
+    if (distributionLinksAvailable.value) {
+        return {
+            label: 'Copy or inspect the beneficiary claim URL',
+            description: 'Manual distribution can proceed outside Cockpit after recipient verification.',
+        };
+    }
+
+    return {
+        label: 'Review distribution readiness',
+        description: 'No beneficiary URL is available from the current read model.',
+    };
+});
+const readinessSummary = computed(() => [
+    {
+        key: 'claim-url',
+        label: 'Claim URL',
+        value: distributionLinksAvailable.value ? 'ready' : 'not available',
+        helper: distributionLinksAvailable.value ? 'Manual copy/inspection only.' : 'Waiting for distribution links.',
+    },
+    {
+        key: 'delivery',
+        label: 'Delivery',
+        value: 'disabled',
+        helper: 'Cockpit does not send SMS, email, webhook, or in-app messages here.',
+    },
+    {
+        key: 'artifacts',
+        label: 'Artifacts',
+        value: 'deferred',
+        helper: 'QR, short links, and print generation remain explicitly gated.',
+    },
+    {
+        key: 'payload-policy',
+        label: 'Payload Policy',
+        value: payloadPolicy.value,
+        helper: 'Read-model summary only.',
+    },
+]);
 const campaignNavigationContext = computed<CockpitCampaignNavigationContext | null>(() => {
     const context = props.campaign_navigation_context;
 
@@ -286,6 +327,88 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                     </div>
                 </dl>
             </div>
+
+            <section
+                class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm dark:border-emerald-900/70 dark:bg-emerald-950/40"
+                data-testid="cockpit-distribution-primary-summary"
+            >
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
+                            Manual distribution summary
+                        </p>
+                        <h3 class="mt-2 text-xl font-semibold text-slate-950 dark:text-slate-50">
+                            Pay Code {{ code }}
+                        </h3>
+                        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                            This summary keeps the operator focused on safe manual distribution. Cockpit can expose and copy the beneficiary URL, but it does not deliver messages, dispatch campaigns, generate artifacts, call providers, or mutate voucher state.
+                        </p>
+                    </div>
+                    <span class="w-fit rounded-full bg-white px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-slate-950 dark:text-emerald-200 dark:ring-emerald-800">
+                        read-only
+                    </span>
+                </div>
+
+                <dl class="mt-5 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
+                    <div
+                        v-for="item in readinessSummary"
+                        :key="item.key"
+                        class="rounded-xl bg-white/80 p-4 dark:bg-slate-950/70"
+                        data-testid="cockpit-distribution-primary-readiness-item"
+                    >
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            {{ item.label }}
+                        </dt>
+                        <dd class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">
+                            {{ item.value }}
+                        </dd>
+                        <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                            {{ item.helper }}
+                        </p>
+                    </div>
+                </dl>
+
+                <div class="mt-5 rounded-xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/60 dark:bg-slate-950/70">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                        Primary next step
+                    </p>
+                    <p class="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50">
+                        {{ primaryDistributionStep.label }}
+                    </p>
+                    <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                        {{ primaryDistributionStep.description }}
+                    </p>
+                    <div class="mt-4 flex flex-wrap gap-3">
+                        <a
+                            v-if="beneficiaryRedeemUrl"
+                            :href="beneficiaryRedeemUrl"
+                            class="inline-flex items-center rounded-full bg-emerald-700 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-800"
+                            data-testid="cockpit-distribution-primary-claim-url-link"
+                        >
+                            Open claim URL
+                        </a>
+                        <CockpitManualCopyButton
+                            v-if="distributionLinksAvailable"
+                            :value="beneficiaryRedeemUrl ?? beneficiaryRedeemPath"
+                            label="Copy claim URL"
+                        />
+                        <a
+                            :href="detailHref"
+                            class="inline-flex items-center rounded-full border border-emerald-300 px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-700 dark:text-emerald-200 dark:hover:bg-emerald-900/50"
+                            data-testid="cockpit-distribution-primary-detail-link"
+                        >
+                            Back to Pay Code Detail
+                        </a>
+                        <a
+                            :href="explorerHref"
+                            class="inline-flex items-center rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                            data-testid="cockpit-distribution-primary-explorer-link"
+                        >
+                            Back to Pay Codes
+                        </a>
+                    </div>
+                </div>
+            </section>
 
             <section
                 v-if="campaignNavigationContext"

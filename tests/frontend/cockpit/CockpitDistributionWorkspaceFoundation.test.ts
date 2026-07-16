@@ -293,6 +293,59 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(guidance.text()).toContain('sensitive settlement access material');
     });
 
+    it('renders a primary manual distribution summary with safe actions', () => {
+        const wrapper = mount(DistributionWorkspace, {
+            props: {
+                context: { code: 'PC-DIST-001' },
+                distribution_workspace_read_model: {
+                    schema: 'x-change.cockpit.distribution-workspace.v1',
+                    status: 'available',
+                    authorized: true,
+                    code: 'PC-DIST-001',
+                    summary: {
+                        code: 'PC-DIST-001',
+                        display_status: 'ready',
+                    },
+                    distribution_links: {
+                        schema: 'x-change.cockpit.distribution-links.v1',
+                        status: 'available',
+                        available: true,
+                        read_only: true,
+                        redeem_url: 'https://example.test/x/claim/PC-DIST-001/experience',
+                        redeem_path: '/x/claim/PC-DIST-001/experience',
+                        source: 'x-change.claim.experience',
+                        delivery_enabled: false,
+                        redactions: { payloads: 'distribution-links-only' },
+                    },
+                    redactions: {
+                        payloads: 'distribution-read-model-summary-only',
+                    },
+                },
+            },
+        });
+
+        const summary = wrapper.find('[data-testid="cockpit-distribution-primary-summary"]');
+        const readiness = summary.findAll('[data-testid="cockpit-distribution-primary-readiness-item"]');
+
+        expect(summary.exists()).toBe(true);
+        expect(summary.text()).toContain('Manual distribution summary');
+        expect(summary.text()).toContain('Pay Code PC-DIST-001');
+        expect(summary.text()).toContain('Claim URL');
+        expect(summary.text()).toContain('ready');
+        expect(summary.text()).toContain('Delivery');
+        expect(summary.text()).toContain('disabled');
+        expect(summary.text()).toContain('Artifacts');
+        expect(summary.text()).toContain('deferred');
+        expect(summary.text()).toContain('Payload Policy');
+        expect(summary.text()).toContain('distribution-read-model-summary-only');
+        expect(summary.text()).toContain('Copy or inspect the beneficiary claim URL');
+        expect(summary.text()).toContain('does not deliver messages');
+        expect(readiness).toHaveLength(4);
+        expect(wrapper.find('[data-testid="cockpit-distribution-primary-claim-url-link"]').attributes('href')).toBe('https://example.test/x/claim/PC-DIST-001/experience');
+        expect(wrapper.find('[data-testid="cockpit-distribution-primary-detail-link"]').attributes('href')).toBe('/x/cockpit/pay-codes/PC-DIST-001');
+        expect(wrapper.find('[data-testid="cockpit-distribution-primary-explorer-link"]').attributes('href')).toBe('/x/cockpit/pay-codes');
+    });
+
     it('copies the Distribution Workspace beneficiary URL through the browser clipboard only', async () => {
         const writeText = vi.fn().mockResolvedValue(undefined);
 
