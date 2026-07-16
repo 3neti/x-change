@@ -2362,3 +2362,11 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Focused frontend verification passed and the host production build completed successfully.
 - Closure report: `../ui-cockpit/reports/414-quick-generate-contract-builder-completion-publish-closure.md`.
 - Boundary remains unchanged: no issuance runtime behavior, payload semantics, execution-engine behavior, provider call, wallet movement, journal write, x-action execution, x-feedback delivery, campaign mutation, claim UX behavior, voucher mutation, or public API behavior changed.
+
+## 2026-07-16 Update — Pay Code Detail Productization Slice 1 — Primary Operator Summary
+
+- Started Pay Code Detail Productization.
+- `/x/cockpit/pay-codes/{code}` now starts with a primary operator summary before lower-level evidence panels.
+- The summary shows Pay Code, lifecycle status, amount, claim state, claim URL readiness, availability, payload policy, and safe navigation actions.
+- Verification report: `../ui-cockpit/reports/415-pay-code-detail-productization-slice-1-primary-summary.md`.
+- Boundary remains unchanged: no voucher mutation, execution-driver invocation, journal write, x-action execution, x-feedback delivery, provider call, wallet movement, campaign dispatch, claim UX behavior, public API behavior, or unsafe payload exposure was added.

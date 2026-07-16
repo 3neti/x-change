@@ -202,6 +202,38 @@ describe('Cockpit Voucher Detail hydration', () => {
         expect(wrapper.text()).not.toContain('must-not-render');
     });
 
+    it('renders a primary operator summary with safe next-step actions', () => {
+        const wrapper = mount(VoucherDetail, {
+            props: {
+                context: { code: 'PC-HYDRATED-001' },
+                read_model: readModel,
+            },
+        });
+
+        const summary = wrapper.find('[data-testid="cockpit-voucher-detail-primary-summary"]');
+        const claimUrl = wrapper.find('[data-testid="cockpit-voucher-detail-primary-claim-url-link"]');
+        const distribution = wrapper.find('[data-testid="cockpit-voucher-detail-primary-distribution-link"]');
+        const explorer = wrapper.find('[data-testid="cockpit-voucher-detail-primary-explorer-link"]');
+
+        expect(summary.exists()).toBe(true);
+        expect(summary.text()).toContain('Operator detail summary');
+        expect(summary.text()).toContain('Pay Code PC-HYDRATED-001');
+        expect(summary.text()).toContain('ready');
+        expect(summary.text()).toContain('₱1,500.75');
+        expect(summary.text()).toContain('Not claimed');
+        expect(summary.text()).toContain('Claim URL');
+        expect(summary.text()).toContain('Manual copy/inspection only');
+        expect(summary.text()).toContain('Copy or inspect the beneficiary claim URL');
+        expect(summary.text()).toContain('sanitized-summary-only');
+        expect(summary.text()).toContain('without mutating the Pay Code or triggering delivery');
+        expect(claimUrl.attributes('href')).toBe('https://example.test/x/claim/PC-HYDRATED-001/experience');
+        expect(distribution.attributes('href')).toBe('/x/cockpit/pay-codes/PC-HYDRATED-001/distribution');
+        expect(explorer.attributes('href')).toBe('/x/cockpit/pay-codes');
+        expect(summary.text()).not.toContain('provider_payload');
+        expect(summary.text()).not.toContain('raw_payload');
+        expect(summary.text()).not.toContain('must-not-render');
+    });
+
     it('renders the beneficiary Pay Code URL as a read-only distribution link', () => {
         const wrapper = mount(VoucherDetail, {
             props: {
