@@ -137,8 +137,8 @@ const activeFilterCount = computed(() => [
 ].filter((value) => value !== undefined && value !== '').length);
 const activeFilterLabels = computed(() => [
     searchFilters.value.search ? `search “${searchFilters.value.search}”` : undefined,
-    ...searchFilters.value.statuses.map((status) => `status ${status}`),
-    ...searchFilters.value.handoffStatuses.map((status) => `handoff ${status}`),
+    ...searchFilters.value.statuses.map((status) => `status ${displayStatus(status)}`),
+    ...searchFilters.value.handoffStatuses.map((status) => `follow-up ${displayStatus(status)}`),
 ].filter((value): value is string => value !== undefined));
 const activeFilterSummary = computed(() => {
     if (!canFilter.value) {
@@ -169,7 +169,7 @@ const filterClearLinks = computed<FilterClearLink[]>(() => {
         } : undefined,
         searchFilters.value.handoffStatuses.length > 0 ? {
             key: 'handoff',
-            label: 'Clear handoff',
+            label: 'Clear follow-up',
             href: filterHrefWithout('handoff'),
         } : undefined,
     ].filter((link): link is FilterClearLink => link !== undefined);
@@ -254,6 +254,47 @@ function sanitizePresentation(presentation: CockpitOperatorIssuanceActivityPrese
     safePresentation.campaignDashboardHref = safeCampaignDashboardHref(safePresentation.campaignAttribution);
 
     return safePresentation;
+}
+
+function displayStatus(value: string | undefined): string {
+    const normalized = value?.trim();
+
+    if (!normalized) {
+        return 'Not connected';
+    }
+
+    if (normalized === 'not_wired') {
+        return 'Not connected';
+    }
+
+    if (normalized === 'not-loaded') {
+        return 'No data loaded';
+    }
+
+    if (normalized === 'read-model-ready') {
+        return 'Ready for display';
+    }
+
+    if (normalized === 'recorded') {
+        return 'Recorded';
+    }
+
+    if (normalized === 'composed') {
+        return 'Prepared';
+    }
+
+    if (normalized === 'planned') {
+        return 'Planned';
+    }
+
+    if (normalized === 'issued') {
+        return 'Issued';
+    }
+
+    return normalized
+        .replaceAll('_', ' ')
+        .replaceAll('-', ' ')
+        .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
 function safeCampaignAttribution(value: unknown): SafeCampaignAttribution | undefined {
@@ -576,7 +617,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                     Generated Pay Codes
                 </h3>
             </div>
-            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+            <span class="inline-flex min-h-7 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-slate-100 px-3 py-1 text-center text-xs font-semibold leading-none text-slate-700 dark:bg-slate-800 dark:text-slate-200">
                 Read-only
             </span>
         </div>
@@ -621,14 +662,14 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                             :value="status"
                             :selected="status === searchFilters.statuses[0]"
                         >
-                            {{ status }}
+                            {{ displayStatus(status) }}
                         </option>
                     </select>
                 </label>
 
                 <label class="lg:w-56">
                     <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                        Handoff
+                        Follow-up status
                     </span>
                     <select
                         name="activity_handoff_status"
@@ -637,14 +678,14 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                         class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:disabled:bg-slate-900/50"
                         data-testid="cockpit-operator-issuance-activity-handoff-filter"
                     >
-                        <option value="">Any handoff status</option>
+                        <option value="">Any follow-up status</option>
                         <option
                             v-for="status in searchFilters.availableHandoffStatuses"
                             :key="status"
                             :value="status"
                             :selected="status === searchFilters.handoffStatuses[0]"
                         >
-                            {{ status }}
+                            {{ displayStatus(status) }}
                         </option>
                     </select>
                 </label>
@@ -693,7 +734,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                     :key="`handoff-${status}`"
                     class="rounded-full bg-white px-2 py-1 dark:bg-slate-900"
                 >
-                    Handoff: {{ status }}
+                    Follow-up: {{ displayStatus(status) }}
                 </span>
                 <span>
                     Read-only filter query; no activity mutation is executed.
@@ -763,8 +804,8 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                             {{ presentation.subtitle }}
                         </p>
                     </div>
-                    <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                        {{ presentation.status }}
+                    <span class="inline-flex min-h-6 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-slate-100 px-2 py-1 text-center text-xs font-semibold leading-none text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                        {{ displayStatus(presentation.status) }}
                     </span>
                 </div>
 
@@ -773,19 +814,19 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                         <dt class="font-semibold text-slate-700 dark:text-slate-300">
                             Journal
                         </dt>
-                        <dd>journal: {{ presentation.handoffs.journal }}</dd>
+                        <dd>Journal: {{ displayStatus(presentation.handoffs.journal) }}</dd>
                     </div>
                     <div>
                         <dt class="font-semibold text-slate-700 dark:text-slate-300">
                             Action
                         </dt>
-                        <dd>action: {{ presentation.handoffs.action }}</dd>
+                        <dd>Action: {{ displayStatus(presentation.handoffs.action) }}</dd>
                     </div>
                     <div>
                         <dt class="font-semibold text-slate-700 dark:text-slate-300">
                             Feedback
                         </dt>
-                        <dd>feedback: {{ presentation.handoffs.feedback }}</dd>
+                        <dd>Feedback: {{ displayStatus(presentation.handoffs.feedback) }}</dd>
                     </div>
                 </dl>
 
@@ -891,7 +932,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                     data-testid="cockpit-operator-issuance-activity-journal-summary"
                 >
                     <summary class="cursor-pointer font-semibold text-slate-700 dark:text-slate-200">
-                        Journal handoff details
+                        Journal status details
                     </summary>
                     <dl class="mt-3 grid gap-2 sm:grid-cols-2">
                     <div v-if="presentation.journalSummary.journalEntryId">
@@ -958,7 +999,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                     data-testid="cockpit-operator-issuance-activity-action-summary"
                 >
                     <summary class="cursor-pointer font-semibold text-indigo-900 dark:text-indigo-100">
-                        Action handoff details
+                        Action status details
                     </summary>
                     <dl class="mt-3 grid gap-2 sm:grid-cols-2">
                     <div v-if="presentation.actionSummary.actionHintId">
@@ -1006,7 +1047,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                     data-testid="cockpit-operator-issuance-activity-feedback-summary"
                 >
                     <summary class="cursor-pointer font-semibold text-emerald-900 dark:text-emerald-100">
-                        Feedback handoff details
+                        Feedback status details
                     </summary>
                     <dl class="mt-3 grid gap-2 sm:grid-cols-2">
                     <div v-if="presentation.feedbackSummary.feedbackIntentId">

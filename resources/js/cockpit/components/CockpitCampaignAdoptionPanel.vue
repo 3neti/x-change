@@ -18,7 +18,7 @@ const campaignCard = computed<Record<string, unknown>>(() => objectValue(objectV
 
 const isAvailable = computed(() => model.value?.authorized === true && model.value.status === 'available');
 
-const campaignName = computed(() => stringValue(campaignCard.value.name) ?? 'Campaign read model unavailable');
+const campaignName = computed(() => stringValue(campaignCard.value.name) ?? 'Campaign summary not connected');
 const recipientCount = computed(() => {
     const value = campaignCard.value.recipient_count;
 
@@ -32,7 +32,7 @@ const recipientCount = computed(() => {
 });
 const planningKey = computed(() => stringValue(facts.value.planning_key) ?? 'No planning key');
 const executionId = computed(() => stringValue(facts.value.execution_id) ?? 'No execution id');
-const mutationReason = computed(() => stringValue(objectValue(model.value?.mutation).reason) ?? 'campaign-mutations-not-authorized');
+const mutationReason = computed(() => displayStatus(stringValue(objectValue(model.value?.mutation).reason) ?? 'campaign-mutations-not-authorized'));
 const unavailableReason = computed(() => {
     const reason = stringValue(objectValue(model.value?.redactions).reason) ?? 'read-model-not-available';
 
@@ -40,7 +40,11 @@ const unavailableReason = computed(() => {
         return 'No campaign selected';
     }
 
-    return reason;
+    if (reason === 'read-model-not-available') {
+        return 'Campaign summary not connected';
+    }
+
+    return displayStatus(reason);
 });
 const quickGenerateLink = computed<CockpitCampaignQuickGenerateLink | null>(() => sanitizeQuickGenerateLink(model.value?.quick_generate_link));
 const recipientQuickGenerateLinks = computed<CockpitCampaignQuickGenerateLink[]>(() => {
@@ -161,6 +165,41 @@ function stringValue(value: unknown): string | undefined {
 
     return undefined;
 }
+
+function displayKey(value: string): string {
+    return value
+        .replaceAll('_', ' ')
+        .replaceAll('-', ' ')
+        .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function displayStatus(value: string): string {
+    if (value === 'campaign-mutations-not-authorized') {
+        return 'Campaign changes disabled';
+    }
+
+    if (value === 'unavailable') {
+        return 'Unavailable';
+    }
+
+    if (value === 'available') {
+        return 'Available';
+    }
+
+    if (value === 'blocked') {
+        return 'Blocked';
+    }
+
+    if (value === 'ready') {
+        return 'Ready';
+    }
+
+    if (value === 'read-only') {
+        return 'Read-only';
+    }
+
+    return displayKey(value);
+}
 </script>
 
 <template>
@@ -183,7 +222,7 @@ function stringValue(value: unknown): string | undefined {
 
             <div class="rounded-lg border border-slate-100 px-3 py-2 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-300">
                 <p class="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    {{ isAvailable ? 'Read-only campaign context' : 'Campaign read model unavailable' }}
+                    {{ isAvailable ? 'Read-only campaign context' : 'Campaign summary not connected' }}
                 </p>
                 <p class="mt-1">
                     {{ isAvailable ? planningKey : unavailableReason }}
@@ -203,14 +242,14 @@ function stringValue(value: unknown): string | undefined {
             >
                 <div class="flex items-center justify-between gap-3">
                     <p class="text-sm font-semibold text-slate-950 dark:text-slate-50">
-                        {{ surface.key }}
+                        {{ displayKey(surface.key) }}
                     </p>
                     <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                        {{ surface.read_only ? 'read-only' : 'blocked' }}
+                        {{ surface.read_only ? 'Read-only' : 'Blocked' }}
                     </span>
                 </div>
                 <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                    {{ surface.status }}
+                    {{ displayStatus(surface.status) }}
                 </p>
             </article>
         </div>
@@ -225,7 +264,7 @@ function stringValue(value: unknown): string | undefined {
                         No campaign panels authorized for display.
                     </p>
                     <p v-for="panel in panels" :key="panel.key">
-                        {{ panel.key }}: {{ panel.status }}
+                        {{ displayKey(panel.key) }}: {{ displayStatus(panel.status) }}
                     </p>
                 </div>
             </div>
@@ -239,7 +278,7 @@ function stringValue(value: unknown): string | undefined {
                         No campaign actions authorized for display.
                     </p>
                     <p v-for="action in actions" :key="action.key">
-                        {{ action.key }}: {{ action.status }}
+                        {{ displayKey(action.key) }}: {{ displayStatus(action.status) }}
                     </p>
                 </div>
             </div>

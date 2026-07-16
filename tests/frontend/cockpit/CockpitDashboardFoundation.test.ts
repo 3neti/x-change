@@ -94,8 +94,9 @@ describe('Cockpit dashboard foundation widgets', () => {
 
         expect(wrapper.find('[data-testid="cockpit-activity-projection-status"]').exists()).toBe(true);
         expect(wrapper.text()).toContain('Durable summary evidence');
-        expect(wrapper.text()).toContain('durable_summary_evidence_available');
+        expect(wrapper.text()).toContain('Summary evidence available');
+        expect(wrapper.text()).not.toContain('durable_summary_evidence_available');
         expect(wrapper.text()).toContain('Action and feedback statuses are projected from x-journal execution.handoff.summary.recorded.');
-        expect(wrapper.text()).toContain('Targets: journal, action, feedback, handoff_summary_journal');
+        expect(wrapper.text()).toContain('Targets: journal, action, feedback, handoff summary journal');
     });
 });

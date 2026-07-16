@@ -4,12 +4,19 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Dashboard Operator Copy Cleanup — Friendly Status Labels
-Status: Dashboard operator-facing architectural labels have friendlier copy
+Current slice: Dashboard Final Copy Polish — Replace Remaining Engineering Tokens
+Status: Dashboard engineering tokens and variable-height action pills have been cleaned up
 Last updated: 2026-07-16
 
 ## Completed
 
+- Completed Dashboard Final Copy Polish — Replace Remaining Engineering Tokens:
+  - Replaced visible `not_wired`, `not-loaded`, `read-model-ready`, `durable_summary_evidence_available`, `runtime_handoff_profile_only`, `campaign-mutations-not-authorized`, and raw campaign snake-case labels with operator-facing copy.
+  - Renamed visible activity filter copy from handoff language to follow-up status language while preserving existing query parameter names and raw contract values.
+  - Normalized primary dashboard action links and status pills with compact no-wrap sizing so long labels do not stretch badge height.
+  - Confirmed this is presentation-only and does not alter read models, activity storage, filters, lifecycle truth, execution, journal, action, feedback, provider, campaign, voucher, wallet, public API, or unsafe payload behavior.
+  - Report: `reports/439-dashboard-final-copy-polish-engineering-tokens.md`.
+  - Next recommended checkpoint: Manual browser acceptance for `/x/cockpit`, then select the next page-specific productization target.
 - Completed Dashboard Operator Copy Cleanup — Friendly Status Labels:
   - Replaced `integration read-models not wired` with `Journal, action, and feedback summaries not connected yet`.
   - Replaced `safe navigation` with `Links only`.

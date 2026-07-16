@@ -137,11 +137,11 @@ const operatingIntegrationStatus = computed(() => {
     const availableCount = integrationSummaries.value.filter((summary) => summary.status === 'available').length;
 
     if (availableCount === integrationSummaries.value.length) {
-        return 'read-models available';
+        return 'Summaries connected';
     }
 
     if (availableCount > 0) {
-        return `${availableCount}/${integrationSummaries.value.length} read-models available`;
+        return `${availableCount}/${integrationSummaries.value.length} summaries connected`;
     }
 
     return 'Journal, action, and feedback summaries not connected yet';
@@ -286,6 +286,35 @@ function integrationSummary(
     };
 }
 
+function displayStatus(value: string): string {
+    const normalized = value.trim();
+
+    if (normalized === 'not_wired') {
+        return 'Not connected';
+    }
+
+    if (normalized === 'not-loaded') {
+        return 'No data loaded';
+    }
+
+    if (normalized === 'read-model-ready') {
+        return 'Ready for display';
+    }
+
+    if (normalized === 'presentation_only') {
+        return 'Read-only';
+    }
+
+    if (normalized === 'available') {
+        return 'Available';
+    }
+
+    return normalized
+        .replaceAll('_', ' ')
+        .replaceAll('-', ' ')
+        .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
 const integrationReadinessNote = computed(() => {
     const availableCount = integrationSummaries.value.filter((summary) => summary.status === 'available').length;
 
@@ -294,7 +323,7 @@ const integrationReadinessNote = computed(() => {
     }
 
     if (availableCount > 0) {
-        return 'Some integration read models are available; unavailable systems stay visibly not wired.';
+        return 'Some summaries are connected; unavailable systems stay visibly marked as not connected.';
     }
 
     return 'Integration cards are placeholders until journal, action, and feedback read models are configured.';
@@ -311,7 +340,7 @@ const activityReadiness = computed(() => {
 
     return {
         status: stringValue(props.operator_issuance_activity_read_model?.status) ?? 'not_wired',
-        label: 'Activity recording not wired',
+        label: 'Activity recording not connected',
         description: 'Quick Generate can still issue Pay Codes; activity evidence appears after durable activity storage is enabled.',
     };
 });
@@ -392,7 +421,7 @@ function integrationSourceLabel(key: string): string {
                         </p>
                     </div>
 
-                    <span class="inline-flex rounded-full border border-indigo-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:border-indigo-800 dark:bg-slate-950 dark:text-indigo-300">
+                    <span class="inline-flex min-h-7 shrink-0 items-center justify-center rounded-full border border-indigo-200 bg-white px-3 py-1 text-center text-xs font-semibold leading-none text-indigo-700 dark:border-indigo-800 dark:bg-slate-950 dark:text-indigo-300">
                         {{ operatingIntegrationStatus }}
                     </span>
                 </div>
@@ -415,7 +444,7 @@ function integrationSourceLabel(key: string): string {
                             </div>
                             <a
                                 :href="card.href"
-                                class="rounded-full bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500"
+                                class="inline-flex min-h-7 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-indigo-600 px-3 py-1.5 text-center text-xs font-semibold leading-none text-white shadow-sm hover:bg-indigo-500"
                                 data-testid="cockpit-operating-summary-link"
                             >
                                 {{ card.action }}
@@ -445,7 +474,7 @@ function integrationSourceLabel(key: string): string {
                             dispatch feedback, write journal entries, run action continuations, or mutate campaign state.
                         </p>
                     </div>
-                    <span class="inline-flex rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:border-slate-700 dark:text-slate-300">
+                    <span class="inline-flex min-h-7 shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-slate-200 px-3 py-1 text-center text-xs font-semibold leading-none text-slate-600 dark:border-slate-700 dark:text-slate-300">
                         Links only
                     </span>
                 </div>
@@ -468,7 +497,7 @@ function integrationSourceLabel(key: string): string {
                             </div>
                             <a
                                 :href="item.href"
-                                class="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                                class="inline-flex min-h-7 shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-slate-200 px-3 py-1.5 text-center text-xs font-semibold leading-none text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                                 data-testid="cockpit-operator-focus-link"
                             >
                                 {{ item.action }}
@@ -507,7 +536,7 @@ function integrationSourceLabel(key: string): string {
                         data-testid="cockpit-activity-readiness-summary"
                     >
                         <p class="font-semibold uppercase tracking-wide">
-                            {{ activityReadiness.status }}
+                            {{ displayStatus(activityReadiness.status) }}
                         </p>
                         <p class="mt-1 font-semibold text-slate-900 dark:text-slate-100">
                             {{ activityReadiness.label }}
@@ -528,8 +557,8 @@ function integrationSourceLabel(key: string): string {
                             <p class="font-semibold text-slate-950 dark:text-slate-50">
                                 {{ summary.label }}
                             </p>
-                            <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                                {{ summary.status }}
+                            <span class="inline-flex min-h-6 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-slate-100 px-2 py-1 text-center text-xs font-semibold leading-none text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                                {{ displayStatus(summary.status) }}
                             </span>
                         </div>
                         <p class="mt-3 text-2xl font-semibold text-slate-950 dark:text-slate-50">
@@ -539,10 +568,10 @@ function integrationSourceLabel(key: string): string {
                             {{ integrationSourceLabel(summary.key) }}
                         </p>
                         <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                            {{ summary.policy }}
+                            {{ displayStatus(summary.policy) }}
                         </p>
                         <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                            {{ summary.reason }}
+                            {{ displayStatus(summary.reason) }}
                         </p>
                     </article>
                 </div>

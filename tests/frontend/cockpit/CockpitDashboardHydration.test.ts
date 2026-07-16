@@ -443,7 +443,7 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(panel.exists()).toBe(true);
         expect(wrapper.text()).toContain('Settlement OS Operating Overview');
         expect(panel.text()).toContain('Start here for generation, inspection, and attention queues');
-        expect(panel.text()).toContain('1/3 read-models available');
+        expect(panel.text()).toContain('1/3 summaries connected');
         expect(panel.text()).not.toContain('integration read-models not wired');
         expect(panel.text()).toContain('Pay Codes');
         expect(panel.text()).toContain('4');
@@ -455,6 +455,10 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(links[0].attributes('href')).toBe('/x/cockpit/pay-codes');
         expect(links[1].attributes('href')).toBe('/x/cockpit/quick-generate');
         expect(links[2].attributes('href')).toBe('/x/cockpit/pay-codes?status=expired');
+        links.forEach((link) => {
+            expect(link.classes()).toContain('min-h-7');
+            expect(link.classes()).toContain('whitespace-nowrap');
+        });
         expect(panel.text()).not.toContain('must-not-render');
         expect(panel.text()).not.toContain('provider_payload');
         expect(panel.text()).not.toContain('raw_payload');
@@ -485,6 +489,10 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(links[0].attributes('href')).toBe('/x/cockpit/quick-generate');
         expect(links[1].attributes('href')).toBe('/x/cockpit/pay-codes');
         expect(links[2].attributes('href')).toBe('/x/cockpit/pay-codes?status=expired');
+        links.forEach((link) => {
+            expect(link.classes()).toContain('min-h-7');
+            expect(link.classes()).toContain('whitespace-nowrap');
+        });
         expect(wrapper.findAll('[data-testid="cockpit-operator-focus-item"]')).toHaveLength(3);
     });
 
@@ -620,12 +628,13 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('250 recipients');
         expect(wrapper.text()).toContain('campaign-plan-1');
         expect(wrapper.text()).toContain('execution-1');
-        expect(wrapper.text()).toContain('campaign_dashboard');
-        expect(wrapper.text()).toContain('attachment_operator_workspace');
-        expect(wrapper.text()).toContain('audience_import_workspace: ready');
-        expect(wrapper.text()).toContain('review_campaign: available');
-        expect(wrapper.text()).toContain('generate_pay_codes: blocked');
-        expect(wrapper.text()).toContain('campaign-mutations-not-authorized');
+        expect(wrapper.text()).toContain('Campaign Dashboard');
+        expect(wrapper.text()).toContain('Attachment Operator Workspace');
+        expect(wrapper.text()).toContain('Audience Import Workspace: Ready');
+        expect(wrapper.text()).toContain('Review Campaign: Available');
+        expect(wrapper.text()).toContain('Generate Pay Codes: Blocked');
+        expect(wrapper.text()).toContain('Campaign changes disabled');
+        expect(wrapper.text()).not.toContain('campaign-mutations-not-authorized');
         expect(wrapper.find('[data-testid="cockpit-campaign-adoption-panel"]').exists()).toBe(true);
         expect(wrapper.findAll('[data-testid="cockpit-campaign-surface"]')).toHaveLength(2);
     });
@@ -668,7 +677,7 @@ describe('Cockpit dashboard read model hydration', () => {
         });
 
         expect(wrapper.text()).toContain('Campaign Cockpit Adoption');
-        expect(wrapper.text()).toContain('Campaign read model unavailable');
+        expect(wrapper.text()).toContain('Campaign summary not connected');
         expect(wrapper.text()).toContain('No campaign selected');
         expect(wrapper.text()).not.toContain('missing-campaign-context');
         expect(wrapper.text()).toContain('Read-only boundary');
@@ -813,9 +822,12 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('Feedback Deliveries');
         expect(wrapper.text()).toContain('x-feedback delivery source');
         expect(wrapper.text()).toContain('1 deliveries');
-        expect(wrapper.text()).toContain('journal-evidence-summary-only');
-        expect(wrapper.text()).toContain('safe-action-host-summary-only');
-        expect(wrapper.text()).toContain('communication-delivery-summary-only');
+        expect(wrapper.text()).toContain('Journal Evidence Summary Only');
+        expect(wrapper.text()).toContain('Safe Action Host Summary Only');
+        expect(wrapper.text()).toContain('Communication Delivery Summary Only');
+        expect(wrapper.text()).not.toContain('journal-evidence-summary-only');
+        expect(wrapper.text()).not.toContain('safe-action-host-summary-only');
+        expect(wrapper.text()).not.toContain('communication-delivery-summary-only');
         expect(wrapper.text()).not.toContain('must-not-render');
         expect(wrapper.findAll('[data-testid="cockpit-integration-summary-card"]')).toHaveLength(3);
         expect(wrapper.find('[data-testid="cockpit-activity-readiness-summary"]').exists()).toBe(true);
@@ -843,8 +855,8 @@ describe('Cockpit dashboard read model hydration', () => {
         });
 
         expect(wrapper.text()).toContain('Journal Evidence');
-        expect(wrapper.text()).toContain('unavailable');
-        expect(wrapper.text()).toContain('read-model-unavailable');
+        expect(wrapper.text()).toContain('Unavailable');
+        expect(wrapper.text()).toContain('Read Model Unavailable');
         expect(wrapper.text()).not.toContain('RuntimeException');
         expect(wrapper.text()).not.toContain('must-not-render');
     });
@@ -911,9 +923,9 @@ describe('Cockpit dashboard read model hydration', () => {
         });
 
         expect(wrapper.text()).toContain('Integration Summary');
-        expect(wrapper.text()).toContain('journal-evidence-summary-only');
-        expect(wrapper.text()).toContain('safe-action-host-summary-only');
-        expect(wrapper.text()).toContain('communication-delivery-summary-only');
+        expect(wrapper.text()).toContain('Journal Evidence Summary Only');
+        expect(wrapper.text()).toContain('Safe Action Host Summary Only');
+        expect(wrapper.text()).toContain('Communication Delivery Summary Only');
         expect(wrapper.text()).not.toContain('SECRET-DO-NOT-RENDER');
         expect(wrapper.text()).not.toContain('RuntimeException');
         expect(wrapper.text()).not.toContain('Stack trace must stay hidden');
@@ -935,9 +947,12 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('Pay Code PC-1234 issued');
         expect(wrapper.text()).toContain('PHP 100.00 issued through Quick Generate');
         expect(wrapper.text()).toContain('corr-1');
-        expect(wrapper.text()).toContain('journal: recorded');
-        expect(wrapper.text()).toContain('action: composed');
-        expect(wrapper.text()).toContain('feedback: planned');
+        expect(wrapper.text()).toContain('Journal: Recorded');
+        expect(wrapper.text()).toContain('Action: Prepared');
+        expect(wrapper.text()).toContain('Feedback: Planned');
+        expect(wrapper.text()).not.toContain('journal: recorded');
+        expect(wrapper.text()).not.toContain('action: composed');
+        expect(wrapper.text()).not.toContain('feedback: planned');
         expect(wrapper.text()).toContain('Journal entry: journal-entry-1');
         expect(wrapper.text()).toContain('Writes journal: yes');
         expect(wrapper.text()).toContain('Source: test-journal-handoff');
@@ -1039,14 +1054,14 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(search.attributes('disabled')).toBeUndefined();
         expect(status.attributes('name')).toBe('activity_status');
         expect((status.element as HTMLSelectElement).value).toBe('issued');
-        expect(status.text()).toContain('failed');
+        expect(status.text()).toContain('Failed');
         expect(handoff.attributes('name')).toBe('activity_handoff_status');
         expect((handoff.element as HTMLSelectElement).value).toBe('recorded');
-        expect(handoff.text()).toContain('planned');
+        expect(handoff.text()).toContain('Planned');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-active-filters"]').text()).toContain('3 active filters');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-active-filters"]').text()).toContain('Read-only filter query; no activity mutation is executed.');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-result-summary"]').text()).toContain('Showing 1 matching activity for the current read-only filters.');
-        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-filter-summary"]').text()).toContain('Filters: search “money changer” · status issued · handoff recorded');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-filter-summary"]').text()).toContain('Filters: search “money changer” · status Issued · follow-up Recorded');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-filter-clear"]').attributes('href')).toBe('/x/cockpit');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-clear-search"]').attributes('href')).toBe('/x/cockpit?activity_status=issued&activity_handoff_status=recorded');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-clear-status"]').attributes('href')).toBe('/x/cockpit?activity_search=money+changer&activity_handoff_status=recorded');

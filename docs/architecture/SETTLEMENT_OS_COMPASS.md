@@ -62,6 +62,12 @@ Last updated: 2026-07-13
 
 ### Current Cockpit Host Integration
 
+- Cockpit Dashboard Final Copy Polish — Replace Remaining Engineering Tokens complete:
+  - Replaced visible dashboard engineering tokens with operator-facing copy.
+  - Converted visible activity filter copy from handoff language to follow-up status language while preserving existing query parameter names and raw contract values.
+  - Normalized dashboard action link and status pill sizing with compact no-wrap classes to avoid uneven badge heights.
+  - Confirmed no read-model, storage, filter contract, lifecycle, execution, journal, action, feedback, provider, campaign, voucher, wallet, public API, or unsafe-payload behavior changed.
+  - Report: [../ui-cockpit/reports/439-dashboard-final-copy-polish-engineering-tokens.md](../ui-cockpit/reports/439-dashboard-final-copy-polish-engineering-tokens.md).
 - Cockpit Wave 72 — Manual Distribution External Evidence Runtime Implementation Decision complete:
   - Closed the external evidence planning track as `planning-track-complete / runtime-deferred`.
   - Confirmed no runtime evidence intake routes, controllers, forms, tables, migrations, models, DTOs, repositories, services, policies, storage, package writers, mutations, provider calls, voucher mutation, wallet mutation, or money movement were added.

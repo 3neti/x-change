@@ -4,6 +4,47 @@ import type { CockpitActivityItem } from '../types';
 defineProps<{
     items: CockpitActivityItem[];
 }>();
+
+function displayStatus(value: string | undefined): string {
+    const normalized = value?.trim();
+
+    if (!normalized) {
+        return 'Not connected';
+    }
+
+    if (normalized === 'durable_summary_evidence_available') {
+        return 'Summary evidence available';
+    }
+
+    if (normalized === 'runtime_handoff_profile_only') {
+        return 'Runtime profile only';
+    }
+
+    if (normalized === 'not_wired') {
+        return 'Not connected';
+    }
+
+    if (normalized === 'not-loaded') {
+        return 'No data loaded';
+    }
+
+    if (normalized === 'read-model-ready') {
+        return 'Ready for display';
+    }
+
+    return normalized
+        .replaceAll('_', ' ')
+        .replaceAll('-', ' ')
+        .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function displayTarget(value: string): string {
+    if (value === 'handoff_summary_journal') {
+        return 'handoff summary journal';
+    }
+
+    return value.replaceAll('_', ' ');
+}
 </script>
 
 <template>
@@ -29,7 +70,7 @@ defineProps<{
                     <p class="text-sm font-semibold text-slate-950 dark:text-slate-50">
                         {{ item.label }}
                     </p>
-                    <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    <span class="inline-flex min-h-5 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-slate-100 px-2 py-0.5 text-center text-[0.65rem] font-semibold uppercase leading-none tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                         {{ item.source }}
                     </span>
                 </div>
@@ -45,11 +86,11 @@ defineProps<{
                     data-testid="cockpit-activity-projection-status"
                 >
                     <div class="flex flex-wrap items-center gap-2">
-                        <span class="rounded-full bg-white px-2 py-0.5 font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-900 dark:text-emerald-100">
+                        <span class="inline-flex min-h-5 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-white px-2 py-0.5 text-center font-semibold uppercase leading-none tracking-wide text-emerald-700 dark:bg-emerald-900 dark:text-emerald-100">
                             {{ item.projection_badge ?? 'Execution evidence' }}
                         </span>
                         <span class="font-semibold">
-                            {{ item.projection_status }}
+                            {{ displayStatus(item.projection_status) }}
                         </span>
                     </div>
                     <p
@@ -62,7 +103,7 @@ defineProps<{
                         v-if="item.projection_targets?.length"
                         class="mt-2 text-emerald-700 dark:text-emerald-300"
                     >
-                        Targets: {{ item.projection_targets.join(', ') }}
+                        Targets: {{ item.projection_targets.map(displayTarget).join(', ') }}
                     </p>
                 </div>
             </article>
