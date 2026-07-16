@@ -116,6 +116,13 @@ const channelArtifactSummary = computed(() => [
         helper: 'Copy text, QR, and short-link facts remain read-only.',
     },
 ]);
+const manualDistributionChecklist = [
+    'Verify the intended recipient outside Cockpit.',
+    'Copy the beneficiary claim URL from this page.',
+    'Send it only through an approved external workflow.',
+    'Do not treat copy as delivery confirmation.',
+    'Return to Pay Code Detail for lifecycle and evidence review.',
+];
 const campaignNavigationContext = computed<CockpitCampaignNavigationContext | null>(() => {
     const context = props.campaign_navigation_context;
 
@@ -470,6 +477,30 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                             </p>
                         </div>
                     </dl>
+                </div>
+
+                <div
+                    class="mt-5 rounded-xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/60 dark:bg-slate-950/70"
+                    data-testid="cockpit-distribution-manual-checklist"
+                >
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                        Manual distribution checklist
+                    </p>
+                    <ol class="mt-4 grid gap-3 text-sm md:grid-cols-2">
+                        <li
+                            v-for="(item, index) in manualDistributionChecklist"
+                            :key="item"
+                            class="flex gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-800"
+                            data-testid="cockpit-distribution-manual-checklist-item"
+                        >
+                            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200">
+                                {{ index + 1 }}
+                            </span>
+                            <span class="leading-6 text-slate-600 dark:text-slate-300">
+                                {{ item }}
+                            </span>
+                        </li>
+                    </ol>
                 </div>
             </section>
 

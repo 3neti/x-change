@@ -448,6 +448,50 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(items).toHaveLength(4);
     });
 
+    it('renders a manual distribution checklist near the primary summary', () => {
+        const wrapper = mount(DistributionWorkspace, {
+            props: {
+                context: { code: 'PC-DIST-001' },
+                distribution_workspace_read_model: {
+                    schema: 'x-change.cockpit.distribution-workspace.v1',
+                    status: 'available',
+                    authorized: true,
+                    code: 'PC-DIST-001',
+                    summary: {
+                        code: 'PC-DIST-001',
+                        display_status: 'ready',
+                    },
+                    distribution_links: {
+                        schema: 'x-change.cockpit.distribution-links.v1',
+                        status: 'available',
+                        available: true,
+                        read_only: true,
+                        redeem_url: 'https://example.test/x/claim/PC-DIST-001/experience',
+                        redeem_path: '/x/claim/PC-DIST-001/experience',
+                        source: 'x-change.claim.experience',
+                        delivery_enabled: false,
+                        redactions: { payloads: 'distribution-links-only' },
+                    },
+                    redactions: {
+                        payloads: 'distribution-read-model-summary-only',
+                    },
+                },
+            },
+        });
+
+        const checklist = wrapper.find('[data-testid="cockpit-distribution-manual-checklist"]');
+        const items = checklist.findAll('[data-testid="cockpit-distribution-manual-checklist-item"]');
+
+        expect(checklist.exists()).toBe(true);
+        expect(checklist.text()).toContain('Manual distribution checklist');
+        expect(checklist.text()).toContain('Verify the intended recipient outside Cockpit');
+        expect(checklist.text()).toContain('Copy the beneficiary claim URL from this page');
+        expect(checklist.text()).toContain('approved external workflow');
+        expect(checklist.text()).toContain('Do not treat copy as delivery confirmation');
+        expect(checklist.text()).toContain('Return to Pay Code Detail');
+        expect(items).toHaveLength(5);
+    });
+
     it('copies the Distribution Workspace beneficiary URL through the browser clipboard only', async () => {
         const writeText = vi.fn().mockResolvedValue(undefined);
 
