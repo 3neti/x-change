@@ -232,6 +232,30 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(wrapper.text()).not.toContain('provider_payload');
     });
 
+    it('summarizes row action safety before the result rows', () => {
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: payCodesReadModel,
+            },
+        });
+
+        const guidance = wrapper.find('[data-testid="cockpit-pay-code-row-action-guidance"]');
+        const items = guidance.findAll('[data-testid="cockpit-pay-code-row-action-guidance-item"]');
+
+        expect(guidance.exists()).toBe(true);
+        expect(guidance.text()).toContain('Row action guidance');
+        expect(guidance.text()).toContain('navigation-only');
+        expect(guidance.text()).toContain('Navigation Links');
+        expect(guidance.text()).toContain('2');
+        expect(guidance.text()).toContain('Blocked Actions');
+        expect(guidance.text()).toContain('1');
+        expect(guidance.text()).toContain('Rows');
+        expect(guidance.text()).toContain('safe navigation or disabled placeholders');
+        expect(guidance.text()).toContain('does not execute actions');
+        expect(guidance.text()).toContain('does not execute actions, deliver feedback, mutate vouchers, or call providers');
+        expect(items).toHaveLength(3);
+    });
+
     it('renders an explicit empty state for authorized empty list read models', () => {
         const wrapper = mount(PayCodeExplorer, {
             props: {

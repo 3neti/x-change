@@ -2441,3 +2441,10 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - The summary shows visible/filtered count, total count, needs-attention count, payload policy, current query/status, and safe Quick Generate / Clear filters navigation.
 - Verification report: `../ui-cockpit/reports/424-pay-code-explorer-productization-slice-1-primary-summary.md`.
 - Boundary remains unchanged: no voucher mutation, driver execution, claim approval, feedback delivery, journal write, provider call, wallet movement, campaign dispatch, public API behavior, execution behavior, or unsafe payload exposure changed.
+
+## 2026-07-16 Update — Pay Code Explorer Productization Slice 2 — Row Action Guidance
+
+- The Pay Code Explorer now summarizes enabled navigation links, blocked row actions, and sanitized row count before the results table.
+- It clarifies that row actions are navigation-only or disabled placeholders.
+- Verification report: `../ui-cockpit/reports/425-pay-code-explorer-productization-slice-2-row-action-guidance.md`.
+- Boundary remains unchanged: no x-action execution, feedback delivery, voucher mutation, claim approval, driver execution, provider call, wallet movement, journal write, public API behavior, or execution behavior changed.

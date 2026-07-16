@@ -65,6 +65,32 @@ const primarySummaryItems = computed(() => [
         helper: 'List rows are sanitized before display.',
     },
 ]);
+const enabledRowActionCount = computed(() => records.value.reduce((count, record) => (
+    count + record.actions.filter((action) => action.enabled && action.href !== null).length
+), 0));
+const disabledRowActionCount = computed(() => records.value.reduce((count, record) => (
+    count + record.actions.filter((action) => action.disabled).length
+), 0));
+const rowActionGuidance = computed(() => [
+    {
+        key: 'navigation',
+        label: 'Navigation Links',
+        value: String(enabledRowActionCount.value),
+        helper: 'Enabled row actions are read-only links to Cockpit detail or distribution pages.',
+    },
+    {
+        key: 'blocked',
+        label: 'Blocked Actions',
+        value: String(disabledRowActionCount.value),
+        helper: 'Disabled row actions remain informational and do not execute feedback or workflow actions.',
+    },
+    {
+        key: 'result-rows',
+        label: 'Rows',
+        value: String(records.value.length),
+        helper: 'Rows are sanitized before rendering.',
+    },
+]);
 const campaignNavigationContext = computed<CockpitCampaignNavigationContext | null>(() => {
     const context = props.campaign_navigation_context;
 
@@ -403,6 +429,43 @@ function integrationBadge(
                         </a>
                     </div>
                 </div>
+            </section>
+
+            <section
+                class="rounded-xl border border-emerald-200 bg-white p-5 shadow-sm dark:border-emerald-900/70 dark:bg-slate-900"
+                data-testid="cockpit-pay-code-row-action-guidance"
+            >
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
+                            Row action guidance
+                        </p>
+                        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                            Row actions are safe navigation or disabled placeholders. This page does not execute actions, deliver feedback, mutate vouchers, or call providers from a list row.
+                        </p>
+                    </div>
+                    <span class="w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200">
+                        navigation-only
+                    </span>
+                </div>
+                <dl class="mt-4 grid gap-3 text-sm md:grid-cols-3">
+                    <div
+                        v-for="item in rowActionGuidance"
+                        :key="item.key"
+                        class="rounded-lg border border-slate-200 p-3 dark:border-slate-800"
+                        data-testid="cockpit-pay-code-row-action-guidance-item"
+                    >
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            {{ item.label }}
+                        </dt>
+                        <dd class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">
+                            {{ item.value }}
+                        </dd>
+                        <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                            {{ item.helper }}
+                        </p>
+                    </div>
+                </dl>
             </section>
 
             <section
