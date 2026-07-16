@@ -2391,3 +2391,13 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Guidance supports ready/available, expired, claimed/redeemed, and approval/review presentations.
 - Verification report: `../ui-cockpit/reports/418-pay-code-detail-productization-slice-4-lifecycle-guidance.md`.
 - Boundary remains unchanged: guidance does not authorize or block distribution, mutate vouchers, execute drivers, write journal entries, execute actions, send feedback, call providers, move wallet funds, change claim UX, change public APIs, or change execution behavior.
+
+## 2026-07-16 Update — Pay Code Detail Productization Slice 5 — Publish / Closure
+
+- Pay Code Detail Productization is closed.
+- Package Cockpit assets were published into the host app.
+- Asset drift is clean: `checked 60, ok 60, stale 0, missing 0, extra 0`.
+- Focused frontend verification passed and the host production build completed successfully.
+- Closure report: `../ui-cockpit/reports/419-pay-code-detail-productization-publish-closure.md`.
+- The wave remains presentation-only: no voucher mutation, execution-driver invocation, journal write, x-action execution, x-feedback delivery, provider call, wallet movement, campaign dispatch, claim UX behavior, public API behavior, or unsafe payload exposure was added.
+- Next recommended wave: Distribution Workspace Productization.
