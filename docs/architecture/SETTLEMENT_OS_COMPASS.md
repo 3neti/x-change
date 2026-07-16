@@ -2618,3 +2618,10 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Technical payload/readiness rows are no longer rendered in the default dashboard scrape.
 - UI report: `../ui-cockpit/reports/444-dashboard-connected-services-disclosure-fix.md`.
 - Boundary remains unchanged: presentation-only dashboard cleanup; no read-model, journal, action, feedback, provider, campaign, voucher, wallet, public API, lifecycle truth, or execution behavior changed.
+
+## 2026-07-17 Update — Cockpit Dashboard Campaign Section Compaction
+
+- `/x/cockpit` Campaigns section now keeps surfaces, workspace panels, operator actions, and mutation status behind `Campaign details`.
+- Connected campaign Quick Generate / Explorer links remain visible as read-only navigation.
+- UI report: `../ui-cockpit/reports/445-dashboard-campaign-section-compaction.md`.
+- Boundary remains unchanged: presentation-only dashboard cleanup; no campaign mutation, campaign dispatch, Pay Code generation behavior, read-model behavior, journal, action, feedback, provider, voucher, wallet, public API, lifecycle truth, or execution behavior changed.

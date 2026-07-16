@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import type {
     CockpitCampaignActionStatus,
     CockpitCampaignPanelStatus,
@@ -12,6 +12,7 @@ const props = defineProps<{
     readModel?: CockpitCampaignReadModel;
 }>();
 
+const detailsExpanded = ref(false);
 const model = computed(() => props.readModel);
 const facts = computed<Record<string, unknown>>(() => objectValue(model.value?.facts));
 const campaignCard = computed<Record<string, unknown>>(() => objectValue(objectValue(facts.value.cards).campaign));
@@ -202,6 +203,10 @@ function displayStatus(value: string): string {
 
     return displayKey(value);
 }
+
+function toggleDetails(): void {
+    detailsExpanded.value = !detailsExpanded.value;
+}
 </script>
 
 <template>
@@ -235,64 +240,80 @@ function displayStatus(value: string): string {
             </div>
         </div>
 
-        <div v-if="surfaces.length > 0" class="mt-5 grid gap-3 md:grid-cols-2">
-            <article
-                v-for="surface in surfaces"
-                :key="surface.key"
-                class="rounded-lg border border-slate-100 px-3 py-3 dark:border-slate-800"
-                data-testid="cockpit-campaign-surface"
+        <button
+            type="button"
+            class="mt-5 inline-flex min-h-8 items-center justify-center rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold leading-none text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+            data-testid="cockpit-campaign-details-toggle"
+            :aria-expanded="detailsExpanded"
+            @click="toggleDetails"
+        >
+            {{ detailsExpanded ? 'Hide campaign details' : 'Campaign details' }}
+        </button>
+
+        <div
+            v-if="detailsExpanded"
+            class="mt-4 space-y-4"
+            data-testid="cockpit-campaign-details"
+        >
+            <div v-if="surfaces.length > 0" class="grid gap-3 md:grid-cols-2">
+                <article
+                    v-for="surface in surfaces"
+                    :key="surface.key"
+                    class="rounded-lg border border-slate-100 px-3 py-3 dark:border-slate-800"
+                    data-testid="cockpit-campaign-surface"
             >
-                <div class="flex items-center justify-between gap-3">
-                    <p class="text-sm font-semibold text-slate-950 dark:text-slate-50">
-                        {{ displayKey(surface.key) }}
+                    <div class="flex items-center justify-between gap-3">
+                        <p class="text-sm font-semibold text-slate-950 dark:text-slate-50">
+                            {{ displayKey(surface.key) }}
+                        </p>
+                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                            {{ surface.read_only ? 'Read-only' : 'Blocked' }}
+                        </span>
+                    </div>
+                    <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                        {{ displayStatus(surface.status) }}
                     </p>
-                    <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                        {{ surface.read_only ? 'Read-only' : 'Blocked' }}
-                    </span>
-                </div>
-                <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                    {{ displayStatus(surface.status) }}
-                </p>
-            </article>
-        </div>
+                </article>
+            </div>
 
-        <div class="mt-5 grid gap-3 md:grid-cols-2">
-            <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
-                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Workspace panels
-                </p>
-                <div class="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                    <p v-if="panels.length === 0">
-                        No campaign panels authorized for display.
+            <div class="grid gap-3 md:grid-cols-2">
+                <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        Workspace panels
                     </p>
-                    <p v-for="panel in panels" :key="panel.key">
-                        {{ displayKey(panel.key) }}: {{ displayStatus(panel.status) }}
+                    <div class="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
+                        <p v-if="panels.length === 0">
+                            No campaign panels authorized for display.
+                        </p>
+                        <p v-for="panel in panels" :key="panel.key">
+                            {{ displayKey(panel.key) }}: {{ displayStatus(panel.status) }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        Operator actions
                     </p>
+                    <div class="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
+                        <p v-if="actions.length === 0">
+                            No campaign actions authorized for display.
+                        </p>
+                        <p v-for="action in actions" :key="action.key">
+                            {{ displayKey(action.key) }}: {{ displayStatus(action.status) }}
+                        </p>
+                    </div>
                 </div>
             </div>
 
-            <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
-                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Operator actions
+            <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
+                <p class="font-semibold">
+                    Campaign changes
                 </p>
-                <div class="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                    <p v-if="actions.length === 0">
-                        No campaign actions authorized for display.
-                    </p>
-                    <p v-for="action in actions" :key="action.key">
-                        {{ displayKey(action.key) }}: {{ displayStatus(action.status) }}
-                    </p>
-                </div>
+                <p class="mt-1">
+                    {{ mutationReason }}
+                </p>
             </div>
-        </div>
-
-        <div class="mt-5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
-            <p class="font-semibold">
-                Campaign changes
-            </p>
-            <p class="mt-1">
-                {{ mutationReason }}
-            </p>
         </div>
 
         <div

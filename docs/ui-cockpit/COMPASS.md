@@ -2857,3 +2857,10 @@ Current boundary:
 - Payload policy and display readiness rows render only after opening a specific service card toggle.
 - Verification report: `reports/444-dashboard-connected-services-disclosure-fix.md`.
 - Boundary remains unchanged: no read-model behavior, durable activity storage behavior, filters, lifecycle truth, execution behavior, journal writes, x-action execution, x-feedback delivery, provider calls, campaign mutation, voucher mutation, wallet movement, public API behavior, or unsafe payload exposure changed.
+
+## 2026-07-17 Update — Dashboard Campaign Section Compaction
+
+- Compacted `/x/cockpit` Campaigns section so the default view shows only primary campaign summary state and connected read-only navigation.
+- Moved campaign surfaces, workspace panels, operator actions, and mutation status behind `Campaign details`.
+- Verification report: `reports/445-dashboard-campaign-section-compaction.md`.
+- Boundary remains unchanged: no campaign mutation, campaign dispatch, Pay Code generation behavior, read-model behavior, lifecycle truth, journal writes, x-action execution, x-feedback delivery, provider calls, voucher mutation, wallet movement, public API behavior, execution behavior, or unsafe payload exposure changed.

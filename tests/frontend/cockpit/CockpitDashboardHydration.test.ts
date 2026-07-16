@@ -615,7 +615,7 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).not.toContain('must-not-render');
     });
 
-    it('hydrates read-only campaign cockpit presentation from campaign read model props', () => {
+    it('hydrates read-only campaign cockpit presentation from campaign read model props', async () => {
         const wrapper = mount(CockpitDashboard, {
             props: {
                 dashboard_read_model: dashboardReadModel,
@@ -628,6 +628,13 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('250 recipients');
         expect(wrapper.text()).toContain('campaign-plan-1');
         expect(wrapper.text()).toContain('execution-1');
+        expect(wrapper.text()).toContain('Campaign details');
+        expect(wrapper.text()).not.toContain('Campaign Dashboard');
+        expect(wrapper.text()).not.toContain('Attachment Operator Workspace');
+        expect(wrapper.text()).not.toContain('Audience Import Workspace: Ready');
+        expect(wrapper.text()).not.toContain('Review Campaign: Available');
+        expect(wrapper.text()).not.toContain('Generate Pay Codes: Blocked');
+        await wrapper.find('[data-testid="cockpit-campaign-details-toggle"]').trigger('click');
         expect(wrapper.text()).toContain('Campaign Dashboard');
         expect(wrapper.text()).toContain('Attachment Operator Workspace');
         expect(wrapper.text()).toContain('Audience Import Workspace: Ready');
@@ -637,6 +644,7 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).not.toContain('campaign-mutations-not-authorized');
         expect(wrapper.find('[data-testid="cockpit-campaign-adoption-panel"]').exists()).toBe(true);
         expect(wrapper.findAll('[data-testid="cockpit-campaign-surface"]')).toHaveLength(2);
+        expect(wrapper.find('[data-testid="cockpit-campaign-details"]').exists()).toBe(true);
     });
 
     it('does not render unsafe campaign cockpit payload values or mutation affordances', () => {
@@ -680,7 +688,10 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('Campaign summary not connected');
         expect(wrapper.text()).toContain('No campaign selected');
         expect(wrapper.text()).not.toContain('missing-campaign-context');
-        expect(wrapper.text()).toContain('No campaign selected');
+        expect(wrapper.text()).not.toContain('No campaign panels authorized for display.');
+        expect(wrapper.text()).not.toContain('No campaign actions authorized for display.');
+        expect(wrapper.text()).not.toContain('Campaign changes disabled');
+        expect(wrapper.find('[data-testid="cockpit-campaign-details"]').exists()).toBe(false);
     });
 
     it('forwards campaign route adapter props into the cockpit dashboard page', () => {
