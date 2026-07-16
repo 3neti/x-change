@@ -444,6 +444,7 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('Settlement OS Operating Overview');
         expect(panel.text()).toContain('Start here for generation, inspection, and attention queues');
         expect(panel.text()).toContain('1/3 read-models available');
+        expect(panel.text()).not.toContain('integration read-models not wired');
         expect(panel.text()).toContain('Pay Codes');
         expect(panel.text()).toContain('4');
         expect(panel.text()).toContain('Quick Generate');
@@ -459,7 +460,7 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(panel.text()).not.toContain('raw_payload');
     });
 
-    it('renders operator focus guidance as safe navigation only', () => {
+    it('renders operator focus guidance as links only', () => {
         const wrapper = mount(CockpitDashboard, {
             props: {
                 dashboard_read_model: dashboardReadModel,
@@ -475,7 +476,8 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(panel.text()).toContain('Generate a Pay Code');
         expect(panel.text()).toContain('Inspect Pay Codes');
         expect(panel.text()).toContain('Review attention queue');
-        expect(panel.text()).toContain('safe navigation');
+        expect(panel.text()).toContain('Links only');
+        expect(panel.text()).not.toContain('safe navigation');
         expect(panel.text()).toContain('They do not execute money movement');
         expect(panel.text()).toContain('4 visible');
         expect(panel.text()).toContain('1 sanitized summaries');
@@ -544,6 +546,19 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(executionPanel.text()).toContain('Execution evidence');
         expect(executionPanel.text()).toContain('Execution recorded for PC-EXEC-001');
         expect(executionPanel.text()).not.toContain('Pay Code PC-1234 issued');
+    });
+
+    it('uses operator-friendly copy for disconnected integration summaries', () => {
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                dashboard_read_model: dashboardReadModel,
+            },
+        });
+
+        const panel = wrapper.find('[data-testid="cockpit-operating-summary-panel"]');
+
+        expect(panel.text()).toContain('Journal, action, and feedback summaries not connected yet');
+        expect(panel.text()).not.toContain('integration read-models not wired');
     });
 
     it('does not render unsafe dashboard payload values', () => {
@@ -646,7 +661,7 @@ describe('Cockpit dashboard read model hydration', () => {
                     },
                     redactions: {
                         payloads: 'not-loaded',
-                        reason: 'package-not-installed',
+                            reason: 'missing-campaign-context',
                     },
                 },
             },
@@ -654,7 +669,8 @@ describe('Cockpit dashboard read model hydration', () => {
 
         expect(wrapper.text()).toContain('Campaign Cockpit Adoption');
         expect(wrapper.text()).toContain('Campaign read model unavailable');
-        expect(wrapper.text()).toContain('package-not-installed');
+        expect(wrapper.text()).toContain('No campaign selected');
+        expect(wrapper.text()).not.toContain('missing-campaign-context');
         expect(wrapper.text()).toContain('Read-only boundary');
     });
 
@@ -955,7 +971,7 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('Purpose: Campaign payout');
         expect(wrapper.text()).toContain('Campaign mutation: no');
         expect(wrapper.text()).toContain('Read-only: yes');
-        expect(wrapper.text()).toContain('presentation-only');
+        expect(wrapper.text()).toContain('Read-only');
         expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-card"]')).toHaveLength(1);
         expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-campaign-attribution"]')).toHaveLength(1);
         expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-journal-summary"]')).toHaveLength(1);

@@ -144,7 +144,7 @@ const operatingIntegrationStatus = computed(() => {
         return `${availableCount}/${integrationSummaries.value.length} read-models available`;
     }
 
-    return 'integration read-models not wired';
+    return 'Journal, action, and feedback summaries not connected yet';
 });
 
 function metricValue(key: string): string | undefined {
@@ -386,7 +386,7 @@ function integrationSourceLabel(key: string): string {
                             Start here for generation, inspection, and attention queues
                         </h3>
                         <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-700 dark:text-slate-300">
-                            The dashboard aggregates existing Cockpit read models into safe navigation. Journal,
+                            The dashboard aggregates existing Cockpit read models into safe links. Journal,
                             action, feedback, provider, campaign, voucher, and wallet mutations remain outside this
                             page.
                         </p>
@@ -446,7 +446,7 @@ function integrationSourceLabel(key: string): string {
                         </p>
                     </div>
                     <span class="inline-flex rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:border-slate-700 dark:text-slate-300">
-                        safe navigation
+                        Links only
                     </span>
                 </div>
 

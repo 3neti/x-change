@@ -2566,3 +2566,14 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Closure report: `../ui-cockpit/reports/437-dashboard-activity-rationalization-publish-closure.md`.
 - The wave remains UI/copy/layout/test hardening only: no read-model behavior, activity storage behavior, filters, lifecycle truth, execution behavior, journal writes, x-action execution, x-feedback delivery, provider calls, campaign mutation, voucher mutation, wallet movement, public API behavior, or unsafe payload exposure changed.
 - Next recommended checkpoint: manual browser acceptance for `/x/cockpit`, then choose the next page-specific target.
+
+## 2026-07-16 Update — Dashboard Operator Copy Cleanup — Friendly Status Labels
+
+- Replaced architectural dashboard badges with operator-friendly labels:
+  - `integration read-models not wired` → `Journal, action, and feedback summaries not connected yet`.
+  - `safe navigation` → `Links only`.
+  - `presentation-only` → `Read-only`.
+  - `Read model pending` → `Balance summary not connected yet`.
+  - `missing-campaign-context` → `No campaign selected`.
+- Verification report: `../ui-cockpit/reports/438-dashboard-operator-copy-cleanup-friendly-status-labels.md`.
+- Boundary remains unchanged: no read-model behavior, activity storage behavior, filters, lifecycle truth, execution behavior, journal writes, x-action execution, x-feedback delivery, provider calls, campaign mutation, voucher mutation, wallet movement, public API behavior, or unsafe payload exposure changed.

@@ -577,7 +577,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                 </h3>
             </div>
             <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                presentation-only
+                Read-only
             </span>
         </div>
 

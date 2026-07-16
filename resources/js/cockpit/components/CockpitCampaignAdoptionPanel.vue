@@ -33,7 +33,15 @@ const recipientCount = computed(() => {
 const planningKey = computed(() => stringValue(facts.value.planning_key) ?? 'No planning key');
 const executionId = computed(() => stringValue(facts.value.execution_id) ?? 'No execution id');
 const mutationReason = computed(() => stringValue(objectValue(model.value?.mutation).reason) ?? 'campaign-mutations-not-authorized');
-const unavailableReason = computed(() => stringValue(objectValue(model.value?.redactions).reason) ?? 'read-model-not-available');
+const unavailableReason = computed(() => {
+    const reason = stringValue(objectValue(model.value?.redactions).reason) ?? 'read-model-not-available';
+
+    if (reason === 'missing-campaign-context') {
+        return 'No campaign selected';
+    }
+
+    return reason;
+});
 const quickGenerateLink = computed<CockpitCampaignQuickGenerateLink | null>(() => sanitizeQuickGenerateLink(model.value?.quick_generate_link));
 const recipientQuickGenerateLinks = computed<CockpitCampaignQuickGenerateLink[]>(() => {
     if (!Array.isArray(model.value?.recipient_quick_generate_links)) {

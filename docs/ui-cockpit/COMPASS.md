@@ -4,12 +4,21 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Dashboard Activity Rationalization Slice 4/5 — Host Publish / Closure
-Status: Dashboard Activity Rationalization is closed after host publish, drift verification, focused frontend tests, and host build
+Current slice: Dashboard Operator Copy Cleanup — Friendly Status Labels
+Status: Dashboard operator-facing architectural labels have friendlier copy
 Last updated: 2026-07-16
 
 ## Completed
 
+- Completed Dashboard Operator Copy Cleanup — Friendly Status Labels:
+  - Replaced `integration read-models not wired` with `Journal, action, and feedback summaries not connected yet`.
+  - Replaced `safe navigation` with `Links only`.
+  - Replaced the Issuance Activity `presentation-only` badge with `Read-only`.
+  - Replaced Liquidity `Read model pending` with `Balance summary not connected yet`.
+  - Replaced campaign `missing-campaign-context` display with `No campaign selected`.
+  - Confirmed this is copy-only and does not alter read models, activity storage, filters, lifecycle truth, execution, journal, action, feedback, provider, campaign, voucher, wallet, public API, or unsafe payload behavior.
+  - Report: `reports/438-dashboard-operator-copy-cleanup-friendly-status-labels.md`.
+  - Next recommended checkpoint: Manual browser acceptance for `/x/cockpit`.
 - Completed Dashboard Activity Rationalization Slice 4/5 — Host Publish / Closure:
   - Published package Cockpit assets into the host app.
   - Verified published asset drift is clean: `checked 60, ok 60, stale 0, missing 0, extra 0`.

@@ -24,6 +24,8 @@ describe('Cockpit dashboard foundation widgets', () => {
         expect(wrapper.text()).toContain('Live Balance');
         expect(wrapper.text()).toContain('Reserved Funds');
         expect(wrapper.text()).toContain('Available To Issue');
+        expect(wrapper.text()).toContain('Balance summary not connected yet');
+        expect(wrapper.text()).not.toContain('Read model pending');
         expect(wrapper.findAll('[data-testid="cockpit-dashboard-metric-card"]')).toHaveLength(4);
     });
 
