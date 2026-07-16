@@ -289,6 +289,53 @@ describe('Cockpit Voucher Detail hydration', () => {
         expect(items).toHaveLength(3);
     });
 
+    it('renders lifecycle guidance from display status without enforcing policy', () => {
+        const wrapper = mount(VoucherDetail, {
+            props: {
+                context: { code: 'PC-HYDRATED-001' },
+                read_model: readModel,
+            },
+        });
+
+        const guidance = wrapper.find('[data-testid="cockpit-voucher-detail-lifecycle-guidance"]');
+
+        expect(guidance.exists()).toBe(true);
+        expect(guidance.text()).toContain('Lifecycle guidance');
+        expect(guidance.text()).toContain('Available');
+        expect(guidance.text()).toContain('ready');
+        expect(guidance.text()).toContain('sanitized lifecycle summary');
+        expect(guidance.text()).toContain('does not enforce lifecycle policy');
+    });
+
+    it('renders expired lifecycle guidance as a read-only warning', () => {
+        const expiredReadModel = {
+            ...readModel,
+            voucher: {
+                ...readModel.voucher,
+                status: 'expired',
+                summary: {
+                    ...readModel.voucher.summary,
+                    status: 'expired',
+                    display_status: 'expired',
+                },
+            },
+        };
+
+        const wrapper = mount(VoucherDetail, {
+            props: {
+                context: { code: 'PC-HYDRATED-001' },
+                read_model: expiredReadModel,
+            },
+        });
+
+        const guidance = wrapper.find('[data-testid="cockpit-voucher-detail-lifecycle-guidance"]');
+
+        expect(guidance.text()).toContain('Expired');
+        expect(guidance.text()).toContain('warning');
+        expect(guidance.text()).toContain('Review evidence before manual distribution');
+        expect(guidance.text()).toContain('does not enforce lifecycle policy');
+    });
+
     it('renders the beneficiary Pay Code URL as a read-only distribution link', () => {
         const wrapper = mount(VoucherDetail, {
             props: {

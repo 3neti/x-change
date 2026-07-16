@@ -67,6 +67,39 @@ const primaryNextStep = computed(() => {
         description: 'Distribution links are not available from the current read model.',
     };
 });
+const lifecycleGuidance = computed(() => {
+    const normalizedStatus = status.value.toLowerCase();
+
+    if (normalizedStatus.includes('expired')) {
+        return {
+            tone: 'warning',
+            label: 'Expired',
+            message: 'The Pay Code appears expired. Review evidence before manual distribution.',
+        };
+    }
+
+    if (normalizedStatus.includes('redeemed') || normalizedStatus.includes('claimed')) {
+        return {
+            tone: 'complete',
+            label: 'Claimed',
+            message: 'The Pay Code appears claimed. Use this screen for read-only inspection.',
+        };
+    }
+
+    if (normalizedStatus.includes('approval') || normalizedStatus.includes('review')) {
+        return {
+            tone: 'watch',
+            label: 'Needs Review',
+            message: 'The Pay Code may require approval or review before completion.',
+        };
+    }
+
+    return {
+        tone: 'ready',
+        label: 'Available',
+        message: 'The Pay Code is presented as available from the sanitized lifecycle summary.',
+    };
+});
 
 const overviewItems = computed<CockpitVoucherOverviewItem[]>(() => {
     if (!props.read_model?.voucher?.authorized) {
@@ -743,6 +776,38 @@ function integrationSummary(
                             </dd>
                         </div>
                     </dl>
+                </div>
+
+                <div
+                    class="mt-5 rounded-xl border p-4"
+                    :class="
+                        lifecycleGuidance.tone === 'warning'
+                            ? 'border-amber-200 bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/30'
+                            : lifecycleGuidance.tone === 'complete'
+                              ? 'border-sky-200 bg-sky-50 dark:border-sky-900/60 dark:bg-sky-950/30'
+                              : lifecycleGuidance.tone === 'watch'
+                                ? 'border-violet-200 bg-violet-50 dark:border-violet-900/60 dark:bg-violet-950/30'
+                                : 'border-emerald-200 bg-white/80 dark:border-emerald-900/60 dark:bg-slate-950/70'
+                    "
+                    data-testid="cockpit-voucher-detail-lifecycle-guidance"
+                >
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                        Lifecycle guidance
+                    </p>
+                    <div class="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <p class="text-sm font-semibold text-slate-950 dark:text-slate-50">
+                            {{ lifecycleGuidance.label }}
+                        </p>
+                        <span class="w-fit rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-200 dark:ring-slate-800">
+                            {{ lifecycleGuidance.tone }}
+                        </span>
+                    </div>
+                    <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                        {{ lifecycleGuidance.message }}
+                    </p>
+                    <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                        This guidance is derived from display status only. Cockpit does not enforce lifecycle policy from this page.
+                    </p>
                 </div>
             </section>
 

@@ -2384,3 +2384,10 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - This makes downstream integration state visible without implying side effects.
 - Verification report: `../ui-cockpit/reports/417-pay-code-detail-productization-slice-3-evidence-readiness.md`.
 - Boundary remains unchanged: no journal write, x-action execution, x-feedback delivery, voucher mutation, driver execution, provider call, wallet movement, campaign mutation, unsafe payload exposure, claim UX behavior, public API behavior, or execution behavior changed.
+
+## 2026-07-16 Update — Pay Code Detail Productization Slice 4 — Lifecycle Guidance
+
+- The primary Voucher Detail area now includes lifecycle guidance derived from sanitized display status.
+- Guidance supports ready/available, expired, claimed/redeemed, and approval/review presentations.
+- Verification report: `../ui-cockpit/reports/418-pay-code-detail-productization-slice-4-lifecycle-guidance.md`.
+- Boundary remains unchanged: guidance does not authorize or block distribution, mutate vouchers, execute drivers, write journal entries, execute actions, send feedback, call providers, move wallet funds, change claim UX, change public APIs, or change execution behavior.
