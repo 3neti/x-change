@@ -263,6 +263,32 @@ describe('Cockpit Voucher Detail hydration', () => {
         expect(fetch).not.toHaveBeenCalled();
     });
 
+    it('summarizes read-only evidence readiness in the primary detail area', () => {
+        const wrapper = mount(VoucherDetail, {
+            props: {
+                context: { code: 'PC-HYDRATED-001' },
+                read_model: readModel,
+            },
+        });
+
+        const readiness = wrapper.find('[data-testid="cockpit-voucher-detail-primary-evidence-readiness"]');
+        const items = readiness.findAll('[data-testid="cockpit-voucher-detail-primary-evidence-readiness-item"]');
+
+        expect(readiness.exists()).toBe(true);
+        expect(readiness.text()).toContain('Evidence readiness');
+        expect(readiness.text()).toContain('Read-only integration state');
+        expect(readiness.text()).toContain('summary only');
+        expect(readiness.text()).toContain('Journal');
+        expect(readiness.text()).toContain('Action');
+        expect(readiness.text()).toContain('Feedback');
+        expect(readiness.text()).toContain('not_wired');
+        expect(readiness.text()).toContain('not-loaded');
+        expect(readiness.text()).toContain('0 entries');
+        expect(readiness.text()).toContain('0 actions');
+        expect(readiness.text()).toContain('0 deliveries');
+        expect(items).toHaveLength(3);
+    });
+
     it('renders the beneficiary Pay Code URL as a read-only distribution link', () => {
         const wrapper = mount(VoucherDetail, {
             props: {

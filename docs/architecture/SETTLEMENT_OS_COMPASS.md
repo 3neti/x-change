@@ -2377,3 +2377,10 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - The copy action is browser-local and uses the same beneficiary claim URL already exposed by the read-only distribution-link read model.
 - Verification report: `../ui-cockpit/reports/416-pay-code-detail-productization-slice-2-primary-copy-control.md`.
 - Boundary remains unchanged: no delivery, short-link creation, QR generation, journal write, x-action execution, x-feedback delivery, provider call, wallet movement, voucher mutation, campaign dispatch, claim UX behavior, public API behavior, or execution behavior changed.
+
+## 2026-07-16 Update — Pay Code Detail Productization Slice 3 — Evidence Readiness Summary
+
+- The primary Voucher Detail area now shows journal, action, and feedback readiness status/counts before the lower integration panel.
+- This makes downstream integration state visible without implying side effects.
+- Verification report: `../ui-cockpit/reports/417-pay-code-detail-productization-slice-3-evidence-readiness.md`.
+- Boundary remains unchanged: no journal write, x-action execution, x-feedback delivery, voucher mutation, driver execution, provider call, wallet movement, campaign mutation, unsafe payload exposure, claim UX behavior, public API behavior, or execution behavior changed.

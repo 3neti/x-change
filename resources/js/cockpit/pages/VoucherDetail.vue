@@ -203,6 +203,10 @@ const integrationSummaries = computed(() => [
     integrationSummary('actions', 'Action CTAs', props.read_model?.actions, 'actions', 'actions'),
     integrationSummary('feedback', 'Feedback Deliveries', props.read_model?.feedback, 'deliveries', 'deliveries'),
 ]);
+const primaryEvidenceReadiness = computed(() => integrationSummaries.value.map((summary) => ({
+    ...summary,
+    label: summary.label.replace(' Evidence', '').replace(' Deliveries', '').replace(' CTAs', ''),
+})));
 const campaignNavigationContext = computed<CockpitCampaignNavigationContext | null>(() => {
     const context = props.campaign_navigation_context;
 
@@ -700,6 +704,45 @@ function integrationSummary(
                             Back to Pay Codes
                         </a>
                     </div>
+                </div>
+
+                <div
+                    class="mt-5 rounded-xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/60 dark:bg-slate-950/70"
+                    data-testid="cockpit-voucher-detail-primary-evidence-readiness"
+                >
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                                Evidence readiness
+                            </p>
+                            <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                                Read-only integration state. These facts do not execute actions, send feedback, or write journal entries.
+                            </p>
+                        </div>
+                        <span class="w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200">
+                            summary only
+                        </span>
+                    </div>
+                    <dl class="mt-4 grid gap-3 text-sm md:grid-cols-3">
+                        <div
+                            v-for="item in primaryEvidenceReadiness"
+                            :key="item.key"
+                            class="rounded-lg border border-slate-200 p-3 dark:border-slate-800"
+                            data-testid="cockpit-voucher-detail-primary-evidence-readiness-item"
+                        >
+                            <dt class="flex items-center justify-between gap-3">
+                                <span class="font-semibold text-slate-950 dark:text-slate-50">
+                                    {{ item.label }}
+                                </span>
+                                <span class="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                                    {{ item.status }}
+                                </span>
+                            </dt>
+                            <dd class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                {{ item.count }} · {{ item.policy }}
+                            </dd>
+                        </div>
+                    </dl>
                 </div>
             </section>
 
