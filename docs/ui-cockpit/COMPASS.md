@@ -4,12 +4,21 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Dashboard Productization Slice 3 — Operator Focus and Next Safe Actions
-Status: Dashboard now includes safe operator focus guidance for generation, inspection, and attention review
+Current slice: Dashboard Productization Slice 4 — Host Publish / Closure
+Status: Dashboard Productization is closed after host publish, asset drift verification, focused frontend test, and host build
 Last updated: 2026-07-16
 
 ## Completed
 
+- Completed Dashboard Productization Slice 4 — Host Publish / Closure:
+  - Published package Cockpit assets into the host app with `php artisan x-change:install --force --no-interaction`.
+  - Verified published asset drift is clean: `checked 60, ok 60, stale 0, missing 0, extra 0`.
+  - Focused dashboard frontend verification passed.
+  - Host production build passed.
+  - Recorded known non-blocking build warnings from Rolldown parsing third-party pure annotations in `node_modules/reka-ui/node_modules/@vueuse/core`.
+  - Dashboard Productization is closed as presentation-only.
+  - Report: `reports/431-dashboard-productization-publish-closure.md`.
+  - Next recommended checkpoint: Cockpit page-by-page manual browser acceptance for Dashboard, then select the next page/productization target.
 - Completed Dashboard Productization Slice 3 — Operator Focus and Next Safe Actions:
   - Added a primary `Operator Focus` panel with next safe actions for Quick Generate, Pay Code Explorer, and attention review.
   - Actions are navigation-only and use existing Cockpit routes.
