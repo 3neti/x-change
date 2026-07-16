@@ -2511,3 +2511,15 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Journal, action, feedback, and campaign diagnostics remain available behind native details sections.
 - Verification report: `../ui-cockpit/reports/432-dashboard-activity-density-cleanup-slice-1-compact-list.md`.
 - Boundary remains unchanged: no activity storage behavior, filters, lifecycle truth, journal writes, x-action execution, x-feedback delivery, provider calls, campaign mutation, voucher mutation, wallet movement, public API behavior, execution behavior, or unsafe payload exposure changed.
+
+## 2026-07-16 Update — Dashboard Activity Density Cleanup Slice 2 — Host Publish / Closure
+
+- Dashboard Activity Density Cleanup is closed.
+- Package Cockpit assets were published into the host app.
+- Asset drift is clean: `checked 60, ok 60, stale 0, missing 0, extra 0`.
+- Focused dashboard frontend verification passed.
+- Host production build completed successfully.
+- Non-blocking build warnings remain from third-party Rolldown pure-annotation parsing in `node_modules/reka-ui/node_modules/@vueuse/core`.
+- Closure report: `../ui-cockpit/reports/433-dashboard-activity-density-cleanup-publish-closure.md`.
+- The wave remains UI-density presentation only: no activity storage behavior, filters, lifecycle truth, journal writes, x-action execution, x-feedback delivery, provider calls, campaign mutation, voucher mutation, wallet movement, public API behavior, execution behavior, or unsafe payload exposure changed.
+- Next recommended checkpoint: manual browser acceptance for the updated `/x/cockpit` activity density, then choose the next page-specific target.

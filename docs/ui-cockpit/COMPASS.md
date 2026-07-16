@@ -4,12 +4,21 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Dashboard Activity Density Cleanup Slice 1 — Compact Activity List
-Status: Dashboard activity list now shows a compact recent subset with collapsed diagnostics
+Current slice: Dashboard Activity Density Cleanup Slice 2 — Host Publish / Closure
+Status: Dashboard Activity Density Cleanup is closed after host publish, drift verification, focused frontend test, and host build
 Last updated: 2026-07-16
 
 ## Completed
 
+- Completed Dashboard Activity Density Cleanup Slice 2 — Host Publish / Closure:
+  - Published package Cockpit assets into the host app.
+  - Verified published asset drift is clean: `checked 60, ok 60, stale 0, missing 0, extra 0`.
+  - Focused dashboard frontend verification passed.
+  - Host production build passed.
+  - Recorded known non-blocking build warnings from Rolldown parsing third-party pure annotations in `node_modules/reka-ui/node_modules/@vueuse/core`.
+  - Dashboard Activity Density Cleanup is closed as UI-density presentation only.
+  - Report: `reports/433-dashboard-activity-density-cleanup-publish-closure.md`.
+  - Next recommended checkpoint: Manual browser acceptance for the updated `/x/cockpit` activity density, then choose the next page-specific target.
 - Completed Dashboard Activity Density Cleanup Slice 1 — Compact Activity List:
   - Operator Issuance Activity now renders only the latest five activity cards on the dashboard.
   - Added density summary and overflow guidance when additional activities are available.
