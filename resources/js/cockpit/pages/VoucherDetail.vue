@@ -680,6 +680,11 @@ function integrationSummary(
                         >
                             Open claim URL
                         </a>
+                        <CockpitManualCopyButton
+                            v-if="distributionLinksAvailable"
+                            :value="beneficiaryRedeemUrl ?? beneficiaryRedeemPath"
+                            label="Copy claim URL"
+                        />
                         <a
                             :href="distributionWorkspaceHref"
                             class="inline-flex items-center rounded-full border border-emerald-300 px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-700 dark:text-emerald-200 dark:hover:bg-emerald-900/50"

@@ -234,6 +234,35 @@ describe('Cockpit Voucher Detail hydration', () => {
         expect(summary.text()).not.toContain('must-not-render');
     });
 
+    it('copies the primary summary claim URL through the browser clipboard only', async () => {
+        const writeText = vi.fn().mockResolvedValue(undefined);
+
+        vi.stubGlobal('navigator', {
+            clipboard: {
+                writeText,
+            },
+        });
+        vi.stubGlobal('fetch', vi.fn());
+
+        const wrapper = mount(VoucherDetail, {
+            props: {
+                context: { code: 'PC-HYDRATED-001' },
+                read_model: readModel,
+            },
+        });
+
+        const summary = wrapper.find('[data-testid="cockpit-voucher-detail-primary-summary"]');
+        const buttons = summary.findAll('[data-testid="cockpit-manual-copy-button"]');
+
+        expect(buttons).toHaveLength(1);
+        expect(buttons[0].text()).toContain('Copy claim URL');
+
+        await buttons[0].trigger('click');
+
+        expect(writeText).toHaveBeenCalledWith('https://example.test/x/claim/PC-HYDRATED-001/experience');
+        expect(fetch).not.toHaveBeenCalled();
+    });
+
     it('renders the beneficiary Pay Code URL as a read-only distribution link', () => {
         const wrapper = mount(VoucherDetail, {
             props: {
