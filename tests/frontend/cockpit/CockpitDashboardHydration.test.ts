@@ -978,6 +978,36 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-mutation"]').exists()).toBe(false);
     });
 
+    it('limits dashboard activity density while preserving read-only overflow guidance', () => {
+        const denseReadModel = structuredClone(operatorIssuanceActivityReadModel);
+        denseReadModel.search_filters.search = undefined;
+        denseReadModel.search_filters.statuses = [];
+        denseReadModel.search_filters.handoff_statuses = [];
+        denseReadModel.presentations = Array.from({ length: 7 }, (_, index) => ({
+            ...structuredClone(operatorIssuanceActivityReadModel.presentations[0]),
+            id: `activity-${index + 1}`,
+            code: `PC-DENSE-${index + 1}`,
+            title: `Pay Code PC-DENSE-${index + 1} issued`,
+            detail_href: `/x/cockpit/pay-codes/PC-DENSE-${index + 1}`,
+        }));
+
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                dashboard_read_model: dashboardReadModel,
+                operator_issuance_activity_read_model: denseReadModel,
+            },
+        });
+
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-result-summary"]').text()).toContain('Showing 7 recent activities.');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-density-summary"]').text()).toContain('Displaying the latest 5 of 7 activities.');
+        expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-card"]')).toHaveLength(5);
+        expect(wrapper.text()).toContain('Pay Code PC-DENSE-1 issued');
+        expect(wrapper.text()).toContain('Pay Code PC-DENSE-5 issued');
+        expect(wrapper.text()).not.toContain('Pay Code PC-DENSE-6 issued');
+        expect(wrapper.text()).toContain('2 additional activities are available through filters or Pay Code Explorer links.');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-density-overflow"]').exists()).toBe(true);
+    });
+
     it('does not render unsafe operator issuance activity payloads or side-effect affordances', () => {
         const wrapper = mount(CockpitDashboard, {
             props: {

@@ -111,6 +111,9 @@ const presentations = computed<SafePresentation[]>(() => {
         .map((presentation) => sanitizePresentation(presentation))
         .filter((presentation): presentation is SafePresentation => presentation !== null);
 });
+const visiblePresentationLimit = 5;
+const visiblePresentations = computed(() => presentations.value.slice(0, visiblePresentationLimit));
+const hiddenPresentationCount = computed(() => Math.max(presentations.value.length - visiblePresentations.value.length, 0));
 
 const searchFilters = computed<SafeSearchFilters>(() => {
     const filters = isPlainObject(props.readModel?.search_filters) ? props.readModel.search_filters : {};
@@ -184,6 +187,17 @@ const activityResultSummary = computed(() => {
     }
 
     return `Showing ${count} recent ${noun}.`;
+});
+const activityDensitySummary = computed(() => {
+    if (presentations.value.length === 0) {
+        return 'No activity cards are displayed.';
+    }
+
+    if (hiddenPresentationCount.value === 0) {
+        return `Displaying ${visiblePresentations.value.length} ${visiblePresentations.value.length === 1 ? 'activity' : 'activities'} on the dashboard.`;
+    }
+
+    return `Displaying the latest ${visiblePresentations.value.length} of ${presentations.value.length} activities. Use filters or Explorer links for the rest.`;
 });
 const emptyTitle = computed(() => stringValue(props.readModel?.empty_state?.title) ?? 'No operator issuance activity available');
 const emptyDescription = computed(() => (
@@ -697,6 +711,12 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
             >
                 {{ activeFilterSummary }}
             </p>
+            <p
+                class="mt-1 text-xs text-slate-500 dark:text-slate-400"
+                data-testid="cockpit-operator-issuance-activity-density-summary"
+            >
+                {{ activityDensitySummary }}
+            </p>
             <div
                 v-if="filterClearLinks.length > 0"
                 class="mt-3 flex flex-wrap gap-2 text-xs"
@@ -729,7 +749,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 
         <div v-else class="mt-5 space-y-3">
             <article
-                v-for="presentation in presentations"
+                v-for="presentation in visiblePresentations"
                 :key="presentation.id"
                 class="rounded-lg border border-slate-200 p-4 dark:border-slate-800"
                 data-testid="cockpit-operator-issuance-activity-card"
@@ -769,11 +789,15 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                     </div>
                 </dl>
 
-                <dl
+                <details
                     v-if="presentation.campaignAttribution"
-                    class="mt-4 grid gap-2 rounded-lg bg-sky-50 p-3 text-xs text-sky-800 dark:bg-sky-950/40 dark:text-sky-200 sm:grid-cols-2"
+                    class="mt-4 rounded-lg bg-sky-50 p-3 text-xs text-sky-800 dark:bg-sky-950/40 dark:text-sky-200"
                     data-testid="cockpit-operator-issuance-activity-campaign-attribution"
                 >
+                    <summary class="cursor-pointer font-semibold text-sky-900 dark:text-sky-100">
+                        Campaign attribution details
+                    </summary>
+                    <dl class="mt-3 grid gap-2 sm:grid-cols-2">
                     <div>
                         <dt class="font-semibold text-sky-900 dark:text-sky-100">
                             Campaign attribution
@@ -858,13 +882,18 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                         </dt>
                         <dd>Read-only: {{ presentation.campaignAttribution.readOnly ? 'yes' : 'no' }}</dd>
                     </div>
-                </dl>
+                    </dl>
+                </details>
 
-                <dl
+                <details
                     v-if="presentation.journalSummary"
-                    class="mt-4 grid gap-2 rounded-lg bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-950 dark:text-slate-300 sm:grid-cols-2"
+                    class="mt-4 rounded-lg bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-950 dark:text-slate-300"
                     data-testid="cockpit-operator-issuance-activity-journal-summary"
                 >
+                    <summary class="cursor-pointer font-semibold text-slate-700 dark:text-slate-200">
+                        Journal handoff details
+                    </summary>
+                    <dl class="mt-3 grid gap-2 sm:grid-cols-2">
                     <div v-if="presentation.journalSummary.journalEntryId">
                         <dt class="font-semibold text-slate-700 dark:text-slate-200">
                             Journal entry
@@ -920,13 +949,18 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                             Read-only: {{ presentation.journalSummary.diagnostic.readOnly ? 'yes' : 'no' }}
                         </dd>
                     </div>
-                </dl>
+                    </dl>
+                </details>
 
-                <dl
+                <details
                     v-if="presentation.actionSummary"
-                    class="mt-4 grid gap-2 rounded-lg bg-indigo-50 p-3 text-xs text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200 sm:grid-cols-2"
+                    class="mt-4 rounded-lg bg-indigo-50 p-3 text-xs text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200"
                     data-testid="cockpit-operator-issuance-activity-action-summary"
                 >
+                    <summary class="cursor-pointer font-semibold text-indigo-900 dark:text-indigo-100">
+                        Action handoff details
+                    </summary>
+                    <dl class="mt-3 grid gap-2 sm:grid-cols-2">
                     <div v-if="presentation.actionSummary.actionHintId">
                         <dt class="font-semibold text-indigo-900 dark:text-indigo-100">
                             Action hint
@@ -963,13 +997,18 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                         </dt>
                         <dd>Reason: {{ presentation.actionSummary.reason }}</dd>
                     </div>
-                </dl>
+                    </dl>
+                </details>
 
-                <dl
+                <details
                     v-if="presentation.feedbackSummary"
-                    class="mt-4 grid gap-2 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200 sm:grid-cols-2"
+                    class="mt-4 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
                     data-testid="cockpit-operator-issuance-activity-feedback-summary"
                 >
+                    <summary class="cursor-pointer font-semibold text-emerald-900 dark:text-emerald-100">
+                        Feedback handoff details
+                    </summary>
+                    <dl class="mt-3 grid gap-2 sm:grid-cols-2">
                     <div v-if="presentation.feedbackSummary.feedbackIntentId">
                         <dt class="font-semibold text-emerald-900 dark:text-emerald-100">
                             Feedback intent
@@ -1012,7 +1051,8 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                         </dt>
                         <dd>Reason: {{ presentation.feedbackSummary.reason }}</dd>
                     </div>
-                </dl>
+                    </dl>
+                </details>
 
                 <div class="mt-4 flex flex-col gap-2 text-xs text-slate-500 dark:text-slate-400 sm:flex-row sm:items-center sm:justify-between">
                     <span v-if="presentation.correlationId">
@@ -1062,6 +1102,14 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                     </a>
                 </div>
             </article>
+
+            <div
+                v-if="hiddenPresentationCount > 0"
+                class="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
+                data-testid="cockpit-operator-issuance-activity-density-overflow"
+            >
+                {{ hiddenPresentationCount }} additional activities are available through filters or Pay Code Explorer links.
+            </div>
         </div>
     </section>
 </template>

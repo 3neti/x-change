@@ -2502,3 +2502,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Closure report: `../ui-cockpit/reports/431-dashboard-productization-publish-closure.md`.
 - The wave remains presentation-only: no voucher mutation, driver execution, journal write, x-action execution, x-feedback delivery, provider call, wallet movement, campaign dispatch, lifecycle truth change, public API behavior, execution behavior, or unsafe payload exposure changed.
 - Next recommended checkpoint: Cockpit page-by-page manual browser acceptance for Dashboard, then select the next page/productization target.
+
+## 2026-07-16 Update — Dashboard Activity Density Cleanup Slice 1 — Compact Activity List
+
+- Started Dashboard Activity Density Cleanup.
+- Operator Issuance Activity now renders only the latest five activity cards on `/x/cockpit`.
+- Added density summary and overflow guidance for additional activities.
+- Journal, action, feedback, and campaign diagnostics remain available behind native details sections.
+- Verification report: `../ui-cockpit/reports/432-dashboard-activity-density-cleanup-slice-1-compact-list.md`.
+- Boundary remains unchanged: no activity storage behavior, filters, lifecycle truth, journal writes, x-action execution, x-feedback delivery, provider calls, campaign mutation, voucher mutation, wallet movement, public API behavior, execution behavior, or unsafe payload exposure changed.

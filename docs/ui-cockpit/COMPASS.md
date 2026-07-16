@@ -4,12 +4,19 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Dashboard Productization Slice 4 — Host Publish / Closure
-Status: Dashboard Productization is closed after host publish, asset drift verification, focused frontend test, and host build
+Current slice: Dashboard Activity Density Cleanup Slice 1 — Compact Activity List
+Status: Dashboard activity list now shows a compact recent subset with collapsed diagnostics
 Last updated: 2026-07-16
 
 ## Completed
 
+- Completed Dashboard Activity Density Cleanup Slice 1 — Compact Activity List:
+  - Operator Issuance Activity now renders only the latest five activity cards on the dashboard.
+  - Added density summary and overflow guidance when additional activities are available.
+  - Moved journal, action, feedback, and campaign diagnostics behind native details sections per activity.
+  - Confirmed the change is UI-density presentation only and does not change activity storage, filtering, lifecycle truth, journal writes, action execution, feedback delivery, provider calls, campaign mutation, voucher mutation, wallet movement, or unsafe payload redaction.
+  - Report: `reports/432-dashboard-activity-density-cleanup-slice-1-compact-list.md`.
+  - Next recommended checkpoint: Dashboard Activity Density Cleanup Slice 2 — Host publish / closure.
 - Completed Dashboard Productization Slice 4 — Host Publish / Closure:
   - Published package Cockpit assets into the host app with `php artisan x-change:install --force --no-interaction`.
   - Verified published asset drift is clean: `checked 60, ok 60, stale 0, missing 0, extra 0`.
