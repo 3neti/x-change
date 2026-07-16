@@ -4,12 +4,21 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Dashboard Activity Rationalization Slice 3 — Distinct Activity Concept Tests
-Status: Frontend coverage now proves Issuance Activity and Execution Activity remain separate dashboard concepts
+Current slice: Dashboard Activity Rationalization Slice 4/5 — Host Publish / Closure
+Status: Dashboard Activity Rationalization is closed after host publish, drift verification, focused frontend tests, and host build
 Last updated: 2026-07-16
 
 ## Completed
 
+- Completed Dashboard Activity Rationalization Slice 4/5 — Host Publish / Closure:
+  - Published package Cockpit assets into the host app.
+  - Verified published asset drift is clean: `checked 60, ok 60, stale 0, missing 0, extra 0`.
+  - Focused dashboard frontend verification passed.
+  - Host production build passed.
+  - Recorded known non-blocking build warnings from Rolldown parsing third-party pure annotations in `node_modules/reka-ui/node_modules/@vueuse/core`.
+  - Dashboard Activity Rationalization is closed as UI/copy/layout/test hardening only.
+  - Report: `reports/437-dashboard-activity-rationalization-publish-closure.md`.
+  - Next recommended checkpoint: Manual browser acceptance for `/x/cockpit`, then choose the next page-specific target.
 - Completed Dashboard Activity Rationalization Slice 3 — Distinct Activity Concept Tests:
   - Added frontend coverage proving `Issuance Activity` renders generated Pay Code activity and excludes execution evidence.
   - Added frontend coverage proving `Execution Activity` renders execution projection evidence and excludes generated Pay Code activity.

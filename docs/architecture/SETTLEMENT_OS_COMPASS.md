@@ -2554,3 +2554,15 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - The test asserts `Execution Activity` contains execution projection evidence and excludes generated Pay Code activity.
 - Verification report: `../ui-cockpit/reports/436-dashboard-activity-rationalization-slice-3-distinct-concepts.md`.
 - Boundary remains unchanged: no UI behavior, read-model behavior, activity storage behavior, filters, lifecycle truth, execution behavior, journal writes, x-action execution, x-feedback delivery, provider calls, campaign mutation, voucher mutation, wallet movement, public API behavior, or unsafe payload exposure changed.
+
+## 2026-07-16 Update — Dashboard Activity Rationalization Slice 4/5 — Host Publish / Closure
+
+- Dashboard Activity Rationalization is closed.
+- Package Cockpit assets were published into the host app.
+- Asset drift is clean: `checked 60, ok 60, stale 0, missing 0, extra 0`.
+- Focused dashboard frontend verification passed.
+- Host production build completed successfully.
+- Non-blocking build warnings remain from third-party Rolldown pure-annotation parsing in `node_modules/reka-ui/node_modules/@vueuse/core`.
+- Closure report: `../ui-cockpit/reports/437-dashboard-activity-rationalization-publish-closure.md`.
+- The wave remains UI/copy/layout/test hardening only: no read-model behavior, activity storage behavior, filters, lifecycle truth, execution behavior, journal writes, x-action execution, x-feedback delivery, provider calls, campaign mutation, voucher mutation, wallet movement, public API behavior, or unsafe payload exposure changed.
+- Next recommended checkpoint: manual browser acceptance for `/x/cockpit`, then choose the next page-specific target.
