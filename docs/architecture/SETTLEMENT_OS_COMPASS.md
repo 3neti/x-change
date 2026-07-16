@@ -2455,3 +2455,13 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Cards show status, redaction policy, and read-only explanation while preserving compact badges.
 - Verification report: `../ui-cockpit/reports/426-pay-code-explorer-productization-slice-3-integration-readiness.md`.
 - Boundary remains unchanged: no journal write, x-action execution, x-feedback delivery, voucher mutation, claim approval, driver execution, provider call, wallet movement, lifecycle truth change, public API behavior, or raw integration payload exposure changed.
+
+## 2026-07-16 Update — Pay Code Explorer Productization Slice 4 — Publish / Closure
+
+- Pay Code Explorer Productization is closed.
+- Package Cockpit assets were published into the host app.
+- Asset drift is clean: `checked 60, ok 60, stale 0, missing 0, extra 0`.
+- Focused frontend verification passed and the host production build completed successfully.
+- Closure report: `../ui-cockpit/reports/427-pay-code-explorer-productization-publish-closure.md`.
+- The wave remains presentation-only: no voucher mutation, driver execution, claim approval, feedback delivery, journal write, x-action execution, provider call, wallet movement, campaign dispatch, public API behavior, lifecycle truth change, execution behavior, or unsafe payload exposure changed.
+- Next recommended wave: Dashboard Productization.
