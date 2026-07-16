@@ -2448,3 +2448,10 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - It clarifies that row actions are navigation-only or disabled placeholders.
 - Verification report: `../ui-cockpit/reports/425-pay-code-explorer-productization-slice-2-row-action-guidance.md`.
 - Boundary remains unchanged: no x-action execution, feedback delivery, voucher mutation, claim approval, driver execution, provider call, wallet movement, journal write, public API behavior, or execution behavior changed.
+
+## 2026-07-16 Update — Pay Code Explorer Productization Slice 3 — Integration Readiness Cards
+
+- The Pay Code Explorer now renders operator-readable journal/action/feedback readiness cards.
+- Cards show status, redaction policy, and read-only explanation while preserving compact badges.
+- Verification report: `../ui-cockpit/reports/426-pay-code-explorer-productization-slice-3-integration-readiness.md`.
+- Boundary remains unchanged: no journal write, x-action execution, x-feedback delivery, voucher mutation, claim approval, driver execution, provider call, wallet movement, lifecycle truth change, public API behavior, or raw integration payload exposure changed.

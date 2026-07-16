@@ -389,6 +389,53 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(wrapper.text()).not.toContain('+639170000000');
     });
 
+    it('renders operator-readable integration readiness cards', () => {
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: payCodesReadModel,
+                read_model: {
+                    journal: {
+                        status: 'available',
+                        authorized: true,
+                        entries: [{ id: 'journal-1' }],
+                        redactions: { payloads: 'journal-evidence-summary-only' },
+                    },
+                    actions: {
+                        status: 'available',
+                        authorized: true,
+                        actions: [{ key: 'review' }],
+                        redactions: { payloads: 'safe-action-host-summary-only' },
+                    },
+                    feedback: {
+                        status: 'available',
+                        authorized: true,
+                        deliveries: [{ id: 'delivery-1' }],
+                        redactions: { payloads: 'communication-delivery-summary-only' },
+                    },
+                    raw_payload: 'must-not-render',
+                },
+            },
+        });
+
+        const readiness = wrapper.find('[data-testid="cockpit-pay-code-integration-readiness"]');
+        const cards = readiness.findAll('[data-testid="cockpit-pay-code-integration-readiness-card"]');
+
+        expect(readiness.exists()).toBe(true);
+        expect(readiness.text()).toContain('Integration readiness');
+        expect(readiness.text()).toContain('Journal');
+        expect(readiness.text()).toContain('journal-evidence-summary-only');
+        expect(readiness.text()).toContain('Journal evidence remains read-only audit context');
+        expect(readiness.text()).toContain('Actions');
+        expect(readiness.text()).toContain('safe-action-host-summary-only');
+        expect(readiness.text()).toContain('presentation-only');
+        expect(readiness.text()).toContain('Feedback');
+        expect(readiness.text()).toContain('communication-delivery-summary-only');
+        expect(readiness.text()).toContain('communication status, not lifecycle truth');
+        expect(readiness.text()).toContain('do not write journal entries');
+        expect(cards).toHaveLength(3);
+        expect(readiness.text()).not.toContain('must-not-render');
+    });
+
     it('hydrates read-only operator activity navigation context on the Pay Code Explorer', () => {
         const wrapper = mount(PayCodeExplorer, {
             props: {

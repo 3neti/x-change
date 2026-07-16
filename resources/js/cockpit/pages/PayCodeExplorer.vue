@@ -210,6 +210,14 @@ const integrationBadges = computed(() => [
     integrationBadge('actions', 'Actions', props.read_model?.actions),
     integrationBadge('feedback', 'Feedback', props.read_model?.feedback),
 ]);
+const integrationReadinessCards = computed(() => integrationBadges.value.map((badge) => ({
+    ...badge,
+    helper: badge.key === 'journal'
+        ? 'Journal evidence remains read-only audit context.'
+        : badge.key === 'actions'
+          ? 'Action CTAs are presentation-only unless explicitly authorized elsewhere.'
+          : 'Feedback delivery state is communication status, not lifecycle truth.',
+})));
 
 function sanitizeRecord(record: CockpitPayCodeExplorerReadModelRecord): CockpitPayCodeExplorerRecord | null {
     const code = stringValue(record.code);
@@ -514,6 +522,41 @@ function integrationBadge(
                         {{ badge.label }}: {{ badge.status }}
                         <span class="ml-1 font-normal opacity-70">{{ badge.policy }}</span>
                     </span>
+                </div>
+            </section>
+
+            <section
+                class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-pay-code-integration-readiness"
+            >
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                    Integration readiness
+                </p>
+                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    These cards summarize read-only integration context for the list. They do not write journal entries, execute actions, send feedback, or change voucher lifecycle state.
+                </p>
+                <div class="mt-4 grid gap-3 md:grid-cols-3">
+                    <article
+                        v-for="card in integrationReadinessCards"
+                        :key="card.key"
+                        class="rounded-lg border border-slate-200 p-4 dark:border-slate-800"
+                        data-testid="cockpit-pay-code-integration-readiness-card"
+                    >
+                        <div class="flex items-center justify-between gap-3">
+                            <h3 class="font-semibold text-slate-950 dark:text-slate-50">
+                                {{ card.label }}
+                            </h3>
+                            <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                                {{ card.status }}
+                            </span>
+                        </div>
+                        <p class="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            {{ card.policy }}
+                        </p>
+                        <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                            {{ card.helper }}
+                        </p>
+                    </article>
                 </div>
             </section>
 
