@@ -2465,3 +2465,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Closure report: `../ui-cockpit/reports/427-pay-code-explorer-productization-publish-closure.md`.
 - The wave remains presentation-only: no voucher mutation, driver execution, claim approval, feedback delivery, journal write, x-action execution, provider call, wallet movement, campaign dispatch, public API behavior, lifecycle truth change, execution behavior, or unsafe payload exposure changed.
 - Next recommended wave: Dashboard Productization.
+
+## 2026-07-16 Update — Dashboard Productization Slice 1 — Operating Summary
+
+- Started Dashboard Productization.
+- `/x/cockpit` now starts with `Settlement OS Operating Overview`.
+- Added a primary operating summary for Pay Codes, Quick Generate, and Needs Attention with safe navigation to existing Cockpit routes.
+- Added a journal/action/feedback read-model availability status derived from existing read-model summaries.
+- Verification report: `../ui-cockpit/reports/428-dashboard-productization-slice-1-operating-summary.md`.
+- Boundary remains unchanged: no voucher mutation, driver execution, journal write, x-action execution, x-feedback delivery, provider call, wallet movement, campaign dispatch, lifecycle truth change, public API behavior, execution behavior, or unsafe payload exposure changed.

@@ -4,12 +4,20 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Execution Integration Slice 9 — Post-pipeline handoff summary journal event contract
-Status: Cockpit execution activity projection remains read-only; summary journal event contract defined but not written
-Last updated: 2026-07-15
+Current slice: Dashboard Productization Slice 1 — Operating Summary
+Status: Dashboard now starts with a read-only operating summary and safe operator navigation
+Last updated: 2026-07-16
 
 ## Completed
 
+- Completed Dashboard Productization Slice 1 — Operating Summary:
+  - `/x/cockpit` now starts with a `Settlement OS Operating Overview`.
+  - Added a primary operating summary for Pay Codes, Quick Generate, and Needs Attention.
+  - Added safe navigation links to Pay Code Explorer, Quick Generate, and the expired attention queue.
+  - Added an integration read-model availability status derived from journal/action/feedback read-model summaries.
+  - Confirmed this remains presentation-only and does not mutate vouchers, execute drivers, write journal entries, execute actions, send feedback, call providers, dispatch campaigns, move wallet funds, or expose unsafe payloads.
+  - Report: `reports/428-dashboard-productization-slice-1-operating-summary.md`.
+  - Next recommended checkpoint: Dashboard Productization Slice 2 — Integration and activity readiness.
 - Completed Execution Integration Slice 9 — Post-pipeline handoff summary journal event contract:
   - Added safe payload contract and mapper for future `execution.handoff.summary.recorded` journal entries.
   - The contract can carry completed journal/action/feedback/Cockpit handoff evidence after the handoff pipeline finishes.

@@ -94,6 +94,63 @@ const integrationSummaries = computed(() => [
     ),
 ]);
 
+const operatingSummaryCards = computed(() => [
+    {
+        key: 'pay-codes',
+        label: 'Pay Codes',
+        value: metricValue('pay-codes-visible') ?? '0',
+        description: 'Sanitized Pay Code rows available for operator inspection.',
+        href: '/x/cockpit/pay-codes',
+        action: 'Open Pay Code Explorer',
+    },
+    {
+        key: 'quick-generate',
+        label: 'Quick Generate',
+        value: latestIssuanceStatus.value,
+        description: 'Template-first issuance handoff through existing x-change generation.',
+        href: '/x/cockpit/quick-generate',
+        action: 'Generate Pay Code',
+    },
+    {
+        key: 'attention',
+        label: 'Needs Attention',
+        value: metricValue('needs-attention') ?? riskSignals.value[0]?.value ?? '0',
+        description: 'Expired, awaiting approval, or review-oriented summaries only.',
+        href: '/x/cockpit/pay-codes?status=expired',
+        action: 'Review attention queue',
+    },
+]);
+
+const latestIssuanceStatus = computed(() => {
+    const presentations = Array.isArray(props.operator_issuance_activity_read_model?.presentations)
+        ? props.operator_issuance_activity_read_model.presentations
+        : [];
+
+    const firstStatus = presentations
+        .map((presentation) => stringValue(presentation.status))
+        .find((status): status is string => status !== undefined);
+
+    return firstStatus ?? 'ready';
+});
+
+const operatingIntegrationStatus = computed(() => {
+    const availableCount = integrationSummaries.value.filter((summary) => summary.status === 'available').length;
+
+    if (availableCount === integrationSummaries.value.length) {
+        return 'read-models available';
+    }
+
+    if (availableCount > 0) {
+        return `${availableCount}/${integrationSummaries.value.length} read-models available`;
+    }
+
+    return 'integration read-models not wired';
+});
+
+function metricValue(key: string): string | undefined {
+    return metrics.value.find((metric) => metric.key === key)?.value;
+}
+
 function sanitizeMetric(metric: CockpitDashboardMetric): CockpitDashboardMetric | null {
     const key = stringValue(metric.key);
     const label = stringValue(metric.label);
@@ -235,16 +292,72 @@ function integrationSummary(
         <section class="space-y-6" data-testid="cockpit-dashboard-shell">
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                    Wave 4 · Slice 2
+                    Dashboard Productization
                 </p>
                 <h2 class="mt-2 text-2xl font-semibold text-slate-950 dark:text-slate-50">
-                    Cockpit Dashboard Foundation
+                    Settlement OS Operating Overview
                 </h2>
                 <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    This dashboard foundation composes read-only operator panels. It does not execute vouchers,
-                    write journal entries, resolve workflow authority, send feedback, call providers, or move money.
+                    This dashboard now prioritizes operator navigation and read-only system posture. It does not
+                    execute vouchers, write journal entries, resolve workflow authority, send feedback, call providers,
+                    dispatch campaigns, or move money.
                 </p>
             </div>
+
+            <section
+                class="rounded-2xl border border-indigo-200 bg-indigo-50/70 p-6 shadow-sm dark:border-indigo-900/70 dark:bg-indigo-950/30"
+                data-testid="cockpit-operating-summary-panel"
+            >
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.22em] text-indigo-700 dark:text-indigo-300">
+                            Operator Console
+                        </p>
+                        <h3 class="mt-2 text-xl font-semibold text-slate-950 dark:text-slate-50">
+                            Start here for generation, inspection, and attention queues
+                        </h3>
+                        <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-700 dark:text-slate-300">
+                            The dashboard aggregates existing Cockpit read models into safe navigation. Journal,
+                            action, feedback, provider, campaign, voucher, and wallet mutations remain outside this
+                            page.
+                        </p>
+                    </div>
+
+                    <span class="inline-flex rounded-full border border-indigo-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:border-indigo-800 dark:bg-slate-950 dark:text-indigo-300">
+                        {{ operatingIntegrationStatus }}
+                    </span>
+                </div>
+
+                <div class="mt-6 grid gap-3 lg:grid-cols-3">
+                    <article
+                        v-for="card in operatingSummaryCards"
+                        :key="card.key"
+                        class="rounded-xl border border-white/80 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                        data-testid="cockpit-operating-summary-card"
+                    >
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-semibold text-slate-950 dark:text-slate-50">
+                                    {{ card.label }}
+                                </p>
+                                <p class="mt-2 text-2xl font-semibold text-slate-950 dark:text-slate-50">
+                                    {{ card.value }}
+                                </p>
+                            </div>
+                            <a
+                                :href="card.href"
+                                class="rounded-full bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500"
+                                data-testid="cockpit-operating-summary-link"
+                            >
+                                {{ card.action }}
+                            </a>
+                        </div>
+                        <p class="mt-3 text-xs leading-5 text-slate-600 dark:text-slate-400">
+                            {{ card.description }}
+                        </p>
+                    </article>
+                </div>
+            </section>
 
             <CockpitLiquidityHero :metrics="metrics" />
 

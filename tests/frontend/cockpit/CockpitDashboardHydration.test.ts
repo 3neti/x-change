@@ -403,6 +403,62 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.findAll('[data-testid="cockpit-activity-item"]')).toHaveLength(1);
     });
 
+    it('renders a primary operating summary with safe dashboard navigation', () => {
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                dashboard_read_model: dashboardReadModel,
+                operator_issuance_activity_read_model: operatorIssuanceActivityReadModel,
+                read_model: {
+                    journal: {
+                        status: 'available',
+                        authorized: true,
+                        entries: [{ id: 'journal-1' }],
+                        redactions: {
+                            payloads: 'journal-evidence-summary-only',
+                        },
+                    },
+                    actions: {
+                        status: 'not_wired',
+                        authorized: false,
+                        actions: [],
+                        redactions: {
+                            payloads: 'safe-action-host-summary-only',
+                        },
+                    },
+                    feedback: {
+                        status: 'not_wired',
+                        authorized: false,
+                        deliveries: [],
+                        redactions: {
+                            payloads: 'communication-delivery-summary-only',
+                        },
+                    },
+                },
+            },
+        });
+
+        const panel = wrapper.find('[data-testid="cockpit-operating-summary-panel"]');
+        const links = wrapper.findAll('[data-testid="cockpit-operating-summary-link"]');
+
+        expect(panel.exists()).toBe(true);
+        expect(wrapper.text()).toContain('Settlement OS Operating Overview');
+        expect(panel.text()).toContain('Start here for generation, inspection, and attention queues');
+        expect(panel.text()).toContain('1/3 read-models available');
+        expect(panel.text()).toContain('Pay Codes');
+        expect(panel.text()).toContain('4');
+        expect(panel.text()).toContain('Quick Generate');
+        expect(panel.text()).toContain('issued');
+        expect(panel.text()).toContain('Needs Attention');
+        expect(panel.text()).toContain('1 sanitized summaries');
+        expect(links).toHaveLength(3);
+        expect(links[0].attributes('href')).toBe('/x/cockpit/pay-codes');
+        expect(links[1].attributes('href')).toBe('/x/cockpit/quick-generate');
+        expect(links[2].attributes('href')).toBe('/x/cockpit/pay-codes?status=expired');
+        expect(panel.text()).not.toContain('must-not-render');
+        expect(panel.text()).not.toContain('provider_payload');
+        expect(panel.text()).not.toContain('raw_payload');
+    });
+
     it('does not render unsafe dashboard payload values', () => {
         const wrapper = mount(CockpitDashboard, {
             props: {
