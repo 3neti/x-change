@@ -170,6 +170,35 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(wrapper.text()).toContain('Needs attention');
     });
 
+    it('renders a primary operator list summary with safe navigation actions', () => {
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: payCodesReadModel,
+            },
+        });
+
+        const summary = wrapper.find('[data-testid="cockpit-pay-code-explorer-primary-summary"]');
+        const items = summary.findAll('[data-testid="cockpit-pay-code-explorer-primary-summary-item"]');
+
+        expect(summary.exists()).toBe(true);
+        expect(summary.text()).toContain('Operator list summary');
+        expect(summary.text()).toContain('Pay Code Explorer');
+        expect(summary.text()).toContain('Visible');
+        expect(summary.text()).toContain('2');
+        expect(summary.text()).toContain('Total');
+        expect(summary.text()).toContain('4');
+        expect(summary.text()).toContain('Needs Attention');
+        expect(summary.text()).toContain('1');
+        expect(summary.text()).toContain('Payload Policy');
+        expect(summary.text()).toContain('sanitized-list-only');
+        expect(summary.text()).toContain('Query: PC-HYDRATED · Status: redeemed');
+        expect(summary.text()).toContain('read-only GET navigation');
+        expect(summary.text()).toContain('does not mutate vouchers');
+        expect(items).toHaveLength(4);
+        expect(wrapper.find('[data-testid="cockpit-pay-code-explorer-primary-quick-generate-link"]').attributes('href')).toBe('/x/cockpit/quick-generate');
+        expect(wrapper.find('[data-testid="cockpit-pay-code-explorer-primary-clear-link"]').attributes('href')).toBe('/x/cockpit/pay-codes');
+    });
+
     it('does not render unsafe fields from hydrated list records', () => {
         const wrapper = mount(PayCodeExplorer, {
             props: {
