@@ -2642,3 +2642,11 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Funding, claim, and review copy now explains the read-only boundary without scaffolding language.
 - UI report: `../ui-cockpit/reports/447-dashboard-lower-status-panel-copy-polish.md`.
 - Boundary remains unchanged: presentation-only dashboard cleanup; no read-model, journal, action, feedback, provider, campaign, voucher, wallet, public API, lifecycle truth, funding reservation, redemption, reconciliation, or execution behavior changed.
+
+## 2026-07-17 Update — Cockpit Dashboard Header Balance Status Copy Polish
+
+- `/x/cockpit` header balance placeholders now use clearer operator-facing disconnected states:
+  - `Internal balance not connected`;
+  - `Provider balance not connected`.
+- UI report: `../ui-cockpit/reports/448-dashboard-header-balance-status-copy-polish.md`.
+- Boundary remains unchanged: presentation-only dashboard cleanup; no wallet read-model connection, provider call, funding reservation, money movement, voucher mutation, journal, action, feedback, campaign, public API, lifecycle truth, or execution behavior changed.

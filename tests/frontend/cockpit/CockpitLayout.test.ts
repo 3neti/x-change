@@ -63,21 +63,16 @@ describe('Cockpit shell layout baseline', () => {
 
     it('renders balance metrics as header HUD presentation only', () => {
         const wrapper = mount(CockpitGlobalHeader, {
-            props: {
-                balances: [
-                    {
-                        key: 'reserved',
-                        label: 'Reserved Funds',
-                        value: '₱4,500,000',
-                        tone: 'warning',
-                    },
-                ],
-            },
+            props: {},
         });
 
         expect(wrapper.find('[data-testid="cockpit-balance-hud"]').exists()).toBe(true);
-        expect(wrapper.text()).toContain('Reserved Funds');
-        expect(wrapper.text()).toContain('₱4,500,000');
+        expect(wrapper.text()).toContain('Internal Balance');
+        expect(wrapper.text()).toContain('Internal balance not connected');
+        expect(wrapper.text()).toContain('Live Balance');
+        expect(wrapper.text()).toContain('Provider balance not connected');
+        expect(wrapper.text()).not.toContain('Summary not connected');
+        expect(wrapper.text()).not.toContain('Provider not connected');
         expect(wrapper.text()).toContain('Operating as: Treasury Operations');
     });
 

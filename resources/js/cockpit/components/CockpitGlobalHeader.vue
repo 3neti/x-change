@@ -15,13 +15,13 @@ withDefaults(defineProps<{
         {
             key: 'internal',
             label: 'Internal Balance',
-            value: 'Summary not connected',
+            value: 'Internal balance not connected',
             tone: 'neutral',
         },
         {
             key: 'live',
             label: 'Live Balance',
-            value: 'Provider not connected',
+            value: 'Provider balance not connected',
             tone: 'neutral',
         },
     ],

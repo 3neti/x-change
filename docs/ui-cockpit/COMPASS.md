@@ -2887,3 +2887,12 @@ Current boundary:
 - Added read-only boundary copy to the funding, claim, and review panels.
 - Verification report: `reports/447-dashboard-lower-status-panel-copy-polish.md`.
 - Boundary remains unchanged: no read-model behavior, wallet/provider calls, funding reservation, voucher mutation, claim approval, redemption, execution, reconciliation, journal writes, x-action execution, x-feedback delivery, campaign behavior, public API behavior, or unsafe payload exposure changed.
+
+## 2026-07-17 Update — Dashboard Header Balance Status Copy Polish
+
+- Polished `/x/cockpit` global header balance status placeholders:
+  - `Summary not connected` → `Internal balance not connected`.
+  - `Provider not connected` → `Provider balance not connected`.
+- Added focused frontend coverage for the default header HUD copy.
+- Verification report: `reports/448-dashboard-header-balance-status-copy-polish.md`.
+- Boundary remains unchanged: no wallet read-model connection, provider call, funding reservation, money movement, voucher mutation, lifecycle truth change, journal write, x-action execution, x-feedback delivery, campaign behavior, public API behavior, or unsafe payload exposure changed.
