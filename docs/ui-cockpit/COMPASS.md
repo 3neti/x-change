@@ -2923,3 +2923,12 @@ Current boundary:
 - Confirmed wallet Treasury absent-fact markers must not be rendered as real Allocation/Slice facts.
 - Report: `reports/456-funding-balance-ui-wave-slice-1-vocabulary.md`.
 - Boundary remains unchanged: no Vue behavior, host-published assets, wallet Treasury runtime dependency, wallet behavior, voucher behavior, provider call, execution behavior, journal/action/feedback/campaign behavior, public API behavior, lifecycle mutation, reservation, release, capture, repayment, reversal, or money movement changed.
+
+# 2026-07-17 — Cockpit Funding / Balance UI Wave — Slice 2 — Dashboard Panel
+
+- Updated `/x/cockpit` Funding Status panel copy and layout.
+- Added scan-friendly funding semantics: Accounting, Liability, Estimate, and External.
+- Replaced generic disconnected copy with `Bridge estimates` and `Treasury facts deferred`.
+- Outstanding Pay Codes and Usable Balance now explicitly render as bridge estimates.
+- Report: `reports/457-funding-balance-ui-wave-slice-2-dashboard-panel.md`.
+- Boundary remains unchanged: presentation-only dashboard update; no wallet Treasury runtime dependency, provider balance refresh, wallet reservation, release, capture, repayment, reversal, refund, voucher lifecycle mutation, journal write, action execution, feedback delivery, campaign mutation, public API behavior, or money movement changed.

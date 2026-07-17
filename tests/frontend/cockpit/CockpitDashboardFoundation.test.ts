@@ -20,13 +20,23 @@ describe('Cockpit dashboard foundation widgets', () => {
         });
 
         expect(wrapper.text()).toContain('Funding readiness');
-        expect(wrapper.text()).toContain('Wallet lookups, reservations, provider calls, and money movement stay outside this dashboard.');
+        expect(wrapper.text()).toContain('Outstanding Pay Codes and Usable Balance are bridge estimates');
+        expect(wrapper.text()).toContain('Cockpit does not reserve, release, capture, refund, or move money here.');
+        expect(wrapper.text()).toContain('Bridge estimates');
+        expect(wrapper.text()).toContain('Treasury facts deferred');
+        expect(wrapper.text()).toContain('Accounting');
+        expect(wrapper.text()).toContain('Liability');
+        expect(wrapper.text()).toContain('Estimate');
+        expect(wrapper.text()).toContain('External');
         expect(wrapper.text()).toContain('Internal Balance');
         expect(wrapper.text()).toContain('Live Balance');
         expect(wrapper.text()).toContain('Outstanding Pay Codes');
         expect(wrapper.text()).toContain('Usable Balance');
-        expect(wrapper.text()).toContain('Balance summary not connected');
+        expect(wrapper.text()).toContain('Bridge estimate; no fund release');
+        expect(wrapper.text()).toContain('Bridge estimate; Internal Balance minus Outstanding Pay Codes');
+        expect(wrapper.text()).not.toContain('Balance summary not connected');
         expect(wrapper.text()).not.toContain('Read model pending');
+        expect(wrapper.find('[data-testid="cockpit-funding-semantics"]').exists()).toBe(true);
         expect(wrapper.findAll('[data-testid="cockpit-dashboard-metric-card"]')).toHaveLength(4);
     });
 

@@ -2778,3 +2778,16 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/456-funding-balance-ui-wave-slice-1-vocabulary.md`.
 - Boundary remains unchanged: no Vue behavior, host-published assets, wallet Treasury runtime dependency, wallet behavior, voucher behavior, provider call, execution behavior, journal/action/feedback/campaign behavior, public API behavior, lifecycle mutation, reservation, release, capture, repayment, reversal, or money movement changed.
 - Next checkpoint: update the dashboard Funding Status panel using this vocabulary.
+
+## 2026-07-17 Update — Cockpit Funding / Balance UI Wave — Slice 2 — Dashboard Panel
+
+- Updated the `/x/cockpit` Funding Status panel to use the approved balance vocabulary.
+- Added scan-friendly semantic groups:
+  - Accounting — Internal Balance;
+  - Liability — Outstanding Pay Codes;
+  - Estimate — Usable Balance;
+  - External — Live Balance.
+- Replaced generic disconnected copy with `Bridge estimates` and `Treasury facts deferred`.
+- UI/report: `../ui-cockpit/reports/457-funding-balance-ui-wave-slice-2-dashboard-panel.md`.
+- Boundary remains unchanged: presentation-only dashboard update; no wallet Treasury runtime dependency, provider balance refresh, wallet reservation, release, capture, repayment, reversal, refund, voucher lifecycle mutation, journal write, action execution, feedback delivery, campaign mutation, public API behavior, or money movement changed.
+- Next checkpoint: publish host assets and verify no drift.

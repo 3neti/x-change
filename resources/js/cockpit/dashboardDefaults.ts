@@ -24,14 +24,14 @@ export const cockpitDashboardMetrics: CockpitDashboardMetric[] = [
         key: 'reserved-funds',
         label: 'Outstanding Pay Codes',
         value: 'Liability summary not connected',
-        helper: 'Read-only estimate; no fund release',
+        helper: 'Bridge estimate; no fund release',
         tone: 'warning',
     },
     {
         key: 'available-to-issue',
         label: 'Usable Balance',
         value: 'Usable balance not connected',
-        helper: 'Wallet balance minus outstanding Pay Codes',
+        helper: 'Bridge estimate; Internal Balance minus Outstanding Pay Codes',
         tone: 'healthy',
     },
 ];
