@@ -2915,3 +2915,11 @@ Current boundary:
 - Default behavior remains `Provider balance not connected`.
 - Verification report: `reports/450-cockpit-funding-status-wave-2-provider-balance-summary-adapter.md`.
 - Boundary remains unchanged: no wallet top-up, wallet debit, reservation, transfer, provider balance refresh, provider sync, voucher mutation, claim approval, redemption, execution, reconciliation, journal write, x-action execution, x-feedback delivery, campaign behavior, public API behavior, or raw wallet/provider payload exposure changed.
+# 2026-07-17 — Cockpit Funding / Balance UI Wave — Slice 1 — Vocabulary
+
+- Started the Cockpit Funding / Balance UI Wave.
+- Defined operator labels for Internal Balance, Outstanding Pay Codes, Usable Balance, and Live Balance.
+- Confirmed `Outstanding Pay Codes` and `Usable Balance` remain x-change bridge estimates until wallet Treasury has persisted facts.
+- Confirmed wallet Treasury absent-fact markers must not be rendered as real Allocation/Slice facts.
+- Report: `reports/456-funding-balance-ui-wave-slice-1-vocabulary.md`.
+- Boundary remains unchanged: no Vue behavior, host-published assets, wallet Treasury runtime dependency, wallet behavior, voucher behavior, provider call, execution behavior, journal/action/feedback/campaign behavior, public API behavior, lifecycle mutation, reservation, release, capture, repayment, reversal, or money movement changed.

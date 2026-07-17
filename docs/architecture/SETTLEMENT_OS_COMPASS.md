@@ -2764,3 +2764,17 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - x-change must not treat `NullTreasuryPlanningRuntime` output as an executed allocation, draw, release, repayment, reversal, or settlement operation.
 - Boundary remains unchanged: no wallet Treasury runtime dependency, no `3neti/wallet` package dependency, no direct wallet Treasury imports, no wallet reservation/capture/release/repayment/reversal behavior, no balance computation change, no voucher lifecycle behavior, no Cockpit UI behavior, and no provider, execution, journal, action, feedback, campaign, public API, or lifecycle mutation behavior changed.
 - Next recommended checkpoint: define an optional read-only wallet Treasury adapter plan only after wallet Phase 5 is committed and consumer labels are accepted.
+
+## 2026-07-17 Update — Cockpit Funding / Balance UI Wave — Slice 1 — Vocabulary
+
+- Started the Cockpit Funding / Balance UI Wave.
+- Operator vocabulary is now defined for:
+  - `Internal Balance`;
+  - `Outstanding Pay Codes`;
+  - `Usable Balance`;
+  - `Live Balance`.
+- `Outstanding Pay Codes` and `Usable Balance` remain x-change bridge estimates until wallet Treasury exposes persisted real facts.
+- Wallet Treasury Phase 4/5 absent-fact markers remain a disconnected/bridge state and must not be shown as real Allocation/Slice facts.
+- UI/report: `../ui-cockpit/reports/456-funding-balance-ui-wave-slice-1-vocabulary.md`.
+- Boundary remains unchanged: no Vue behavior, host-published assets, wallet Treasury runtime dependency, wallet behavior, voucher behavior, provider call, execution behavior, journal/action/feedback/campaign behavior, public API behavior, lifecycle mutation, reservation, release, capture, repayment, reversal, or money movement changed.
+- Next checkpoint: update the dashboard Funding Status panel using this vocabulary.
