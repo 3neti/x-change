@@ -2862,3 +2862,14 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/463-distribution-workspace-final-copy-polish-slice-1-inspection-copy.md`.
 - Boundary remains unchanged: presentation-only distribution update; no read-model behavior, route behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle mutation, claim approval, driver execution, artifact generation, journal write, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next checkpoint: publish host assets and verify no drift.
+
+## 2026-07-17 Update — Distribution Workspace Final Copy Polish — Slice 2 — Host Publish / Closure
+
+- Closed the Distribution Workspace Final Copy Polish wave.
+- Package-owned Cockpit assets were published into the host app.
+- Asset drift is clean: `checked 60, ok 60, stale 0, missing 0, extra 0`.
+- Focused Distribution Workspace frontend verification passed.
+- Host production build passed with the known non-blocking third-party Rolldown annotation warnings.
+- UI/report: `../ui-cockpit/reports/464-distribution-workspace-final-copy-polish-slice-2-publish-closure.md`.
+- Boundary remains unchanged: host-publish and verification only; no read-model behavior, route behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle mutation, claim approval, driver execution, artifact generation, journal write, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next recommended checkpoint: manual browser acceptance on `/x/cockpit/pay-codes/{code}/distribution`, then continue with the next page-specific Cockpit target.

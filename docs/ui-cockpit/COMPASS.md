@@ -2997,3 +2997,13 @@ Current boundary:
 - Replaced `Read-only share surface` with `Read-only claim link`.
 - Report: `reports/463-distribution-workspace-final-copy-polish-slice-1-inspection-copy.md`.
 - Boundary remains unchanged: presentation-only distribution update; no read-model behavior, route behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle mutation, claim approval, driver execution, artifact generation, journal write, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-17 — Distribution Workspace Final Copy Polish — Slice 2 — Host Publish / Closure
+
+- Published package-owned Cockpit assets into the host app with `php artisan x-change:install --force --no-interaction`.
+- Verified published Cockpit assets are clean: checked 60, ok 60, stale 0, missing 0, extra 0.
+- Focused Distribution Workspace frontend verification passed.
+- Host production build passed with the known non-blocking third-party Rolldown annotation warnings.
+- Report: `reports/464-distribution-workspace-final-copy-polish-slice-2-publish-closure.md`.
+- Closed the Distribution Workspace Final Copy Polish wave.
+- Boundary remains unchanged: host-publish and verification only; no read-model behavior, route behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle mutation, claim approval, driver execution, artifact generation, journal write, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
