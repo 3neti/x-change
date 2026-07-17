@@ -2823,3 +2823,17 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/460-pay-code-explorer-productization-slice-2-publish-closure.md`.
 - Boundary remains unchanged: host-publish and verification only; no filter behavior, query API, voucher lifecycle mutation, claim approval, driver execution, feedback delivery, journal write, provider call, campaign mutation, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next recommended checkpoint: manual browser acceptance on `/x/cockpit/pay-codes`, then continue with the next page-specific Cockpit target.
+
+## 2026-07-17 Update — Voucher Detail Final Copy Polish — Slice 1 — Inspection Copy
+
+- Started the Voucher Detail Final Copy Polish wave.
+- `/x/cockpit/pay-codes/{code}` now uses `Pay Code Detail` and `Pay Code inspection` instead of old read-model/foundation scaffold copy.
+- Remaining scaffold section labels were replaced with operator-facing inspection labels:
+  - `Pay Code facts`;
+  - `Lifecycle timeline`;
+  - `Evidence status`;
+  - `Delivery status`;
+  - `Audit and follow-up status`.
+- UI/report: `../ui-cockpit/reports/461-voucher-detail-final-copy-polish-slice-1-inspection-copy.md`.
+- Boundary remains unchanged: presentation-only detail update; no read-model behavior, route behavior, voucher lifecycle mutation, claim approval, driver execution, feedback delivery, journal write, provider call, campaign mutation, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next checkpoint: publish host assets and verify no drift.

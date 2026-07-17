@@ -19,7 +19,7 @@ defineProps<{
             Audit
         </p>
         <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-            Audit tab placeholder
+            Audit and follow-up status
         </h3>
 
         <div class="mt-5 grid gap-3">
@@ -45,7 +45,7 @@ defineProps<{
 
         <div class="mt-6 rounded-lg border border-dashed border-slate-300 p-4 dark:border-slate-700">
             <p class="text-sm font-semibold text-slate-950 dark:text-slate-50">
-                Operator actions are disabled in Slice 5.
+                Operator actions are read-only from this page.
             </p>
             <div class="mt-3 grid gap-2">
                 <div

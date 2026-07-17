@@ -15,7 +15,7 @@ defineProps<{
             Distribution
         </p>
         <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-            Distribution tab placeholder
+            Delivery status
         </h3>
 
         <div class="mt-5 grid gap-3">

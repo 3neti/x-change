@@ -167,7 +167,7 @@ describe('Cockpit Voucher Detail hydration', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Voucher Detail Read Model');
+        expect(wrapper.text()).toContain('Pay Code Detail');
         expect(wrapper.text()).toContain('PC-HYDRATED-001');
         expect(wrapper.text()).toContain('ready');
         expect(wrapper.text()).toContain('₱1,500.75');

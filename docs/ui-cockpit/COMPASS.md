@@ -2961,3 +2961,16 @@ Current boundary:
 - Report: `reports/460-pay-code-explorer-productization-slice-2-publish-closure.md`.
 - Closed the Pay Code Explorer Productization wave.
 - Boundary remains unchanged: host-publish and verification only; no filter behavior, query API, voucher lifecycle mutation, claim approval, driver execution, feedback delivery, journal write, provider call, campaign mutation, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-17 — Voucher Detail Final Copy Polish — Slice 1 — Inspection Copy
+
+- Started the Voucher Detail Final Copy Polish wave.
+- Updated `/x/cockpit/pay-codes/{code}` hero copy to `Pay Code Detail` and `Pay Code inspection`.
+- Replaced remaining scaffold section labels with operator-facing labels:
+  - `Pay Code facts`;
+  - `Lifecycle timeline`;
+  - `Evidence status`;
+  - `Delivery status`;
+  - `Audit and follow-up status`.
+- Report: `reports/461-voucher-detail-final-copy-polish-slice-1-inspection-copy.md`.
+- Boundary remains unchanged: presentation-only detail update; no read-model behavior, route behavior, voucher lifecycle mutation, claim approval, driver execution, feedback delivery, journal write, provider call, campaign mutation, wallet behavior, Treasury behavior, public API behavior, or money movement changed.

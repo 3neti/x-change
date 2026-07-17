@@ -23,7 +23,7 @@ describe('Cockpit Voucher Detail foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Voucher read-model placeholder');
+        expect(wrapper.text()).toContain('Pay Code facts');
         expect(wrapper.text()).toContain('Pay Code');
         expect(wrapper.text()).toContain('PC-READY-001');
         expect(wrapper.text()).toContain('Execution ID');
@@ -38,7 +38,7 @@ describe('Cockpit Voucher Detail foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Lifecycle facts placeholder');
+        expect(wrapper.text()).toContain('Lifecycle timeline');
         expect(wrapper.text()).toContain('Issued');
         expect(wrapper.text()).toContain('Claim started');
         expect(wrapper.text()).toContain('Execution outcome');
@@ -60,12 +60,12 @@ describe('Cockpit Voucher Detail foundation', () => {
             },
         });
 
-        expect(evidence.text()).toContain('Evidence tab placeholder');
+        expect(evidence.text()).toContain('Evidence status');
         expect(evidence.text()).toContain('Identity evidence');
         expect(evidence.text()).toContain('Settlement envelope evidence');
         expect(evidence.findAll('[data-testid="cockpit-voucher-evidence-item"]')).toHaveLength(3);
 
-        expect(distribution.text()).toContain('Distribution tab placeholder');
+        expect(distribution.text()).toContain('Delivery status');
         expect(distribution.text()).toContain('SMS');
         expect(distribution.text()).toContain('Email');
         expect(distribution.text()).toContain('In-app');
@@ -80,7 +80,7 @@ describe('Cockpit Voucher Detail foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Audit tab placeholder');
+        expect(wrapper.text()).toContain('Audit and follow-up status');
         expect(wrapper.text()).toContain('Journal read model');
         expect(wrapper.text()).toContain('Action handoff');
         expect(wrapper.text()).toContain('Provider callbacks');
@@ -100,7 +100,9 @@ describe('Cockpit Voucher Detail foundation', () => {
         const wrapper = mount(VoucherDetail);
 
         expect(wrapper.find('[data-testid="cockpit-voucher-detail-shell"]').exists()).toBe(true);
-        expect(wrapper.text()).toContain('Voucher Detail Foundation');
+        expect(wrapper.text()).toContain('Pay Code Detail');
+        expect(wrapper.text()).toContain('Pay Code inspection');
+        expect(wrapper.text()).toContain('Inspect sanitized Pay Code facts');
         expect(wrapper.text()).toContain('Overview');
         expect(wrapper.text()).toContain('Timeline');
         expect(wrapper.text()).toContain('Evidence');

@@ -15,7 +15,7 @@ defineProps<{
             Timeline
         </p>
         <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-            Lifecycle facts placeholder
+            Lifecycle timeline
         </h3>
 
         <ol class="mt-5 space-y-4">

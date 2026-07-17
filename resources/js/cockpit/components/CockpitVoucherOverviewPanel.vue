@@ -16,7 +16,7 @@ defineProps<{
                 Overview
             </p>
             <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                Voucher read-model placeholder
+                Pay Code facts
             </h3>
         </div>
 

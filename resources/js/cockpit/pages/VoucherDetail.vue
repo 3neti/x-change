@@ -187,7 +187,7 @@ const evidenceHeading = computed(() => (
     Array.isArray(props.read_model?.voucher?.evidence_summary)
     && props.read_model.voucher.evidence_summary.length > 0
         ? 'Evidence summary'
-        : 'Evidence tab placeholder'
+        : 'Evidence status'
 ));
 
 const distributionItems = computed<CockpitVoucherDistributionItem[]>(() => [
@@ -587,15 +587,16 @@ function integrationSummary(
         <section class="space-y-6" data-testid="cockpit-voucher-detail-shell">
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                    Wave 4 · Slice 12
+                    Pay Code inspection
                 </p>
                 <h2 class="mt-2 text-2xl font-semibold text-slate-950 dark:text-slate-50">
-                    Voucher Detail Read Model
+                    Pay Code Detail
                 </h2>
                 <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    This screen hydrates the Voucher Detail Foundation from sanitized voucher summary
-                    facts only. It does not mutate vouchers, execute drivers, write journal entries, send
-                    feedback, call providers, or move money.
+                    Inspect sanitized Pay Code facts, lifecycle state, claim URL readiness, and
+                    integration evidence from one read-only workspace. This page does not mutate
+                    vouchers, execute drivers, write journal entries, send feedback, call providers,
+                    or move money.
                 </p>
                 <dl class="mt-5 grid gap-3 text-sm sm:grid-cols-3">
                     <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
