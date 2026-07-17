@@ -1115,21 +1115,21 @@ function stringValue(value: unknown): string | null {
                 <p
                     class="text-xs font-semibold tracking-[0.22em] text-slate-500 uppercase dark:text-slate-400"
                 >
-                    Wave 12 · Functional parity bridge
+                    Pay Code generation
                 </p>
                 <h2
                     class="mt-2 text-2xl font-semibold text-slate-950 dark:text-slate-50"
                 >
-                    Quick Generate Runtime
+                    Quick Generate
                 </h2>
                 <p
                     class="mt-3 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300"
                 >
-                    This screen now uses the template-first draft/compiler path
-                    and hands off to the existing x-change GeneratePayCode
-                    action. Pricing and funding preflights are informational,
-                    while journal, action, feedback, provider, and campaign
-                    mutations remain separately gated.
+                    Create a Pay Code through the approved template-first
+                    handoff to the existing x-change GeneratePayCode action.
+                    Pricing and funding preflights are informational, while
+                    journal, action, feedback, provider, and campaign mutations
+                    remain separately gated.
                 </p>
             </div>
 

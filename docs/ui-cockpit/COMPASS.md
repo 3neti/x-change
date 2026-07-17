@@ -3007,3 +3007,13 @@ Current boundary:
 - Report: `reports/464-distribution-workspace-final-copy-polish-slice-2-publish-closure.md`.
 - Closed the Distribution Workspace Final Copy Polish wave.
 - Boundary remains unchanged: host-publish and verification only; no read-model behavior, route behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle mutation, claim approval, driver execution, artifact generation, journal write, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-17 — Quick Generate Final Copy Polish — Slice 1 — Generation Copy
+
+- Started the Quick Generate Final Copy Polish wave.
+- Updated `/x/cockpit/quick-generate` hero copy to `Quick Generate` and `Pay Code generation`.
+- Replaced remaining high-noise scaffold labels:
+  - `Operator input reference`;
+  - `Preflight summary`.
+- Report: `reports/465-quick-generate-final-copy-polish-slice-1-generation-copy.md`.
+- Boundary remains unchanged: presentation-only Quick Generate update; no route behavior, form payload shape, validation, idempotency, pricing calculation, funding behavior, issuer wallet behavior, voucher instruction compilation, GeneratePayCode handoff, journal write, x-action execution, x-feedback delivery, provider call, campaign mutation, public API behavior, or money movement changed.

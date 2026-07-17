@@ -15,7 +15,7 @@ defineProps<{
             Runtime Inputs
         </p>
         <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-            Operator input placeholders
+            Operator input reference
         </h3>
 
         <div class="mt-5 space-y-3">
@@ -38,4 +38,3 @@ defineProps<{
         </div>
     </section>
 </template>
-

@@ -61,14 +61,14 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toHaveLength(3);
     });
 
-    it('renders runtime inputs as placeholders without a submit form', () => {
+    it('renders runtime inputs as reference facts without a submit form', () => {
         const wrapper = mount(CockpitRuntimeInputPanel, {
             props: {
                 inputs: cockpitRuntimeInputs,
             },
         });
 
-        expect(wrapper.text()).toContain('Operator input placeholders');
+        expect(wrapper.text()).toContain('Operator input reference');
         expect(wrapper.text()).toContain('Amount');
         expect(wrapper.text()).toContain('Recipient');
         expect(wrapper.text()).toContain('Purpose');
@@ -1914,7 +1914,8 @@ describe('Cockpit Quick Generate foundation', () => {
                 .find('[data-testid="cockpit-quick-generate-shell"]')
                 .exists(),
         ).toBe(true);
-        expect(wrapper.text()).toContain('Quick Generate Runtime');
+        expect(wrapper.text()).toContain('Quick Generate');
+        expect(wrapper.text()).toContain('Pay Code generation');
         expect(wrapper.text()).toContain('Template Selector');
         expect(wrapper.text()).toContain('Runtime Inputs');
         expect(wrapper.text()).toContain('Pricing and Funding');
@@ -1922,7 +1923,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.find('[aria-current="page"]').text()).toContain(
             'Quick Generate',
         );
-        expect(wrapper.text()).toContain('template-first draft/compiler path');
+        expect(wrapper.text()).toContain('approved template-first handoff');
         expect(wrapper.text()).toContain('GeneratePayCode action');
         expect(wrapper.text()).toContain('preflights are informational');
         expect(wrapper.text()).toContain('Issuance Boundary Plan');

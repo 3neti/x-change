@@ -2873,3 +2873,14 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/464-distribution-workspace-final-copy-polish-slice-2-publish-closure.md`.
 - Boundary remains unchanged: host-publish and verification only; no read-model behavior, route behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle mutation, claim approval, driver execution, artifact generation, journal write, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next recommended checkpoint: manual browser acceptance on `/x/cockpit/pay-codes/{code}/distribution`, then continue with the next page-specific Cockpit target.
+
+## 2026-07-17 Update — Quick Generate Final Copy Polish — Slice 1 — Generation Copy
+
+- Started the Quick Generate Final Copy Polish wave.
+- `/x/cockpit/quick-generate` now uses `Quick Generate` and `Pay Code generation` instead of old runtime/wave scaffold copy.
+- Remaining high-noise labels were replaced with operator-facing labels:
+  - `Operator input reference`;
+  - `Preflight summary`.
+- UI/report: `../ui-cockpit/reports/465-quick-generate-final-copy-polish-slice-1-generation-copy.md`.
+- Boundary remains unchanged: presentation-only Quick Generate update; no route behavior, form payload shape, validation, idempotency, pricing calculation, funding behavior, issuer wallet behavior, voucher instruction compilation, GeneratePayCode handoff, journal write, x-action execution, x-feedback delivery, provider call, campaign mutation, public API behavior, or money movement changed.
+- Next checkpoint: publish host assets and verify no drift.
