@@ -7,6 +7,7 @@ import CockpitGenerateActionPanel from '../../../resources/js/cockpit/components
 import CockpitIssuanceBoundaryPanel from '../../../resources/js/cockpit/components/CockpitIssuanceBoundaryPanel.vue';
 import CockpitPricingFundingSummary from '../../../resources/js/cockpit/components/CockpitPricingFundingSummary.vue';
 import CockpitQuickGenerateAuthorizationGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateAuthorizationGatePanel.vue';
+import CockpitQuickGenerateDiagnosticsSummary from '../../../resources/js/cockpit/components/CockpitQuickGenerateDiagnosticsSummary.vue';
 import CockpitQuickGenerateDraftContractPanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateDraftContractPanel.vue';
 import CockpitQuickGenerateFundingGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateFundingGatePanel.vue';
 import CockpitQuickGenerateIdempotencyGatePanel from '../../../resources/js/cockpit/components/CockpitQuickGenerateIdempotencyGatePanel.vue';
@@ -130,13 +131,15 @@ describe('Cockpit Quick Generate foundation', () => {
     it('demotes historical gate panels behind a diagnostics disclosure', () => {
         const wrapper = mount(CockpitDiagnosticsDisclosure, {
             props: {
-                title: 'Architecture history and gate diagnostics',
+                title: 'Engineering diagnostics',
                 summary:
-                    'Older baseline panels remain available for engineering diagnostics.',
+                    'A compact readiness summary is shown first.',
+                eyebrow: 'Optional diagnostics',
+                actionLabel: 'Show diagnostics',
             },
             slots: {
                 default:
-                    '<div data-testid="diagnostic-slot">Authorization Gate Baseline</div>',
+                    '<div data-testid="diagnostic-slot">Full architecture history</div>',
             },
         });
 
@@ -145,14 +148,62 @@ describe('Cockpit Quick Generate foundation', () => {
                 .find('[data-testid="cockpit-diagnostics-disclosure"]')
                 .exists(),
         ).toBe(true);
-        expect(wrapper.text()).toContain('Engineering history');
-        expect(wrapper.text()).toContain(
-            'Architecture history and gate diagnostics',
-        );
-        expect(wrapper.text()).toContain('Show diagnostic history');
+        expect(wrapper.text()).toContain('Optional diagnostics');
+        expect(wrapper.text()).toContain('Engineering diagnostics');
+        expect(wrapper.text()).toContain('Show diagnostics');
         expect(
             wrapper.find('[data-testid="diagnostic-slot"]').text(),
-        ).toContain('Authorization Gate Baseline');
+        ).toContain('Full architecture history');
+    });
+
+    it('renders a compact Quick Generate diagnostics summary before full history', () => {
+        const wrapper = mount(CockpitQuickGenerateDiagnosticsSummary, {
+            props: {
+                mutationContract: {
+                    status: 'approved-handoff',
+                    runtime_enabled: true,
+                },
+                pricingGate: {
+                    status: 'runtime-informational',
+                },
+                fundingGate: {
+                    status: 'runtime-informational',
+                },
+                idempotencyGate: {
+                    status: 'backend-ready',
+                },
+                validationRedactionGate: {
+                    status: 'backend-ready',
+                },
+                mutationHandoffPlan: {
+                    status: 'backend-handoff-wired',
+                },
+                mutationPreconditionsReview: {
+                    recommendation: 'use-existing-issuance-handoff',
+                },
+                mutationAuthorizationDecision: {
+                    status: 'approved-handoff',
+                },
+                authorization: {
+                    status: 'runtime-ready',
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Readiness summary');
+        expect(wrapper.text()).toContain('Quick Generate handoff status');
+        expect(wrapper.text()).toContain('Operator Submit');
+        expect(wrapper.text()).toContain('Ready');
+        expect(wrapper.text()).toContain('Pricing');
+        expect(wrapper.text()).toContain('Runtime Informational');
+        expect(wrapper.text()).toContain('External Effects');
+        expect(wrapper.text()).toContain('Separately gated');
+        expect(wrapper.text()).toContain('Use Existing Issuance Handoff');
+        expect(
+            wrapper.findAll(
+                '[data-testid="cockpit-quick-generate-diagnostics-summary-item"]',
+            ),
+        ).toHaveLength(8);
     });
 
     it('can render a non-diagnostic disclosure for operator reference content', () => {

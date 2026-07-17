@@ -2895,3 +2895,23 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/466-quick-generate-final-copy-polish-slice-2-publish-closure.md`.
 - Boundary remains unchanged: host-publish and verification only; no route behavior, form payload shape, validation, idempotency, pricing calculation, funding behavior, issuer wallet behavior, voucher instruction compilation, GeneratePayCode handoff, journal write, x-action execution, x-feedback delivery, provider call, campaign mutation, public API behavior, or money movement changed.
 - Next recommended checkpoint: manual browser acceptance on `/x/cockpit/quick-generate`, then continue with a focused Quick Generate diagnostic simplification or remaining page-specific polish.
+
+## 2026-07-18 Update — Quick Generate Diagnostic Simplification — Slice 1 — Compact Summary
+
+- Started the Quick Generate Diagnostic Simplification wave.
+- `/x/cockpit/quick-generate` now presents a compact `Quick Generate handoff status` readiness summary before the older architecture-history panels.
+- The diagnostics disclosure is now labeled `Engineering diagnostics`, and older gate/history panels are nested under `Full architecture history`.
+- UI/report: `../ui-cockpit/reports/467-quick-generate-diagnostic-simplification-slice-1-compact-summary.md`.
+- Boundary remains unchanged: presentation-only Quick Generate diagnostics update; no route behavior, form payload shape, validation, idempotency, pricing calculation, funding behavior, issuer wallet behavior, voucher instruction compilation, GeneratePayCode handoff, journal write, x-action execution, x-feedback delivery, provider call, campaign mutation, public API behavior, or money movement changed.
+- Next checkpoint: publish host assets and verify no drift.
+
+## 2026-07-18 Update — Quick Generate Diagnostic Simplification — Slice 2 — Host Publish / Closure
+
+- Closed the Quick Generate Diagnostic Simplification wave.
+- Package-owned Cockpit assets were published into the host app.
+- Published asset drift is clean with `php artisan x-change:doctor --assets`.
+- Focused Quick Generate frontend verification and targeted architecture verification passed.
+- Host production build passed with the known non-blocking third-party Rolldown annotation warnings.
+- UI/report: `../ui-cockpit/reports/468-quick-generate-diagnostic-simplification-slice-2-publish-closure.md`.
+- Boundary remains unchanged: host-publish and verification only; no route behavior, form payload shape, validation, idempotency, pricing calculation, funding behavior, issuer wallet behavior, voucher instruction compilation, GeneratePayCode handoff, journal write, x-action execution, x-feedback delivery, provider call, campaign mutation, public API behavior, or money movement changed.
+- Next recommended checkpoint: manual browser acceptance on `/x/cockpit/quick-generate`, then continue to Pay Code Explorer filter/query UX polish or another page-specific Cockpit cleanup.

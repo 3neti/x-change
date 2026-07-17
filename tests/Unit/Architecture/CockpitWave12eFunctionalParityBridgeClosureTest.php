@@ -18,7 +18,7 @@ it('documents cockpit wave 12e functional parity bridge closure', function () {
         ->and($report)->toContain('php artisan x-change:install --force')
         ->and($report)->toContain('npm run dev')
         ->and($report)->toContain('Wave 13')
-        ->and($quickGenerate)->toContain('Quick Generate Runtime')
+        ->and($quickGenerate)->toContain('Quick Generate')
         ->and($quickGenerate)->not->toContain('No voucher generation')
         ->and($payCodeCreate)->toContain('x-change.pay-code-create.cockpit-bridge.v1')
         ->and($payCodeIndex)->toContain('x-change.pay-code-index.cockpit-bridge.v1')

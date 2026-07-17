@@ -5,6 +5,7 @@ import CockpitGenerateActionPanel from '../components/CockpitGenerateActionPanel
 import CockpitIssuanceBoundaryPanel from '../components/CockpitIssuanceBoundaryPanel.vue';
 import CockpitPricingFundingSummary from '../components/CockpitPricingFundingSummary.vue';
 import CockpitQuickGenerateAuthorizationGatePanel from '../components/CockpitQuickGenerateAuthorizationGatePanel.vue';
+import CockpitQuickGenerateDiagnosticsSummary from '../components/CockpitQuickGenerateDiagnosticsSummary.vue';
 import CockpitQuickGenerateDraftContractPanel from '../components/CockpitQuickGenerateDraftContractPanel.vue';
 import CockpitQuickGenerateFundingGatePanel from '../components/CockpitQuickGenerateFundingGatePanel.vue';
 import CockpitQuickGenerateIdempotencyGatePanel from '../components/CockpitQuickGenerateIdempotencyGatePanel.vue';
@@ -1162,44 +1163,69 @@ function stringValue(value: unknown): string | null {
                     :runtime-enabled="true"
                 />
                 <CockpitDiagnosticsDisclosure
-                    title="Architecture history and gate diagnostics"
-                    summary="Older baseline panels remain available for engineering diagnostics. They are no longer the primary operator guidance after the Quick Generate runtime handoff."
+                    title="Engineering diagnostics"
+                    summary="A compact readiness summary is shown first. Open the full architecture history only when debugging gate provenance or old slice decisions."
+                    eyebrow="Optional diagnostics"
+                    action-label="Show diagnostics"
                 >
-                    <CockpitPricingFundingSummary
-                        :summaries="pricingSummaries"
-                    />
-                    <CockpitQuickGeneratePricingGatePanel
+                    <CockpitQuickGenerateDiagnosticsSummary
+                        :mutation-contract="mutationContract"
                         :pricing-gate="pricingGate"
-                    />
-                    <CockpitQuickGenerateFundingGatePanel
                         :funding-gate="fundingGate"
-                    />
-                    <CockpitQuickGenerateIdempotencyGatePanel
                         :idempotency-gate="idempotencyGate"
-                    />
-                    <CockpitQuickGenerateValidationRedactionGatePanel
                         :validation-redaction-gate="validationRedactionGate"
-                    />
-                    <CockpitQuickGenerateMutationHandoffPlanPanel
                         :mutation-handoff-plan="mutationHandoffPlan"
-                    />
-                    <CockpitQuickGenerateMutationPreconditionsReviewPanel
                         :mutation-preconditions-review="
                             mutationPreconditionsReview
                         "
-                    />
-                    <CockpitQuickGenerateMutationAuthorizationDecisionPanel
                         :mutation-authorization-decision="
                             mutationAuthorizationDecision
                         "
-                    />
-                    <CockpitQuickGenerateAuthorizationGatePanel
                         :authorization="authorization"
                     />
-                    <CockpitQuickGenerateDraftContractPanel
-                        :draft-contract="draftContract"
-                    />
-                    <CockpitIssuanceBoundaryPanel />
+
+                    <CockpitDiagnosticsDisclosure
+                        title="Full architecture history"
+                        summary="These older panels are retained as engineering evidence. They should not be used as the primary operator workflow."
+                        eyebrow="Detailed history"
+                        action-label="Show full history"
+                    >
+                        <CockpitPricingFundingSummary
+                            :summaries="pricingSummaries"
+                        />
+                        <CockpitQuickGeneratePricingGatePanel
+                            :pricing-gate="pricingGate"
+                        />
+                        <CockpitQuickGenerateFundingGatePanel
+                            :funding-gate="fundingGate"
+                        />
+                        <CockpitQuickGenerateIdempotencyGatePanel
+                            :idempotency-gate="idempotencyGate"
+                        />
+                        <CockpitQuickGenerateValidationRedactionGatePanel
+                            :validation-redaction-gate="validationRedactionGate"
+                        />
+                        <CockpitQuickGenerateMutationHandoffPlanPanel
+                            :mutation-handoff-plan="mutationHandoffPlan"
+                        />
+                        <CockpitQuickGenerateMutationPreconditionsReviewPanel
+                            :mutation-preconditions-review="
+                                mutationPreconditionsReview
+                            "
+                        />
+                        <CockpitQuickGenerateMutationAuthorizationDecisionPanel
+                            :mutation-authorization-decision="
+                                mutationAuthorizationDecision
+                            "
+                        />
+                        <CockpitQuickGenerateAuthorizationGatePanel
+                            :authorization="authorization"
+                        />
+                        <CockpitQuickGenerateDraftContractPanel
+                            :draft-contract="draftContract"
+                        />
+                        <CockpitIssuanceBoundaryPanel />
+                    </CockpitDiagnosticsDisclosure>
                 </CockpitDiagnosticsDisclosure>
             </div>
         </section>

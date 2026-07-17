@@ -17,8 +17,9 @@ it('documents cockpit wave 13e operator focused presentation closure', function 
         ->and($report)->toContain('php artisan x-change:install --force')
         ->and($report)->toContain('npm run dev')
         ->and($quickGenerate)->toContain('CockpitDiagnosticsDisclosure')
-        ->and($quickGenerate)->toContain('Quick Generate Runtime')
-        ->and($quickGenerate)->toContain('Architecture history and gate diagnostics')
+        ->and($quickGenerate)->toContain('Quick Generate')
+        ->and($quickGenerate)->toContain('Engineering diagnostics')
+        ->and($quickGenerate)->toContain('Full architecture history')
         ->and($callout)->toContain('Cockpit bridge')
         ->and($diagnostics)->toContain('Show diagnostic history');
 });
