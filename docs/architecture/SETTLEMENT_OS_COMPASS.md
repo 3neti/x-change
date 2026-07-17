@@ -2927,3 +2927,14 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/469-pay-code-explorer-filter-query-ux-polish-slice-1-copy.md`.
 - Boundary remains unchanged: presentation-only Explorer update; no route behavior, query behavior, read-model behavior, voucher lifecycle mutation, claim approval, driver execution, feedback delivery, journal write, provider call, campaign mutation, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next checkpoint: publish host assets and verify no drift.
+
+## 2026-07-18 Update — Pay Code Explorer Filter / Query UX Polish — Slice 2 — Host Publish / Closure
+
+- Closed the Pay Code Explorer Filter / Query UX Polish wave.
+- Package-owned Cockpit assets were published into the host app.
+- Published asset drift is clean with `php artisan x-change:doctor --assets`.
+- Focused Pay Code Explorer frontend verification passed.
+- Host production build passed with the known non-blocking third-party Rolldown annotation warnings.
+- UI/report: `../ui-cockpit/reports/470-pay-code-explorer-filter-query-ux-polish-slice-2-publish-closure.md`.
+- Boundary remains unchanged: host-publish and verification only; no route behavior, query behavior, read-model behavior, voucher lifecycle mutation, claim approval, driver execution, feedback delivery, journal write, provider call, campaign mutation, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next recommended checkpoint: manual browser acceptance on `/x/cockpit/pay-codes`, then continue with either Dashboard lower-panel cleanup or Voucher Detail/Distribution layout polish.

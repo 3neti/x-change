@@ -3058,3 +3058,13 @@ Current boundary:
   - row-action guidance now describes inspection workspaces instead of disabled placeholders.
 - Report: `reports/469-pay-code-explorer-filter-query-ux-polish-slice-1-copy.md`.
 - Boundary remains unchanged: presentation-only Explorer update; no route behavior, query behavior, read-model behavior, voucher lifecycle mutation, claim approval, driver execution, feedback delivery, journal write, provider call, campaign mutation, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-18 — Pay Code Explorer Filter / Query UX Polish — Slice 2 — Host Publish / Closure
+
+- Published package-owned Cockpit assets into the host app with `php artisan x-change:install --force --no-interaction`.
+- Verified published Cockpit assets are clean with `php artisan x-change:doctor --assets`.
+- Focused Pay Code Explorer frontend verification passed.
+- Host production build passed with the known non-blocking third-party Rolldown annotation warnings.
+- Report: `reports/470-pay-code-explorer-filter-query-ux-polish-slice-2-publish-closure.md`.
+- Closed the Pay Code Explorer Filter / Query UX Polish wave.
+- Boundary remains unchanged: host-publish and verification only; no route behavior, query behavior, read-model behavior, voucher lifecycle mutation, claim approval, driver execution, feedback delivery, journal write, provider call, campaign mutation, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
