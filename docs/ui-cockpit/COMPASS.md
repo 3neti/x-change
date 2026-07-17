@@ -2942,3 +2942,12 @@ Current boundary:
 - Report: `reports/458-funding-balance-ui-wave-slice-3-publish-closure.md`.
 - Closed the Funding / Balance UI Wave.
 - Boundary remains unchanged: host-publish and verification only; no wallet Treasury runtime dependency, provider balance refresh, wallet reservation, release, capture, repayment, reversal, refund, voucher lifecycle mutation, journal write, action execution, feedback delivery, campaign mutation, public API behavior, lifecycle mutation, or money movement changed.
+
+# 2026-07-17 — Pay Code Explorer Productization — Slice 1 — Results Scan
+
+- Started Pay Code Explorer Productization.
+- Renamed the results table from placeholder language to `Pay Code results`.
+- Added scan guidance for Identify, Assess, and Navigate.
+- Made row-action boundary explicit as navigation-only.
+- Report: `reports/459-pay-code-explorer-productization-slice-1-results-scan.md`.
+- Boundary remains unchanged: presentation-only explorer update; no filter behavior, query API, voucher lifecycle mutation, claim approval, driver execution, feedback delivery, journal write, provider call, campaign mutation, wallet behavior, Treasury behavior, public API behavior, or money movement changed.

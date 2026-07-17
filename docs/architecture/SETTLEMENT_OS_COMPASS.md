@@ -2802,3 +2802,13 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/458-funding-balance-ui-wave-slice-3-publish-closure.md`.
 - Boundary remains unchanged: host-publish and verification only; no wallet Treasury runtime dependency, provider balance refresh, wallet reservation, release, capture, repayment, reversal, refund, voucher lifecycle mutation, journal write, action execution, feedback delivery, campaign mutation, public API behavior, lifecycle mutation, or money movement changed.
 - Next recommended checkpoint: manual browser acceptance on `/x/cockpit`, then choose the next page-specific Cockpit target.
+
+## 2026-07-17 Update — Pay Code Explorer Productization — Slice 1 — Results Scan
+
+- Started Pay Code Explorer Productization.
+- `/x/cockpit/pay-codes` results now use operator-facing `Pay Code results` copy instead of placeholder language.
+- Added scan guidance for Identify, Assess, and Navigate.
+- Row actions remain explicitly navigation-only.
+- UI/report: `../ui-cockpit/reports/459-pay-code-explorer-productization-slice-1-results-scan.md`.
+- Boundary remains unchanged: presentation-only explorer update; no filter behavior, query API, voucher lifecycle mutation, claim approval, driver execution, feedback delivery, journal write, provider call, campaign mutation, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next checkpoint: publish host assets and verify no drift.

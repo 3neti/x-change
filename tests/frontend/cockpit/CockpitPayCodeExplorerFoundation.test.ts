@@ -59,10 +59,20 @@ describe('Cockpit Pay Code Explorer foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Pay Code read-model placeholder');
+        expect(wrapper.text()).toContain('Pay Code results');
+        expect(wrapper.text()).toContain('Scan sanitized Pay Code rows');
+        expect(wrapper.text()).toContain('Navigation-only');
+        expect(wrapper.text()).toContain('Identify');
+        expect(wrapper.text()).toContain('Assess');
+        expect(wrapper.text()).toContain('Navigate');
+        expect(wrapper.text()).toContain('Detail or distribution');
+        expect(wrapper.text()).not.toContain('Pay Code read-model placeholder');
         expect(wrapper.text()).toContain('PC-READY-001');
         expect(wrapper.text()).toContain('PC-PENDING-002');
         expect(wrapper.text()).toContain('PC-SETTLE-003');
+        expect(
+            wrapper.find('[data-testid="cockpit-pay-code-results-scan-guide"]').exists(),
+        ).toBe(true);
         expect(
             wrapper.findAll('[data-testid="cockpit-pay-code-row"]'),
         ).toHaveLength(3);
