@@ -2837,3 +2837,14 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/461-voucher-detail-final-copy-polish-slice-1-inspection-copy.md`.
 - Boundary remains unchanged: presentation-only detail update; no read-model behavior, route behavior, voucher lifecycle mutation, claim approval, driver execution, feedback delivery, journal write, provider call, campaign mutation, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next checkpoint: publish host assets and verify no drift.
+
+## 2026-07-17 Update — Voucher Detail Final Copy Polish — Slice 2 — Host Publish / Closure
+
+- Closed the Voucher Detail Final Copy Polish wave.
+- Package-owned Cockpit assets were published into the host app.
+- Asset drift is clean: `checked 60, ok 60, stale 0, missing 0, extra 0`.
+- Focused Voucher Detail frontend verification passed.
+- Host production build passed with the known non-blocking third-party Rolldown annotation warnings.
+- UI/report: `../ui-cockpit/reports/462-voucher-detail-final-copy-polish-slice-2-publish-closure.md`.
+- Boundary remains unchanged: host-publish and verification only; no read-model behavior, route behavior, voucher lifecycle mutation, claim approval, driver execution, feedback delivery, journal write, provider call, campaign mutation, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next recommended checkpoint: manual browser acceptance on `/x/cockpit/pay-codes/{code}`, then continue with the next page-specific Cockpit target.
