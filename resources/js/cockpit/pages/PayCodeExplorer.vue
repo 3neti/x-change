@@ -66,10 +66,10 @@ const primarySummaryItems = computed(() => [
     },
 ]);
 const enabledRowActionCount = computed(() => records.value.reduce((count, record) => (
-    count + record.actions.filter((action) => action.enabled && action.href !== null).length
+    count + (record.actions ?? []).filter((action) => action.enabled && action.href !== null).length
 ), 0));
 const disabledRowActionCount = computed(() => records.value.reduce((count, record) => (
-    count + record.actions.filter((action) => action.disabled).length
+    count + (record.actions ?? []).filter((action) => action.disabled).length
 ), 0));
 const rowActionGuidance = computed(() => [
     {

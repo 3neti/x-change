@@ -2671,3 +2671,22 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Default runtime remains disconnected until the host explicitly enables the header provider balance summary.
 - UI report: `../ui-cockpit/reports/450-cockpit-funding-status-wave-2-provider-balance-summary-adapter.md`.
 - Boundary remains unchanged: no wallet top-up/debit/reservation/transfer, provider balance refresh/sync, voucher mutation, claim lifecycle mutation, execution behavior, journal/action/feedback/campaign behavior, public API behavior, or raw wallet/provider payload exposure changed.
+
+## 2026-07-17 Update — Money Semantics Wave — Voucher Liability and Usable Balance Characterization
+
+- Added a read-only voucher liability summary seam:
+  - `VoucherLiabilitySummaryContract`;
+  - `VoucherLiabilitySummaryService`;
+  - `VoucherLiabilitySummaryData`.
+- Current debit-at-issuance behavior is now explicitly characterized:
+  - issuance reduces/allocates wallet funds;
+  - active unredeemed Pay Codes are summarized as outstanding liability;
+  - redeemed, expired, and cancelled Pay Codes are excluded from outstanding liability;
+  - expiry and cancellation do not currently release, refund, or credit wallet funds.
+- `/x/cockpit` can now show read-only `Outstanding Pay Codes` and `Usable Balance` alongside internal and live balances.
+- Lifecycle scenario runner now includes `money_semantics` snapshots and a safe demo scenario:
+  - `money_semantics_voucher_liability_demo`;
+  - recommended command: `php artisan xchange:lifecycle:run money_semantics_voucher_liability_demo --no-claim --json`.
+- UI/report: `../ui-cockpit/reports/451-money-semantics-voucher-liability-characterization.md`.
+- Boundary remains unchanged: no wallet top-up/debit/refund/release/reservation behavior changed, no expiry job was added, no cancellation money movement was added, and no provider, execution, journal, action, feedback, campaign, voucher lifecycle, or public API behavior changed.
+- Next decision: if these read-only numbers are accepted, design a separate reservation/release money-movement wave.

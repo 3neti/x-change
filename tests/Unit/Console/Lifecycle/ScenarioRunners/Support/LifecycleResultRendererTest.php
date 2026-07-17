@@ -78,6 +78,15 @@ it('renders human lifecycle summary when json option is disabled', function () {
                 'failed' => 0,
                 'total' => 1,
             ],
+            'money_semantics' => [
+                'behavior' => 'debit_at_issuance',
+                'after_issuance' => [
+                    'currency' => 'PHP',
+                    'wallet_balance_minor' => 97500,
+                    'outstanding_liability_minor' => 2500,
+                    'usable_balance_estimate_minor' => 95000,
+                ],
+            ],
         ],
         exitCode: 0,
     );
@@ -86,7 +95,11 @@ it('renders human lifecycle summary when json option is disabled', function () {
         ->and($command->capturedOutput)->toContain('Lifecycle scenario completed.')
         ->and($command->capturedOutput)->toContain('Scenario: basic_cash')
         ->and($command->capturedOutput)->toContain('Voucher Code: ABCD')
-        ->and($command->capturedOutput)->toContain('Attempts: 1/1 passed');
+        ->and($command->capturedOutput)->toContain('Attempts: 1/1 passed')
+        ->and($command->capturedOutput)->toContain('Money Semantics:')
+        ->and($command->capturedOutput)->toContain('  Behavior: debit_at_issuance')
+        ->and($command->capturedOutput)->toContain('  Outstanding Pay Codes: ₱25.00')
+        ->and($command->capturedOutput)->toContain('  Usable Balance Estimate: ₱950.00');
 });
 
 it('renders phase summary reconciliation and wallet transactions when present', function () {

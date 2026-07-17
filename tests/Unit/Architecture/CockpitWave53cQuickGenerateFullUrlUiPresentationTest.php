@@ -23,7 +23,7 @@ it('documents the quick generate full url ui presentation', function (): void {
         ->toContain('cockpit-quick-generate-beneficiary-url-panel')
         ->toContain('cockpit-quick-generate-beneficiary-url-link')
         ->and($frontendTest)
-        ->toContain('https://example.test/r/PC-UI-001')
+        ->toContain('https://example.test/x/claim/PC-UI-001/experience')
         ->toContain('https://example.test/r/PC-CAMPAIGN-001')
         ->toContain('cockpit-quick-generate-beneficiary-url-panel');
 });

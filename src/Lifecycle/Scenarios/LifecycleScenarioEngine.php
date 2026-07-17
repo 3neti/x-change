@@ -13,6 +13,7 @@ use LBHurtado\EmiPaynamicsConstellation\Contracts\ConstellationOtpResolver;
 use LBHurtado\EmiPaynamicsConstellation\Support\InteractiveOtpResolver;
 use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
+use LBHurtado\XChange\Contracts\VoucherLiabilitySummaryContract;
 use LBHurtado\XChange\Lifecycle\Output\ConsoleLifecycleOutput;
 use LBHurtado\XChange\Lifecycle\Output\LifecycleOutputContract;
 use LBHurtado\XChange\Lifecycle\Runners\ScenarioRunContext;
@@ -33,6 +34,7 @@ final class LifecycleScenarioEngine
         private readonly Container $container,
         private readonly ProviderRuntimeSettingsResolverContract $settings,
         private readonly LifecycleIntegrationReportBuilder $integrationReports,
+        private readonly VoucherLiabilitySummaryContract $liabilities,
     ) {}
 
     public function run(
@@ -216,6 +218,7 @@ final class LifecycleScenarioEngine
                     ],
                     'estimate' => $bootstrap->estimate,
                     'generated' => $bootstrap->generated->toArray(),
+                    'money_semantics' => $bootstrap->moneySemantics,
                     'wallet_transactions' => $recentTransactions,
                 ],
             );
@@ -247,6 +250,10 @@ final class LifecycleScenarioEngine
         );
 
         $payload = $result->payload;
+        $payload['money_semantics'] = [
+            ...$bootstrap->moneySemantics,
+            'after_claim' => $this->liabilities->forIssuer($bootstrap->issuer)->toArray(),
+        ];
 
         if ($resolvedProvider !== null) {
             $payload['provider'] = $resolvedProvider;

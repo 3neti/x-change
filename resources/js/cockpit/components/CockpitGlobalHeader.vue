@@ -19,6 +19,18 @@ withDefaults(defineProps<{
             tone: 'neutral',
         },
         {
+            key: 'outstanding',
+            label: 'Outstanding Pay Codes',
+            value: 'Liability summary not connected',
+            tone: 'neutral',
+        },
+        {
+            key: 'usable',
+            label: 'Usable Balance',
+            value: 'Usable balance not connected',
+            tone: 'neutral',
+        },
+        {
             key: 'live',
             label: 'Live Balance',
             value: 'Provider balance not connected',

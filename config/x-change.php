@@ -530,7 +530,7 @@ return [
                 'categories' => [],
                 'tags' => ['demo'],
                 'scenarios' => [
-                    // optionally explicit scenario keys
+                    'money_semantics_voucher_liability_demo',
                 ],
             ],
 

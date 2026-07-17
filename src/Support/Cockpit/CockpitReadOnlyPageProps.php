@@ -146,6 +146,7 @@ class CockpitReadOnlyPageProps
             ...$this->toArray(),
             'cockpit_header_read_model' => $this->headerReadModels->forOperator($operator)->toArray(),
             'dashboard_read_model' => $this->readModels->forDashboard(new CockpitReadModelQueryData(
+                operatorId: $operatorId,
                 include: ['voucher'],
             ))->toArray(),
             'campaign_read_model' => $this->readModels->forCampaignAdoption(new CockpitReadModelQueryData(

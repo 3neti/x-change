@@ -22,16 +22,16 @@ export const cockpitDashboardMetrics: CockpitDashboardMetric[] = [
     },
     {
         key: 'reserved-funds',
-        label: 'Reserved Funds',
-        value: 'Reservation summary not connected',
-        helper: 'No money movement',
+        label: 'Outstanding Pay Codes',
+        value: 'Liability summary not connected',
+        helper: 'Read-only estimate; no fund release',
         tone: 'warning',
     },
     {
         key: 'available-to-issue',
-        label: 'Available To Issue',
-        value: 'Funding policy not connected',
-        helper: 'Read-only',
+        label: 'Usable Balance',
+        value: 'Usable balance not connected',
+        helper: 'Wallet balance minus outstanding Pay Codes',
         tone: 'healthy',
     },
 ];

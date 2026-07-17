@@ -100,6 +100,10 @@ final class LifecycleResultRenderer
             ));
         }
 
+        if (isset($payload['money_semantics']) && is_array($payload['money_semantics'])) {
+            $this->renderMoneySemantics($command, $payload['money_semantics']);
+        }
+
         if (! empty($payload['wallet_transactions']) && is_array($payload['wallet_transactions'])) {
             $command->newLine();
             $command->line('Recent Wallet Transactions:');
@@ -130,6 +134,40 @@ final class LifecycleResultRenderer
         if (isset($payload['integrations']) && is_array($payload['integrations'])) {
             $this->renderIntegrations($command, $payload['integrations']);
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $moneySemantics
+     */
+    private function renderMoneySemantics(Command $command, array $moneySemantics): void
+    {
+        $after = data_get($moneySemantics, 'after_claim');
+
+        if (! is_array($after)) {
+            $after = data_get($moneySemantics, 'after_issuance');
+        }
+
+        if (! is_array($after)) {
+            return;
+        }
+
+        $currency = (string) data_get($after, 'currency', 'PHP');
+
+        $command->newLine();
+        $command->line('Money Semantics:');
+        $command->line('  Behavior: '.(string) data_get($moneySemantics, 'behavior', 'debit_at_issuance'));
+        $command->line('  Wallet Balance: '.$this->formatMinorAmount(data_get($after, 'wallet_balance_minor'), $currency));
+        $command->line('  Outstanding Pay Codes: '.$this->formatMinorAmount(data_get($after, 'outstanding_liability_minor'), $currency));
+        $command->line('  Usable Balance Estimate: '.$this->formatMinorAmount(data_get($after, 'usable_balance_estimate_minor'), $currency));
+    }
+
+    private function formatMinorAmount(mixed $amount, string $currency): string
+    {
+        if (! is_numeric($amount)) {
+            return 'n/a';
+        }
+
+        return Number::currency(((int) $amount) / 100, in: $currency);
     }
 
     private function lineIfPresent(Command $command, string $label, mixed $value): void

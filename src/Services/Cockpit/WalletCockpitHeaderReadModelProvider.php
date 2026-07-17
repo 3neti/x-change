@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Services\Cockpit;
 
 use Illuminate\Support\Number;
 use LBHurtado\XChange\Contracts\CockpitHeaderReadModelProviderContract;
+use LBHurtado\XChange\Contracts\VoucherLiabilitySummaryContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitDashboardMetricData;
 use LBHurtado\XChange\Data\Cockpit\CockpitHeaderReadModelData;
@@ -17,6 +18,7 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
     public function __construct(
         private readonly WalletAccessContract $wallets,
         private readonly ?BuildBalanceOverview $fundingOverview = null,
+        private readonly ?VoucherLiabilitySummaryContract $liabilities = null,
     ) {}
 
     public function forOperator(mixed $operator = null): CockpitHeaderReadModelData
@@ -24,14 +26,18 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
         return new CockpitHeaderReadModelData(
             balances: [
                 $this->internalBalance($operator),
+                $this->outstandingLiability($operator),
+                $this->usableBalance($operator),
                 $this->providerBalance($operator),
             ],
             redactions: [
                 'payloads' => 'balance-summary-only',
                 'wallet_payloads_exposed' => false,
                 'provider_payloads_exposed' => false,
+                'voucher_payloads_exposed' => false,
                 'raw_payloads_exposed' => false,
                 'mutates_wallets' => false,
+                'releases_funds' => false,
                 'calls_providers' => false,
             ],
         );
@@ -90,6 +96,74 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
             );
         } catch (Throwable) {
             return $this->disconnectedProviderBalance();
+        }
+    }
+
+    private function outstandingLiability(mixed $operator): CockpitDashboardMetricData
+    {
+        if ($operator === null) {
+            return new CockpitDashboardMetricData(
+                key: 'outstanding',
+                label: 'Outstanding Pay Codes',
+                value: 'Not connected',
+                helper: 'No operator is available for liability summary.',
+                tone: 'neutral',
+            );
+        }
+
+        try {
+            $summary = ($this->liabilities ?? app(VoucherLiabilitySummaryContract::class))
+                ->forIssuer($operator);
+
+            return new CockpitDashboardMetricData(
+                key: 'outstanding',
+                label: 'Outstanding Pay Codes',
+                value: $this->formatMoney($summary->outstanding_liability_minor),
+                helper: 'Read-only active Pay Code liability estimate.',
+                tone: $summary->outstanding_liability_minor > 0 ? 'warning' : 'healthy',
+            );
+        } catch (Throwable) {
+            return new CockpitDashboardMetricData(
+                key: 'outstanding',
+                label: 'Outstanding Pay Codes',
+                value: 'Not connected',
+                helper: 'Voucher liability summary is unavailable.',
+                tone: 'neutral',
+            );
+        }
+    }
+
+    private function usableBalance(mixed $operator): CockpitDashboardMetricData
+    {
+        if ($operator === null) {
+            return new CockpitDashboardMetricData(
+                key: 'usable',
+                label: 'Usable Balance',
+                value: 'Not connected',
+                helper: 'No operator is available for usable balance estimate.',
+                tone: 'neutral',
+            );
+        }
+
+        try {
+            $summary = ($this->liabilities ?? app(VoucherLiabilitySummaryContract::class))
+                ->forIssuer($operator);
+
+            return new CockpitDashboardMetricData(
+                key: 'usable',
+                label: 'Usable Balance',
+                value: $this->formatMoney($summary->usable_balance_estimate_minor),
+                helper: 'Wallet balance minus outstanding active Pay Code liability.',
+                tone: 'healthy',
+            );
+        } catch (Throwable) {
+            return new CockpitDashboardMetricData(
+                key: 'usable',
+                label: 'Usable Balance',
+                value: 'Not connected',
+                helper: 'Usable balance estimate is unavailable.',
+                tone: 'neutral',
+            );
         }
     }
 

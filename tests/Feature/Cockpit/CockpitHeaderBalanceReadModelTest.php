@@ -5,6 +5,7 @@ declare(strict_types=1);
 use LBHurtado\XChange\Contracts\CockpitHeaderReadModelProviderContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Services\BuildBalanceOverview;
+use LBHurtado\XChange\Tests\Fakes\User;
 
 it('binds a read-only cockpit header balance read model with safe provider fallback', function () {
     app()->forgetInstance(CockpitHeaderReadModelProviderContract::class);
@@ -41,9 +42,14 @@ it('binds a read-only cockpit header balance read model with safe provider fallb
         ])
         ->and($readModel['balances'][0]['key'])->toBe('internal')
         ->and($readModel['balances'][0]['value'])->toContain('123.45')
-        ->and($readModel['balances'][1]['key'])->toBe('live')
-        ->and($readModel['balances'][1]['value'])->toBe('Provider balance not connected')
+        ->and($readModel['balances'][1]['key'])->toBe('outstanding')
+        ->and($readModel['balances'][1]['value'])->toContain('0.00')
+        ->and($readModel['balances'][2]['key'])->toBe('usable')
+        ->and($readModel['balances'][2]['value'])->toContain('0.00')
+        ->and($readModel['balances'][3]['key'])->toBe('live')
+        ->and($readModel['balances'][3]['value'])->toBe('Provider balance not connected')
         ->and($readModel['redactions']['mutates_wallets'])->toBeFalse()
+        ->and($readModel['redactions']['releases_funds'])->toBeFalse()
         ->and($readModel['redactions']['calls_providers'])->toBeFalse();
 });
 
@@ -105,10 +111,10 @@ it('can expose a read-only provider balance summary when explicitly enabled', fu
         ->forOperator((object) ['id' => 1])
         ->toArray();
 
-    expect($readModel['balances'][1]['key'])->toBe('live')
-        ->and($readModel['balances'][1]['value'])->toContain('25,000')
-        ->and($readModel['balances'][1]['helper'])->toBe('NetBank source account liquidity summary.')
-        ->and($readModel['balances'][1]['tone'])->toBe('healthy')
+    expect($readModel['balances'][3]['key'])->toBe('live')
+        ->and($readModel['balances'][3]['value'])->toContain('25,000')
+        ->and($readModel['balances'][3]['helper'])->toBe('NetBank source account liquidity summary.')
+        ->and($readModel['balances'][3]['tone'])->toBe('healthy')
         ->and($readModel['redactions']['calls_providers'])->toBeFalse()
         ->and($readModel['redactions']['provider_payloads_exposed'])->toBeFalse();
 });
@@ -144,10 +150,36 @@ it('hydrates the cockpit dashboard with header balance read-model props', functi
         ->assertJsonPath('props.cockpit_header_read_model.authorized', true)
         ->assertJsonPath('props.cockpit_header_read_model.read_only', true)
         ->assertJsonPath('props.cockpit_header_read_model.balances.0.key', 'internal')
-        ->assertJsonPath('props.cockpit_header_read_model.balances.1.value', 'Provider balance not connected')
+        ->assertJsonPath('props.cockpit_header_read_model.balances.1.key', 'outstanding')
+        ->assertJsonPath('props.cockpit_header_read_model.balances.2.key', 'usable')
+        ->assertJsonPath('props.cockpit_header_read_model.balances.3.value', 'Provider balance not connected')
         ->assertJsonPath('props.cockpit_header_read_model.redactions.mutates_wallets', false)
+        ->assertJsonPath('props.cockpit_header_read_model.redactions.releases_funds', false)
         ->assertJsonPath('props.cockpit_header_read_model.redactions.calls_providers', false)
         ->assertJsonMissingPath('props.cockpit_header_read_model.wallet')
         ->assertJsonMissingPath('props.cockpit_header_read_model.provider_payload')
         ->assertJsonMissingPath('props.cockpit_header_read_model.raw_payload');
+});
+
+it('hydrates the cockpit dashboard with read-only voucher liability metrics', function () {
+    config(['x-change.lifecycle.defaults.user_model' => User::class]);
+
+    $operator = actingAsTestUser(100_000);
+    test()->actingAs($operator);
+    issueVoucher(validVoucherInstructions(25));
+
+    $response = $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.dashboard'));
+
+    $response->assertOk();
+
+    $metricKeys = collect($response->json('props.dashboard_read_model.metrics'))
+        ->pluck('key')
+        ->all();
+
+    expect($metricKeys)
+        ->toContain('active-issued-liability')
+        ->toContain('redeemed-liability')
+        ->toContain('expired-liability')
+        ->toContain('cancelled-liability');
 });

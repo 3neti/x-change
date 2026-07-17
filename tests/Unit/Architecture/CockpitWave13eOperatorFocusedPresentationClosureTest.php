@@ -18,6 +18,7 @@ it('documents cockpit wave 13e operator focused presentation closure', function 
         ->and($report)->toContain('npm run dev')
         ->and($quickGenerate)->toContain('CockpitDiagnosticsDisclosure')
         ->and($quickGenerate)->toContain('Quick Generate Runtime')
+        ->and($quickGenerate)->toContain('Architecture history and gate diagnostics')
         ->and($callout)->toContain('Cockpit bridge')
-        ->and($diagnostics)->toContain('Show architecture history');
+        ->and($diagnostics)->toContain('Show diagnostic history');
 });

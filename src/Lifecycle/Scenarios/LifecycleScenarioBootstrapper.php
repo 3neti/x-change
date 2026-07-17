@@ -10,6 +10,7 @@ use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
+use LBHurtado\XChange\Contracts\VoucherLiabilitySummaryContract;
 use RuntimeException;
 
 final class LifecycleScenarioBootstrapper
@@ -18,6 +19,7 @@ final class LifecycleScenarioBootstrapper
         private readonly EstimatePayCodeCost $estimatePayCodeCost,
         private readonly GeneratePayCode $generatePayCode,
         private readonly VoucherAccessContract $vouchers,
+        private readonly VoucherLiabilitySummaryContract $liabilities,
     ) {}
 
     /**
@@ -44,6 +46,7 @@ final class LifecycleScenarioBootstrapper
         $issuer = $this->resolveIssuerModel($issuerId);
         $baseClaimMobile = $this->resolveScenarioMobile($scenario, $issuer);
         $idempotencyKey = 'lifecycle-'.(string) str()->uuid();
+        $beforeIssuance = $this->liabilities->forIssuer($issuer)->toArray();
 
         $lifecycleInput = $this->buildLifecycleInput(
             scenario: $scenario,
@@ -59,6 +62,7 @@ final class LifecycleScenarioBootstrapper
 
         $generated = $this->generatePayCode->handle($lifecycleInput);
         $voucher = $this->vouchers->findByCodeOrFail($generated->code);
+        $afterIssuance = $this->liabilities->forIssuer($issuer)->toArray();
 
         return new LifecycleScenarioBootstrapResult(
             issuerId: $issuerId,
@@ -74,6 +78,12 @@ final class LifecycleScenarioBootstrapper
             estimate: $estimate,
             generated: $generated,
             voucher: $voucher,
+            moneySemantics: [
+                'mode' => 'read_only_characterization',
+                'behavior' => 'debit_at_issuance',
+                'before_issuance' => $beforeIssuance,
+                'after_issuance' => $afterIssuance,
+            ],
         );
     }
 

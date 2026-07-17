@@ -23,8 +23,8 @@ describe('Cockpit dashboard foundation widgets', () => {
         expect(wrapper.text()).toContain('Wallet lookups, reservations, provider calls, and money movement stay outside this dashboard.');
         expect(wrapper.text()).toContain('Internal Balance');
         expect(wrapper.text()).toContain('Live Balance');
-        expect(wrapper.text()).toContain('Reserved Funds');
-        expect(wrapper.text()).toContain('Available To Issue');
+        expect(wrapper.text()).toContain('Outstanding Pay Codes');
+        expect(wrapper.text()).toContain('Usable Balance');
         expect(wrapper.text()).toContain('Balance summary not connected');
         expect(wrapper.text()).not.toContain('Read model pending');
         expect(wrapper.findAll('[data-testid="cockpit-dashboard-metric-card"]')).toHaveLength(4);

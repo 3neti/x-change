@@ -372,6 +372,24 @@ return [
             ],
         ],
 
+        'money_semantics_voucher_liability_demo' => [
+            'label' => 'Money Semantics Voucher Liability Demo',
+            'description' => 'Demonstrates debit-at-issuance wallet behavior and read-only outstanding Pay Code liability snapshots.',
+            'category' => 'smoke',
+            'tags' => ['demo', 'money-semantics', 'liability', 'read-only'],
+            'amount' => 25,
+            'currency' => 'PHP',
+            'cash' => [],
+            'inputs' => [
+                'fields' => [],
+            ],
+            'feedback' => [],
+            'claim' => [],
+            'expect' => [
+                'tariffs' => ['cash'],
+            ],
+        ],
+
         'bio' => [
             'label' => 'Bio Information',
             'amount' => 25,

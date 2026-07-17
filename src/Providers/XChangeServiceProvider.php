@@ -117,6 +117,7 @@ use LBHurtado\XChange\Contracts\VendorRegistryContract;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Contracts\VoucherCollectionWalletResolverContract;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
+use LBHurtado\XChange\Contracts\VoucherLiabilitySummaryContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\VoucherPaymentConfirmationContract;
 use LBHurtado\XChange\Contracts\VoucherPaymentProviderContract;
@@ -228,6 +229,7 @@ use LBHurtado\XChange\Services\SystemWalletProxy;
 use LBHurtado\XChange\Services\TxtcmdrWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\UserLifecycleService;
 use LBHurtado\XChange\Services\VoucherAccessService;
+use LBHurtado\XChange\Services\VoucherLiabilitySummaryService;
 use LBHurtado\XChange\Services\VoucherLifecycleService;
 use LBHurtado\XChange\Services\VoucherPaymentQrRendererFactory;
 use LBHurtado\XChange\Services\WithdrawalLifecycleService;
@@ -307,12 +309,14 @@ class XChangeServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(OptionalCockpitIntegrationReadModels::class);
+        $this->app->singleton(VoucherLiabilitySummaryContract::class, VoucherLiabilitySummaryService::class);
         $this->app->singleton(CockpitReadModelProviderContract::class, function ($app): VoucherLifecycleCockpitReadModelProvider {
             return new VoucherLifecycleCockpitReadModelProvider(
                 vouchers: $app->make(VoucherLifecycleServiceContract::class),
                 fallback: new NullCockpitReadModelProvider,
                 integrations: $app->make(OptionalCockpitIntegrationReadModels::class),
                 operatorIssuanceActivity: $app->make(DurableCockpitOperatorIssuanceActivityReadModelProvider::class),
+                liabilities: $app->make(VoucherLiabilitySummaryContract::class),
             );
         });
         $this->app->singleton(CockpitHeaderReadModelProviderContract::class, WalletCockpitHeaderReadModelProvider::class);

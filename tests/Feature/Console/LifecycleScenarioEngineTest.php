@@ -26,7 +26,8 @@ function prepareEngineLifecycleIssuer(): FakeLifecycleUser
 }
 
 it('returns failure result for unknown lifecycle scenario', function () {
-    $command = new class extends Command {
+    $command = new class extends Command
+    {
         public function option($key = null): mixed
         {
             return false;
@@ -45,7 +46,8 @@ it('returns failure result for unknown lifecycle scenario', function () {
 });
 
 it('returns failure result for missing selected attempt', function () {
-    $command = new class extends Command {
+    $command = new class extends Command
+    {
         public function option($key = null): mixed
         {
             return false;
@@ -69,7 +71,8 @@ it('returns failure result for missing selected attempt', function () {
 it('runs no-claim lifecycle scenario through the engine', function () {
     $issuer = prepareEngineLifecycleIssuer();
 
-    $command = new class extends Command {
+    $command = new class extends Command
+    {
         public function option($key = null): mixed
         {
             return false;
@@ -97,10 +100,52 @@ it('runs no-claim lifecycle scenario through the engine', function () {
         ->and(data_get($result->payload, 'attempt_summary.total'))->not->toBeNull();
 });
 
+it('demonstrates voucher liability money semantics through a no-claim lifecycle scenario', function () {
+    $issuer = prepareEngineLifecycleIssuer();
+
+    $command = new class extends Command
+    {
+        public function option($key = null): mixed
+        {
+            return false;
+        }
+
+        public function info($string, $verbosity = null): void {}
+
+        public function line($string, $style = null, $verbosity = null): void {}
+    };
+
+    $result = app(LifecycleScenarioEngine::class)->run(
+        command: $command,
+        scenarioKey: 'money_semantics_voucher_liability_demo',
+        options: new LifecycleScenarioRunOptions(
+            issuer: (string) $issuer->getKey(),
+            wallet: (string) $issuer->getKey(),
+            noClaim: true,
+            json: true,
+        ),
+    );
+
+    $before = data_get($result->payload, 'money_semantics.before_issuance');
+    $after = data_get($result->payload, 'money_semantics.after_issuance');
+
+    expect($result->exitCode)->toBe(Command::SUCCESS)
+        ->and($result->payload['scenario'])->toBe('money_semantics_voucher_liability_demo')
+        ->and(data_get($result->payload, 'money_semantics.behavior'))->toBe('debit_at_issuance')
+        ->and($before)->toBeArray()
+        ->and($after)->toBeArray()
+        ->and(data_get($after, 'wallet_balance_minor'))->toBeLessThan(data_get($before, 'wallet_balance_minor'))
+        ->and(data_get($after, 'outstanding_liability_minor'))->toBeGreaterThan(data_get($before, 'outstanding_liability_minor'))
+        ->and(data_get($after, 'read_only'))->toBeTrue()
+        ->and(data_get($after, 'redactions.mutates_wallets'))->toBeFalse()
+        ->and(data_get($after, 'redactions.releases_funds'))->toBeFalse();
+});
+
 it('runs sequential claim scenarios through the registered runner', function () {
     $issuer = prepareEngineLifecycleIssuer();
 
-    $command = new class extends Command {
+    $command = new class extends Command
+    {
         public function option($key = null): mixed
         {
             return match ($key) {

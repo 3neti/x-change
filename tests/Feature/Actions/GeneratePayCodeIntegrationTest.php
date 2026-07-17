@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
+use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Data\DebitData;
 use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
@@ -116,4 +117,44 @@ it('fails end to end when issuer wallet cannot afford pay code generation', func
 
     expect(fn () => $action->handle($payload))
         ->toThrow(InsufficientWalletBalance::class);
+});
+
+it('characterizes that cancellation does not credit issuer wallet funds today', function () {
+    $user = actingAsTestUser(1_000_000);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+
+    $result = app(GeneratePayCode::class)->handle(array_merge(validPayCodePayload(25.0), [
+        'issuer_id' => $user->id,
+    ]));
+
+    $wallet->refresh();
+    $afterIssuance = (int) $wallet->balance;
+
+    app(VoucherLifecycleServiceContract::class)->cancel((string) $result->voucher_id, [
+        'reason' => 'money semantics characterization',
+    ]);
+
+    $wallet->refresh();
+
+    expect((int) $wallet->balance)->toBe($afterIssuance);
+});
+
+it('characterizes that expiry does not credit issuer wallet funds today', function () {
+    $user = actingAsTestUser(1_000_000);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+
+    $result = app(GeneratePayCode::class)->handle(array_merge(validPayCodePayload(25.0), [
+        'issuer_id' => $user->id,
+    ]));
+
+    $wallet->refresh();
+    $afterIssuance = (int) $wallet->balance;
+
+    Voucher::query()
+        ->whereKey($result->voucher_id)
+        ->update(['expires_at' => now()->subMinute()]);
+
+    $wallet->refresh();
+
+    expect((int) $wallet->balance)->toBe($afterIssuance);
 });

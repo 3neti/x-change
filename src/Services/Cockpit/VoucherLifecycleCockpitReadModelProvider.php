@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services\Cockpit;
 
 use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route;
 use JsonSerializable;
 use LBHurtado\XChange\Contracts\CockpitCampaignIssuanceDraftAdapterContract;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
+use LBHurtado\XChange\Contracts\VoucherLiabilitySummaryContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitCampaignReadModelData;
 use LBHurtado\XChange\Data\Cockpit\CockpitDashboardActivityData;
@@ -61,6 +63,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         private readonly ?OptionalCockpitIntegrationReadModels $integrations = null,
         private readonly ?DurableCockpitOperatorIssuanceActivityReadModelProvider $operatorIssuanceActivity = null,
         private readonly ?CockpitCampaignIssuanceDraftAdapterContract $campaignDraftAdapter = null,
+        private readonly ?VoucherLiabilitySummaryContract $liabilities = null,
     ) {}
 
     public function forVoucher(CockpitReadModelQueryData $query): CockpitReadModelBundleData
@@ -302,6 +305,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                     helper: 'Expired or awaiting approval summaries only',
                     tone: 'warning',
                 ),
+                ...$this->liabilityMetrics($query),
             ],
             pipeline: [
                 new CockpitDashboardPipelineStageData(
@@ -1645,6 +1649,74 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         }
 
         return null;
+    }
+
+    /**
+     * @return array<int, CockpitDashboardMetricData>
+     */
+    private function liabilityMetrics(CockpitReadModelQueryData $query): array
+    {
+        if ($this->liabilities === null || $query->operatorId === null) {
+            return [];
+        }
+
+        $operator = $this->resolveOperator($query->operatorId);
+
+        if ($operator === null) {
+            return [];
+        }
+
+        $summary = $this->liabilities->forIssuer($operator);
+
+        return [
+            new CockpitDashboardMetricData(
+                key: 'active-issued-liability',
+                label: 'Active Issued',
+                value: $this->formatMinorMoney($summary->active_issued_minor, $summary->currency),
+                helper: $summary->active_count.' active Pay Codes counted as outstanding liability.',
+                tone: $summary->active_issued_minor > 0 ? 'warning' : 'healthy',
+            ),
+            new CockpitDashboardMetricData(
+                key: 'redeemed-liability',
+                label: 'Redeemed Amount',
+                value: $this->formatMinorMoney($summary->redeemed_minor, $summary->currency),
+                helper: $summary->redeemed_count.' redeemed Pay Codes excluded from outstanding liability.',
+                tone: 'healthy',
+            ),
+            new CockpitDashboardMetricData(
+                key: 'expired-liability',
+                label: 'Expired Amount',
+                value: $this->formatMinorMoney($summary->expired_minor, $summary->currency),
+                helper: $summary->expired_count.' expired Pay Codes excluded from outstanding liability; no wallet release is performed.',
+                tone: $summary->expired_minor > 0 ? 'warning' : 'neutral',
+            ),
+            new CockpitDashboardMetricData(
+                key: 'cancelled-liability',
+                label: 'Cancelled Amount',
+                value: $this->formatMinorMoney($summary->cancelled_minor, $summary->currency),
+                helper: $summary->cancelled_count.' cancelled Pay Codes excluded from outstanding liability; no wallet release is performed.',
+                tone: $summary->cancelled_minor > 0 ? 'warning' : 'neutral',
+            ),
+        ];
+    }
+
+    private function resolveOperator(string $operatorId): ?Model
+    {
+        $class = (string) config('x-change.lifecycle.defaults.user_model', config('auth.providers.users.model'));
+
+        if ($class === '' || ! is_subclass_of($class, Model::class)) {
+            return null;
+        }
+
+        /** @var Model|null $operator */
+        $operator = $class::query()->find($operatorId);
+
+        return $operator;
+    }
+
+    private function formatMinorMoney(int $amount, string $currency): string
+    {
+        return $currency.' '.number_format($amount / 100, 2);
     }
 
     /**
