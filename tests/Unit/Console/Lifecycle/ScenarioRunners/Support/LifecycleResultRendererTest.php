@@ -103,6 +103,13 @@ it('renders human lifecycle summary when json option is disabled', function () {
                 'selected_model' => null,
                 'requires_human_approval' => true,
             ],
+            'money_movement_triggers' => [
+                'status' => 'planning_only',
+                'triggers' => [
+                    ['event' => 'pay_code_issued', 'enabled' => false],
+                    ['event' => 'pay_code_redeemed', 'enabled' => false],
+                ],
+            ],
         ],
         exitCode: 0,
     );
@@ -123,7 +130,11 @@ it('renders human lifecycle summary when json option is disabled', function () {
         ->and($command->capturedOutput)->toContain('Money Movement Target:')
         ->and($command->capturedOutput)->toContain('  Status: pending_human_approval')
         ->and($command->capturedOutput)->toContain('  Recommended Model: reserve_at_issuance_debit_at_redemption')
-        ->and($command->capturedOutput)->toContain('  Selected Model: none');
+        ->and($command->capturedOutput)->toContain('  Selected Model: none')
+        ->and($command->capturedOutput)->toContain('Money Movement Triggers:')
+        ->and($command->capturedOutput)->toContain('  Status: planning_only')
+        ->and($command->capturedOutput)->toContain('  Planned Triggers: 2')
+        ->and($command->capturedOutput)->toContain('  Enabled: no');
 });
 
 it('renders phase summary reconciliation and wallet transactions when present', function () {

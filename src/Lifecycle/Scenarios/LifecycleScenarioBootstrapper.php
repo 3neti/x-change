@@ -10,6 +10,7 @@ use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
 use LBHurtado\XChange\Contracts\MoneyMovementAccountingDecisionContract;
+use LBHurtado\XChange\Contracts\MoneyMovementLifecycleTriggerMatrixContract;
 use LBHurtado\XChange\Contracts\MoneyMovementTargetModelContract;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Contracts\VoucherLiabilitySummaryContract;
@@ -24,6 +25,7 @@ final class LifecycleScenarioBootstrapper
         private readonly VoucherLiabilitySummaryContract $liabilities,
         private readonly MoneyMovementAccountingDecisionContract $moneyMovementDecision,
         private readonly MoneyMovementTargetModelContract $moneyMovementTarget,
+        private readonly MoneyMovementLifecycleTriggerMatrixContract $moneyMovementTriggers,
     ) {}
 
     /**
@@ -90,6 +92,7 @@ final class LifecycleScenarioBootstrapper
             ],
             moneyMovementDecision: $this->moneyMovementDecision->current()->toArray(),
             moneyMovementTarget: $this->moneyMovementTarget->current()->toArray(),
+            moneyMovementTriggers: $this->moneyMovementTriggers->current()->toArray(),
         );
     }
 

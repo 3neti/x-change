@@ -112,6 +112,10 @@ final class LifecycleResultRenderer
             $this->renderMoneyMovementTarget($command, $payload['money_movement_target']);
         }
 
+        if (isset($payload['money_movement_triggers']) && is_array($payload['money_movement_triggers'])) {
+            $this->renderMoneyMovementTriggers($command, $payload['money_movement_triggers']);
+        }
+
         if (! empty($payload['wallet_transactions']) && is_array($payload['wallet_transactions'])) {
             $command->newLine();
             $command->line('Recent Wallet Transactions:');
@@ -209,6 +213,24 @@ final class LifecycleResultRenderer
         $command->line('  Recommended Model: '.(string) data_get($target, 'recommended_model', 'reserve_at_issuance_debit_at_redemption'));
         $command->line('  Selected Model: '.(string) (data_get($target, 'selected_model') ?: 'none'));
         $command->line('  Requires Approval: '.$this->booleanLabel(data_get($target, 'requires_human_approval')));
+    }
+
+    /**
+     * @param  array<string, mixed>  $matrix
+     */
+    private function renderMoneyMovementTriggers(Command $command, array $matrix): void
+    {
+        $triggers = data_get($matrix, 'triggers');
+
+        if (! is_array($triggers)) {
+            return;
+        }
+
+        $command->newLine();
+        $command->line('Money Movement Triggers:');
+        $command->line('  Status: '.(string) data_get($matrix, 'status', 'planning_only'));
+        $command->line('  Planned Triggers: '.count($triggers));
+        $command->line('  Enabled: no');
     }
 
     private function lineIfPresent(Command $command, string $label, mixed $value): void

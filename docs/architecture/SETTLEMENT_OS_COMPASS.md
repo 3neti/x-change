@@ -2722,3 +2722,22 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/453-money-movement-target-model-approval-gate.md`.
 - Boundary remains unchanged: no wallet top-up/debit/refund/release/reservation behavior changed, no expiry job was added, no cancellation money movement was added, and no provider, execution, journal, action, feedback, campaign, voucher lifecycle, or public API behavior changed.
 - Next decision: map lifecycle trigger ownership before any reservation/capture/release mechanics are implemented.
+
+## 2026-07-17 Update — Money Movement Wave — Lifecycle Trigger Matrix
+
+- Added a read-only lifecycle trigger matrix seam:
+  - `MoneyMovementLifecycleTriggerMatrixContract`;
+  - `DefaultMoneyMovementLifecycleTriggerMatrixService`;
+  - `MoneyMovementLifecycleTriggerMatrixData`.
+- Planned triggers are now explicitly captured:
+  - `pay_code_issued`;
+  - `pay_code_redeemed`;
+  - `pay_code_partially_claimed`;
+  - `pay_code_expired`;
+  - `pay_code_cancelled`;
+  - `provider_disbursement_failed_after_capture`.
+- All triggers remain disabled and planning-only.
+- Lifecycle scenario output now includes `money_movement_triggers`, and human output renders a `Money Movement Triggers` section.
+- UI/report: `../ui-cockpit/reports/454-money-movement-lifecycle-trigger-matrix.md`.
+- Boundary remains unchanged: no wallet top-up/debit/refund/release/reservation/capture/reversal behavior changed, no expiry job was added, no cancellation money movement was added, and no provider, execution, journal, action, feedback, campaign, voucher lifecycle, or public API behavior changed.
+- Next decision: after human target-model approval, coordinate the wallet package reservation ledger contract before x-change emits real trigger requests.

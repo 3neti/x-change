@@ -25,5 +25,6 @@ final readonly class LifecycleScenarioBootstrapResult
         public array $moneySemantics = [],
         public array $moneyMovementDecision = [],
         public array $moneyMovementTarget = [],
+        public array $moneyMovementTriggers = [],
     ) {}
 }
