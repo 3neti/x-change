@@ -2884,3 +2884,14 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/465-quick-generate-final-copy-polish-slice-1-generation-copy.md`.
 - Boundary remains unchanged: presentation-only Quick Generate update; no route behavior, form payload shape, validation, idempotency, pricing calculation, funding behavior, issuer wallet behavior, voucher instruction compilation, GeneratePayCode handoff, journal write, x-action execution, x-feedback delivery, provider call, campaign mutation, public API behavior, or money movement changed.
 - Next checkpoint: publish host assets and verify no drift.
+
+## 2026-07-17 Update — Quick Generate Final Copy Polish — Slice 2 — Host Publish / Closure
+
+- Closed the Quick Generate Final Copy Polish wave.
+- Package-owned Cockpit assets were published into the host app.
+- Asset drift is clean: `checked 60, ok 60, stale 0, missing 0, extra 0`.
+- Focused Quick Generate frontend verification passed.
+- Host production build passed with the known non-blocking third-party Rolldown annotation warnings.
+- UI/report: `../ui-cockpit/reports/466-quick-generate-final-copy-polish-slice-2-publish-closure.md`.
+- Boundary remains unchanged: host-publish and verification only; no route behavior, form payload shape, validation, idempotency, pricing calculation, funding behavior, issuer wallet behavior, voucher instruction compilation, GeneratePayCode handoff, journal write, x-action execution, x-feedback delivery, provider call, campaign mutation, public API behavior, or money movement changed.
+- Next recommended checkpoint: manual browser acceptance on `/x/cockpit/quick-generate`, then continue with a focused Quick Generate diagnostic simplification or remaining page-specific polish.
