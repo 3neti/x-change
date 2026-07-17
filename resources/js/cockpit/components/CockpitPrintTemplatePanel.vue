@@ -15,7 +15,7 @@ defineProps<{
             Print Templates
         </p>
         <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-            Print template placeholder
+            Print asset readiness
         </h3>
 
         <div class="mt-5 grid gap-3 md:grid-cols-3">

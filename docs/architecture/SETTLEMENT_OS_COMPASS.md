@@ -2848,3 +2848,17 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/462-voucher-detail-final-copy-polish-slice-2-publish-closure.md`.
 - Boundary remains unchanged: host-publish and verification only; no read-model behavior, route behavior, voucher lifecycle mutation, claim approval, driver execution, feedback delivery, journal write, provider call, campaign mutation, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next recommended checkpoint: manual browser acceptance on `/x/cockpit/pay-codes/{code}`, then continue with the next page-specific Cockpit target.
+
+## 2026-07-17 Update — Distribution Workspace Final Copy Polish — Slice 1 — Inspection Copy
+
+- Started the Distribution Workspace Final Copy Polish wave.
+- `/x/cockpit/pay-codes/{code}/distribution` now uses `Distribution Workspace` and `Distribution inspection` instead of old wave/foundation/runtime scaffold copy.
+- Remaining scaffold section labels were replaced with operator-facing inspection labels:
+  - `Delivery channel status`;
+  - `Print asset readiness`;
+  - `Share asset readiness`;
+  - `Distribution status summary`.
+- `Read-only share surface` is now `Read-only claim link`.
+- UI/report: `../ui-cockpit/reports/463-distribution-workspace-final-copy-polish-slice-1-inspection-copy.md`.
+- Boundary remains unchanged: presentation-only distribution update; no read-model behavior, route behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle mutation, claim approval, driver execution, artifact generation, journal write, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next checkpoint: publish host assets and verify no drift.

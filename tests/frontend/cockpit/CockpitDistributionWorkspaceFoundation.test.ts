@@ -27,7 +27,7 @@ describe('Cockpit Distribution Workspace foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Channel planning placeholder');
+        expect(wrapper.text()).toContain('Delivery channel status');
         expect(wrapper.text()).toContain('SMS handoff');
         expect(wrapper.text()).toContain('Email handoff');
         expect(wrapper.text()).toContain('In-app notification handoff');
@@ -51,7 +51,7 @@ describe('Cockpit Distribution Workspace foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Print template placeholder');
+        expect(wrapper.text()).toContain('Print asset readiness');
         expect(wrapper.text()).toContain('Receipt card');
         expect(wrapper.text()).toContain('Branch release sheet');
         expect(wrapper.text()).toContain('Counter slip');
@@ -66,7 +66,7 @@ describe('Cockpit Distribution Workspace foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Share asset placeholder');
+        expect(wrapper.text()).toContain('Share asset readiness');
         expect(wrapper.text()).toContain('QR asset');
         expect(wrapper.text()).toContain('Short link');
         expect(wrapper.text()).toContain('Copy text');
@@ -81,7 +81,7 @@ describe('Cockpit Distribution Workspace foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Distribution analytics placeholder');
+        expect(wrapper.text()).toContain('Distribution status summary');
         expect(wrapper.text()).toContain('Planned sends');
         expect(wrapper.text()).toContain('Printed assets');
         expect(wrapper.text()).toContain('Delivery state');
@@ -94,7 +94,9 @@ describe('Cockpit Distribution Workspace foundation', () => {
         const wrapper = mount(DistributionWorkspace);
 
         expect(wrapper.find('[data-testid="cockpit-distribution-workspace-shell"]').exists()).toBe(true);
-        expect(wrapper.text()).toContain('Distribution Workspace Foundation');
+        expect(wrapper.text()).toContain('Distribution inspection');
+        expect(wrapper.text()).toContain('Distribution Workspace');
+        expect(wrapper.text()).toContain('Inspect manual distribution readiness');
         expect(wrapper.text()).toContain('Digital Distribution');
         expect(wrapper.text()).toContain('Print Templates');
         expect(wrapper.text()).toContain('Share / QR');
@@ -222,8 +224,8 @@ describe('Cockpit Distribution Workspace foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Wave 33 · Share surface');
-        expect(wrapper.text()).toContain('Distribution Workspace Runtime');
+        expect(wrapper.text()).toContain('Distribution inspection');
+        expect(wrapper.text()).toContain('Distribution Workspace');
         expect(wrapper.text()).toContain('PC-DIST-001');
         expect(wrapper.text()).toContain('ready');
         expect(wrapper.text()).toContain('distribution-read-model-summary-only');
@@ -562,7 +564,7 @@ describe('Cockpit Distribution Workspace foundation', () => {
         });
 
         expect(wrapper.text()).toContain('PC-DIST-002');
-        expect(wrapper.text()).toContain('Distribution Workspace Runtime');
+        expect(wrapper.text()).toContain('Distribution Workspace');
         expect(wrapper.find('[data-testid="cockpit-distribution-workspace-shell"]').exists()).toBe(true);
     });
 

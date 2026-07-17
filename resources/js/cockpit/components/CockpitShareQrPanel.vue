@@ -15,7 +15,7 @@ defineProps<{
             Share / QR
         </p>
         <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-            Share asset placeholder
+            Share asset readiness
         </h3>
 
         <div class="mt-5 grid gap-3">

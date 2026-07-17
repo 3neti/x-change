@@ -2984,3 +2984,16 @@ Current boundary:
 - Report: `reports/462-voucher-detail-final-copy-polish-slice-2-publish-closure.md`.
 - Closed the Voucher Detail Final Copy Polish wave.
 - Boundary remains unchanged: host-publish and verification only; no read-model behavior, route behavior, voucher lifecycle mutation, claim approval, driver execution, feedback delivery, journal write, provider call, campaign mutation, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-17 — Distribution Workspace Final Copy Polish — Slice 1 — Inspection Copy
+
+- Started the Distribution Workspace Final Copy Polish wave.
+- Updated `/x/cockpit/pay-codes/{code}/distribution` hero copy to `Distribution Workspace` and `Distribution inspection`.
+- Replaced remaining scaffold section labels with operator-facing labels:
+  - `Delivery channel status`;
+  - `Print asset readiness`;
+  - `Share asset readiness`;
+  - `Distribution status summary`.
+- Replaced `Read-only share surface` with `Read-only claim link`.
+- Report: `reports/463-distribution-workspace-final-copy-polish-slice-1-inspection-copy.md`.
+- Boundary remains unchanged: presentation-only distribution update; no read-model behavior, route behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle mutation, claim approval, driver execution, artifact generation, journal write, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.

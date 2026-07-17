@@ -323,15 +323,16 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
         <section class="space-y-6" data-testid="cockpit-distribution-workspace-shell">
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                    {{ isHydrated ? 'Wave 33 · Share surface' : 'Wave 4 · Slice 6' }}
+                    Distribution inspection
                 </p>
                 <h2 class="mt-2 text-2xl font-semibold text-slate-950 dark:text-slate-50">
-                    {{ isHydrated ? 'Distribution Workspace Runtime' : 'Distribution Workspace Foundation' }}
+                    Distribution Workspace
                 </h2>
                 <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    This screen presents read-only distribution and share-surface facts for a Pay Code.
-                    It does not dispatch distribution, send feedback, create campaigns, mutate vouchers,
-                    execute drivers, write journal entries, call providers, generate artifacts, or move money.
+                    Inspect manual distribution readiness, beneficiary URL availability, delivery
+                    channel status, and share assets for a Pay Code. This page does not dispatch
+                    distribution, send feedback, create campaigns, mutate vouchers, execute drivers,
+                    write journal entries, call providers, generate artifacts, or move money.
                 </p>
                 <dl class="mt-5 grid gap-3 text-sm sm:grid-cols-3">
                     <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
@@ -602,7 +603,7 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                 data-testid="cockpit-distribution-workspace-links-panel"
             >
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
-                    Read-only share surface
+                    Read-only claim link
                 </p>
                 <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
                     Beneficiary Pay Code URL
