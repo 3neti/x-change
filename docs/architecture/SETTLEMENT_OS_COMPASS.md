@@ -2791,3 +2791,14 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/457-funding-balance-ui-wave-slice-2-dashboard-panel.md`.
 - Boundary remains unchanged: presentation-only dashboard update; no wallet Treasury runtime dependency, provider balance refresh, wallet reservation, release, capture, repayment, reversal, refund, voucher lifecycle mutation, journal write, action execution, feedback delivery, campaign mutation, public API behavior, or money movement changed.
 - Next checkpoint: publish host assets and verify no drift.
+
+## 2026-07-17 Update — Cockpit Funding / Balance UI Wave — Slice 3 — Host Publish / Closure
+
+- Closed the Cockpit Funding / Balance UI Wave.
+- Package-owned Cockpit assets were published into the host app.
+- Asset drift is clean: `checked 60, ok 60, stale 0, missing 0, extra 0`.
+- Focused dashboard frontend verification passed.
+- Host production build passed with the known non-blocking third-party Rolldown annotation warnings.
+- UI/report: `../ui-cockpit/reports/458-funding-balance-ui-wave-slice-3-publish-closure.md`.
+- Boundary remains unchanged: host-publish and verification only; no wallet Treasury runtime dependency, provider balance refresh, wallet reservation, release, capture, repayment, reversal, refund, voucher lifecycle mutation, journal write, action execution, feedback delivery, campaign mutation, public API behavior, lifecycle mutation, or money movement changed.
+- Next recommended checkpoint: manual browser acceptance on `/x/cockpit`, then choose the next page-specific Cockpit target.
