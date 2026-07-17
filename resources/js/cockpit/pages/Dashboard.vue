@@ -27,6 +27,13 @@ const props = defineProps<CockpitDashboardPageProps>();
 
 const readModel = computed(() => props.dashboard_read_model);
 const expandedIntegrationDetails = ref<Record<string, boolean>>({});
+const headerBalances = computed(() => {
+    const balances = props.cockpit_header_read_model?.balances;
+
+    return Array.isArray(balances) && balances.length > 0
+        ? balances
+        : undefined;
+});
 
 const metrics = computed<CockpitDashboardMetric[]>(() => {
     if (!readModel.value?.authorized || !Array.isArray(readModel.value.metrics) || readModel.value.metrics.length === 0) {
@@ -398,7 +405,7 @@ function areIntegrationDetailsExpanded(key: string): boolean {
 </script>
 
 <template>
-    <CockpitLayout active-navigation="dashboard">
+    <CockpitLayout active-navigation="dashboard" :balances="headerBalances">
         <section class="space-y-6" data-testid="cockpit-dashboard-shell">
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">

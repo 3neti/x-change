@@ -63,6 +63,7 @@ use LBHurtado\XChange\Contracts\ClaimExecutionFactoryContract;
 use LBHurtado\XChange\Contracts\ClaimOtpChallengeContract;
 use LBHurtado\XChange\Contracts\ClaimOtpVerificationContract;
 use LBHurtado\XChange\Contracts\CockpitCampaignIssuanceDraftAdapterContract;
+use LBHurtado\XChange\Contracts\CockpitHeaderReadModelProviderContract;
 use LBHurtado\XChange\Contracts\CockpitIssuanceDraftAuditMetadataBuilderContract;
 use LBHurtado\XChange\Contracts\CockpitIssuanceDraftCompilerContract;
 use LBHurtado\XChange\Contracts\CockpitIssuanceDraftValidatorContract;
@@ -167,6 +168,7 @@ use LBHurtado\XChange\Services\Cockpit\NullCockpitOperatorIssuanceActivityReposi
 use LBHurtado\XChange\Services\Cockpit\NullCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Cockpit\OptionalCockpitIntegrationReadModels;
 use LBHurtado\XChange\Services\Cockpit\VoucherLifecycleCockpitReadModelProvider;
+use LBHurtado\XChange\Services\Cockpit\WalletCockpitHeaderReadModelProvider;
 use LBHurtado\XChange\Services\ConfigMinimumWithdrawalPolicyResolver;
 use LBHurtado\XChange\Services\ConfigProviderTopologyResolver;
 use LBHurtado\XChange\Services\ConfigVendorRegistry;
@@ -313,6 +315,7 @@ class XChangeServiceProvider extends ServiceProvider
                 operatorIssuanceActivity: $app->make(DurableCockpitOperatorIssuanceActivityReadModelProvider::class),
             );
         });
+        $this->app->singleton(CockpitHeaderReadModelProviderContract::class, WalletCockpitHeaderReadModelProvider::class);
         $this->app->singleton(CockpitRedactorContract::class, DefaultCockpitRedactor::class);
         $this->app->bind(CockpitOperatorIssuanceActivityRecorderContract::class, function ($app) {
             $service = $this->cockpitOperatorIssuanceActivityService(

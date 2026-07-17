@@ -308,6 +308,14 @@ export type CockpitActivityNavigationContext = {
 };
 
 export type CockpitDashboardPageProps = {
+    cockpit_header_read_model?: {
+        schema?: string;
+        status?: string;
+        authorized?: boolean;
+        read_only?: boolean;
+        balances?: CockpitBalanceMetric[];
+        redactions?: CockpitReadModelRedactions;
+    };
     dashboard_read_model?: CockpitDashboardReadModel;
     campaign_read_model?: CockpitCampaignReadModel;
     operator_issuance_activity_read_model?: CockpitOperatorIssuanceActivityReadModel;

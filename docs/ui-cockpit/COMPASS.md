@@ -2896,3 +2896,13 @@ Current boundary:
 - Added focused frontend coverage for the default header HUD copy.
 - Verification report: `reports/448-dashboard-header-balance-status-copy-polish.md`.
 - Boundary remains unchanged: no wallet read-model connection, provider call, funding reservation, money movement, voucher mutation, lifecycle truth change, journal write, x-action execution, x-feedback delivery, campaign behavior, public API behavior, or unsafe payload exposure changed.
+
+## 2026-07-17 Update — Cockpit Funding Status Wave 1 — Header Balance Read Model Wiring
+
+- Added a read-only `CockpitHeaderReadModelProviderContract` and `CockpitHeaderReadModelData`.
+- Added `WalletCockpitHeaderReadModelProvider` to resolve authenticated operator wallet balance through `WalletAccessContract`.
+- Dashboard page props now include `cockpit_header_read_model`.
+- `/x/cockpit` Dashboard passes hydrated header balances into `CockpitLayout`.
+- Provider balance remains explicitly disconnected until a future provider-balance adapter wave.
+- Verification report: `reports/449-cockpit-funding-status-wave-1-header-balance-read-model.md`.
+- Boundary remains unchanged: no wallet top-up, wallet debit, reservation, transfer, provider balance API call, NetBank/Paynamics/GCash call, voucher mutation, claim approval, redemption, execution, reconciliation, journal write, x-action execution, x-feedback delivery, campaign behavior, public API behavior, or raw wallet/provider payload exposure changed.

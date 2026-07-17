@@ -49,6 +49,30 @@ const dashboardReadModel = {
     wallet: 'must-not-render',
 };
 
+const cockpitHeaderReadModel = {
+    schema: 'x-change.cockpit.header-read-model.v1',
+    status: 'available',
+    authorized: true,
+    read_only: true,
+    balances: [
+        {
+            key: 'internal',
+            label: 'Internal Balance',
+            value: '₱9,876.50',
+            tone: 'healthy',
+        },
+        {
+            key: 'live',
+            label: 'Live Balance',
+            value: 'Provider balance not connected',
+            tone: 'neutral',
+        },
+    ],
+    redactions: {
+        payloads: 'balance-summary-only',
+    },
+};
+
 const campaignReadModel = {
     schema: 'x-change.cockpit.campaign-adoption.v1',
     status: 'available',
@@ -401,6 +425,20 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.findAll('[data-testid="cockpit-pipeline-stage"]')).toHaveLength(1);
         expect(wrapper.findAll('[data-testid="cockpit-risk-signal"]')).toHaveLength(1);
         expect(wrapper.findAll('[data-testid="cockpit-activity-item"]')).toHaveLength(1);
+    });
+
+    it('hydrates the global header from cockpit header balance read model props', () => {
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                cockpit_header_read_model: cockpitHeaderReadModel,
+                dashboard_read_model: dashboardReadModel,
+            },
+        });
+
+        expect(wrapper.find('[data-testid="cockpit-global-header"]').text()).toContain('Internal Balance');
+        expect(wrapper.find('[data-testid="cockpit-global-header"]').text()).toContain('₱9,876.50');
+        expect(wrapper.find('[data-testid="cockpit-global-header"]').text()).toContain('Provider balance not connected');
+        expect(wrapper.find('[data-testid="cockpit-global-header"]').text()).not.toContain('Internal balance not connected');
     });
 
     it('renders a primary operating summary with safe dashboard navigation', () => {

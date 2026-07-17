@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Support\Cockpit;
 
 use Illuminate\Support\Facades\Route;
+use LBHurtado\XChange\Contracts\CockpitHeaderReadModelProviderContract;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitDistributionWorkspaceItemData;
 use LBHurtado\XChange\Data\Cockpit\CockpitDistributionWorkspaceReadModelData;
@@ -17,6 +18,7 @@ class CockpitReadOnlyPageProps
     public function __construct(
         private readonly CockpitReadModelProviderContract $readModels,
         private readonly CockpitOperatorIssuanceActivityRuntimeProfileInspector $operatorActivityRuntimeProfile,
+        private readonly CockpitHeaderReadModelProviderContract $headerReadModels,
     ) {}
 
     /**
@@ -137,10 +139,12 @@ class CockpitReadOnlyPageProps
         ?string $campaignRecipientReference = null,
         ?string $campaignPurpose = null,
         ?string $operatorId = null,
+        mixed $operator = null,
         ?CockpitOperatorIssuanceActivitySearchFilterData $operatorActivityFilters = null,
     ): array {
         return [
             ...$this->toArray(),
+            'cockpit_header_read_model' => $this->headerReadModels->forOperator($operator)->toArray(),
             'dashboard_read_model' => $this->readModels->forDashboard(new CockpitReadModelQueryData(
                 include: ['voucher'],
             ))->toArray(),

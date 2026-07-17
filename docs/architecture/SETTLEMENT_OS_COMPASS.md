@@ -2650,3 +2650,15 @@ Workstream compasses remain the source of detailed slice history. This Compass s
   - `Provider balance not connected`.
 - UI report: `../ui-cockpit/reports/448-dashboard-header-balance-status-copy-polish.md`.
 - Boundary remains unchanged: presentation-only dashboard cleanup; no wallet read-model connection, provider call, funding reservation, money movement, voucher mutation, journal, action, feedback, campaign, public API, lifecycle truth, or execution behavior changed.
+
+## 2026-07-17 Update — Cockpit Funding Status Wave 1 — Header Balance Read Model Wiring
+
+- x-change now has a package-owned read-only Cockpit header balance read-model seam:
+  - `CockpitHeaderReadModelProviderContract`;
+  - `CockpitHeaderReadModelData`;
+  - `WalletCockpitHeaderReadModelProvider`.
+- `/x/cockpit` Dashboard receives `cockpit_header_read_model` and hydrates the global header from it.
+- Internal balance can now display the authenticated operator wallet balance when resolvable.
+- Provider balance remains deliberately disconnected; provider live balance wiring requires a separate explicit adapter wave.
+- UI report: `../ui-cockpit/reports/449-cockpit-funding-status-wave-1-header-balance-read-model.md`.
+- Boundary remains unchanged: read-only balance summary only; no wallet top-up/debit/reservation/transfer, provider API call, voucher mutation, claim lifecycle mutation, execution behavior, journal/action/feedback/campaign behavior, public API behavior, or raw wallet/provider payload exposure changed.
