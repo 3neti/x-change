@@ -11,6 +11,7 @@ use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\EmiPaynamicsConstellation\Adapters\ConstellationPayoutProvider;
 use LBHurtado\EmiPaynamicsConstellation\Contracts\ConstellationOtpResolver;
 use LBHurtado\EmiPaynamicsConstellation\Support\InteractiveOtpResolver;
+use LBHurtado\XChange\Contracts\MoneyMovementAccountingDecisionContract;
 use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
 use LBHurtado\XChange\Contracts\VoucherLiabilitySummaryContract;
@@ -35,6 +36,7 @@ final class LifecycleScenarioEngine
         private readonly ProviderRuntimeSettingsResolverContract $settings,
         private readonly LifecycleIntegrationReportBuilder $integrationReports,
         private readonly VoucherLiabilitySummaryContract $liabilities,
+        private readonly MoneyMovementAccountingDecisionContract $moneyMovementDecision,
     ) {}
 
     public function run(
@@ -219,6 +221,7 @@ final class LifecycleScenarioEngine
                     'estimate' => $bootstrap->estimate,
                     'generated' => $bootstrap->generated->toArray(),
                     'money_semantics' => $bootstrap->moneySemantics,
+                    'money_movement_decision' => $bootstrap->moneyMovementDecision,
                     'wallet_transactions' => $recentTransactions,
                 ],
             );
@@ -254,6 +257,7 @@ final class LifecycleScenarioEngine
             ...$bootstrap->moneySemantics,
             'after_claim' => $this->liabilities->forIssuer($bootstrap->issuer)->toArray(),
         ];
+        $payload['money_movement_decision'] = $this->moneyMovementDecision->current()->toArray();
 
         if ($resolvedProvider !== null) {
             $payload['provider'] = $resolvedProvider;

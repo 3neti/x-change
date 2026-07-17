@@ -2690,3 +2690,21 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/451-money-semantics-voucher-liability-characterization.md`.
 - Boundary remains unchanged: no wallet top-up/debit/refund/release/reservation behavior changed, no expiry job was added, no cancellation money movement was added, and no provider, execution, journal, action, feedback, campaign, voucher lifecycle, or public API behavior changed.
 - Next decision: if these read-only numbers are accepted, design a separate reservation/release money-movement wave.
+
+## 2026-07-17 Update — Money Movement Wave — Accounting Decision Scaffold
+
+- Added an explicit read-only money-movement accounting decision seam:
+  - `MoneyMovementAccountingDecisionContract`;
+  - `DefaultMoneyMovementAccountingDecisionService`;
+  - `MoneyMovementAccountingDecisionData`.
+- The current model is recorded as `debit_at_issuance`.
+- The next model remains a decision point: `reservation_release_pending_decision`.
+- Candidate models are now captured in code and tests:
+  - keep debit-at-issuance;
+  - debit-at-issuance with terminal release;
+  - reserve-at-issuance and debit-at-redemption.
+- Lifecycle scenario output now includes `money_movement_decision`, and human output renders a `Money Movement Decision` section.
+- Cockpit dashboard liability metrics can include a read-only `Money Movement Model` fact.
+- UI/report: `../ui-cockpit/reports/452-money-movement-accounting-decision-scaffold.md`.
+- Boundary remains unchanged: no wallet top-up/debit/refund/release/reservation behavior changed, no expiry job was added, no cancellation money movement was added, and no provider, execution, journal, action, feedback, campaign, voucher lifecycle, or public API behavior changed.
+- Next decision: choose the target accounting model before implementing any wallet reservation or release mechanics.

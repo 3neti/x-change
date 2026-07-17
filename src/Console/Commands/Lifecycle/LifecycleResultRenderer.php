@@ -104,6 +104,10 @@ final class LifecycleResultRenderer
             $this->renderMoneySemantics($command, $payload['money_semantics']);
         }
 
+        if (isset($payload['money_movement_decision']) && is_array($payload['money_movement_decision'])) {
+            $this->renderMoneyMovementDecision($command, $payload['money_movement_decision']);
+        }
+
         if (! empty($payload['wallet_transactions']) && is_array($payload['wallet_transactions'])) {
             $command->newLine();
             $command->line('Recent Wallet Transactions:');
@@ -168,6 +172,26 @@ final class LifecycleResultRenderer
         }
 
         return Number::currency(((int) $amount) / 100, in: $currency);
+    }
+
+    /**
+     * @param  array<string, mixed>  $decision
+     */
+    private function renderMoneyMovementDecision(Command $command, array $decision): void
+    {
+        $command->newLine();
+        $command->line('Money Movement Decision:');
+        $command->line('  Status: '.(string) data_get($decision, 'status', 'decision_required'));
+        $command->line('  Current Model: '.(string) data_get($decision, 'current_model', 'debit_at_issuance'));
+        $command->line('  Recommended Next Model: '.(string) data_get($decision, 'recommended_next_model', 'reservation_release_pending_decision'));
+        $command->line('  Mutates Wallets: '.($this->booleanLabel(data_get($decision, 'redactions.mutates_wallets'))));
+        $command->line('  Reserves Funds: '.($this->booleanLabel(data_get($decision, 'redactions.reserves_funds'))));
+        $command->line('  Releases Funds: '.($this->booleanLabel(data_get($decision, 'redactions.releases_funds'))));
+    }
+
+    private function booleanLabel(mixed $value): string
+    {
+        return $value === true ? 'yes' : 'no';
     }
 
     private function lineIfPresent(Command $command, string $label, mixed $value): void

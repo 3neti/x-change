@@ -87,6 +87,16 @@ it('renders human lifecycle summary when json option is disabled', function () {
                     'usable_balance_estimate_minor' => 95000,
                 ],
             ],
+            'money_movement_decision' => [
+                'status' => 'decision_required',
+                'current_model' => 'debit_at_issuance',
+                'recommended_next_model' => 'reservation_release_pending_decision',
+                'redactions' => [
+                    'mutates_wallets' => false,
+                    'reserves_funds' => false,
+                    'releases_funds' => false,
+                ],
+            ],
         ],
         exitCode: 0,
     );
@@ -99,7 +109,11 @@ it('renders human lifecycle summary when json option is disabled', function () {
         ->and($command->capturedOutput)->toContain('Money Semantics:')
         ->and($command->capturedOutput)->toContain('  Behavior: debit_at_issuance')
         ->and($command->capturedOutput)->toContain('  Outstanding Pay Codes: ₱25.00')
-        ->and($command->capturedOutput)->toContain('  Usable Balance Estimate: ₱950.00');
+        ->and($command->capturedOutput)->toContain('  Usable Balance Estimate: ₱950.00')
+        ->and($command->capturedOutput)->toContain('Money Movement Decision:')
+        ->and($command->capturedOutput)->toContain('  Status: decision_required')
+        ->and($command->capturedOutput)->toContain('  Current Model: debit_at_issuance')
+        ->and($command->capturedOutput)->toContain('  Releases Funds: no');
 });
 
 it('renders phase summary reconciliation and wallet transactions when present', function () {

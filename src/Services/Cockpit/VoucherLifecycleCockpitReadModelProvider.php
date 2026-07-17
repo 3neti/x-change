@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Route;
 use JsonSerializable;
 use LBHurtado\XChange\Contracts\CockpitCampaignIssuanceDraftAdapterContract;
 use LBHurtado\XChange\Contracts\CockpitReadModelProviderContract;
+use LBHurtado\XChange\Contracts\MoneyMovementAccountingDecisionContract;
 use LBHurtado\XChange\Contracts\VoucherLiabilitySummaryContract;
 use LBHurtado\XChange\Contracts\VoucherLifecycleServiceContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitCampaignReadModelData;
@@ -64,6 +65,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         private readonly ?DurableCockpitOperatorIssuanceActivityReadModelProvider $operatorIssuanceActivity = null,
         private readonly ?CockpitCampaignIssuanceDraftAdapterContract $campaignDraftAdapter = null,
         private readonly ?VoucherLiabilitySummaryContract $liabilities = null,
+        private readonly ?MoneyMovementAccountingDecisionContract $moneyMovementDecision = null,
     ) {}
 
     public function forVoucher(CockpitReadModelQueryData $query): CockpitReadModelBundleData
@@ -1696,6 +1698,29 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                 value: $this->formatMinorMoney($summary->cancelled_minor, $summary->currency),
                 helper: $summary->cancelled_count.' cancelled Pay Codes excluded from outstanding liability; no wallet release is performed.',
                 tone: $summary->cancelled_minor > 0 ? 'warning' : 'neutral',
+            ),
+            ...$this->moneyMovementDecisionMetrics(),
+        ];
+    }
+
+    /**
+     * @return array<int, CockpitDashboardMetricData>
+     */
+    private function moneyMovementDecisionMetrics(): array
+    {
+        if ($this->moneyMovementDecision === null) {
+            return [];
+        }
+
+        $decision = $this->moneyMovementDecision->current();
+
+        return [
+            new CockpitDashboardMetricData(
+                key: 'money-movement-model',
+                label: 'Money Movement Model',
+                value: str($decision->current_model)->replace('_', ' ')->title()->toString(),
+                helper: 'Reservation/release accounting is still a decision point; Cockpit shows read-only estimates only.',
+                tone: 'warning',
             ),
         ];
     }

@@ -96,6 +96,7 @@ use LBHurtado\XChange\Contracts\ExecutionResultHandoffPipelineContract;
 use LBHurtado\XChange\Contracts\ExecutionResultHandoffSummaryJournalWriterContract;
 use LBHurtado\XChange\Contracts\ExecutionResultJournalHandoffContract;
 use LBHurtado\XChange\Contracts\MinimumWithdrawalPolicyResolverContract;
+use LBHurtado\XChange\Contracts\MoneyMovementAccountingDecisionContract;
 use LBHurtado\XChange\Contracts\PayCodePresentationResolverContract;
 use LBHurtado\XChange\Contracts\PricelistServiceContract;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
@@ -181,6 +182,7 @@ use LBHurtado\XChange\Services\DefaultDisbursementReconciliationService;
 use LBHurtado\XChange\Services\DefaultDisbursementReconciliationStore;
 use LBHurtado\XChange\Services\DefaultDisbursementStatusFetcherService;
 use LBHurtado\XChange\Services\DefaultDisbursementStatusResolverService;
+use LBHurtado\XChange\Services\DefaultMoneyMovementAccountingDecisionService;
 use LBHurtado\XChange\Services\DefaultPayCodePresentationResolver;
 use LBHurtado\XChange\Services\DefaultRedemptionCompletionContextService;
 use LBHurtado\XChange\Services\DefaultRedemptionContextResolverService;
@@ -310,6 +312,10 @@ class XChangeServiceProvider extends ServiceProvider
 
         $this->app->singleton(OptionalCockpitIntegrationReadModels::class);
         $this->app->singleton(VoucherLiabilitySummaryContract::class, VoucherLiabilitySummaryService::class);
+        $this->app->singleton(
+            MoneyMovementAccountingDecisionContract::class,
+            DefaultMoneyMovementAccountingDecisionService::class,
+        );
         $this->app->singleton(CockpitReadModelProviderContract::class, function ($app): VoucherLifecycleCockpitReadModelProvider {
             return new VoucherLifecycleCockpitReadModelProvider(
                 vouchers: $app->make(VoucherLifecycleServiceContract::class),
@@ -317,6 +323,7 @@ class XChangeServiceProvider extends ServiceProvider
                 integrations: $app->make(OptionalCockpitIntegrationReadModels::class),
                 operatorIssuanceActivity: $app->make(DurableCockpitOperatorIssuanceActivityReadModelProvider::class),
                 liabilities: $app->make(VoucherLiabilitySummaryContract::class),
+                moneyMovementDecision: $app->make(MoneyMovementAccountingDecisionContract::class),
             );
         });
         $this->app->singleton(CockpitHeaderReadModelProviderContract::class, WalletCockpitHeaderReadModelProvider::class);

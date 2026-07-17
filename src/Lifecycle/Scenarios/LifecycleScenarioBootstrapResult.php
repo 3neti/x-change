@@ -23,5 +23,6 @@ final readonly class LifecycleScenarioBootstrapResult
         public mixed $generated,
         public mixed $voucher,
         public array $moneySemantics = [],
+        public array $moneyMovementDecision = [],
     ) {}
 }

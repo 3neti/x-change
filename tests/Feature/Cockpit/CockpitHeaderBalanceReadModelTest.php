@@ -181,5 +181,6 @@ it('hydrates the cockpit dashboard with read-only voucher liability metrics', fu
         ->toContain('active-issued-liability')
         ->toContain('redeemed-liability')
         ->toContain('expired-liability')
-        ->toContain('cancelled-liability');
+        ->toContain('cancelled-liability')
+        ->toContain('money-movement-model');
 });

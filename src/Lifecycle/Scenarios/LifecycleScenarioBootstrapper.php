@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use LBHurtado\ModelChannel\Contracts\HasMobileChannel;
 use LBHurtado\XChange\Actions\PayCode\EstimatePayCodeCost;
 use LBHurtado\XChange\Actions\PayCode\GeneratePayCode;
+use LBHurtado\XChange\Contracts\MoneyMovementAccountingDecisionContract;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Contracts\VoucherLiabilitySummaryContract;
 use RuntimeException;
@@ -20,6 +21,7 @@ final class LifecycleScenarioBootstrapper
         private readonly GeneratePayCode $generatePayCode,
         private readonly VoucherAccessContract $vouchers,
         private readonly VoucherLiabilitySummaryContract $liabilities,
+        private readonly MoneyMovementAccountingDecisionContract $moneyMovementDecision,
     ) {}
 
     /**
@@ -84,6 +86,7 @@ final class LifecycleScenarioBootstrapper
                 'before_issuance' => $beforeIssuance,
                 'after_issuance' => $afterIssuance,
             ],
+            moneyMovementDecision: $this->moneyMovementDecision->current()->toArray(),
         );
     }
 
