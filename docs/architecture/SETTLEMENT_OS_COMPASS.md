@@ -2812,3 +2812,14 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/459-pay-code-explorer-productization-slice-1-results-scan.md`.
 - Boundary remains unchanged: presentation-only explorer update; no filter behavior, query API, voucher lifecycle mutation, claim approval, driver execution, feedback delivery, journal write, provider call, campaign mutation, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next checkpoint: publish host assets and verify no drift.
+
+## 2026-07-17 Update — Pay Code Explorer Productization — Slice 2 — Host Publish / Closure
+
+- Closed the Pay Code Explorer Productization wave.
+- Package-owned Cockpit assets were published into the host app.
+- Asset drift is clean: `checked 60, ok 60, stale 0, missing 0, extra 0`.
+- Focused Pay Code Explorer frontend verification passed.
+- Host production build passed with the known non-blocking third-party Rolldown annotation warnings.
+- UI/report: `../ui-cockpit/reports/460-pay-code-explorer-productization-slice-2-publish-closure.md`.
+- Boundary remains unchanged: host-publish and verification only; no filter behavior, query API, voucher lifecycle mutation, claim approval, driver execution, feedback delivery, journal write, provider call, campaign mutation, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next recommended checkpoint: manual browser acceptance on `/x/cockpit/pay-codes`, then continue with the next page-specific Cockpit target.
