@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import CockpitCampaignAdoptionPanel from '../components/CockpitCampaignAdoptionPanel.vue';
+import CockpitDiagnosticsDisclosure from '../components/CockpitDiagnosticsDisclosure.vue';
 import CockpitLiquidityHero from '../components/CockpitLiquidityHero.vue';
 import CockpitOperatorIssuanceActivityPanel from '../components/CockpitOperatorIssuanceActivityPanel.vue';
 import CockpitRecentActivityPanel from '../components/CockpitRecentActivityPanel.vue';
@@ -533,105 +534,112 @@ function areIntegrationDetailsExpanded(key: string): boolean {
 
             <CockpitRecentActivityPanel :items="activity" />
 
-            <section
-                class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                data-testid="cockpit-integration-summary-panel"
+            <CockpitDiagnosticsDisclosure
+                title="System posture"
+                summary="Funding, service connections, campaign context, and lifecycle posture remain available here without dominating the operator dashboard."
+                eyebrow="Optional system status"
+                action-label="Show system posture"
             >
-                <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                            Connected Services
-                        </p>
-                        <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                            Audit, follow-up, and notification status
-                        </h3>
-                        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                            {{ integrationReadinessNote }}
-                        </p>
-                    </div>
-
-                    <div
-                        class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
-                        data-testid="cockpit-activity-readiness-summary"
-                    >
-                        <p class="font-semibold uppercase tracking-wide">
-                            {{ displayStatus(activityReadiness.status) }}
-                        </p>
-                        <p class="mt-1 font-semibold text-slate-900 dark:text-slate-100">
-                            {{ activityReadiness.label }}
-                        </p>
-                        <p class="mt-1 max-w-xs leading-5">
-                            {{ activityReadiness.description }}
-                        </p>
-                    </div>
-                </div>
-                <div class="mt-5 grid gap-3 md:grid-cols-3">
-                    <article
-                        v-for="summary in integrationSummaries"
-                        :key="summary.key"
-                        class="rounded-lg border border-slate-200 p-4 dark:border-slate-800"
-                        data-testid="cockpit-integration-summary-card"
-                    >
-                        <div class="flex items-start justify-between gap-3">
-                            <div>
-                                <p class="font-semibold text-slate-950 dark:text-slate-50">
-                                {{ summary.label }}
-                                </p>
-                                <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                                    {{ integrationSourceLabel(summary.key) }}
-                                </p>
-                            </div>
-                            <span class="inline-flex min-h-6 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-slate-100 px-2 py-1 text-center text-xs font-semibold leading-none text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                                {{ displayStatus(summary.status) }}
-                            </span>
+                <section
+                    class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                    data-testid="cockpit-integration-summary-panel"
+                >
+                    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                                Connected Services
+                            </p>
+                            <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
+                                Audit, follow-up, and notification status
+                            </h3>
+                            <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                                {{ integrationReadinessNote }}
+                            </p>
                         </div>
-                        <p class="mt-4 text-2xl font-semibold text-slate-950 dark:text-slate-50">
-                            {{ summary.count }}
-                        </p>
-                        <button
-                            type="button"
-                            class="mt-3 inline-flex min-h-7 items-center justify-center rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold leading-none text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                            data-testid="cockpit-integration-summary-details-toggle"
-                            :aria-expanded="areIntegrationDetailsExpanded(summary.key)"
-                            @click="toggleIntegrationDetails(summary.key)"
-                        >
-                            {{ areIntegrationDetailsExpanded(summary.key) ? 'Hide connection details' : 'Connection details' }}
-                        </button>
+
                         <div
-                            v-if="areIntegrationDetailsExpanded(summary.key)"
-                            class="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:bg-slate-950 dark:text-slate-300"
-                            data-testid="cockpit-integration-summary-details"
+                            class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
+                            data-testid="cockpit-activity-readiness-summary"
                         >
-                            <dl class="mt-3 space-y-2">
-                                <div>
-                                    <dt class="font-semibold text-slate-700 dark:text-slate-200">
-                                        Payload policy
-                                    </dt>
-                                    <dd>{{ displayStatus(summary.policy) }}</dd>
-                                </div>
-                                <div>
-                                    <dt class="font-semibold text-slate-700 dark:text-slate-200">
-                                        Display readiness
-                                    </dt>
-                                    <dd>{{ displayStatus(summary.reason) }}</dd>
-                                </div>
-                            </dl>
+                            <p class="font-semibold uppercase tracking-wide">
+                                {{ displayStatus(activityReadiness.status) }}
+                            </p>
+                            <p class="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+                                {{ activityReadiness.label }}
+                            </p>
+                            <p class="mt-1 max-w-xs leading-5">
+                                {{ activityReadiness.description }}
+                            </p>
                         </div>
-                    </article>
+                    </div>
+                    <div class="mt-5 grid gap-3 md:grid-cols-3">
+                        <article
+                            v-for="summary in integrationSummaries"
+                            :key="summary.key"
+                            class="rounded-lg border border-slate-200 p-4 dark:border-slate-800"
+                            data-testid="cockpit-integration-summary-card"
+                        >
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="font-semibold text-slate-950 dark:text-slate-50">
+                                        {{ summary.label }}
+                                    </p>
+                                    <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                        {{ integrationSourceLabel(summary.key) }}
+                                    </p>
+                                </div>
+                                <span class="inline-flex min-h-6 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-slate-100 px-2 py-1 text-center text-xs font-semibold leading-none text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                                    {{ displayStatus(summary.status) }}
+                                </span>
+                            </div>
+                            <p class="mt-4 text-2xl font-semibold text-slate-950 dark:text-slate-50">
+                                {{ summary.count }}
+                            </p>
+                            <button
+                                type="button"
+                                class="mt-3 inline-flex min-h-7 items-center justify-center rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold leading-none text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                                data-testid="cockpit-integration-summary-details-toggle"
+                                :aria-expanded="areIntegrationDetailsExpanded(summary.key)"
+                                @click="toggleIntegrationDetails(summary.key)"
+                            >
+                                {{ areIntegrationDetailsExpanded(summary.key) ? 'Hide connection details' : 'Connection details' }}
+                            </button>
+                            <div
+                                v-if="areIntegrationDetailsExpanded(summary.key)"
+                                class="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:bg-slate-950 dark:text-slate-300"
+                                data-testid="cockpit-integration-summary-details"
+                            >
+                                <dl class="mt-3 space-y-2">
+                                    <div>
+                                        <dt class="font-semibold text-slate-700 dark:text-slate-200">
+                                            Payload policy
+                                        </dt>
+                                        <dd>{{ displayStatus(summary.policy) }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt class="font-semibold text-slate-700 dark:text-slate-200">
+                                            Display readiness
+                                        </dt>
+                                        <dd>{{ displayStatus(summary.reason) }}</dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </article>
+                    </div>
+                </section>
+
+                <CockpitLiquidityHero :metrics="metrics" />
+
+                <div class="grid gap-4 xl:grid-cols-3">
+                    <CockpitRedemptionPipeline
+                        class="xl:col-span-2"
+                        :stages="pipeline"
+                    />
+                    <CockpitRiskExpiryPanel :signals="riskSignals" />
                 </div>
-            </section>
 
-            <CockpitLiquidityHero :metrics="metrics" />
-
-            <div class="grid gap-4 xl:grid-cols-3">
-                <CockpitRedemptionPipeline
-                    class="xl:col-span-2"
-                    :stages="pipeline"
-                />
-                <CockpitRiskExpiryPanel :signals="riskSignals" />
-            </div>
-
-            <CockpitCampaignAdoptionPanel :read-model="props.campaign_read_model" />
+                <CockpitCampaignAdoptionPanel :read-model="props.campaign_read_model" />
+            </CockpitDiagnosticsDisclosure>
         </section>
     </CockpitLayout>
 </template>

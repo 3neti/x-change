@@ -3068,3 +3068,11 @@ Current boundary:
 - Report: `reports/470-pay-code-explorer-filter-query-ux-polish-slice-2-publish-closure.md`.
 - Closed the Pay Code Explorer Filter / Query UX Polish wave.
 - Boundary remains unchanged: host-publish and verification only; no route behavior, query behavior, read-model behavior, voucher lifecycle mutation, claim approval, driver execution, feedback delivery, journal write, provider call, campaign mutation, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-18 — Dashboard Lower-Panel Cleanup — Slice 1 — System Posture Disclosure
+
+- Started the Dashboard Lower-Panel Cleanup wave.
+- Grouped lower Dashboard status panels behind one optional `System posture` disclosure.
+- Moved Connected Services, Funding readiness, Claim lifecycle summary, Risk signals, and Campaign context into the disclosure while preserving all read-only facts.
+- Report: `reports/471-dashboard-lower-panel-cleanup-slice-1-system-posture.md`.
+- Boundary remains unchanged: presentation-only Dashboard update; no route behavior, read-model behavior, wallet behavior, Treasury behavior, voucher lifecycle mutation, claim approval, driver execution, journal write, x-action execution, x-feedback delivery, provider call, campaign mutation, public API behavior, or money movement changed.

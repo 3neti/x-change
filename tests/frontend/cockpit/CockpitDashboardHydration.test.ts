@@ -558,6 +558,30 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(campaignIndex).toBeGreaterThan(liquidityIndex);
     });
 
+    it('groups lower system posture panels behind an optional disclosure', () => {
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                dashboard_read_model: dashboardReadModel,
+            },
+        });
+
+        const disclosures = wrapper.findAll(
+            '[data-testid="cockpit-diagnostics-disclosure"]',
+        );
+        const postureDisclosure = disclosures.find((disclosure) =>
+            disclosure.text().includes('System posture'),
+        );
+
+        expect(postureDisclosure?.exists()).toBe(true);
+        expect(postureDisclosure?.text()).toContain('Optional system status');
+        expect(postureDisclosure?.text()).toContain('Show system posture');
+        expect(postureDisclosure?.text()).toContain('Connected Services');
+        expect(postureDisclosure?.text()).toContain('Funding readiness');
+        expect(postureDisclosure?.text()).toContain('Claim lifecycle summary');
+        expect(postureDisclosure?.text()).toContain('Items that may need attention');
+        expect(postureDisclosure?.text()).toContain('Campaign summary');
+    });
+
     it('keeps issuance activity distinct from execution activity evidence', () => {
         const wrapper = mount(CockpitDashboard, {
             props: {

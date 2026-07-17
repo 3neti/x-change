@@ -2938,3 +2938,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/470-pay-code-explorer-filter-query-ux-polish-slice-2-publish-closure.md`.
 - Boundary remains unchanged: host-publish and verification only; no route behavior, query behavior, read-model behavior, voucher lifecycle mutation, claim approval, driver execution, feedback delivery, journal write, provider call, campaign mutation, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next recommended checkpoint: manual browser acceptance on `/x/cockpit/pay-codes`, then continue with either Dashboard lower-panel cleanup or Voucher Detail/Distribution layout polish.
+
+## 2026-07-18 Update — Dashboard Lower-Panel Cleanup — Slice 1 — System Posture Disclosure
+
+- Started the Dashboard Lower-Panel Cleanup wave.
+- `/x/cockpit` now groups lower status panels behind one optional `System posture` disclosure.
+- Connected Services, Funding readiness, Claim lifecycle summary, Risk signals, and Campaign context remain available, but no longer dominate the default operator dashboard view.
+- UI/report: `../ui-cockpit/reports/471-dashboard-lower-panel-cleanup-slice-1-system-posture.md`.
+- Boundary remains unchanged: presentation-only Dashboard update; no route behavior, read-model behavior, wallet behavior, Treasury behavior, voucher lifecycle mutation, claim approval, driver execution, journal write, x-action execution, x-feedback delivery, provider call, campaign mutation, public API behavior, or money movement changed.
+- Next checkpoint: publish host assets and verify no drift.
