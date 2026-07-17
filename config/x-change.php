@@ -132,6 +132,10 @@ return [
     ],
 
     'cockpit' => [
+        'header_provider_balance' => [
+            'enabled' => (bool) env('XCHANGE_COCKPIT_HEADER_PROVIDER_BALANCE_ENABLED', false),
+        ],
+
         'operator_issuance_activity' => [
             'repository' => env('XCHANGE_COCKPIT_OPERATOR_ISSUANCE_ACTIVITY_REPOSITORY')
                 ?: null,

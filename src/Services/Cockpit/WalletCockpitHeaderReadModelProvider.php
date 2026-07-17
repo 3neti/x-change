@@ -9,18 +9,22 @@ use LBHurtado\XChange\Contracts\CockpitHeaderReadModelProviderContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitDashboardMetricData;
 use LBHurtado\XChange\Data\Cockpit\CockpitHeaderReadModelData;
+use LBHurtado\XChange\Services\BuildBalanceOverview;
 use Throwable;
 
 class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProviderContract
 {
-    public function __construct(private readonly WalletAccessContract $wallets) {}
+    public function __construct(
+        private readonly WalletAccessContract $wallets,
+        private readonly ?BuildBalanceOverview $fundingOverview = null,
+    ) {}
 
     public function forOperator(mixed $operator = null): CockpitHeaderReadModelData
     {
         return new CockpitHeaderReadModelData(
             balances: [
                 $this->internalBalance($operator),
-                $this->providerBalance(),
+                $this->providerBalance($operator),
             ],
             redactions: [
                 'payloads' => 'balance-summary-only',
@@ -55,13 +59,47 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
         }
     }
 
-    private function providerBalance(): CockpitDashboardMetricData
+    private function providerBalance(mixed $operator): CockpitDashboardMetricData
+    {
+        if (! (bool) config('x-change.cockpit.header_provider_balance.enabled', false) || $operator === null) {
+            return $this->disconnectedProviderBalance();
+        }
+
+        try {
+            $overview = ($this->fundingOverview ?? app(BuildBalanceOverview::class))
+                ->handle($operator, null, false);
+            $balance = $this->providerBalanceFromOverview($overview);
+
+            if ($balance === null) {
+                return $this->disconnectedProviderBalance();
+            }
+
+            $value = $balance['balance_minor'] ?? $balance['available_balance_minor'] ?? null;
+
+            if ($value === null) {
+                return $this->disconnectedProviderBalance($this->stringValue($balance['sync_message'] ?? null));
+            }
+
+            return new CockpitDashboardMetricData(
+                key: 'live',
+                label: 'Live Balance',
+                value: $this->formatMoney($value),
+                helper: $this->stringValue($balance['description'] ?? null)
+                    ?? 'Read-only provider balance summary.',
+                tone: ((bool) ($balance['is_stale'] ?? false)) ? 'warning' : 'healthy',
+            );
+        } catch (Throwable) {
+            return $this->disconnectedProviderBalance();
+        }
+    }
+
+    private function disconnectedProviderBalance(?string $helper = null): CockpitDashboardMetricData
     {
         return new CockpitDashboardMetricData(
             key: 'live',
             label: 'Live Balance',
             value: 'Provider balance not connected',
-            helper: 'Provider balance adapters are not wired to Cockpit yet.',
+            helper: $helper ?? 'Provider balance adapters are not wired to Cockpit yet.',
             tone: 'neutral',
         );
     }
@@ -75,6 +113,45 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
             helper: 'No operator wallet balance is available for this view.',
             tone: 'neutral',
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $overview
+     * @return array<string, mixed>|null
+     */
+    private function providerBalanceFromOverview(array $overview): ?array
+    {
+        $balances = $overview['balances'] ?? [];
+
+        if (! is_array($balances)) {
+            return null;
+        }
+
+        foreach ($balances as $balance) {
+            if (! is_array($balance)) {
+                continue;
+            }
+
+            $key = $this->stringValue($balance['key'] ?? null);
+            $authority = $this->stringValue($balance['authority'] ?? null);
+
+            if ($key === 'provider_wallet' || $key === 'netbank_source_account' || str_starts_with((string) $authority, 'provider_')) {
+                return $balance;
+            }
+        }
+
+        return null;
+    }
+
+    private function stringValue(mixed $value): ?string
+    {
+        if (! is_scalar($value)) {
+            return null;
+        }
+
+        $normalized = trim((string) $value);
+
+        return $normalized !== '' ? $normalized : null;
     }
 
     private function formatMoney(int|float|string|null $balance): string

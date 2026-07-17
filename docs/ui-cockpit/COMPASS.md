@@ -2906,3 +2906,12 @@ Current boundary:
 - Provider balance remains explicitly disconnected until a future provider-balance adapter wave.
 - Verification report: `reports/449-cockpit-funding-status-wave-1-header-balance-read-model.md`.
 - Boundary remains unchanged: no wallet top-up, wallet debit, reservation, transfer, provider balance API call, NetBank/Paynamics/GCash call, voucher mutation, claim approval, redemption, execution, reconciliation, journal write, x-action execution, x-feedback delivery, campaign behavior, public API behavior, or raw wallet/provider payload exposure changed.
+
+## 2026-07-17 Update — Cockpit Funding Status Wave 2 — Provider Balance Summary Adapter
+
+- Added an opt-in provider balance summary path for the Cockpit header read model.
+- New config: `x-change.cockpit.header_provider_balance.enabled`.
+- When enabled, `WalletCockpitHeaderReadModelProvider` reads provider-like balance summaries from `BuildBalanceOverview` with `syncIfStale: false`.
+- Default behavior remains `Provider balance not connected`.
+- Verification report: `reports/450-cockpit-funding-status-wave-2-provider-balance-summary-adapter.md`.
+- Boundary remains unchanged: no wallet top-up, wallet debit, reservation, transfer, provider balance refresh, provider sync, voucher mutation, claim approval, redemption, execution, reconciliation, journal write, x-action execution, x-feedback delivery, campaign behavior, public API behavior, or raw wallet/provider payload exposure changed.

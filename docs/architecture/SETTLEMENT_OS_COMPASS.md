@@ -2662,3 +2662,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Provider balance remains deliberately disconnected; provider live balance wiring requires a separate explicit adapter wave.
 - UI report: `../ui-cockpit/reports/449-cockpit-funding-status-wave-1-header-balance-read-model.md`.
 - Boundary remains unchanged: read-only balance summary only; no wallet top-up/debit/reservation/transfer, provider API call, voucher mutation, claim lifecycle mutation, execution behavior, journal/action/feedback/campaign behavior, public API behavior, or raw wallet/provider payload exposure changed.
+
+## 2026-07-17 Update — Cockpit Funding Status Wave 2 — Provider Balance Summary Adapter
+
+- Cockpit header provider balance can now be hydrated from existing x-change funding overview summaries when explicitly enabled.
+- The opt-in config is `x-change.cockpit.header_provider_balance.enabled`.
+- The adapter calls `BuildBalanceOverview` with `syncIfStale: false` and only displays safe provider-like summary rows.
+- Default runtime remains disconnected until the host explicitly enables the header provider balance summary.
+- UI report: `../ui-cockpit/reports/450-cockpit-funding-status-wave-2-provider-balance-summary-adapter.md`.
+- Boundary remains unchanged: no wallet top-up/debit/reservation/transfer, provider balance refresh/sync, voucher mutation, claim lifecycle mutation, execution behavior, journal/action/feedback/campaign behavior, public API behavior, or raw wallet/provider payload exposure changed.

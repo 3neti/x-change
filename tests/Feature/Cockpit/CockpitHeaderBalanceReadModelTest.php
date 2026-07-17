@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use LBHurtado\XChange\Contracts\CockpitHeaderReadModelProviderContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
+use LBHurtado\XChange\Services\BuildBalanceOverview;
 
 it('binds a read-only cockpit header balance read model with safe provider fallback', function () {
     app()->forgetInstance(CockpitHeaderReadModelProviderContract::class);
@@ -44,6 +45,72 @@ it('binds a read-only cockpit header balance read model with safe provider fallb
         ->and($readModel['balances'][1]['value'])->toBe('Provider balance not connected')
         ->and($readModel['redactions']['mutates_wallets'])->toBeFalse()
         ->and($readModel['redactions']['calls_providers'])->toBeFalse();
+});
+
+it('can expose a read-only provider balance summary when explicitly enabled', function () {
+    config(['x-change.cockpit.header_provider_balance.enabled' => true]);
+    app()->forgetInstance(CockpitHeaderReadModelProviderContract::class);
+    app()->instance(WalletAccessContract::class, new class implements WalletAccessContract
+    {
+        public function resolveForUser(mixed $user): mixed
+        {
+            return (object) ['id' => 789];
+        }
+
+        public function getBalance(mixed $wallet): int|float|string
+        {
+            return 500000;
+        }
+
+        public function assertCanAfford(mixed $wallet, int|float|string $amount): void {}
+
+        public function debit(mixed $wallet, int|float|string $amount, array $meta = []): mixed
+        {
+            throw new RuntimeException('Header read model must not debit wallets.');
+        }
+    });
+    app()->instance(BuildBalanceOverview::class, new class extends BuildBalanceOverview
+    {
+        public function __construct() {}
+
+        public function handle(mixed $owner, ?string $provider = null, bool $syncIfStale = true): array
+        {
+            expect($syncIfStale)->toBeFalse();
+
+            return [
+                'provider' => 'netbank',
+                'topology' => 'ledger_pooled',
+                'authority' => 'local_ledger',
+                'balances' => [
+                    [
+                        'key' => 'local_ledger',
+                        'authority' => 'local_ledger',
+                        'balance_minor' => 500000,
+                        'currency' => 'PHP',
+                    ],
+                    [
+                        'key' => 'netbank_source_account',
+                        'authority' => 'provider_source_account',
+                        'description' => 'NetBank source account liquidity summary.',
+                        'balance_minor' => 2500000,
+                        'currency' => 'PHP',
+                        'is_stale' => false,
+                    ],
+                ],
+            ];
+        }
+    });
+
+    $readModel = app(CockpitHeaderReadModelProviderContract::class)
+        ->forOperator((object) ['id' => 1])
+        ->toArray();
+
+    expect($readModel['balances'][1]['key'])->toBe('live')
+        ->and($readModel['balances'][1]['value'])->toContain('25,000')
+        ->and($readModel['balances'][1]['helper'])->toBe('NetBank source account liquidity summary.')
+        ->and($readModel['balances'][1]['tone'])->toBe('healthy')
+        ->and($readModel['redactions']['calls_providers'])->toBeFalse()
+        ->and($readModel['redactions']['provider_payloads_exposed'])->toBeFalse();
 });
 
 it('hydrates the cockpit dashboard with header balance read-model props', function () {
