@@ -3076,3 +3076,13 @@ Current boundary:
 - Moved Connected Services, Funding readiness, Claim lifecycle summary, Risk signals, and Campaign context into the disclosure while preserving all read-only facts.
 - Report: `reports/471-dashboard-lower-panel-cleanup-slice-1-system-posture.md`.
 - Boundary remains unchanged: presentation-only Dashboard update; no route behavior, read-model behavior, wallet behavior, Treasury behavior, voucher lifecycle mutation, claim approval, driver execution, journal write, x-action execution, x-feedback delivery, provider call, campaign mutation, public API behavior, or money movement changed.
+
+# 2026-07-18 — Dashboard Lower-Panel Cleanup — Slice 2 — Host Publish / Closure
+
+- Published package-owned Cockpit assets into the host app with `php artisan x-change:install --force --no-interaction`.
+- Verified published Cockpit assets are clean with `php artisan x-change:doctor --assets`.
+- Focused Dashboard frontend verification passed.
+- Host production build passed with the known non-blocking third-party Rolldown annotation warnings.
+- Report: `reports/472-dashboard-lower-panel-cleanup-slice-2-publish-closure.md`.
+- Closed the Dashboard Lower-Panel Cleanup wave.
+- Boundary remains unchanged: host-publish and verification only; no route behavior, read-model behavior, wallet behavior, Treasury behavior, voucher lifecycle mutation, claim approval, driver execution, journal write, x-action execution, x-feedback delivery, provider call, campaign mutation, public API behavior, or money movement changed.

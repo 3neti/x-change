@@ -2947,3 +2947,14 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/471-dashboard-lower-panel-cleanup-slice-1-system-posture.md`.
 - Boundary remains unchanged: presentation-only Dashboard update; no route behavior, read-model behavior, wallet behavior, Treasury behavior, voucher lifecycle mutation, claim approval, driver execution, journal write, x-action execution, x-feedback delivery, provider call, campaign mutation, public API behavior, or money movement changed.
 - Next checkpoint: publish host assets and verify no drift.
+
+## 2026-07-18 Update — Dashboard Lower-Panel Cleanup — Slice 2 — Host Publish / Closure
+
+- Closed the Dashboard Lower-Panel Cleanup wave.
+- Package-owned Cockpit assets were published into the host app.
+- Published asset drift is clean with `php artisan x-change:doctor --assets`.
+- Focused Dashboard frontend verification passed.
+- Host production build passed with the known non-blocking third-party Rolldown annotation warnings.
+- UI/report: `../ui-cockpit/reports/472-dashboard-lower-panel-cleanup-slice-2-publish-closure.md`.
+- Boundary remains unchanged: host-publish and verification only; no route behavior, read-model behavior, wallet behavior, Treasury behavior, voucher lifecycle mutation, claim approval, driver execution, journal write, x-action execution, x-feedback delivery, provider call, campaign mutation, public API behavior, or money movement changed.
+- Next recommended checkpoint: manual browser acceptance on `/x/cockpit`, then continue with Voucher Detail / Distribution layout polish or choose a real integration wiring wave.
