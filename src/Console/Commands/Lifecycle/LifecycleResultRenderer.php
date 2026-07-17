@@ -108,6 +108,10 @@ final class LifecycleResultRenderer
             $this->renderMoneyMovementDecision($command, $payload['money_movement_decision']);
         }
 
+        if (isset($payload['money_movement_target']) && is_array($payload['money_movement_target'])) {
+            $this->renderMoneyMovementTarget($command, $payload['money_movement_target']);
+        }
+
         if (! empty($payload['wallet_transactions']) && is_array($payload['wallet_transactions'])) {
             $command->newLine();
             $command->line('Recent Wallet Transactions:');
@@ -192,6 +196,19 @@ final class LifecycleResultRenderer
     private function booleanLabel(mixed $value): string
     {
         return $value === true ? 'yes' : 'no';
+    }
+
+    /**
+     * @param  array<string, mixed>  $target
+     */
+    private function renderMoneyMovementTarget(Command $command, array $target): void
+    {
+        $command->newLine();
+        $command->line('Money Movement Target:');
+        $command->line('  Status: '.(string) data_get($target, 'status', 'pending_human_approval'));
+        $command->line('  Recommended Model: '.(string) data_get($target, 'recommended_model', 'reserve_at_issuance_debit_at_redemption'));
+        $command->line('  Selected Model: '.(string) (data_get($target, 'selected_model') ?: 'none'));
+        $command->line('  Requires Approval: '.$this->booleanLabel(data_get($target, 'requires_human_approval')));
     }
 
     private function lineIfPresent(Command $command, string $label, mixed $value): void

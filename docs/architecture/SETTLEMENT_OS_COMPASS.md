@@ -2708,3 +2708,17 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/452-money-movement-accounting-decision-scaffold.md`.
 - Boundary remains unchanged: no wallet top-up/debit/refund/release/reservation behavior changed, no expiry job was added, no cancellation money movement was added, and no provider, execution, journal, action, feedback, campaign, voucher lifecycle, or public API behavior changed.
 - Next decision: choose the target accounting model before implementing any wallet reservation or release mechanics.
+
+## 2026-07-17 Update — Money Movement Wave — Target Model Approval Gate
+
+- Added an explicit read-only target model seam:
+  - `MoneyMovementTargetModelContract`;
+  - `DefaultMoneyMovementTargetModelService`;
+  - `MoneyMovementTargetModelData`.
+- Current model remains `debit_at_issuance`.
+- Recommended model is now recorded as `reserve_at_issuance_debit_at_redemption`.
+- No model is selected yet; status remains `pending_human_approval`.
+- Lifecycle scenario output now includes `money_movement_target`, and human output renders a `Money Movement Target` section.
+- UI/report: `../ui-cockpit/reports/453-money-movement-target-model-approval-gate.md`.
+- Boundary remains unchanged: no wallet top-up/debit/refund/release/reservation behavior changed, no expiry job was added, no cancellation money movement was added, and no provider, execution, journal, action, feedback, campaign, voucher lifecycle, or public API behavior changed.
+- Next decision: map lifecycle trigger ownership before any reservation/capture/release mechanics are implemented.

@@ -97,6 +97,12 @@ it('renders human lifecycle summary when json option is disabled', function () {
                     'releases_funds' => false,
                 ],
             ],
+            'money_movement_target' => [
+                'status' => 'pending_human_approval',
+                'recommended_model' => 'reserve_at_issuance_debit_at_redemption',
+                'selected_model' => null,
+                'requires_human_approval' => true,
+            ],
         ],
         exitCode: 0,
     );
@@ -113,7 +119,11 @@ it('renders human lifecycle summary when json option is disabled', function () {
         ->and($command->capturedOutput)->toContain('Money Movement Decision:')
         ->and($command->capturedOutput)->toContain('  Status: decision_required')
         ->and($command->capturedOutput)->toContain('  Current Model: debit_at_issuance')
-        ->and($command->capturedOutput)->toContain('  Releases Funds: no');
+        ->and($command->capturedOutput)->toContain('  Releases Funds: no')
+        ->and($command->capturedOutput)->toContain('Money Movement Target:')
+        ->and($command->capturedOutput)->toContain('  Status: pending_human_approval')
+        ->and($command->capturedOutput)->toContain('  Recommended Model: reserve_at_issuance_debit_at_redemption')
+        ->and($command->capturedOutput)->toContain('  Selected Model: none');
 });
 
 it('renders phase summary reconciliation and wallet transactions when present', function () {

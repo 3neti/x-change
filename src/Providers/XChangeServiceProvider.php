@@ -97,6 +97,7 @@ use LBHurtado\XChange\Contracts\ExecutionResultHandoffSummaryJournalWriterContra
 use LBHurtado\XChange\Contracts\ExecutionResultJournalHandoffContract;
 use LBHurtado\XChange\Contracts\MinimumWithdrawalPolicyResolverContract;
 use LBHurtado\XChange\Contracts\MoneyMovementAccountingDecisionContract;
+use LBHurtado\XChange\Contracts\MoneyMovementTargetModelContract;
 use LBHurtado\XChange\Contracts\PayCodePresentationResolverContract;
 use LBHurtado\XChange\Contracts\PricelistServiceContract;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
@@ -183,6 +184,7 @@ use LBHurtado\XChange\Services\DefaultDisbursementReconciliationStore;
 use LBHurtado\XChange\Services\DefaultDisbursementStatusFetcherService;
 use LBHurtado\XChange\Services\DefaultDisbursementStatusResolverService;
 use LBHurtado\XChange\Services\DefaultMoneyMovementAccountingDecisionService;
+use LBHurtado\XChange\Services\DefaultMoneyMovementTargetModelService;
 use LBHurtado\XChange\Services\DefaultPayCodePresentationResolver;
 use LBHurtado\XChange\Services\DefaultRedemptionCompletionContextService;
 use LBHurtado\XChange\Services\DefaultRedemptionContextResolverService;
@@ -315,6 +317,10 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->singleton(
             MoneyMovementAccountingDecisionContract::class,
             DefaultMoneyMovementAccountingDecisionService::class,
+        );
+        $this->app->singleton(
+            MoneyMovementTargetModelContract::class,
+            DefaultMoneyMovementTargetModelService::class,
         );
         $this->app->singleton(CockpitReadModelProviderContract::class, function ($app): VoucherLifecycleCockpitReadModelProvider {
             return new VoucherLifecycleCockpitReadModelProvider(
