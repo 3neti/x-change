@@ -2915,3 +2915,15 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/468-quick-generate-diagnostic-simplification-slice-2-publish-closure.md`.
 - Boundary remains unchanged: host-publish and verification only; no route behavior, form payload shape, validation, idempotency, pricing calculation, funding behavior, issuer wallet behavior, voucher instruction compilation, GeneratePayCode handoff, journal write, x-action execution, x-feedback delivery, provider call, campaign mutation, public API behavior, or money movement changed.
 - Next recommended checkpoint: manual browser acceptance on `/x/cockpit/quick-generate`, then continue to Pay Code Explorer filter/query UX polish or another page-specific Cockpit cleanup.
+
+## 2026-07-18 Update — Pay Code Explorer Filter / Query UX Polish — Slice 1 — Filter Copy
+
+- Started the Pay Code Explorer Filter / Query UX Polish wave.
+- `/x/cockpit/pay-codes` now removes remaining scaffold-like filter copy:
+  - `Pay Code Explorer Foundation` is now `Pay Code Explorer`;
+  - `Query controls placeholder` is now `Current query criteria`;
+  - filter cards are framed as `Filter summary`;
+  - row-action guidance describes inspection workspaces instead of disabled placeholders.
+- UI/report: `../ui-cockpit/reports/469-pay-code-explorer-filter-query-ux-polish-slice-1-copy.md`.
+- Boundary remains unchanged: presentation-only Explorer update; no route behavior, query behavior, read-model behavior, voucher lifecycle mutation, claim approval, driver execution, feedback delivery, journal write, provider call, campaign mutation, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next checkpoint: publish host assets and verify no drift.

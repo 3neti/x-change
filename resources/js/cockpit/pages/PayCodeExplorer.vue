@@ -332,15 +332,16 @@ function integrationBadge(
         <section class="space-y-6" data-testid="cockpit-pay-code-explorer-shell">
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                    Wave 4 · Slice 13
+                    Pay Code operations
                 </p>
                 <h2 class="mt-2 text-2xl font-semibold text-slate-950 dark:text-slate-50">
-                    Pay Code Explorer Foundation
+                    Pay Code Explorer
                 </h2>
                 <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    Pay Code Explorer Read Model hydration renders sanitized list facts when supplied.
-                    This screen remains read-only: it does not mutate vouchers, execute drivers, approve
-                    claims, send feedback, write journal entries, call providers, or move money.
+                    Find and inspect Pay Codes using sanitized list facts. This
+                    screen remains read-only: it does not mutate vouchers,
+                    execute drivers, approve claims, send feedback, write
+                    journal entries, call providers, or move money.
                 </p>
                 <dl class="mt-5 grid gap-3 text-sm sm:grid-cols-3">
                     <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
@@ -418,7 +419,7 @@ function integrationBadge(
                         Query: {{ query || 'all Pay Codes' }} · Status: {{ statusFilter ?? 'all statuses' }}
                     </p>
                     <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                        Search and filter controls use read-only GET navigation. Row actions are navigation-only unless a future authorized mutation slice explicitly changes that boundary.
+                        Search and filters only change the current list view. Row actions remain navigation-only unless a future authorized mutation slice explicitly changes that boundary.
                     </p>
                     <div class="mt-4 flex flex-wrap gap-3">
                         <a
@@ -449,7 +450,7 @@ function integrationBadge(
                             Row action guidance
                         </p>
                         <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                            Row actions are safe navigation or disabled placeholders. This page does not execute actions, deliver feedback, mutate vouchers, or call providers from a list row.
+                            Row actions open inspection workspaces or remain disabled when the destination is not authorized. This page does not execute actions, deliver feedback, mutate vouchers, or call providers from a list row.
                         </p>
                     </div>
                     <span class="w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200">

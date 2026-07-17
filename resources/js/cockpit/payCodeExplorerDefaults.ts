@@ -9,7 +9,7 @@ export const cockpitPayCodeExplorerFilters: CockpitPayCodeExplorerFilter[] = [
         key: 'status',
         label: 'Status',
         value: 'All lifecycle states',
-        helper: 'Filtering is presentation-only until a host query API is wired.',
+        helper: 'Current list includes every lifecycle state.',
     },
     {
         key: 'template',
@@ -21,7 +21,7 @@ export const cockpitPayCodeExplorerFilters: CockpitPayCodeExplorerFilter[] = [
         key: 'risk',
         label: 'Risk',
         value: 'Attention signals pending',
-        helper: 'Risk computation is not inferred in the frontend.',
+        helper: 'Risk signals come from the sanitized read model only.',
     },
 ];
 

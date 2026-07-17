@@ -32,19 +32,23 @@ describe('Cockpit Pay Code Explorer foundation', () => {
         expect(wrapper.find('[type="submit"]').exists()).toBe(true);
     });
 
-    it('renders filter builder placeholders without applying host queries', () => {
+    it('renders filter summary cards without applying mutations', () => {
         const wrapper = mount(CockpitPayCodeFilterBuilder, {
             props: {
                 filters: cockpitPayCodeExplorerFilters,
             },
         });
 
-        expect(wrapper.text()).toContain('Query controls placeholder');
+        expect(wrapper.text()).toContain('Filter summary');
+        expect(wrapper.text()).toContain('Current query criteria');
+        expect(wrapper.text()).toContain(
+            'Filters use normal GET navigation',
+        );
         expect(wrapper.text()).toContain('Status');
         expect(wrapper.text()).toContain('Template');
         expect(wrapper.text()).toContain('Risk');
         expect(wrapper.text()).toContain(
-            'Filtering is presentation-only until a host query API is wired.',
+            'Current list includes every lifecycle state.',
         );
         expect(
             wrapper.findAll('[data-testid="cockpit-pay-code-filter"]'),
@@ -96,9 +100,10 @@ describe('Cockpit Pay Code Explorer foundation', () => {
                 .find('[data-testid="cockpit-pay-code-explorer-shell"]')
                 .exists(),
         ).toBe(true);
-        expect(wrapper.text()).toContain('Pay Code Explorer Foundation');
+        expect(wrapper.text()).toContain('Pay Code operations');
+        expect(wrapper.text()).toContain('Pay Code Explorer');
         expect(wrapper.text()).toContain('Search');
-        expect(wrapper.text()).toContain('Filter Builder');
+        expect(wrapper.text()).toContain('Filter summary');
         expect(wrapper.text()).toContain('Results');
         expect(wrapper.find('[aria-current="page"]').text()).toContain(
             'Pay Codes',

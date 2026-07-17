@@ -127,7 +127,7 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Pay Code Explorer Read Model');
+        expect(wrapper.text()).toContain('Find and inspect Pay Codes');
         expect(wrapper.text()).toContain('PC-HYDRATED-001');
         expect(wrapper.text()).toContain('PC-HYDRATED-002');
         expect(wrapper.text()).toContain('₱1,500.75');
@@ -192,7 +192,7 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(summary.text()).toContain('Payload Policy');
         expect(summary.text()).toContain('sanitized-list-only');
         expect(summary.text()).toContain('Query: PC-HYDRATED · Status: redeemed');
-        expect(summary.text()).toContain('read-only GET navigation');
+        expect(summary.text()).toContain('Search and filters only change the current list view');
         expect(summary.text()).toContain('does not mutate vouchers');
         expect(items).toHaveLength(4);
         expect(wrapper.find('[data-testid="cockpit-pay-code-explorer-primary-quick-generate-link"]').attributes('href')).toBe('/x/cockpit/quick-generate');
@@ -250,7 +250,7 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(guidance.text()).toContain('Blocked Actions');
         expect(guidance.text()).toContain('1');
         expect(guidance.text()).toContain('Rows');
-        expect(guidance.text()).toContain('safe navigation or disabled placeholders');
+        expect(guidance.text()).toContain('open inspection workspaces or remain disabled');
         expect(guidance.text()).toContain('does not execute actions');
         expect(guidance.text()).toContain('does not execute actions, deliver feedback, mutate vouchers, or call providers');
         expect(items).toHaveLength(3);
