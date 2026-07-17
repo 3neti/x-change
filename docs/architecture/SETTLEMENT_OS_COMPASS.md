@@ -2741,3 +2741,26 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/454-money-movement-lifecycle-trigger-matrix.md`.
 - Boundary remains unchanged: no wallet top-up/debit/refund/release/reservation/capture/reversal behavior changed, no expiry job was added, no cancellation money movement was added, and no provider, execution, journal, action, feedback, campaign, voucher lifecycle, or public API behavior changed.
 - Next decision: after human target-model approval, coordinate the wallet package reservation ledger contract before x-change emits real trigger requests.
+
+## 2026-07-17 Update — x-change Treasury Consumer Review — Wallet Phase 0–5
+
+- Reviewed wallet Treasury Phase 0–5 from the x-change / Cockpit consumer side.
+- Wallet Treasury is green through:
+  - Phase 0 — architecture documentation;
+  - Phase 1 — current behavior characterization;
+  - Phase 2 — planning-only DTOs and contracts;
+  - Phase 3 — null Treasury planning runtime;
+  - Phase 4 — wallet-backed Inventory read model baseline;
+  - Phase 5 — Allocation and Slice read-model planning scaffold.
+- Consumer mapping is now recorded in `../ui-cockpit/reports/455-treasury-consumer-review-wallet-phase-0-5.md`.
+- x-change bridge values remain authoritative for Cockpit display until wallet Treasury reports real persisted facts:
+  - `Outstanding Pay Codes`;
+  - `Usable Balance`;
+  - `Money Movement Model`;
+  - `Money Movement Triggers`.
+- Wallet Treasury Phase 4/5 absent-fact markers must be treated as disconnected/bridge state:
+  - `hasTreasuryFacts = false`;
+  - `treasury_facts = absent`.
+- x-change must not treat `NullTreasuryPlanningRuntime` output as an executed allocation, draw, release, repayment, reversal, or settlement operation.
+- Boundary remains unchanged: no wallet Treasury runtime dependency, no `3neti/wallet` package dependency, no direct wallet Treasury imports, no wallet reservation/capture/release/repayment/reversal behavior, no balance computation change, no voucher lifecycle behavior, no Cockpit UI behavior, and no provider, execution, journal, action, feedback, campaign, public API, or lifecycle mutation behavior changed.
+- Next recommended checkpoint: define an optional read-only wallet Treasury adapter plan only after wallet Phase 5 is committed and consumer labels are accepted.
