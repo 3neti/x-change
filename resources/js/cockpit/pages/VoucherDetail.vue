@@ -443,7 +443,9 @@ function journalAuditItem(
         ?? stringValue(journalEntry.type)
         ?? stringValue(journalEntry.event)
         ?? 'journal.entry';
+    const payload = objectValue(journalEntry.payload);
     const summary = stringValue(journalEntry.summary)
+        ?? stringValue(payload?.summary)
         ?? stringValue(journalEntry.description)
         ?? 'Journal evidence summary available.';
     const occurredAt = stringValue(journalEntry.occurred_at)

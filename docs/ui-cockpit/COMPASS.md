@@ -3496,3 +3496,10 @@ Current boundary:
 - Hardened Cockpit redaction so nested `wallet` keys are redacted before x-journal evidence reaches the UI.
 - Report: `reports/523-voucher-detail-x-journal-evidence-read-model-slice-1.md`.
 - Boundary remains unchanged: read-model and redaction hardening only; no journal writes, x-action execution, x-feedback delivery, campaign mutation, campaign dispatch, voucher mutation, claim execution, driver execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+
+# 2026-07-19 — Voucher Detail x-journal Evidence Read Model — Slice 2
+
+- Voucher Detail now renders real x-journal entry summaries from `payload.summary` in the Audit panel.
+- Published package-owned Cockpit assets into the host app and verified no asset drift.
+- Report: `reports/524-voucher-detail-x-journal-evidence-read-model-slice-2.md`.
+- Boundary remains unchanged: read-only presentation only; no journal writes, x-action execution, x-feedback delivery, campaign mutation, campaign dispatch, voucher mutation, claim execution, driver execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.

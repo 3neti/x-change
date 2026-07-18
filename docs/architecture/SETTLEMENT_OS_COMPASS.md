@@ -3333,3 +3333,11 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/523-voucher-detail-x-journal-evidence-read-model-slice-1.md`.
 - Boundary remains unchanged: read-model and redaction hardening only; no journal writes, x-action execution, x-feedback delivery, campaign mutation, campaign dispatch, voucher mutation, claim execution, driver execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
 - Next checkpoint: verify the Voucher Detail audit/evidence panels render connected x-journal evidence cleanly, then publish assets and close the wave.
+
+## 2026-07-19 Update — Voucher Detail x-journal Evidence Read Model — Slice 2
+
+- Voucher Detail now renders real x-journal entry summaries from `payload.summary`.
+- Published package-owned Cockpit assets into the host app and confirmed published assets match package source.
+- UI/report: `../ui-cockpit/reports/524-voucher-detail-x-journal-evidence-read-model-slice-2.md`.
+- Boundary remains unchanged: read-only presentation only; no journal writes, x-action execution, x-feedback delivery, campaign mutation, campaign dispatch, voucher mutation, claim execution, driver execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+- Next checkpoint: close the wave with focused backend/frontend/build verification.

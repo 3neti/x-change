@@ -466,6 +466,49 @@ describe('Cockpit Voucher Detail hydration', () => {
         expect(wrapper.text()).not.toContain('raw_payload');
     });
 
+    it('renders real x-journal payload summaries in the audit panel', () => {
+        const wrapper = mount(VoucherDetail, {
+            props: {
+                read_model: {
+                    ...readModel,
+                    journal: {
+                        status: 'available',
+                        authorized: true,
+                        entries: [
+                            {
+                                reference_number: 'ERN-COCKPIT-VOUCHER-EVIDENCE-001',
+                                event_type: 'voucher.audit.recorded',
+                                occurred_at: '2026-07-19T10:00:00+08:00',
+                                payload: {
+                                    summary: 'Voucher evidence summary from x-journal.',
+                                    raw_payload: '[redacted]',
+                                    provider_payload: '[redacted]',
+                                },
+                                metadata: {
+                                    wallet: '[redacted]',
+                                },
+                            },
+                        ],
+                        redactions: {
+                            payloads: 'journal-evidence-summary-only',
+                            source: 'x-journal',
+                            evidence_only: true,
+                            writes_journal_entries: false,
+                        },
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.find('[data-testid="cockpit-voucher-audit-panel"]').text()).toContain('Journal: voucher.audit.recorded');
+        expect(wrapper.find('[data-testid="cockpit-voucher-audit-panel"]').text()).toContain('Voucher evidence summary from x-journal.');
+        expect(wrapper.find('[data-testid="cockpit-voucher-audit-panel"]').text()).toContain('journal-evidence-summary-only');
+        expect(wrapper.text()).not.toContain('must-not-render');
+        expect(wrapper.text()).not.toContain('provider_payload');
+        expect(wrapper.text()).not.toContain('raw_payload');
+        expect(wrapper.text()).not.toContain('wallet');
+    });
+
     it('hydrates action read-model CTAs as disabled operator actions without unsafe payloads', () => {
         const wrapper = mount(VoucherDetail, {
             props: {
