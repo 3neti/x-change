@@ -3269,3 +3269,11 @@ Current boundary:
 - Added a read-only return link back to the Cockpit campaign view with the same campaign context.
 - Report: `reports/495-campaign-explorer-context-productization-slice-1.md`.
 - Boundary remains unchanged: presentation-only Pay Code Explorer UI update; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-18 — Campaign Explorer Context Productization — Slice 2 — Route Props
+
+- Pay Code Explorer route props now preserve full campaign id, audience id, and recipient id context from campaign-aware links.
+- Route acceptance verifies those values remain read-only orientation facts and that campaign mutation/provider/wallet/raw payload surfaces remain absent.
+- Updated the older dashboard campaign route expectation to match the current installed/read-only x-campaign package-presence state.
+- Report: `reports/496-campaign-explorer-context-productization-slice-2-route-props.md`.
+- Boundary remains unchanged: route-prop and test-characterization update only; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.

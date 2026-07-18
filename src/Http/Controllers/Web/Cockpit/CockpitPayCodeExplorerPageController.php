@@ -19,6 +19,9 @@ class CockpitPayCodeExplorerPageController extends Controller
         return Inertia::render('x-change/cockpit/PayCodeExplorer', $this->props->toPayCodeExplorerArray(
             campaignPlanningKey: $this->optionalString($request->query('campaign_planning_key')),
             campaignExecutionId: $this->optionalString($request->query('campaign_execution_id')),
+            campaignId: $this->optionalString($request->query('campaign_id')),
+            campaignAudienceId: $this->optionalString($request->query('campaign_audience_id')),
+            campaignRecipientId: $this->optionalString($request->query('campaign_recipient_id')),
             campaignSource: $this->optionalString($request->query('campaign_source')),
             activityCode: $this->optionalString($request->query('activity_code')),
             activitySource: $this->optionalString($request->query('activity_source')),

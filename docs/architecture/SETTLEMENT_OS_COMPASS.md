@@ -3133,3 +3133,11 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/495-campaign-explorer-context-productization-slice-1.md`.
 - Boundary remains unchanged: presentation-only Pay Code Explorer UI update; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next checkpoint: preserve full campaign id/audience/recipient route props through the Pay Code Explorer controller.
+
+## 2026-07-18 Update — Campaign Explorer Context Productization — Slice 2 — Route Props
+
+- `/x/cockpit/pay-codes` now preserves full campaign id, audience id, and recipient id query context through the backend route props.
+- Route-level acceptance confirms campaign context remains read-only and excludes campaign mutation, provider, wallet, raw payload, and Pay Code generation payload surfaces.
+- UI/report: `../ui-cockpit/reports/496-campaign-explorer-context-productization-slice-2-route-props.md`.
+- Boundary remains unchanged: route-prop and test-characterization update only; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next checkpoint: publish package assets into the host, run drift verification, frontend Explorer checks, and host build.

@@ -174,6 +174,9 @@ it('passes optional campaign navigation context to the pay code explorer without
         ->get(route('x-change.cockpit.pay-codes.index', [
             'campaign_planning_key' => ' campaign-plan-1 ',
             'campaign_execution_id' => ' execution-1 ',
+            'campaign_id' => ' campaign-1 ',
+            'campaign_audience_id' => ' audience-1 ',
+            'campaign_recipient_id' => ' recipient-1 ',
             'campaign_source' => ' campaign_cockpit ',
         ]))
         ->assertOk()
@@ -184,6 +187,9 @@ it('passes optional campaign navigation context to the pay code explorer without
         ->assertJsonPath('props.campaign_navigation_context.source', 'campaign_cockpit')
         ->assertJsonPath('props.campaign_navigation_context.planning_key', 'campaign-plan-1')
         ->assertJsonPath('props.campaign_navigation_context.execution_id', 'execution-1')
+        ->assertJsonPath('props.campaign_navigation_context.campaign_id', 'campaign-1')
+        ->assertJsonPath('props.campaign_navigation_context.audience_id', 'audience-1')
+        ->assertJsonPath('props.campaign_navigation_context.recipient_id', 'recipient-1')
         ->assertJsonPath('props.campaign_navigation_context.destination', 'pay_code_explorer')
         ->assertJsonPath('props.campaign_navigation_context.read_only', true)
         ->assertJsonPath('props.campaign_navigation_context.mutation.enabled', false)
@@ -350,16 +356,25 @@ it('exposes a read-only campaign cockpit read model prop on the dashboard route'
         ->assertOk()
         ->assertJsonPath('component', 'x-change/cockpit/Dashboard')
         ->assertJsonPath('props.campaign_read_model.schema', 'x-change.cockpit.campaign-adoption.v1')
-        ->assertJsonPath('props.campaign_read_model.status', 'unavailable')
-        ->assertJsonPath('props.campaign_read_model.authorized', false)
+        ->assertJsonPath('props.campaign_read_model.status', 'available')
+        ->assertJsonPath('props.campaign_read_model.authorized', true)
         ->assertJsonPath('props.campaign_read_model.source', 'x-campaign')
-        ->assertJsonPath('props.campaign_read_model.facts', [])
+        ->assertJsonPath('props.campaign_read_model.facts.context_status', 'no-campaign-selected')
+        ->assertJsonPath('props.campaign_read_model.facts.selected', false)
+        ->assertJsonPath('props.campaign_read_model.facts.metadata.package_available', true)
         ->assertJsonPath('props.campaign_read_model.mutation.enabled', false)
         ->assertJsonPath('props.campaign_read_model.mutation.status', 'blocked')
         ->assertJsonPath('props.campaign_read_model.mutation.reason', 'campaign-mutations-not-authorized')
-        ->assertJsonPath('props.campaign_read_model.redactions.payloads', 'not-loaded')
+        ->assertJsonPath('props.campaign_read_model.redactions.payloads', 'campaign-cockpit-package-presence-only')
         ->assertJsonPath('props.campaign_read_model.redactions.source', 'x-campaign')
-        ->assertJsonPath('props.campaign_read_model.redactions.reason', 'missing-campaign-context')
+        ->assertJsonPath('props.campaign_read_model.redactions.reason', 'no-campaign-selected')
+        ->assertJsonPath('props.campaign_read_model.redactions.read_only', true)
+        ->assertJsonPath('props.campaign_read_model.redactions.mutates_campaigns', false)
+        ->assertJsonPath('props.campaign_read_model.redactions.issues_pay_codes', false)
+        ->assertJsonPath('props.campaign_read_model.redactions.sends_feedback', false)
+        ->assertJsonPath('props.campaign_read_model.redactions.writes_journal', false)
+        ->assertJsonPath('props.campaign_read_model.redactions.moves_money', false)
+        ->assertJsonPath('props.campaign_read_model.quick_generate_link.enabled', false)
         ->assertJsonMissingPath('props.campaign_read_model.provider_payload')
         ->assertJsonMissingPath('props.campaign_read_model.raw_payload')
         ->assertJsonMissingPath('props.campaign_read_model.wallet')

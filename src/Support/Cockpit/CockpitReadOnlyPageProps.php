@@ -96,6 +96,9 @@ class CockpitReadOnlyPageProps
     public function toPayCodeExplorerArray(
         ?string $campaignPlanningKey = null,
         ?string $campaignExecutionId = null,
+        ?string $campaignId = null,
+        ?string $campaignAudienceId = null,
+        ?string $campaignRecipientId = null,
         ?string $campaignSource = null,
         ?string $activityCode = null,
         ?string $activitySource = null,
@@ -115,6 +118,9 @@ class CockpitReadOnlyPageProps
                 campaignExecutionId: $campaignExecutionId,
                 campaignSource: $campaignSource,
                 destination: 'pay_code_explorer',
+                campaignId: $campaignId,
+                campaignAudienceId: $campaignAudienceId,
+                campaignRecipientId: $campaignRecipientId,
             ),
             'activity_navigation_context' => $this->activityNavigationContext(
                 activityCode: $activityCode,
