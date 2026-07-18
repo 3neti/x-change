@@ -3004,3 +3004,13 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/477-real-integration-wiring-slice-2-dashboard-route-props.md`.
 - Boundary remains unchanged: route-prop verification only; no journal write, x-action execution, x-feedback delivery, campaign dispatch, voucher lifecycle mutation, driver execution, artifact generation, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next checkpoint: publish package assets if operator-facing copy changes are needed, then verify dashboard frontend rendering and build.
+
+## 2026-07-18 Update — Real Integration Wiring Wave — Slice 3 — Rendering / Closure
+
+- Closed the Real Integration Wiring wave.
+- Verified published Cockpit assets remain in sync with package source.
+- Focused Dashboard frontend hydration/rendering verification passed.
+- Host production build passed with the known non-blocking third-party Rolldown annotation warnings.
+- UI/report: `../ui-cockpit/reports/478-real-integration-wiring-slice-3-rendering-closure.md`.
+- Boundary remains unchanged: verification and closure only; no journal write, x-action execution, x-feedback delivery, campaign dispatch, voucher lifecycle mutation, driver execution, artifact generation, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next recommended checkpoint: manually inspect `/x/cockpit` Connected Services, then decide whether to wire campaign read-only context or continue page-specific Cockpit UI polish.

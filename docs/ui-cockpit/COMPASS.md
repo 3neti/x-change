@@ -3126,3 +3126,12 @@ Current boundary:
 - Confirmed voucher and execution facts remain fallback/not-wired when no Pay Code is selected.
 - Report: `reports/477-real-integration-wiring-slice-2-dashboard-route-props.md`.
 - Boundary remains unchanged: route-prop verification only; no journal write, x-action execution, x-feedback delivery, campaign dispatch, voucher lifecycle mutation, driver execution, artifact generation, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-18 — Real Integration Wiring Wave — Slice 3 — Rendering / Closure
+
+- Closed the Real Integration Wiring wave.
+- Verified published Cockpit assets remain in sync with package source.
+- Focused Dashboard frontend hydration/rendering verification passed.
+- Host production build passed with the known non-blocking third-party Rolldown annotation warnings.
+- Report: `reports/478-real-integration-wiring-slice-3-rendering-closure.md`.
+- Boundary remains unchanged: verification and closure only; no journal write, x-action execution, x-feedback delivery, campaign dispatch, voucher lifecycle mutation, driver execution, artifact generation, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
