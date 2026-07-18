@@ -5,11 +5,20 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Campaign Row Navigation Continuity
-Status: Slice 2 in progress; detail and distribution drilldowns expose carried campaign context
+Status: Closed; campaign context survives Explorer row drilldown into Detail and Distribution
 Last updated: 2026-07-18
 
 ## Completed
 
+- Completed Campaign Row Navigation Continuity Slice 3 / Closure:
+  - Published Cockpit assets to the host app.
+  - Confirmed published assets match package source.
+  - Verified backend Cockpit read-only routes pass campaign navigation context through page props.
+  - Verified focused frontend continuity coverage for Explorer, Voucher Detail, and Distribution Workspace.
+  - Verified the host production build.
+  - Confirmed no routes, controllers, campaign mutation, campaign dispatch, Pay Code generation through campaign, feedback sends, journal writes, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, persistence, or money movement were added.
+  - Report: `reports/503-campaign-row-navigation-continuity-slice-3-closure.md`.
+  - Next recommended wave: page-focused Cockpit polish or a specific connected-service read model integration.
 - Completed Campaign Row Navigation Continuity Slice 2:
   - Voucher Detail displays carried campaign ID, audience ID, recipient ID, planning key, execution ID, source, destination, safety reason, and payload visibility.
   - Distribution Workspace displays the same carried campaign context after campaign-filtered Explorer drilldown.
