@@ -3041,3 +3041,13 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/481-real-campaign-read-only-wiring-slice-3-dashboard-panel-copy.md`.
 - Boundary remains unchanged: presentation-only Dashboard copy/rendering update; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next checkpoint: close the wave with focused route/frontend/build verification.
+
+## 2026-07-18 Update — Real Campaign Read-Only Wiring Wave — Slice 4 — Closure
+
+- Closed the Real Campaign Read-Only Wiring wave.
+- Backend read-model, route-prop, frontend rendering, published asset, and host build verification passed.
+- x-campaign is now visible to Cockpit as installed/read-only without requiring selected campaign context.
+- Selected campaign context remains explicit and still hydrates through `CampaignCockpitWorkspace::summary`.
+- UI/report: `../ui-cockpit/reports/482-real-campaign-read-only-wiring-slice-4-closure.md`.
+- Boundary remains unchanged: verification and closure only; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next recommended checkpoint: manually inspect `/x/cockpit` campaign panel, then choose either selected-campaign fixture wiring or continue primary page UI polish.

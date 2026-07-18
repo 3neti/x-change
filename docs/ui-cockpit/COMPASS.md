@@ -3157,3 +3157,11 @@ Current boundary:
 - Published package-owned Cockpit assets into the host app and verified no published asset drift.
 - Report: `reports/481-real-campaign-read-only-wiring-slice-3-dashboard-panel-copy.md`.
 - Boundary remains unchanged: presentation-only Dashboard copy/rendering update; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-18 — Real Campaign Read-Only Wiring Wave — Slice 4 — Closure
+
+- Closed the Real Campaign Read-Only Wiring wave.
+- Backend read-model, route-prop, frontend rendering, published asset, and host build verification passed.
+- `/x/cockpit` can now show x-campaign as installed/read-only without implying a selected campaign or campaign mutation capability.
+- Report: `reports/482-real-campaign-read-only-wiring-slice-4-closure.md`.
+- Boundary remains unchanged: verification and closure only; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
