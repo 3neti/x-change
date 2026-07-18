@@ -757,6 +757,67 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.find('[data-testid="cockpit-campaign-details"]').exists()).toBe(false);
     });
 
+    it('renders installed x-campaign package presence without implying a selected campaign', async () => {
+        const wrapper = mount(CockpitDashboard, {
+            props: {
+                campaign_read_model: {
+                    schema: 'x-change.cockpit.campaign-adoption.v1',
+                    status: 'available',
+                    authorized: true,
+                    source: 'x-campaign',
+                    surfaces: [
+                        {
+                            key: 'campaign_dashboard',
+                            status: 'available',
+                            enabled: true,
+                            read_only: true,
+                            reason: 'x-campaign-package-available',
+                        },
+                    ],
+                    facts: {
+                        context_status: 'no-campaign-selected',
+                        selected: false,
+                        cards: {},
+                        panels: {},
+                        actions: {},
+                        blockers: ['no-campaign-selected'],
+                        metadata: {
+                            package_available: true,
+                        },
+                    },
+                    mutation: {
+                        enabled: false,
+                        status: 'blocked',
+                        reason: 'campaign-mutations-not-authorized',
+                    },
+                    quick_generate_link: {
+                        enabled: false,
+                    },
+                    recipient_quick_generate_links: [],
+                    redactions: {
+                        payloads: 'campaign-cockpit-package-presence-only',
+                        source: 'x-campaign',
+                        reason: 'no-campaign-selected',
+                    },
+                },
+            },
+        });
+
+        expect(wrapper.text()).toContain('Campaign package connected');
+        expect(wrapper.text()).toContain('No campaign selected');
+        expect(wrapper.text()).toContain('Read-only campaign summaries');
+        expect(wrapper.text()).toContain('Ready when a campaign is selected');
+        expect(wrapper.text()).not.toContain('Campaign summary not connected');
+
+        await wrapper.find('[data-testid="cockpit-campaign-details-toggle"]').trigger('click');
+
+        expect(wrapper.text()).toContain('Campaign Dashboard');
+        expect(wrapper.text()).toContain('Available');
+        expect(wrapper.find('[data-testid="cockpit-campaign-quick-generate-link"]').exists()).toBe(false);
+        expect(wrapper.text()).not.toContain('No planning key');
+        expect(wrapper.text()).not.toContain('No execution id');
+    });
+
     it('forwards campaign route adapter props into the cockpit dashboard page', () => {
         const wrapper = mount(DashboardRouteAdapter, {
             props: {

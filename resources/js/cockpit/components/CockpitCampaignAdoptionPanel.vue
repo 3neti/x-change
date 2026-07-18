@@ -18,9 +18,34 @@ const facts = computed<Record<string, unknown>>(() => objectValue(model.value?.f
 const campaignCard = computed<Record<string, unknown>>(() => objectValue(objectValue(facts.value.cards).campaign));
 
 const isAvailable = computed(() => model.value?.authorized === true && model.value.status === 'available');
+const hasSelectedCampaign = computed(() => {
+    if (!isAvailable.value) {
+        return false;
+    }
 
-const campaignName = computed(() => stringValue(campaignCard.value.name) ?? 'Campaign summary not connected');
+    if (facts.value.selected === false || facts.value.context_status === 'no-campaign-selected') {
+        return false;
+    }
+
+    return stringValue(facts.value.planning_key) !== undefined && stringValue(facts.value.execution_id) !== undefined;
+});
+
+const campaignName = computed(() => {
+    if (hasSelectedCampaign.value) {
+        return stringValue(campaignCard.value.name) ?? 'Selected campaign';
+    }
+
+    if (isAvailable.value) {
+        return 'Campaign package connected';
+    }
+
+    return 'Campaign summary not connected';
+});
 const recipientCount = computed(() => {
+    if (!hasSelectedCampaign.value) {
+        return 'No campaign selected';
+    }
+
     const value = campaignCard.value.recipient_count;
 
     if (typeof value === 'number' && Number.isFinite(value)) {
@@ -33,6 +58,17 @@ const recipientCount = computed(() => {
 });
 const planningKey = computed(() => stringValue(facts.value.planning_key) ?? 'No planning key');
 const executionId = computed(() => stringValue(facts.value.execution_id) ?? 'No execution id');
+const campaignContextSummary = computed(() => {
+    if (hasSelectedCampaign.value) {
+        return planningKey.value;
+    }
+
+    if (isAvailable.value) {
+        return 'Ready when a campaign is selected';
+    }
+
+    return unavailableReason.value;
+});
 const mutationReason = computed(() => displayStatus(stringValue(objectValue(model.value?.mutation).reason) ?? 'campaign-mutations-not-authorized'));
 const unavailableReason = computed(() => {
     const reason = stringValue(objectValue(model.value?.redactions).reason) ?? 'read-model-not-available';
@@ -223,18 +259,18 @@ function toggleDetails(): void {
                     {{ campaignName }}
                 </h3>
                 <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                    {{ isAvailable ? recipientCount : 'No campaign selected' }}
+                    {{ recipientCount }}
                 </p>
             </div>
 
             <div class="rounded-lg border border-slate-100 px-3 py-2 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-300">
                 <p class="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    {{ isAvailable ? 'Read-only campaign context' : 'Campaign summary not connected' }}
+                    {{ isAvailable ? 'Read-only campaign summaries' : 'Campaign summary not connected' }}
                 </p>
                 <p class="mt-1">
-                    {{ isAvailable ? planningKey : unavailableReason }}
+                    {{ campaignContextSummary }}
                 </p>
-                <p v-if="isAvailable" class="mt-1">
+                <p v-if="hasSelectedCampaign" class="mt-1">
                     {{ executionId }}
                 </p>
             </div>

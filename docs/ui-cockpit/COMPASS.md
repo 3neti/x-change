@@ -3150,3 +3150,10 @@ Current boundary:
 - Confirmed the dashboard receives `context_status: no-campaign-selected` and package-presence-only redactions.
 - Report: `reports/480-real-campaign-read-only-wiring-slice-2-dashboard-route-props.md`.
 - Boundary remains unchanged: route-prop verification only; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-18 — Real Campaign Read-Only Wiring Wave — Slice 3 — Dashboard Panel Copy
+
+- Updated the Dashboard campaign panel so installed/no-selected-campaign reads as a connected read-only package state instead of missing integration.
+- Published package-owned Cockpit assets into the host app and verified no published asset drift.
+- Report: `reports/481-real-campaign-read-only-wiring-slice-3-dashboard-panel-copy.md`.
+- Boundary remains unchanged: presentation-only Dashboard copy/rendering update; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.

@@ -3032,3 +3032,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/480-real-campaign-read-only-wiring-slice-2-dashboard-route-props.md`.
 - Boundary remains unchanged: route-prop verification only; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next checkpoint: polish Dashboard campaign panel copy so installed/no-selected-campaign reads as a connected package state instead of a missing integration.
+
+## 2026-07-18 Update — Real Campaign Read-Only Wiring Wave — Slice 3 — Dashboard Panel Copy
+
+- Dashboard campaign panel now renders installed x-campaign package presence as a connected read-only state when no campaign is selected.
+- Expected text: `Campaign package connected`, `No campaign selected`, `Read-only campaign summaries`, and `Ready when a campaign is selected`.
+- Package-owned Cockpit assets were published into the host app and asset drift is clean.
+- UI/report: `../ui-cockpit/reports/481-real-campaign-read-only-wiring-slice-3-dashboard-panel-copy.md`.
+- Boundary remains unchanged: presentation-only Dashboard copy/rendering update; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next checkpoint: close the wave with focused route/frontend/build verification.
