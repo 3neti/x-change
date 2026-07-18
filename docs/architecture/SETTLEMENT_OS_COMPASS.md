@@ -3176,3 +3176,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/500-pay-code-explorer-campaign-filter-affordance-slice-3-closure.md`.
 - Boundary remains unchanged: publish and verification only; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next recommended checkpoint: manually inspect `/x/cockpit/pay-codes` using a campaign-aware Explorer URL, then continue selected-campaign read-only workspace work or primary Cockpit page polish.
+
+## 2026-07-18 Update — Campaign-aware Row Navigation Continuity — Slice 1
+
+- Started the Campaign-aware Row Navigation Continuity wave.
+- Campaign-aware Pay Code Explorer row links now carry campaign context into Voucher Detail and Distribution Workspace.
+- Existing row action query parameters are preserved.
+- UI/report: `../ui-cockpit/reports/501-campaign-row-navigation-continuity-slice-1.md`.
+- Boundary remains unchanged: presentation/navigation-only row link update; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, voucher lifecycle mutation, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next checkpoint: verify Voucher Detail and Distribution Workspace render the carried campaign context safely.

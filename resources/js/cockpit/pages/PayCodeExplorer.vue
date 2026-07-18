@@ -374,6 +374,7 @@ function sanitizeRecord(record: CockpitPayCodeExplorerReadModelRecord): CockpitP
         actions: Array.isArray(record.actions)
             ? record.actions
                 .map((action) => sanitizeRowAction(action))
+                .map((action) => appendCampaignContextToRowAction(action))
                 .filter((action): action is NonNullable<ReturnType<typeof sanitizeRowAction>> => action !== null)
             : [],
     };
@@ -406,6 +407,24 @@ function sanitizeRowAction(action: unknown): {
         read_only: value.read_only !== false,
         href: enabled ? stringValue(value.href) : null,
         reason: stringValue(value.reason),
+    };
+}
+
+function appendCampaignContextToRowAction(action: ReturnType<typeof sanitizeRowAction>): ReturnType<typeof sanitizeRowAction> {
+    if (action === null || action.href === null || campaignExplorerContextParams.value.length === 0) {
+        return action;
+    }
+
+    const [path, queryString = ''] = action.href.split('?');
+    const params = new URLSearchParams(queryString);
+
+    for (const field of campaignExplorerContextParams.value) {
+        params.set(field.name, field.value);
+    }
+
+    return {
+        ...action,
+        href: `${path}?${params.toString()}`,
     };
 }
 

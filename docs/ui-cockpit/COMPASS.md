@@ -3309,3 +3309,11 @@ Current boundary:
 - Focused frontend Explorer verification, backend route/integration verification, and host production build passed.
 - Report: `reports/500-pay-code-explorer-campaign-filter-affordance-slice-3-closure.md`.
 - Boundary remains unchanged: publish and verification only; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-18 — Campaign-aware Row Navigation Continuity — Slice 1
+
+- Started the Campaign-aware Row Navigation Continuity wave.
+- Campaign-aware Explorer row links now preserve campaign planning key, execution ID, campaign ID, audience ID, recipient ID, and source when navigating to Voucher Detail or Distribution Workspace.
+- Existing row-action query strings are preserved.
+- Report: `reports/501-campaign-row-navigation-continuity-slice-1.md`.
+- Boundary remains unchanged: presentation/navigation-only row link update; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, voucher lifecycle mutation, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.

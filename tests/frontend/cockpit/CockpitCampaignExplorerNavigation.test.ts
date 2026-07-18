@@ -7,7 +7,31 @@ const payCodesReadModel = {
     status: 'available',
     authorized: true,
     query: null,
-    records: [],
+    records: [
+        {
+            code: 'PC-CAMPAIGN-001',
+            template: 'OFW Remittance',
+            amount: 500,
+            currency: 'PHP',
+            status: 'active',
+            actions: [
+                {
+                    key: 'detail',
+                    label: 'View details',
+                    enabled: true,
+                    read_only: true,
+                    href: '/x/cockpit/pay-codes/PC-CAMPAIGN-001',
+                },
+                {
+                    key: 'distribution',
+                    label: 'Distribution',
+                    enabled: true,
+                    read_only: true,
+                    href: '/x/cockpit/pay-codes/PC-CAMPAIGN-001/distribution?tab=share',
+                },
+            ],
+        },
+    ],
     redactions: {
         payloads: 'sanitized-list-summary-only',
     },
@@ -114,6 +138,26 @@ describe('Cockpit campaign explorer navigation boundary', () => {
         expect(filterCards.some((card) => card.text().includes('Campaign Planning Key'))).toBe(true);
         expect(filterCards.some((card) => card.text().includes('Campaign Recipient Id'))).toBe(true);
         expect(wrapper.text()).toContain('Campaign context is preserved as read-only Explorer orientation metadata.');
+    });
+
+    it('preserves campaign context through row detail and distribution navigation links', () => {
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: payCodesReadModel,
+                campaign_navigation_context: campaignNavigationContext,
+            },
+        });
+
+        const actionLinks = wrapper.findAll('[data-testid="cockpit-pay-code-row-action-link"]');
+
+        expect(actionLinks).toHaveLength(2);
+        expect(actionLinks[0].attributes('href')).toContain('/x/cockpit/pay-codes/PC-CAMPAIGN-001?');
+        expect(actionLinks[0].attributes('href')).toContain('campaign_planning_key=campaign-plan-1');
+        expect(actionLinks[0].attributes('href')).toContain('campaign_recipient_id=recipient-1');
+        expect(actionLinks[1].attributes('href')).toContain('/x/cockpit/pay-codes/PC-CAMPAIGN-001/distribution?');
+        expect(actionLinks[1].attributes('href')).toContain('tab=share');
+        expect(actionLinks[1].attributes('href')).toContain('campaign_execution_id=execution-1');
+        expect(actionLinks[1].attributes('href')).toContain('campaign_source=campaign_cockpit');
     });
 
     it('does not render unsafe campaign navigation payloads or routes', () => {
