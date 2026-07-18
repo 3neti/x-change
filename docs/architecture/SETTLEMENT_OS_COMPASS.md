@@ -3014,3 +3014,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/478-real-integration-wiring-slice-3-rendering-closure.md`.
 - Boundary remains unchanged: verification and closure only; no journal write, x-action execution, x-feedback delivery, campaign dispatch, voucher lifecycle mutation, driver execution, artifact generation, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next recommended checkpoint: manually inspect `/x/cockpit` Connected Services, then decide whether to wire campaign read-only context or continue page-specific Cockpit UI polish.
+
+## 2026-07-18 Update — Real Campaign Read-Only Wiring Wave — Slice 1 — Package Presence Summary
+
+- Started the Real Campaign Read-Only Wiring wave.
+- Dashboard campaign adoption can now distinguish an installed x-campaign package from a missing selected campaign context.
+- No selected campaign still means no campaign plan details are loaded and no campaign workspace route is registered.
+- UI/report: `../ui-cockpit/reports/479-real-campaign-read-only-wiring-slice-1-package-presence.md`.
+- Boundary remains unchanged: read-model wiring only; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next checkpoint: add route-level dashboard prop verification for installed x-campaign package presence without selected campaign context.

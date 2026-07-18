@@ -533,6 +533,101 @@ it('hydrates optional campaign cockpit adoption facts through a configured read-
         ]);
 });
 
+it('reports x-campaign as available read-only package context when no campaign is selected', function () {
+    config(['x-change.cockpit.integrations.campaign.cockpit' => 'fake.package.available.campaign.cockpit']);
+    app()->instance('fake.package.available.campaign.cockpit', new class
+    {
+        public function summary(): never
+        {
+            throw new RuntimeException('Dashboard package-presence summary must not require a selected campaign.');
+        }
+
+        /**
+         * @return array<string, bool>
+         */
+        public function effects(): array
+        {
+            return [
+                'integrates_repository' => true,
+                'persists' => false,
+                'uses_database' => false,
+                'queues_jobs' => false,
+                'issues_pay_codes' => false,
+                'sends_feedback' => false,
+                'writes_journal' => false,
+                'moves_money' => false,
+            ];
+        }
+    });
+
+    $readModel = app(OptionalCockpitIntegrationReadModels::class)
+        ->campaignAdoption(new CockpitReadModelQueryData(
+            operatorId: 'operator-1',
+            include: ['campaigns', 'audiences', 'imports', 'attachments', 'api_descriptors'],
+        ));
+
+    expect($readModel->status)->toBe('available')
+        ->and($readModel->authorized)->toBeTrue()
+        ->and($readModel->source)->toBe('x-campaign')
+        ->and($readModel->facts)->toMatchArray([
+            'context_status' => 'no-campaign-selected',
+            'selected' => false,
+            'operator_id' => 'operator-1',
+            'cards' => [],
+            'panels' => [],
+            'actions' => [],
+            'blockers' => ['no-campaign-selected'],
+            'metadata' => [
+                'source' => 'x-change.cockpit',
+                'read_only' => true,
+                'integration' => 'campaign.cockpit',
+                'package_available' => true,
+            ],
+        ])
+        ->and($readModel->surfaces)->each->toMatchArray([
+            'status' => 'available',
+            'enabled' => true,
+            'read_only' => true,
+            'reason' => 'x-campaign-package-available',
+        ])
+        ->and($readModel->mutation)->toBe([
+            'enabled' => false,
+            'status' => 'blocked',
+            'reason' => 'campaign-mutations-not-authorized',
+        ])
+        ->and($readModel->redactions)->toMatchArray([
+            'payloads' => 'campaign-cockpit-package-presence-only',
+            'source' => 'x-campaign',
+            'read_only' => true,
+            'routes_registered' => false,
+            'controllers_registered' => false,
+            'mutates_campaigns' => false,
+            'issues_pay_codes' => false,
+            'sends_feedback' => false,
+            'writes_journal' => false,
+            'moves_money' => false,
+            'reason' => 'no-campaign-selected',
+            'effects' => [
+                'integrates_repository' => true,
+                'persists' => false,
+                'uses_database' => false,
+                'queues_jobs' => false,
+                'issues_pay_codes' => false,
+                'sends_feedback' => false,
+                'writes_journal' => false,
+                'moves_money' => false,
+            ],
+        ])
+        ->and($readModel->toArray())->not->toHaveKeys([
+            'provider_payload',
+            'raw_payload',
+            'wallet',
+            'campaign_mutation_endpoint',
+            'pay_code_generation_payload',
+            'delivery_dispatch_payload',
+        ]);
+});
+
 it('degrades optional campaign cockpit adoption safely when the configured adapter fails', function () {
     config(['x-change.cockpit.integrations.campaign.cockpit' => 'fake.failing.campaign.cockpit']);
     app()->instance('fake.failing.campaign.cockpit', new class

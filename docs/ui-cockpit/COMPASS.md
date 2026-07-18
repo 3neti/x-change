@@ -3135,3 +3135,11 @@ Current boundary:
 - Host production build passed with the known non-blocking third-party Rolldown annotation warnings.
 - Report: `reports/478-real-integration-wiring-slice-3-rendering-closure.md`.
 - Boundary remains unchanged: verification and closure only; no journal write, x-action execution, x-feedback delivery, campaign dispatch, voucher lifecycle mutation, driver execution, artifact generation, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-18 — Real Campaign Read-Only Wiring Wave — Slice 1 — Package Presence Summary
+
+- Started the Real Campaign Read-Only Wiring wave.
+- Updated the optional campaign Cockpit adapter so an installed x-campaign workspace can report package availability even when no campaign is selected.
+- Selected-campaign summary hydration still requires a planning key and continues through `CampaignCockpitWorkspace::summary`.
+- Report: `reports/479-real-campaign-read-only-wiring-slice-1-package-presence.md`.
+- Boundary remains unchanged: read-model wiring only; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.

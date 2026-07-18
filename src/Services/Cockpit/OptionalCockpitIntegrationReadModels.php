@@ -161,8 +161,12 @@ class OptionalCockpitIntegrationReadModels
         $planningKey = $this->nonEmptyString($query->code);
         $operatorId = $this->nonEmptyString($query->operatorId);
 
-        if ($planningKey === null || $operatorId === null) {
-            return $this->campaignUnavailable('missing-campaign-context');
+        if ($planningKey === null) {
+            return $this->campaignPackageAvailable($query, $service);
+        }
+
+        if ($operatorId === null) {
+            return $this->campaignUnavailable('missing-operator-context');
         }
 
         $executionId = $this->nonEmptyString($query->correlationId) ?? $planningKey;
@@ -793,6 +797,81 @@ class OptionalCockpitIntegrationReadModels
             mutation: $this->campaignMutation(),
             redactions: $this->unavailableRedactions('x-campaign', $reason, $exception),
         );
+    }
+
+    private function campaignPackageAvailable(CockpitReadModelQueryData $query, object $service): CockpitCampaignReadModelData
+    {
+        return new CockpitCampaignReadModelData(
+            status: 'available',
+            authorized: true,
+            source: 'x-campaign',
+            surfaces: $this->campaignSurfaces('available', true, 'x-campaign-package-available'),
+            facts: [
+                'context_status' => 'no-campaign-selected',
+                'selected' => false,
+                'operator_id' => $this->nonEmptyString($query->operatorId),
+                'cards' => [],
+                'panels' => [],
+                'actions' => [],
+                'blockers' => ['no-campaign-selected'],
+                'metadata' => [
+                    'source' => 'x-change.cockpit',
+                    'read_only' => true,
+                    'integration' => 'campaign.cockpit',
+                    'package_available' => true,
+                ],
+            ],
+            mutation: $this->campaignMutation(),
+            redactions: [
+                'payloads' => 'campaign-cockpit-package-presence-only',
+                'source' => 'x-campaign',
+                'read_only' => true,
+                'routes_registered' => false,
+                'controllers_registered' => false,
+                'mutates_campaigns' => false,
+                'issues_pay_codes' => false,
+                'sends_feedback' => false,
+                'writes_journal' => false,
+                'moves_money' => false,
+                'reason' => 'no-campaign-selected',
+                'effects' => $this->campaignEffects($service),
+            ],
+        );
+    }
+
+    /**
+     * @return array<string, bool>
+     */
+    private function campaignEffects(object $service): array
+    {
+        if (! method_exists($service, 'effects')) {
+            return [
+                'persists' => false,
+                'uses_database' => false,
+                'queues_jobs' => false,
+                'issues_pay_codes' => false,
+                'sends_feedback' => false,
+                'writes_journal' => false,
+                'moves_money' => false,
+            ];
+        }
+
+        try {
+            return collect($service->effects())
+                ->filter(fn (mixed $value): bool => is_bool($value))
+                ->map(fn (bool $value): bool => $value)
+                ->all();
+        } catch (Throwable) {
+            return [
+                'persists' => false,
+                'uses_database' => false,
+                'queues_jobs' => false,
+                'issues_pay_codes' => false,
+                'sends_feedback' => false,
+                'writes_journal' => false,
+                'moves_money' => false,
+            ];
+        }
     }
 
     /**
