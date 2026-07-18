@@ -5,11 +5,20 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Campaign Activity Return Navigation Productization
-Status: Dashboard activity campaign return links are visible and read-only
+Status: Closed; campaign-attributed generation has visible read-only return navigation
 Last updated: 2026-07-18
 
 ## Completed
 
+- Completed Campaign Activity Return Navigation Productization Slice 3 / Closure:
+  - Published Cockpit assets and confirmed package-to-host asset drift is clean.
+  - Verified focused dashboard and Quick Generate frontend tests.
+  - Verified focused backend campaign prefill/activity attribution tests.
+  - Verified host production build.
+  - Confirmed campaign-attributed generation now has visible read-only return paths from Quick Generate and dashboard Issuance Activity.
+  - Confirmed no routes, controllers, campaign mutation, campaign dispatch, Pay Code generation through campaign, feedback sends, journal writes, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, persistence, or money movement were added.
+  - Report: `reports/494-campaign-activity-return-navigation-slice-3-closure.md`.
+  - Next recommended wave: Campaign Explorer Context Productization.
 - Completed Campaign Activity Return Navigation Productization Slice 2:
   - Added a compact `Campaign context` strip inside campaign-attributed dashboard Issuance Activity cards.
   - Shows planning key, execution id, and recipient reference as scan-friendly facts.
