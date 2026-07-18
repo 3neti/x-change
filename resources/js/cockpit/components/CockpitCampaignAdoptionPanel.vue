@@ -84,6 +84,31 @@ const unavailableReason = computed(() => {
     return displayStatus(reason);
 });
 const quickGenerateLink = computed<CockpitCampaignQuickGenerateLink | null>(() => sanitizeQuickGenerateLink(model.value?.quick_generate_link));
+const quickGenerateDraft = computed<Record<string, unknown>>(() => objectValue(quickGenerateLink.value?.draft));
+const quickGeneratePrefillFacts = computed(() => {
+    if (!quickGenerateLink.value) {
+        return [];
+    }
+
+    return [
+        {
+            label: 'Template',
+            value: displayKey(stringValue(quickGenerateDraft.value.template_key) ?? 'Template pending'),
+        },
+        {
+            label: 'Amount',
+            value: moneyValue(quickGenerateDraft.value.amount, quickGenerateDraft.value.currency),
+        },
+        {
+            label: 'Recipient',
+            value: stringValue(quickGenerateDraft.value.recipient_reference) ?? 'Recipient pending',
+        },
+        {
+            label: 'Purpose',
+            value: stringValue(quickGenerateDraft.value.purpose) ?? 'Purpose pending',
+        },
+    ];
+});
 const recipientQuickGenerateLinks = computed<CockpitCampaignQuickGenerateLink[]>(() => {
     if (!Array.isArray(model.value?.recipient_quick_generate_links)) {
         return [];
@@ -264,6 +289,17 @@ function displayStatus(value: string): string {
     return displayKey(value);
 }
 
+function moneyValue(amount: unknown, currency: unknown): string {
+    const normalizedAmount = stringValue(amount) ?? 'Amount pending';
+    const normalizedCurrency = stringValue(currency) ?? 'PHP';
+
+    if (normalizedAmount === 'Amount pending') {
+        return normalizedAmount;
+    }
+
+    return `${normalizedCurrency} ${normalizedAmount}`;
+}
+
 function toggleDetails(): void {
     detailsExpanded.value = !detailsExpanded.value;
 }
@@ -298,6 +334,76 @@ function toggleDetails(): void {
                     {{ executionId }}
                 </p>
             </div>
+        </div>
+
+        <div
+            v-if="hasSelectedCampaign"
+            class="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950"
+            data-testid="cockpit-campaign-selected-context"
+        >
+            <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-200">
+                        Selected Campaign Context
+                    </p>
+                    <p class="mt-2 text-sm text-emerald-950 dark:text-emerald-100">
+                        This campaign can prefill Quick Generate. Campaign state remains unchanged.
+                    </p>
+                </div>
+                <span class="inline-flex min-h-7 w-fit items-center rounded-full bg-white px-2.5 py-1 text-xs font-semibold leading-none text-emerald-800 dark:bg-emerald-900 dark:text-emerald-100">
+                    Prefill Only
+                </span>
+            </div>
+
+            <dl class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <div class="rounded-lg bg-white/80 p-3 dark:bg-emerald-900/60">
+                    <dt class="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">
+                        Planning Key
+                    </dt>
+                    <dd class="mt-1 break-words text-sm font-semibold text-emerald-950 dark:text-emerald-50">
+                        {{ planningKey }}
+                    </dd>
+                </div>
+                <div class="rounded-lg bg-white/80 p-3 dark:bg-emerald-900/60">
+                    <dt class="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">
+                        Execution
+                    </dt>
+                    <dd class="mt-1 break-words text-sm font-semibold text-emerald-950 dark:text-emerald-50">
+                        {{ executionId }}
+                    </dd>
+                </div>
+                <div
+                    v-for="fact in quickGeneratePrefillFacts.slice(0, 2)"
+                    :key="fact.label"
+                    class="rounded-lg bg-white/80 p-3 dark:bg-emerald-900/60"
+                >
+                    <dt class="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">
+                        {{ fact.label }}
+                    </dt>
+                    <dd class="mt-1 break-words text-sm font-semibold text-emerald-950 dark:text-emerald-50">
+                        {{ fact.value }}
+                    </dd>
+                </div>
+            </dl>
+
+            <dl
+                v-if="quickGenerateLink"
+                class="mt-3 grid gap-3 md:grid-cols-2"
+                data-testid="cockpit-campaign-prefill-summary"
+            >
+                <div
+                    v-for="fact in quickGeneratePrefillFacts.slice(2)"
+                    :key="fact.label"
+                    class="rounded-lg bg-white/70 p-3 dark:bg-emerald-900/40"
+                >
+                    <dt class="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">
+                        {{ fact.label }}
+                    </dt>
+                    <dd class="mt-1 break-words text-sm text-emerald-950 dark:text-emerald-50">
+                        {{ fact.value }}
+                    </dd>
+                </div>
+            </dl>
         </div>
 
         <button
@@ -413,7 +519,7 @@ function toggleDetails(): void {
                 class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-950 transition hover:border-emerald-300 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100"
                 data-testid="cockpit-campaign-quick-generate-link"
             >
-                <span class="block font-semibold">{{ quickGenerateLink.label ?? 'Open Quick Generate' }}</span>
+                <span class="block font-semibold">Generate from this campaign</span>
                 <span class="mt-1 block text-emerald-800 dark:text-emerald-200">
                     Prefills the existing Quick Generate handoff
                 </span>

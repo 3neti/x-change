@@ -691,6 +691,11 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('250 recipients');
         expect(wrapper.text()).toContain('campaign-plan-1');
         expect(wrapper.text()).toContain('execution-1');
+        expect(wrapper.text()).toContain('Selected Campaign Context');
+        expect(wrapper.text()).toContain('Prefill Only');
+        expect(wrapper.text()).toContain('PHP 500.00');
+        expect(wrapper.text()).toContain('09173011987');
+        expect(wrapper.text()).toContain('Campaign payout');
         expect(wrapper.text()).toContain('Campaign details');
         expect(wrapper.text()).not.toContain('Campaign Dashboard');
         expect(wrapper.text()).not.toContain('Attachment Operator Workspace');
@@ -867,13 +872,22 @@ describe('Cockpit dashboard read model hydration', () => {
         });
 
         const quickGenerateLink = wrapper.find('[data-testid="cockpit-campaign-quick-generate-link"]');
+        const selectedContext = wrapper.find('[data-testid="cockpit-campaign-selected-context"]');
+        const prefillSummary = wrapper.find('[data-testid="cockpit-campaign-prefill-summary"]');
 
+        expect(selectedContext.exists()).toBe(true);
+        expect(selectedContext.text()).toContain('This campaign can prefill Quick Generate');
+        expect(prefillSummary.exists()).toBe(true);
+        expect(prefillSummary.text()).toContain('Recipient');
+        expect(prefillSummary.text()).toContain('09173011987');
+        expect(prefillSummary.text()).toContain('Purpose');
+        expect(prefillSummary.text()).toContain('Campaign payout');
         expect(quickGenerateLink.exists()).toBe(true);
         expect(quickGenerateLink.attributes('href')).toContain('/x/cockpit/quick-generate');
         expect(quickGenerateLink.attributes('href')).toContain('campaign_planning_key=campaign-plan-1');
         expect(quickGenerateLink.attributes('href')).toContain('campaign_template_key=ofw-remittance');
         expect(quickGenerateLink.attributes('href')).toContain('campaign_recipient_reference=09173011987');
-        expect(quickGenerateLink.text()).toContain('Open Quick Generate');
+        expect(quickGenerateLink.text()).toContain('Generate from this campaign');
         expect(quickGenerateLink.text()).toContain('Prefills the existing Quick Generate handoff');
         expect(quickGenerateLink.text()).toContain('read-only campaign context');
         expect(wrapper.text()).not.toContain('raw_payload');

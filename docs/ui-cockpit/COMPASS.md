@@ -4,12 +4,20 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Selected Campaign Local Fixture Wiring
-Status: Closed; selected local campaign read model can be inspected through the dashboard
+Current slice: Campaign Selected Context UI Productization
+Status: Selected campaign context is presented as read-only Quick Generate prefill guidance
 Last updated: 2026-07-18
 
 ## Completed
 
+- Completed Campaign Selected Context UI Productization Slice 1:
+  - Added a selected campaign context card to `/x/cockpit`.
+  - Shows planning key, execution id, template, amount, recipient, and purpose as operator-facing prefill facts.
+  - Renamed the campaign Quick Generate CTA to `Generate from this campaign`.
+  - Kept campaign details behind disclosure and marked selected context as `Prefill Only`.
+  - Confirmed no routes, controllers, campaign mutations, campaign dispatch, Pay Code generation through campaign, feedback sends, journal writes, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, durable persistence, or money movement were added.
+  - Report: `reports/487-campaign-selected-context-ui-productization-slice-1.md`.
+  - Next recommended checkpoint: Campaign Selected Context UI Productization Slice 2 — host publish / verification / closure.
 - Completed Selected Campaign Local Fixture Wiring Slice 2 / Closure:
   - Published Cockpit assets and confirmed package-to-host asset drift is clean.
   - Verified focused dashboard frontend tests.
