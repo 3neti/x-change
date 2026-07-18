@@ -5,11 +5,20 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Campaign-to-Quick-Generate Prefill Acceptance
-Status: Local campaign Quick Generate activity attribution is covered
+Status: Closed; selected campaign prefill and activity attribution are accepted
 Last updated: 2026-07-18
 
 ## Completed
 
+- Completed Campaign-to-Quick-Generate Prefill Acceptance Slice 3 / Closure:
+  - Published Cockpit assets and confirmed package-to-host asset drift is clean.
+  - Verified focused backend campaign prefill and activity attribution tests.
+  - Verified focused dashboard and Quick Generate frontend tests.
+  - Verified host production build.
+  - Accepted the local flow from selected campaign dashboard context to Quick Generate prefill to safe operator activity attribution.
+  - Confirmed campaign adoption remains prefill-only and does not add campaign mutation, campaign dispatch, Pay Code generation through campaign, feedback sends, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, durable campaign persistence, or money movement.
+  - Report: `reports/491-campaign-quick-generate-prefill-acceptance-slice-3-closure.md`.
+  - Next recommended wave: Campaign Activity Return Navigation Productization.
 - Completed Campaign-to-Quick-Generate Prefill Acceptance Slice 2:
   - Added combined runtime acceptance coverage for selected local campaign fixture attribution after Quick Generate submission.
   - Verified mutation response and durable operator issuance activity metadata carry safe campaign attribution.
