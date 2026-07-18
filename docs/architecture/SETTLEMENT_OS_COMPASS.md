@@ -3141,3 +3141,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/496-campaign-explorer-context-productization-slice-2-route-props.md`.
 - Boundary remains unchanged: route-prop and test-characterization update only; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next checkpoint: publish package assets into the host, run drift verification, frontend Explorer checks, and host build.
+
+## 2026-07-18 Update — Campaign Explorer Context Productization — Slice 3 — Publish / Closure
+
+- Closed the Campaign Explorer Context Productization wave.
+- Host-published Cockpit assets match package source.
+- Focused Explorer frontend verification, Cockpit backend route/integration verification, and host production build passed.
+- UI/report: `../ui-cockpit/reports/497-campaign-explorer-context-productization-slice-3-closure.md`.
+- Boundary remains unchanged: publish and verification only; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next recommended checkpoint: manually inspect `/x/cockpit/pay-codes` from a campaign-aware link, then continue page-specific Cockpit polish or decide the next campaign read-only workspace slice.
