@@ -60,7 +60,10 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).toContain('Branch release sheet');
         expect(wrapper.text()).toContain('Counter slip');
         expect(wrapper.text()).toContain('Print assets are not generated or persisted');
+        expect(wrapper.find('[data-testid="cockpit-print-template-density-summary"]').text()).toContain('Templates');
+        expect(wrapper.find('[data-testid="cockpit-print-template-density-summary"]').text()).toContain('3');
         expect(wrapper.findAll('[data-testid="cockpit-print-template"]')).toHaveLength(3);
+        expect(wrapper.findAll('[data-testid="cockpit-print-template-disclosure"]')).toHaveLength(3);
     });
 
     it('renders share and QR placeholders without creating share assets', () => {
@@ -75,7 +78,10 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).toContain('Short link');
         expect(wrapper.text()).toContain('Copy text');
         expect(wrapper.text()).toContain('QR generation must use an approved Pay Code representation');
+        expect(wrapper.find('[data-testid="cockpit-share-asset-density-summary"]').text()).toContain('Share Assets');
+        expect(wrapper.find('[data-testid="cockpit-share-asset-density-summary"]').text()).toContain('Deferred Assets');
         expect(wrapper.findAll('[data-testid="cockpit-share-asset"]')).toHaveLength(3);
+        expect(wrapper.findAll('[data-testid="cockpit-share-asset-disclosure"]')).toHaveLength(3);
     });
 
     it('renders operational distribution analytics without campaign ownership', () => {
@@ -91,7 +97,10 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).toContain('Delivery state');
         expect(wrapper.text()).toContain('Campaign state');
         expect(wrapper.text()).toContain('Campaign behavior is deferred until Wave 5');
+        expect(wrapper.find('[data-testid="cockpit-distribution-analytics-density-summary"]').text()).toContain('Analytics Facts');
+        expect(wrapper.find('[data-testid="cockpit-distribution-analytics-density-summary"]').text()).toContain('4 read-only facts');
         expect(wrapper.findAll('[data-testid="cockpit-distribution-metric"]')).toHaveLength(4);
+        expect(wrapper.findAll('[data-testid="cockpit-distribution-metric-disclosure"]')).toHaveLength(4);
     });
 
     it('renders the full distribution workspace page with Pay Codes navigation and side-effect boundaries', () => {
