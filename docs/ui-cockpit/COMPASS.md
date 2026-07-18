@@ -3143,3 +3143,10 @@ Current boundary:
 - Selected-campaign summary hydration still requires a planning key and continues through `CampaignCockpitWorkspace::summary`.
 - Report: `reports/479-real-campaign-read-only-wiring-slice-1-package-presence.md`.
 - Boundary remains unchanged: read-model wiring only; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-18 — Real Campaign Read-Only Wiring Wave — Slice 2 — Dashboard Route Props
+
+- Added route-level verification that `/x/cockpit` exposes installed x-campaign package availability without requiring a selected campaign.
+- Confirmed the dashboard receives `context_status: no-campaign-selected` and package-presence-only redactions.
+- Report: `reports/480-real-campaign-read-only-wiring-slice-2-dashboard-route-props.md`.
+- Boundary remains unchanged: route-prop verification only; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
