@@ -184,6 +184,20 @@ const campaignDashboardReturnHref = computed(() => {
 
     return `/x/cockpit?${campaignQueryString()}`;
 });
+const campaignNavigationSourceLabel = computed(() => campaignValueLabel(campaignNavigationContext.value?.source, {
+    campaign_cockpit: 'Campaign Cockpit',
+    x_campaign_adapter: 'Campaign package adapter',
+}));
+const campaignNavigationDestinationLabel = computed(() => campaignValueLabel(campaignNavigationContext.value?.destination, {
+    pay_code_detail: 'Pay Code Detail',
+    distribution_workspace: 'Distribution Workspace',
+}));
+const campaignNavigationSafetyLabel = computed(() => campaignValueLabel(campaignNavigationContext.value?.mutation?.reason, {
+    'campaign-navigation-read-only': 'Campaign navigation only',
+}));
+const campaignNavigationPayloadLabel = computed(() => campaignValueLabel(campaignNavigationContext.value?.redactions?.payloads, {
+    'navigation-context-only': 'Navigation context only',
+}));
 
 const shareAssets = computed<CockpitShareAsset[]>(() => {
     const assets = distributionReadModel.value?.share_assets;
@@ -279,6 +293,16 @@ function stringValue(value: unknown): string | null {
     }
 
     return null;
+}
+
+function campaignValueLabel(value: unknown, labels: Record<string, string>): string {
+    const normalized = stringValue(value);
+
+    if (!normalized) {
+        return 'Not provided';
+    }
+
+    return labels[normalized] ?? normalized;
 }
 
 function objectValue(value: unknown): Record<string, unknown> | null {
@@ -567,7 +591,7 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                             Source
                         </dt>
                         <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                            {{ campaignNavigationContext.source }}
+                            {{ campaignNavigationSourceLabel }}
                         </dd>
                     </div>
                     <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
@@ -575,7 +599,7 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                             Current page
                         </dt>
                         <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                            {{ campaignNavigationContext.destination }}
+                            {{ campaignNavigationDestinationLabel }}
                         </dd>
                     </div>
                     <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
@@ -583,7 +607,7 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                             Safety
                         </dt>
                         <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                            {{ campaignNavigationContext.mutation?.reason }}
+                            {{ campaignNavigationSafetyLabel }}
                         </dd>
                     </div>
                     <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
@@ -591,7 +615,7 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                             Payload visibility
                         </dt>
                         <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                            {{ campaignNavigationContext.redactions?.payloads }}
+                            {{ campaignNavigationPayloadLabel }}
                         </dd>
                     </div>
                 </dl>

@@ -612,10 +612,14 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).toContain('campaign-wave-46');
         expect(wrapper.text()).toContain('audience-wave-46');
         expect(wrapper.text()).toContain('recipient-wave-46');
-        expect(wrapper.text()).toContain('x_campaign_adapter');
-        expect(wrapper.text()).toContain('distribution_workspace');
-        expect(wrapper.text()).toContain('campaign-navigation-read-only');
-        expect(wrapper.text()).toContain('navigation-context-only');
+        expect(wrapper.text()).toContain('Campaign package adapter');
+        expect(wrapper.text()).toContain('Distribution Workspace');
+        expect(wrapper.text()).toContain('Campaign navigation only');
+        expect(wrapper.text()).toContain('Navigation context only');
+        expect(wrapper.text()).not.toContain('x_campaign_adapter');
+        expect(wrapper.text()).not.toContain('distribution_workspace');
+        expect(wrapper.text()).not.toContain('campaign-navigation-read-only');
+        expect(wrapper.text()).not.toContain('navigation-context-only');
         expect(wrapper.find('[data-testid="cockpit-distribution-campaign-detail-return-link"]').attributes('href')).toBe('/x/cockpit/pay-codes/Not%20wired?campaign_planning_key=plan-wave-46&campaign_execution_id=exec-wave-46&campaign_id=campaign-wave-46&campaign_audience_id=audience-wave-46&campaign_recipient_id=recipient-wave-46&campaign_source=x_campaign_adapter');
         expect(wrapper.find('[data-testid="cockpit-distribution-campaign-detail-return-link"]').text()).toContain('Back to Pay Code Detail');
         expect(wrapper.find('[data-testid="cockpit-distribution-campaign-detail-return-link"]').text()).toContain('read-only');
