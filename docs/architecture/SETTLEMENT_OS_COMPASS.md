@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Cockpit Campaign Selected Context UI Productization
-Current status: Selected campaign context now presents read-only Quick Generate prefill guidance
+Current status: Campaign selected-context UI productization closed; next is campaign-to-Quick-Generate prefill acceptance
 Last updated: 2026-07-18
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-18
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Selected campaign context UI productization in progress | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Selected campaign context UI productized; prefill acceptance next | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,11 @@ Last updated: 2026-07-18
 
 ### Current Cockpit Host Integration
 
+- Cockpit Campaign Selected Context UI Productization Slice 2 / Closure complete:
+  - Published Cockpit assets to the host app and confirmed asset drift is clean.
+  - Verified focused dashboard frontend tests and host production build.
+  - Confirmed selected campaign context presents Quick Generate prefill facts and keeps campaign changes disabled.
+  - Report: [../ui-cockpit/reports/488-campaign-selected-context-ui-productization-slice-2-closure.md](../ui-cockpit/reports/488-campaign-selected-context-ui-productization-slice-2-closure.md).
 - Cockpit Campaign Selected Context UI Productization Slice 1 complete:
   - Added a selected campaign context card to the dashboard.
   - Shows planning key, execution id, template, amount, recipient, and purpose as operator-facing Quick Generate prefill facts.

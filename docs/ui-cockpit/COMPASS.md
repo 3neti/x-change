@@ -5,11 +5,19 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Campaign Selected Context UI Productization
-Status: Selected campaign context is presented as read-only Quick Generate prefill guidance
+Status: Closed; selected campaign context is visible as read-only Quick Generate prefill guidance
 Last updated: 2026-07-18
 
 ## Completed
 
+- Completed Campaign Selected Context UI Productization Slice 2 / Closure:
+  - Published Cockpit assets to the host app.
+  - Verified package-to-host asset drift is clean.
+  - Verified focused dashboard frontend tests and host production build.
+  - Confirmed selected campaign context shows planning key, execution id, template, amount, recipient, purpose, and `Generate from this campaign`.
+  - Confirmed campaign changes remain disabled and selected campaign context remains prefill-only.
+  - Report: `reports/488-campaign-selected-context-ui-productization-slice-2-closure.md`.
+  - Next recommended wave: Campaign-to-Quick-Generate Prefill Acceptance.
 - Completed Campaign Selected Context UI Productization Slice 1:
   - Added a selected campaign context card to `/x/cockpit`.
   - Shows planning key, execution id, template, amount, recipient, and purpose as operator-facing prefill facts.
