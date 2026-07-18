@@ -3167,3 +3167,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/499-pay-code-explorer-campaign-filter-affordance-slice-2-route-acceptance.md`.
 - Boundary remains unchanged: route acceptance only; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next checkpoint: publish package assets, verify no drift, run focused Explorer tests, and close the wave.
+
+## 2026-07-18 Update — Pay Code Explorer Campaign Filter Affordance — Slice 3 — Publish / Closure
+
+- Closed the Pay Code Explorer Campaign Filter Affordance wave.
+- Host-published Cockpit assets match package source.
+- Focused Explorer frontend verification, Cockpit backend route/integration verification, and host production build passed.
+- UI/report: `../ui-cockpit/reports/500-pay-code-explorer-campaign-filter-affordance-slice-3-closure.md`.
+- Boundary remains unchanged: publish and verification only; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next recommended checkpoint: manually inspect `/x/cockpit/pay-codes` using a campaign-aware Explorer URL, then continue selected-campaign read-only workspace work or primary Cockpit page polish.

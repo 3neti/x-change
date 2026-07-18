@@ -3301,3 +3301,11 @@ Current boundary:
 - Verified the sanitized list read model receives search/status filters while campaign context remains read-only and payload-safe.
 - Report: `reports/499-pay-code-explorer-campaign-filter-affordance-slice-2-route-acceptance.md`.
 - Boundary remains unchanged: route acceptance only; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-18 — Pay Code Explorer Campaign Filter Affordance — Slice 3 — Publish / Closure
+
+- Closed the Pay Code Explorer Campaign Filter Affordance wave.
+- Package-owned Cockpit assets were published into the host app and verified clean with `php artisan x-change:doctor --assets`.
+- Focused frontend Explorer verification, backend route/integration verification, and host production build passed.
+- Report: `reports/500-pay-code-explorer-campaign-filter-affordance-slice-3-closure.md`.
+- Boundary remains unchanged: publish and verification only; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
