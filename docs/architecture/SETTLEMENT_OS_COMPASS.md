@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Cockpit Campaign Drilldown Context Copy Polish
-Current status: Slice 2 in progress; Distribution Workspace renders friendly campaign context labels
+Current status: Closed; campaign drilldown context renders friendly labels on Detail and Distribution
 Last updated: 2026-07-18
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-18
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Campaign drilldown context copy polish Slice 2 in progress | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Campaign drilldown context copy polish closed | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,12 @@ Last updated: 2026-07-18
 
 ### Current Cockpit Host Integration
 
+- Cockpit Campaign Drilldown Context Copy Polish Slice 3 / Closure complete:
+  - Published package Cockpit assets to the host app and confirmed asset drift is clean.
+  - Verified focused backend route, frontend context-card, Explorer navigation, and host build checks.
+  - Confirmed campaign-aware Voucher Detail and Distribution Workspace pages now show friendly operator labels instead of raw context tokens.
+  - Confirmed no routes, controllers, campaign mutation, campaign dispatch, Pay Code generation through campaign, feedback sends, journal writes, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, persistence, or money movement were added.
+  - Report: [../ui-cockpit/reports/506-campaign-drilldown-context-copy-polish-slice-3-closure.md](../ui-cockpit/reports/506-campaign-drilldown-context-copy-polish-slice-3-closure.md).
 - Cockpit Campaign Drilldown Context Copy Polish Slice 2 complete:
   - Distribution Workspace now renders friendly operator labels for campaign context source, destination, safety, and payload visibility.
   - Raw campaign context tokens remain internal to links and contracts.
