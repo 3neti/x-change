@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Cockpit Campaign Activity Return Navigation Productization
-Current status: Quick Generate campaign return navigation is visible after campaign-attributed generation
+Current status: Dashboard activity campaign return links are visible and read-only
 Last updated: 2026-07-18
 
 | Wave | Workstream | Role | Status | Compass |
@@ -62,6 +62,11 @@ Last updated: 2026-07-18
 
 ### Current Cockpit Host Integration
 
+- Cockpit Campaign Activity Return Navigation Productization Slice 2 complete:
+  - Added visible campaign context and read-only campaign return links to campaign-attributed dashboard Issuance Activity cards.
+  - Preserved existing campaign attribution detail disclosure and read-only boundaries.
+  - Confirmed no routes, controllers, campaign mutation, campaign dispatch, Pay Code generation through campaign, feedback sends, journal writes, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, persistence, or money movement were added.
+  - Report: [../ui-cockpit/reports/493-campaign-activity-return-navigation-slice-2.md](../ui-cockpit/reports/493-campaign-activity-return-navigation-slice-2.md).
 - Cockpit Campaign Activity Return Navigation Productization Slice 1 complete:
   - Added a dedicated Quick Generate `Campaign return navigation` panel for campaign-attributed results.
   - Preserved existing post-issuance navigation contracts and read-only campaign boundaries.

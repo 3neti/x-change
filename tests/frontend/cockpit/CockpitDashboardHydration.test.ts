@@ -1149,6 +1149,8 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('Planned deliveries: 1');
         expect(wrapper.text()).toContain('Source: test-feedback-handoff');
         expect(wrapper.text()).toContain('Campaign attribution: available');
+        expect(wrapper.text()).toContain('Campaign context');
+        expect(wrapper.text()).toContain('This Pay Code keeps read-only campaign attribution');
         expect(wrapper.text()).toContain('Campaign: campaign-wave-43c');
         expect(wrapper.text()).toContain('Audience: audience-wave-43c');
         expect(wrapper.text()).toContain('Recipient: recipient-wave-43c');
@@ -1164,6 +1166,7 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('Read-only: yes');
         expect(wrapper.text()).toContain('Read-only');
         expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-card"]')).toHaveLength(1);
+        expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-campaign-return-panel"]')).toHaveLength(1);
         expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-campaign-attribution"]')).toHaveLength(1);
         expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-journal-summary"]')).toHaveLength(1);
         expect(wrapper.findAll('[data-testid="cockpit-operator-issuance-activity-journal-diagnostic"]')).toHaveLength(1);
@@ -1182,6 +1185,10 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-campaign-dashboard-link"]').attributes('href')).toBe('/x/cockpit?campaign_planning_key=plan-wave-43c&campaign_execution_id=exec-wave-43c&campaign_id=campaign-wave-43c&campaign_audience_id=audience-wave-43c&campaign_recipient_id=recipient-wave-43c&campaign_source=x_campaign_adapter');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-campaign-dashboard-link"]').text()).toContain('Return to Campaign Dashboard');
         expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-campaign-dashboard-link"]').text()).toContain('read-only');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-campaign-return-dashboard-link"]').attributes('href')).toBe('/x/cockpit?campaign_planning_key=plan-wave-43c&campaign_execution_id=exec-wave-43c&campaign_id=campaign-wave-43c&campaign_audience_id=audience-wave-43c&campaign_recipient_id=recipient-wave-43c&campaign_source=x_campaign_adapter');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-campaign-return-dashboard-link"]').text()).toContain('Return to Campaign Dashboard');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-campaign-return-explorer-link"]').attributes('href')).toBe('/x/cockpit/pay-codes?activity_code=PC-1234&activity_source=operator_issuance_activity&campaign_planning_key=plan-wave-43c&campaign_execution_id=exec-wave-43c&campaign_id=campaign-wave-43c&campaign_audience_id=audience-wave-43c&campaign_recipient_id=recipient-wave-43c&campaign_source=x_campaign_adapter');
+        expect(wrapper.find('[data-testid="cockpit-operator-issuance-activity-campaign-return-explorer-link"]').text()).toContain('Open campaign-filtered Explorer');
     });
 
     it('hides empty disconnected activity handoff details while preserving status badges', () => {

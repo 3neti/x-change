@@ -860,6 +860,66 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
                     </div>
                 </dl>
 
+                <div
+                    v-if="presentation.campaignAttribution && !presentation.campaignAttribution.mutatesCampaign"
+                    class="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-800 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-200"
+                    data-testid="cockpit-operator-issuance-activity-campaign-return-panel"
+                >
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <p class="font-semibold text-sky-900 dark:text-sky-100">
+                                Campaign context
+                            </p>
+                            <p class="mt-1">
+                                This Pay Code keeps read-only campaign attribution for filtered inspection and return navigation.
+                            </p>
+                        </div>
+                        <span class="inline-flex min-h-6 w-fit items-center rounded-full bg-white px-2 py-1 font-semibold text-sky-700 ring-1 ring-sky-200 dark:bg-sky-950 dark:text-sky-200 dark:ring-sky-800">
+                            Read-only
+                        </span>
+                    </div>
+
+                    <dl class="mt-3 grid gap-2 sm:grid-cols-3">
+                        <div v-if="presentation.campaignAttribution.planningKey">
+                            <dt class="font-semibold text-sky-900 dark:text-sky-100">
+                                Planning Key
+                            </dt>
+                            <dd>{{ presentation.campaignAttribution.planningKey }}</dd>
+                        </div>
+                        <div v-if="presentation.campaignAttribution.executionId">
+                            <dt class="font-semibold text-sky-900 dark:text-sky-100">
+                                Execution
+                            </dt>
+                            <dd>{{ presentation.campaignAttribution.executionId }}</dd>
+                        </div>
+                        <div v-if="presentation.campaignAttribution.recipientReference">
+                            <dt class="font-semibold text-sky-900 dark:text-sky-100">
+                                Recipient
+                            </dt>
+                            <dd>{{ presentation.campaignAttribution.recipientReference }}</dd>
+                        </div>
+                    </dl>
+
+                    <div class="mt-3 flex flex-col gap-2 sm:flex-row">
+                        <a
+                            v-if="presentation.campaignDashboardHref"
+                            :href="presentation.campaignDashboardHref"
+                            class="font-semibold text-sky-700 underline decoration-sky-300 underline-offset-4 hover:text-sky-950 dark:text-sky-200 dark:decoration-sky-600 dark:hover:text-white"
+                            data-testid="cockpit-operator-issuance-activity-campaign-return-dashboard-link"
+                        >
+                            Return to Campaign Dashboard
+                        </a>
+                        <a
+                            v-if="presentation.explorerHref"
+                            :href="presentation.explorerHref"
+                            class="font-semibold text-sky-700 underline decoration-sky-300 underline-offset-4 hover:text-sky-950 dark:text-sky-200 dark:decoration-sky-600 dark:hover:text-white"
+                            data-testid="cockpit-operator-issuance-activity-campaign-return-explorer-link"
+                        >
+                            Open campaign-filtered Explorer
+                        </a>
+                    </div>
+                </div>
+
                 <details
                     v-if="presentation.campaignAttribution"
                     class="mt-4 rounded-lg bg-sky-50 p-3 text-xs text-sky-800 dark:bg-sky-950/40 dark:text-sky-200"
