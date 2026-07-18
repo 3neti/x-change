@@ -3094,3 +3094,10 @@ Current boundary:
 - Kept evidence readiness as a separate scan row below the operator action/lifecycle pair.
 - Report: `reports/473-voucher-detail-distribution-layout-polish-slice-1-voucher-detail.md`.
 - Boundary remains unchanged: presentation-only Voucher Detail layout update; no route behavior, read-model hydration, claim behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle mutation, driver execution, artifact generation, journal write, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-18 — Voucher Detail / Distribution Layout Polish — Slice 2 — Distribution Workspace
+
+- Updated `/x/cockpit/pay-codes/{code}/distribution` so the top summary presents `Manual next step` and the manual distribution checklist side by side on wide screens.
+- Kept channel and artifact readiness as a separate scan row below the manual action/checklist pair.
+- Report: `reports/474-voucher-detail-distribution-layout-polish-slice-2-distribution-workspace.md`.
+- Boundary remains unchanged: presentation-only Distribution Workspace layout update; no route behavior, read-model hydration, claim behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle mutation, driver execution, artifact generation, journal write, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.

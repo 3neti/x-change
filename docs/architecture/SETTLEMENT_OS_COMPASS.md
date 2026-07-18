@@ -2967,3 +2967,11 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/473-voucher-detail-distribution-layout-polish-slice-1-voucher-detail.md`.
 - Boundary remains unchanged: presentation-only Voucher Detail layout update; no route behavior, read-model hydration, claim behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle mutation, driver execution, artifact generation, journal write, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next checkpoint: targeted Voucher Detail frontend verification, then Distribution Workspace layout polish.
+
+## 2026-07-18 Update — Voucher Detail / Distribution Layout Polish — Slice 2 — Distribution Workspace
+
+- `/x/cockpit/pay-codes/{code}/distribution` now presents the manual next step and manual distribution checklist in a more scan-friendly top summary layout.
+- Channel and artifact readiness remains visible as a separate read-only summary row.
+- UI/report: `../ui-cockpit/reports/474-voucher-detail-distribution-layout-polish-slice-2-distribution-workspace.md`.
+- Boundary remains unchanged: presentation-only Distribution Workspace layout update; no route behavior, read-model hydration, claim behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle mutation, driver execution, artifact generation, journal write, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next checkpoint: targeted Distribution Workspace frontend verification, then publish host assets and verify no drift.

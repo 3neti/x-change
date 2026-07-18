@@ -97,6 +97,10 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).toContain('Distribution inspection');
         expect(wrapper.text()).toContain('Distribution Workspace');
         expect(wrapper.text()).toContain('Inspect manual distribution readiness');
+        expect(wrapper.text()).toContain('Manual next step');
+        expect(wrapper.find('[data-testid="cockpit-distribution-primary-summary"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="cockpit-distribution-primary-detail-link"]').text()).toContain('Back to Pay Code Detail');
+        expect(wrapper.find('[data-testid="cockpit-distribution-primary-explorer-link"]').text()).toContain('Back to Pay Codes');
         expect(wrapper.text()).toContain('Digital Distribution');
         expect(wrapper.text()).toContain('Print Templates');
         expect(wrapper.text()).toContain('Share / QR');

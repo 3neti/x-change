@@ -402,49 +402,75 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                     </div>
                 </dl>
 
-                <div class="mt-5 rounded-xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/60 dark:bg-slate-950/70">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
-                        Primary next step
-                    </p>
-                    <p class="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50">
-                        {{ primaryDistributionStep.label }}
-                    </p>
-                    <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                        {{ primaryDistributionStep.description }}
-                    </p>
-                    <div class="mt-4 flex flex-wrap gap-3">
-                        <a
-                            v-if="beneficiaryRedeemUrl"
-                            :href="beneficiaryRedeemUrl"
-                            class="inline-flex items-center rounded-full bg-emerald-700 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-800"
-                            data-testid="cockpit-distribution-primary-claim-url-link"
-                        >
-                            Open claim URL
-                        </a>
-                        <CockpitManualCopyButton
-                            v-if="distributionLinksAvailable"
-                            :value="beneficiaryRedeemUrl ?? beneficiaryRedeemPath"
-                            label="Copy claim URL"
-                        />
-                        <a
-                            :href="detailHref"
-                            class="inline-flex items-center rounded-full border border-emerald-300 px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-700 dark:text-emerald-200 dark:hover:bg-emerald-900/50"
-                            data-testid="cockpit-distribution-primary-detail-link"
-                        >
-                            Back to Pay Code Detail
-                        </a>
-                        <a
-                            :href="explorerHref"
-                            class="inline-flex items-center rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                            data-testid="cockpit-distribution-primary-explorer-link"
-                        >
-                            Back to Pay Codes
-                        </a>
+                <div class="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.95fr)]">
+                    <div class="rounded-xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/60 dark:bg-slate-950/70">
+                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                            Manual next step
+                        </p>
+                        <p class="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50">
+                            {{ primaryDistributionStep.label }}
+                        </p>
+                        <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                            {{ primaryDistributionStep.description }}
+                        </p>
+                        <div class="mt-4 flex flex-wrap gap-3">
+                            <a
+                                v-if="beneficiaryRedeemUrl"
+                                :href="beneficiaryRedeemUrl"
+                                class="inline-flex items-center rounded-full bg-emerald-700 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-800"
+                                data-testid="cockpit-distribution-primary-claim-url-link"
+                            >
+                                Open claim URL
+                            </a>
+                            <CockpitManualCopyButton
+                                v-if="distributionLinksAvailable"
+                                :value="beneficiaryRedeemUrl ?? beneficiaryRedeemPath"
+                                label="Copy claim URL"
+                            />
+                            <a
+                                :href="detailHref"
+                                class="inline-flex items-center rounded-full border border-emerald-300 px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-700 dark:text-emerald-200 dark:hover:bg-emerald-900/50"
+                                data-testid="cockpit-distribution-primary-detail-link"
+                            >
+                                Back to Pay Code Detail
+                            </a>
+                            <a
+                                :href="explorerHref"
+                                class="inline-flex items-center rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                                data-testid="cockpit-distribution-primary-explorer-link"
+                            >
+                                Back to Pay Codes
+                            </a>
+                        </div>
+                    </div>
+
+                    <div
+                        class="rounded-xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/60 dark:bg-slate-950/70"
+                        data-testid="cockpit-distribution-manual-checklist"
+                    >
+                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                            Manual distribution checklist
+                        </p>
+                        <ol class="mt-4 grid gap-3 text-sm">
+                            <li
+                                v-for="(item, index) in manualDistributionChecklist"
+                                :key="item"
+                                class="flex gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-800"
+                                data-testid="cockpit-distribution-manual-checklist-item"
+                            >
+                                <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200">
+                                    {{ index + 1 }}
+                                </span>
+                                <span class="leading-6 text-slate-600 dark:text-slate-300">
+                                    {{ item }}
+                                </span>
+                            </li>
+                        </ol>
                     </div>
                 </div>
 
                 <div
-                    class="mt-5 rounded-xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/60 dark:bg-slate-950/70"
+                    class="mt-4 rounded-xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/60 dark:bg-slate-950/70"
                     data-testid="cockpit-distribution-channel-artifact-readiness"
                 >
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -478,30 +504,6 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                             </p>
                         </div>
                     </dl>
-                </div>
-
-                <div
-                    class="mt-5 rounded-xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/60 dark:bg-slate-950/70"
-                    data-testid="cockpit-distribution-manual-checklist"
-                >
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
-                        Manual distribution checklist
-                    </p>
-                    <ol class="mt-4 grid gap-3 text-sm md:grid-cols-2">
-                        <li
-                            v-for="(item, index) in manualDistributionChecklist"
-                            :key="item"
-                            class="flex gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-800"
-                            data-testid="cockpit-distribution-manual-checklist-item"
-                        >
-                            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200">
-                                {{ index + 1 }}
-                            </span>
-                            <span class="leading-6 text-slate-600 dark:text-slate-300">
-                                {{ item }}
-                            </span>
-                        </li>
-                    </ol>
                 </div>
             </section>
 
