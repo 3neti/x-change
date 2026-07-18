@@ -3488,3 +3488,11 @@ Current boundary:
 - Existing row-action query strings are preserved.
 - Report: `reports/501-campaign-row-navigation-continuity-slice-1.md`.
 - Boundary remains unchanged: presentation/navigation-only row link update; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, voucher lifecycle mutation, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-19 — Voucher Detail x-journal Evidence Read Model — Slice 1
+
+- Started the Voucher Detail x-journal Evidence Read Model wave.
+- Verified `/x/cockpit/pay-codes/{code}` can hydrate real x-journal entries as read-only voucher evidence when a matching Pay Code exists.
+- Hardened Cockpit redaction so nested `wallet` keys are redacted before x-journal evidence reaches the UI.
+- Report: `reports/523-voucher-detail-x-journal-evidence-read-model-slice-1.md`.
+- Boundary remains unchanged: read-model and redaction hardening only; no journal writes, x-action execution, x-feedback delivery, campaign mutation, campaign dispatch, voucher mutation, claim execution, driver execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.

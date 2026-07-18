@@ -26,6 +26,7 @@ class DefaultCockpitRedactor implements CockpitRedactorContract
         'reference_id',
         'secret',
         'token',
+        'wallet',
         'webhook',
     ];
 

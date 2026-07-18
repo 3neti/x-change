@@ -3324,3 +3324,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/501-campaign-row-navigation-continuity-slice-1.md`.
 - Boundary remains unchanged: presentation/navigation-only row link update; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, voucher lifecycle mutation, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next checkpoint: verify Voucher Detail and Distribution Workspace render the carried campaign context safely.
+
+## 2026-07-19 Update — Voucher Detail x-journal Evidence Read Model — Slice 1
+
+- Started the Voucher Detail x-journal Evidence Read Model wave.
+- Verified Voucher Detail can consume real x-journal voucher-scoped entries as read-only evidence.
+- Hardened the Cockpit redaction policy for nested wallet data in connected-service payloads.
+- UI/report: `../ui-cockpit/reports/523-voucher-detail-x-journal-evidence-read-model-slice-1.md`.
+- Boundary remains unchanged: read-model and redaction hardening only; no journal writes, x-action execution, x-feedback delivery, campaign mutation, campaign dispatch, voucher mutation, claim execution, driver execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+- Next checkpoint: verify the Voucher Detail audit/evidence panels render connected x-journal evidence cleanly, then publish assets and close the wave.

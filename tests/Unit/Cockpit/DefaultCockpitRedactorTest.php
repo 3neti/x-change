@@ -20,6 +20,9 @@ it('redacts sensitive cockpit payload keys recursively', function () {
             'event_type' => 'execution.succeeded',
             'metadata' => [
                 'account_number' => '1234567890',
+                'wallet' => [
+                    'balance' => '1000.00',
+                ],
             ],
         ],
     ];
@@ -35,6 +38,7 @@ it('redacts sensitive cockpit payload keys recursively', function () {
             'event_type' => 'execution.succeeded',
             'metadata' => [
                 'account_number' => '[redacted]',
+                'wallet' => '[redacted]',
             ],
         ],
     ]);
