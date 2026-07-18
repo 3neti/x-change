@@ -5,11 +5,19 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Selected Campaign Local Fixture Wiring
-Status: Selected local campaign read model hydrates through the real optional x-campaign adapter
+Status: Closed; selected local campaign read model can be inspected through the dashboard
 Last updated: 2026-07-18
 
 ## Completed
 
+- Completed Selected Campaign Local Fixture Wiring Slice 2 / Closure:
+  - Published Cockpit assets and confirmed package-to-host asset drift is clean.
+  - Verified focused dashboard frontend tests.
+  - Verified the host production build.
+  - Recorded the visible operator expectation for `/x/cockpit?campaign_planning_key=plan-local&campaign_execution_id=exec-local`.
+  - Confirmed campaign changes remain disabled and the selected campaign context is read-only/prefill-only.
+  - Report: `reports/486-selected-campaign-local-fixture-wiring-slice-2-closure.md`.
+  - Next recommended wave: Campaign Selected Context UI Productization.
 - Completed Selected Campaign Local Fixture Wiring Slice 1:
   - Added a non-production local campaign fixture configuration block.
   - Seeded the local `plan-local` / `exec-local` campaign through installed x-campaign contracts and its in-memory repository when requested from the dashboard.
