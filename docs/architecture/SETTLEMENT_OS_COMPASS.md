@@ -32,8 +32,8 @@ This Compass is the program-level memory. Future workstream compasses should be 
 
 ## Current Position
 
-Current wave: Cockpit Campaign Selected Context UI Productization
-Current status: Campaign selected-context UI productization closed; next is campaign-to-Quick-Generate prefill acceptance
+Current wave: Cockpit Campaign-to-Quick-Generate Prefill Acceptance
+Current status: Dashboard selected campaign link carries local fixture prefill into Quick Generate
 Last updated: 2026-07-18
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-18
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Selected campaign context UI productized; prefill acceptance next | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Campaign-to-Quick-Generate prefill acceptance in progress | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,12 @@ Last updated: 2026-07-18
 
 ### Current Cockpit Host Integration
 
+- Cockpit Campaign-to-Quick-Generate Prefill Acceptance Slice 1 complete:
+  - Added acceptance coverage for selected campaign dashboard link into Quick Generate.
+  - Confirmed simple local fixture campaign URL carries safe prefill context into Quick Generate.
+  - Added local-fixture metadata fallback for template, amount, currency, recipient, and purpose.
+  - Confirmed this remains read-only/prefill-only and does not add campaign mutation, campaign dispatch, Pay Code generation through campaign, feedback sends, journal writes, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, durable persistence, or money movement.
+  - Report: [../ui-cockpit/reports/489-campaign-quick-generate-prefill-acceptance-slice-1.md](../ui-cockpit/reports/489-campaign-quick-generate-prefill-acceptance-slice-1.md).
 - Cockpit Campaign Selected Context UI Productization Slice 2 / Closure complete:
   - Published Cockpit assets to the host app and confirmed asset drift is clean.
   - Verified focused dashboard frontend tests and host production build.

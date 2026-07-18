@@ -4,12 +4,19 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Campaign Selected Context UI Productization
-Status: Closed; selected campaign context is visible as read-only Quick Generate prefill guidance
+Current slice: Campaign-to-Quick-Generate Prefill Acceptance
+Status: Dashboard selected campaign link carries local fixture prefill into Quick Generate
 Last updated: 2026-07-18
 
 ## Completed
 
+- Completed Campaign-to-Quick-Generate Prefill Acceptance Slice 1:
+  - Added acceptance coverage for the local selected campaign dashboard link into Quick Generate.
+  - Confirmed `/x/cockpit?campaign_planning_key=plan-local&campaign_execution_id=exec-local` produces a Quick Generate link with safe local fixture prefill context.
+  - Added a local-fixture metadata fallback so the simple fixture URL carries template, amount, currency, recipient, and purpose into Quick Generate.
+  - Confirmed no campaign mutation, campaign dispatch, Pay Code generation through campaign, feedback sends, journal writes, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, durable persistence, or money movement were added.
+  - Report: `reports/489-campaign-quick-generate-prefill-acceptance-slice-1.md`.
+  - Next recommended checkpoint: Campaign-to-Quick-Generate Prefill Acceptance Slice 2 — generated activity attribution verification.
 - Completed Campaign Selected Context UI Productization Slice 2 / Closure:
   - Published Cockpit assets to the host app.
   - Verified package-to-host asset drift is clean.

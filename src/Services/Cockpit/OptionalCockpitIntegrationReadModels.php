@@ -187,6 +187,7 @@ class OptionalCockpitIntegrationReadModels
             );
             $payload = $this->redact($this->arrayValue($result));
             $effects = $this->arrayValue($payload['effects'] ?? []);
+            $metadata = $this->campaignReadModelMetadata($payload, $planningKey, $executionId, $query);
 
             return new CockpitCampaignReadModelData(
                 status: 'available',
@@ -204,7 +205,7 @@ class OptionalCockpitIntegrationReadModels
                         (array) ($payload['blockers'] ?? []),
                         fn (mixed $blocker): bool => is_string($blocker) && trim($blocker) !== '',
                     )),
-                    'metadata' => $this->arrayValue($payload['metadata'] ?? []),
+                    'metadata' => $metadata,
                 ],
                 mutation: $this->campaignMutation(),
                 redactions: [
@@ -950,6 +951,39 @@ class OptionalCockpitIntegrationReadModels
         } catch (Throwable) {
             return;
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function campaignReadModelMetadata(array $payload, string $planningKey, string $executionId, CockpitReadModelQueryData $query): array
+    {
+        $metadata = $this->arrayValue($payload['metadata'] ?? []);
+
+        if (! $this->localCampaignFixtureEnabled($planningKey)) {
+            return $metadata;
+        }
+
+        if ($this->arrayValue($metadata['quick_generate_context'] ?? []) !== []) {
+            return $metadata;
+        }
+
+        $audienceId = $this->localCampaignFixtureAudienceId();
+        $metadata['quick_generate_context'] = [
+            'campaign_id' => $query->campaignId ?? 'campaign-local',
+            'audience_id' => $query->campaignAudienceId ?? $audienceId,
+            'source' => $query->campaignSource ?? 'campaign_cockpit',
+            'template_key' => $query->campaignTemplateKey ?? 'ofw-remittance',
+            'amount' => $query->campaignAmount ?? '500.00',
+            'currency' => $query->campaignCurrency ?? 'PHP',
+            'recipient_reference' => $query->campaignRecipientReference ?? '09173011987',
+            'purpose' => $query->campaignPurpose ?? 'Campaign payout',
+            'planning_key' => $planningKey,
+            'execution_id' => $executionId,
+        ];
+
+        return $metadata;
     }
 
     private function localCampaignFixtureEnabled(string $planningKey): bool

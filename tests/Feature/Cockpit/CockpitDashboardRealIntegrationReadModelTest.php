@@ -118,3 +118,57 @@ it('hydrates a selected local campaign fixture through the real x-campaign cockp
         ->assertJsonMissingPath('props.campaign_read_model.pay_code_generation_payload')
         ->assertJsonMissingPath('props.campaign_read_model.delivery_dispatch_payload');
 });
+
+it('carries the selected local campaign fixture link into quick generate prefill', function () {
+    config([
+        'x-change.cockpit.local_campaign_fixture.enabled' => true,
+        'x-change.cockpit.local_campaign_fixture.planning_key' => 'plan-local',
+        'x-change.cockpit.local_campaign_fixture.execution_id' => 'exec-local',
+        'x-change.cockpit.local_campaign_fixture.audience_id' => 'audience-local',
+    ]);
+
+    actingAsTestUser();
+
+    $dashboard = $this
+        ->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.dashboard', [
+            'campaign_planning_key' => 'plan-local',
+            'campaign_execution_id' => 'exec-local',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('props.campaign_read_model.quick_generate_link.enabled', true)
+        ->assertJsonPath('props.campaign_read_model.quick_generate_link.read_only', true)
+        ->assertJsonPath('props.campaign_read_model.quick_generate_link.mutates_campaign', false);
+
+    $quickGenerateHref = $dashboard->json('props.campaign_read_model.quick_generate_link.href');
+
+    expect($quickGenerateHref)->toBeString()
+        ->and($quickGenerateHref)->toContain('/x/cockpit/quick-generate')
+        ->and($quickGenerateHref)->toContain('campaign_planning_key=plan-local')
+        ->and($quickGenerateHref)->toContain('campaign_execution_id=exec-local');
+
+    $quickGeneratePath = parse_url($quickGenerateHref, PHP_URL_PATH);
+    $quickGenerateQuery = parse_url($quickGenerateHref, PHP_URL_QUERY);
+
+    $this
+        ->withHeader('X-Inertia', 'true')
+        ->get($quickGeneratePath.'?'.$quickGenerateQuery)
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/cockpit/QuickGenerate')
+        ->assertJsonPath('props.quick_generate_read_model.campaign_context.status', 'available')
+        ->assertJsonPath('props.quick_generate_read_model.campaign_context.read_only', true)
+        ->assertJsonPath('props.quick_generate_read_model.campaign_context.mutates_campaign', false)
+        ->assertJsonPath('props.quick_generate_read_model.campaign_context.planning_key', 'plan-local')
+        ->assertJsonPath('props.quick_generate_read_model.campaign_context.execution_id', 'exec-local')
+        ->assertJsonPath('props.quick_generate_read_model.campaign_context.source', 'campaign_cockpit')
+        ->assertJsonPath('props.quick_generate_read_model.campaign_context.draft.template_key', 'ofw-remittance')
+        ->assertJsonPath('props.quick_generate_read_model.campaign_context.draft.amount', '500.00')
+        ->assertJsonPath('props.quick_generate_read_model.campaign_context.draft.currency', 'PHP')
+        ->assertJsonPath('props.quick_generate_read_model.campaign_context.draft.recipient_reference', '09173011987')
+        ->assertJsonPath('props.quick_generate_read_model.campaign_context.draft.purpose', 'Campaign payout')
+        ->assertJsonMissingPath('props.quick_generate_read_model.campaign_context.campaign_payload')
+        ->assertJsonMissingPath('props.quick_generate_read_model.campaign_context.recipient_payload')
+        ->assertJsonMissingPath('props.quick_generate_read_model.campaign_context.provider_payload')
+        ->assertJsonMissingPath('props.quick_generate_read_model.campaign_context.wallet')
+        ->assertJsonMissingPath('props.quick_generate_read_model.campaign_context.raw_payload');
+});
