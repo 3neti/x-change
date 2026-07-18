@@ -146,6 +146,30 @@ const actions = computed<CockpitCampaignActionStatus[]>(() => {
         });
 });
 
+const emptyPanelsCopy = computed(() => {
+    if (isAvailable.value && !hasSelectedCampaign.value) {
+        return 'Select a campaign to see workspace panels.';
+    }
+
+    return 'No campaign panels are available for this context.';
+});
+
+const emptyActionsCopy = computed(() => {
+    if (isAvailable.value && !hasSelectedCampaign.value) {
+        return 'Select a campaign to see available campaign actions.';
+    }
+
+    return 'No campaign actions are available for this context.';
+});
+
+const campaignWorkspaceCopy = computed(() => {
+    if (isAvailable.value && !hasSelectedCampaign.value) {
+        return 'A dedicated campaign workspace is not enabled yet. Select a campaign to keep using the current read-only dashboard context.';
+    }
+
+    return 'Dedicated campaign workspace is not enabled yet.';
+});
+
 function sanitizeSurface(surface: unknown): CockpitCampaignSurface | null {
     const payload = objectValue(surface);
     const key = stringValue(payload.key);
@@ -319,7 +343,7 @@ function toggleDetails(): void {
                     </p>
                     <div class="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
                         <p v-if="panels.length === 0">
-                            No campaign panels authorized for display.
+                            {{ emptyPanelsCopy }}
                         </p>
                         <p v-for="panel in panels" :key="panel.key">
                             {{ displayKey(panel.key) }}: {{ displayStatus(panel.status) }}
@@ -333,7 +357,7 @@ function toggleDetails(): void {
                     </p>
                     <div class="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
                         <p v-if="actions.length === 0">
-                            No campaign actions authorized for display.
+                            {{ emptyActionsCopy }}
                         </p>
                         <p v-for="action in actions" :key="action.key">
                             {{ displayKey(action.key) }}: {{ displayStatus(action.status) }}
@@ -415,7 +439,7 @@ function toggleDetails(): void {
             >
                 <span class="block font-semibold">Campaign workspace</span>
                 <span class="mt-1 block">
-                    Deferred until an explicit read-only workspace route is authorized.
+                    {{ campaignWorkspaceCopy }}
                 </span>
             </span>
         </div>

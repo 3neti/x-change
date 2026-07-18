@@ -813,7 +813,13 @@ describe('Cockpit dashboard read model hydration', () => {
 
         expect(wrapper.text()).toContain('Campaign Dashboard');
         expect(wrapper.text()).toContain('Available');
+        expect(wrapper.text()).toContain('Select a campaign to see workspace panels.');
+        expect(wrapper.text()).toContain('Select a campaign to see available campaign actions.');
+        expect(wrapper.text()).toContain('A dedicated campaign workspace is not enabled yet.');
         expect(wrapper.find('[data-testid="cockpit-campaign-quick-generate-link"]').exists()).toBe(false);
+        expect(wrapper.text()).not.toContain('No campaign panels authorized for display.');
+        expect(wrapper.text()).not.toContain('No campaign actions authorized for display.');
+        expect(wrapper.text()).not.toContain('Deferred until an explicit read-only workspace route is authorized.');
         expect(wrapper.text()).not.toContain('No planning key');
         expect(wrapper.text()).not.toContain('No execution id');
     });

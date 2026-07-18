@@ -3165,3 +3165,11 @@ Current boundary:
 - `/x/cockpit` can now show x-campaign as installed/read-only without implying a selected campaign or campaign mutation capability.
 - Report: `reports/482-real-campaign-read-only-wiring-slice-4-closure.md`.
 - Boundary remains unchanged: verification and closure only; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-18 — Campaign Panel Empty-State Copy Polish — Slice 1
+
+- Started the Campaign Panel Empty-State Copy Polish wave.
+- Replaced remaining implementation-facing campaign empty states with operator-facing selected-campaign guidance.
+- Published package-owned Cockpit assets into the host app and verified no published asset drift.
+- Report: `reports/483-campaign-panel-empty-state-copy-polish-slice-1.md`.
+- Boundary remains unchanged: presentation-only Dashboard campaign panel copy update; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
