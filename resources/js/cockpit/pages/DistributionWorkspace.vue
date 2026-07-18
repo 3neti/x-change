@@ -548,6 +548,30 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                     </div>
                     <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Campaign
+                        </dt>
+                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                            {{ campaignNavigationContext.campaign_id ?? 'campaign pending' }}
+                        </dd>
+                    </div>
+                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Audience
+                        </dt>
+                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                            {{ campaignNavigationContext.audience_id ?? 'audience pending' }}
+                        </dd>
+                    </div>
+                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Source
+                        </dt>
+                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                            {{ campaignNavigationContext.source }}
+                        </dd>
+                    </div>
+                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Current page
                         </dt>
                         <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">

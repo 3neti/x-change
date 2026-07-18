@@ -609,7 +609,10 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).toContain('only move between read-only Cockpit views');
         expect(wrapper.text()).toContain('plan-wave-46');
         expect(wrapper.text()).toContain('exec-wave-46');
+        expect(wrapper.text()).toContain('campaign-wave-46');
+        expect(wrapper.text()).toContain('audience-wave-46');
         expect(wrapper.text()).toContain('recipient-wave-46');
+        expect(wrapper.text()).toContain('x_campaign_adapter');
         expect(wrapper.text()).toContain('distribution_workspace');
         expect(wrapper.text()).toContain('campaign-navigation-read-only');
         expect(wrapper.text()).toContain('navigation-context-only');

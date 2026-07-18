@@ -4,12 +4,27 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Campaign Activity Return Navigation Productization
-Status: Closed; campaign-attributed generation has visible read-only return navigation
+Current slice: Campaign Row Navigation Continuity
+Status: Slice 2 in progress; detail and distribution drilldowns expose carried campaign context
 Last updated: 2026-07-18
 
 ## Completed
 
+- Completed Campaign Row Navigation Continuity Slice 2:
+  - Voucher Detail displays carried campaign ID, audience ID, recipient ID, planning key, execution ID, source, destination, safety reason, and payload visibility.
+  - Distribution Workspace displays the same carried campaign context after campaign-filtered Explorer drilldown.
+  - Existing read-only return links to Explorer and dashboard remain unchanged.
+  - Frontend tests prove the context is visible and unsafe raw payload fields remain redacted.
+  - Confirmed no routes, controllers, campaign mutation, campaign dispatch, Pay Code generation through campaign, feedback sends, journal writes, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, persistence, or money movement were added.
+  - Report: `reports/502-campaign-row-navigation-continuity-slice-2.md`.
+  - Next recommended checkpoint: Campaign Row Navigation Continuity Slice 3 — host publish / verification / closure.
+- Completed Campaign Row Navigation Continuity Slice 1:
+  - Pay Code Explorer row actions now preserve campaign context when the Explorer is opened from a campaign-selected context.
+  - Detail and Distribution row links keep planning key, execution ID, campaign ID, audience ID, recipient ID, campaign source, and existing query parameters.
+  - Frontend coverage proves generated row links preserve campaign context without changing row action ownership.
+  - Confirmed no routes, controllers, campaign mutation, campaign dispatch, Pay Code generation through campaign, feedback sends, journal writes, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, persistence, or money movement were added.
+  - Report: `reports/501-campaign-row-navigation-continuity-slice-1.md`.
+  - Next recommended checkpoint: Campaign Row Navigation Continuity Slice 2 — detail / distribution context rendering verification.
 - Completed Campaign Activity Return Navigation Productization Slice 3 / Closure:
   - Published Cockpit assets and confirmed package-to-host asset drift is clean.
   - Verified focused dashboard and Quick Generate frontend tests.

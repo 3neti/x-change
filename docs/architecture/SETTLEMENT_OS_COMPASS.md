@@ -32,8 +32,8 @@ This Compass is the program-level memory. Future workstream compasses should be 
 
 ## Current Position
 
-Current wave: Cockpit Campaign Activity Return Navigation Productization
-Current status: Campaign activity return navigation productization closed
+Current wave: Cockpit Campaign Row Navigation Continuity
+Current status: Slice 2 in progress; campaign context survives Explorer row drilldown into Detail and Distribution
 Last updated: 2026-07-18
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-18
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Campaign activity return navigation productized; Explorer context productization next | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Campaign row navigation continuity Slice 2 in progress | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,17 @@ Last updated: 2026-07-18
 
 ### Current Cockpit Host Integration
 
+- Cockpit Campaign Row Navigation Continuity Slice 2 complete:
+  - Voucher Detail and Distribution Workspace expose the carried campaign drilldown context as read-only operator facts.
+  - Both pages show campaign ID, audience ID, recipient ID, planning key, execution ID, source, destination, safety reason, and payload visibility.
+  - Existing return links to Explorer and dashboard remain read-only.
+  - Confirmed no routes, controllers, campaign mutation, campaign dispatch, Pay Code generation through campaign, feedback sends, journal writes, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, persistence, or money movement were added.
+  - Report: [../ui-cockpit/reports/502-campaign-row-navigation-continuity-slice-2.md](../ui-cockpit/reports/502-campaign-row-navigation-continuity-slice-2.md).
+- Cockpit Campaign Row Navigation Continuity Slice 1 complete:
+  - Pay Code Explorer row actions preserve campaign context when opened from campaign-selected context.
+  - Detail and Distribution links carry planning key, execution ID, campaign ID, audience ID, recipient ID, campaign source, and existing query parameters.
+  - Confirmed no routes, controllers, campaign mutation, campaign dispatch, Pay Code generation through campaign, feedback sends, journal writes, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, persistence, or money movement were added.
+  - Report: [../ui-cockpit/reports/501-campaign-row-navigation-continuity-slice-1.md](../ui-cockpit/reports/501-campaign-row-navigation-continuity-slice-1.md).
 - Cockpit Campaign Activity Return Navigation Productization Slice 3 / Closure complete:
   - Published Cockpit assets and confirmed package-to-host asset drift is clean.
   - Verified focused frontend, backend, and host build checks.
