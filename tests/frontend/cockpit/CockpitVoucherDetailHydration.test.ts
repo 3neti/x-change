@@ -357,6 +357,10 @@ describe('Cockpit Voucher Detail hydration', () => {
         expect(panel.text()).toContain('read-only');
         expect(panel.text()).toContain('delivery disabled');
         expect(panel.text()).toContain('distribution-links-only');
+        expect(wrapper.find('[data-testid="cockpit-voucher-detail-distribution-link-density-summary"]').text()).toContain('Claim URL');
+        expect(wrapper.find('[data-testid="cockpit-voucher-detail-distribution-link-density-summary"]').text()).toContain('Ready');
+        expect(wrapper.find('[data-testid="cockpit-voucher-detail-distribution-link-density-summary"]').text()).toContain('Browser-local');
+        expect(wrapper.find('[data-testid="cockpit-voucher-detail-distribution-link-metadata"]').exists()).toBe(true);
         expect(link.attributes('href')).toBe('https://example.test/x/claim/PC-HYDRATED-001/experience');
     });
 
@@ -371,6 +375,7 @@ describe('Cockpit Voucher Detail hydration', () => {
         const guidance = wrapper.find('[data-testid="cockpit-voucher-detail-manual-distribution-guidance"]');
 
         expect(guidance.exists()).toBe(true);
+        expect(guidance.element.tagName).toBe('DETAILS');
         expect(guidance.text()).toContain('Manual distribution guidance');
         expect(guidance.text()).toContain('manual distribution only');
         expect(guidance.text()).toContain('approved external workflow');

@@ -962,8 +962,37 @@ function integrationSummary(
                     delivery disabled means Cockpit does not send SMS, email, webhook, in-app feedback, campaign dispatch,
                     journal entries, provider calls, or money movement from this panel.
                 </p>
-                <dl class="mt-5 grid gap-3 text-sm md:grid-cols-3">
-                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70 md:col-span-2">
+                <div
+                    class="mt-5 grid gap-3 rounded-lg border border-emerald-200 bg-white/70 p-3 text-sm dark:border-emerald-900/60 dark:bg-slate-950/60 sm:grid-cols-3"
+                    data-testid="cockpit-voucher-detail-distribution-link-density-summary"
+                >
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">
+                            Claim URL
+                        </p>
+                        <p class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                            {{ beneficiaryRedeemUrl ? 'Ready' : 'Path only' }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">
+                            Delivery
+                        </p>
+                        <p class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                            Disabled
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">
+                            Copy
+                        </p>
+                        <p class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                            Browser-local
+                        </p>
+                    </div>
+                </div>
+                <dl class="mt-5 grid gap-3 text-sm">
+                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Full URL
                         </dt>
@@ -981,52 +1010,54 @@ function integrationSummary(
                             </span>
                         </dd>
                     </div>
-                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
-                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Path
-                        </dt>
-                        <dd class="mt-1 break-all font-semibold text-slate-950 dark:text-slate-50">
-                            {{ beneficiaryRedeemPath ?? 'path unavailable' }}
-                        </dd>
-                    </div>
-                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
-                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Source
-                        </dt>
-                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                            {{ distributionLinks?.source ?? 'x-change.claim.experience' }}
-                        </dd>
-                    </div>
-                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
-                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Delivery
-                        </dt>
-                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                            delivery disabled
-                        </dd>
-                    </div>
-                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
-                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Payload policy
-                        </dt>
-                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                            {{ distributionLinksPolicy }}
-                        </dd>
-                    </div>
                 </dl>
+                <details
+                    class="mt-3 rounded-lg border border-emerald-200 bg-white/70 p-3 text-sm text-slate-600 dark:border-emerald-900/60 dark:bg-slate-950/60 dark:text-slate-300"
+                    data-testid="cockpit-voucher-detail-distribution-link-metadata"
+                >
+                    <summary class="cursor-pointer font-semibold text-slate-700 dark:text-slate-200">
+                        Link details
+                    </summary>
+                    <dl class="mt-3 grid gap-3 md:grid-cols-3">
+                        <div>
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                Path
+                            </dt>
+                            <dd class="mt-1 break-all font-semibold text-slate-950 dark:text-slate-50">
+                                {{ beneficiaryRedeemPath ?? 'path unavailable' }}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                Source
+                            </dt>
+                            <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                                {{ distributionLinks?.source ?? 'x-change.claim.experience' }}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                Payload policy
+                            </dt>
+                            <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                                {{ distributionLinksPolicy }}
+                            </dd>
+                        </div>
+                    </dl>
+                </details>
                 <div class="mt-5">
                     <CockpitManualCopyButton
                         :value="beneficiaryRedeemUrl ?? beneficiaryRedeemPath"
                         label="Copy beneficiary URL"
                     />
                 </div>
-                <div
+                <details
                     class="mt-5 rounded-lg border border-emerald-200 bg-white/80 p-4 text-sm leading-6 text-slate-600 dark:border-emerald-900/60 dark:bg-slate-950/70 dark:text-slate-300"
                     data-testid="cockpit-voucher-detail-manual-distribution-guidance"
                 >
-                    <p class="font-semibold text-slate-950 dark:text-slate-50">
+                    <summary class="cursor-pointer font-semibold text-slate-950 dark:text-slate-50">
                         Manual distribution guidance
-                    </p>
+                    </summary>
                     <ul class="mt-3 list-disc space-y-1 pl-5">
                         <li>Use this copied link for manual distribution only.</li>
                         <li>Share it only through an approved external workflow after verifying the recipient.</li>
@@ -1034,7 +1065,7 @@ function integrationSummary(
                         <li>Cockpit does not record copy telemetry, create short links, or generate QR assets here.</li>
                         <li>Treat this beneficiary URL as sensitive settlement access material.</li>
                     </ul>
-                </div>
+                </details>
             </section>
 
             <CockpitVoucherOverviewPanel :items="overviewItems" />
