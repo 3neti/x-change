@@ -2975,3 +2975,14 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/474-voucher-detail-distribution-layout-polish-slice-2-distribution-workspace.md`.
 - Boundary remains unchanged: presentation-only Distribution Workspace layout update; no route behavior, read-model hydration, claim behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle mutation, driver execution, artifact generation, journal write, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next checkpoint: targeted Distribution Workspace frontend verification, then publish host assets and verify no drift.
+
+## 2026-07-18 Update — Voucher Detail / Distribution Layout Polish — Slice 3 — Host Publish / Closure
+
+- Closed the Voucher Detail / Distribution Layout Polish wave.
+- Package-owned Cockpit assets were published into the host app.
+- Published asset drift is clean with `php artisan x-change:doctor --assets`.
+- Focused Voucher Detail and Distribution Workspace frontend verification passed.
+- Host production build passed with the known non-blocking third-party Rolldown annotation warnings.
+- UI/report: `../ui-cockpit/reports/475-voucher-detail-distribution-layout-polish-slice-3-publish-closure.md`.
+- Boundary remains unchanged: host-publish and verification only; no route behavior, read-model hydration, claim behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle mutation, driver execution, artifact generation, journal write, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next recommended checkpoint: manual browser acceptance on `/x/cockpit/pay-codes/{code}` and `/x/cockpit/pay-codes/{code}/distribution`, then continue with the next page-specific Cockpit polish or choose a real integration wiring wave.
