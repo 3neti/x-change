@@ -6,6 +6,11 @@ const props = defineProps<{
     query?: string;
     statusFilter?: string | null;
     filters?: CockpitPayCodeExplorerFilter[];
+    hiddenFields?: Array<{
+        name: string;
+        value: string;
+    }>;
+    clearHref?: string;
 }>();
 
 const statusOptions = computed(() => {
@@ -44,6 +49,14 @@ const activeSummary = computed(() => {
             Search
         </p>
         <form action="/x/cockpit/pay-codes" class="mt-3 grid gap-3 lg:grid-cols-[1fr_220px_auto]" method="get">
+            <input
+                v-for="field in hiddenFields ?? []"
+                :key="field.name"
+                :name="field.name"
+                :value="field.value"
+                type="hidden"
+                data-testid="cockpit-pay-code-search-context-input"
+            />
             <label class="block">
                 <span class="sr-only">Search Pay Codes</span>
                 <input
@@ -87,7 +100,7 @@ const activeSummary = computed(() => {
             </span>
             <a
                 v-if="query || statusFilter"
-                href="/x/cockpit/pay-codes"
+                :href="clearHref ?? '/x/cockpit/pay-codes'"
                 class="font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 hover:text-slate-950 dark:text-slate-200 dark:decoration-slate-600 dark:hover:text-white"
                 data-testid="cockpit-pay-code-clear-filters"
             >

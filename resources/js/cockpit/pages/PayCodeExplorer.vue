@@ -205,6 +205,53 @@ const campaignDashboardHref = computed(() => {
 
     return `/x/cockpit?${params.toString()}`;
 });
+const campaignExplorerContextParams = computed(() => {
+    const context = campaignNavigationContext.value;
+
+    if (!context) {
+        return [];
+    }
+
+    const fields = [
+        {
+            name: 'campaign_planning_key',
+            value: context.planning_key ?? '',
+        },
+        {
+            name: 'campaign_execution_id',
+            value: context.execution_id ?? '',
+        },
+        {
+            name: 'campaign_source',
+            value: context.source ?? 'campaign_cockpit',
+        },
+    ];
+
+    if (context.campaign_id) {
+        fields.push({ name: 'campaign_id', value: context.campaign_id });
+    }
+
+    if (context.audience_id) {
+        fields.push({ name: 'campaign_audience_id', value: context.audience_id });
+    }
+
+    if (context.recipient_id) {
+        fields.push({ name: 'campaign_recipient_id', value: context.recipient_id });
+    }
+
+    return fields.filter((field) => field.value.trim() !== '');
+});
+const campaignExplorerBaseHref = computed(() => {
+    const params = new URLSearchParams();
+
+    for (const field of campaignExplorerContextParams.value) {
+        params.set(field.name, field.value);
+    }
+
+    const queryString = params.toString();
+
+    return queryString === '' ? '/x/cockpit/pay-codes' : `/x/cockpit/pay-codes?${queryString}`;
+});
 const activityNavigationContext = computed<CockpitActivityNavigationContext | null>(() => {
     const context = props.activity_navigation_context;
 
@@ -264,6 +311,17 @@ const filters = computed<CockpitPayCodeExplorerFilter[]>(() => {
             value: status.value,
             helper: 'This status describes list-readiness only; it is not voucher lifecycle truth.',
         },
+        ...campaignExplorerContextParams.value.map((field) => ({
+            key: field.name,
+            label: field.name
+                .replace(/^campaign_/, 'Campaign ')
+                .replaceAll('_', ' ')
+                .replace(/\b\w/g, (letter) => letter.toUpperCase()),
+            value: field.value,
+            active: true,
+            read_only: true,
+            helper: 'Campaign context is preserved as read-only Explorer orientation metadata.',
+        })),
         ...readModelFilters.map((filter) => ({
             key: filter.key,
             label: filter.label,
@@ -510,7 +568,7 @@ function integrationBadge(
                             Quick Generate
                         </a>
                         <a
-                            href="/x/cockpit/pay-codes"
+                            :href="campaignExplorerBaseHref"
                             class="inline-flex items-center rounded-full border border-emerald-300 px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-700 dark:text-emerald-200 dark:hover:bg-emerald-900/50"
                             data-testid="cockpit-pay-code-explorer-primary-clear-link"
                         >
@@ -751,7 +809,9 @@ function integrationBadge(
             </div>
 
             <CockpitPayCodeSearchBar
+                :clear-href="campaignExplorerBaseHref"
                 :filters="readModel?.filters ?? []"
+                :hidden-fields="campaignExplorerContextParams"
                 :query="query"
                 :status-filter="statusFilter"
             />

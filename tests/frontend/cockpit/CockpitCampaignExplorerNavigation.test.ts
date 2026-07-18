@@ -83,6 +83,39 @@ describe('Cockpit campaign explorer navigation boundary', () => {
         expect(link.attributes('href')).toContain('campaign_source=campaign_cockpit');
     });
 
+    it('preserves campaign context through read-only explorer filter forms', () => {
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: {
+                    ...payCodesReadModel,
+                    query: 'PC-CAMPAIGN',
+                    status_filter: 'issued',
+                    filters: [
+                        { key: 'status', label: 'Issued', value: 'issued', active: true, read_only: true },
+                    ],
+                },
+                campaign_navigation_context: campaignNavigationContext,
+            },
+        });
+
+        const hiddenFields = wrapper.findAll('[data-testid="cockpit-pay-code-search-context-input"]');
+        const filterCards = wrapper.findAll('[data-testid="cockpit-pay-code-filter"]');
+
+        expect(hiddenFields.map((field) => [field.attributes('name'), field.attributes('value')])).toEqual([
+            ['campaign_planning_key', 'campaign-plan-1'],
+            ['campaign_execution_id', 'execution-1'],
+            ['campaign_source', 'campaign_cockpit'],
+            ['campaign_id', 'campaign-1'],
+            ['campaign_audience_id', 'audience-1'],
+            ['campaign_recipient_id', 'recipient-1'],
+        ]);
+        expect(wrapper.find('[data-testid="cockpit-pay-code-clear-filters"]').attributes('href')).toContain('campaign_planning_key=campaign-plan-1');
+        expect(wrapper.find('[data-testid="cockpit-pay-code-explorer-primary-clear-link"]').attributes('href')).toContain('campaign_recipient_id=recipient-1');
+        expect(filterCards.some((card) => card.text().includes('Campaign Planning Key'))).toBe(true);
+        expect(filterCards.some((card) => card.text().includes('Campaign Recipient Id'))).toBe(true);
+        expect(wrapper.text()).toContain('Campaign context is preserved as read-only Explorer orientation metadata.');
+    });
+
     it('does not render unsafe campaign navigation payloads or routes', () => {
         const wrapper = mount(PayCodeExplorer, {
             props: {

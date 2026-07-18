@@ -3150,3 +3150,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/497-campaign-explorer-context-productization-slice-3-closure.md`.
 - Boundary remains unchanged: publish and verification only; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next recommended checkpoint: manually inspect `/x/cockpit/pay-codes` from a campaign-aware link, then continue page-specific Cockpit polish or decide the next campaign read-only workspace slice.
+
+## 2026-07-18 Update — Pay Code Explorer Campaign Filter Affordance — Slice 1
+
+- Started the Pay Code Explorer Campaign Filter Affordance wave.
+- Campaign context now stays visible in `/x/cockpit/pay-codes` filter summaries and survives read-only search/status GET navigation.
+- Clear-filter links preserve campaign orientation while clearing only Explorer search/status filters.
+- UI/report: `../ui-cockpit/reports/498-pay-code-explorer-campaign-filter-affordance-slice-1.md`.
+- Boundary remains unchanged: presentation-only Explorer filter affordance update; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next checkpoint: add route-level acceptance that campaign context survives Explorer search/status query combinations.

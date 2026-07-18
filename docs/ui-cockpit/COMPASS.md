@@ -3285,3 +3285,12 @@ Current boundary:
 - Focused frontend Explorer verification, backend route/integration verification, and host production build passed.
 - Report: `reports/497-campaign-explorer-context-productization-slice-3-closure.md`.
 - Boundary remains unchanged: publish and verification only; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-18 — Pay Code Explorer Campaign Filter Affordance — Slice 1
+
+- Started the Pay Code Explorer Campaign Filter Affordance wave.
+- Campaign context now appears in the Explorer filter summary as read-only orientation metadata.
+- Search/status GET filter submissions preserve campaign planning key, execution ID, campaign ID, audience ID, recipient ID, and source.
+- Clear-filter links clear only search/status filters while preserving campaign context.
+- Report: `reports/498-pay-code-explorer-campaign-filter-affordance-slice-1.md`.
+- Boundary remains unchanged: presentation-only Explorer filter affordance update; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
