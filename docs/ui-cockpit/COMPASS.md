@@ -4,12 +4,18 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Campaign Row Navigation Continuity
-Status: Closed; campaign context survives Explorer row drilldown into Detail and Distribution
+Current slice: Campaign Drilldown Context Copy Polish
+Status: Slice 1 in progress; Voucher Detail renders friendly campaign context labels
 Last updated: 2026-07-18
 
 ## Completed
 
+- Completed Campaign Drilldown Context Copy Polish Slice 1:
+  - Voucher Detail now renders friendly operator labels for campaign context source, destination, safety, and payload visibility.
+  - Raw campaign context tokens remain internal to links and contracts.
+  - Confirmed no routes, controllers, campaign mutation, campaign dispatch, Pay Code generation through campaign, feedback sends, journal writes, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, persistence, or money movement were added.
+  - Report: `reports/504-campaign-drilldown-context-copy-polish-slice-1.md`.
+  - Next recommended checkpoint: Campaign Drilldown Context Copy Polish Slice 2 — Distribution Workspace context labels.
 - Completed Campaign Row Navigation Continuity Slice 3 / Closure:
   - Published Cockpit assets to the host app.
   - Confirmed published assets match package source.

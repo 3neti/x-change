@@ -32,8 +32,8 @@ This Compass is the program-level memory. Future workstream compasses should be 
 
 ## Current Position
 
-Current wave: Cockpit Campaign Row Navigation Continuity
-Current status: Closed; campaign context survives Explorer row drilldown into Detail and Distribution
+Current wave: Cockpit Campaign Drilldown Context Copy Polish
+Current status: Slice 1 in progress; Voucher Detail renders friendly campaign context labels
 Last updated: 2026-07-18
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-18
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Campaign row navigation continuity closed | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Campaign drilldown context copy polish Slice 1 in progress | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,11 @@ Last updated: 2026-07-18
 
 ### Current Cockpit Host Integration
 
+- Cockpit Campaign Drilldown Context Copy Polish Slice 1 complete:
+  - Voucher Detail now renders friendly operator labels for campaign context source, destination, safety, and payload visibility.
+  - Raw campaign context tokens remain internal to links and contracts.
+  - Confirmed no routes, controllers, campaign mutation, campaign dispatch, Pay Code generation through campaign, feedback sends, journal writes, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, persistence, or money movement were added.
+  - Report: [../ui-cockpit/reports/504-campaign-drilldown-context-copy-polish-slice-1.md](../ui-cockpit/reports/504-campaign-drilldown-context-copy-polish-slice-1.md).
 - Cockpit Campaign Row Navigation Continuity Slice 3 / Closure complete:
   - Published package Cockpit assets to the host app and confirmed asset drift is clean.
   - Verified focused backend route, frontend continuity, and host build checks.
