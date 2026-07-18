@@ -3294,3 +3294,10 @@ Current boundary:
 - Clear-filter links clear only search/status filters while preserving campaign context.
 - Report: `reports/498-pay-code-explorer-campaign-filter-affordance-slice-1.md`.
 - Boundary remains unchanged: presentation-only Explorer filter affordance update; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-18 — Pay Code Explorer Campaign Filter Affordance — Slice 2 — Route Acceptance
+
+- Added backend acceptance proving campaign context and Explorer search/status filters can coexist.
+- Verified the sanitized list read model receives search/status filters while campaign context remains read-only and payload-safe.
+- Report: `reports/499-pay-code-explorer-campaign-filter-affordance-slice-2-route-acceptance.md`.
+- Boundary remains unchanged: route acceptance only; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.

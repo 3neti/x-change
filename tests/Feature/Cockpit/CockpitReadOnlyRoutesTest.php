@@ -325,6 +325,49 @@ it('passes read-only pay code explorer search and status query filters into the 
         ->assertJsonMissingPath('props.pay_codes_read_model.mutation_route');
 });
 
+it('keeps campaign context while applying pay code explorer search and status query filters', function () {
+    actingAsTestUser();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.pay-codes.index', [
+            'search' => ' pc-campaign ',
+            'status' => ' active ',
+            'campaign_planning_key' => ' plan-filter-1 ',
+            'campaign_execution_id' => ' exec-filter-1 ',
+            'campaign_id' => ' campaign-filter-1 ',
+            'campaign_audience_id' => ' audience-filter-1 ',
+            'campaign_recipient_id' => ' recipient-filter-1 ',
+            'campaign_source' => ' x_campaign_adapter ',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/cockpit/PayCodeExplorer')
+        ->assertJsonPath('props.pay_codes_read_model.query', 'PC-CAMPAIGN')
+        ->assertJsonPath('props.pay_codes_read_model.status_filter', 'active')
+        ->assertJsonPath('props.pay_codes_read_model.filters.0.key', 'search')
+        ->assertJsonPath('props.pay_codes_read_model.filters.0.value', 'PC-CAMPAIGN')
+        ->assertJsonPath('props.pay_codes_read_model.filters.0.active', true)
+        ->assertJsonPath('props.pay_codes_read_model.filters.0.read_only', true)
+        ->assertJsonPath('props.pay_codes_read_model.filters.3.key', 'status')
+        ->assertJsonPath('props.pay_codes_read_model.filters.3.value', 'active')
+        ->assertJsonPath('props.pay_codes_read_model.filters.3.active', true)
+        ->assertJsonPath('props.pay_codes_read_model.filters.3.read_only', true)
+        ->assertJsonPath('props.campaign_navigation_context.planning_key', 'plan-filter-1')
+        ->assertJsonPath('props.campaign_navigation_context.execution_id', 'exec-filter-1')
+        ->assertJsonPath('props.campaign_navigation_context.campaign_id', 'campaign-filter-1')
+        ->assertJsonPath('props.campaign_navigation_context.audience_id', 'audience-filter-1')
+        ->assertJsonPath('props.campaign_navigation_context.recipient_id', 'recipient-filter-1')
+        ->assertJsonPath('props.campaign_navigation_context.source', 'x_campaign_adapter')
+        ->assertJsonPath('props.campaign_navigation_context.destination', 'pay_code_explorer')
+        ->assertJsonPath('props.campaign_navigation_context.read_only', true)
+        ->assertJsonPath('props.campaign_navigation_context.mutation.enabled', false)
+        ->assertJsonPath('props.campaign_navigation_context.redactions.payloads', 'navigation-context-only')
+        ->assertJsonMissingPath('props.campaign_navigation_context.raw_payload')
+        ->assertJsonMissingPath('props.campaign_navigation_context.provider_payload')
+        ->assertJsonMissingPath('props.campaign_navigation_context.wallet')
+        ->assertJsonMissingPath('props.campaign_navigation_context.mutation_route')
+        ->assertJsonMissingPath('props.campaign_navigation_context.pay_code_generation_payload');
+});
+
 it('hydrates the dashboard with a sanitized dashboard read model prop', function () {
     actingAsTestUser();
 

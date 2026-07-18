@@ -3159,3 +3159,11 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/498-pay-code-explorer-campaign-filter-affordance-slice-1.md`.
 - Boundary remains unchanged: presentation-only Explorer filter affordance update; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next checkpoint: add route-level acceptance that campaign context survives Explorer search/status query combinations.
+
+## 2026-07-18 Update — Pay Code Explorer Campaign Filter Affordance — Slice 2 — Route Acceptance
+
+- Added route-level acceptance that campaign navigation context remains intact while `/x/cockpit/pay-codes` applies read-only search/status filters.
+- Verified mutation, provider, wallet, raw payload, and Pay Code generation payload surfaces remain absent.
+- UI/report: `../ui-cockpit/reports/499-pay-code-explorer-campaign-filter-affordance-slice-2-route-acceptance.md`.
+- Boundary remains unchanged: route acceptance only; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next checkpoint: publish package assets, verify no drift, run focused Explorer tests, and close the wave.
