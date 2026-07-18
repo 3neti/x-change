@@ -232,6 +232,28 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(wrapper.text()).not.toContain('provider_payload');
     });
 
+    it('summarizes pay code result density before the rows', () => {
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: payCodesReadModel,
+            },
+        });
+
+        const density = wrapper.find('[data-testid="cockpit-pay-code-results-density-summary"]');
+        const scanGuide = wrapper.find('[data-testid="cockpit-pay-code-results-scan-guide"]');
+
+        expect(density.exists()).toBe(true);
+        expect(density.text()).toContain('Rows');
+        expect(density.text()).toContain('2');
+        expect(density.text()).toContain('Links');
+        expect(density.text()).toContain('2');
+        expect(density.text()).toContain('Disabled');
+        expect(density.text()).toContain('4');
+        expect(scanGuide.exists()).toBe(true);
+        expect(scanGuide.element.tagName.toLowerCase()).toBe('details');
+        expect(scanGuide.text()).toContain('How to scan these rows');
+    });
+
     it('summarizes row action safety before the result rows', () => {
         const wrapper = mount(PayCodeExplorer, {
             props: {

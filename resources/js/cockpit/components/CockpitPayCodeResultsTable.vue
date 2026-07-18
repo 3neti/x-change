@@ -5,7 +5,7 @@ import type {
     CockpitPayCodeRowAction,
 } from '../types';
 
-defineProps<{
+const props = defineProps<{
     records: CockpitPayCodeExplorerRecord[];
     actions: CockpitPayCodeRowAction[];
 }>();
@@ -35,6 +35,22 @@ function rowActions(record: CockpitPayCodeExplorerRecord, fallbackActions: Cockp
 function isEnabledAction(action: CockpitPayCodeRowAction): boolean {
     return action.enabled === true && typeof action.href === 'string' && action.href.trim() !== '';
 }
+
+function enabledActionCount(record: CockpitPayCodeExplorerRecord): number {
+    return rowActions(record, props.actions).filter((action) => isEnabledAction(action)).length;
+}
+
+function disabledActionCount(record: CockpitPayCodeExplorerRecord): number {
+    return rowActions(record, props.actions).filter((action) => !isEnabledAction(action)).length;
+}
+
+function totalEnabledActionCount(): number {
+    return props.records.reduce((count, record) => count + enabledActionCount(record), 0);
+}
+
+function totalDisabledActionCount(): number {
+    return props.records.reduce((count, record) => count + disabledActionCount(record), 0);
+}
 </script>
 
 <template>
@@ -43,7 +59,7 @@ function isEnabledAction(action: CockpitPayCodeRowAction): boolean {
         data-testid="cockpit-pay-code-results-table"
     >
         <div class="border-b border-slate-200 p-5 dark:border-slate-800">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
                         Results
@@ -51,37 +67,63 @@ function isEnabledAction(action: CockpitPayCodeRowAction): boolean {
                     <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
                         Pay Code results
                     </h3>
-                    <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                        Scan sanitized Pay Code rows and open the appropriate workspace. Row actions
-                        are navigation-only and do not send feedback, approve claims, execute drivers,
-                        call providers, or move money.
-                    </p>
                 </div>
-                <span class="w-fit rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:border-slate-700 dark:text-slate-300">
-                    Navigation-only
-                </span>
+                <dl
+                    class="grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-2 text-center dark:bg-slate-950"
+                    data-testid="cockpit-pay-code-results-density-summary"
+                >
+                    <div class="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Rows
+                        </dt>
+                        <dd class="mt-1 text-sm font-semibold text-slate-950 dark:text-slate-50">
+                            {{ records.length }}
+                        </dd>
+                    </div>
+                    <div class="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Links
+                        </dt>
+                        <dd class="mt-1 text-sm font-semibold text-slate-950 dark:text-slate-50">
+                            {{ totalEnabledActionCount() }}
+                        </dd>
+                    </div>
+                    <div class="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Disabled
+                        </dt>
+                        <dd class="mt-1 text-sm font-semibold text-slate-950 dark:text-slate-50">
+                            {{ totalDisabledActionCount() }}
+                        </dd>
+                    </div>
+                </dl>
             </div>
 
-            <div
-                class="mt-4 grid gap-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-950 sm:grid-cols-3"
+            <details
+                class="mt-4 rounded-xl bg-slate-50 p-3 dark:bg-slate-950"
                 data-testid="cockpit-pay-code-results-scan-guide"
             >
-                <article
-                    v-for="field in scanFields"
-                    :key="field.label"
-                    class="rounded-lg bg-white p-3 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800"
-                >
-                    <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                        {{ field.label }}
-                    </p>
-                    <p class="mt-1 text-sm font-semibold text-slate-950 dark:text-slate-50">
-                        {{ field.value }}
-                    </p>
-                    <p class="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">
-                        {{ field.helper }}
-                    </p>
-                </article>
-            </div>
+                <summary class="cursor-pointer text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                    How to scan these rows
+                </summary>
+                <div class="mt-3 grid gap-3 sm:grid-cols-3">
+                    <article
+                        v-for="field in scanFields"
+                        :key="field.label"
+                        class="rounded-lg bg-white p-3 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800"
+                    >
+                        <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                            {{ field.label }}
+                        </p>
+                        <p class="mt-1 text-sm font-semibold text-slate-950 dark:text-slate-50">
+                            {{ field.value }}
+                        </p>
+                        <p class="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">
+                            {{ field.helper }}
+                        </p>
+                    </article>
+                </div>
+            </details>
         </div>
 
         <div class="overflow-x-auto">

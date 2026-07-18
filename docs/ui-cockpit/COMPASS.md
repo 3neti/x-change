@@ -4,12 +4,19 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Campaign Drilldown Context Copy Polish
-Status: Closed; campaign drilldown context renders friendly labels on Detail and Distribution
-Last updated: 2026-07-18
+Current slice: Pay Code Explorer Result Density Polish
+Status: Slice 1 in progress; results table has compact density summary
+Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Pay Code Explorer Result Density Polish Slice 1:
+  - Added compact row/link/disabled-action counts above Pay Code Explorer results.
+  - Moved the scan guide into a collapsed disclosure to reduce visual noise.
+  - Preserved existing read-only row links, disabled row actions, filters, campaign context, sanitized data policy, and route behavior.
+  - Confirmed no routes, controllers, campaign mutation, campaign dispatch, Pay Code generation through campaign, feedback sends, journal writes, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, persistence, or money movement were added.
+  - Report: `reports/507-pay-code-explorer-result-density-polish-slice-1.md`.
+  - Next recommended checkpoint: Pay Code Explorer Result Density Polish Slice 2 — row action visual grouping.
 - Completed Campaign Drilldown Context Copy Polish Slice 3 / Closure:
   - Published Cockpit assets to the host app.
   - Confirmed package-to-host asset drift is clean.
