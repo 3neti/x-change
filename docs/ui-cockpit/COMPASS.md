@@ -5,11 +5,18 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Voucher Detail Evidence Density Cleanup
-Status: Slice 1 in progress; Evidence panel has density summary and metadata disclosures
+Status: Slice 2 in progress; Audit panel has density summary and action disclosure
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Voucher Detail Evidence Density Cleanup Slice 2:
+  - Added an audit density summary with audit fact count and disabled action count.
+  - Moved disabled operator action details behind a disclosure.
+  - Preserved disabled action buttons, reasons, and read-only behavior.
+  - Confirmed no routes, controllers, voucher mutation, claim execution, driver execution, journal writes, action execution, feedback sends, provider calls, campaign mutation, wallet behavior, Treasury behavior, public API changes, persistence, or money movement were added.
+  - Report: `reports/511-voucher-detail-evidence-density-cleanup-slice-2.md`.
+  - Next recommended checkpoint: Voucher Detail Evidence Density Cleanup Slice 3 — host publish / verification / closure.
 - Completed Voucher Detail Evidence Density Cleanup Slice 1:
   - Added an evidence density summary with total evidence fact count and status counts.
   - Moved per-evidence source/read-only metadata into compact disclosures.

@@ -4,10 +4,14 @@ import type {
     CockpitVoucherDetailAction,
 } from '../types';
 
-defineProps<{
+const props = defineProps<{
     audits: CockpitVoucherAuditItem[];
     actions: CockpitVoucherDetailAction[];
 }>();
+
+function disabledActionCount(): number {
+    return props.actions.filter((action) => action.disabled !== false).length;
+}
 </script>
 
 <template>
@@ -21,6 +25,27 @@ defineProps<{
         <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
             Audit and follow-up status
         </h3>
+        <dl
+            class="mt-4 grid gap-2 rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-950 sm:grid-cols-2"
+            data-testid="cockpit-voucher-audit-density-summary"
+        >
+            <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Audit Facts
+                </dt>
+                <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                    {{ audits.length }}
+                </dd>
+            </div>
+            <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Disabled Actions
+                </dt>
+                <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                    {{ disabledActionCount() }}
+                </dd>
+            </div>
+        </dl>
 
         <div class="mt-5 grid gap-3">
             <article
@@ -43,10 +68,13 @@ defineProps<{
             </article>
         </div>
 
-        <div class="mt-6 rounded-lg border border-dashed border-slate-300 p-4 dark:border-slate-700">
-            <p class="text-sm font-semibold text-slate-950 dark:text-slate-50">
+        <details
+            class="mt-6 rounded-lg border border-dashed border-slate-300 p-4 dark:border-slate-700"
+            data-testid="cockpit-voucher-disabled-actions-disclosure"
+        >
+            <summary class="cursor-pointer text-sm font-semibold text-slate-950 dark:text-slate-50">
                 Operator actions are read-only from this page.
-            </p>
+            </summary>
             <div class="mt-3 grid gap-2">
                 <div
                     v-for="action in actions"
@@ -67,6 +95,6 @@ defineProps<{
                     </p>
                 </div>
             </div>
-        </div>
+        </details>
     </section>
 </template>

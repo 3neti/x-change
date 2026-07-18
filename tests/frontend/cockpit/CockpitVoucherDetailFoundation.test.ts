@@ -87,6 +87,11 @@ describe('Cockpit Voucher Detail foundation', () => {
         expect(wrapper.text()).toContain('Journal read model');
         expect(wrapper.text()).toContain('Action handoff');
         expect(wrapper.text()).toContain('Provider callbacks');
+        expect(wrapper.find('[data-testid="cockpit-voucher-audit-density-summary"]').text()).toContain('Audit Facts');
+        expect(wrapper.find('[data-testid="cockpit-voucher-audit-density-summary"]').text()).toContain('3');
+        expect(wrapper.find('[data-testid="cockpit-voucher-audit-density-summary"]').text()).toContain('Disabled Actions');
+        expect(wrapper.find('[data-testid="cockpit-voucher-audit-density-summary"]').text()).toContain('4');
+        expect(wrapper.find('[data-testid="cockpit-voucher-disabled-actions-disclosure"]').exists()).toBe(true);
         expect(wrapper.findAll('[data-testid="cockpit-voucher-audit-item"]')).toHaveLength(3);
 
         const actions = wrapper.findAll('[data-testid="cockpit-voucher-detail-action"]');
