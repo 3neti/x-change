@@ -4,12 +4,19 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Distribution Workspace Delivery Density Cleanup
-Status: Closed; Distribution Workspace delivery panels are more scan-friendly
+Current slice: Dashboard Lower-Panel Simplification
+Status: Slice 1 in progress; Funding Status has compact summary and semantic disclosure
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Dashboard Lower-Panel Simplification Slice 1:
+  - Added a compact funding density summary for funding facts, semantic categories, and money-movement status.
+  - Moved the funding semantics explainer cards behind a disclosure.
+  - Preserved all funding metrics, bridge-estimate language, and read-only money-movement boundaries.
+  - Confirmed no routes, controllers, balance computation changes, wallet behavior, Treasury behavior, voucher mutation, claim execution, driver execution, journal writes, action execution, feedback sends, provider calls, campaign mutation, public API changes, persistence, or money movement were added.
+  - Report: `reports/516-dashboard-lower-panel-simplification-slice-1.md`.
+  - Next recommended checkpoint: Dashboard Lower-Panel Simplification Slice 2 — compact Claim Status and Review Queue panels.
 - Completed Distribution Workspace Delivery Density Cleanup Slice 3 / Closure:
   - Published package Cockpit assets to the host app.
   - Confirmed published Cockpit assets match package source.

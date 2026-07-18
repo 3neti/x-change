@@ -36,6 +36,9 @@ describe('Cockpit dashboard foundation widgets', () => {
         expect(wrapper.text()).toContain('Bridge estimate; Internal Balance minus Outstanding Pay Codes');
         expect(wrapper.text()).not.toContain('Balance summary not connected');
         expect(wrapper.text()).not.toContain('Read model pending');
+        expect(wrapper.find('[data-testid="cockpit-funding-density-summary"]').text()).toContain('Funding Facts');
+        expect(wrapper.find('[data-testid="cockpit-funding-density-summary"]').text()).toContain('Money Movement');
+        expect(wrapper.find('[data-testid="cockpit-funding-density-summary"]').text()).toContain('Disabled');
         expect(wrapper.find('[data-testid="cockpit-funding-semantics"]').exists()).toBe(true);
         expect(wrapper.findAll('[data-testid="cockpit-dashboard-metric-card"]')).toHaveLength(4);
     });

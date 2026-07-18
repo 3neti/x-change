@@ -2,7 +2,7 @@
 import CockpitDashboardMetricCard from './CockpitDashboardMetricCard.vue';
 import type { CockpitDashboardMetric } from '../types';
 
-defineProps<{
+const props = defineProps<{
     metrics: CockpitDashboardMetric[];
 }>();
 
@@ -28,6 +28,10 @@ const fundingSemantics = [
         helper: 'Provider summary only when explicitly connected.',
     },
 ];
+
+function metricCount(): number {
+    return props.metrics.length;
+}
 </script>
 
 <template>
@@ -61,25 +65,62 @@ const fundingSemantics = [
         </div>
 
         <div
-            class="mt-5 grid gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/60 sm:grid-cols-2 xl:grid-cols-4"
-            data-testid="cockpit-funding-semantics"
+            class="mt-5 grid gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/60 sm:grid-cols-3"
+            data-testid="cockpit-funding-density-summary"
         >
-            <article
-                v-for="semantic in fundingSemantics"
-                :key="semantic.label"
-                class="rounded-xl bg-white p-3 shadow-sm ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800"
-            >
+            <div>
                 <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                    {{ semantic.label }}
+                    Funding Facts
                 </p>
                 <p class="mt-1 text-sm font-semibold text-slate-950 dark:text-slate-50">
-                    {{ semantic.value }}
+                    {{ metricCount() }}
                 </p>
-                <p class="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">
-                    {{ semantic.helper }}
+            </div>
+            <div>
+                <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                    Semantics
                 </p>
-            </article>
+                <p class="mt-1 text-sm font-semibold text-slate-950 dark:text-slate-50">
+                    {{ fundingSemantics.length }}
+                </p>
+            </div>
+            <div>
+                <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                    Money Movement
+                </p>
+                <p class="mt-1 text-sm font-semibold text-slate-950 dark:text-slate-50">
+                    Disabled
+                </p>
+            </div>
         </div>
+
+        <details
+            class="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/60"
+            data-testid="cockpit-funding-semantics"
+        >
+            <summary class="cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-200">
+                Funding semantics details
+            </summary>
+            <div
+                class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+            >
+                <article
+                    v-for="semantic in fundingSemantics"
+                    :key="semantic.label"
+                    class="rounded-xl bg-white p-3 shadow-sm ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800"
+                >
+                    <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                        {{ semantic.label }}
+                    </p>
+                    <p class="mt-1 text-sm font-semibold text-slate-950 dark:text-slate-50">
+                        {{ semantic.value }}
+                    </p>
+                    <p class="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">
+                        {{ semantic.helper }}
+                    </p>
+                </article>
+            </div>
+        </details>
 
         <div class="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <CockpitDashboardMetricCard
