@@ -5,11 +5,21 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Dashboard Lower-Panel Simplification
-Status: Slice 3 in progress; Campaigns panel has compact summary across selected and no-campaign states
+Status: Closed; dashboard lower panels are more scan-friendly inside System posture
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Dashboard Lower-Panel Simplification Slice 4 / Closure:
+  - Published package Cockpit assets to the host app.
+  - Confirmed published Cockpit assets match package source.
+  - Verified focused backend Cockpit read-only route coverage.
+  - Verified focused frontend Dashboard foundation and hydration coverage.
+  - Verified the host production build.
+  - Confirmed Funding Status, Claim Status, Review Queue, and Campaigns panels now expose compact summaries first while preserving read-only details.
+  - Confirmed no routes, controllers, balance computation changes, lifecycle mutation, review workflow actions, campaign mutation, campaign dispatch, voucher mutation, claim execution, driver execution, journal writes, action execution, feedback sends, provider calls, wallet behavior, Treasury behavior, public API changes, persistence, or money movement were added.
+  - Report: `reports/519-dashboard-lower-panel-simplification-slice-4-closure.md`.
+  - Next recommended wave: Voucher Detail distribution-tab density cleanup or a specific connected-service read model integration.
 - Completed Dashboard Lower-Panel Simplification Slice 3:
   - Added a compact Campaigns summary for surfaces, panels, actions, and selected-campaign status.
   - Preserved the existing campaign details disclosure for surfaces, panels, actions, and mutation boundary details.

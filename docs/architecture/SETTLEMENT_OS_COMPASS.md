@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Cockpit Dashboard Lower-Panel Simplification
-Current status: Slice 3 in progress; Campaigns panel has compact summary across selected and no-campaign states
+Current status: Closed; dashboard lower panels are more scan-friendly inside System posture
 Last updated: 2026-07-19
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-19
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Dashboard lower-panel simplification Slice 3 in progress | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Dashboard lower-panel simplification closed | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,14 @@ Last updated: 2026-07-19
 
 ### Current Cockpit Host Integration
 
+- Cockpit Dashboard Lower-Panel Simplification Slice 4 / Closure complete:
+  - Published package Cockpit assets to the host app and confirmed package-to-host asset drift is clean.
+  - Verified focused backend Cockpit read-only route coverage.
+  - Verified focused frontend Dashboard foundation and hydration coverage.
+  - Verified the host production build.
+  - Confirmed Funding Status, Claim Status, Review Queue, and Campaigns panels now expose compact summaries first while preserving read-only details.
+  - Confirmed no routes, controllers, balance computation changes, lifecycle mutation, review workflow actions, campaign mutation, campaign dispatch, voucher mutation, claim execution, driver execution, journal writes, action execution, feedback sends, provider calls, wallet behavior, Treasury behavior, public API changes, persistence, or money movement were added.
+  - Report: [../ui-cockpit/reports/519-dashboard-lower-panel-simplification-slice-4-closure.md](../ui-cockpit/reports/519-dashboard-lower-panel-simplification-slice-4-closure.md).
 - Cockpit Dashboard Lower-Panel Simplification Slice 3 complete:
   - Added a compact Campaigns summary for surfaces, panels, actions, and selected-campaign status.
   - Preserved the existing campaign details disclosure for surfaces, panels, actions, and mutation boundary details.
