@@ -4,10 +4,18 @@ import type {
     CockpitDistributionChannel,
 } from '../types';
 
-defineProps<{
+const props = defineProps<{
     channels: CockpitDistributionChannel[];
     actions: CockpitDistributionAction[];
 }>();
+
+function enabledActionCount(): number {
+    return props.actions.filter((action) => !action.disabled).length;
+}
+
+function disabledActionCount(): number {
+    return props.actions.filter((action) => action.disabled).length;
+}
 </script>
 
 <template>
@@ -21,6 +29,36 @@ defineProps<{
         <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
             Delivery channel status
         </h3>
+
+        <div
+            class="mt-5 grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-800 dark:bg-slate-950/40 sm:grid-cols-3"
+            data-testid="cockpit-distribution-density-summary"
+        >
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Channels
+                </p>
+                <p class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                    {{ channels.length }}
+                </p>
+            </div>
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Available Actions
+                </p>
+                <p class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                    {{ enabledActionCount() }}
+                </p>
+            </div>
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Blocked Actions
+                </p>
+                <p class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                    {{ disabledActionCount() }}
+                </p>
+            </div>
+        </div>
 
         <div class="mt-5 grid gap-3">
             <article
@@ -58,9 +96,17 @@ defineProps<{
                 >
                     {{ action.label }}
                 </button>
-                <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                    {{ action.reason }}
-                </p>
+                <details
+                    class="mt-2 text-xs text-slate-500 dark:text-slate-400"
+                    data-testid="cockpit-distribution-action-disclosure"
+                >
+                    <summary class="cursor-pointer font-medium text-slate-600 dark:text-slate-300">
+                        Action status details
+                    </summary>
+                    <p class="mt-2 leading-5">
+                        {{ action.reason }}
+                    </p>
+                </details>
             </div>
         </div>
     </section>

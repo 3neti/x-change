@@ -33,10 +33,14 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).toContain('In-app notification handoff');
         expect(wrapper.text()).toContain('Manual branch release');
         expect(wrapper.findAll('[data-testid="cockpit-distribution-channel"]')).toHaveLength(4);
+        expect(wrapper.find('[data-testid="cockpit-distribution-density-summary"]').text()).toContain('Channels');
+        expect(wrapper.find('[data-testid="cockpit-distribution-density-summary"]').text()).toContain('Blocked Actions');
+        expect(wrapper.find('[data-testid="cockpit-distribution-density-summary"]').text()).toContain('4');
 
         const actions = wrapper.findAll('[data-testid="cockpit-distribution-action"]');
 
         expect(actions).toHaveLength(4);
+        expect(wrapper.findAll('[data-testid="cockpit-distribution-action-disclosure"]')).toHaveLength(4);
 
         for (const action of actions) {
             expect(action.attributes('disabled')).toBeDefined();
