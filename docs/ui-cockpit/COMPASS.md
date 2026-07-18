@@ -3086,3 +3086,11 @@ Current boundary:
 - Report: `reports/472-dashboard-lower-panel-cleanup-slice-2-publish-closure.md`.
 - Closed the Dashboard Lower-Panel Cleanup wave.
 - Boundary remains unchanged: host-publish and verification only; no route behavior, read-model behavior, wallet behavior, Treasury behavior, voucher lifecycle mutation, claim approval, driver execution, journal write, x-action execution, x-feedback delivery, provider call, campaign mutation, public API behavior, or money movement changed.
+
+# 2026-07-18 — Voucher Detail / Distribution Layout Polish — Slice 1 — Voucher Detail
+
+- Started the Voucher Detail / Distribution Layout Polish wave.
+- Updated `/x/cockpit/pay-codes/{code}` so the top summary presents `Operator next step` and lifecycle guidance side by side on wide screens.
+- Kept evidence readiness as a separate scan row below the operator action/lifecycle pair.
+- Report: `reports/473-voucher-detail-distribution-layout-polish-slice-1-voucher-detail.md`.
+- Boundary remains unchanged: presentation-only Voucher Detail layout update; no route behavior, read-model hydration, claim behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle mutation, driver execution, artifact generation, journal write, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.

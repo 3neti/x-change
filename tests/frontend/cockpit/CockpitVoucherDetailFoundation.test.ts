@@ -103,6 +103,11 @@ describe('Cockpit Voucher Detail foundation', () => {
         expect(wrapper.text()).toContain('Pay Code Detail');
         expect(wrapper.text()).toContain('Pay Code inspection');
         expect(wrapper.text()).toContain('Inspect sanitized Pay Code facts');
+        expect(wrapper.text()).toContain('Operator next step');
+        expect(wrapper.text()).toContain('Lifecycle guidance');
+        expect(wrapper.find('[data-testid="cockpit-voucher-detail-primary-summary"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="cockpit-voucher-detail-primary-distribution-link"]').text()).toContain('Open distribution workspace');
+        expect(wrapper.find('[data-testid="cockpit-voucher-detail-primary-explorer-link"]').text()).toContain('Back to Pay Codes');
         expect(wrapper.text()).toContain('Overview');
         expect(wrapper.text()).toContain('Timeline');
         expect(wrapper.text()).toContain('Evidence');

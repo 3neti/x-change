@@ -696,52 +696,86 @@ function integrationSummary(
                     </div>
                 </dl>
 
-                <div class="mt-5 rounded-xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/60 dark:bg-slate-950/70">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
-                        Primary next step
-                    </p>
-                    <p class="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50">
-                        {{ primaryNextStep.label }}
-                    </p>
-                    <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                        {{ primaryNextStep.description }}
-                    </p>
-                    <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                        Availability: {{ availabilityDisplay }} · Payload policy: {{ redactions.payloads ?? 'not-loaded' }}
-                    </p>
-                    <div class="mt-4 flex flex-wrap gap-3">
-                        <a
-                            v-if="beneficiaryRedeemUrl"
-                            :href="beneficiaryRedeemUrl"
-                            class="inline-flex items-center rounded-full bg-emerald-700 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-800"
-                            data-testid="cockpit-voucher-detail-primary-claim-url-link"
-                        >
-                            Open claim URL
-                        </a>
-                        <CockpitManualCopyButton
-                            v-if="distributionLinksAvailable"
-                            :value="beneficiaryRedeemUrl ?? beneficiaryRedeemPath"
-                            label="Copy claim URL"
-                        />
-                        <a
-                            :href="distributionWorkspaceHref"
-                            class="inline-flex items-center rounded-full border border-emerald-300 px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-700 dark:text-emerald-200 dark:hover:bg-emerald-900/50"
-                            data-testid="cockpit-voucher-detail-primary-distribution-link"
-                        >
-                            Open distribution workspace
-                        </a>
-                        <a
-                            :href="explorerHref"
-                            class="inline-flex items-center rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                            data-testid="cockpit-voucher-detail-primary-explorer-link"
-                        >
-                            Back to Pay Codes
-                        </a>
+                <div class="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
+                    <div class="rounded-xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/60 dark:bg-slate-950/70">
+                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                            Operator next step
+                        </p>
+                        <p class="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50">
+                            {{ primaryNextStep.label }}
+                        </p>
+                        <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                            {{ primaryNextStep.description }}
+                        </p>
+                        <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                            Availability: {{ availabilityDisplay }} · Payload policy: {{ redactions.payloads ?? 'not-loaded' }}
+                        </p>
+                        <div class="mt-4 flex flex-wrap gap-3">
+                            <a
+                                v-if="beneficiaryRedeemUrl"
+                                :href="beneficiaryRedeemUrl"
+                                class="inline-flex items-center rounded-full bg-emerald-700 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-800"
+                                data-testid="cockpit-voucher-detail-primary-claim-url-link"
+                            >
+                                Open claim URL
+                            </a>
+                            <CockpitManualCopyButton
+                                v-if="distributionLinksAvailable"
+                                :value="beneficiaryRedeemUrl ?? beneficiaryRedeemPath"
+                                label="Copy claim URL"
+                            />
+                            <a
+                                :href="distributionWorkspaceHref"
+                                class="inline-flex items-center rounded-full border border-emerald-300 px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-700 dark:text-emerald-200 dark:hover:bg-emerald-900/50"
+                                data-testid="cockpit-voucher-detail-primary-distribution-link"
+                            >
+                                Open distribution workspace
+                            </a>
+                            <a
+                                :href="explorerHref"
+                                class="inline-flex items-center rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                                data-testid="cockpit-voucher-detail-primary-explorer-link"
+                            >
+                                Back to Pay Codes
+                            </a>
+                        </div>
+                    </div>
+
+                    <div
+                        class="rounded-xl border p-4"
+                        :class="
+                            lifecycleGuidance.tone === 'warning'
+                                ? 'border-amber-200 bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/30'
+                                : lifecycleGuidance.tone === 'complete'
+                                  ? 'border-sky-200 bg-sky-50 dark:border-sky-900/60 dark:bg-sky-950/30'
+                                  : lifecycleGuidance.tone === 'watch'
+                                    ? 'border-violet-200 bg-violet-50 dark:border-violet-900/60 dark:bg-violet-950/30'
+                                    : 'border-emerald-200 bg-white/80 dark:border-emerald-900/60 dark:bg-slate-950/70'
+                        "
+                        data-testid="cockpit-voucher-detail-lifecycle-guidance"
+                    >
+                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                            Lifecycle guidance
+                        </p>
+                        <div class="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <p class="text-sm font-semibold text-slate-950 dark:text-slate-50">
+                                {{ lifecycleGuidance.label }}
+                            </p>
+                            <span class="w-fit rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-200 dark:ring-slate-800">
+                                {{ lifecycleGuidance.tone }}
+                            </span>
+                        </div>
+                        <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                            {{ lifecycleGuidance.message }}
+                        </p>
+                        <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                            Derived from display status only; Cockpit does not enforce lifecycle policy from this page.
+                        </p>
                     </div>
                 </div>
 
                 <div
-                    class="mt-5 rounded-xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/60 dark:bg-slate-950/70"
+                    class="mt-4 rounded-xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/60 dark:bg-slate-950/70"
                     data-testid="cockpit-voucher-detail-primary-evidence-readiness"
                 >
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -777,38 +811,6 @@ function integrationSummary(
                             </dd>
                         </div>
                     </dl>
-                </div>
-
-                <div
-                    class="mt-5 rounded-xl border p-4"
-                    :class="
-                        lifecycleGuidance.tone === 'warning'
-                            ? 'border-amber-200 bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/30'
-                            : lifecycleGuidance.tone === 'complete'
-                              ? 'border-sky-200 bg-sky-50 dark:border-sky-900/60 dark:bg-sky-950/30'
-                              : lifecycleGuidance.tone === 'watch'
-                                ? 'border-violet-200 bg-violet-50 dark:border-violet-900/60 dark:bg-violet-950/30'
-                                : 'border-emerald-200 bg-white/80 dark:border-emerald-900/60 dark:bg-slate-950/70'
-                    "
-                    data-testid="cockpit-voucher-detail-lifecycle-guidance"
-                >
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                        Lifecycle guidance
-                    </p>
-                    <div class="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <p class="text-sm font-semibold text-slate-950 dark:text-slate-50">
-                            {{ lifecycleGuidance.label }}
-                        </p>
-                        <span class="w-fit rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-200 dark:ring-slate-800">
-                            {{ lifecycleGuidance.tone }}
-                        </span>
-                    </div>
-                    <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                        {{ lifecycleGuidance.message }}
-                    </p>
-                    <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                        This guidance is derived from display status only. Cockpit does not enforce lifecycle policy from this page.
-                    </p>
                 </div>
             </section>
 
