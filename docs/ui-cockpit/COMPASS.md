@@ -5,11 +5,20 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Pay Code Explorer Result Density Polish
-Status: Slice 2 in progress; disabled row actions are grouped behind disclosures
+Status: Closed; Pay Code Explorer results are more scan-friendly
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Pay Code Explorer Result Density Polish Slice 3 / Closure:
+  - Published Cockpit assets to the host app.
+  - Confirmed package-to-host asset drift is clean.
+  - Verified focused backend, frontend, and host build checks.
+  - Confirmed `/x/cockpit/pay-codes` now shows a compact rows/links/disabled summary, collapsed scan instructions, visible enabled row actions, and grouped unavailable actions.
+  - Confirmed campaign-aware Explorer navigation still carries campaign context.
+  - Confirmed no routes, controllers, campaign mutation, campaign dispatch, Pay Code generation through campaign, feedback sends, journal writes, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, persistence, or money movement were added.
+  - Report: `reports/509-pay-code-explorer-result-density-polish-slice-3-closure.md`.
+  - Next recommended wave: Dashboard lower-panel simplification or Voucher Detail evidence-density cleanup.
 - Completed Pay Code Explorer Result Density Polish Slice 2:
   - Enabled row actions remain visible as primary read-only navigation pills.
   - Disabled or unavailable row actions are grouped inside compact per-row disclosures.

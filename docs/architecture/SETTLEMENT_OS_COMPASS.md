@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Cockpit Pay Code Explorer Result Density Polish
-Current status: Slice 2 in progress; disabled row actions are grouped behind disclosures
+Current status: Closed; Pay Code Explorer results are more scan-friendly
 Last updated: 2026-07-19
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-19
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Pay Code Explorer result density polish Slice 2 in progress | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Pay Code Explorer result density polish closed | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,13 @@ Last updated: 2026-07-19
 
 ### Current Cockpit Host Integration
 
+- Cockpit Pay Code Explorer Result Density Polish Slice 3 / Closure complete:
+  - Published package Cockpit assets to the host app and confirmed asset drift is clean.
+  - Verified focused backend route, frontend Explorer, campaign navigation, and host build checks.
+  - Confirmed `/x/cockpit/pay-codes` now shows a compact rows/links/disabled summary, collapsed scan instructions, visible enabled row actions, and grouped unavailable actions.
+  - Confirmed campaign-aware Explorer navigation still carries campaign context.
+  - Confirmed no routes, controllers, campaign mutation, campaign dispatch, Pay Code generation through campaign, feedback sends, journal writes, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, persistence, or money movement were added.
+  - Report: [../ui-cockpit/reports/509-pay-code-explorer-result-density-polish-slice-3-closure.md](../ui-cockpit/reports/509-pay-code-explorer-result-density-polish-slice-3-closure.md).
 - Cockpit Pay Code Explorer Result Density Polish Slice 2 complete:
   - Enabled Pay Code Explorer row actions remain visible as primary read-only navigation pills.
   - Disabled or unavailable row actions are grouped inside compact per-row disclosures.
