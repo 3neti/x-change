@@ -196,6 +196,9 @@ describe('Cockpit Voucher Detail hydration', () => {
         expect(wrapper.text()).toContain('redaction-policy');
         expect(wrapper.text()).toContain('Read-only');
         expect(wrapper.text()).toContain('yes');
+        expect(wrapper.find('[data-testid="cockpit-voucher-evidence-density-summary"]').text()).toContain('Evidence Facts');
+        expect(wrapper.find('[data-testid="cockpit-voucher-evidence-density-summary"]').text()).toContain('7');
+        expect(wrapper.findAll('[data-testid="cockpit-voucher-evidence-item-metadata"]')).toHaveLength(7);
         expect(wrapper.findAll('[data-testid="cockpit-voucher-evidence-item"]')).toHaveLength(7);
         expect(wrapper.text()).not.toContain('provider_payload');
         expect(wrapper.text()).not.toContain('raw_payload');

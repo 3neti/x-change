@@ -4,12 +4,19 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Pay Code Explorer Result Density Polish
-Status: Closed; Pay Code Explorer results are more scan-friendly
+Current slice: Voucher Detail Evidence Density Cleanup
+Status: Slice 1 in progress; Evidence panel has density summary and metadata disclosures
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Voucher Detail Evidence Density Cleanup Slice 1:
+  - Added an evidence density summary with total evidence fact count and status counts.
+  - Moved per-evidence source/read-only metadata into compact disclosures.
+  - Preserved evidence hydration, redaction behavior, and read-only boundaries.
+  - Confirmed no routes, controllers, voucher mutation, claim execution, driver execution, journal writes, action execution, feedback sends, provider calls, campaign mutation, wallet behavior, Treasury behavior, public API changes, persistence, or money movement were added.
+  - Report: `reports/510-voucher-detail-evidence-density-cleanup-slice-1.md`.
+  - Next recommended checkpoint: Voucher Detail Evidence Density Cleanup Slice 2 — audit/follow-up detail density.
 - Completed Pay Code Explorer Result Density Polish Slice 3 / Closure:
   - Published Cockpit assets to the host app.
   - Confirmed package-to-host asset drift is clean.

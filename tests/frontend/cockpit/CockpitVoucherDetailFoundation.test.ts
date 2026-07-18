@@ -63,6 +63,9 @@ describe('Cockpit Voucher Detail foundation', () => {
         expect(evidence.text()).toContain('Evidence status');
         expect(evidence.text()).toContain('Identity evidence');
         expect(evidence.text()).toContain('Settlement envelope evidence');
+        expect(evidence.find('[data-testid="cockpit-voucher-evidence-density-summary"]').text()).toContain('Evidence Facts');
+        expect(evidence.find('[data-testid="cockpit-voucher-evidence-density-summary"]').text()).toContain('3');
+        expect(evidence.findAll('[data-testid="cockpit-voucher-evidence-item-metadata"]')).toHaveLength(0);
         expect(evidence.findAll('[data-testid="cockpit-voucher-evidence-item"]')).toHaveLength(3);
 
         expect(distribution.text()).toContain('Delivery status');
