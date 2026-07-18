@@ -3260,3 +3260,12 @@ Current boundary:
 - Focused Dashboard frontend verification, asset drift verification, and host production build passed.
 - Report: `reports/484-campaign-panel-empty-state-copy-polish-slice-2-closure.md`.
 - Boundary remains unchanged: verification and closure only; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-18 — Campaign Explorer Context Productization — Slice 1
+
+- Started the Campaign Explorer Context Productization wave.
+- `/x/cockpit/pay-codes` now renders campaign query context as an operator-facing `Campaign Explorer Context` panel.
+- The panel exposes read-only orientation facts only: planning key, execution ID, campaign ID, audience ID, recipient ID, source, destination, and payload policy.
+- Added a read-only return link back to the Cockpit campaign view with the same campaign context.
+- Report: `reports/495-campaign-explorer-context-productization-slice-1.md`.
+- Boundary remains unchanged: presentation-only Pay Code Explorer UI update; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.

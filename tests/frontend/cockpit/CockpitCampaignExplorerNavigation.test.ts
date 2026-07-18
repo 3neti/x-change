@@ -20,6 +20,9 @@ const campaignNavigationContext = {
     source: 'campaign_cockpit',
     planning_key: 'campaign-plan-1',
     execution_id: 'execution-1',
+    campaign_id: 'campaign-1',
+    audience_id: 'audience-1',
+    recipient_id: 'recipient-1',
     destination: 'pay_code_explorer',
     read_only: true,
     mutation: {
@@ -44,14 +47,40 @@ describe('Cockpit campaign explorer navigation boundary', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Campaign navigation context');
+        expect(wrapper.text()).toContain('Campaign Explorer Context');
+        expect(wrapper.text()).toContain('Campaign-aware Pay Code view');
+        expect(wrapper.text()).toContain('Read-only filter');
         expect(wrapper.text()).toContain('campaign-plan-1');
         expect(wrapper.text()).toContain('execution-1');
-        expect(wrapper.text()).toContain('pay_code_explorer');
+        expect(wrapper.text()).toContain('campaign-1');
+        expect(wrapper.text()).toContain('audience-1');
+        expect(wrapper.text()).toContain('recipient-1');
+        expect(wrapper.text()).toContain('Pay Code Explorer');
         expect(wrapper.text()).toContain('campaign-navigation-read-only');
         expect(wrapper.text()).toContain('navigation-context-only');
         expect(wrapper.find('[data-testid="cockpit-campaign-navigation-context"]').exists()).toBe(true);
+        expect(wrapper.findAll('[data-testid="cockpit-campaign-navigation-context-item"]')).toHaveLength(8);
         expect(wrapper.find('[data-testid="cockpit-campaign-navigation-mutation-button"]').exists()).toBe(false);
+    });
+
+    it('links back to the dashboard with the same campaign context', () => {
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: payCodesReadModel,
+                campaign_navigation_context: campaignNavigationContext,
+            },
+        });
+
+        const link = wrapper.find('[data-testid="cockpit-campaign-navigation-dashboard-link"]');
+
+        expect(link.exists()).toBe(true);
+        expect(link.attributes('href')).toContain('/x/cockpit?');
+        expect(link.attributes('href')).toContain('campaign_planning_key=campaign-plan-1');
+        expect(link.attributes('href')).toContain('campaign_execution_id=execution-1');
+        expect(link.attributes('href')).toContain('campaign_id=campaign-1');
+        expect(link.attributes('href')).toContain('campaign_audience_id=audience-1');
+        expect(link.attributes('href')).toContain('campaign_recipient_id=recipient-1');
+        expect(link.attributes('href')).toContain('campaign_source=campaign_cockpit');
     });
 
     it('does not render unsafe campaign navigation payloads or routes', () => {
@@ -77,7 +106,7 @@ describe('Cockpit campaign explorer navigation boundary', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Campaign navigation context');
+        expect(wrapper.text()).toContain('Campaign Explorer Context');
         expect(wrapper.text()).toContain('campaign-plan-1');
         expect(wrapper.text()).not.toContain('must-not-render');
     });

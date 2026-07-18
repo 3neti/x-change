@@ -287,6 +287,9 @@ export type CockpitCampaignNavigationContext = {
     source?: string;
     planning_key?: string | null;
     execution_id?: string | null;
+    campaign_id?: string | null;
+    audience_id?: string | null;
+    recipient_id?: string | null;
     destination?: string;
     read_only?: boolean;
     mutation?: Record<string, unknown>;

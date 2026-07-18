@@ -113,6 +113,9 @@ const campaignNavigationContext = computed<CockpitCampaignNavigationContext | nu
         source: stringValue(context.source) ?? 'campaign_cockpit',
         planning_key: planningKey,
         execution_id: executionId,
+        campaign_id: stringValue(context.campaign_id),
+        audience_id: stringValue(context.audience_id),
+        recipient_id: stringValue(context.recipient_id),
         destination,
         read_only: true,
         mutation: {
@@ -124,6 +127,83 @@ const campaignNavigationContext = computed<CockpitCampaignNavigationContext | nu
             payloads: stringValue(context.redactions?.payloads) ?? 'navigation-context-only',
         },
     };
+});
+const campaignNavigationContextItems = computed(() => {
+    const context = campaignNavigationContext.value;
+
+    if (!context) {
+        return [];
+    }
+
+    return [
+        {
+            key: 'planning-key',
+            label: 'Planning Key',
+            value: context.planning_key,
+        },
+        {
+            key: 'execution-id',
+            label: 'Execution ID',
+            value: context.execution_id,
+        },
+        {
+            key: 'campaign-id',
+            label: 'Campaign ID',
+            value: context.campaign_id ?? 'Not provided',
+        },
+        {
+            key: 'audience-id',
+            label: 'Audience ID',
+            value: context.audience_id ?? 'Not provided',
+        },
+        {
+            key: 'recipient-id',
+            label: 'Recipient ID',
+            value: context.recipient_id ?? 'Not provided',
+        },
+        {
+            key: 'source',
+            label: 'Source',
+            value: context.source,
+        },
+        {
+            key: 'destination',
+            label: 'Destination',
+            value: 'Pay Code Explorer',
+        },
+        {
+            key: 'payload-policy',
+            label: 'Payload Policy',
+            value: context.redactions?.payloads ?? 'navigation-context-only',
+        },
+    ];
+});
+const campaignDashboardHref = computed(() => {
+    const context = campaignNavigationContext.value;
+
+    if (!context) {
+        return '/x/cockpit';
+    }
+
+    const params = new URLSearchParams({
+        campaign_planning_key: context.planning_key ?? '',
+        campaign_execution_id: context.execution_id ?? '',
+        campaign_source: context.source ?? 'campaign_cockpit',
+    });
+
+    if (context.campaign_id) {
+        params.set('campaign_id', context.campaign_id);
+    }
+
+    if (context.audience_id) {
+        params.set('campaign_audience_id', context.audience_id);
+    }
+
+    if (context.recipient_id) {
+        params.set('campaign_recipient_id', context.recipient_id);
+    }
+
+    return `/x/cockpit?${params.toString()}`;
 });
 const activityNavigationContext = computed<CockpitActivityNavigationContext | null>(() => {
     const context = props.activity_navigation_context;
@@ -441,6 +521,63 @@ function integrationBadge(
             </section>
 
             <section
+                v-if="campaignNavigationContext"
+                class="rounded-2xl border border-sky-200 bg-sky-50 p-5 text-sm text-sky-950 shadow-sm dark:border-sky-900 dark:bg-sky-950/70 dark:text-sky-100"
+                data-testid="cockpit-campaign-navigation-context"
+            >
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700 dark:text-sky-300">
+                            Campaign Explorer Context
+                        </p>
+                        <h3 class="mt-2 text-xl font-semibold">
+                            Campaign-aware Pay Code view
+                        </h3>
+                        <p class="mt-2 max-w-3xl leading-6 text-sky-900/80 dark:text-sky-100/80">
+                            This context came from Campaign Cockpit navigation and is used only to orient the Explorer. It does not dispatch campaigns, issue more Pay Codes, send feedback, write journal entries, call providers, or move money.
+                        </p>
+                    </div>
+                    <span class="w-fit rounded-full bg-white px-3 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-200 dark:bg-sky-900 dark:text-sky-100 dark:ring-sky-800">
+                        Read-only filter
+                    </span>
+                </div>
+
+                <dl class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <div
+                        v-for="item in campaignNavigationContextItems"
+                        :key="item.key"
+                        class="rounded-xl bg-white/80 p-4 dark:bg-sky-900/50"
+                        data-testid="cockpit-campaign-navigation-context-item"
+                    >
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">
+                            {{ item.label }}
+                        </dt>
+                        <dd class="mt-1 break-words font-semibold">
+                            {{ item.value }}
+                        </dd>
+                    </div>
+                </dl>
+
+                <div class="mt-5 flex flex-col gap-3 rounded-xl border border-sky-200 bg-white/70 p-4 dark:border-sky-800 dark:bg-sky-900/40 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p class="font-semibold">
+                            Campaign changes are disabled here
+                        </p>
+                        <p class="mt-1 leading-6 text-sky-900/80 dark:text-sky-100/80">
+                            {{ campaignNavigationContext.mutation?.reason }}
+                        </p>
+                    </div>
+                    <a
+                        :href="campaignDashboardHref"
+                        class="inline-flex w-fit items-center rounded-full border border-sky-300 bg-white px-4 py-2 text-xs font-semibold text-sky-700 transition hover:bg-sky-100 dark:border-sky-700 dark:bg-sky-950 dark:text-sky-100 dark:hover:bg-sky-900"
+                        data-testid="cockpit-campaign-navigation-dashboard-link"
+                    >
+                        Return to Cockpit campaign view
+                    </a>
+                </div>
+            </section>
+
+            <section
                 class="rounded-xl border border-emerald-200 bg-white p-5 shadow-sm dark:border-emerald-900/70 dark:bg-slate-900"
                 data-testid="cockpit-pay-code-row-action-guidance"
             >
@@ -560,58 +697,6 @@ function integrationBadge(
                     </article>
                 </div>
             </section>
-
-            <div
-                v-if="campaignNavigationContext"
-                class="rounded-2xl border border-sky-200 bg-sky-50 p-5 text-sm text-sky-950 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-100"
-                data-testid="cockpit-campaign-navigation-context"
-            >
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700 dark:text-sky-300">
-                    Campaign navigation context
-                </p>
-                <div class="mt-3 grid gap-3 md:grid-cols-4">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">
-                            Planning key
-                        </p>
-                        <p class="mt-1 font-semibold">
-                            {{ campaignNavigationContext.planning_key }}
-                        </p>
-                    </div>
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">
-                            Execution id
-                        </p>
-                        <p class="mt-1 font-semibold">
-                            {{ campaignNavigationContext.execution_id }}
-                        </p>
-                    </div>
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">
-                            Destination
-                        </p>
-                        <p class="mt-1 font-semibold">
-                            {{ campaignNavigationContext.destination }}
-                        </p>
-                    </div>
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">
-                            Payload policy
-                        </p>
-                        <p class="mt-1 font-semibold">
-                            {{ campaignNavigationContext.redactions?.payloads }}
-                        </p>
-                    </div>
-                </div>
-                <div class="mt-4 rounded-lg border border-sky-200 bg-white/60 px-3 py-3 dark:border-sky-800 dark:bg-sky-900/40">
-                    <p class="font-semibold">
-                        Mutation blocked
-                    </p>
-                    <p class="mt-1">
-                        {{ campaignNavigationContext.mutation?.reason }}
-                    </p>
-                </div>
-            </div>
 
             <div
                 v-if="activityNavigationContext"

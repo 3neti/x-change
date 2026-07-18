@@ -3124,3 +3124,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/484-campaign-panel-empty-state-copy-polish-slice-2-closure.md`.
 - Boundary remains unchanged: verification and closure only; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next recommended checkpoint: manually inspect `/x/cockpit` Campaigns details copy, then continue with selected-campaign fixture wiring or primary Cockpit page polish.
+
+## 2026-07-18 Update — Campaign Explorer Context Productization — Slice 1
+
+- Started the Campaign Explorer Context Productization wave.
+- `/x/cockpit/pay-codes` now productizes campaign navigation context as an operator-facing read-only panel.
+- The panel shows campaign orientation facts and a safe return link back to `/x/cockpit` with the same campaign context.
+- UI/report: `../ui-cockpit/reports/495-campaign-explorer-context-productization-slice-1.md`.
+- Boundary remains unchanged: presentation-only Pay Code Explorer UI update; no campaign route, controller, campaign mutation, campaign dispatch, Pay Code issuance through campaign, journal write, action execution, feedback delivery, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next checkpoint: preserve full campaign id/audience/recipient route props through the Pay Code Explorer controller.
