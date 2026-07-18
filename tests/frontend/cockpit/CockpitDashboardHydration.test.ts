@@ -697,6 +697,10 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('09173011987');
         expect(wrapper.text()).toContain('Campaign payout');
         expect(wrapper.text()).toContain('Campaign details');
+        expect(wrapper.find('[data-testid="cockpit-campaign-density-summary"]').text()).toContain('Surfaces');
+        expect(wrapper.find('[data-testid="cockpit-campaign-density-summary"]').text()).toContain('Panels');
+        expect(wrapper.find('[data-testid="cockpit-campaign-density-summary"]').text()).toContain('Actions');
+        expect(wrapper.find('[data-testid="cockpit-campaign-density-summary"]').text()).toContain('Selected');
         expect(wrapper.text()).not.toContain('Campaign Dashboard');
         expect(wrapper.text()).not.toContain('Attachment Operator Workspace');
         expect(wrapper.text()).not.toContain('Audience Import Workspace: Ready');
@@ -755,6 +759,8 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('Campaigns');
         expect(wrapper.text()).toContain('Campaign summary not connected');
         expect(wrapper.text()).toContain('No campaign selected');
+        expect(wrapper.find('[data-testid="cockpit-campaign-density-summary"]').text()).toContain('Selected');
+        expect(wrapper.find('[data-testid="cockpit-campaign-density-summary"]').text()).toContain('No');
         expect(wrapper.text()).not.toContain('missing-campaign-context');
         expect(wrapper.text()).not.toContain('No campaign panels authorized for display.');
         expect(wrapper.text()).not.toContain('No campaign actions authorized for display.');
@@ -812,6 +818,8 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('No campaign selected');
         expect(wrapper.text()).toContain('Read-only campaign summaries');
         expect(wrapper.text()).toContain('Ready when a campaign is selected');
+        expect(wrapper.find('[data-testid="cockpit-campaign-density-summary"]').text()).toContain('Surfaces');
+        expect(wrapper.find('[data-testid="cockpit-campaign-density-summary"]').text()).toContain('Selected');
         expect(wrapper.text()).not.toContain('Campaign summary not connected');
 
         await wrapper.find('[data-testid="cockpit-campaign-details-toggle"]').trigger('click');

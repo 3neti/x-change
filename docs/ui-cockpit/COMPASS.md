@@ -5,11 +5,18 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Dashboard Lower-Panel Simplification
-Status: Slice 2 in progress; Claim Status and Review Queue have compact summaries
+Status: Slice 3 in progress; Campaigns panel has compact summary across selected and no-campaign states
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Dashboard Lower-Panel Simplification Slice 3:
+  - Added a compact Campaigns summary for surfaces, panels, actions, and selected-campaign status.
+  - Preserved the existing campaign details disclosure for surfaces, panels, actions, and mutation boundary details.
+  - Preserved selected campaign prefill facts and Quick Generate links.
+  - Confirmed no routes, controllers, campaign mutation, campaign dispatch, Pay Code generation through campaign, feedback sends, journal writes, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, persistence, or money movement were added.
+  - Report: `reports/518-dashboard-lower-panel-simplification-slice-3.md`.
+  - Next recommended checkpoint: Dashboard Lower-Panel Simplification Slice 4 — host publish / verification / closure.
 - Completed Dashboard Lower-Panel Simplification Slice 2:
   - Added a compact Claim Status summary for claim fact count, active counts, and execution status.
   - Added a compact Review Queue summary for signal count and highest severity.

@@ -194,6 +194,24 @@ const campaignWorkspaceCopy = computed(() => {
 
     return 'Dedicated campaign workspace is not enabled yet.';
 });
+const campaignDensitySummary = computed(() => [
+    {
+        label: 'Surfaces',
+        value: String(surfaces.value.length),
+    },
+    {
+        label: 'Panels',
+        value: String(panels.value.length),
+    },
+    {
+        label: 'Actions',
+        value: String(actions.value.length),
+    },
+    {
+        label: 'Selected',
+        value: hasSelectedCampaign.value ? 'Yes' : 'No',
+    },
+]);
 
 function sanitizeSurface(surface: unknown): CockpitCampaignSurface | null {
     const payload = objectValue(surface);
@@ -332,6 +350,23 @@ function toggleDetails(): void {
                 </p>
                 <p v-if="hasSelectedCampaign" class="mt-1">
                     {{ executionId }}
+                </p>
+            </div>
+        </div>
+
+        <div
+            class="mt-5 grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-800 dark:bg-slate-950/40 sm:grid-cols-4"
+            data-testid="cockpit-campaign-density-summary"
+        >
+            <div
+                v-for="item in campaignDensitySummary"
+                :key="item.label"
+            >
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    {{ item.label }}
+                </p>
+                <p class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                    {{ item.value }}
                 </p>
             </div>
         </div>
