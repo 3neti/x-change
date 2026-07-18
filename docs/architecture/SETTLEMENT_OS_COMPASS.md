@@ -32,8 +32,8 @@ This Compass is the program-level memory. Future workstream compasses should be 
 
 ## Current Position
 
-Current wave: Cockpit Dashboard Lower-Panel Simplification
-Current status: Closed; dashboard lower panels are more scan-friendly inside System posture
+Current wave: Cockpit Voucher Detail Distribution Density Cleanup
+Current status: Slice 1 in progress; Voucher Detail Distribution panel has compact summary and channel disclosures
 Last updated: 2026-07-19
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-19
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Dashboard lower-panel simplification closed | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Voucher Detail distribution density cleanup Slice 1 in progress | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,12 @@ Last updated: 2026-07-19
 
 ### Current Cockpit Host Integration
 
+- Cockpit Voucher Detail Distribution Density Cleanup Slice 1 complete:
+  - Added a compact distribution summary for channel count and status counts.
+  - Moved per-channel helper text behind disclosures.
+  - Preserved all channel labels, statuses, helper text, and read-only distribution boundaries.
+  - Confirmed no routes, controllers, delivery dispatch, feedback sends, campaign mutation, voucher mutation, claim execution, driver execution, journal writes, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, persistence, or money movement were added.
+  - Report: [../ui-cockpit/reports/520-voucher-detail-distribution-density-cleanup-slice-1.md](../ui-cockpit/reports/520-voucher-detail-distribution-density-cleanup-slice-1.md).
 - Cockpit Dashboard Lower-Panel Simplification Slice 4 / Closure complete:
   - Published package Cockpit assets to the host app and confirmed package-to-host asset drift is clean.
   - Verified focused backend Cockpit read-only route coverage.

@@ -4,12 +4,19 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Dashboard Lower-Panel Simplification
-Status: Closed; dashboard lower panels are more scan-friendly inside System posture
+Current slice: Voucher Detail Distribution Density Cleanup
+Status: Slice 1 in progress; Voucher Detail Distribution panel has compact summary and channel disclosures
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Voucher Detail Distribution Density Cleanup Slice 1:
+  - Added a compact distribution summary for channel count and status counts.
+  - Moved per-channel helper text behind disclosures.
+  - Preserved all channel labels, statuses, helper text, and read-only distribution boundaries.
+  - Confirmed no routes, controllers, delivery dispatch, feedback sends, campaign mutation, voucher mutation, claim execution, driver execution, journal writes, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, persistence, or money movement were added.
+  - Report: `reports/520-voucher-detail-distribution-density-cleanup-slice-1.md`.
+  - Next recommended checkpoint: Voucher Detail Distribution Density Cleanup Slice 2 — compact beneficiary URL and manual distribution guidance area.
 - Completed Dashboard Lower-Panel Simplification Slice 4 / Closure:
   - Published package Cockpit assets to the host app.
   - Confirmed published Cockpit assets match package source.

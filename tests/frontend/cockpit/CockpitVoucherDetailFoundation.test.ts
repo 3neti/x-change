@@ -72,7 +72,11 @@ describe('Cockpit Voucher Detail foundation', () => {
         expect(distribution.text()).toContain('SMS');
         expect(distribution.text()).toContain('Email');
         expect(distribution.text()).toContain('In-app');
+        expect(distribution.find('[data-testid="cockpit-voucher-distribution-density-summary"]').text()).toContain('Channels');
+        expect(distribution.find('[data-testid="cockpit-voucher-distribution-density-summary"]').text()).toContain('Status Summary');
+        expect(distribution.find('[data-testid="cockpit-voucher-distribution-density-summary"]').text()).toContain('3');
         expect(distribution.findAll('[data-testid="cockpit-voucher-distribution-item"]')).toHaveLength(3);
+        expect(distribution.findAll('[data-testid="cockpit-voucher-distribution-item-disclosure"]')).toHaveLength(3);
     });
 
     it('renders audit placeholders and disabled actions without command behavior', () => {
