@@ -1141,6 +1141,20 @@ const postIssuanceNavigationItems = computed<
         );
 });
 
+const campaignReturnNavigationItems = computed<
+    CockpitQuickGeneratePostIssuanceNavigationItem[]
+>(() => {
+    if (!campaignAttributionAvailable.value) {
+        return [];
+    }
+
+    return postIssuanceNavigationItems.value.filter((item) => {
+        const key = stringValue(item.key) ?? '';
+
+        return key.startsWith('campaign_');
+    });
+});
+
 const canRefreshReadModel = computed<boolean>(() => {
     return lastResponse.value !== null && !processing.value;
 });
@@ -6432,6 +6446,42 @@ function dataGet(source: unknown, path: string[]): unknown {
                         </dd>
                     </div>
                 </dl>
+            </section>
+
+            <section
+                v-if="campaignReturnNavigationItems.length > 0"
+                class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/70 dark:bg-amber-950/30"
+                data-testid="cockpit-quick-generate-campaign-return-navigation-panel"
+            >
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p class="font-semibold text-amber-950 dark:text-amber-50">
+                            Campaign return navigation
+                        </p>
+                        <p class="mt-1 text-[11px] leading-4 text-amber-800 dark:text-amber-200">
+                            Return to campaign-filtered Cockpit views after generation. These links are read-only and do not update campaign state.
+                        </p>
+                    </div>
+                    <span class="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800">
+                        Read-only
+                    </span>
+                </div>
+
+                <div class="mt-3 grid gap-2 sm:grid-cols-2">
+                    <a
+                        v-for="item in campaignReturnNavigationItems"
+                        :key="String(item.key ?? item.label ?? 'campaign-return')"
+                        :href="item.enabled === true && item.href ? item.href : undefined"
+                        class="rounded-lg border border-amber-200 bg-white px-3 py-3 font-semibold text-amber-900 transition hover:border-amber-300 hover:bg-amber-100 aria-disabled:cursor-not-allowed aria-disabled:opacity-60 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100 dark:hover:bg-amber-900/40"
+                        :aria-disabled="item.enabled === true && item.href ? undefined : 'true'"
+                        :data-testid="`cockpit-quick-generate-campaign-return-link-${item.key}`"
+                    >
+                        <span class="block">{{ item.label }}</span>
+                        <span class="mt-1 block text-[11px] font-medium text-amber-700 dark:text-amber-200">
+                            Campaign context preserved · {{ item.status }}
+                        </span>
+                    </a>
+                </div>
             </section>
 
             <section

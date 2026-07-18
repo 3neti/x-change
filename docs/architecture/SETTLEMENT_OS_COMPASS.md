@@ -32,8 +32,8 @@ This Compass is the program-level memory. Future workstream compasses should be 
 
 ## Current Position
 
-Current wave: Cockpit Campaign-to-Quick-Generate Prefill Acceptance
-Current status: Campaign-to-Quick-Generate prefill acceptance closed
+Current wave: Cockpit Campaign Activity Return Navigation Productization
+Current status: Quick Generate campaign return navigation is visible after campaign-attributed generation
 Last updated: 2026-07-18
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-18
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Campaign prefill and activity attribution accepted; return navigation productization next | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Campaign activity return navigation productization in progress | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,11 @@ Last updated: 2026-07-18
 
 ### Current Cockpit Host Integration
 
+- Cockpit Campaign Activity Return Navigation Productization Slice 1 complete:
+  - Added a dedicated Quick Generate `Campaign return navigation` panel for campaign-attributed results.
+  - Preserved existing post-issuance navigation contracts and read-only campaign boundaries.
+  - Confirmed no routes, controllers, campaign mutation, campaign dispatch, Pay Code generation through campaign, feedback sends, journal writes, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, persistence, or money movement were added.
+  - Report: [../ui-cockpit/reports/492-campaign-activity-return-navigation-slice-1.md](../ui-cockpit/reports/492-campaign-activity-return-navigation-slice-1.md).
 - Cockpit Campaign-to-Quick-Generate Prefill Acceptance Slice 3 / Closure complete:
   - Accepted selected campaign dashboard context to Quick Generate prefill to safe operator activity attribution.
   - Verified focused backend, frontend, asset drift, and host build checks.

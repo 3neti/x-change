@@ -1375,6 +1375,41 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(
             wrapper
                 .find(
+                    '[data-testid="cockpit-quick-generate-campaign-return-navigation-panel"]',
+                )
+                .exists(),
+        ).toBe(true);
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-campaign-return-navigation-panel"]',
+                )
+                .text(),
+        ).toContain('Campaign return navigation');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-campaign-return-navigation-panel"]',
+                )
+                .text(),
+        ).toContain('Campaign context preserved');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-campaign-return-link-campaign_explorer"]',
+                )
+                .attributes('href'),
+        ).toContain('campaign_planning_key=plan-35d');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-campaign-return-link-campaign_dashboard"]',
+                )
+                .attributes('href'),
+        ).toContain('campaign_execution_id=exec-35d');
+        expect(
+            wrapper
+                .find(
                     '[data-testid="cockpit-quick-generate-post-issuance-link-campaign_explorer"]',
                 )
                 .attributes('href'),

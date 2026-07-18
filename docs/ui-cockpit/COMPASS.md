@@ -4,12 +4,19 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Campaign-to-Quick-Generate Prefill Acceptance
-Status: Closed; selected campaign prefill and activity attribution are accepted
+Current slice: Campaign Activity Return Navigation Productization
+Status: Quick Generate campaign return navigation is visible after campaign-attributed generation
 Last updated: 2026-07-18
 
 ## Completed
 
+- Completed Campaign Activity Return Navigation Productization Slice 1:
+  - Added a dedicated `Campaign return navigation` panel to the Quick Generate result area.
+  - Campaign-scoped return links are now easier to find after a campaign-attributed generation.
+  - Preserved the existing post-issuance navigation contract and generic link list.
+  - Confirmed no routes, controllers, campaign mutation, campaign dispatch, Pay Code generation through campaign, feedback sends, journal writes, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, persistence, or money movement were added.
+  - Report: `reports/492-campaign-activity-return-navigation-slice-1.md`.
+  - Next recommended checkpoint: Campaign Activity Return Navigation Productization Slice 2 — dashboard activity campaign-return card polish.
 - Completed Campaign-to-Quick-Generate Prefill Acceptance Slice 3 / Closure:
   - Published Cockpit assets and confirmed package-to-host asset drift is clean.
   - Verified focused backend campaign prefill and activity attribution tests.
