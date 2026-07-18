@@ -32,9 +32,9 @@ This Compass is the program-level memory. Future workstream compasses should be 
 
 ## Current Position
 
-Current wave: Host Integration Readiness
-Current status: Manual distribution external evidence planning track complete; runtime deferred
-Last updated: 2026-07-13
+Current wave: Cockpit Selected Campaign Local Fixture Wiring
+Current status: Selected campaign read model hydrates through the optional x-campaign adapter
+Last updated: 2026-07-18
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
@@ -42,7 +42,7 @@ Last updated: 2026-07-13
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | External evidence planning track complete; runtime deferred; next capability selection pending | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Selected local campaign read model fixture wired through optional x-campaign adapter | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,12 @@ Last updated: 2026-07-13
 
 ### Current Cockpit Host Integration
 
+- Cockpit Selected Campaign Local Fixture Wiring Slice 1 complete:
+  - Added a non-production local campaign fixture that can seed `plan-local` / `exec-local` through installed x-campaign contracts and the x-campaign in-memory repository.
+  - Confirmed dashboard selected campaign facts and operator-safe Quick Generate prefill context hydrate through the real optional x-campaign adapter.
+  - Deferred recipient-level Quick Generate links until x-campaign exposes stable recipient source contexts.
+  - Confirmed no durable persistence, migrations, routes, controllers, campaign mutation, campaign dispatch, Pay Code generation through campaign, feedback sends, journal writes, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, or money movement were added.
+  - Report: [../ui-cockpit/reports/485-selected-campaign-local-fixture-wiring-slice-1.md](../ui-cockpit/reports/485-selected-campaign-local-fixture-wiring-slice-1.md).
 - Cockpit Dashboard Header and Secondary Panels Copy Polish complete:
   - Replaced header balance defaults and secondary dashboard panel headings with operator-facing copy.
   - Replaced remaining dashboard fallback `Pending ...` phrases with not-connected summaries.

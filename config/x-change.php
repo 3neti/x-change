@@ -190,6 +190,16 @@ return [
                 'console' => env('XCHANGE_COCKPIT_FEEDBACK_CONSOLE'),
             ],
         ],
+
+        'local_campaign_fixture' => [
+            'enabled' => (bool) env(
+                'XCHANGE_COCKPIT_LOCAL_CAMPAIGN_FIXTURE_ENABLED',
+                env('APP_ENV') !== 'production',
+            ),
+            'planning_key' => env('XCHANGE_COCKPIT_LOCAL_CAMPAIGN_FIXTURE_PLANNING_KEY', 'plan-local'),
+            'execution_id' => env('XCHANGE_COCKPIT_LOCAL_CAMPAIGN_FIXTURE_EXECUTION_ID', 'exec-local'),
+            'audience_id' => env('XCHANGE_COCKPIT_LOCAL_CAMPAIGN_FIXTURE_AUDIENCE_ID', 'audience-local'),
+        ],
     ],
 
     'execution_result_handoffs' => [

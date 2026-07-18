@@ -4,12 +4,20 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Dashboard Header and Secondary Panels Copy Polish
-Status: Dashboard header, funding, claim, attention, and campaign panels use operator-facing language
-Last updated: 2026-07-16
+Current slice: Selected Campaign Local Fixture Wiring
+Status: Selected local campaign read model hydrates through the real optional x-campaign adapter
+Last updated: 2026-07-18
 
 ## Completed
 
+- Completed Selected Campaign Local Fixture Wiring Slice 1:
+  - Added a non-production local campaign fixture configuration block.
+  - Seeded the local `plan-local` / `exec-local` campaign through installed x-campaign contracts and its in-memory repository when requested from the dashboard.
+  - Confirmed `/x/cockpit?campaign_planning_key=plan-local&campaign_execution_id=exec-local` hydrates selected campaign facts and operator-safe Quick Generate prefill context from the real optional adapter.
+  - Deferred recipient-level Quick Generate links until x-campaign exposes stable recipient source contexts in the read-model contract.
+  - Confirmed no durable persistence, migrations, routes, controllers, campaign mutation, campaign dispatch, Pay Code generation through campaign, feedback sends, journal writes, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, or money movement were added.
+  - Report: `reports/485-selected-campaign-local-fixture-wiring-slice-1.md`.
+  - Next recommended checkpoint: Selected Campaign Local Fixture Wiring Slice 2 — UI publish / verification / closure.
 - Completed Dashboard Header and Secondary Panels Copy Polish:
   - Replaced header balance defaults with `Summary not connected` and `Provider not connected`.
   - Renamed `Dashboard Productization` to `Operator Dashboard`.

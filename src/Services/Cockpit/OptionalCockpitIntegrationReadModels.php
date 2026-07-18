@@ -170,6 +170,7 @@ class OptionalCockpitIntegrationReadModels
         }
 
         $executionId = $this->nonEmptyString($query->correlationId) ?? $planningKey;
+        $this->seedLocalCampaignFixtureIfRequested($planningKey, $operatorId, $executionId, $query);
 
         try {
             $result = $service->summary(
@@ -837,6 +838,135 @@ class OptionalCockpitIntegrationReadModels
                 'effects' => $this->campaignEffects($service),
             ],
         );
+    }
+
+    private function seedLocalCampaignFixtureIfRequested(
+        string $planningKey,
+        string $operatorId,
+        string $executionId,
+        CockpitReadModelQueryData $query,
+    ): void {
+        if (! $this->localCampaignFixtureEnabled($planningKey)) {
+            return;
+        }
+
+        $repositoryContract = $this->fqcn('XCampaign', 'Contracts\\CampaignPlanRepository');
+        $creatorContract = $this->fqcn('XCampaign', 'Contracts\\CreatesCampaignPlans');
+        $audienceContract = $this->fqcn('XCampaign', 'Contracts\\AddsAudiencesToCampaignPlans');
+        $executionContract = $this->fqcn('XCampaign', 'Contracts\\PlansCampaignExecutions');
+        $planningInputClass = $this->fqcn('XCampaign', 'Data\\CampaignPlanningInputData');
+        $audienceInputClass = $this->fqcn('XCampaign', 'Data\\CampaignAudiencePlanningInputData');
+        $executionInputClass = $this->fqcn('XCampaign', 'Data\\CampaignExecutionPlanningInputData');
+
+        if (
+            ! interface_exists($repositoryContract)
+            || ! interface_exists($creatorContract)
+            || ! interface_exists($audienceContract)
+            || ! interface_exists($executionContract)
+            || ! class_exists($planningInputClass)
+            || ! class_exists($audienceInputClass)
+            || ! class_exists($executionInputClass)
+        ) {
+            return;
+        }
+
+        try {
+            $repository = $this->container->make($repositoryContract);
+
+            if (! is_object($repository) || ! method_exists($repository, 'has') || ! method_exists($repository, 'put')) {
+                return;
+            }
+
+            if ($repository->has($planningKey)) {
+                return;
+            }
+
+            $audienceId = $this->localCampaignFixtureAudienceId();
+            $creator = $this->container->make($creatorContract);
+            $audiencePlanner = $this->container->make($audienceContract);
+            $executionPlanner = $this->container->make($executionContract);
+
+            $plan = $creator->handle(new $planningInputClass(
+                name: 'Local Cockpit Campaign',
+                description: 'Local read-only fixture for selected campaign Cockpit verification.',
+                featureProfile: 'cockpit-local-fixture',
+                owner: $operatorId,
+                issuer: 'x-change',
+                metadata: [
+                    'source' => 'x-change.cockpit.local-campaign-fixture',
+                    'read_only' => true,
+                    'fixture' => true,
+                    'quick_generate_context' => [
+                        'campaign_id' => $query->campaignId ?? 'campaign-local',
+                        'audience_id' => $query->campaignAudienceId ?? $audienceId,
+                        'source' => $query->campaignSource ?? 'campaign_cockpit',
+                        'template_key' => $query->campaignTemplateKey ?? 'ofw-remittance',
+                        'amount' => $query->campaignAmount ?? '500.00',
+                        'currency' => $query->campaignCurrency ?? 'PHP',
+                        'recipient_reference' => $query->campaignRecipientReference ?? '09173011987',
+                        'purpose' => $query->campaignPurpose ?? 'Campaign payout',
+                    ],
+                    'recipient_quick_generate_contexts' => [
+                        [
+                            'key' => 'recipient-local-1',
+                            'label' => 'Generate for local recipient',
+                            'recipient_id' => 'recipient-local-1',
+                            'campaign_id' => $query->campaignId ?? 'campaign-local',
+                            'audience_id' => $query->campaignAudienceId ?? $audienceId,
+                            'source' => 'x_campaign_local_fixture',
+                            'template_key' => 'ofw-remittance',
+                            'amount' => '500.00',
+                            'currency' => 'PHP',
+                            'recipient_reference' => '09173011987',
+                            'purpose' => 'Campaign payout',
+                        ],
+                    ],
+                ],
+            ));
+
+            $plan = $audiencePlanner->handle($plan, new $audienceInputClass(
+                id: $audienceId,
+                name: 'Local Cockpit Recipients',
+                status: 'ready',
+                metadata: [
+                    'source' => 'x-change.cockpit.local-campaign-fixture',
+                    'read_only' => true,
+                    'fixture' => true,
+                ],
+            ));
+
+            $plan = $executionPlanner->handle($plan, new $executionInputClass(
+                id: $executionId,
+                audienceId: $audienceId,
+                correlationId: $executionId,
+                metadata: [
+                    'source' => 'x-change.cockpit.local-campaign-fixture',
+                    'read_only' => true,
+                    'fixture' => true,
+                ],
+            ));
+
+            $repository->put($planningKey, $plan);
+        } catch (Throwable) {
+            return;
+        }
+    }
+
+    private function localCampaignFixtureEnabled(string $planningKey): bool
+    {
+        if (config('x-change.cockpit.local_campaign_fixture.enabled') !== true) {
+            return false;
+        }
+
+        $fixturePlanningKey = $this->nonEmptyString(config('x-change.cockpit.local_campaign_fixture.planning_key'));
+
+        return $fixturePlanningKey !== null && hash_equals($fixturePlanningKey, $planningKey);
+    }
+
+    private function localCampaignFixtureAudienceId(): string
+    {
+        return $this->nonEmptyString(config('x-change.cockpit.local_campaign_fixture.audience_id'))
+            ?? 'audience-local';
     }
 
     /**
