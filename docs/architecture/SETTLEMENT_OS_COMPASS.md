@@ -2986,3 +2986,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/475-voucher-detail-distribution-layout-polish-slice-3-publish-closure.md`.
 - Boundary remains unchanged: host-publish and verification only; no route behavior, read-model hydration, claim behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle mutation, driver execution, artifact generation, journal write, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next recommended checkpoint: manual browser acceptance on `/x/cockpit/pay-codes/{code}` and `/x/cockpit/pay-codes/{code}/distribution`, then continue with the next page-specific Cockpit polish or choose a real integration wiring wave.
+
+## 2026-07-18 Update — Real Integration Wiring Wave — Slice 1 — Dashboard Integration Bundle
+
+- Started the Real Integration Wiring wave.
+- Dashboard-level Connected Services can now hydrate through the existing optional x-journal, x-action, and x-feedback read-only adapters even when no Pay Code is selected.
+- Voucher and execution facts remain fallback/not-wired without a Pay Code.
+- UI/report: `../ui-cockpit/reports/476-real-integration-wiring-slice-1-dashboard-integration-bundle.md`.
+- Boundary remains unchanged: read-model wiring only; no journal write, x-action execution, x-feedback delivery, campaign dispatch, voucher lifecycle mutation, driver execution, artifact generation, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next checkpoint: publish package assets if UI changes are needed, then verify `/x/cockpit` shows Connected Services as read-only available when package adapters resolve.

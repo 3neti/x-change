@@ -48,6 +48,125 @@ it('returns an empty not wired cockpit read model bundle by default', function (
         ->and($bundle->feedback->deliveries)->toBe([]);
 });
 
+it('hydrates dashboard-level integration summaries without requiring a pay code', function () {
+    config()->set('x-change.cockpit.integrations.journal.reader', 'fake.dashboard.journal.reader');
+    config()->set('x-change.cockpit.integrations.action.composer', 'fake.dashboard.action.composer');
+    config()->set('x-change.cockpit.integrations.feedback.console', 'fake.dashboard.feedback.console');
+
+    app()->instance('fake.dashboard.journal.reader', new class
+    {
+        public function read(mixed $query): array
+        {
+            return [
+                'entries' => [
+                    [
+                        'id' => 'journal-dashboard-1',
+                        'event_type' => 'execution.result.recorded',
+                        'payload' => [
+                            'safe' => 'visible',
+                            'secret' => 'must-redact',
+                        ],
+                    ],
+                ],
+                'metadata' => [
+                    'pagination' => ['visible_total' => 1],
+                ],
+            ];
+        }
+    });
+
+    app()->instance('fake.dashboard.action.composer', new class
+    {
+        public function compose(): array
+        {
+            return [
+                'actions' => [
+                    [
+                        'key' => 'review',
+                        'label' => 'Review',
+                        'raw_payload' => 'must-redact',
+                    ],
+                ],
+                'meta' => [
+                    'safe_diagnostics' => [
+                        ['status' => 'included'],
+                    ],
+                ],
+            ];
+        }
+    });
+
+    app()->instance('fake.dashboard.feedback.console', new class
+    {
+        public function history(array $filters = []): array
+        {
+            return [
+                'records' => [
+                    [
+                        'id' => 'delivery-dashboard-1',
+                        'status' => 'planned',
+                        'provider_payload' => 'must-redact',
+                    ],
+                ],
+            ];
+        }
+    });
+
+    $provider = new VoucherLifecycleCockpitReadModelProvider(
+        vouchers: new class implements VoucherLifecycleServiceContract
+        {
+            public function list(array $filters = []): array
+            {
+                return [];
+            }
+
+            public function show(string $voucher): mixed
+            {
+                return null;
+            }
+
+            public function showByCode(string $code): mixed
+            {
+                return null;
+            }
+
+            public function status(string $voucher): mixed
+            {
+                return null;
+            }
+
+            public function cancel(string $voucher, array $payload = []): mixed
+            {
+                return [];
+            }
+        },
+        integrations: new OptionalCockpitIntegrationReadModels(app(), new DefaultCockpitRedactor),
+    );
+
+    $bundle = $provider->forVoucher(new CockpitReadModelQueryData(
+        operatorId: 'operator-dashboard',
+        include: ['journal', 'actions', 'feedback'],
+        correlationId: 'corr-dashboard',
+    ));
+
+    expect($bundle->code)->toBeNull()
+        ->and($bundle->voucher->status)->toBe('not_wired')
+        ->and($bundle->execution->status)->toBe('not_wired')
+        ->and($bundle->journal->status)->toBe('available')
+        ->and($bundle->journal->authorized)->toBeTrue()
+        ->and($bundle->journal->entries[0]['payload']['secret'])->toBe('[redacted]')
+        ->and($bundle->journal->redactions['source'])->toBe('x-journal')
+        ->and($bundle->journal->redactions['writes_journal_entries'])->toBeFalse()
+        ->and($bundle->actions->status)->toBe('available')
+        ->and($bundle->actions->actions[0]['raw_payload'])->toBe('[redacted]')
+        ->and($bundle->actions->redactions['source'])->toBe('x-action')
+        ->and($bundle->actions->redactions['executes_action'])->toBeFalse()
+        ->and($bundle->feedback->status)->toBe('available')
+        ->and($bundle->feedback->deliveries[0]['provider_payload'])->toBe('[redacted]')
+        ->and($bundle->feedback->redactions['source'])->toBe('x-feedback')
+        ->and($bundle->feedback->redactions['sends_feedback'])->toBeFalse();
+});
+
 it('serializes cockpit read model placeholders without broad payload exposure', function () {
     $bundle = (new NullCockpitReadModelProvider)->forVoucher(new CockpitReadModelQueryData(
         code: 'PC-READY-001',

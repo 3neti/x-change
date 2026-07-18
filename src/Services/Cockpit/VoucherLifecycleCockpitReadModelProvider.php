@@ -73,7 +73,23 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
         $code = $this->normalizeCode($query->code);
 
         if ($code === null) {
-            return $this->fallback->forVoucher($query);
+            $fallback = $this->fallback->forVoucher($query);
+
+            if (
+                $this->integrations === null
+                || ! $this->shouldHydrateIntegrationSummaries($query)
+            ) {
+                return $fallback;
+            }
+
+            return new CockpitReadModelBundleData(
+                code: null,
+                voucher: $fallback->voucher,
+                execution: $fallback->execution,
+                journal: $this->integrations->journal($query),
+                actions: $this->integrations->actions($query),
+                feedback: $this->integrations->feedback($query),
+            );
         }
 
         try {
@@ -144,6 +160,13 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             actions: $actions,
             feedback: $feedback,
         );
+    }
+
+    private function shouldHydrateIntegrationSummaries(CockpitReadModelQueryData $query): bool
+    {
+        return collect($query->include)
+            ->intersect(['journal', 'actions', 'feedback'])
+            ->isNotEmpty();
     }
 
     /**

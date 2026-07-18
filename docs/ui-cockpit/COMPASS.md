@@ -3111,3 +3111,11 @@ Current boundary:
 - Report: `reports/475-voucher-detail-distribution-layout-polish-slice-3-publish-closure.md`.
 - Closed the Voucher Detail / Distribution Layout Polish wave.
 - Boundary remains unchanged: host-publish and verification only; no route behavior, read-model hydration, claim behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle mutation, driver execution, artifact generation, journal write, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-18 — Real Integration Wiring Wave — Slice 1 — Dashboard Integration Bundle
+
+- Started the Real Integration Wiring wave.
+- Updated dashboard-level read-model hydration so Connected Services can use the existing optional x-journal, x-action, and x-feedback read-only adapters even when no specific Pay Code is selected.
+- Voucher and execution facts remain fallback/not-wired without a Pay Code.
+- Report: `reports/476-real-integration-wiring-slice-1-dashboard-integration-bundle.md`.
+- Boundary remains unchanged: read-model wiring only; no journal write, x-action execution, x-feedback delivery, campaign dispatch, voucher lifecycle mutation, driver execution, artifact generation, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
