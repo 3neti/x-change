@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Cockpit Campaign-to-Quick-Generate Prefill Acceptance
-Current status: Dashboard selected campaign link carries local fixture prefill into Quick Generate
+Current status: Local campaign Quick Generate activity attribution is covered
 Last updated: 2026-07-18
 
 | Wave | Workstream | Role | Status | Compass |
@@ -62,6 +62,12 @@ Last updated: 2026-07-18
 
 ### Current Cockpit Host Integration
 
+- Cockpit Campaign-to-Quick-Generate Prefill Acceptance Slice 2 complete:
+  - Added combined runtime acceptance coverage for selected local campaign fixture attribution after Quick Generate submission.
+  - Verified mutation response and durable operator issuance activity metadata carry safe campaign attribution.
+  - Verified post-issuance campaign navigation links remain read-only and unsafe campaign, recipient, provider, wallet, and delivery payloads are not exposed.
+  - Confirmed no campaign mutation, campaign dispatch, Pay Code generation through campaign, feedback sends, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, or money movement were added.
+  - Report: [../ui-cockpit/reports/490-campaign-quick-generate-prefill-acceptance-slice-2.md](../ui-cockpit/reports/490-campaign-quick-generate-prefill-acceptance-slice-2.md).
 - Cockpit Campaign-to-Quick-Generate Prefill Acceptance Slice 1 complete:
   - Added acceptance coverage for selected campaign dashboard link into Quick Generate.
   - Confirmed simple local fixture campaign URL carries safe prefill context into Quick Generate.

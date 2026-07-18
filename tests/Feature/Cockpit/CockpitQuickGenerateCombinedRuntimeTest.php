@@ -135,6 +135,85 @@ it('records campaign recipient attribution in durable operator issuance activity
         ->and($activity->metadata)->not->toHaveKey('wallet');
 });
 
+it('records selected local campaign fixture attribution after quick generate submission', function () {
+    Route::get('/x/cockpit/pay-codes/{code}', fn (string $code): string => $code)
+        ->name('x-change.cockpit.pay-codes.show');
+
+    enableCockpitCombinedRuntimeProfile();
+    app()->instance(GeneratePayCode::class, cockpitCombinedRuntimeGeneratePayCodeAction('PC-LOCAL-CAMPAIGN'));
+
+    actingAsTestUser();
+
+    $payload = cockpitCombinedRuntimePayload();
+    data_set($payload, 'cash.amount', '500.00');
+    data_set($payload, 'cash.currency', 'PHP');
+    data_set($payload, 'feedback.mobile', '09173011987');
+    data_set($payload, 'rider.message', 'Campaign payout');
+    data_set($payload, 'metadata.custom.cockpit.template_key', 'ofw-remittance');
+    data_set($payload, 'metadata.custom.cockpit.campaign_context', 'read-model-prefill');
+    data_set($payload, 'metadata.campaign', [
+        'planning_key' => 'plan-local',
+        'execution_id' => 'exec-local',
+        'campaign_id' => 'campaign-local',
+        'audience_id' => 'audience-local',
+        'recipient_id' => null,
+        'source' => 'campaign_cockpit',
+        'read_only' => true,
+        'mutates_campaign' => false,
+    ]);
+
+    $this->withHeaders([
+        'Accept' => 'application/json',
+        'Idempotency-Key' => 'quick-generate-local-campaign-prefill-acceptance',
+        'X-Correlation-ID' => 'corr-quick-generate-local-campaign-prefill-acceptance',
+    ])
+        ->post(route('x-change.cockpit.quick-generate.store'), $payload)
+        ->assertCreated()
+        ->assertJsonPath('result.code', 'PC-LOCAL-CAMPAIGN')
+        ->assertJsonPath('campaign_attribution.status', 'available')
+        ->assertJsonPath('campaign_attribution.read_only', true)
+        ->assertJsonPath('campaign_attribution.mutates_campaign', false)
+        ->assertJsonPath('campaign_attribution.planning_key', 'plan-local')
+        ->assertJsonPath('campaign_attribution.execution_id', 'exec-local')
+        ->assertJsonPath('campaign_attribution.campaign_id', 'campaign-local')
+        ->assertJsonPath('campaign_attribution.audience_id', 'audience-local')
+        ->assertJsonPath('campaign_attribution.source', 'campaign_cockpit')
+        ->assertJsonPath('campaign_attribution.generated_code', 'PC-LOCAL-CAMPAIGN')
+        ->assertJsonPath('campaign_attribution.template_key', 'ofw-remittance')
+        ->assertJsonPath('campaign_attribution.amount', '500.00')
+        ->assertJsonPath('campaign_attribution.currency', 'PHP')
+        ->assertJsonPath('campaign_attribution.recipient_reference', '09173011987')
+        ->assertJsonPath('campaign_attribution.purpose', 'Campaign payout')
+        ->assertJsonPath('post_issuance_navigation.items.2.key', 'campaign_explorer')
+        ->assertJsonPath('post_issuance_navigation.items.2.read_only', true)
+        ->assertJsonPath('post_issuance_navigation.items.3.key', 'campaign_dashboard')
+        ->assertJsonPath('post_issuance_navigation.items.3.read_only', true)
+        ->assertJsonMissingPath('campaign_mutation')
+        ->assertJsonMissingPath('campaign_payload')
+        ->assertJsonMissingPath('recipient_payload')
+        ->assertJsonMissingPath('delivery_payload')
+        ->assertJsonMissingPath('provider_payload')
+        ->assertJsonMissingPath('wallet');
+
+    $activity = CockpitOperatorIssuanceActivity::query()->sole();
+
+    expect($activity->subject_reference)->toBe('PC-LOCAL-CAMPAIGN')
+        ->and($activity->metadata['campaign_attribution']['planning_key'])->toBe('plan-local')
+        ->and($activity->metadata['campaign_attribution']['execution_id'])->toBe('exec-local')
+        ->and($activity->metadata['campaign_attribution']['campaign_id'])->toBe('campaign-local')
+        ->and($activity->metadata['campaign_attribution']['audience_id'])->toBe('audience-local')
+        ->and($activity->metadata['campaign_attribution']['source'])->toBe('campaign_cockpit')
+        ->and($activity->metadata['campaign_attribution']['read_only'])->toBeTrue()
+        ->and($activity->metadata['campaign_attribution']['mutates_campaign'])->toBeFalse()
+        ->and($activity->metadata['campaign_attribution']['generated_code'])->toBe('PC-LOCAL-CAMPAIGN')
+        ->and($activity->metadata['campaign_attribution']['recipient_reference'])->toBe('09173011987')
+        ->and($activity->metadata['campaign_attribution']['redactions']['payloads'])->toBe('campaign-attribution-only')
+        ->and($activity->metadata)->not->toHaveKey('campaign_payload')
+        ->and($activity->metadata)->not->toHaveKey('recipient_payload')
+        ->and($activity->metadata)->not->toHaveKey('provider_payload')
+        ->and($activity->metadata)->not->toHaveKey('wallet');
+});
+
 function enableCockpitCombinedRuntimeProfile(): void
 {
     config()->set('x-change.cockpit.operator_issuance_activity.repository', 'database');
