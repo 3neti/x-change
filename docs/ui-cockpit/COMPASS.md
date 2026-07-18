@@ -3503,3 +3503,11 @@ Current boundary:
 - Published package-owned Cockpit assets into the host app and verified no asset drift.
 - Report: `reports/524-voucher-detail-x-journal-evidence-read-model-slice-2.md`.
 - Boundary remains unchanged: read-only presentation only; no journal writes, x-action execution, x-feedback delivery, campaign mutation, campaign dispatch, voucher mutation, claim execution, driver execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+
+# 2026-07-19 — Voucher Detail x-journal Evidence Read Model — Slice 3 Closure
+
+- Closed the Voucher Detail x-journal Evidence Read Model wave.
+- Focused backend, frontend, asset drift, and host build verification passed.
+- Voucher Detail can now display connected x-journal voucher evidence summaries without exposing wallet/provider/raw payload data.
+- Report: `reports/525-voucher-detail-x-journal-evidence-read-model-slice-3-closure.md`.
+- Boundary remains unchanged: connected read-model presentation only; no journal writes, x-action execution, x-feedback delivery, campaign mutation, campaign dispatch, voucher mutation, claim execution, driver execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.

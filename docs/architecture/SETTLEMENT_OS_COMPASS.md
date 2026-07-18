@@ -3341,3 +3341,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/524-voucher-detail-x-journal-evidence-read-model-slice-2.md`.
 - Boundary remains unchanged: read-only presentation only; no journal writes, x-action execution, x-feedback delivery, campaign mutation, campaign dispatch, voucher mutation, claim execution, driver execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
 - Next checkpoint: close the wave with focused backend/frontend/build verification.
+
+## 2026-07-19 Update — Voucher Detail x-journal Evidence Read Model — Slice 3 Closure
+
+- Closed the Voucher Detail x-journal Evidence Read Model wave.
+- Voucher Detail now has verified read-only consumption and rendering of voucher-scoped x-journal evidence entries.
+- Connected-service redaction now covers nested wallet data.
+- UI/report: `../ui-cockpit/reports/525-voucher-detail-x-journal-evidence-read-model-slice-3-closure.md`.
+- Boundary remains unchanged: connected read-model presentation only; no journal writes, x-action execution, x-feedback delivery, campaign mutation, campaign dispatch, voucher mutation, claim execution, driver execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+- Next recommended checkpoint: connect the next voucher-scoped service read model, likely x-feedback delivery summaries or x-action follow-up CTAs, while keeping all mutations disabled until explicitly approved.
