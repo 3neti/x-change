@@ -3119,3 +3119,10 @@ Current boundary:
 - Voucher and execution facts remain fallback/not-wired without a Pay Code.
 - Report: `reports/476-real-integration-wiring-slice-1-dashboard-integration-bundle.md`.
 - Boundary remains unchanged: read-model wiring only; no journal write, x-action execution, x-feedback delivery, campaign dispatch, voucher lifecycle mutation, driver execution, artifact generation, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-18 — Real Integration Wiring Wave — Slice 2 — Dashboard Route Props
+
+- Added route-level verification that `/x/cockpit` receives real read-only Connected Services props from installed x-journal, x-action, and x-feedback packages.
+- Confirmed voucher and execution facts remain fallback/not-wired when no Pay Code is selected.
+- Report: `reports/477-real-integration-wiring-slice-2-dashboard-route-props.md`.
+- Boundary remains unchanged: route-prop verification only; no journal write, x-action execution, x-feedback delivery, campaign dispatch, voucher lifecycle mutation, driver execution, artifact generation, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.

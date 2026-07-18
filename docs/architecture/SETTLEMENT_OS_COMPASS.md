@@ -2995,3 +2995,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/476-real-integration-wiring-slice-1-dashboard-integration-bundle.md`.
 - Boundary remains unchanged: read-model wiring only; no journal write, x-action execution, x-feedback delivery, campaign dispatch, voucher lifecycle mutation, driver execution, artifact generation, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next checkpoint: publish package assets if UI changes are needed, then verify `/x/cockpit` shows Connected Services as read-only available when package adapters resolve.
+
+## 2026-07-18 Update — Real Integration Wiring Wave — Slice 2 — Dashboard Route Props
+
+- Added route-level verification for `/x/cockpit` Connected Services props.
+- Confirmed installed x-journal, x-action, and x-feedback packages are surfaced as read-only dashboard summaries.
+- Confirmed voucher and execution facts remain fallback/not-wired without a Pay Code.
+- UI/report: `../ui-cockpit/reports/477-real-integration-wiring-slice-2-dashboard-route-props.md`.
+- Boundary remains unchanged: route-prop verification only; no journal write, x-action execution, x-feedback delivery, campaign dispatch, voucher lifecycle mutation, driver execution, artifact generation, provider call, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next checkpoint: publish package assets if operator-facing copy changes are needed, then verify dashboard frontend rendering and build.
