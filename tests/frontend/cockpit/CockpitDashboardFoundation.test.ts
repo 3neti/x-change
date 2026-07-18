@@ -56,6 +56,9 @@ describe('Cockpit dashboard foundation widgets', () => {
         expect(wrapper.text()).toContain('Claim Started');
         expect(wrapper.text()).toContain('Reconciled');
         expect(wrapper.text()).toContain('Read-only');
+        expect(wrapper.find('[data-testid="cockpit-pipeline-density-summary"]').text()).toContain('Claim Facts');
+        expect(wrapper.find('[data-testid="cockpit-pipeline-density-summary"]').text()).toContain('Active Counts');
+        expect(wrapper.find('[data-testid="cockpit-pipeline-density-summary"]').text()).toContain('Not run here');
         expect(wrapper.findAll('[data-testid="cockpit-pipeline-stage"]')).toHaveLength(7);
     });
 
@@ -71,6 +74,9 @@ describe('Cockpit dashboard foundation widgets', () => {
         expect(wrapper.text()).toContain('Expiring Today');
         expect(wrapper.text()).toContain('Funding Runway');
         expect(wrapper.text()).toContain('Stuck Settlements');
+        expect(wrapper.find('[data-testid="cockpit-risk-density-summary"]').text()).toContain('Signals');
+        expect(wrapper.find('[data-testid="cockpit-risk-density-summary"]').text()).toContain('Highest Severity');
+        expect(wrapper.find('[data-testid="cockpit-risk-density-summary"]').text()).toContain('Critical');
         expect(wrapper.findAll('[data-testid="cockpit-risk-signal"]')).toHaveLength(3);
     });
 

@@ -1,9 +1,29 @@
 <script setup lang="ts">
 import type { CockpitRiskSignal } from '../types';
 
-defineProps<{
+const props = defineProps<{
     signals: CockpitRiskSignal[];
 }>();
+
+function signalCount(): number {
+    return props.signals.length;
+}
+
+function highestSeverityLabel(): string {
+    if (props.signals.some((signal) => signal.severity === 'critical')) {
+        return 'Critical';
+    }
+
+    if (props.signals.some((signal) => signal.severity === 'warning')) {
+        return 'Warning';
+    }
+
+    if (props.signals.some((signal) => signal.severity === 'watch')) {
+        return 'Watch';
+    }
+
+    return 'None';
+}
 
 const severityClass = (severity: CockpitRiskSignal['severity']): string => {
     return {
@@ -36,6 +56,28 @@ const severityLabel = (severity: CockpitRiskSignal['severity']): string => {
         <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
             Read-only signals for operator triage. Review actions remain outside this dashboard.
         </p>
+
+        <div
+            class="mt-5 grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-800 dark:bg-slate-950/40 sm:grid-cols-2"
+            data-testid="cockpit-risk-density-summary"
+        >
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Signals
+                </p>
+                <p class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                    {{ signalCount() }}
+                </p>
+            </div>
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Highest Severity
+                </p>
+                <p class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                    {{ highestSeverityLabel() }}
+                </p>
+            </div>
+        </div>
 
         <div class="mt-5 space-y-3">
             <article

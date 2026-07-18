@@ -1,9 +1,21 @@
 <script setup lang="ts">
 import type { CockpitPipelineStage } from '../types';
 
-defineProps<{
+const props = defineProps<{
     stages: CockpitPipelineStage[];
 }>();
+
+function stageCount(): number {
+    return props.stages.length;
+}
+
+function nonZeroStageCount(): number {
+    return props.stages.filter((stage) => {
+        const numericValue = Number(stage.value);
+
+        return Number.isFinite(numericValue) && numericValue > 0;
+    }).length;
+}
 </script>
 
 <template>
@@ -26,6 +38,36 @@ defineProps<{
             <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                 Read-only
             </span>
+        </div>
+
+        <div
+            class="mt-5 grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-800 dark:bg-slate-950/40 sm:grid-cols-3"
+            data-testid="cockpit-pipeline-density-summary"
+        >
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Claim Facts
+                </p>
+                <p class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                    {{ stageCount() }}
+                </p>
+            </div>
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Active Counts
+                </p>
+                <p class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                    {{ nonZeroStageCount() }}
+                </p>
+            </div>
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Execution
+                </p>
+                <p class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                    Not run here
+                </p>
+            </div>
         </div>
 
         <div class="mt-5 grid gap-2">
