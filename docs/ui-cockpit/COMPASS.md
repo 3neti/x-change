@@ -5,11 +5,18 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Pay Code Explorer Result Density Polish
-Status: Slice 1 in progress; results table has compact density summary
+Status: Slice 2 in progress; disabled row actions are grouped behind disclosures
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Pay Code Explorer Result Density Polish Slice 2:
+  - Enabled row actions remain visible as primary read-only navigation pills.
+  - Disabled or unavailable row actions are grouped inside compact per-row disclosures.
+  - Existing row action data, hrefs, disabled controls, and safety reasons remain available.
+  - Confirmed no routes, controllers, campaign mutation, campaign dispatch, Pay Code generation through campaign, feedback sends, journal writes, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, persistence, or money movement were added.
+  - Report: `reports/508-pay-code-explorer-result-density-polish-slice-2.md`.
+  - Next recommended checkpoint: Pay Code Explorer Result Density Polish Slice 3 — host publish / verification / closure.
 - Completed Pay Code Explorer Result Density Polish Slice 1:
   - Added compact row/link/disabled-action counts above Pay Code Explorer results.
   - Moved the scan guide into a collapsed disclosure to reduce visual noise.

@@ -36,12 +36,20 @@ function isEnabledAction(action: CockpitPayCodeRowAction): boolean {
     return action.enabled === true && typeof action.href === 'string' && action.href.trim() !== '';
 }
 
+function enabledActions(record: CockpitPayCodeExplorerRecord): CockpitPayCodeRowAction[] {
+    return rowActions(record, props.actions).filter((action) => isEnabledAction(action));
+}
+
+function disabledActions(record: CockpitPayCodeExplorerRecord): CockpitPayCodeRowAction[] {
+    return rowActions(record, props.actions).filter((action) => !isEnabledAction(action));
+}
+
 function enabledActionCount(record: CockpitPayCodeExplorerRecord): number {
-    return rowActions(record, props.actions).filter((action) => isEnabledAction(action)).length;
+    return enabledActions(record).length;
 }
 
 function disabledActionCount(record: CockpitPayCodeExplorerRecord): number {
-    return rowActions(record, props.actions).filter((action) => !isEnabledAction(action)).length;
+    return disabledActions(record).length;
 }
 
 function totalEnabledActionCount(): number {
@@ -166,31 +174,41 @@ function totalDisabledActionCount(): number {
                             {{ record.lastActivity }}
                         </td>
                         <td class="px-5 py-4">
-                            <div class="flex flex-wrap gap-2">
-                                <template
-                                    v-for="action in rowActions(record, actions)"
-                                    :key="action.key"
-                                >
+                            <div class="flex min-w-44 flex-col gap-2">
+                                <div class="flex flex-wrap gap-2">
                                     <Link
-                                        v-if="isEnabledAction(action)"
+                                        v-for="action in enabledActions(record)"
+                                        :key="action.key"
                                         :href="action.href ?? '#'"
                                         :title="action.reason ?? undefined"
-                                        class="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+                                        class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:border-emerald-700"
                                         data-testid="cockpit-pay-code-row-action-link"
                                     >
                                         {{ action.label }}
                                     </Link>
-                                    <button
-                                        v-else
-                                        :disabled="action.disabled !== false"
-                                        :title="action.reason ?? undefined"
-                                        type="button"
-                                        class="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:text-slate-300"
-                                        data-testid="cockpit-pay-code-row-action-disabled"
-                                    >
-                                        {{ action.label }}
-                                    </button>
-                                </template>
+                                </div>
+                                <details
+                                    v-if="disabledActions(record).length > 0"
+                                    class="group w-fit text-xs text-slate-500 dark:text-slate-400"
+                                    data-testid="cockpit-pay-code-row-unavailable-actions"
+                                >
+                                    <summary class="cursor-pointer font-medium text-slate-500 transition hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">
+                                        {{ disabledActions(record).length }} unavailable
+                                    </summary>
+                                    <div class="mt-2 flex flex-wrap gap-2">
+                                        <button
+                                            v-for="action in disabledActions(record)"
+                                            :key="action.key"
+                                            :disabled="action.disabled !== false"
+                                            :title="action.reason ?? undefined"
+                                            type="button"
+                                            class="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:text-slate-300"
+                                            data-testid="cockpit-pay-code-row-action-disabled"
+                                        >
+                                            {{ action.label }}
+                                        </button>
+                                    </div>
+                                </details>
                             </div>
                         </td>
                     </tr>

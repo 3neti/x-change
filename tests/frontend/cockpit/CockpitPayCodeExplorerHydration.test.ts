@@ -228,6 +228,7 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(actionLinks[1].attributes('href')).toBe('/x/cockpit/pay-codes/PC-HYDRATED-001/distribution');
         expect(actionLinks[1].text()).toContain('Distribution');
         expect(disabledActions.some((action) => action.text().includes('Notify recipient'))).toBe(true);
+        expect(wrapper.find('[data-testid="cockpit-pay-code-row-unavailable-actions"]').text()).toContain('1 unavailable');
         expect(wrapper.find('[data-testid="cockpit-pay-code-results-table"]').text()).not.toContain('Execute');
         expect(wrapper.text()).not.toContain('provider_payload');
     });

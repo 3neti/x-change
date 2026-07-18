@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Cockpit Pay Code Explorer Result Density Polish
-Current status: Slice 1 in progress; results table has compact density summary
+Current status: Slice 2 in progress; disabled row actions are grouped behind disclosures
 Last updated: 2026-07-19
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-19
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Pay Code Explorer result density polish Slice 1 in progress | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Pay Code Explorer result density polish Slice 2 in progress | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,12 @@ Last updated: 2026-07-19
 
 ### Current Cockpit Host Integration
 
+- Cockpit Pay Code Explorer Result Density Polish Slice 2 complete:
+  - Enabled Pay Code Explorer row actions remain visible as primary read-only navigation pills.
+  - Disabled or unavailable row actions are grouped inside compact per-row disclosures.
+  - Existing row action data, hrefs, disabled controls, and safety reasons remain available.
+  - Confirmed no routes, controllers, campaign mutation, campaign dispatch, Pay Code generation through campaign, feedback sends, journal writes, action execution, provider calls, wallet behavior, Treasury behavior, public API changes, persistence, or money movement were added.
+  - Report: [../ui-cockpit/reports/508-pay-code-explorer-result-density-polish-slice-2.md](../ui-cockpit/reports/508-pay-code-explorer-result-density-polish-slice-2.md).
 - Cockpit Pay Code Explorer Result Density Polish Slice 1 complete:
   - Added compact row/link/disabled-action counts above Pay Code Explorer results.
   - Moved the scan guide into a collapsed disclosure to reduce visual noise.
