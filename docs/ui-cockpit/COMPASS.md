@@ -3662,3 +3662,11 @@ Current boundary:
 - Published package-owned Cockpit assets into the host app and confirmed published assets match package source.
 - Report: `reports/545-voucher-detail-page-polish-slice-2.md`.
 - Boundary remains unchanged: presentation-copy update only; no route behavior, read-model hydration, distribution dispatch, feedback delivery, x-action execution, journal write, voucher mutation, provider call, persistence, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-19 — Voucher Detail Page Polish — Slice 3 Closure
+
+- Closed the Voucher Detail Page Polish wave.
+- Focused frontend, asset drift, and host production build verification passed.
+- Voucher Detail now has a more scan-friendly primary context and cleaner operator-facing connected-service language.
+- Report: `reports/546-voucher-detail-page-polish-slice-3-closure.md`.
+- Boundary remains unchanged: presentation-only polish; no route behavior, read-model hydration, distribution dispatch, feedback delivery, x-action execution, journal write, voucher mutation, provider call, persistence, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
