@@ -3621,3 +3621,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/569-distribution-workspace-secondary-panel-copy-polish-slice-2-closure.md`.
 - Boundary remains unchanged: presentation-only polish and publish verification; no route behavior, read-model hydration, distribution dispatch, feedback delivery, x-action execution, journal write, campaign mutation, voucher mutation, claim execution, driver execution, provider call, artifact generation, persistence, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next recommended checkpoint: manually inspect `/x/cockpit/pay-codes/{code}/distribution`, then continue page-focused Cockpit polish or pick the next real integration wiring wave.
+
+## 2026-07-19 Update — Distribution Workspace Copy Acceptance — Slice 1
+
+- Started the Distribution Workspace Copy Acceptance wave.
+- Added a human acceptance checklist for the copy-polished Distribution Workspace secondary panels.
+- Strengthened authenticated Dusk smoke coverage to assert the operator-facing secondary panel labels appear in the host-published page.
+- UI/report: `../ui-cockpit/reports/570-distribution-workspace-copy-acceptance-slice-1-checklist.md`.
+- Boundary remains unchanged: acceptance scaffolding only; no route behavior, read-model hydration, distribution dispatch, feedback delivery, x-action execution, journal write, campaign mutation, voucher mutation, claim execution, driver execution, provider call, artifact generation, persistence, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next checkpoint: automated verification closure while pending human visual evidence.
