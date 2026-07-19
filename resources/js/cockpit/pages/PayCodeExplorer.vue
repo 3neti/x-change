@@ -206,6 +206,8 @@ const campaignNavigationContextItems = computed(() => {
         },
     ];
 });
+const campaignNavigationPrimaryItems = computed(() => campaignNavigationContextItems.value
+    .filter((item) => ['planning-key', 'campaign-id', 'recipient-id', 'source'].includes(item.key)));
 const campaignDashboardHref = computed(() => {
     const context = campaignNavigationContext.value;
 
@@ -645,32 +647,35 @@ function integrationBadge(
 
             <section
                 v-if="campaignNavigationContext"
-                class="rounded-2xl border border-sky-200 bg-sky-50 p-5 text-sm text-sky-950 shadow-sm dark:border-sky-900 dark:bg-sky-950/70 dark:text-sky-100"
+                class="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50 to-white p-5 text-sm text-sky-950 shadow-sm dark:border-sky-900 dark:from-sky-950/70 dark:to-slate-900 dark:text-sky-100"
                 data-testid="cockpit-campaign-navigation-context"
             >
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700 dark:text-sky-300">
-                            Campaign Explorer Context
+                            Campaign Context
                         </p>
                         <h3 class="mt-2 text-xl font-semibold">
-                            Campaign-aware Pay Code view
+                            Showing Pay Codes from a campaign view
                         </h3>
                         <p class="mt-2 max-w-3xl leading-6 text-sky-900/80 dark:text-sky-100/80">
-                            This context came from Campaign Cockpit navigation and is used only to orient the Explorer. It does not dispatch campaigns, issue more Pay Codes, send feedback, write journal entries, call providers, or move money.
+                            Campaign identifiers are preserved so operators can inspect related Pay Codes and return to the campaign view. This page does not change campaigns, send messages, issue additional Pay Codes, write audit entries, call providers, or move money.
                         </p>
                     </div>
                     <span class="w-fit rounded-full bg-white px-3 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-200 dark:bg-sky-900 dark:text-sky-100 dark:ring-sky-800">
-                        Read-only filter
+                        Read-only context
                     </span>
                 </div>
 
-                <dl class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <dl
+                    class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+                    data-testid="cockpit-campaign-navigation-primary-context"
+                >
                     <div
-                        v-for="item in campaignNavigationContextItems"
+                        v-for="item in campaignNavigationPrimaryItems"
                         :key="item.key"
-                        class="rounded-xl bg-white/80 p-4 dark:bg-sky-900/50"
-                        data-testid="cockpit-campaign-navigation-context-item"
+                        class="rounded-xl bg-white/85 p-4 ring-1 ring-sky-100 dark:bg-sky-900/50 dark:ring-sky-800"
+                        data-testid="cockpit-campaign-navigation-primary-context-item"
                     >
                         <dt class="text-xs font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">
                             {{ item.label }}
@@ -681,13 +686,37 @@ function integrationBadge(
                     </div>
                 </dl>
 
+                <details
+                    class="mt-4 rounded-xl border border-sky-200 bg-white/70 p-4 dark:border-sky-800 dark:bg-sky-900/40"
+                    data-testid="cockpit-campaign-navigation-context-details"
+                >
+                    <summary class="cursor-pointer text-sm font-semibold text-sky-800 dark:text-sky-100">
+                        Campaign filter details
+                    </summary>
+                    <dl class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                        <div
+                            v-for="item in campaignNavigationContextItems"
+                            :key="item.key"
+                            class="rounded-lg bg-sky-50/80 p-3 dark:bg-sky-950/70"
+                            data-testid="cockpit-campaign-navigation-context-item"
+                        >
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">
+                                {{ item.label }}
+                            </dt>
+                            <dd class="mt-1 break-words font-semibold">
+                                {{ item.value }}
+                            </dd>
+                        </div>
+                    </dl>
+                </details>
+
                 <div class="mt-5 flex flex-col gap-3 rounded-xl border border-sky-200 bg-white/70 p-4 dark:border-sky-800 dark:bg-sky-900/40 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <p class="font-semibold">
-                            Campaign changes are disabled here
+                            Campaign changes are disabled
                         </p>
                         <p class="mt-1 leading-6 text-sky-900/80 dark:text-sky-100/80">
-                            {{ campaignNavigationContext.mutation?.reason }}
+                            Use this view for inspection and navigation only. Campaign edits, delivery, and bulk issuance remain outside Pay Code Explorer.
                         </p>
                     </div>
                     <a

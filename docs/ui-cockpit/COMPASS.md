@@ -4,12 +4,22 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Pay Code Explorer Row / Mobile Density Polish
-Status: Closed; Pay Code Explorer row/mobile density polish is host-published
+Current slice: Pay Code Explorer Campaign Context Visual Polish
+Status: Slice 1 implemented; host publish / closure pending
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Pay Code Explorer Campaign Context Visual Polish Slice 1:
+  - Renamed the campaign panel to `Campaign Context`.
+  - Replaced raw mutation reason display with operator-facing copy.
+  - Added a primary four-field campaign context summary for Planning Key, Campaign ID, Recipient ID, and Source.
+  - Moved the full campaign context identifier set into `Campaign filter details`.
+  - Preserved hidden GET fields, campaign return link, row detail links, and distribution links.
+  - Verified focused campaign Explorer frontend navigation coverage, Pay Code Explorer hydration coverage, and backend architecture documentation coverage.
+  - Confirmed no routes, controllers, queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, or money movement were changed.
+  - Report: `reports/557-pay-code-explorer-campaign-context-polish-slice-1.md`.
+  - Next recommended checkpoint: Pay Code Explorer Campaign Context Visual Polish Slice 2 — host publish / asset drift / browser / build closure.
 - Completed Pay Code Explorer Row / Mobile Density Polish Slice 2 / Closure:
   - Published package Cockpit assets to the host app.
   - Confirmed published Cockpit assets match package source.

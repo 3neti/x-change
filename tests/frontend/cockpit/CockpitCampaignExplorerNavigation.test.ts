@@ -71,18 +71,21 @@ describe('Cockpit campaign explorer navigation boundary', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Campaign Explorer Context');
-        expect(wrapper.text()).toContain('Campaign-aware Pay Code view');
-        expect(wrapper.text()).toContain('Read-only filter');
+        expect(wrapper.text()).toContain('Campaign Context');
+        expect(wrapper.text()).toContain('Showing Pay Codes from a campaign view');
+        expect(wrapper.text()).toContain('Read-only context');
         expect(wrapper.text()).toContain('campaign-plan-1');
-        expect(wrapper.text()).toContain('execution-1');
         expect(wrapper.text()).toContain('campaign-1');
-        expect(wrapper.text()).toContain('audience-1');
         expect(wrapper.text()).toContain('recipient-1');
         expect(wrapper.text()).toContain('Pay Code Explorer');
-        expect(wrapper.text()).toContain('campaign-navigation-read-only');
+        expect(wrapper.text()).toContain('Campaign changes are disabled');
+        expect(wrapper.text()).toContain('Campaign filter details');
+        expect(wrapper.text()).toContain('Use this view for inspection and navigation only');
+        expect(wrapper.text()).not.toContain('campaign-navigation-read-only');
         expect(wrapper.text()).toContain('navigation-context-only');
         expect(wrapper.find('[data-testid="cockpit-campaign-navigation-context"]').exists()).toBe(true);
+        expect(wrapper.findAll('[data-testid="cockpit-campaign-navigation-primary-context-item"]')).toHaveLength(4);
+        expect(wrapper.find('[data-testid="cockpit-campaign-navigation-context-details"]').element.tagName.toLowerCase()).toBe('details');
         expect(wrapper.findAll('[data-testid="cockpit-campaign-navigation-context-item"]')).toHaveLength(8);
         expect(wrapper.find('[data-testid="cockpit-campaign-navigation-mutation-button"]').exists()).toBe(false);
     });
@@ -183,7 +186,8 @@ describe('Cockpit campaign explorer navigation boundary', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Campaign Explorer Context');
+        expect(wrapper.text()).toContain('Campaign Context');
+        expect(wrapper.text()).toContain('Showing Pay Codes from a campaign view');
         expect(wrapper.text()).toContain('campaign-plan-1');
         expect(wrapper.text()).not.toContain('must-not-render');
     });
