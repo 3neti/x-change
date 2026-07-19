@@ -46,13 +46,13 @@ function metricMetadata(metric: CockpitDistributionMetric): Array<{ label: strin
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                        Operational evidence
+                        Status evidence
                     </p>
                     <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                        Read-only evidence summary
+                        Delivery and campaign signals
                     </h3>
                     <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                        Audit and operational facts are summarized here without writing journal entries or changing delivery state.
+                        These are read-only status facts from connected summaries. Open a row only if you need source details.
                     </p>
                 </div>
                 <dl
@@ -85,7 +85,7 @@ function metricMetadata(metric: CockpitDistributionMetric): Array<{ label: strin
                     data-testid="cockpit-distribution-metric-disclosure"
                 >
                     <summary class="cursor-pointer font-medium text-slate-600 dark:text-slate-300">
-                        Evidence details
+                        Why this status appears
                     </summary>
                     <p class="mt-2 leading-5">
                         {{ metric.helper }}

@@ -4,12 +4,19 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Distribution Workspace Manual Acceptance
-Status: Passed with UI follow-up
+Current slice: Distribution Workspace Secondary Panel Copy Polish
+Status: In progress
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Distribution Workspace Secondary Panel Copy Polish Slice 1:
+  - Replaced lower Distribution Workspace secondary-panel language with friendlier operator copy.
+  - Renamed delivery copy to notification readiness, print copy to printable handout options, share copy to share options, and operational evidence to status evidence.
+  - Kept all details available in compact disclosures while making disabled/no-dispatch semantics easier to scan.
+  - Confirmed no routes, controllers, queries, read-model hydration, distribution links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, artifact generation, or money movement were changed.
+  - Report: `reports/568-distribution-workspace-secondary-panel-copy-polish-slice-1.md`.
+  - Next recommended checkpoint: Distribution Workspace Secondary Panel Copy Polish Slice 2 — host publish / drift / browser / build closure.
 - Completed Distribution Workspace Manual Acceptance Slice 3:
   - Recorded human browser scrape evidence for `/x/cockpit/pay-codes/E9MC/distribution`.
   - Accepted the page as `Pass with UI follow-up` for the current read-only/manual-distribution gate.

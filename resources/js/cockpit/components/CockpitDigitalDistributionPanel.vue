@@ -65,10 +65,10 @@ function actionMetadata(action: CockpitDistributionAction): Array<{ label: strin
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                            Delivery channels
+                            Notification channels
                         </p>
                         <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                            Message and follow-up status
+                            Message and follow-up readiness
                         </h3>
                     </div>
                     <dl
@@ -90,7 +90,7 @@ function actionMetadata(action: CockpitDistributionAction): Array<{ label: strin
                     </dl>
                 </div>
                 <p class="max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    Channel and follow-up facts are read-only. This workspace does not send messages, execute actions, dispatch campaigns, or create artifacts.
+                    These are status summaries only. Cockpit does not send notifications, run follow-up actions, dispatch campaigns, or create artifacts from this workspace.
                 </p>
             </div>
         </summary>
@@ -153,7 +153,7 @@ function actionMetadata(action: CockpitDistributionAction): Array<{ label: strin
                     data-testid="cockpit-distribution-action-disclosure"
                 >
                     <summary class="cursor-pointer font-medium text-slate-600 dark:text-slate-300">
-                        Follow-up details
+                        Why disabled
                     </summary>
                     <p class="mt-2 leading-5">
                         {{ action.reason }}

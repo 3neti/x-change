@@ -19,13 +19,13 @@ function deferredAssetCount(): number {
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                        Share Assets
+                        Share options
                     </p>
                     <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                        Link, QR, and short-link readiness
+                        Copy, QR, and short-link readiness
                     </h3>
                     <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                        Share assets are inspection facts only. This workspace does not create QR codes, short links, or delivery artifacts.
+                        Only the claim URL can be copied today. QR codes and short links are future artifacts and are not generated here.
                     </p>
                 </div>
                 <dl
@@ -64,7 +64,7 @@ function deferredAssetCount(): number {
                     data-testid="cockpit-share-asset-disclosure"
                 >
                     <summary class="cursor-pointer font-medium text-slate-600 dark:text-slate-300">
-                        Asset details
+                        What this means
                     </summary>
                     <p class="mt-2 leading-5">
                         {{ asset.helper }}

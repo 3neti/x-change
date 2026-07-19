@@ -9,7 +9,11 @@ function formatSummary(): string {
     const formats = new Set(props.templates.map((template) => template.format).filter(Boolean));
 
     if (formats.size === 0) {
-        return 'No formats';
+        return 'No templates';
+    }
+
+    if (formats.size === 1) {
+        return `${props.templates.length} planned templates`;
     }
 
     return Array.from(formats).join(', ');
@@ -28,10 +32,10 @@ function formatSummary(): string {
                         Print Templates
                     </p>
                     <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                        Print asset readiness
+                        Printable handout options
                     </h3>
                     <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                        Template previews are read-only. This workspace does not generate print files or talk to printers.
+                        These are future handout ideas only. Cockpit does not generate PDFs, create files, or talk to printers from this workspace.
                     </p>
                 </div>
                 <dl

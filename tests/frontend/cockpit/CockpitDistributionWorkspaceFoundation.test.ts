@@ -27,8 +27,9 @@ describe('Cockpit Distribution Workspace foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Delivery channels');
-        expect(wrapper.text()).toContain('Message and follow-up status');
+        expect(wrapper.text()).toContain('Notification channels');
+        expect(wrapper.text()).toContain('Message and follow-up readiness');
+        expect(wrapper.text()).toContain('Cockpit does not send notifications');
         expect(wrapper.text()).toContain('SMS handoff');
         expect(wrapper.text()).toContain('Email handoff');
         expect(wrapper.text()).toContain('In-app notification handoff');
@@ -58,8 +59,8 @@ describe('Cockpit Distribution Workspace foundation', () => {
         });
 
         expect(wrapper.find('[data-testid="cockpit-print-template-panel"]').element.tagName.toLowerCase()).toBe('details');
-        expect(wrapper.text()).toContain('Print asset readiness');
-        expect(wrapper.text()).toContain('Template previews are read-only');
+        expect(wrapper.text()).toContain('Printable handout options');
+        expect(wrapper.text()).toContain('future handout ideas only');
         expect(wrapper.text()).toContain('Receipt card');
         expect(wrapper.text()).toContain('Branch release sheet');
         expect(wrapper.text()).toContain('Counter slip');
@@ -78,7 +79,8 @@ describe('Cockpit Distribution Workspace foundation', () => {
         });
 
         expect(wrapper.find('[data-testid="cockpit-share-qr-panel"]').element.tagName.toLowerCase()).toBe('details');
-        expect(wrapper.text()).toContain('Link, QR, and short-link readiness');
+        expect(wrapper.text()).toContain('Copy, QR, and short-link readiness');
+        expect(wrapper.text()).toContain('Only the claim URL can be copied today');
         expect(wrapper.text()).toContain('QR asset');
         expect(wrapper.text()).toContain('Short link');
         expect(wrapper.text()).toContain('Copy text');
@@ -97,8 +99,9 @@ describe('Cockpit Distribution Workspace foundation', () => {
         });
 
         expect(wrapper.find('[data-testid="cockpit-distribution-analytics-panel"]').element.tagName.toLowerCase()).toBe('details');
-        expect(wrapper.text()).toContain('Operational evidence');
-        expect(wrapper.text()).toContain('Read-only evidence summary');
+        expect(wrapper.text()).toContain('Status evidence');
+        expect(wrapper.text()).toContain('Delivery and campaign signals');
+        expect(wrapper.text()).toContain('Open a row only if you need source details');
         expect(wrapper.text()).toContain('Planned sends');
         expect(wrapper.text()).toContain('Printed assets');
         expect(wrapper.text()).toContain('Delivery state');
@@ -121,10 +124,10 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.find('[data-testid="cockpit-distribution-primary-summary"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="cockpit-distribution-primary-detail-link"]').text()).toContain('Back to Pay Code Detail');
         expect(wrapper.find('[data-testid="cockpit-distribution-primary-explorer-link"]').text()).toContain('Back to Pay Codes');
-        expect(wrapper.text()).toContain('Delivery channels');
+        expect(wrapper.text()).toContain('Notification channels');
         expect(wrapper.text()).toContain('Print Templates');
-        expect(wrapper.text()).toContain('Share Assets');
-        expect(wrapper.text()).toContain('Operational evidence');
+        expect(wrapper.text()).toContain('Share options');
+        expect(wrapper.text()).toContain('Status evidence');
         expect(wrapper.find('[aria-current="page"]').text()).toContain('Pay Codes');
         expect(wrapper.text()).toContain('does not dispatch distribution');
         expect(wrapper.text()).toContain('send feedback');
