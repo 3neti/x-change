@@ -4,12 +4,22 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Pay Code Explorer Search / Results Polish
-Status: Closed; Pay Code Explorer search/results polish is host-published
+Current slice: Pay Code Explorer Row / Mobile Density Polish
+Status: Slice 1 implemented; host publish / closure pending
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Pay Code Explorer Row / Mobile Density Polish Slice 1:
+  - Added mobile-first Pay Code result cards below the results header.
+  - Kept the existing desktop results table for medium and larger screens.
+  - Hid the wide table below `md` to avoid horizontal table pressure on phones.
+  - Preserved enabled row links to Voucher Detail and Distribution Workspace.
+  - Preserved disabled-action summaries without adding executable actions.
+  - Verified focused Pay Code Explorer frontend hydration coverage and backend architecture documentation coverage.
+  - Confirmed no routes, controllers, queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, or money movement were changed.
+  - Report: `reports/555-pay-code-explorer-row-mobile-density-slice-1.md`.
+  - Next recommended checkpoint: Pay Code Explorer Row / Mobile Density Polish Slice 2 — host publish / asset drift / browser / build closure.
 - Completed Pay Code Explorer Search / Results Polish Slice 2 / Closure:
   - Published package Cockpit assets to the host app.
   - Confirmed published Cockpit assets match package source.

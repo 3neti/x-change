@@ -242,6 +242,31 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(wrapper.text()).not.toContain('provider_payload');
     });
 
+    it('renders mobile-first Pay Code result cards without duplicating desktop row test contracts', () => {
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: payCodesReadModel,
+            },
+        });
+
+        const mobileResults = wrapper.find('[data-testid="cockpit-pay-code-mobile-results"]');
+        const mobileRows = wrapper.findAll('[data-testid="cockpit-pay-code-mobile-row"]');
+        const mobileLinks = wrapper.findAll('[data-testid="cockpit-pay-code-mobile-row-action-link"]');
+
+        expect(mobileResults.exists()).toBe(true);
+        expect(mobileResults.classes()).toContain('md:hidden');
+        expect(mobileRows).toHaveLength(2);
+        expect(mobileRows[0].text()).toContain('PC-HYDRATED-001');
+        expect(mobileRows[0].text()).toContain('Money Changer');
+        expect(mobileRows[0].text()).toContain('₱1,500.75');
+        expect(mobileRows[0].text()).toContain('Treasury Desk');
+        expect(mobileRows[0].text()).toContain('1 unavailable');
+        expect(mobileLinks).toHaveLength(2);
+        expect(mobileLinks[0].attributes('href')).toBe('/x/cockpit/pay-codes/PC-HYDRATED-001');
+        expect(mobileLinks[1].attributes('href')).toBe('/x/cockpit/pay-codes/PC-HYDRATED-001/distribution');
+        expect(wrapper.findAll('[data-testid="cockpit-pay-code-row"]')).toHaveLength(2);
+    });
+
     it('summarizes pay code result density before the rows', () => {
         const wrapper = mount(PayCodeExplorer, {
             props: {

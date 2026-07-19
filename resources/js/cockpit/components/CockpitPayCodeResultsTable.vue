@@ -134,7 +134,80 @@ function totalDisabledActionCount(): number {
             </details>
         </div>
 
-        <div class="overflow-x-auto">
+        <div
+            class="divide-y divide-slate-100 md:hidden dark:divide-slate-800"
+            data-testid="cockpit-pay-code-mobile-results"
+        >
+            <article
+                v-for="record in records"
+                :key="`mobile-${record.code}`"
+                class="space-y-4 p-4"
+                data-testid="cockpit-pay-code-mobile-row"
+            >
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="font-mono text-base font-semibold text-slate-950 dark:text-slate-50">
+                            {{ record.code }}
+                        </p>
+                        <p class="mt-1 truncate text-sm text-slate-600 dark:text-slate-300">
+                            {{ record.template }}
+                        </p>
+                    </div>
+                    <span class="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                        {{ record.status }}
+                    </span>
+                </div>
+
+                <dl class="grid grid-cols-2 gap-3 text-sm">
+                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
+                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Amount
+                        </dt>
+                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                            {{ record.amount }}
+                        </dd>
+                    </div>
+                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
+                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Owner
+                        </dt>
+                        <dd class="mt-1 truncate font-semibold text-slate-950 dark:text-slate-50">
+                            {{ record.owner }}
+                        </dd>
+                    </div>
+                    <div class="col-span-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
+                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Last Activity
+                        </dt>
+                        <dd class="mt-1 text-slate-700 dark:text-slate-200">
+                            {{ record.lastActivity }}
+                        </dd>
+                    </div>
+                </dl>
+
+                <div class="flex flex-wrap gap-2">
+                    <Link
+                        v-for="action in enabledActions(record)"
+                        :key="action.key"
+                        :href="action.href ?? '#'"
+                        :title="action.reason ?? undefined"
+                        class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:border-emerald-700"
+                        data-testid="cockpit-pay-code-mobile-row-action-link"
+                    >
+                        {{ action.label }}
+                    </Link>
+                    <span
+                        v-if="disabledActions(record).length > 0"
+                        class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                        data-testid="cockpit-pay-code-mobile-row-disabled-summary"
+                    >
+                        {{ disabledActions(record).length }} unavailable
+                    </span>
+                </div>
+            </article>
+        </div>
+
+        <div class="hidden overflow-x-auto md:block">
             <table class="min-w-full divide-y divide-slate-200 text-left text-sm dark:divide-slate-800">
                 <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-950 dark:text-slate-400">
                     <tr>
