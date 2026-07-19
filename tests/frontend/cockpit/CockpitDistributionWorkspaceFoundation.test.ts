@@ -279,6 +279,15 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).toContain('https://example.test/x/claim/PC-DIST-001/experience');
         expect(wrapper.text()).toContain('/x/claim/PC-DIST-001/experience');
         expect(wrapper.text()).toContain('delivery disabled');
+        expect(wrapper.text()).toContain('Connected context');
+        expect(wrapper.text()).toContain('inspection only');
+        expect(wrapper.text()).toContain('Claim URL');
+        expect(wrapper.text()).toContain('Ready');
+        expect(wrapper.text()).toContain('Delivery Evidence');
+        expect(wrapper.text()).toContain('Follow-Up Guidance');
+        expect(wrapper.text()).toContain('Audit Evidence');
+        expect(wrapper.find('[data-testid="cockpit-distribution-connected-context-summary"]').exists()).toBe(true);
+        expect(wrapper.findAll('[data-testid="cockpit-distribution-connected-context-item"]')).toHaveLength(4);
         expect(wrapper.find('[data-testid="cockpit-distribution-workspace-links-panel"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="cockpit-distribution-workspace-beneficiary-url-link"]').attributes('href')).toBe('https://example.test/x/claim/PC-DIST-001/experience');
         expect(wrapper.text()).toContain('Copy text');

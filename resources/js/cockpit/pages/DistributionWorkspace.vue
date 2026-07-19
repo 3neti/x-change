@@ -90,6 +90,32 @@ const readinessSummary = computed(() => [
         helper: 'Read-model summary only.',
     },
 ]);
+const connectedContextSummary = computed(() => [
+    {
+        key: 'claim-url',
+        label: 'Claim URL',
+        value: distributionLinksAvailable.value ? 'Ready' : 'Not Available',
+        helper: distributionLinksAvailable.value ? 'Canonical beneficiary URL is available for manual copy.' : 'No claim URL is available yet.',
+    },
+    {
+        key: 'delivery-evidence',
+        label: 'Delivery Evidence',
+        value: `${distributionChannels.value.filter((channel) => channel.metadata?.communication_state_only === true).length}`,
+        helper: 'Read-only x-feedback delivery summaries shown as communication state.',
+    },
+    {
+        key: 'follow-up-guidance',
+        label: 'Follow-Up Guidance',
+        value: `${distributionActions.value.filter((action) => action.metadata?.presentation_run === true).length}`,
+        helper: 'Disabled x-action guidance rows; Cockpit does not execute them.',
+    },
+    {
+        key: 'audit-evidence',
+        label: 'Audit Evidence',
+        value: `${distributionMetrics.value.filter((metric) => metric.metadata?.evidence_only === true).length}`,
+        helper: 'Read-only x-journal evidence rows shown as audit guidance.',
+    },
+]);
 const channelArtifactSummary = computed(() => [
     {
         key: 'channels',
@@ -494,6 +520,43 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                             </li>
                         </ol>
                     </div>
+                </div>
+
+                <div
+                    class="mt-5 rounded-xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/60 dark:bg-slate-950/70"
+                    data-testid="cockpit-distribution-connected-context-summary"
+                >
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                                Connected context
+                            </p>
+                            <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                                Quick scan of the read-only distribution context currently available for this Pay Code.
+                            </p>
+                        </div>
+                        <span class="w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200">
+                            inspection only
+                        </span>
+                    </div>
+                    <dl class="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
+                        <div
+                            v-for="item in connectedContextSummary"
+                            :key="item.key"
+                            class="rounded-lg border border-slate-200 p-3 dark:border-slate-800"
+                            data-testid="cockpit-distribution-connected-context-item"
+                        >
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                {{ item.label }}
+                            </dt>
+                            <dd class="mt-1 text-base font-semibold text-slate-950 dark:text-slate-50">
+                                {{ item.value }}
+                            </dd>
+                            <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                {{ item.helper }}
+                            </p>
+                        </div>
+                    </dl>
                 </div>
 
                 <div
