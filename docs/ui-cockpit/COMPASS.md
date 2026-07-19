@@ -3647,3 +3647,10 @@ Current boundary:
 - Distribution Workspace now has a more operator-facing primary scan path and less engineering-oriented panel copy.
 - Report: `reports/543-distribution-workspace-page-polish-slice-3-closure.md`.
 - Boundary remains unchanged: presentation-only polish; no route behavior, read-model hydration, distribution dispatch, feedback delivery, x-action execution, journal write, voucher mutation, provider call, artifact generation, persistence, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-19 — Voucher Detail Page Polish — Slice 1
+
+- Started the Voucher Detail Page Polish wave.
+- Added a primary `Connected context` summary for claim URL readiness, notification evidence, follow-up guidance, and audit evidence.
+- Report: `reports/544-voucher-detail-page-polish-slice-1.md`.
+- Boundary remains unchanged: presentation-only UI polish; no route behavior, read-model hydration, distribution dispatch, feedback delivery, x-action execution, journal write, voucher mutation, provider call, persistence, wallet behavior, Treasury behavior, public API behavior, or money movement changed.

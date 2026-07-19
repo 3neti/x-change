@@ -292,6 +292,54 @@ describe('Cockpit Voucher Detail hydration', () => {
         expect(items).toHaveLength(3);
     });
 
+    it('renders a scan-friendly connected context summary in the primary detail area', () => {
+        const wrapper = mount(VoucherDetail, {
+            props: {
+                context: { code: 'PC-HYDRATED-001' },
+                read_model: {
+                    ...readModel,
+                    journal: {
+                        status: 'available',
+                        authorized: true,
+                        entries: [{ id: 'journal-1' }, { id: 'journal-2' }],
+                        redactions: { payloads: 'journal-evidence-summary-only' },
+                    },
+                    actions: {
+                        status: 'available',
+                        authorized: true,
+                        actions: [{ key: 'review' }],
+                        redactions: { payloads: 'safe-action-host-summary-only' },
+                    },
+                    feedback: {
+                        status: 'available',
+                        authorized: true,
+                        deliveries: [{ id: 'delivery-1' }],
+                        redactions: { payloads: 'communication-delivery-summary-only' },
+                    },
+                },
+            },
+        });
+
+        const context = wrapper.find('[data-testid="cockpit-voucher-detail-connected-context"]');
+        const items = context.findAll('[data-testid="cockpit-voucher-detail-connected-context-item"]');
+
+        expect(context.exists()).toBe(true);
+        expect(context.text()).toContain('Connected context');
+        expect(context.text()).toContain('claim access, notification state, follow-up guidance, and audit evidence');
+        expect(context.text()).toContain('Claim URL');
+        expect(context.text()).toContain('Ready');
+        expect(context.text()).toContain('Full URL');
+        expect(context.text()).toContain('Delivery Evidence');
+        expect(context.text()).toContain('1 deliveries');
+        expect(context.text()).toContain('Follow-Up Guidance');
+        expect(context.text()).toContain('1 actions');
+        expect(context.text()).toContain('Audit Evidence');
+        expect(context.text()).toContain('2 entries');
+        expect(context.text()).not.toContain('provider_payload');
+        expect(context.text()).not.toContain('raw_payload');
+        expect(items).toHaveLength(4);
+    });
+
     it('renders lifecycle guidance from display status without enforcing policy', () => {
         const wrapper = mount(VoucherDetail, {
             props: {

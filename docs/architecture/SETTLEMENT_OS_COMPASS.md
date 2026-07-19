@@ -3509,3 +3509,11 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/543-distribution-workspace-page-polish-slice-3-closure.md`.
 - Boundary remains unchanged: presentation-only polish; no route behavior, read-model hydration, distribution dispatch, feedback delivery, x-action execution, journal write, voucher mutation, provider call, artifact generation, persistence, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next recommended checkpoint: manually inspect the five primary Cockpit pages, or start the next page-focused polish wave for Voucher Detail.
+
+## 2026-07-19 Update — Voucher Detail Page Polish — Slice 1
+
+- Started the Voucher Detail Page Polish wave.
+- Voucher Detail now has a primary `Connected context` summary for claim URL readiness, notification evidence, follow-up guidance, and audit evidence.
+- UI/report: `../ui-cockpit/reports/544-voucher-detail-page-polish-slice-1.md`.
+- Boundary remains unchanged: presentation-only UI polish; no route behavior, read-model hydration, distribution dispatch, feedback delivery, x-action execution, journal write, voucher mutation, provider call, persistence, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next checkpoint: polish Voucher Detail panel copy and publish host assets.

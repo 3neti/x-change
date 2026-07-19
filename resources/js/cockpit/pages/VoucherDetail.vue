@@ -240,6 +240,36 @@ const primaryEvidenceReadiness = computed(() => integrationSummaries.value.map((
     ...summary,
     label: summary.label.replace(' Evidence', '').replace(' Deliveries', '').replace(' CTAs', ''),
 })));
+const connectedContextSummaries = computed(() => [
+    {
+        key: 'claim-url',
+        label: 'Claim URL',
+        status: distributionLinksAvailable.value ? 'Ready' : 'Not available',
+        count: beneficiaryRedeemUrl.value ? 'Full URL' : 'Path pending',
+        source: 'Claim experience',
+    },
+    {
+        key: 'delivery-evidence',
+        label: 'Delivery Evidence',
+        status: operatorStatus(readModelStatus(props.read_model?.feedback)),
+        count: collectionCount(props.read_model?.feedback, 'deliveries', 'deliveries'),
+        source: 'Notification summaries',
+    },
+    {
+        key: 'follow-up-guidance',
+        label: 'Follow-Up Guidance',
+        status: operatorStatus(readModelStatus(props.read_model?.actions)),
+        count: collectionCount(props.read_model?.actions, 'actions', 'actions'),
+        source: 'Disabled action guidance',
+    },
+    {
+        key: 'audit-evidence',
+        label: 'Audit Evidence',
+        status: operatorStatus(readModelStatus(props.read_model?.journal)),
+        count: collectionCount(props.read_model?.journal, 'entries', 'entries'),
+        source: 'Journal summaries',
+    },
+]);
 const campaignNavigationContext = computed<CockpitCampaignNavigationContext | null>(() => {
     const context = props.campaign_navigation_context;
 
@@ -383,6 +413,28 @@ function availabilityWindow(startsAt: unknown, expiresAt: unknown): string {
 
 function readModelStatus(model?: CockpitDependentReadModel): string {
     return stringValue(model?.status) ?? 'not_wired';
+}
+
+function operatorStatus(status: string): string {
+    if (status === 'not_wired') {
+        return 'Not connected';
+    }
+
+    if (status === 'available') {
+        return 'Available';
+    }
+
+    return status;
+}
+
+function collectionCount(
+    model: CockpitDependentReadModel | undefined,
+    collectionKey: 'entries' | 'actions' | 'deliveries',
+    noun: string,
+): string {
+    const collection = Array.isArray(model?.[collectionKey]) ? model[collectionKey] : [];
+
+    return `${collection.length} ${noun}`;
 }
 
 function hydratedEvidenceItems(
@@ -833,6 +885,48 @@ function integrationSummary(
                             Derived from display status only; Cockpit does not enforce lifecycle policy from this page.
                         </p>
                     </div>
+                </div>
+
+                <div
+                    class="mt-4 rounded-xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/60 dark:bg-slate-950/70"
+                    data-testid="cockpit-voucher-detail-connected-context"
+                >
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                                Connected context
+                            </p>
+                            <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                                Main inspection facts for claim access, notification state, follow-up guidance, and audit evidence.
+                            </p>
+                        </div>
+                        <span class="w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200">
+                            read-only
+                        </span>
+                    </div>
+                    <dl class="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
+                        <div
+                            v-for="item in connectedContextSummaries"
+                            :key="item.key"
+                            class="rounded-lg border border-slate-200 p-3 dark:border-slate-800"
+                            data-testid="cockpit-voucher-detail-connected-context-item"
+                        >
+                            <dt class="flex items-center justify-between gap-3">
+                                <span class="font-semibold text-slate-950 dark:text-slate-50">
+                                    {{ item.label }}
+                                </span>
+                                <span class="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                                    {{ item.status }}
+                                </span>
+                            </dt>
+                            <dd class="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50">
+                                {{ item.count }}
+                            </dd>
+                            <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                {{ item.source }}
+                            </p>
+                        </div>
+                    </dl>
                 </div>
 
                 <div
