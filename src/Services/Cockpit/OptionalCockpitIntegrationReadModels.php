@@ -74,7 +74,7 @@ class OptionalCockpitIntegrationReadModels
 
             return new CockpitActionReadModelData(
                 status: 'available',
-                actions: $this->listValue($payload['actions'] ?? []),
+                actions: $this->actionItems($payload),
                 diagnostics: $this->listValue($payload['meta']['safe_diagnostics'] ?? []),
                 redactions: [
                     'payloads' => 'safe-action-host-summary-only',
@@ -723,6 +723,42 @@ class OptionalCockpitIntegrationReadModels
             'attributes' => ['code' => $query->code],
             'meta' => ['source' => 'x-change.cockpit'],
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<int, array<string, mixed>>
+     */
+    private function actionItems(array $payload): array
+    {
+        return collect($this->listValue($payload['actions'] ?? []))
+            ->map(function (array $item): array {
+                $action = $this->arrayValue($item['action'] ?? []);
+                $target = $this->arrayValue($item['target_resolution'] ?? []);
+                $meta = $this->arrayValue($item['meta'] ?? []);
+
+                return array_filter([
+                    'key' => $action['key'] ?? null,
+                    'label' => $action['label'] ?? null,
+                    'intent' => $action['intent'] ?? null,
+                    'description' => $action['description'] ?? null,
+                    'style' => $action['style'] ?? null,
+                    'status' => 'available',
+                    'target' => array_filter([
+                        'action_key' => $target['action_key'] ?? null,
+                        'type' => $target['type'] ?? null,
+                        'method' => $target['method'] ?? null,
+                        'route' => $target['route'] ?? null,
+                        'redirectable' => $target['redirectable'] ?? null,
+                        'external' => $target['external'] ?? null,
+                    ], fn (mixed $value): bool => $value !== null),
+                    'meta' => array_filter([
+                        'run_semantics' => $this->arrayValue($meta['run_semantics'] ?? []),
+                    ], fn (mixed $value): bool => $value !== []),
+                ], fn (mixed $value): bool => $value !== null && $value !== []);
+            })
+            ->values()
+            ->all();
     }
 
     private function actionContext(CockpitReadModelQueryData $query): mixed
