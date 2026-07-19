@@ -5,11 +5,25 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Pay Code Explorer Status Badge Polish
-Status: In progress
+Status: Closed / pending human inspection
 Last updated: 2026-07-20
 
 ## Completed
 
+- Completed Pay Code Explorer Status Badge Polish Slice 2 / Closure:
+  - Published package Cockpit assets to the host app.
+  - Confirmed published Cockpit assets match package source.
+  - Verified focused Pay Code Explorer frontend hydration coverage.
+  - Verified focused backend architecture documentation coverage.
+  - Verified authenticated Dusk browser smoke coverage for `/x/cockpit/pay-codes`.
+  - Verified the host production frontend build.
+  - Confirmed desktop and mobile Pay Code Explorer rows render scan-friendly status badges.
+  - Confirmed status text is shown in operator-facing Title Case.
+  - Confirmed successful/available, pending/review, and attention/error statuses use distinct color groups.
+  - Confirmed unknown statuses fall back to a neutral badge.
+  - Confirmed no routes, controllers, backend queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, artifact generation, or money movement were changed.
+  - Report: `reports/591-pay-code-explorer-status-badge-polish-slice-2-closure.md`.
+  - Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, then continue page-focused Cockpit polish or pick the next real integration wiring wave.
 - Started Pay Code Explorer Status Badge Polish Slice 1:
   - Rendered Pay Code Explorer row statuses in operator-facing Title Case.
   - Added status-specific badge color groups for active/issued/ready/redeemed/completed, awaiting/pending/review, and expired/failed/cancelled states.
