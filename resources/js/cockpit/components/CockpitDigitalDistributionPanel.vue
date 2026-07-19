@@ -42,6 +42,21 @@ function deliveryMetadata(channel: CockpitDistributionChannel): Array<{ label: s
         communicationStateOnly === null ? null : { label: 'Communication State Only', value: communicationStateOnly },
     ].filter((item): item is { label: string; value: string } => item !== null);
 }
+
+function actionMetadata(action: CockpitDistributionAction): Array<{ label: string; value: string }> {
+    const metadata = action.metadata ?? {};
+    const targetRoute = stringValue(metadata.target_route);
+    const targetType = stringValue(metadata.target_type);
+    const presentationRun = stringValue(metadata.presentation_run);
+    const executesAction = stringValue(metadata.executes_action);
+
+    return [
+        targetRoute === null ? null : { label: 'Target Route', value: targetRoute },
+        targetType === null ? null : { label: 'Target Type', value: targetType },
+        presentationRun === null ? null : { label: 'Presentation Run', value: presentationRun },
+        executesAction === null ? null : { label: 'Executes Action', value: executesAction },
+    ].filter((item): item is { label: string; value: string } => item !== null);
+}
 </script>
 
 <template>
@@ -149,6 +164,23 @@ function deliveryMetadata(channel: CockpitDistributionChannel): Array<{ label: s
                     <p class="mt-2 leading-5">
                         {{ action.reason }}
                     </p>
+                    <dl
+                        v-if="actionMetadata(action).length > 0"
+                        class="mt-3 grid gap-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-950/50 sm:grid-cols-2"
+                        data-testid="cockpit-distribution-action-metadata"
+                    >
+                        <div
+                            v-for="item in actionMetadata(action)"
+                            :key="`${action.key}-${item.label}`"
+                        >
+                            <dt class="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                {{ item.label }}
+                            </dt>
+                            <dd class="mt-1 break-words text-slate-700 dark:text-slate-200">
+                                {{ item.value }}
+                            </dd>
+                        </div>
+                    </dl>
                 </details>
             </div>
         </div>

@@ -965,6 +965,7 @@ export type CockpitDistributionAction = {
     label: string;
     disabled: boolean;
     reason: string;
+    metadata?: Record<string, unknown>;
 };
 
 export type CockpitDistributionWorkspaceItem = {

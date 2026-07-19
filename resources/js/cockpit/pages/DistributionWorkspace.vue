@@ -272,6 +272,7 @@ const distributionActions = computed<CockpitDistributionAction[]>(() => {
         label: action.label,
         disabled: true,
         reason: `${action.status} · ${action.description}`,
+        metadata: action.metadata,
     }));
 });
 

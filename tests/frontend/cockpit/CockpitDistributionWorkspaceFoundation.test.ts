@@ -225,13 +225,19 @@ describe('Cockpit Distribution Workspace foundation', () => {
             ],
             actions: [
                 {
-                    key: 'send-now',
-                    label: 'Send now',
-                    status: 'blocked',
-                    description: 'Distribution dispatch is not authorized from Cockpit.',
+                    key: 'distribution.manual-review',
+                    label: 'Review Manual Distribution',
+                    status: 'available',
+                    description: 'Inspect manual distribution readiness before sending externally.',
                     read_only: true,
-                    available: false,
-                    source: 'mutation-boundary',
+                    available: true,
+                    source: 'x-action',
+                    metadata: {
+                        target_route: 'x-change.cockpit.pay-codes.distribution',
+                        target_type: 'route',
+                        presentation_run: true,
+                        executes_action: false,
+                    },
                 },
             ],
             redactions: {
@@ -276,8 +282,16 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).toContain('true');
         expect(wrapper.text()).toContain('Receipt card');
         expect(wrapper.text()).toContain('Delivery state');
-        expect(wrapper.text()).toContain('Send now');
-        expect(wrapper.text()).toContain('blocked');
+        expect(wrapper.text()).toContain('Review Manual Distribution');
+        expect(wrapper.text()).toContain('available');
+        expect(wrapper.text()).toContain('Target Route');
+        expect(wrapper.text()).toContain('x-change.cockpit.pay-codes.distribution');
+        expect(wrapper.text()).toContain('Target Type');
+        expect(wrapper.text()).toContain('route');
+        expect(wrapper.text()).toContain('Presentation Run');
+        expect(wrapper.text()).toContain('true');
+        expect(wrapper.text()).toContain('Executes Action');
+        expect(wrapper.text()).toContain('false');
         expect(wrapper.text()).not.toContain('must-not-render');
         expect(wrapper.text()).not.toContain('provider_payload');
         expect(wrapper.text()).not.toContain('raw_payload');
