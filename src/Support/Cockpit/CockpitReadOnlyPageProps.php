@@ -361,6 +361,11 @@ class CockpitReadOnlyPageProps
             is_array($feedback['deliveries'] ?? null) ? $feedback['deliveries'] : [],
             $feedbackStatus,
         );
+        $actions = is_array($readModel['actions'] ?? null) ? $readModel['actions'] : [];
+        $xActionGuidance = $this->distributionActionGuidance(
+            is_array($actions['actions'] ?? null) ? $actions['actions'] : [],
+            $this->stringValue($actions['status'] ?? null, 'not_wired') ?? 'not_wired',
+        );
 
         return new CockpitDistributionWorkspaceReadModelData(
             status: $code === null ? 'not_wired' : 'available',
@@ -457,6 +462,7 @@ class CockpitReadOnlyPageProps
                 ),
             ],
             actions: [
+                ...$xActionGuidance,
                 new CockpitDistributionWorkspaceItemData(
                     key: 'send-now',
                     label: 'Send now',
@@ -495,6 +501,8 @@ class CockpitReadOnlyPageProps
                 'dispatch_enabled' => false,
                 'artifact_generation_enabled' => false,
                 'campaign_mutation_enabled' => false,
+                'action_execution_enabled' => false,
+                'action_payloads_exposed' => false,
             ],
         );
     }
@@ -609,6 +617,46 @@ class CockpitReadOnlyPageProps
             'in_app', 'in-app' => 'In-app',
             default => str($channel)->replace(['_', '-'], ' ')->headline()->toString(),
         };
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $actions
+     * @return array<int, CockpitDistributionWorkspaceItemData>
+     */
+    private function distributionActionGuidance(array $actions, string $actionStatus): array
+    {
+        if ($actionStatus !== 'available') {
+            return [];
+        }
+
+        return collect($actions)
+            ->map(function (array $action, int $index): CockpitDistributionWorkspaceItemData {
+                $target = is_array($action['target'] ?? null) ? $action['target'] : [];
+                $meta = is_array($action['meta'] ?? null) ? $action['meta'] : [];
+                $runSemantics = is_array($meta['run_semantics'] ?? null) ? $meta['run_semantics'] : [];
+
+                return new CockpitDistributionWorkspaceItemData(
+                    key: $this->stringValue($action['key'] ?? null, sprintf('x-action-%d', $index + 1)) ?? sprintf('x-action-%d', $index + 1),
+                    label: $this->stringValue($action['label'] ?? null, 'Follow-up action') ?? 'Follow-up action',
+                    status: $this->stringValue($action['status'] ?? null, 'available') ?? 'available',
+                    description: $this->stringValue($action['description'] ?? null, 'x-action follow-up guidance is shown as a disabled read-only CTA; Cockpit does not execute it from Distribution Workspace.') ?? 'x-action follow-up guidance is shown as a disabled read-only CTA; Cockpit does not execute it from Distribution Workspace.',
+                    available: true,
+                    source: 'x-action',
+                    metadata: array_filter([
+                        'intent' => $this->stringValue($action['intent'] ?? null, null),
+                        'style' => $this->stringValue($action['style'] ?? null, null),
+                        'target_type' => $this->stringValue($target['type'] ?? null, null),
+                        'target_route' => $this->stringValue($target['route'] ?? null, null),
+                        'redirectable' => $target['redirectable'] ?? null,
+                        'presentation_run' => $runSemantics['presentation_run'] ?? true,
+                        'durable_run' => $runSemantics['durable'] ?? false,
+                        'executes_action' => false,
+                        'authorizes_action' => false,
+                    ], fn (mixed $value): bool => $value !== null),
+                );
+            })
+            ->values()
+            ->all();
     }
 
     private function stringValue(mixed $value, ?string $fallback = ''): ?string
