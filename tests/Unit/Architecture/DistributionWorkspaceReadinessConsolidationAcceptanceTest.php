@@ -6,6 +6,7 @@ it('documents distribution workspace readiness consolidation acceptance checklis
     $packageRoot = dirname(__DIR__, 3);
 
     $checklist = file_get_contents($packageRoot.'/docs/ui-cockpit/reports/575-distribution-workspace-readiness-consolidation-acceptance-slice-1-checklist.md');
+    $closure = file_get_contents($packageRoot.'/docs/ui-cockpit/reports/576-distribution-workspace-readiness-consolidation-acceptance-slice-2-automated-closure.md');
     $browserTest = file_get_contents($packageRoot.'/../../tests/Browser/CockpitVoucherDetailDistributionSmokeTest.php');
     $cockpitCompass = file_get_contents($packageRoot.'/docs/ui-cockpit/COMPASS.md');
     $settlementCompass = file_get_contents($packageRoot.'/docs/architecture/SETTLEMENT_OS_COMPASS.md');
@@ -19,8 +20,17 @@ it('documents distribution workspace readiness consolidation acceptance checklis
         ->and($browserTest)->toContain('DETAILED READINESS PANELS')
         ->and($browserTest)->toContain('Channel and artifact readiness')
         ->and($browserTest)->toContain('assertDontSee')
+        ->and($closure)->toContain('Distribution Workspace Readiness Consolidation Acceptance — Slice 2 Automated Closure')
+        ->and($closure)->toContain('automated-green / pending-human-visual-acceptance')
+        ->and($closure)->toContain('php artisan x-change:doctor --assets --no-interaction')
+        ->and($closure)->toContain('php artisan dusk tests/Browser/CockpitVoucherDetailDistributionSmokeTest.php')
+        ->and($closure)->toContain('Manual visual review is still required')
         ->and($cockpitCompass)->toContain('Distribution Workspace Readiness Consolidation Acceptance Slice 1')
         ->and($cockpitCompass)->toContain('reports/575-distribution-workspace-readiness-consolidation-acceptance-slice-1-checklist.md')
+        ->and($cockpitCompass)->toContain('Distribution Workspace Readiness Consolidation Acceptance Slice 2')
+        ->and($cockpitCompass)->toContain('reports/576-distribution-workspace-readiness-consolidation-acceptance-slice-2-automated-closure.md')
         ->and($settlementCompass)->toContain('Distribution Workspace Readiness Consolidation Acceptance — Slice 1')
-        ->and($settlementCompass)->toContain('../ui-cockpit/reports/575-distribution-workspace-readiness-consolidation-acceptance-slice-1-checklist.md');
+        ->and($settlementCompass)->toContain('../ui-cockpit/reports/575-distribution-workspace-readiness-consolidation-acceptance-slice-1-checklist.md')
+        ->and($settlementCompass)->toContain('Distribution Workspace Readiness Consolidation Acceptance — Slice 2')
+        ->and($settlementCompass)->toContain('../ui-cockpit/reports/576-distribution-workspace-readiness-consolidation-acceptance-slice-2-automated-closure.md');
 });
