@@ -502,13 +502,22 @@ function actionDetailItem(
         ?? stringValue(actionItem.name)
         ?? key;
     const status = stringValue(actionItem.status) ?? 'available';
+    const description = stringValue(actionItem.description);
+    const target = objectValue(actionItem.target);
+    const route = stringValue(target?.route);
     const payloadPolicy = stringValue(actionRedactions?.payloads) ?? 'safe-action-host-summary-only';
+    const reasonParts = [
+        description,
+        route === null ? null : `Target: ${route}`,
+        `${status} · ${payloadPolicy}`,
+        'Follow-up CTA is disabled; Cockpit does not execute x-action actions from Voucher Detail.',
+    ].filter((part): part is string => part !== null && part.trim() !== '');
 
     return {
         key,
         label,
         disabled: true,
-        reason: `${status} · ${payloadPolicy} · Action execution remains disabled from Cockpit.`,
+        reason: reasonParts.join(' · '),
     };
 }
 

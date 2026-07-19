@@ -522,6 +522,11 @@ describe('Cockpit Voucher Detail hydration', () => {
                                 key: 'approve-redemption',
                                 label: 'Approve redemption',
                                 status: 'available',
+                                description: 'Review the redemption evidence.',
+                                target: {
+                                    type: 'route',
+                                    route: 'x-change.cockpit.pay-codes.distribution',
+                                },
                                 target_url: '/must-not-render',
                                 raw_diagnostics: 'must-not-render',
                                 provider_payload: 'must-not-render',
@@ -546,7 +551,11 @@ describe('Cockpit Voucher Detail hydration', () => {
         });
 
         expect(wrapper.text()).toContain('Approve redemption');
-        expect(wrapper.text()).toContain('Action execution remains disabled from Cockpit.');
+        expect(wrapper.text()).toContain('Audit and follow-up CTAs');
+        expect(wrapper.text()).toContain('Follow-up CTAs are read-only from this page.');
+        expect(wrapper.text()).toContain('Review the redemption evidence.');
+        expect(wrapper.text()).toContain('Target: x-change.cockpit.pay-codes.distribution');
+        expect(wrapper.text()).toContain('Follow-up CTA is disabled; Cockpit does not execute x-action actions from Voucher Detail.');
         expect(wrapper.text()).toContain('safe-action-host-summary-only');
         expect(wrapper.text()).not.toContain('/must-not-render');
         expect(wrapper.text()).not.toContain('raw_diagnostics');
