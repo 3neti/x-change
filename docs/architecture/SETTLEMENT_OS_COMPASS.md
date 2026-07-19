@@ -3693,3 +3693,11 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/577-distribution-workspace-readiness-consolidation-acceptance-slice-3-human-pass.md`.
 - Boundary remains unchanged: human evidence record only; no route behavior, read-model hydration, distribution dispatch, feedback delivery, x-action execution, journal write, campaign mutation, voucher mutation, claim execution, driver execution, provider call, artifact generation, persistence, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next recommended checkpoint: pick the next page-focused Cockpit target or the next real integration wiring wave.
+
+## 2026-07-19 Update — Pay Code Explorer Manual Acceptance — Slice 1
+
+- Started the Pay Code Explorer Manual Acceptance wave for `/x/cockpit/pay-codes`.
+- Added a human acceptance checklist for the current read-only Explorer after search, result-density, campaign-context, filter-builder, and mobile-row polish.
+- UI/report: `../ui-cockpit/reports/578-pay-code-explorer-manual-acceptance-slice-1-checklist.md`.
+- Boundary remains unchanged: acceptance checklist only; no route behavior, queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next checkpoint: automated verification closure while pending human visual evidence.

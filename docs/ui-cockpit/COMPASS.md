@@ -4,12 +4,19 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Distribution Workspace Readiness Consolidation Acceptance
-Status: Passed
+Current slice: Pay Code Explorer Manual Acceptance
+Status: Slice 1 checklist scaffolded
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Pay Code Explorer Manual Acceptance Slice 1:
+  - Added the targeted human acceptance checklist for `/x/cockpit/pay-codes`.
+  - Recorded inspection expectations for read-only search/status filters, current search summary, compact filter details, desktop rows, mobile cards, safe navigation links, disabled row actions, campaign context, redaction, and visible runtime errors.
+  - Explicitly kept final acceptance human-gated; automated checks must not claim visual `Pass`.
+  - Confirmed no routes, controllers, queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, artifact generation, or money movement were changed.
+  - Report: `reports/578-pay-code-explorer-manual-acceptance-slice-1-checklist.md`.
+  - Next recommended checkpoint: Pay Code Explorer Manual Acceptance Slice 2 — automated verification closure while pending human visual evidence.
 - Completed Distribution Workspace Readiness Consolidation Acceptance Slice 3:
   - Recorded supplied human browser scrape evidence for `/x/cockpit/pay-codes/E9MC/distribution`.
   - Accepted the consolidated Distribution Workspace readiness layout as `Pass`.
