@@ -3701,3 +3701,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/578-pay-code-explorer-manual-acceptance-slice-1-checklist.md`.
 - Boundary remains unchanged: acceptance checklist only; no route behavior, queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next checkpoint: automated verification closure while pending human visual evidence.
+
+## 2026-07-19 Update — Pay Code Explorer Manual Acceptance — Slice 2
+
+- Closed the automated side of the Pay Code Explorer Manual Acceptance wave.
+- Published assets remain aligned, authenticated browser smoke renders `/x/cockpit/pay-codes`, search/status query parameters are preserved, read-only filter copy is visible, and unsafe payload terms remain hidden.
+- Human visual acceptance remains pending because automated checks do not prove scan quality or operator readability.
+- UI/report: `../ui-cockpit/reports/579-pay-code-explorer-manual-acceptance-slice-2-automated-closure.md`.
+- Boundary remains unchanged: automated acceptance scaffolding only; no route behavior, queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next recommended checkpoint: human visual inspection of `/x/cockpit/pay-codes`, then continue page-focused Cockpit polish or pick the next real integration wiring wave.

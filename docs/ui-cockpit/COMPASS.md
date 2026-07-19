@@ -5,11 +5,21 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Pay Code Explorer Manual Acceptance
-Status: Slice 1 checklist scaffolded
+Status: Automated green / pending human visual acceptance
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Pay Code Explorer Manual Acceptance Slice 2:
+  - Recorded automated closure for the current Pay Code Explorer manual acceptance wave.
+  - Confirmed published Cockpit assets match package source.
+  - Verified authenticated browser smoke coverage for `/x/cockpit/pay-codes`.
+  - Verified search and status query preservation, current search summary, read-only GET filter copy, list totals, connected-service badges, and unsafe payload redaction.
+  - Verified the host production frontend build.
+  - Kept final human decision pending; automated checks do not claim visual acceptance.
+  - Confirmed no routes, controllers, queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, artifact generation, or money movement were changed.
+  - Report: `reports/579-pay-code-explorer-manual-acceptance-slice-2-automated-closure.md`.
+  - Next recommended checkpoint: human visual inspection of `/x/cockpit/pay-codes`, then continue page-focused Cockpit polish or pick the next real integration wiring wave.
 - Completed Pay Code Explorer Manual Acceptance Slice 1:
   - Added the targeted human acceptance checklist for `/x/cockpit/pay-codes`.
   - Recorded inspection expectations for read-only search/status filters, current search summary, compact filter details, desktop rows, mobile cards, safe navigation links, disabled row actions, campaign context, redaction, and visible runtime errors.
