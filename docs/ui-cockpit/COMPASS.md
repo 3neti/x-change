@@ -4,12 +4,20 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Distribution Workspace Secondary Panel Cleanup
-Status: Closed; Distribution Workspace secondary panel cleanup is host-published
+Current slice: Distribution Workspace Manual Acceptance
+Status: In progress; Slice 1 checklist scaffolded and pending human visual acceptance
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Distribution Workspace Manual Acceptance Slice 1:
+  - Added the human visual acceptance checklist for `/x/cockpit/pay-codes/{code}/distribution`.
+  - Recorded the required inspection points for claim URL visibility, local copy, manual distribution guidance, compact secondary panels, disabled mutation controls, and no visible/runtime errors.
+  - Explicitly kept status as `pending-human-visual-acceptance`; no human pass is claimed without supplied evidence.
+  - Verified backend architecture documentation coverage.
+  - Confirmed no routes, controllers, queries, read-model hydration, distribution links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, or money movement were changed.
+  - Report: `reports/565-distribution-workspace-manual-acceptance-slice-1-checklist.md`.
+  - Next recommended checkpoint: Distribution Workspace Manual Acceptance Slice 2 — automated browser evidence and pending-human closure record.
 - Completed Distribution Workspace Secondary Panel Cleanup Slice 2 / Closure:
   - Published package Cockpit assets to the host app.
   - Confirmed published Cockpit assets match package source.
