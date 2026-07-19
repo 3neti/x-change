@@ -3657,3 +3657,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/573-distribution-workspace-readiness-consolidation-slice-1.md`.
 - Boundary remains unchanged: presentation-only consolidation; no route behavior, read-model hydration, distribution dispatch, feedback delivery, x-action execution, journal write, campaign mutation, voucher mutation, claim execution, driver execution, provider call, artifact generation, persistence, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next checkpoint: publish host assets and close with focused frontend, drift, Dusk, and build verification.
+
+## 2026-07-19 Update — Distribution Workspace Readiness Consolidation — Slice 2 / Closure
+
+- Closed the Distribution Workspace Readiness Consolidation wave.
+- Host-published Cockpit assets now replace the repeated channel/artifact metric grid with a compact detailed-readiness bridge.
+- Focused frontend, asset drift, Dusk browser smoke, and host build verification passed.
+- UI/report: `../ui-cockpit/reports/574-distribution-workspace-readiness-consolidation-slice-2-closure.md`.
+- Boundary remains unchanged: presentation-only consolidation and publish verification; no route behavior, read-model hydration, distribution dispatch, feedback delivery, x-action execution, journal write, campaign mutation, voucher mutation, claim execution, driver execution, provider call, artifact generation, persistence, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next recommended checkpoint: manual inspection of `/x/cockpit/pay-codes/{code}/distribution`, or pick the next page-focused Cockpit polish / integration wiring wave.
