@@ -5,11 +5,24 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Pay Code Explorer Page Size Control
-Status: In progress
+Status: Closed / pending human inspection
 Last updated: 2026-07-20
 
 ## Completed
 
+- Completed Pay Code Explorer Page Size Control Slice 2 / Closure:
+  - Published package Cockpit assets to the host app.
+  - Confirmed published Cockpit assets match package source.
+  - Verified focused Pay Code Explorer frontend hydration coverage.
+  - Verified focused backend architecture documentation coverage.
+  - Verified authenticated Dusk browser smoke coverage for `/x/cockpit/pay-codes`.
+  - Verified the host production frontend build.
+  - Confirmed high-volume Explorer results default to `25` rows per page.
+  - Confirmed operators can switch between `10`, `25`, and `50` rows per page.
+  - Confirmed changing row density resets pagination to page 1 and hides pagination when all matching rows fit.
+  - Confirmed no routes, controllers, backend queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, artifact generation, or money movement were changed.
+  - Report: `reports/587-pay-code-explorer-page-size-control-slice-2-closure.md`.
+  - Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, then continue page-focused Cockpit polish or pick the next real integration wiring wave.
 - Started Pay Code Explorer Page Size Control Slice 1:
   - Added a browser-local rows-per-page selector for high-volume Pay Code Explorer results.
   - Added `10`, `25`, and `50` rows-per-page options while keeping `25` as the default density.
