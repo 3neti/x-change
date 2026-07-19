@@ -5,11 +5,22 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Quick Generate Form Density
-Status: Slice 1 complete; DTO coverage map is collapsed behind the operator checklist
+Status: Closed; Quick Generate form density changes are host-published
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Quick Generate Form Density Slice 2 / Closure:
+  - Published package Cockpit assets to the host app.
+  - Confirmed published Cockpit assets match package source.
+  - Verified focused Quick Generate frontend foundation and hydration coverage.
+  - Verified focused backend architecture documentation coverage.
+  - Verified authenticated Dusk browser smoke coverage for `/x/cockpit/quick-generate`.
+  - Verified the host production frontend build.
+  - Confirmed the DTO coverage map is collapsed by default and the visible Contract Builder Checklist remains the primary scan map.
+  - Confirmed no routes, controllers, request payloads, issuance behavior, validation behavior, provider calls, wallet behavior, Treasury behavior, journal writes, action execution, feedback sends, campaign mutation, persistence changes, public API changes, or money movement were added.
+  - Report: `reports/552-quick-generate-form-density-slice-2-closure.md`.
+  - Next recommended wave: Pay Code Explorer search/results polish, unless Quick Generate needs another targeted card-level pass after manual review.
 - Completed Quick Generate Form Density Slice 1:
   - Kept Contract Builder Checklist visible as the primary operator scan map.
   - Moved `VoucherInstruction DTO coverage` into a collapsed disclosure.
