@@ -3731,3 +3731,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/581-pay-code-explorer-result-volume-pagination-polish-slice-1.md`.
 - Boundary remains unchanged: presentation-only client-side result limiting; no route behavior, backend queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next checkpoint: host publish, asset drift, authenticated browser smoke, build, and closure.
+
+## 2026-07-20 Update — Pay Code Explorer Result Volume / Pagination Polish — Slice 2
+
+- Closed the Pay Code Explorer Result Volume / Pagination Polish wave.
+- Host-published Cockpit assets now carry the default 25-row result limit and high-volume notice.
+- Focused frontend, asset drift, Dusk browser smoke, and host build verification passed.
+- UI/report: `../ui-cockpit/reports/582-pay-code-explorer-result-volume-pagination-polish-slice-2-closure.md`.
+- Boundary remains unchanged: presentation-only result-volume polish; no route behavior, backend queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, then choose the next page-focused Cockpit target or a real integration wiring wave.
