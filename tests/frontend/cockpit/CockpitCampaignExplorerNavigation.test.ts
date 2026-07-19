@@ -127,6 +127,7 @@ describe('Cockpit campaign explorer navigation boundary', () => {
 
         const hiddenFields = wrapper.findAll('[data-testid="cockpit-pay-code-search-context-input"]');
         const filterCards = wrapper.findAll('[data-testid="cockpit-pay-code-filter"]');
+        const filterSummary = wrapper.find('[data-testid="cockpit-pay-code-filter-density-summary"]');
 
         expect(hiddenFields.map((field) => [field.attributes('name'), field.attributes('value')])).toEqual([
             ['campaign_planning_key', 'campaign-plan-1'],
@@ -138,6 +139,8 @@ describe('Cockpit campaign explorer navigation boundary', () => {
         ]);
         expect(wrapper.find('[data-testid="cockpit-pay-code-clear-filters"]').attributes('href')).toContain('campaign_planning_key=campaign-plan-1');
         expect(wrapper.find('[data-testid="cockpit-pay-code-explorer-primary-clear-link"]').attributes('href')).toContain('campaign_recipient_id=recipient-1');
+        expect(filterSummary.text()).toContain('Context');
+        expect(filterSummary.text()).toContain('6');
         expect(filterCards.some((card) => card.text().includes('Campaign Planning Key'))).toBe(true);
         expect(filterCards.some((card) => card.text().includes('Campaign Recipient Id'))).toBe(true);
         expect(wrapper.text()).toContain('Campaign context is preserved as read-only Explorer orientation metadata.');

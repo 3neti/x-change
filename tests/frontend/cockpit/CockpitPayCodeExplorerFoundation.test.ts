@@ -39,11 +39,16 @@ describe('Cockpit Pay Code Explorer foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Filter summary');
-        expect(wrapper.text()).toContain('Current query criteria');
+        expect(wrapper.element.tagName.toLowerCase()).toBe('details');
+        expect(wrapper.text()).toContain('Filter Details');
+        expect(wrapper.text()).toContain('Read-only query criteria');
         expect(wrapper.text()).toContain(
-            'Filters use normal GET navigation',
+            'Filtering uses normal GET navigation',
         );
+        expect(wrapper.find('[data-testid="cockpit-pay-code-filter-density-summary"]').exists()).toBe(true);
+        expect(wrapper.text()).toContain('Active');
+        expect(wrapper.text()).toContain('Context');
+        expect(wrapper.text()).toContain('Total');
         expect(wrapper.text()).toContain('Status');
         expect(wrapper.text()).toContain('Template');
         expect(wrapper.text()).toContain('Risk');
@@ -64,8 +69,8 @@ describe('Cockpit Pay Code Explorer foundation', () => {
         });
 
         expect(wrapper.text()).toContain('Pay Code results');
-        expect(wrapper.text()).toContain('Scan sanitized Pay Code rows');
-        expect(wrapper.text()).toContain('Navigation-only');
+        expect(wrapper.text()).toContain('How to scan these rows');
+        expect(wrapper.text()).toContain('Links only');
         expect(wrapper.text()).toContain('Identify');
         expect(wrapper.text()).toContain('Assess');
         expect(wrapper.text()).toContain('Navigate');
@@ -103,7 +108,7 @@ describe('Cockpit Pay Code Explorer foundation', () => {
         expect(wrapper.text()).toContain('Pay Code operations');
         expect(wrapper.text()).toContain('Pay Code Explorer');
         expect(wrapper.text()).toContain('Search');
-        expect(wrapper.text()).toContain('Filter summary');
+        expect(wrapper.text()).toContain('Filter Details');
         expect(wrapper.text()).toContain('Results');
         expect(wrapper.find('[aria-current="page"]').text()).toContain(
             'Pay Codes',

@@ -4,12 +4,21 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Pay Code Explorer Campaign Context Visual Polish
-Status: Closed; Pay Code Explorer campaign context visual polish is host-published
+Current slice: Pay Code Explorer Filter Builder Density Polish
+Status: Slice 1 implemented; host publish / closure pending
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Pay Code Explorer Filter Builder Density Polish Slice 1:
+  - Converted the filter-builder panel into a disclosure.
+  - Added compact counts for active filters, campaign context filters, and total filter metadata rows.
+  - Kept all detailed filter cards available inside the disclosure.
+  - Preserved GET search form behavior, hidden campaign fields, clear links, and row navigation links.
+  - Verified focused Pay Code Explorer foundation frontend coverage, campaign Explorer navigation coverage, and backend architecture documentation coverage.
+  - Confirmed no routes, controllers, queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, or money movement were changed.
+  - Report: `reports/559-pay-code-explorer-filter-builder-density-slice-1.md`.
+  - Next recommended checkpoint: Pay Code Explorer Filter Builder Density Polish Slice 2 — host publish / asset drift / browser / build closure.
 - Completed Pay Code Explorer Campaign Context Visual Polish Slice 2 / Closure:
   - Published package Cockpit assets to the host app.
   - Confirmed published Cockpit assets match package source.
