@@ -7,6 +7,7 @@ import type {
 } from '../types';
 
 const defaultVisibleRecordLimit = 25;
+const visibleRecordLimitOptions = [10, 25, 50];
 
 const props = defineProps<{
     records: CockpitPayCodeExplorerRecord[];
@@ -14,7 +15,7 @@ const props = defineProps<{
     visibleLimit?: number;
 }>();
 
-const effectiveVisibleLimit = computed(() =>
+const selectedVisibleLimit = ref(
     props.visibleLimit && props.visibleLimit > 0
         ? props.visibleLimit
         : defaultVisibleRecordLimit,
@@ -23,17 +24,17 @@ const effectiveVisibleLimit = computed(() =>
 const currentPage = ref(1);
 
 const totalPages = computed(() =>
-    Math.max(Math.ceil(props.records.length / effectiveVisibleLimit.value), 1),
+    Math.max(Math.ceil(props.records.length / selectedVisibleLimit.value), 1),
 );
 
 const firstVisibleRecordNumber = computed(() =>
     props.records.length === 0
         ? 0
-        : (currentPage.value - 1) * effectiveVisibleLimit.value + 1,
+        : (currentPage.value - 1) * selectedVisibleLimit.value + 1,
 );
 
 const lastVisibleRecordNumber = computed(() =>
-    Math.min(currentPage.value * effectiveVisibleLimit.value, props.records.length),
+    Math.min(currentPage.value * selectedVisibleLimit.value, props.records.length),
 );
 
 const visibleRecords = computed(() =>
@@ -51,7 +52,7 @@ const hasPreviousPage = computed(() => currentPage.value > 1);
 const hasNextPage = computed(() => currentPage.value < totalPages.value);
 
 watch(
-    () => [props.records.length, effectiveVisibleLimit.value],
+    () => [props.records.length, selectedVisibleLimit.value],
     () => {
         currentPage.value = 1;
     },
@@ -212,12 +213,34 @@ function totalDisabledActionCount(): number {
             <nav
                 v-if="isResultLimited"
                 aria-label="Pay Code result pages"
-                class="mt-4 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800 dark:bg-slate-900"
+                class="mt-4 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 lg:flex-row lg:items-center lg:justify-between dark:border-slate-800 dark:bg-slate-900"
                 data-testid="cockpit-pay-code-result-pagination"
             >
-                <p class="text-sm font-medium text-slate-700 dark:text-slate-200">
-                    Page {{ currentPage }} of {{ totalPages }}
-                </p>
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <p class="text-sm font-medium text-slate-700 dark:text-slate-200">
+                        Page {{ currentPage }} of {{ totalPages }}
+                    </p>
+                    <label
+                        class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                        for="cockpit-pay-code-page-size"
+                    >
+                        Rows
+                        <select
+                            id="cockpit-pay-code-page-size"
+                            v-model.number="selectedVisibleLimit"
+                            class="h-9 rounded-full border border-slate-200 bg-white px-3 text-sm font-semibold normal-case tracking-normal text-slate-700 shadow-sm transition focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-emerald-500 dark:focus:ring-emerald-900/60"
+                            data-testid="cockpit-pay-code-result-page-size"
+                        >
+                            <option
+                                v-for="option in visibleRecordLimitOptions"
+                                :key="option"
+                                :value="option"
+                            >
+                                {{ option }} per page
+                            </option>
+                        </select>
+                    </label>
+                </div>
                 <div class="flex flex-wrap gap-2">
                     <button
                         :disabled="!hasPreviousPage"

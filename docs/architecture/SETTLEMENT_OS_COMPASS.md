@@ -3766,3 +3766,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/585-pay-code-explorer-result-metric-width-stability.md`.
 - Boundary remains unchanged: presentation-only width stabilization; no route behavior, backend queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, then choose the next page-focused Cockpit target or a real integration wiring wave.
+
+## 2026-07-20 Update — Pay Code Explorer Page Size Control — Slice 1
+
+- Started the Pay Code Explorer Page Size Control wave.
+- Added a browser-local rows-per-page selector with `10`, `25`, and `50` options while keeping `25` as the default result density.
+- Changing result density resets pagination to page 1 and does not change the underlying sanitized read-model totals or links.
+- UI/report: `../ui-cockpit/reports/586-pay-code-explorer-page-size-control-slice-1.md`.
+- Boundary remains unchanged: presentation-only client-side density control; no route behavior, backend queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next checkpoint: host publish, asset drift, authenticated browser smoke, build, and closure.

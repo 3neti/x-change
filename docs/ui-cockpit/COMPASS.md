@@ -4,12 +4,20 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Pay Code Explorer Result Metric Width Stability
-Status: Closed / pending human inspection
+Current slice: Pay Code Explorer Page Size Control
+Status: In progress
 Last updated: 2026-07-20
 
 ## Completed
 
+- Started Pay Code Explorer Page Size Control Slice 1:
+  - Added a browser-local rows-per-page selector for high-volume Pay Code Explorer results.
+  - Added `10`, `25`, and `50` rows-per-page options while keeping `25` as the default density.
+  - Reset pagination to page 1 when the selected density changes.
+  - Preserved full sanitized read-model totals, link counts, disabled-action counts, search filters, status filters, detail links, distribution links, and read-only boundary.
+  - Confirmed no routes, controllers, backend queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, artifact generation, or money movement were changed.
+  - Report: `reports/586-pay-code-explorer-page-size-control-slice-1.md`.
+  - Next recommended checkpoint: Pay Code Explorer Page Size Control Slice 2 — host publish / asset drift / browser / build closure.
 - Completed Pay Code Explorer Result Metric Width Stability:
   - Stabilized the Results metric cards for `Showing`, `Total Rows`, `Links`, and `Disabled`.
   - Added a stable desktop metric grid width while keeping the existing mobile two-column layout.
