@@ -599,8 +599,8 @@ describe('Cockpit Voucher Detail hydration', () => {
         });
 
         expect(wrapper.text()).toContain('Approve redemption');
-        expect(wrapper.text()).toContain('Audit and follow-up guidance');
-        expect(wrapper.text()).toContain('Follow-up actions are read-only from this page.');
+        expect(wrapper.text()).toContain('Audit and follow-up details');
+        expect(wrapper.text()).toContain('Follow-up actions are disabled from this page.');
         expect(wrapper.text()).toContain('Review the redemption evidence.');
         expect(wrapper.text()).toContain('Target: x-change.cockpit.pay-codes.distribution');
         expect(wrapper.text()).toContain('Follow-up action is disabled; Cockpit does not execute x-action actions from Voucher Detail.');

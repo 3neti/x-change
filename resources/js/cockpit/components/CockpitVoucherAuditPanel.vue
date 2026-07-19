@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import type {
     CockpitVoucherAuditItem,
     CockpitVoucherDetailAction,
@@ -9,43 +10,60 @@ const props = defineProps<{
     actions: CockpitVoucherDetailAction[];
 }>();
 
-function disabledActionCount(): number {
-    return props.actions.filter((action) => action.disabled !== false).length;
-}
+const disabledActionCount = computed(() => props.actions.filter((action) => action.disabled !== false).length);
+const availableActionCount = computed(() => props.actions.length - disabledActionCount.value);
+const connectedAuditCount = computed(() => props.audits.filter((audit) => audit.status === 'available' || audit.status === 'Available').length);
 </script>
 
 <template>
-    <section
+    <details
         class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
         data-testid="cockpit-voucher-audit-panel"
     >
-        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-            Audit
-        </p>
-        <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-            Audit and follow-up guidance
-        </h3>
-        <dl
-            class="mt-4 grid gap-2 rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-950 sm:grid-cols-2"
-            data-testid="cockpit-voucher-audit-density-summary"
-        >
-            <div>
-                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Audit Facts
-                </dt>
-                <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                    {{ audits.length }}
-                </dd>
+        <summary class="cursor-pointer list-none">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                        Follow-up status
+                    </p>
+                    <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
+                        Audit and follow-up details
+                    </h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                        Open this panel to inspect journal evidence and disabled follow-up guidance. This page still does not execute actions or write audit entries.
+                    </p>
+                </div>
+                <dl
+                    class="grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-2 text-center text-sm dark:bg-slate-950"
+                    data-testid="cockpit-voucher-audit-density-summary"
+                >
+                    <div class="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Evidence
+                        </dt>
+                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                            {{ audits.length }}
+                        </dd>
+                    </div>
+                    <div class="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Connected
+                        </dt>
+                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                            {{ connectedAuditCount }}
+                        </dd>
+                    </div>
+                    <div class="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Follow-Ups
+                        </dt>
+                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                            {{ disabledActionCount }}
+                        </dd>
+                    </div>
+                </dl>
             </div>
-            <div>
-                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Disabled actions
-                </dt>
-                <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                    {{ disabledActionCount() }}
-                </dd>
-            </div>
-        </dl>
+        </summary>
 
         <div class="mt-5 grid gap-3">
             <article
@@ -73,8 +91,11 @@ function disabledActionCount(): number {
             data-testid="cockpit-voucher-disabled-actions-disclosure"
         >
             <summary class="cursor-pointer text-sm font-semibold text-slate-950 dark:text-slate-50">
-                Follow-up actions are read-only from this page.
+                Follow-up actions are disabled from this page.
             </summary>
+            <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                {{ availableActionCount }} executable follow-ups are available here. {{ disabledActionCount }} follow-ups are shown as read-only guidance.
+            </p>
             <div class="mt-3 grid gap-2">
                 <div
                     v-for="action in actions"
@@ -96,5 +117,5 @@ function disabledActionCount(): number {
                 </div>
             </div>
         </details>
-    </section>
+    </details>
 </template>

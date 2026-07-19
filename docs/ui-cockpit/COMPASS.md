@@ -4,12 +4,21 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Pay Code Explorer Filter Builder Density Polish
-Status: Closed; Pay Code Explorer filter-builder density polish is host-published
+Current slice: Voucher Detail Secondary Panel Cleanup
+Status: In progress; Slice 1 package-side audit/follow-up density cleanup scaffolded
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Voucher Detail Secondary Panel Cleanup Slice 1:
+  - Converted the Voucher Detail audit/follow-up secondary panel into a compact disclosure.
+  - Added a scan-friendly summary for evidence facts, connected evidence facts, and disabled follow-ups.
+  - Reworded follow-up action copy as disabled guidance instead of executable actions.
+  - Kept all detailed journal evidence and follow-up guidance available inside disclosures.
+  - Verified focused Voucher Detail foundation and hydration frontend coverage plus backend architecture documentation coverage.
+  - Confirmed no routes, controllers, queries, read-model hydration, campaign context propagation, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, or money movement were changed.
+  - Report: `reports/561-voucher-detail-secondary-panel-cleanup-slice-1.md`.
+  - Next recommended checkpoint: Voucher Detail Secondary Panel Cleanup Slice 2 — host publish / asset drift / browser / build closure.
 - Completed Pay Code Explorer Filter Builder Density Polish Slice 2 / Closure:
   - Published package Cockpit assets to the host app.
   - Confirmed published Cockpit assets match package source.

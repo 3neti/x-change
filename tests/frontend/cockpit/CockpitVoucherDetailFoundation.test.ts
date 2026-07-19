@@ -42,7 +42,7 @@ describe('Cockpit Voucher Detail foundation', () => {
         expect(wrapper.text()).toContain('Issued');
         expect(wrapper.text()).toContain('Claim started');
         expect(wrapper.text()).toContain('Execution outcome');
-        expect(wrapper.text()).toContain('Feedback status');
+        expect(wrapper.text()).toContain('Notification status');
         expect(wrapper.text()).toContain('no driver is invoked here');
         expect(wrapper.findAll('[data-testid="cockpit-voucher-timeline-item"]')).toHaveLength(4);
     });
@@ -68,7 +68,7 @@ describe('Cockpit Voucher Detail foundation', () => {
         expect(evidence.findAll('[data-testid="cockpit-voucher-evidence-item-metadata"]')).toHaveLength(0);
         expect(evidence.findAll('[data-testid="cockpit-voucher-evidence-item"]')).toHaveLength(3);
 
-        expect(distribution.text()).toContain('Delivery status');
+        expect(distribution.text()).toContain('Notification status');
         expect(distribution.text()).toContain('SMS');
         expect(distribution.text()).toContain('Email');
         expect(distribution.text()).toContain('In-app');
@@ -87,13 +87,15 @@ describe('Cockpit Voucher Detail foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Audit and follow-up status');
-        expect(wrapper.text()).toContain('Journal read model');
-        expect(wrapper.text()).toContain('Action handoff');
+        expect(wrapper.text()).toContain('Audit and follow-up details');
+        expect(wrapper.text()).toContain('Audit trail');
+        expect(wrapper.text()).toContain('Follow-up guidance');
         expect(wrapper.text()).toContain('Provider callbacks');
-        expect(wrapper.find('[data-testid="cockpit-voucher-audit-density-summary"]').text()).toContain('Audit Facts');
+        expect(wrapper.find('[data-testid="cockpit-voucher-audit-panel"]').element.tagName.toLowerCase()).toBe('details');
+        expect(wrapper.find('[data-testid="cockpit-voucher-audit-density-summary"]').text()).toContain('Evidence');
         expect(wrapper.find('[data-testid="cockpit-voucher-audit-density-summary"]').text()).toContain('3');
-        expect(wrapper.find('[data-testid="cockpit-voucher-audit-density-summary"]').text()).toContain('Disabled Actions');
+        expect(wrapper.find('[data-testid="cockpit-voucher-audit-density-summary"]').text()).toContain('Connected');
+        expect(wrapper.find('[data-testid="cockpit-voucher-audit-density-summary"]').text()).toContain('Follow-Ups');
         expect(wrapper.find('[data-testid="cockpit-voucher-audit-density-summary"]').text()).toContain('4');
         expect(wrapper.find('[data-testid="cockpit-voucher-disabled-actions-disclosure"]').exists()).toBe(true);
         expect(wrapper.findAll('[data-testid="cockpit-voucher-audit-item"]')).toHaveLength(3);
