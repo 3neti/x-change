@@ -31,7 +31,7 @@ function statusSummary(): string {
             Distribution
         </p>
         <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-            Delivery status
+            Notification status
         </h3>
 
         <div
@@ -76,7 +76,7 @@ function statusSummary(): string {
                     data-testid="cockpit-voucher-distribution-item-disclosure"
                 >
                     <summary class="cursor-pointer font-medium text-slate-600 dark:text-slate-300">
-                        Channel details
+                    Channel details
                     </summary>
                     <p class="mt-2 leading-5">
                         {{ item.helper }}

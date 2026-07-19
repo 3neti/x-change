@@ -3654,3 +3654,11 @@ Current boundary:
 - Added a primary `Connected context` summary for claim URL readiness, notification evidence, follow-up guidance, and audit evidence.
 - Report: `reports/544-voucher-detail-page-polish-slice-1.md`.
 - Boundary remains unchanged: presentation-only UI polish; no route behavior, read-model hydration, distribution dispatch, feedback delivery, x-action execution, journal write, voucher mutation, provider call, persistence, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-19 — Voucher Detail Page Polish — Slice 2
+
+- Replaced remaining technical Voucher Detail labels with operator-facing copy around connected services, audit trail, follow-up actions, and notifications.
+- Common raw states such as `not_wired`, `not-loaded`, and `read-model-ready` are translated in the primary service summary while preserving read-only source semantics.
+- Published package-owned Cockpit assets into the host app and confirmed published assets match package source.
+- Report: `reports/545-voucher-detail-page-polish-slice-2.md`.
+- Boundary remains unchanged: presentation-copy update only; no route behavior, read-model hydration, distribution dispatch, feedback delivery, x-action execution, journal write, voucher mutation, provider call, persistence, wallet behavior, Treasury behavior, public API behavior, or money movement changed.

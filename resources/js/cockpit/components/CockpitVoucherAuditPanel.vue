@@ -23,7 +23,7 @@ function disabledActionCount(): number {
             Audit
         </p>
         <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-            Audit and follow-up CTAs
+            Audit and follow-up guidance
         </h3>
         <dl
             class="mt-4 grid gap-2 rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-950 sm:grid-cols-2"
@@ -39,7 +39,7 @@ function disabledActionCount(): number {
             </div>
             <div>
                 <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Disabled CTAs
+                    Disabled actions
                 </dt>
                 <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
                     {{ disabledActionCount() }}
@@ -73,7 +73,7 @@ function disabledActionCount(): number {
             data-testid="cockpit-voucher-disabled-actions-disclosure"
         >
             <summary class="cursor-pointer text-sm font-semibold text-slate-950 dark:text-slate-50">
-                Follow-up CTAs are read-only from this page.
+                Follow-up actions are read-only from this page.
             </summary>
             <div class="mt-3 grid gap-2">
                 <div

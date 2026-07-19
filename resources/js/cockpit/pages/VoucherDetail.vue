@@ -172,8 +172,8 @@ const timelineItems = computed<CockpitVoucherTimelineItem[]>(() => [
     },
     {
         id: 'feedback',
-        label: 'Feedback delivery',
-        description: 'Feedback deliveries remain unavailable until an authorized feedback read model is wired.',
+        label: 'Notification status',
+        description: 'Notification summaries remain unavailable until an authorized feedback read model is connected.',
         timestamp: readModelStatus(props.read_model?.feedback),
         source: 'feedback',
     },
@@ -204,15 +204,15 @@ const auditItems = computed<CockpitVoucherAuditItem[]>(() => [
     ...journalAuditItems(props.read_model?.journal),
     {
         id: 'actions',
-        label: 'Action handoff',
+        label: 'Follow-up guidance',
         status: readModelStatus(props.read_model?.actions),
-        helper: 'x-action can describe next steps later, but this page does not execute actions.',
+        helper: 'Follow-up guidance can be displayed here, but this page does not execute actions.',
     },
     {
         id: 'feedback',
-        label: 'Feedback delivery',
+        label: 'Notification status',
         status: readModelStatus(props.read_model?.feedback),
-        helper: 'Feedback delivery remains unavailable until an authorized feedback read model is wired.',
+        helper: 'Notification delivery remains unavailable until an authorized feedback read model is connected.',
     },
 ]);
 
@@ -232,13 +232,13 @@ const detailActions = computed<CockpitVoucherDetailAction[]>(() => {
 });
 
 const integrationSummaries = computed(() => [
-    integrationSummary('journal', 'Journal Evidence', props.read_model?.journal, 'entries', 'entries'),
-    integrationSummary('actions', 'Action CTAs', props.read_model?.actions, 'actions', 'actions'),
-    integrationSummary('feedback', 'Feedback Deliveries', props.read_model?.feedback, 'deliveries', 'deliveries'),
+    integrationSummary('journal', 'Audit Trail', props.read_model?.journal, 'entries', 'entries'),
+    integrationSummary('actions', 'Follow-Up Actions', props.read_model?.actions, 'actions', 'actions'),
+    integrationSummary('feedback', 'Notifications', props.read_model?.feedback, 'deliveries', 'deliveries'),
 ]);
 const primaryEvidenceReadiness = computed(() => integrationSummaries.value.map((summary) => ({
     ...summary,
-    label: summary.label.replace(' Evidence', '').replace(' Deliveries', '').replace(' CTAs', ''),
+    label: summary.label.replace(' Trail', '').replace(' Actions', ''),
 })));
 const connectedContextSummaries = computed(() => [
     {
@@ -481,9 +481,9 @@ function journalAuditItems(model?: CockpitDependentReadModel): CockpitVoucherAud
         return [
             {
                 id: 'journal',
-                label: 'Journal read model',
+                label: 'Audit trail',
                 status: readModelStatus(model),
-                helper: 'Journal entries remain unavailable until an authorized journal read model is wired.',
+                helper: 'Audit entries remain unavailable until an authorized journal read model is connected.',
             },
         ];
     }
@@ -562,7 +562,7 @@ function actionDetailItem(
         description,
         route === null ? null : `Target: ${route}`,
         `${status} · ${payloadPolicy}`,
-        'Follow-up CTA is disabled; Cockpit does not execute x-action actions from Voucher Detail.',
+        'Follow-up action is disabled; Cockpit does not execute x-action actions from Voucher Detail.',
     ].filter((part): part is string => part !== null && part.trim() !== '');
 
     return {
@@ -617,7 +617,7 @@ function feedbackDistributionItem(
         payloadPolicy,
         providerStatus === null ? null : `Provider status: ${providerStatus}`,
         attemptSummary,
-        'Feedback delivery remains read-only from Cockpit.',
+        'Notification delivery remains read-only from Cockpit.',
     ].filter((part): part is string => part !== null && part.trim() !== '');
 
     return {
@@ -687,11 +687,22 @@ function integrationSummary(
     return {
         key,
         label,
-        status: readModelStatus(model),
+        status: operatorStatus(readModelStatus(model)),
         count: `${collection.length} ${noun}`,
-        policy: stringValue(model?.redactions?.payloads) ?? 'not-loaded',
-        reason: stringValue(model?.redactions?.reason) ?? 'read-model-ready',
+        policy: policyLabel(stringValue(model?.redactions?.payloads) ?? 'not-loaded'),
+        reason: policyLabel(stringValue(model?.redactions?.reason) ?? 'read-model-ready'),
     };
+}
+
+function policyLabel(value: string): string {
+    return {
+        'not-loaded': 'No data loaded',
+        'read-model-ready': 'Ready for display',
+        'journal-evidence-summary-only': 'Audit summary only',
+        'safe-action-host-summary-only': 'Follow-up summary only',
+        'communication-delivery-summary-only': 'Notification summary only',
+        'read-model-unavailable': 'Read model unavailable',
+    }[value] ?? value.replaceAll('-', ' ');
 }
 </script>
 
@@ -936,10 +947,10 @@ function integrationSummary(
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
-                                Evidence readiness
+                                Connected services
                             </p>
                             <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                                Read-only integration state. These facts do not execute actions, send feedback, or write journal entries.
+                                Read-only audit, follow-up, and notification state. These facts do not execute actions, send notifications, or write journal entries.
                             </p>
                         </div>
                         <span class="w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200">
@@ -1209,7 +1220,7 @@ function integrationSummary(
                     Voucher Integration Summary
                 </p>
                 <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                    Journal · Action · Feedback
+                    Audit, follow-up, and notification status
                 </h3>
                 <div class="mt-5 grid gap-3 md:grid-cols-3">
                     <article

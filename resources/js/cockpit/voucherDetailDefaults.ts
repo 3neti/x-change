@@ -70,8 +70,8 @@ export const cockpitVoucherTimelineItems: CockpitVoucherTimelineItem[] = [
     },
     {
         id: 'feedback-status',
-        label: 'Feedback status',
-        description: 'Feedback delivery status placeholder.',
+        label: 'Notification status',
+        description: 'Notification delivery status placeholder.',
         timestamp: 'Delivery read model pending',
         source: 'feedback',
     },
@@ -122,13 +122,13 @@ export const cockpitVoucherDistributionItems: CockpitVoucherDistributionItem[] =
 export const cockpitVoucherAuditItems: CockpitVoucherAuditItem[] = [
     {
         id: 'journal',
-        label: 'Journal read model',
+        label: 'Audit trail',
         status: 'Not wired',
         helper: 'Cockpit must compose with x-journal visibility and redaction later.',
     },
     {
         id: 'actions',
-        label: 'Action handoff',
+        label: 'Follow-up guidance',
         status: 'Not wired',
         helper: 'x-action can describe next steps but does not execute money.',
     },
@@ -143,15 +143,15 @@ export const cockpitVoucherAuditItems: CockpitVoucherAuditItem[] = [
 export const cockpitVoucherDetailActions: CockpitVoucherDetailAction[] = [
     {
         key: 'open-claim',
-        label: 'Open claim flow',
+        label: 'Open claim URL',
         disabled: true,
-        reason: 'Claim UX wiring is not part of Cockpit Slice 5.',
+        reason: 'Claim inspection is available only through approved read-only links.',
     },
     {
         key: 'resend-feedback',
-        label: 'Resend feedback',
+        label: 'Request notification resend',
         disabled: true,
-        reason: 'Feedback delivery must be explicitly routed through x-feedback later.',
+        reason: 'Notification sends must be explicitly routed through x-feedback later.',
     },
     {
         key: 'reconcile',
@@ -161,8 +161,8 @@ export const cockpitVoucherDetailActions: CockpitVoucherDetailAction[] = [
     },
     {
         key: 'cancel',
-        label: 'Cancel voucher',
+        label: 'Cancel Pay Code',
         disabled: true,
-        reason: 'Voucher mutation is prohibited in this foundation slice.',
+        reason: 'Pay Code mutation is prohibited from this read-only detail screen.',
     },
 ];

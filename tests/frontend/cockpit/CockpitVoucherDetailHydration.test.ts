@@ -278,14 +278,14 @@ describe('Cockpit Voucher Detail hydration', () => {
         const items = readiness.findAll('[data-testid="cockpit-voucher-detail-primary-evidence-readiness-item"]');
 
         expect(readiness.exists()).toBe(true);
-        expect(readiness.text()).toContain('Evidence readiness');
-        expect(readiness.text()).toContain('Read-only integration state');
+        expect(readiness.text()).toContain('Connected services');
+        expect(readiness.text()).toContain('Read-only audit, follow-up, and notification state');
         expect(readiness.text()).toContain('summary only');
-        expect(readiness.text()).toContain('Journal');
-        expect(readiness.text()).toContain('Action');
-        expect(readiness.text()).toContain('Feedback');
-        expect(readiness.text()).toContain('not_wired');
-        expect(readiness.text()).toContain('not-loaded');
+        expect(readiness.text()).toContain('Audit');
+        expect(readiness.text()).toContain('Follow-Up');
+        expect(readiness.text()).toContain('Notifications');
+        expect(readiness.text()).toContain('Not connected');
+        expect(readiness.text()).toContain('No data loaded');
         expect(readiness.text()).toContain('0 entries');
         expect(readiness.text()).toContain('0 actions');
         expect(readiness.text()).toContain('0 deliveries');
@@ -467,12 +467,12 @@ describe('Cockpit Voucher Detail hydration', () => {
         });
 
         expect(wrapper.text()).toContain('Execution read model');
-        expect(wrapper.text()).toContain('Journal read model');
-        expect(wrapper.text()).toContain('Action handoff');
-        expect(wrapper.text()).toContain('Feedback delivery');
+        expect(wrapper.text()).toContain('Audit trail');
+        expect(wrapper.text()).toContain('Follow-up guidance');
+        expect(wrapper.text()).toContain('Notification status');
         expect(wrapper.text()).toContain('not_wired');
         expect(wrapper.text()).toContain('No execution driver is invoked by this screen.');
-        expect(wrapper.text()).toContain('Journal entries remain unavailable until an authorized journal read model is wired.');
+        expect(wrapper.text()).toContain('Audit entries remain unavailable until an authorized journal read model is connected.');
     });
 
     it('hydrates journal evidence entries without rendering unsafe journal payloads', () => {
@@ -599,11 +599,11 @@ describe('Cockpit Voucher Detail hydration', () => {
         });
 
         expect(wrapper.text()).toContain('Approve redemption');
-        expect(wrapper.text()).toContain('Audit and follow-up CTAs');
-        expect(wrapper.text()).toContain('Follow-up CTAs are read-only from this page.');
+        expect(wrapper.text()).toContain('Audit and follow-up guidance');
+        expect(wrapper.text()).toContain('Follow-up actions are read-only from this page.');
         expect(wrapper.text()).toContain('Review the redemption evidence.');
         expect(wrapper.text()).toContain('Target: x-change.cockpit.pay-codes.distribution');
-        expect(wrapper.text()).toContain('Follow-up CTA is disabled; Cockpit does not execute x-action actions from Voucher Detail.');
+        expect(wrapper.text()).toContain('Follow-up action is disabled; Cockpit does not execute x-action actions from Voucher Detail.');
         expect(wrapper.text()).toContain('safe-action-host-summary-only');
         expect(wrapper.text()).not.toContain('/must-not-render');
         expect(wrapper.text()).not.toContain('raw_diagnostics');
@@ -648,7 +648,7 @@ describe('Cockpit Voucher Detail hydration', () => {
         expect(wrapper.text()).toContain('Provider status: ACCEPTED');
         expect(wrapper.text()).toContain('Attempts: 1/3');
         expect(wrapper.text()).toContain('communication-delivery-summary-only');
-        expect(wrapper.text()).toContain('Feedback delivery remains read-only from Cockpit.');
+        expect(wrapper.text()).toContain('Notification delivery remains read-only from Cockpit.');
         expect(wrapper.text()).not.toContain('+639170000000');
         expect(wrapper.text()).not.toContain('must-not-render');
         expect(wrapper.text()).not.toContain('provider_payload');
@@ -682,7 +682,7 @@ describe('Cockpit Voucher Detail hydration', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Voucher Integration Summary');
+        expect(wrapper.text()).toContain('Audit, follow-up, and notification status');
         expect(wrapper.text()).toContain('2 entries');
         expect(wrapper.text()).toContain('1 actions');
         expect(wrapper.text()).toContain('1 deliveries');
@@ -710,8 +710,8 @@ describe('Cockpit Voucher Detail hydration', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Voucher Integration Summary');
-        expect(wrapper.text()).toContain('read-model-unavailable');
+        expect(wrapper.text()).toContain('Audit, follow-up, and notification status');
+        expect(wrapper.text()).toContain('Read model unavailable');
         expect(wrapper.text()).not.toContain('RuntimeException');
         expect(wrapper.text()).not.toContain('must-not-render');
     });
@@ -812,10 +812,10 @@ describe('Cockpit Voucher Detail hydration', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Voucher Integration Summary');
-        expect(wrapper.text()).toContain('journal-evidence-summary-only');
-        expect(wrapper.text()).toContain('safe-action-host-summary-only');
-        expect(wrapper.text()).toContain('communication-delivery-summary-only');
+        expect(wrapper.text()).toContain('Audit, follow-up, and notification status');
+        expect(wrapper.text()).toContain('Audit summary only');
+        expect(wrapper.text()).toContain('Follow-up summary only');
+        expect(wrapper.text()).toContain('Notification summary only');
         expect(wrapper.text()).not.toContain('SECRET-DO-NOT-RENDER');
         expect(wrapper.text()).not.toContain('RuntimeException');
         expect(wrapper.text()).not.toContain('Stack trace must stay hidden');
