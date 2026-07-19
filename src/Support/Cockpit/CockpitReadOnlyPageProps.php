@@ -366,6 +366,12 @@ class CockpitReadOnlyPageProps
             is_array($actions['actions'] ?? null) ? $actions['actions'] : [],
             $this->stringValue($actions['status'] ?? null, 'not_wired') ?? 'not_wired',
         );
+        $journal = is_array($readModel['journal'] ?? null) ? $readModel['journal'] : [];
+        $journalEvidence = $this->distributionJournalEvidence(
+            is_array($journal['entries'] ?? null) ? $journal['entries'] : [],
+            $this->stringValue($journal['status'] ?? null, 'not_wired') ?? 'not_wired',
+            is_array($journal['redactions'] ?? null) ? $journal['redactions'] : [],
+        );
 
         return new CockpitDistributionWorkspaceReadModelData(
             status: $code === null ? 'not_wired' : 'available',
@@ -439,6 +445,7 @@ class CockpitReadOnlyPageProps
                 ),
             ],
             analytics: [
+                ...$journalEvidence,
                 new CockpitDistributionWorkspaceItemData(
                     key: 'delivery-state',
                     label: 'Delivery state',
@@ -503,6 +510,8 @@ class CockpitReadOnlyPageProps
                 'campaign_mutation_enabled' => false,
                 'action_execution_enabled' => false,
                 'action_payloads_exposed' => false,
+                'journal_writes_enabled' => false,
+                'journal_payloads_exposed' => false,
             ],
         );
     }
@@ -655,6 +664,48 @@ class CockpitReadOnlyPageProps
                     ], fn (mixed $value): bool => $value !== null),
                 );
             })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $entries
+     * @param  array<string, mixed>  $redactions
+     * @return array<int, CockpitDistributionWorkspaceItemData>
+     */
+    private function distributionJournalEvidence(array $entries, string $journalStatus, array $redactions): array
+    {
+        if ($journalStatus !== 'available') {
+            return [];
+        }
+
+        $payloadPolicy = $this->stringValue($redactions['payloads'] ?? null, 'journal-evidence-summary-only') ?? 'journal-evidence-summary-only';
+
+        return collect($entries)
+            ->map(function (array $entry, int $index) use ($payloadPolicy): CockpitDistributionWorkspaceItemData {
+                $payload = is_array($entry['payload'] ?? null) ? $entry['payload'] : [];
+                $eventType = $this->stringValue($entry['event_type'] ?? null, 'journal.entry') ?? 'journal.entry';
+                $summary = $this->stringValue($payload['summary'] ?? null, null)
+                    ?? $this->stringValue($entry['summary'] ?? null, null)
+                    ?? 'Journal evidence summary available.';
+                $occurredAt = $this->stringValue($entry['occurred_at'] ?? null, 'timestamp redacted') ?? 'timestamp redacted';
+
+                return new CockpitDistributionWorkspaceItemData(
+                    key: $this->stringValue($entry['reference_number'] ?? null, sprintf('journal-%d', $index + 1)) ?? sprintf('journal-%d', $index + 1),
+                    label: 'Journal: '.$eventType,
+                    status: 'available',
+                    description: $summary.' · '.$occurredAt.' · '.$payloadPolicy,
+                    available: true,
+                    source: 'x-journal',
+                    metadata: [
+                        'event_type' => $eventType,
+                        'payload_policy' => $payloadPolicy,
+                        'evidence_only' => true,
+                        'writes_journal' => false,
+                    ],
+                );
+            })
+            ->take(5)
             ->values()
             ->all();
     }
