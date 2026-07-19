@@ -4,12 +4,21 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Quick Generate Form Density
-Status: Closed; Quick Generate form density changes are host-published
+Current slice: Pay Code Explorer Search / Results Polish
+Status: Slice 1 implemented; host publish / closure pending
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Pay Code Explorer Search / Results Polish Slice 1:
+  - Added a compact `Current Search` summary inside the primary Pay Code Explorer card.
+  - Shows search term, status filter, visible row count, and campaign-context presence as read-only facts.
+  - Moved row action guidance, list totals, connected-service badges, and connected-service readiness into disclosure panels.
+  - Replaced `navigation-only` with `Links only`.
+  - Verified focused Pay Code Explorer frontend hydration coverage and backend architecture documentation coverage.
+  - Confirmed no routes, controllers, queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, or money movement were changed.
+  - Report: `reports/553-pay-code-explorer-search-results-polish-slice-1.md`.
+  - Next recommended checkpoint: Pay Code Explorer Search / Results Polish Slice 2 — host publish / asset drift / browser / build closure.
 - Completed Quick Generate Form Density Slice 2 / Closure:
   - Published package Cockpit assets to the host app.
   - Confirmed published Cockpit assets match package source.

@@ -164,7 +164,9 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         });
 
         expect(wrapper.find('[data-testid="cockpit-pay-code-stats-summary"]').exists()).toBe(true);
-        expect(wrapper.text()).toContain('Functional parity summary');
+        expect(wrapper.find('[data-testid="cockpit-pay-code-stats-summary"]').element.tagName.toLowerCase()).toBe('details');
+        expect(wrapper.text()).toContain('List totals');
+        expect(wrapper.text()).toContain('Read-only totals');
         expect(wrapper.text()).toContain('Filtered');
         expect(wrapper.text()).toContain('Total');
         expect(wrapper.text()).toContain('Needs attention');
@@ -191,10 +193,17 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(summary.text()).toContain('1');
         expect(summary.text()).toContain('Payload Policy');
         expect(summary.text()).toContain('sanitized-list-only');
-        expect(summary.text()).toContain('Query: PC-HYDRATED · Status: redeemed');
+        expect(summary.text()).toContain('Current Search');
+        expect(summary.text()).toContain('Search');
+        expect(summary.text()).toContain('PC-HYDRATED');
+        expect(summary.text()).toContain('Status');
+        expect(summary.text()).toContain('redeemed');
+        expect(summary.text()).toContain('Campaign Context');
+        expect(summary.text()).toContain('None');
         expect(summary.text()).toContain('Search and filters only change the current list view');
         expect(summary.text()).toContain('does not mutate vouchers');
         expect(items).toHaveLength(4);
+        expect(wrapper.findAll('[data-testid="cockpit-pay-code-explorer-current-search-item"]')).toHaveLength(4);
         expect(wrapper.find('[data-testid="cockpit-pay-code-explorer-primary-quick-generate-link"]').attributes('href')).toBe('/x/cockpit/quick-generate');
         expect(wrapper.find('[data-testid="cockpit-pay-code-explorer-primary-clear-link"]').attributes('href')).toBe('/x/cockpit/pay-codes');
     });
@@ -266,8 +275,9 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         const items = guidance.findAll('[data-testid="cockpit-pay-code-row-action-guidance-item"]');
 
         expect(guidance.exists()).toBe(true);
+        expect(guidance.element.tagName.toLowerCase()).toBe('details');
         expect(guidance.text()).toContain('Row action guidance');
-        expect(guidance.text()).toContain('navigation-only');
+        expect(guidance.text()).toContain('Links only');
         expect(guidance.text()).toContain('Navigation Links');
         expect(guidance.text()).toContain('2');
         expect(guidance.text()).toContain('Blocked Actions');
@@ -336,7 +346,8 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Integration badges');
+        expect(wrapper.text()).toContain('Connected service badges');
+        expect(wrapper.text()).toContain('Connected services');
         expect(wrapper.text()).toContain('Journal: available');
         expect(wrapper.text()).toContain('Actions: available');
         expect(wrapper.text()).toContain('Feedback: available');
@@ -401,7 +412,7 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Integration badges');
+        expect(wrapper.text()).toContain('Connected service badges');
         expect(wrapper.text()).toContain('journal-evidence-summary-only');
         expect(wrapper.text()).toContain('safe-action-host-summary-only');
         expect(wrapper.text()).toContain('communication-delivery-summary-only');
@@ -444,7 +455,9 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         const cards = readiness.findAll('[data-testid="cockpit-pay-code-integration-readiness-card"]');
 
         expect(readiness.exists()).toBe(true);
-        expect(readiness.text()).toContain('Integration readiness');
+        expect(readiness.element.tagName.toLowerCase()).toBe('details');
+        expect(readiness.text()).toContain('Connected service details');
+        expect(readiness.text()).toContain('Connected service readiness');
         expect(readiness.text()).toContain('Journal');
         expect(readiness.text()).toContain('journal-evidence-summary-only');
         expect(readiness.text()).toContain('Journal evidence remains read-only audit context');

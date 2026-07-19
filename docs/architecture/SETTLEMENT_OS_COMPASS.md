@@ -32,8 +32,8 @@ This Compass is the program-level memory. Future workstream compasses should be 
 
 ## Current Position
 
-Current wave: Cockpit Quick Generate Form Density
-Current status: Closed; Quick Generate form density changes are host-published
+Current wave: Cockpit Pay Code Explorer Search / Results Polish
+Current status: Slice 1 implemented; host publish / closure pending
 Last updated: 2026-07-19
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-19
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Quick Generate form density closed | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Pay Code Explorer search/results polish in progress | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,11 @@ Last updated: 2026-07-19
 
 ### Current Cockpit Host Integration
 
+- Cockpit Pay Code Explorer Search / Results Polish Slice 1 complete:
+  - Pay Code Explorer now shows a compact `Current Search` summary for search term, status filter, visible row count, and campaign-context presence.
+  - Duplicate Explorer diagnostics for row guidance, list totals, connected-service badges, and connected-service readiness are now disclosure panels.
+  - Confirmed no routes, controllers, queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, or money movement were changed.
+  - Report: [../ui-cockpit/reports/553-pay-code-explorer-search-results-polish-slice-1.md](../ui-cockpit/reports/553-pay-code-explorer-search-results-polish-slice-1.md).
 - Cockpit Voucher Detail Distribution Density Cleanup Slice 3 / Closure complete:
   - Published package Cockpit assets to the host app and confirmed package-to-host asset drift is clean.
   - Verified focused backend Cockpit read-only route coverage.

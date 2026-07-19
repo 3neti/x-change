@@ -65,6 +65,34 @@ const primarySummaryItems = computed(() => [
         helper: 'List rows are sanitized before display.',
     },
 ]);
+const currentSearchItems = computed(() => [
+    {
+        key: 'search',
+        label: 'Search',
+        value: query.value || 'All Pay Codes',
+        helper: query.value ? 'Search term applied to the current read-only list.' : 'No search term is applied.',
+    },
+    {
+        key: 'status',
+        label: 'Status',
+        value: statusFilter.value ?? 'All statuses',
+        helper: statusFilter.value ? 'Status filter applied to the current read-only list.' : 'No lifecycle status filter is applied.',
+    },
+    {
+        key: 'visible',
+        label: 'Visible Rows',
+        value: String(stats.value.filtered || records.value.length),
+        helper: 'Rows currently visible from sanitized read-model facts.',
+    },
+    {
+        key: 'campaign',
+        label: 'Campaign Context',
+        value: campaignNavigationContext.value ? 'Preserved' : 'None',
+        helper: campaignNavigationContext.value
+            ? 'Campaign identifiers are preserved as read-only filter context.'
+            : 'No campaign filter context is attached.',
+    },
+]);
 const enabledRowActionCount = computed(() => records.value.reduce((count, record) => (
     count + (record.actions ?? []).filter((action) => action.enabled && action.href !== null).length
 ), 0));
@@ -570,11 +598,29 @@ function integrationBadge(
 
                 <div class="mt-5 rounded-xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/60 dark:bg-slate-950/70">
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
-                        Current view
+                        Current Search
                     </p>
-                    <p class="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50">
-                        Query: {{ query || 'all Pay Codes' }} · Status: {{ statusFilter ?? 'all statuses' }}
-                    </p>
+                    <dl
+                        class="mt-3 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4"
+                        data-testid="cockpit-pay-code-explorer-current-search"
+                    >
+                        <div
+                            v-for="item in currentSearchItems"
+                            :key="item.key"
+                            class="rounded-lg border border-emerald-100 bg-emerald-50/70 p-3 dark:border-emerald-900/70 dark:bg-emerald-950/30"
+                            data-testid="cockpit-pay-code-explorer-current-search-item"
+                        >
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                                {{ item.label }}
+                            </dt>
+                            <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                                {{ item.value }}
+                            </dd>
+                            <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                {{ item.helper }}
+                            </p>
+                        </div>
+                    </dl>
                     <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
                         Search and filters only change the current list view. Row actions remain navigation-only unless a future authorized mutation slice explicitly changes that boundary.
                     </p>
@@ -654,10 +700,13 @@ function integrationBadge(
                 </div>
             </section>
 
-            <section
+            <details
                 class="rounded-xl border border-emerald-200 bg-white p-5 shadow-sm dark:border-emerald-900/70 dark:bg-slate-900"
                 data-testid="cockpit-pay-code-row-action-guidance"
             >
+                <summary class="cursor-pointer text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+                    Row action guidance
+                </summary>
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
@@ -668,7 +717,7 @@ function integrationBadge(
                         </p>
                     </div>
                     <span class="w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200">
-                        navigation-only
+                        Links only
                     </span>
                 </div>
                 <dl class="mt-4 grid gap-3 text-sm md:grid-cols-3">
@@ -689,14 +738,17 @@ function integrationBadge(
                         </p>
                     </div>
                 </dl>
-            </section>
+            </details>
 
-            <section
+            <details
                 class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 data-testid="cockpit-pay-code-stats-summary"
             >
+                <summary class="cursor-pointer text-sm font-semibold text-slate-800 dark:text-slate-200">
+                    List totals
+                </summary>
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                    Functional parity summary
+                    Read-only totals
                 </p>
                 <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
@@ -718,14 +770,17 @@ function integrationBadge(
                         </p>
                     </div>
                 </div>
-            </section>
+            </details>
 
-            <section
+            <details
                 class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 data-testid="cockpit-pay-code-integration-badges"
             >
+                <summary class="cursor-pointer text-sm font-semibold text-slate-800 dark:text-slate-200">
+                    Connected service badges
+                </summary>
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                    Integration badges
+                    Connected services
                 </p>
                 <div class="mt-4 flex flex-wrap gap-2">
                     <span
@@ -738,14 +793,17 @@ function integrationBadge(
                         <span class="ml-1 font-normal opacity-70">{{ badge.policy }}</span>
                     </span>
                 </div>
-            </section>
+            </details>
 
-            <section
+            <details
                 class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 data-testid="cockpit-pay-code-integration-readiness"
             >
+                <summary class="cursor-pointer text-sm font-semibold text-slate-800 dark:text-slate-200">
+                    Connected service details
+                </summary>
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                    Integration readiness
+                    Connected service readiness
                 </p>
                 <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
                     These cards summarize read-only integration context for the list. They do not write journal entries, execute actions, send feedback, or change voucher lifecycle state.
@@ -773,7 +831,7 @@ function integrationBadge(
                         </p>
                     </article>
                 </div>
-            </section>
+            </details>
 
             <div
                 v-if="activityNavigationContext"
