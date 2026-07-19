@@ -3581,3 +3581,25 @@ Current boundary:
 - Distribution Workspace can now display connected x-feedback delivery state without exposing recipient/provider internals and without enabling sends or retries.
 - Report: `reports/534-distribution-workspace-x-feedback-read-model-slice-3-closure.md`.
 - Boundary remains unchanged: connected read-model presentation only; no feedback delivery, retry execution, provider call, journal write, x-action execution, campaign mutation, voucher mutation, claim execution, driver execution, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+
+# 2026-07-19 — Distribution Workspace x-action Read Model — Slice 1
+
+- Started the Distribution Workspace x-action Read Model wave.
+- `/x/cockpit/pay-codes/{code}/distribution` now projects real x-action follow-up CTA summaries into disabled Distribution Workspace action guidance rows.
+- Report: `reports/535-distribution-workspace-x-action-read-model-slice-1.md`.
+- Boundary remains unchanged: read-only action guidance projection only; no x-action execution, authorization, durable run persistence, journal write, feedback delivery, campaign mutation, voucher mutation, claim execution, driver execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+
+# 2026-07-19 — Distribution Workspace x-action Read Model — Slice 2
+
+- Distribution Workspace now renders safe x-action metadata in disabled action disclosures: target route, target type, presentation-run status, and executes-action status.
+- Published package-owned Cockpit assets into the host app and confirmed published assets match package source.
+- Report: `reports/536-distribution-workspace-x-action-read-model-slice-2.md`.
+- Boundary remains unchanged: read-only presentation only; no x-action execution, authorization, durable run persistence, journal write, feedback delivery, campaign mutation, voucher mutation, claim execution, driver execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+
+# 2026-07-19 — Distribution Workspace x-action Read Model — Slice 3 Closure
+
+- Closed the Distribution Workspace x-action Read Model wave.
+- Focused backend, frontend, asset drift, and host build verification passed.
+- Distribution Workspace can now display connected x-action follow-up CTAs as disabled read-only guidance without exposing x-action run/handoff internals.
+- Report: `reports/537-distribution-workspace-x-action-read-model-slice-3-closure.md`.
+- Boundary remains unchanged: connected read-model presentation only; no x-action execution, authorization, durable run persistence, journal write, feedback delivery, campaign mutation, voucher mutation, claim execution, driver execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
