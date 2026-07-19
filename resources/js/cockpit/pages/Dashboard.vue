@@ -26,6 +26,16 @@ import type {
 
 const props = defineProps<CockpitDashboardPageProps>();
 
+type CockpitConnectedServiceCard = {
+    key: string;
+    label: string;
+    source: string;
+    status: string;
+    count: string;
+    boundary: string;
+    available: boolean;
+};
+
 const readModel = computed(() => props.dashboard_read_model);
 const expandedIntegrationDetails = ref<Record<string, boolean>>({});
 const headerBalances = computed(() => {
@@ -79,7 +89,7 @@ const activity = computed<CockpitActivityItem[]>(() => {
 const integrationSummaries = computed(() => [
     integrationSummary(
         'journal',
-        'Journal Evidence',
+        'Audit Trail',
         props.read_model?.journal,
         'entries',
         'entries',
@@ -87,7 +97,7 @@ const integrationSummaries = computed(() => [
     ),
     integrationSummary(
         'actions',
-        'Action CTAs',
+        'Follow-Up Actions',
         props.read_model?.actions,
         'actions',
         'actions',
@@ -95,12 +105,51 @@ const integrationSummaries = computed(() => [
     ),
     integrationSummary(
         'feedback',
-        'Feedback Deliveries',
+        'Notifications',
         props.read_model?.feedback,
         'deliveries',
         'deliveries',
         'communication-delivery-summary-only',
     ),
+]);
+
+const connectedServiceCards = computed<CockpitConnectedServiceCard[]>(() => [
+    ...integrationSummaries.value.map((summary) => ({
+        key: summary.key,
+        label: summary.label,
+        source: integrationSourceLabel(summary.key),
+        status: displayStatus(summary.status),
+        count: summary.count,
+        boundary: serviceBoundary(summary.key),
+        available: isStatusAvailable(summary.status),
+    })),
+    {
+        key: 'campaigns',
+        label: 'Campaigns',
+        source: 'Campaign package',
+        status: displayStatus(stringValue(props.campaign_read_model?.status) ?? 'not_wired'),
+        count: campaignSurfaceSummary.value,
+        boundary: 'Read-only campaign context',
+        available: props.campaign_read_model?.authorized === true && isStatusAvailable(stringValue(props.campaign_read_model.status) ?? ''),
+    },
+    {
+        key: 'balances',
+        label: 'Balances',
+        source: 'Treasury posture',
+        status: headerBalances.value ? 'Available' : 'Not connected',
+        count: headerBalances.value ? `${headerBalances.value.length} balances` : '0 balances',
+        boundary: 'Read-only balance posture',
+        available: headerBalances.value !== undefined,
+    },
+    {
+        key: 'execution',
+        label: 'Execution Evidence',
+        source: 'Execution read model',
+        status: executionEvidenceCount.value > 0 ? 'Available' : 'Not connected',
+        count: `${executionEvidenceCount.value} records`,
+        boundary: 'Read-only execution summaries',
+        available: executionEvidenceCount.value > 0,
+    },
 ]);
 
 const operatingSummaryCards = computed(() => [
@@ -143,18 +192,35 @@ const latestIssuanceStatus = computed(() => {
 });
 
 const operatingIntegrationStatus = computed(() => {
-    const availableCount = integrationSummaries.value.filter((summary) => summary.status === 'available').length;
+    const availableCount = connectedServiceCards.value.filter((summary) => summary.available).length;
 
-    if (availableCount === integrationSummaries.value.length) {
-        return 'Summaries connected';
+    if (availableCount === connectedServiceCards.value.length) {
+        return 'Core summaries connected';
     }
 
     if (availableCount > 0) {
-        return `${availableCount}/${integrationSummaries.value.length} summaries connected`;
+        return `${availableCount}/${connectedServiceCards.value.length} services connected`;
     }
 
-    return 'Journal, action, and feedback summaries not connected yet';
+    return 'Service summaries not connected yet';
 });
+
+const campaignSurfaceSummary = computed(() => {
+    const surfaces = Array.isArray(props.campaign_read_model?.surfaces) ? props.campaign_read_model.surfaces : [];
+    const availableSurfaces = surfaces.filter((surface) => {
+        const status = typeof surface.status === 'string' ? surface.status : '';
+
+        return surface.enabled === true || isStatusAvailable(status);
+    });
+
+    if (availableSurfaces.length > 0) {
+        return `${availableSurfaces.length} surfaces`;
+    }
+
+    return 'No campaign selected';
+});
+
+const executionEvidenceCount = computed(() => activity.value.filter((item) => item.source === 'execution').length);
 
 function metricValue(key: string): string | undefined {
     return metrics.value.find((metric) => metric.key === key)?.value;
@@ -324,6 +390,10 @@ function displayStatus(value: string): string {
         .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
+function isStatusAvailable(value: string): boolean {
+    return value.trim() === 'available';
+}
+
 const integrationReadinessNote = computed(() => {
     const availableCount = integrationSummaries.value.filter((summary) => summary.status === 'available').length;
 
@@ -383,14 +453,26 @@ const operatorFocusItems = computed(() => [
 
 function integrationSourceLabel(key: string): string {
     if (key === 'journal') {
-        return 'Audit trail source';
+        return 'x-journal audit source';
     }
 
     if (key === 'actions') {
-        return 'Follow-up action source';
+        return 'x-action follow-up source';
     }
 
-    return 'Notification source';
+    return 'x-feedback notification source';
+}
+
+function serviceBoundary(key: string): string {
+    if (key === 'journal') {
+        return 'Read-only audit summaries';
+    }
+
+    if (key === 'actions') {
+        return 'Read-only follow-up summaries';
+    }
+
+    return 'Read-only notification summaries';
 }
 
 function toggleIntegrationDetails(key: string): void {
@@ -478,6 +560,62 @@ function areIntegrationDetailsExpanded(key: string): boolean {
             </section>
 
             <section
+                class="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-6 shadow-sm dark:border-emerald-900/70 dark:bg-emerald-950/20"
+                data-testid="cockpit-connected-services-overview"
+            >
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700 dark:text-emerald-300">
+                            Connected Services
+                        </p>
+                        <h3 class="mt-2 text-xl font-semibold text-slate-950 dark:text-slate-50">
+                            Audit, follow-up, notification, campaign, balance, and execution readiness
+                        </h3>
+                        <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-700 dark:text-slate-300">
+                            This overview shows which surrounding packages are available for read-only inspection.
+                            It does not write audit entries, run follow-up actions, send notifications, mutate
+                            campaigns, query providers, or move money.
+                        </p>
+                    </div>
+                    <span class="inline-flex min-h-7 shrink-0 items-center justify-center rounded-full border border-emerald-200 bg-white px-3 py-1 text-center text-xs font-semibold leading-none text-emerald-700 dark:border-emerald-800 dark:bg-slate-950 dark:text-emerald-300">
+                        {{ operatingIntegrationStatus }}
+                    </span>
+                </div>
+
+                <div class="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <article
+                        v-for="service in connectedServiceCards"
+                        :key="service.key"
+                        class="flex min-h-36 flex-col justify-between rounded-xl border border-white/80 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                        data-testid="cockpit-connected-service-card"
+                    >
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="font-semibold text-slate-950 dark:text-slate-50">
+                                    {{ service.label }}
+                                </p>
+                                <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                    {{ service.source }}
+                                </p>
+                            </div>
+                            <span class="inline-flex min-h-6 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-slate-100 px-2.5 py-1 text-center text-xs font-semibold leading-none text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                                {{ service.status }}
+                            </span>
+                        </div>
+
+                        <div class="mt-4">
+                            <p class="text-2xl font-semibold text-slate-950 dark:text-slate-50">
+                                {{ service.count }}
+                            </p>
+                            <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                {{ service.boundary }}
+                            </p>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <section
                 class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 data-testid="cockpit-operator-focus-panel"
             >
@@ -547,10 +685,10 @@ function areIntegrationDetailsExpanded(key: string): boolean {
                     <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                                Connected Services
+                                Service Connection Details
                             </p>
                             <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                                Audit, follow-up, and notification status
+                                Audit, follow-up, and notification payload boundaries
                             </h3>
                             <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
                                 {{ integrationReadinessNote }}

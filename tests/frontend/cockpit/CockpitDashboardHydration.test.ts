@@ -481,7 +481,7 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(panel.exists()).toBe(true);
         expect(wrapper.text()).toContain('Settlement OS Operating Overview');
         expect(panel.text()).toContain('Start here for generation, inspection, and attention queues');
-        expect(panel.text()).toContain('1/3 summaries connected');
+        expect(panel.text()).toContain('1/6 services connected');
         expect(panel.text()).not.toContain('integration read-models not wired');
         expect(panel.text()).toContain('Pay Codes');
         expect(panel.text()).toContain('4');
@@ -543,14 +543,17 @@ describe('Cockpit dashboard read model hydration', () => {
         });
 
         const text = wrapper.text();
+        const connectedServicesIndex = text.indexOf('Connected Services');
         const operatorFocusIndex = text.indexOf('Operator Focus');
         const issuanceIndex = text.indexOf('Issuance Activity');
         const executionIndex = text.indexOf('System Activity');
-        const integrationIndex = text.indexOf('Connected Services');
+        const integrationIndex = text.indexOf('Service Connection Details');
         const liquidityIndex = text.indexOf('Funding Status');
-        const campaignIndex = text.indexOf('Campaigns');
+        const campaignIndex = text.lastIndexOf('Campaign summary');
 
+        expect(connectedServicesIndex).toBeGreaterThan(-1);
         expect(operatorFocusIndex).toBeGreaterThan(-1);
+        expect(operatorFocusIndex).toBeGreaterThan(connectedServicesIndex);
         expect(issuanceIndex).toBeGreaterThan(operatorFocusIndex);
         expect(executionIndex).toBeGreaterThan(issuanceIndex);
         expect(integrationIndex).toBeGreaterThan(executionIndex);
@@ -575,7 +578,7 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(postureDisclosure?.exists()).toBe(true);
         expect(postureDisclosure?.text()).toContain('Optional system status');
         expect(postureDisclosure?.text()).toContain('Show system posture');
-        expect(postureDisclosure?.text()).toContain('Connected Services');
+        expect(postureDisclosure?.text()).toContain('Service Connection Details');
         expect(postureDisclosure?.text()).toContain('Funding readiness');
         expect(postureDisclosure?.text()).toContain('Claim lifecycle summary');
         expect(postureDisclosure?.text()).toContain('Items that may need attention');
@@ -628,7 +631,7 @@ describe('Cockpit dashboard read model hydration', () => {
 
         const panel = wrapper.find('[data-testid="cockpit-operating-summary-panel"]');
 
-        expect(panel.text()).toContain('Journal, action, and feedback summaries not connected yet');
+        expect(panel.text()).toContain('Service summaries not connected yet');
         expect(panel.text()).not.toContain('integration read-models not wired');
     });
 
@@ -935,7 +938,20 @@ describe('Cockpit dashboard read model hydration', () => {
     it('renders journal action and feedback integration summary cards from the read model bundle', async () => {
         const wrapper = mount(CockpitDashboard, {
             props: {
-                dashboard_read_model: dashboardReadModel,
+                dashboard_read_model: {
+                    ...dashboardReadModel,
+                    activity: [
+                        {
+                            id: 'execution-1',
+                            label: 'Execution recorded for PC-1234',
+                            description: 'settlement_envelope succeeded · exec-1234',
+                            timestamp: '2026-07-10T10:00:00+08:00',
+                            source: 'execution',
+                        },
+                    ],
+                },
+                cockpit_header_read_model: cockpitHeaderReadModel,
+                campaign_read_model: campaignReadModel,
                 operator_issuance_activity_read_model: operatorIssuanceActivityReadModel,
                 read_model: {
                     journal: {
@@ -972,19 +988,34 @@ describe('Cockpit dashboard read model hydration', () => {
         });
 
         expect(wrapper.text()).toContain('Connected Services');
-        expect(wrapper.text()).toContain('Audit, follow-up, and notification status');
+        expect(wrapper.text()).toContain('Audit, follow-up, notification, campaign, balance, and execution readiness');
+        expect(wrapper.text()).toContain('Core summaries connected');
+        expect(wrapper.text()).toContain('This overview shows which surrounding packages are available for read-only inspection.');
+        expect(wrapper.find('[data-testid="cockpit-connected-services-overview"]').exists()).toBe(true);
+        expect(wrapper.findAll('[data-testid="cockpit-connected-service-card"]')).toHaveLength(6);
+        expect(wrapper.text()).toContain('Service Connection Details');
+        expect(wrapper.text()).toContain('Audit, follow-up, and notification payload boundaries');
         expect(wrapper.text()).toContain('Audit, follow-up, and notification summaries are available for read-only display.');
         expect(wrapper.text()).toContain('Durable activity read model available');
         expect(wrapper.text()).toContain('Quick Generate activity can be inspected as an operator-safe summary.');
-        expect(wrapper.text()).toContain('Journal Evidence');
-        expect(wrapper.text()).toContain('Audit trail source');
+        expect(wrapper.text()).toContain('Audit Trail');
+        expect(wrapper.text()).toContain('x-journal audit source');
         expect(wrapper.text()).toContain('1 entries');
-        expect(wrapper.text()).toContain('Action CTAs');
-        expect(wrapper.text()).toContain('Follow-up action source');
+        expect(wrapper.text()).toContain('Follow-Up Actions');
+        expect(wrapper.text()).toContain('x-action follow-up source');
         expect(wrapper.text()).toContain('1 actions');
-        expect(wrapper.text()).toContain('Feedback Deliveries');
-        expect(wrapper.text()).toContain('Notification source');
+        expect(wrapper.text()).toContain('Notifications');
+        expect(wrapper.text()).toContain('x-feedback notification source');
         expect(wrapper.text()).toContain('1 deliveries');
+        expect(wrapper.text()).toContain('Campaigns');
+        expect(wrapper.text()).toContain('Campaign package');
+        expect(wrapper.text()).toContain('2 surfaces');
+        expect(wrapper.text()).toContain('Balances');
+        expect(wrapper.text()).toContain('Treasury posture');
+        expect(wrapper.text()).toContain('2 balances');
+        expect(wrapper.text()).toContain('Execution Evidence');
+        expect(wrapper.text()).toContain('Execution read model');
+        expect(wrapper.text()).toContain('1 records');
         expect(wrapper.text()).not.toContain('journal-evidence-summary-only');
         expect(wrapper.text()).not.toContain('safe-action-host-summary-only');
         expect(wrapper.text()).not.toContain('communication-delivery-summary-only');
@@ -1027,7 +1058,7 @@ describe('Cockpit dashboard read model hydration', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Journal Evidence');
+        expect(wrapper.text()).toContain('Audit Trail');
         expect(wrapper.text()).toContain('Unavailable');
         expect(wrapper.text()).not.toContain('Read Model Unavailable');
         await wrapper.findAll('[data-testid="cockpit-integration-summary-details-toggle"]')[0].trigger('click');

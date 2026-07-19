@@ -4,12 +4,20 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Voucher Detail Distribution Density Cleanup
-Status: Closed; Voucher Detail distribution surfaces are more scan-friendly
+Current slice: Dashboard Connected Services Productization
+Status: Slice 1 complete; package dashboard now exposes a six-service read-only overview before operator actions
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Dashboard Connected Services Productization Slice 1:
+  - Promoted connected-service readiness into a visible `/x/cockpit` overview above operator actions.
+  - Added scan-friendly cards for Audit Trail / x-journal, Follow-Up Actions / x-action, Notifications / x-feedback, Campaigns / x-campaign, Balances / Treasury posture, and Execution Evidence.
+  - Kept journal/action/feedback payload boundary details inside the optional System Posture disclosure.
+  - Verified focused frontend dashboard hydration coverage and formatting.
+  - Confirmed no journal writes, action execution, feedback sends, campaign mutation, provider calls, wallet behavior changes, Treasury behavior changes, persistence changes, public API changes, or money movement were added.
+  - Report: `reports/547-dashboard-connected-services-productization-slice-1.md`.
+  - Next recommended checkpoint: Dashboard Connected Services Productization Slice 2 — host publish / drift / browser / build closure.
 - Completed Voucher Detail Distribution Density Cleanup Slice 3 / Closure:
   - Published package Cockpit assets to the host app.
   - Confirmed published Cockpit assets match package source.
