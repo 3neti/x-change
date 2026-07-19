@@ -21,47 +21,42 @@ const connectedAuditCount = computed(() => props.audits.filter((audit) => audit.
         data-testid="cockpit-voucher-audit-panel"
     >
         <summary class="cursor-pointer list-none">
-            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
+            <div class="flex flex-col gap-3">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                            Follow-up status
+                        </p>
+                        <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
+                            Audit and follow-up details
+                        </h3>
+                    </div>
+                    <dl
+                        class="flex flex-wrap gap-2 text-xs"
+                        data-testid="cockpit-voucher-audit-density-summary"
+                    >
+                        <div class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                            <dt>Evidence</dt>
+                            <dd class="font-semibold">{{ audits.length }}</dd>
+                        </div>
+                        <div class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                            <dt>Connected</dt>
+                            <dd class="font-semibold">{{ connectedAuditCount }}</dd>
+                        </div>
+                        <div class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                            <dt>Disabled Follow-Ups</dt>
+                            <dd class="font-semibold">{{ disabledActionCount }}</dd>
+                        </div>
+                    </dl>
+                </div>
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                        Follow-up status
+                        View details
                     </p>
-                    <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                        Audit and follow-up details
-                    </h3>
-                    <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                        Open this panel to inspect journal evidence and disabled follow-up guidance. This page still does not execute actions or write audit entries.
+                    <p class="max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                        Journal evidence and disabled follow-up guidance. This page does not execute actions or write audit entries.
                     </p>
                 </div>
-                <dl
-                    class="grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-2 text-center text-sm dark:bg-slate-950"
-                    data-testid="cockpit-voucher-audit-density-summary"
-                >
-                    <div class="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
-                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Evidence
-                        </dt>
-                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                            {{ audits.length }}
-                        </dd>
-                    </div>
-                    <div class="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
-                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Connected
-                        </dt>
-                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                            {{ connectedAuditCount }}
-                        </dd>
-                    </div>
-                    <div class="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
-                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Follow-Ups
-                        </dt>
-                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                            {{ disabledActionCount }}
-                        </dd>
-                    </div>
-                </dl>
             </div>
         </summary>
 
