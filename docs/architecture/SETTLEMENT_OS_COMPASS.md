@@ -32,8 +32,8 @@ This Compass is the program-level memory. Future workstream compasses should be 
 
 ## Current Position
 
-Current wave: Cockpit Voucher Detail Secondary Panel Cleanup
-Current status: Closed; Voucher Detail secondary panel cleanup is host-published
+Current wave: Cockpit Distribution Workspace Secondary Panel Cleanup
+Current status: In progress; Distribution Workspace secondary panel cleanup Slice 1 scaffolded
 Last updated: 2026-07-19
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-19
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Voucher Detail secondary panel cleanup closed | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Distribution Workspace secondary panel cleanup in progress | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,10 @@ Last updated: 2026-07-19
 
 ### Current Cockpit Host Integration
 
+- Cockpit Distribution Workspace Secondary Panel Cleanup Slice 1 complete:
+  - Distribution Workspace delivery channels, print templates, share assets, and operational evidence secondary panels now render as compact disclosures with slim count pills.
+  - Distribution Workspace remains read-only and does not dispatch, send, execute, generate artifacts, call providers, mutate vouchers, write journals, or move money.
+  - Report: [../ui-cockpit/reports/563-distribution-workspace-secondary-panel-cleanup-slice-1.md](../ui-cockpit/reports/563-distribution-workspace-secondary-panel-cleanup-slice-1.md).
 - Cockpit Voucher Detail Secondary Panel Cleanup Slice 2 / Closure complete:
   - Published package-owned Cockpit assets into the host app and confirmed host assets match package source.
   - Authenticated browser smoke verifies Voucher Detail and Distribution Workspace still render for an existing Pay Code.

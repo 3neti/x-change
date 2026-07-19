@@ -11,38 +11,38 @@ function deferredAssetCount(): number {
 </script>
 
 <template>
-    <section
+    <details
         class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
         data-testid="cockpit-share-qr-panel"
     >
-        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-            Share / QR
-        </p>
-        <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-            Share asset readiness
-        </h3>
-
-        <div
-            class="mt-5 grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-800 dark:bg-slate-950/40 sm:grid-cols-2"
-            data-testid="cockpit-share-asset-density-summary"
-        >
-            <div>
-                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Share Assets
-                </p>
-                <p class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                    {{ assets.length }}
-                </p>
+        <summary class="cursor-pointer list-none">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                        Share Assets
+                    </p>
+                    <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
+                        Link, QR, and short-link readiness
+                    </h3>
+                    <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                        Share assets are inspection facts only. This workspace does not create QR codes, short links, or delivery artifacts.
+                    </p>
+                </div>
+                <dl
+                    class="flex flex-wrap gap-2 text-xs"
+                    data-testid="cockpit-share-asset-density-summary"
+                >
+                    <div class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                        <dt>Assets</dt>
+                        <dd class="font-semibold">{{ assets.length }}</dd>
+                    </div>
+                    <div class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                        <dt>Deferred</dt>
+                        <dd class="font-semibold">{{ deferredAssetCount() }}</dd>
+                    </div>
+                </dl>
             </div>
-            <div>
-                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Deferred Assets
-                </p>
-                <p class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                    {{ deferredAssetCount() }}
-                </p>
-            </div>
-        </div>
+        </summary>
 
         <div class="mt-5 grid gap-3">
             <article
@@ -72,5 +72,5 @@ function deferredAssetCount(): number {
                 </details>
             </article>
         </div>
-    </section>
+    </details>
 </template>

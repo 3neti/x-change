@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import type {
     CockpitDistributionAction,
     CockpitDistributionChannel,
@@ -9,13 +10,8 @@ const props = defineProps<{
     actions: CockpitDistributionAction[];
 }>();
 
-function enabledActionCount(): number {
-    return props.actions.filter((action) => !action.disabled).length;
-}
-
-function disabledActionCount(): number {
-    return props.actions.filter((action) => action.disabled).length;
-}
+const enabledActionCount = computed(() => props.actions.filter((action) => !action.disabled).length);
+const disabledActionCount = computed(() => props.actions.filter((action) => action.disabled).length);
 
 function stringValue(value: unknown): string | null {
     if (typeof value === 'string' && value.trim() !== '') {
@@ -60,46 +56,44 @@ function actionMetadata(action: CockpitDistributionAction): Array<{ label: strin
 </script>
 
 <template>
-    <section
+    <details
         class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
         data-testid="cockpit-digital-distribution-panel"
     >
-        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-            Delivery channels
-        </p>
-        <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-            Message and follow-up status
-        </h3>
-
-        <div
-            class="mt-5 grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-800 dark:bg-slate-950/40 sm:grid-cols-3"
-            data-testid="cockpit-distribution-density-summary"
-        >
-            <div>
-                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Channels
-                </p>
-                <p class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                    {{ channels.length }}
-                </p>
-            </div>
-            <div>
-                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Available Follow-Ups
-                </p>
-                <p class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                    {{ enabledActionCount() }}
-                </p>
-            </div>
-            <div>
-                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Disabled Follow-Ups
-                </p>
-                <p class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                    {{ disabledActionCount() }}
+        <summary class="cursor-pointer list-none">
+            <div class="flex flex-col gap-3">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                            Delivery channels
+                        </p>
+                        <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
+                            Message and follow-up status
+                        </h3>
+                    </div>
+                    <dl
+                        class="flex flex-wrap gap-2 text-xs"
+                        data-testid="cockpit-distribution-density-summary"
+                    >
+                        <div class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                            <dt>Channels</dt>
+                            <dd class="font-semibold">{{ channels.length }}</dd>
+                        </div>
+                        <div class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                            <dt>Available Follow-Ups</dt>
+                            <dd class="font-semibold">{{ enabledActionCount }}</dd>
+                        </div>
+                        <div class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                            <dt>Disabled Follow-Ups</dt>
+                            <dd class="font-semibold">{{ disabledActionCount }}</dd>
+                        </div>
+                    </dl>
+                </div>
+                <p class="max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    Channel and follow-up facts are read-only. This workspace does not send messages, execute actions, dispatch campaigns, or create artifacts.
                 </p>
             </div>
-        </div>
+        </summary>
 
         <div class="mt-5 grid gap-3">
             <article
@@ -184,5 +178,5 @@ function actionMetadata(action: CockpitDistributionAction): Array<{ label: strin
                 </details>
             </div>
         </div>
-    </section>
+    </details>
 </template>
