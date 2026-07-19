@@ -3404,3 +3404,30 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/531-voucher-detail-x-action-follow-up-read-model-slice-3-closure.md`.
 - Boundary remains unchanged: connected x-action presentation only; no x-action execution, authorization, durable run persistence, journal write, feedback delivery, provider call, campaign mutation, voucher mutation, claim execution, driver execution, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
 - Next recommended checkpoint: move connected-service summaries into Distribution Workspace, starting with x-feedback delivery state.
+
+## 2026-07-19 Update — Distribution Workspace x-feedback Read Model — Slice 1
+
+- Started the Distribution Workspace x-feedback Read Model wave.
+- Distribution Workspace can hydrate real x-feedback delivery summaries into Digital Distribution channel rows for a matching Pay Code.
+- Fallback delivery-planning rows remain when x-feedback records are unavailable.
+- UI/report: `../ui-cockpit/reports/532-distribution-workspace-x-feedback-read-model-slice-1.md`.
+- Boundary remains unchanged: read-only distribution delivery-state projection only; no feedback delivery, retry execution, provider call, journal write, x-action execution, campaign mutation, voucher mutation, claim execution, driver execution, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next checkpoint: render safe delivery metadata in the Distribution Workspace UI and publish host assets.
+
+## 2026-07-19 Update — Distribution Workspace x-feedback Read Model — Slice 2
+
+- Distribution Workspace renders connected x-feedback delivery metadata as scan-friendly read-only channel facts.
+- Operator-visible channel rows can show provider status, attempts, and communication-state-only flag.
+- Host-published Cockpit assets match package source.
+- UI/report: `../ui-cockpit/reports/533-distribution-workspace-x-feedback-read-model-slice-2.md`.
+- Boundary remains unchanged: read-only presentation only; no feedback delivery, retry execution, provider call, journal write, x-action execution, campaign mutation, voucher mutation, claim execution, driver execution, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next checkpoint: close the wave with focused backend/frontend/build verification.
+
+## 2026-07-19 Update — Distribution Workspace x-feedback Read Model — Slice 3 Closure
+
+- Closed the Distribution Workspace x-feedback Read Model wave.
+- Distribution Workspace now has verified read-only consumption and rendering of x-feedback delivery summaries.
+- Recipient and provider internals remain excluded from Cockpit payloads.
+- UI/report: `../ui-cockpit/reports/534-distribution-workspace-x-feedback-read-model-slice-3-closure.md`.
+- Boundary remains unchanged: connected communication-state presentation only; no feedback delivery, retry execution, provider call, journal write, x-action execution, campaign mutation, voucher mutation, claim execution, driver execution, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next recommended checkpoint: connect Distribution Workspace x-action follow-up CTA summaries as disabled read-only guidance, or pause connected-service work and inspect the five primary Cockpit pages manually.
