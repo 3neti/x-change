@@ -5,11 +5,19 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Distribution Workspace Manual Acceptance
-Status: Automated green; pending human visual acceptance
+Status: Passed with UI follow-up
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Distribution Workspace Manual Acceptance Slice 3:
+  - Recorded human browser scrape evidence for `/x/cockpit/pay-codes/E9MC/distribution`.
+  - Accepted the page as `Pass with UI follow-up` for the current read-only/manual-distribution gate.
+  - Confirmed the visible scrape includes beneficiary URL, copy controls, manual checklist, connected context, disabled delivery, deferred artifacts, read-only claim link, and secondary panels.
+  - Recorded follow-up UI concerns for lower secondary panels without blocking the read-only acceptance gate.
+  - Confirmed no visible evidence of feedback delivery, campaign dispatch, short-link creation, QR generation, journal writes, provider calls, voucher mutation, wallet mutation, or money movement.
+  - Report: `reports/567-distribution-workspace-manual-acceptance-slice-3-human-pass.md`.
+  - Next recommended checkpoint: Distribution Workspace Secondary Panel Copy Polish, or Dashboard connected-service wiring depth.
 - Completed Distribution Workspace Manual Acceptance Slice 2:
   - Recorded automated evidence for the cleaned Distribution Workspace.
   - Confirmed asset drift is clean, focused frontend coverage is green, architecture guards are green, Dusk browser smoke is green, and host build succeeds.
