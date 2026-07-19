@@ -5,11 +5,24 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Pay Code Explorer Bottom Pagination Affordance
-Status: In progress
+Status: Closed / pending human inspection
 Last updated: 2026-07-20
 
 ## Completed
 
+- Completed Pay Code Explorer Bottom Pagination Affordance Slice 2 / Closure:
+  - Published package Cockpit assets to the host app.
+  - Confirmed published Cockpit assets match package source.
+  - Verified focused Pay Code Explorer frontend hydration coverage.
+  - Verified focused backend architecture documentation coverage.
+  - Verified authenticated Dusk browser smoke coverage for `/x/cockpit/pay-codes`.
+  - Verified the host production frontend build.
+  - Confirmed high-volume Explorer results show pagination controls above and below the result rows.
+  - Confirmed footer `Previous` and `Next` controls update the same client-side page state as the header controls.
+  - Confirmed the rows-per-page selector remains header-only to avoid duplicate control density.
+  - Confirmed no routes, controllers, backend queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, artifact generation, or money movement were changed.
+  - Report: `reports/589-pay-code-explorer-bottom-pagination-affordance-slice-2-closure.md`.
+  - Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, then continue page-focused Cockpit polish or pick the next real integration wiring wave.
 - Started Pay Code Explorer Bottom Pagination Affordance Slice 1:
   - Added footer pagination below the Pay Code Explorer result rows.
   - Reused the same browser-local `Previous` and `Next` state as the top pagination controls.
