@@ -357,6 +357,10 @@ class CockpitReadOnlyPageProps
             : $this->distributionLinks($code);
         $feedback = is_array($readModel['feedback'] ?? null) ? $readModel['feedback'] : [];
         $feedbackStatus = $this->stringValue($feedback['status'] ?? null, 'not_wired');
+        $feedbackDeliveries = $this->distributionFeedbackChannels(
+            is_array($feedback['deliveries'] ?? null) ? $feedback['deliveries'] : [],
+            $feedbackStatus,
+        );
 
         return new CockpitDistributionWorkspaceReadModelData(
             status: $code === null ? 'not_wired' : 'available',
@@ -397,27 +401,7 @@ class CockpitReadOnlyPageProps
                 ),
             ],
             channels: [
-                new CockpitDistributionWorkspaceItemData(
-                    key: 'sms',
-                    label: 'SMS',
-                    status: $feedbackStatus,
-                    description: 'SMS delivery state must come from x-feedback; this workspace does not send messages.',
-                    source: 'feedback-read-model',
-                ),
-                new CockpitDistributionWorkspaceItemData(
-                    key: 'email',
-                    label: 'Email',
-                    status: $feedbackStatus,
-                    description: 'Email delivery state must come from x-feedback; this workspace does not send messages.',
-                    source: 'feedback-read-model',
-                ),
-                new CockpitDistributionWorkspaceItemData(
-                    key: 'in-app',
-                    label: 'In-app',
-                    status: $feedbackStatus,
-                    description: 'In-app notification state must come from x-feedback; this workspace does not create notifications.',
-                    source: 'feedback-read-model',
-                ),
+                ...$feedbackDeliveries,
                 new CockpitDistributionWorkspaceItemData(
                     key: 'manual',
                     label: 'Manual branch release',
@@ -454,8 +438,15 @@ class CockpitReadOnlyPageProps
                     key: 'delivery-state',
                     label: 'Delivery state',
                     status: $feedbackStatus,
-                    description: 'Delivery truth is communication state from x-feedback, not lifecycle truth.',
+                    description: count($feedbackDeliveries) > 0
+                        ? sprintf('%d x-feedback delivery summary row(s) are available as communication state only.', count($feedbackDeliveries))
+                        : 'Delivery truth is communication state from x-feedback, not lifecycle truth.',
                     source: 'feedback-read-model',
+                    metadata: [
+                        'delivery_count' => count($feedbackDeliveries),
+                        'sends_feedback' => false,
+                        'retries_delivery' => false,
+                    ],
                 ),
                 new CockpitDistributionWorkspaceItemData(
                     key: 'campaign-state',
@@ -543,6 +534,81 @@ class CockpitReadOnlyPageProps
                 'delivery_payloads_exposed' => false,
             ],
         ];
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $deliveries
+     * @return array<int, CockpitDistributionWorkspaceItemData>
+     */
+    private function distributionFeedbackChannels(array $deliveries, string $feedbackStatus): array
+    {
+        $items = collect($deliveries)
+            ->map(function (array $delivery, int $index): CockpitDistributionWorkspaceItemData {
+                $channel = $this->stringValue($delivery['channel'] ?? null, 'feedback') ?? 'feedback';
+                $status = $this->stringValue($delivery['status'] ?? null, 'available') ?? 'available';
+                $attemptCount = $delivery['attempt_count'] ?? null;
+                $maxAttempts = $delivery['max_attempts'] ?? null;
+                $providerStatus = $this->stringValue($delivery['provider_status'] ?? null, null);
+
+                return new CockpitDistributionWorkspaceItemData(
+                    key: $this->stringValue($delivery['delivery_id'] ?? null, sprintf('feedback-%d', $index + 1)) ?? sprintf('feedback-%d', $index + 1),
+                    label: $this->channelLabel($channel),
+                    status: $status,
+                    description: 'x-feedback delivery state is shown for operator inspection only; this workspace does not send, retry, or call providers.',
+                    available: true,
+                    source: 'x-feedback',
+                    metadata: array_filter([
+                        'channel' => $channel,
+                        'provider_status' => $providerStatus,
+                        'attempt_count' => is_numeric($attemptCount) ? (int) $attemptCount : null,
+                        'max_attempts' => is_numeric($maxAttempts) ? (int) $maxAttempts : null,
+                        'communication_state_only' => true,
+                        'sends_feedback' => false,
+                        'retries_delivery' => false,
+                        'calls_providers' => false,
+                    ], fn (mixed $value): bool => $value !== null),
+                );
+            })
+            ->values()
+            ->all();
+
+        if ($items !== []) {
+            return $items;
+        }
+
+        return [
+            new CockpitDistributionWorkspaceItemData(
+                key: 'sms',
+                label: 'SMS',
+                status: $feedbackStatus,
+                description: 'SMS delivery state must come from x-feedback; this workspace does not send messages.',
+                source: 'feedback-read-model',
+            ),
+            new CockpitDistributionWorkspaceItemData(
+                key: 'email',
+                label: 'Email',
+                status: $feedbackStatus,
+                description: 'Email delivery state must come from x-feedback; this workspace does not send messages.',
+                source: 'feedback-read-model',
+            ),
+            new CockpitDistributionWorkspaceItemData(
+                key: 'in-app',
+                label: 'In-app',
+                status: $feedbackStatus,
+                description: 'In-app notification state must come from x-feedback; this workspace does not create notifications.',
+                source: 'feedback-read-model',
+            ),
+        ];
+    }
+
+    private function channelLabel(string $channel): string
+    {
+        return match (strtolower($channel)) {
+            'sms' => 'SMS',
+            'mail', 'email' => 'Email',
+            'in_app', 'in-app' => 'In-app',
+            default => str($channel)->replace(['_', '-'], ' ')->headline()->toString(),
+        };
     }
 
     private function stringValue(mixed $value, ?string $fallback = ''): ?string
