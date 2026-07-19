@@ -4,7 +4,9 @@ it('documents pay code explorer campaign context visual polish slice 1', functio
     $packageRoot = dirname(__DIR__, 3);
 
     $report = file_get_contents($packageRoot.'/docs/ui-cockpit/reports/557-pay-code-explorer-campaign-context-polish-slice-1.md');
+    $closure = file_get_contents($packageRoot.'/docs/ui-cockpit/reports/558-pay-code-explorer-campaign-context-polish-slice-2-closure.md');
     $page = file_get_contents($packageRoot.'/resources/js/cockpit/pages/PayCodeExplorer.vue');
+    $hostPage = file_get_contents($packageRoot.'/../../resources/js/cockpit/pages/PayCodeExplorer.vue');
     $frontendTest = file_get_contents($packageRoot.'/tests/frontend/cockpit/CockpitCampaignExplorerNavigation.test.ts');
     $cockpitCompass = file_get_contents($packageRoot.'/docs/ui-cockpit/COMPASS.md');
     $settlementCompass = file_get_contents($packageRoot.'/docs/architecture/SETTLEMENT_OS_COMPASS.md');
@@ -17,10 +19,18 @@ it('documents pay code explorer campaign context visual polish slice 1', functio
         ->and($page)->toContain('cockpit-campaign-navigation-primary-context')
         ->and($page)->toContain('Campaign filter details')
         ->and($page)->not->toContain('{{ campaignNavigationContext.mutation?.reason }}')
+        ->and($hostPage)->toContain('Showing Pay Codes from a campaign view')
         ->and($frontendTest)->toContain('Showing Pay Codes from a campaign view')
         ->and($frontendTest)->toContain('cockpit-campaign-navigation-primary-context-item')
+        ->and($closure)->toContain('Pay Code Explorer Campaign Context Visual Polish — Slice 2 / Closure')
+        ->and($closure)->toContain('php artisan x-change:doctor --assets --no-interaction')
+        ->and($closure)->toContain('php artisan dusk tests/Browser/CockpitPayCodeExplorerFilterSmokeTest.php')
         ->and($cockpitCompass)->toContain('Pay Code Explorer Campaign Context Visual Polish Slice 1')
         ->and($cockpitCompass)->toContain('reports/557-pay-code-explorer-campaign-context-polish-slice-1.md')
+        ->and($cockpitCompass)->toContain('Pay Code Explorer Campaign Context Visual Polish Slice 2 / Closure')
+        ->and($cockpitCompass)->toContain('reports/558-pay-code-explorer-campaign-context-polish-slice-2-closure.md')
         ->and($settlementCompass)->toContain('Pay Code Explorer Campaign Context Visual Polish Slice 1')
-        ->and($settlementCompass)->toContain('../ui-cockpit/reports/557-pay-code-explorer-campaign-context-polish-slice-1.md');
+        ->and($settlementCompass)->toContain('../ui-cockpit/reports/557-pay-code-explorer-campaign-context-polish-slice-1.md')
+        ->and($settlementCompass)->toContain('Pay Code Explorer Campaign Context Visual Polish Slice 2 / Closure')
+        ->and($settlementCompass)->toContain('../ui-cockpit/reports/558-pay-code-explorer-campaign-context-polish-slice-2-closure.md');
 });
