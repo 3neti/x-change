@@ -3534,3 +3534,27 @@ Current boundary:
 - Voucher Detail can now display connected x-feedback delivery state without exposing recipient/provider internals and without enabling sends or retries.
 - Report: `reports/528-voucher-detail-x-feedback-delivery-read-model-slice-3-closure.md`.
 - Boundary remains unchanged: connected read-model presentation only; no feedback delivery, retry execution, recipient exposure, provider payload exposure, journal write, x-action execution, campaign mutation, voucher mutation, claim execution, driver execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+
+# 2026-07-19 — Voucher Detail x-action Follow-up Read Model — Slice 1
+
+- Started the Voucher Detail x-action Follow-up Read Model wave.
+- Verified `/x/cockpit/pay-codes/{code}` can hydrate real x-action host-composed follow-up CTA summaries.
+- Projected x-action host actions through an explicit Cockpit allowlist so run objects, handoff payloads, target parameters, unsafe URLs, raw diagnostics, provider payloads, and secrets stay out of the Inertia payload.
+- Report: `reports/529-voucher-detail-x-action-follow-up-read-model-slice-1.md`.
+- Boundary remains unchanged: read-only x-action summary projection only; no x-action execution, authorization, durable run persistence, journal write, feedback delivery, provider call, campaign mutation, voucher mutation, claim execution, driver execution, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+
+# 2026-07-19 — Voucher Detail x-action Follow-up Read Model — Slice 2
+
+- Voucher Detail now renders x-action summaries as disabled follow-up CTAs.
+- The audit panel now uses operator-facing `Audit and follow-up CTAs` copy and includes safe route context in disabled CTA details.
+- Published package-owned Cockpit assets into the host app and confirmed published assets match package source.
+- Report: `reports/530-voucher-detail-x-action-follow-up-read-model-slice-2.md`.
+- Boundary remains unchanged: read-only presentation only; no x-action execution, authorization, durable run persistence, journal write, feedback delivery, provider call, campaign mutation, voucher mutation, claim execution, driver execution, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+
+# 2026-07-19 — Voucher Detail x-action Follow-up Read Model — Slice 3 Closure
+
+- Closed the Voucher Detail x-action Follow-up Read Model wave.
+- Focused backend, frontend, asset drift, and host build verification passed.
+- Voucher Detail can now display connected x-action follow-up CTAs as disabled read-only guidance without exposing x-action run/handoff internals.
+- Report: `reports/531-voucher-detail-x-action-follow-up-read-model-slice-3-closure.md`.
+- Boundary remains unchanged: connected read-model presentation only; no x-action execution, authorization, durable run persistence, journal write, feedback delivery, provider call, campaign mutation, voucher mutation, claim execution, driver execution, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
