@@ -3740,3 +3740,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/582-pay-code-explorer-result-volume-pagination-polish-slice-2-closure.md`.
 - Boundary remains unchanged: presentation-only result-volume polish; no route behavior, backend queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, then choose the next page-focused Cockpit target or a real integration wiring wave.
+
+## 2026-07-20 Update — Pay Code Explorer Pagination Navigation — Slice 1
+
+- Started the Pay Code Explorer Pagination Navigation wave.
+- Pay Code Explorer now includes client-side `Previous` and `Next` controls over the already-hydrated sanitized read model.
+- The result header now shows range copy such as `Showing 1–25 of 356`, plus `Page X of Y` navigation copy.
+- UI/report: `../ui-cockpit/reports/583-pay-code-explorer-pagination-navigation-slice-1.md`.
+- Boundary remains unchanged: presentation-only client-side pagination; no route behavior, backend queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next checkpoint: host publish, asset drift, authenticated browser smoke, build, and closure.

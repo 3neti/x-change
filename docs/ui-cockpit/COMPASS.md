@@ -4,12 +4,20 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Pay Code Explorer Result Volume / Pagination Polish
-Status: Closed / pending human inspection
+Current slice: Pay Code Explorer Pagination Navigation
+Status: Slice 1 scaffolded
 Last updated: 2026-07-20
 
 ## Completed
 
+- Completed Pay Code Explorer Pagination Navigation Slice 1:
+  - Added client-side `Previous` and `Next` controls for high-volume Pay Code Explorer results.
+  - Added `Page X of Y` copy.
+  - Replaced simple count copy with range copy such as `Showing 1–25 of 356`.
+  - Preserved the 25-record page size, search/status filter narrowing, full sanitized read-model counts, detail links, distribution links, and disabled/unavailable action counts.
+  - Confirmed no routes, controllers, backend queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, artifact generation, or money movement were changed.
+  - Report: `reports/583-pay-code-explorer-pagination-navigation-slice-1.md`.
+  - Next recommended checkpoint: Pay Code Explorer Pagination Navigation Slice 2 — host publish / asset drift / browser / build closure.
 - Completed Pay Code Explorer Result Volume / Pagination Polish Slice 2 / Closure:
   - Published package Cockpit assets to the host app.
   - Confirmed published Cockpit assets match package source.

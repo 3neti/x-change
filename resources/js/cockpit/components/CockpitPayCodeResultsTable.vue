@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import type {
     CockpitPayCodeExplorerRecord,
     CockpitPayCodeRowAction,
@@ -20,8 +20,24 @@ const effectiveVisibleLimit = computed(() =>
         : defaultVisibleRecordLimit,
 );
 
+const currentPage = ref(1);
+
+const totalPages = computed(() =>
+    Math.max(Math.ceil(props.records.length / effectiveVisibleLimit.value), 1),
+);
+
+const firstVisibleRecordNumber = computed(() =>
+    props.records.length === 0
+        ? 0
+        : (currentPage.value - 1) * effectiveVisibleLimit.value + 1,
+);
+
+const lastVisibleRecordNumber = computed(() =>
+    Math.min(currentPage.value * effectiveVisibleLimit.value, props.records.length),
+);
+
 const visibleRecords = computed(() =>
-    props.records.slice(0, effectiveVisibleLimit.value),
+    props.records.slice(firstVisibleRecordNumber.value - 1, lastVisibleRecordNumber.value),
 );
 
 const hiddenRecordCount = computed(() =>
@@ -29,6 +45,29 @@ const hiddenRecordCount = computed(() =>
 );
 
 const isResultLimited = computed(() => hiddenRecordCount.value > 0);
+
+const hasPreviousPage = computed(() => currentPage.value > 1);
+
+const hasNextPage = computed(() => currentPage.value < totalPages.value);
+
+watch(
+    () => [props.records.length, effectiveVisibleLimit.value],
+    () => {
+        currentPage.value = 1;
+    },
+);
+
+function goToPreviousPage(): void {
+    if (hasPreviousPage.value) {
+        currentPage.value -= 1;
+    }
+}
+
+function goToNextPage(): void {
+    if (hasNextPage.value) {
+        currentPage.value += 1;
+    }
+}
 
 const scanFields = [
     {
@@ -105,7 +144,7 @@ function totalDisabledActionCount(): number {
                             Showing
                         </dt>
                         <dd class="mt-1 text-sm font-semibold text-slate-950 dark:text-slate-50">
-                            {{ visibleRecords.length }} of {{ records.length }}
+                            {{ firstVisibleRecordNumber }}–{{ lastVisibleRecordNumber }} of {{ records.length }}
                         </dd>
                     </div>
                     <div class="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
@@ -166,9 +205,40 @@ function totalDisabledActionCount(): number {
                 class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
                 data-testid="cockpit-pay-code-result-limit-notice"
             >
-                Showing the first {{ visibleRecords.length }} of {{ records.length }} Pay Codes.
-                Use search or status filters to narrow the list; no voucher data is changed.
+                Showing {{ firstVisibleRecordNumber }}–{{ lastVisibleRecordNumber }} of {{ records.length }} Pay Codes.
+                Use search or status filters to narrow the list; pagination changes only the browser view.
             </div>
+
+            <nav
+                v-if="isResultLimited"
+                aria-label="Pay Code result pages"
+                class="mt-4 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-pay-code-result-pagination"
+            >
+                <p class="text-sm font-medium text-slate-700 dark:text-slate-200">
+                    Page {{ currentPage }} of {{ totalPages }}
+                </p>
+                <div class="flex flex-wrap gap-2">
+                    <button
+                        :disabled="!hasPreviousPage"
+                        type="button"
+                        class="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+                        data-testid="cockpit-pay-code-result-pagination-previous"
+                        @click="goToPreviousPage"
+                    >
+                        Previous
+                    </button>
+                    <button
+                        :disabled="!hasNextPage"
+                        type="button"
+                        class="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+                        data-testid="cockpit-pay-code-result-pagination-next"
+                        @click="goToNextPage"
+                    >
+                        Next
+                    </button>
+                </div>
+            </nav>
         </div>
 
         <div
