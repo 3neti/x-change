@@ -16,6 +16,32 @@ function enabledActionCount(): number {
 function disabledActionCount(): number {
     return props.actions.filter((action) => action.disabled).length;
 }
+
+function stringValue(value: unknown): string | null {
+    if (typeof value === 'string' && value.trim() !== '') {
+        return value.trim();
+    }
+
+    if (typeof value === 'number' || typeof value === 'boolean') {
+        return String(value);
+    }
+
+    return null;
+}
+
+function deliveryMetadata(channel: CockpitDistributionChannel): Array<{ label: string; value: string }> {
+    const metadata = channel.metadata ?? {};
+    const providerStatus = stringValue(metadata.provider_status);
+    const attemptCount = stringValue(metadata.attempt_count);
+    const maxAttempts = stringValue(metadata.max_attempts);
+    const communicationStateOnly = stringValue(metadata.communication_state_only);
+
+    return [
+        providerStatus === null ? null : { label: 'Provider Status', value: providerStatus },
+        attemptCount === null ? null : { label: 'Attempts', value: `${attemptCount}${maxAttempts === null ? '' : `/${maxAttempts}`}` },
+        communicationStateOnly === null ? null : { label: 'Communication State Only', value: communicationStateOnly },
+    ].filter((item): item is { label: string; value: string } => item !== null);
+}
 </script>
 
 <template>
@@ -78,6 +104,23 @@ function disabledActionCount(): number {
                 <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
                     {{ channel.helper }}
                 </p>
+                <dl
+                    v-if="deliveryMetadata(channel).length > 0"
+                    class="mt-3 grid gap-2 rounded-lg bg-slate-50 p-3 text-xs dark:bg-slate-950/50 sm:grid-cols-3"
+                    data-testid="cockpit-distribution-channel-metadata"
+                >
+                    <div
+                        v-for="item in deliveryMetadata(channel)"
+                        :key="`${channel.key}-${item.label}`"
+                    >
+                        <dt class="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            {{ item.label }}
+                        </dt>
+                        <dd class="mt-1 text-slate-700 dark:text-slate-200">
+                            {{ item.value }}
+                        </dd>
+                    </div>
+                </dl>
             </article>
         </div>
 

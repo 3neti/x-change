@@ -184,13 +184,21 @@ describe('Cockpit Distribution Workspace foundation', () => {
             ],
             channels: [
                 {
-                    key: 'sms',
+                    key: 'delivery-sms-1',
                     label: 'SMS',
-                    status: 'not_wired',
-                    description: 'SMS delivery state must come from x-feedback.',
+                    status: 'delivered',
+                    description: 'x-feedback delivery state is shown for operator inspection only.',
                     read_only: true,
-                    available: false,
-                    source: 'feedback-read-model',
+                    available: true,
+                    source: 'x-feedback',
+                    metadata: {
+                        provider_status: 'DELIVERED',
+                        attempt_count: 2,
+                        max_attempts: 3,
+                        communication_state_only: true,
+                        sends_feedback: false,
+                        retries_delivery: false,
+                    },
                 },
             ],
             print_templates: [
@@ -258,7 +266,14 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).toContain('QR asset');
         expect(wrapper.text()).toContain('deferred');
         expect(wrapper.text()).toContain('SMS');
-        expect(wrapper.text()).toContain('feedback-read-model');
+        expect(wrapper.text()).toContain('delivered');
+        expect(wrapper.text()).toContain('x-feedback');
+        expect(wrapper.text()).toContain('Provider Status');
+        expect(wrapper.text()).toContain('DELIVERED');
+        expect(wrapper.text()).toContain('Attempts');
+        expect(wrapper.text()).toContain('2/3');
+        expect(wrapper.text()).toContain('Communication State Only');
+        expect(wrapper.text()).toContain('true');
         expect(wrapper.text()).toContain('Receipt card');
         expect(wrapper.text()).toContain('Delivery state');
         expect(wrapper.text()).toContain('Send now');

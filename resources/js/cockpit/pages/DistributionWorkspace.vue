@@ -226,6 +226,7 @@ const distributionChannels = computed<CockpitDistributionChannel[]>(() => {
         label: channel.label,
         status: channel.status,
         helper: helperWithSource(channel),
+        metadata: channel.metadata,
     }));
 });
 
