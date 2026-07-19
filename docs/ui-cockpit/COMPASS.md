@@ -5,11 +5,22 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Voucher Detail Secondary Panel Cleanup
-Status: In progress; Slice 1 package-side audit/follow-up density cleanup scaffolded
+Status: Closed; Voucher Detail secondary panel cleanup is host-published
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Voucher Detail Secondary Panel Cleanup Slice 2 / Closure:
+  - Published package Cockpit assets to the host app.
+  - Confirmed published Cockpit assets match package source.
+  - Verified focused Voucher Detail foundation and hydration frontend coverage.
+  - Verified focused backend architecture documentation coverage.
+  - Verified authenticated Dusk browser smoke coverage for Voucher Detail and Distribution Workspace.
+  - Verified the host production frontend build.
+  - Confirmed the Voucher Detail audit/follow-up secondary panel remains compact in the host-published UI.
+  - Confirmed no routes, controllers, queries, read-model hydration, campaign context propagation, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, or money movement were changed.
+  - Report: `reports/562-voucher-detail-secondary-panel-cleanup-slice-2-closure.md`.
+  - Next recommended checkpoint: manual inspection of `/x/cockpit/pay-codes/{code}`, or continue with Distribution Workspace secondary panel cleanup.
 - Completed Voucher Detail Secondary Panel Cleanup Slice 1:
   - Converted the Voucher Detail audit/follow-up secondary panel into a compact disclosure.
   - Added a scan-friendly summary for evidence facts, connected evidence facts, and disabled follow-ups.

@@ -4,7 +4,9 @@ it('documents voucher detail secondary panel cleanup slice 1', function (): void
     $packageRoot = dirname(__DIR__, 3);
 
     $report = file_get_contents($packageRoot.'/docs/ui-cockpit/reports/561-voucher-detail-secondary-panel-cleanup-slice-1.md');
+    $closure = file_get_contents($packageRoot.'/docs/ui-cockpit/reports/562-voucher-detail-secondary-panel-cleanup-slice-2-closure.md');
     $component = file_get_contents($packageRoot.'/resources/js/cockpit/components/CockpitVoucherAuditPanel.vue');
+    $hostComponent = file_get_contents($packageRoot.'/../../resources/js/cockpit/components/CockpitVoucherAuditPanel.vue');
     $foundationTest = file_get_contents($packageRoot.'/tests/frontend/cockpit/CockpitVoucherDetailFoundation.test.ts');
     $hydrationTest = file_get_contents($packageRoot.'/tests/frontend/cockpit/CockpitVoucherDetailHydration.test.ts');
     $cockpitCompass = file_get_contents($packageRoot.'/docs/ui-cockpit/COMPASS.md');
@@ -18,11 +20,19 @@ it('documents voucher detail secondary panel cleanup slice 1', function (): void
         ->and($component)->toContain('Audit and follow-up details')
         ->and($component)->toContain('connectedAuditCount')
         ->and($component)->toContain('<details')
+        ->and($hostComponent)->toContain('Audit and follow-up details')
         ->and($foundationTest)->toContain('cockpit-voucher-audit-panel')
         ->and($foundationTest)->toContain('Follow-Ups')
         ->and($hydrationTest)->toContain('Follow-up actions are disabled from this page.')
+        ->and($closure)->toContain('Voucher Detail Secondary Panel Cleanup — Slice 2 / Closure')
+        ->and($closure)->toContain('php artisan x-change:doctor --assets --no-interaction')
+        ->and($closure)->toContain('php artisan dusk tests/Browser/CockpitVoucherDetailDistributionSmokeTest.php')
         ->and($cockpitCompass)->toContain('Voucher Detail Secondary Panel Cleanup Slice 1')
         ->and($cockpitCompass)->toContain('reports/561-voucher-detail-secondary-panel-cleanup-slice-1.md')
+        ->and($cockpitCompass)->toContain('Voucher Detail Secondary Panel Cleanup Slice 2 / Closure')
+        ->and($cockpitCompass)->toContain('reports/562-voucher-detail-secondary-panel-cleanup-slice-2-closure.md')
         ->and($settlementCompass)->toContain('Voucher Detail Secondary Panel Cleanup Slice 1')
-        ->and($settlementCompass)->toContain('../ui-cockpit/reports/561-voucher-detail-secondary-panel-cleanup-slice-1.md');
+        ->and($settlementCompass)->toContain('../ui-cockpit/reports/561-voucher-detail-secondary-panel-cleanup-slice-1.md')
+        ->and($settlementCompass)->toContain('Voucher Detail Secondary Panel Cleanup Slice 2 / Closure')
+        ->and($settlementCompass)->toContain('../ui-cockpit/reports/562-voucher-detail-secondary-panel-cleanup-slice-2-closure.md');
 });
