@@ -5,11 +5,20 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Distribution Workspace Copy Acceptance
-Status: In progress
+Status: Automated green / pending human visual acceptance
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Distribution Workspace Copy Acceptance Slice 2:
+  - Recorded automated closure for the copy-polished Distribution Workspace.
+  - Confirmed published Cockpit assets match package source.
+  - Verified authenticated browser smoke coverage sees the new operator-facing labels.
+  - Verified the host production frontend build.
+  - Kept final human decision pending; automated checks do not claim visual acceptance.
+  - Confirmed no routes, controllers, queries, read-model hydration, distribution links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, artifact generation, or money movement were changed.
+  - Report: `reports/571-distribution-workspace-copy-acceptance-slice-2-automated-closure.md`.
+  - Next recommended checkpoint: human visual inspection of `/x/cockpit/pay-codes/{code}/distribution`, then continue page-focused Cockpit polish or pick the next real integration wiring wave.
 - Completed Distribution Workspace Copy Acceptance Slice 1:
   - Added a targeted human acceptance checklist for the copy-polished Distribution Workspace secondary panels.
   - Strengthened authenticated browser smoke coverage to assert the new operator-facing labels are visible in the host-published page.

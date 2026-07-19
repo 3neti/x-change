@@ -6,6 +6,7 @@ it('documents distribution workspace copy acceptance checklist slice 1', functio
     $packageRoot = dirname(__DIR__, 3);
 
     $checklist = file_get_contents($packageRoot.'/docs/ui-cockpit/reports/570-distribution-workspace-copy-acceptance-slice-1-checklist.md');
+    $closure = file_get_contents($packageRoot.'/docs/ui-cockpit/reports/571-distribution-workspace-copy-acceptance-slice-2-automated-closure.md');
     $browserTest = file_get_contents($packageRoot.'/../../tests/Browser/CockpitVoucherDetailDistributionSmokeTest.php');
     $cockpitCompass = file_get_contents($packageRoot.'/docs/ui-cockpit/COMPASS.md');
     $settlementCompass = file_get_contents($packageRoot.'/docs/architecture/SETTLEMENT_OS_COMPASS.md');
@@ -24,8 +25,17 @@ it('documents distribution workspace copy acceptance checklist slice 1', functio
         ->and($browserTest)->toContain('Printable handout options')
         ->and($browserTest)->toContain('SHARE OPTIONS')
         ->and($browserTest)->toContain('STATUS EVIDENCE')
+        ->and($closure)->toContain('Distribution Workspace Copy Acceptance — Slice 2 Automated Closure')
+        ->and($closure)->toContain('automated-green / pending-human-visual-acceptance')
+        ->and($closure)->toContain('php artisan x-change:doctor --assets --no-interaction')
+        ->and($closure)->toContain('php artisan dusk tests/Browser/CockpitVoucherDetailDistributionSmokeTest.php')
+        ->and($closure)->toContain('Manual visual review is still required')
         ->and($cockpitCompass)->toContain('Distribution Workspace Copy Acceptance Slice 1')
         ->and($cockpitCompass)->toContain('reports/570-distribution-workspace-copy-acceptance-slice-1-checklist.md')
+        ->and($cockpitCompass)->toContain('Distribution Workspace Copy Acceptance Slice 2')
+        ->and($cockpitCompass)->toContain('reports/571-distribution-workspace-copy-acceptance-slice-2-automated-closure.md')
         ->and($settlementCompass)->toContain('Distribution Workspace Copy Acceptance — Slice 1')
-        ->and($settlementCompass)->toContain('../ui-cockpit/reports/570-distribution-workspace-copy-acceptance-slice-1-checklist.md');
+        ->and($settlementCompass)->toContain('../ui-cockpit/reports/570-distribution-workspace-copy-acceptance-slice-1-checklist.md')
+        ->and($settlementCompass)->toContain('Distribution Workspace Copy Acceptance — Slice 2')
+        ->and($settlementCompass)->toContain('../ui-cockpit/reports/571-distribution-workspace-copy-acceptance-slice-2-automated-closure.md');
 });
