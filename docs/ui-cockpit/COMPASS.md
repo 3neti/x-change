@@ -4,12 +4,20 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Pay Code Explorer Bottom Pagination Affordance
-Status: Closed / pending human inspection
+Current slice: Pay Code Explorer Status Badge Polish
+Status: In progress
 Last updated: 2026-07-20
 
 ## Completed
 
+- Started Pay Code Explorer Status Badge Polish Slice 1:
+  - Rendered Pay Code Explorer row statuses in operator-facing Title Case.
+  - Added status-specific badge color groups for active/issued/ready/redeemed/completed, awaiting/pending/review, and expired/failed/cancelled states.
+  - Applied the same status badge treatment to desktop table rows and mobile cards.
+  - Preserved raw sanitized status facts as read-model input only.
+  - Confirmed no routes, controllers, backend queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, artifact generation, or money movement were changed.
+  - Report: `reports/590-pay-code-explorer-status-badge-polish-slice-1.md`.
+  - Next recommended checkpoint: Pay Code Explorer Status Badge Polish Slice 2 — host publish / asset drift / browser / build closure.
 - Completed Pay Code Explorer Bottom Pagination Affordance Slice 2 / Closure:
   - Published package Cockpit assets to the host app.
   - Confirmed published Cockpit assets match package source.

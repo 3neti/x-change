@@ -3802,3 +3802,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/589-pay-code-explorer-bottom-pagination-affordance-slice-2-closure.md`.
 - Boundary remains unchanged: presentation-only client-side pagination affordance; no route behavior, backend queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, then choose the next page-focused Cockpit target or a real integration wiring wave.
+
+## 2026-07-20 Update — Pay Code Explorer Status Badge Polish — Slice 1
+
+- Started the Pay Code Explorer Status Badge Polish wave.
+- Pay Code Explorer row statuses now render as operator-facing Title Case badges.
+- Status badge colors are grouped for successful/available, pending/review, and attention/error lifecycle states.
+- UI/report: `../ui-cockpit/reports/590-pay-code-explorer-status-badge-polish-slice-1.md`.
+- Boundary remains unchanged: presentation-only status badge polish; no route behavior, backend queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next checkpoint: host publish, asset drift, authenticated browser smoke, build, and closure.

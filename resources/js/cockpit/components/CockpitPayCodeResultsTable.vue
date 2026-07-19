@@ -119,6 +119,32 @@ function totalEnabledActionCount(): number {
 function totalDisabledActionCount(): number {
     return props.records.reduce((count, record) => count + disabledActionCount(record), 0);
 }
+
+function displayStatus(status: string): string {
+    return status
+        .split(/[_\s-]+/)
+        .filter((part) => part.trim() !== '')
+        .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1).toLowerCase()}`)
+        .join(' ');
+}
+
+function statusBadgeClass(status: string): string {
+    const normalizedStatus = status.toLowerCase().replaceAll('_', '-');
+
+    if (['active', 'issued', 'ready', 'redeemed', 'completed'].includes(normalizedStatus)) {
+        return 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800';
+    }
+
+    if (['awaiting-approval', 'pending', 'review'].includes(normalizedStatus)) {
+        return 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800';
+    }
+
+    if (['expired', 'failed', 'cancelled', 'canceled'].includes(normalizedStatus)) {
+        return 'bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950 dark:text-rose-200 dark:ring-rose-800';
+    }
+
+    return 'bg-slate-100 text-slate-700 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700';
+}
 </script>
 
 <template>
@@ -283,8 +309,12 @@ function totalDisabledActionCount(): number {
                             {{ record.template }}
                         </p>
                     </div>
-                    <span class="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                        {{ record.status }}
+                    <span
+                        :class="statusBadgeClass(record.status)"
+                        class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ring-1"
+                        data-testid="cockpit-pay-code-mobile-status-badge"
+                    >
+                        {{ displayStatus(record.status) }}
                     </span>
                 </div>
 
@@ -366,8 +396,12 @@ function totalDisabledActionCount(): number {
                             {{ record.amount }}
                         </td>
                         <td class="px-5 py-4">
-                            <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                                {{ record.status }}
+                            <span
+                                :class="statusBadgeClass(record.status)"
+                                class="rounded-full px-2.5 py-1 text-xs font-semibold ring-1"
+                                data-testid="cockpit-pay-code-status-badge"
+                            >
+                                {{ displayStatus(record.status) }}
                             </span>
                         </td>
                         <td class="px-5 py-4 text-slate-700 dark:text-slate-200">
