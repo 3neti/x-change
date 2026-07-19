@@ -5,11 +5,22 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Distribution Workspace Secondary Panel Cleanup
-Status: In progress; Slice 1 package-side secondary panel density cleanup scaffolded
+Status: Closed; Distribution Workspace secondary panel cleanup is host-published
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Distribution Workspace Secondary Panel Cleanup Slice 2 / Closure:
+  - Published package Cockpit assets to the host app.
+  - Confirmed published Cockpit assets match package source.
+  - Verified focused Distribution Workspace frontend coverage.
+  - Verified focused backend architecture documentation coverage.
+  - Verified authenticated Dusk browser smoke coverage for Voucher Detail and Distribution Workspace.
+  - Verified the host production frontend build.
+  - Confirmed the Distribution Workspace secondary panels remain compact in the host-published UI.
+  - Confirmed no routes, controllers, queries, read-model hydration, campaign context propagation, distribution links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, or money movement were changed.
+  - Report: `reports/564-distribution-workspace-secondary-panel-cleanup-slice-2-closure.md`.
+  - Next recommended checkpoint: manual inspection of `/x/cockpit/pay-codes/{code}/distribution`, or continue with Distribution Workspace manual acceptance closure.
 - Completed Distribution Workspace Secondary Panel Cleanup Slice 1:
   - Converted delivery channels, print templates, share assets, and operational evidence secondary panels into compact disclosures.
   - Replaced bulky density summary boxes with slim inline count pills.

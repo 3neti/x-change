@@ -4,7 +4,9 @@ it('documents distribution workspace secondary panel cleanup slice 1', function 
     $packageRoot = dirname(__DIR__, 3);
 
     $report = file_get_contents($packageRoot.'/docs/ui-cockpit/reports/563-distribution-workspace-secondary-panel-cleanup-slice-1.md');
+    $closure = file_get_contents($packageRoot.'/docs/ui-cockpit/reports/564-distribution-workspace-secondary-panel-cleanup-slice-2-closure.md');
     $digitalPanel = file_get_contents($packageRoot.'/resources/js/cockpit/components/CockpitDigitalDistributionPanel.vue');
+    $hostDigitalPanel = file_get_contents($packageRoot.'/../../resources/js/cockpit/components/CockpitDigitalDistributionPanel.vue');
     $printPanel = file_get_contents($packageRoot.'/resources/js/cockpit/components/CockpitPrintTemplatePanel.vue');
     $sharePanel = file_get_contents($packageRoot.'/resources/js/cockpit/components/CockpitShareQrPanel.vue');
     $analyticsPanel = file_get_contents($packageRoot.'/resources/js/cockpit/components/CockpitDistributionAnalyticsPanel.vue');
@@ -18,6 +20,7 @@ it('documents distribution workspace secondary panel cleanup slice 1', function 
         ->toContain('did not change routes, controllers, queries, read-model hydration')
         ->and($digitalPanel)->toContain('<details')
         ->and($digitalPanel)->toContain('Channel and follow-up facts are read-only')
+        ->and($hostDigitalPanel)->toContain('Channel and follow-up facts are read-only')
         ->and($printPanel)->toContain('<details')
         ->and($printPanel)->toContain('Template previews are read-only')
         ->and($sharePanel)->toContain('<details')
@@ -26,8 +29,15 @@ it('documents distribution workspace secondary panel cleanup slice 1', function 
         ->and($analyticsPanel)->toContain('Operational evidence')
         ->and($frontendTest)->toContain('cockpit-digital-distribution-panel')
         ->and($frontendTest)->toContain('cockpit-distribution-analytics-panel')
+        ->and($closure)->toContain('Distribution Workspace Secondary Panel Cleanup — Slice 2 / Closure')
+        ->and($closure)->toContain('php artisan x-change:doctor --assets --no-interaction')
+        ->and($closure)->toContain('php artisan dusk tests/Browser/CockpitVoucherDetailDistributionSmokeTest.php')
         ->and($cockpitCompass)->toContain('Distribution Workspace Secondary Panel Cleanup Slice 1')
         ->and($cockpitCompass)->toContain('reports/563-distribution-workspace-secondary-panel-cleanup-slice-1.md')
+        ->and($cockpitCompass)->toContain('Distribution Workspace Secondary Panel Cleanup Slice 2 / Closure')
+        ->and($cockpitCompass)->toContain('reports/564-distribution-workspace-secondary-panel-cleanup-slice-2-closure.md')
         ->and($settlementCompass)->toContain('Distribution Workspace Secondary Panel Cleanup Slice 1')
-        ->and($settlementCompass)->toContain('../ui-cockpit/reports/563-distribution-workspace-secondary-panel-cleanup-slice-1.md');
+        ->and($settlementCompass)->toContain('../ui-cockpit/reports/563-distribution-workspace-secondary-panel-cleanup-slice-1.md')
+        ->and($settlementCompass)->toContain('Distribution Workspace Secondary Panel Cleanup Slice 2 / Closure')
+        ->and($settlementCompass)->toContain('../ui-cockpit/reports/564-distribution-workspace-secondary-panel-cleanup-slice-2-closure.md');
 });
