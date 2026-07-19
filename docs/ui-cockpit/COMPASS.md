@@ -5,11 +5,22 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Pay Code Explorer Manual Acceptance
-Status: Automated green / pending human visual acceptance
-Last updated: 2026-07-19
+Status: Passed with UI follow-up
+Last updated: 2026-07-20
 
 ## Completed
 
+- Completed Pay Code Explorer Manual Acceptance Slice 3:
+  - Recorded supplied human browser scrape evidence for `/x/cockpit/pay-codes`.
+  - Accepted the current Pay Code Explorer as `Pass with UI follow-up`.
+  - Confirmed the page exposes read-model availability, sanitized payload policy, operator list summary, current search, search controls, filter details, and results.
+  - Confirmed visible counts include 356 records, 356 visible rows, 354 needs-attention summaries, 712 navigation links, and 712 disabled/unavailable actions.
+  - Confirmed row navigation includes `View details` and `Distribution`.
+  - Confirmed owners are redacted and row activity remains read-model-only.
+  - Confirmed the supplied scrape reports no visible runtime errors and no visible feedback delivery, campaign dispatch, journal writes, provider calls, voucher mutation, wallet mutation, Treasury mutation, or money movement.
+  - Recorded the UI follow-up: result volume is too high for comfortable scanning and should be addressed with pagination, result limiting, virtualized rows, or a page-size control.
+  - Report: `reports/580-pay-code-explorer-manual-acceptance-slice-3-human-pass.md`.
+  - Next recommended checkpoint: Pay Code Explorer Result Volume / Pagination Polish, or pick the next real integration wiring wave.
 - Completed Pay Code Explorer Manual Acceptance Slice 2:
   - Recorded automated closure for the current Pay Code Explorer manual acceptance wave.
   - Confirmed published Cockpit assets match package source.

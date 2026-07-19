@@ -3710,3 +3710,14 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/579-pay-code-explorer-manual-acceptance-slice-2-automated-closure.md`.
 - Boundary remains unchanged: automated acceptance scaffolding only; no route behavior, queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next recommended checkpoint: human visual inspection of `/x/cockpit/pay-codes`, then continue page-focused Cockpit polish or pick the next real integration wiring wave.
+
+## 2026-07-20 Update — Pay Code Explorer Manual Acceptance — Slice 3
+
+- Recorded supplied human browser scrape evidence for `/x/cockpit/pay-codes`.
+- Accepted the current Pay Code Explorer as `Pass with UI follow-up`.
+- The supplied scrape confirms read-model availability, sanitized payload policy, operator list summary, search/filter controls, filter details, and result rows are visible.
+- The supplied scrape confirms row navigation to detail and distribution views remains visible, owners are redacted, and row activity remains read-model-only.
+- The supplied scrape also shows a clear follow-up: 356 visible rows are too many for comfortable scanning and should be addressed by pagination, result limiting, virtualized rows, or a page-size control.
+- UI/report: `../ui-cockpit/reports/580-pay-code-explorer-manual-acceptance-slice-3-human-pass.md`.
+- Boundary remains unchanged: human evidence record only; no route behavior, queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next recommended checkpoint: Pay Code Explorer Result Volume / Pagination Polish, or pick the next real integration wiring wave.
