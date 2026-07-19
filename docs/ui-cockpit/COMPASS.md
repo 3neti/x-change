@@ -4,12 +4,20 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Quick Generate Result Clarity
-Status: Closed; Quick Generate result surface is primary-card first and host-published
+Current slice: Quick Generate Form Density
+Status: Slice 1 complete; DTO coverage map is collapsed behind the operator checklist
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Quick Generate Form Density Slice 1:
+  - Kept Contract Builder Checklist visible as the primary operator scan map.
+  - Moved `VoucherInstruction DTO coverage` into a collapsed disclosure.
+  - Preserved all form controls, payload construction, validation behavior, template defaults, claim inputs, validation, rider, feedback, slices, settlement, execution, metadata, and engineering preview behavior.
+  - Verified focused Quick Generate frontend foundation and hydration coverage.
+  - Confirmed no routes, controllers, request payloads, issuance behavior, validation behavior, provider calls, wallet behavior, Treasury behavior, journal writes, action execution, feedback sends, campaign mutation, persistence changes, public API changes, or money movement were added.
+  - Report: `reports/551-quick-generate-form-density-slice-1.md`.
+  - Next recommended checkpoint: Quick Generate Form Density Slice 2 — host publish / drift / browser / build closure.
 - Completed Quick Generate Result Clarity Slice 2 / Closure:
   - Published package Cockpit assets to the host app.
   - Confirmed published Cockpit assets match package source.

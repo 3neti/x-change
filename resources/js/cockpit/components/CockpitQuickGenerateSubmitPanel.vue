@@ -3329,12 +3329,22 @@ function dataGet(source: unknown, path: string[]): unknown {
             </dl>
         </section>
 
-        <section
+        <details
             class="mt-5 rounded-2xl border border-slate-200 bg-white/80 p-4 text-xs text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-300"
             data-testid="cockpit-voucher-instruction-coverage"
         >
+            <summary
+                class="cursor-pointer text-sm font-semibold text-slate-950 dark:text-slate-50"
+            >
+                VoucherInstruction DTO coverage
+            </summary>
+            <p class="mt-2 max-w-3xl leading-5 text-slate-500 dark:text-slate-400">
+                Engineering map of voucher-owned DTO fields represented by this
+                page. Open this only when checking contract coverage.
+            </p>
+
             <div
-                class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"
+                class="mt-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between"
             >
                 <div>
                     <p
@@ -3383,7 +3393,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                     </div>
                 </div>
             </div>
-        </section>
+        </details>
 
         <div
             class="mt-5 grid gap-4"

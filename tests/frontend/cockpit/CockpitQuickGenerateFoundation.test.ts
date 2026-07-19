@@ -892,6 +892,16 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(checklist.text()).toContain('PHP 25 × 1');
         expect(checklist.text()).toContain('Implicit default execution.');
 
+        const coverage = wrapper.find(
+            '[data-testid="cockpit-voucher-instruction-coverage"]',
+        );
+
+        expect(coverage.exists()).toBe(true);
+        expect(coverage.element.tagName).toBe('DETAILS');
+        expect(coverage.text()).toContain('VoucherInstruction DTO coverage');
+        expect(coverage.text()).toContain('Open this only when checking contract coverage.');
+        expect(coverage.text()).toContain('cash.amount');
+
         await wrapper
             .find('[data-testid="cockpit-quick-generate-feedback-email"]')
             .setValue('not-an-email');
