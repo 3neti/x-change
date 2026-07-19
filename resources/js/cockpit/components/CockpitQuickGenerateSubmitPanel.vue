@@ -6228,6 +6228,22 @@ function dataGet(source: unknown, path: string[]): unknown {
                 </div>
             </section>
 
+            <details
+                class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-quick-generate-supporting-result-details"
+            >
+                <summary
+                    class="cursor-pointer text-sm font-semibold text-slate-900 dark:text-slate-100"
+                >
+                    Supporting result details
+                </summary>
+                <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                    Additional generated Pay Code links, campaign return
+                    navigation, runtime metadata, and preflight details remain
+                    available for inspection. The primary card above is the
+                    operator workflow surface.
+                </p>
+
             <div class="mt-3 flex flex-wrap gap-2">
                 <a
                     v-if="cockpitDetailUrl"
@@ -6770,6 +6786,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                     </dl>
                 </section>
             </div>
+            </details>
         </div>
     </form>
 </template>

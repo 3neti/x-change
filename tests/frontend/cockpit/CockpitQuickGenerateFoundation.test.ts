@@ -656,6 +656,27 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(
             wrapper
                 .find(
+                    '[data-testid="cockpit-quick-generate-supporting-result-details"]',
+                )
+                .exists(),
+        ).toBe(true);
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-supporting-result-details"]',
+                )
+                .text(),
+        ).toContain('Supporting result details');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-quick-generate-supporting-result-details"]',
+                )
+                .text(),
+        ).toContain('The primary card above is the operator workflow surface.');
+        expect(
+            wrapper
+                .find(
                     '[data-testid="cockpit-quick-generate-post-issuance-navigation-panel"]',
                 )
                 .exists(),

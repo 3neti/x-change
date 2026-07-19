@@ -4,12 +4,20 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Dashboard Connected Services Productization
-Status: Closed; dashboard connected services are scan-first and host-published
+Current slice: Quick Generate Result Clarity
+Status: Slice 1 complete; supporting generated-result details are collapsed behind the primary success card
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Quick Generate Result Clarity Slice 1:
+  - Kept the productized Quick Generate success card as the primary operator result surface.
+  - Collapsed duplicate/supporting generated-result details behind a `Supporting result details` disclosure.
+  - Preserved generated Pay Code links, campaign return navigation, runtime metadata, pricing preflight, and funding preflight for inspection.
+  - Verified focused Quick Generate frontend foundation and hydration coverage.
+  - Confirmed no routes, controllers, request payloads, issuance behavior, validation behavior, provider calls, wallet behavior, Treasury behavior, journal writes, action execution, feedback sends, campaign mutation, persistence changes, public API changes, or money movement were added.
+  - Report: `reports/549-quick-generate-result-clarity-slice-1.md`.
+  - Next recommended checkpoint: Quick Generate Result Clarity Slice 2 — host publish / drift / browser / build closure.
 - Completed Dashboard Connected Services Productization Slice 2 / Closure:
   - Published package Cockpit assets to the host app.
   - Confirmed published Cockpit assets match package source.
