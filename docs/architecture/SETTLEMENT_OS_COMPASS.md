@@ -3350,3 +3350,30 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/525-voucher-detail-x-journal-evidence-read-model-slice-3-closure.md`.
 - Boundary remains unchanged: connected read-model presentation only; no journal writes, x-action execution, x-feedback delivery, campaign mutation, campaign dispatch, voucher mutation, claim execution, driver execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
 - Next recommended checkpoint: connect the next voucher-scoped service read model, likely x-feedback delivery summaries or x-action follow-up CTAs, while keeping all mutations disabled until explicitly approved.
+
+## 2026-07-19 Update — Voucher Detail x-feedback Delivery Read Model — Slice 1
+
+- Started the Voucher Detail x-feedback Delivery Read Model wave.
+- Voucher Detail can hydrate real x-feedback delivery records as communication-state summaries for a matching Pay Code/correlation id.
+- x-change projects x-feedback console records through an explicit allowlist before exposing them to Cockpit.
+- UI/report: `../ui-cockpit/reports/526-voucher-detail-x-feedback-delivery-read-model-slice-1.md`.
+- Boundary remains unchanged: read-only feedback summary projection only; no x-feedback delivery, retry execution, provider call, journal write, x-action execution, campaign mutation, voucher mutation, claim execution, driver execution, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+- Next checkpoint: render the connected delivery summaries cleanly in Voucher Detail and publish host assets.
+
+## 2026-07-19 Update — Voucher Detail x-feedback Delivery Read Model — Slice 2
+
+- Voucher Detail renders connected x-feedback delivery summaries using real package field names.
+- Operator-visible delivery rows can show channel, status, provider status, attempts, and payload policy.
+- Host-published Cockpit assets match package source.
+- UI/report: `../ui-cockpit/reports/527-voucher-detail-x-feedback-delivery-read-model-slice-2.md`.
+- Boundary remains unchanged: read-only presentation only; no feedback delivery, retry execution, recipient exposure, provider payload exposure, journal write, x-action execution, campaign mutation, voucher mutation, claim execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+- Next checkpoint: close the wave with focused backend/frontend/build verification.
+
+## 2026-07-19 Update — Voucher Detail x-feedback Delivery Read Model — Slice 3 Closure
+
+- Closed the Voucher Detail x-feedback Delivery Read Model wave.
+- Voucher Detail now has verified read-only consumption and rendering of voucher-scoped x-feedback delivery summaries.
+- Recipient and provider internals remain excluded from the Cockpit payload.
+- UI/report: `../ui-cockpit/reports/528-voucher-detail-x-feedback-delivery-read-model-slice-3-closure.md`.
+- Boundary remains unchanged: connected communication-state presentation only; no feedback delivery, retry execution, recipient exposure, provider payload exposure, journal write, x-action execution, campaign mutation, voucher mutation, claim execution, driver execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+- Next recommended checkpoint: connect Voucher Detail x-action follow-up CTA summaries with all actions still disabled until explicitly authorized.

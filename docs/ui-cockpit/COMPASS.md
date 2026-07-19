@@ -3511,3 +3511,26 @@ Current boundary:
 - Voucher Detail can now display connected x-journal voucher evidence summaries without exposing wallet/provider/raw payload data.
 - Report: `reports/525-voucher-detail-x-journal-evidence-read-model-slice-3-closure.md`.
 - Boundary remains unchanged: connected read-model presentation only; no journal writes, x-action execution, x-feedback delivery, campaign mutation, campaign dispatch, voucher mutation, claim execution, driver execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+
+# 2026-07-19 — Voucher Detail x-feedback Delivery Read Model — Slice 1
+
+- Started the Voucher Detail x-feedback Delivery Read Model wave.
+- Verified `/x/cockpit/pay-codes/{code}` can hydrate real x-feedback delivery records as read-only communication-state summaries.
+- Projected x-feedback console records through an explicit Cockpit allowlist so recipient routes, provider message ids, provider payloads, raw payloads, idempotency keys, and secrets stay out of the Inertia payload.
+- Report: `reports/526-voucher-detail-x-feedback-delivery-read-model-slice-1.md`.
+- Boundary remains unchanged: read-only feedback summary projection only; no x-feedback delivery, retry execution, provider call, journal write, x-action execution, campaign mutation, voucher mutation, claim execution, driver execution, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+
+# 2026-07-19 — Voucher Detail x-feedback Delivery Read Model — Slice 2
+
+- Voucher Detail now renders real x-feedback delivery summaries using package field names such as `delivery_id`, `provider_status`, `attempt_count`, and `max_attempts`.
+- Published package-owned Cockpit assets into the host app and confirmed published assets match package source.
+- Report: `reports/527-voucher-detail-x-feedback-delivery-read-model-slice-2.md`.
+- Boundary remains unchanged: read-only presentation only; no feedback delivery, retry execution, recipient exposure, provider payload exposure, journal write, x-action execution, campaign mutation, voucher mutation, claim execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+
+# 2026-07-19 — Voucher Detail x-feedback Delivery Read Model — Slice 3 Closure
+
+- Closed the Voucher Detail x-feedback Delivery Read Model wave.
+- Focused backend, frontend, asset drift, and host build verification passed.
+- Voucher Detail can now display connected x-feedback delivery state without exposing recipient/provider internals and without enabling sends or retries.
+- Report: `reports/528-voucher-detail-x-feedback-delivery-read-model-slice-3-closure.md`.
+- Boundary remains unchanged: connected read-model presentation only; no feedback delivery, retry execution, recipient exposure, provider payload exposure, journal write, x-action execution, campaign mutation, voucher mutation, claim execution, driver execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
