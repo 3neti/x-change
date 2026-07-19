@@ -136,38 +136,38 @@ function totalDisabledActionCount(): number {
                     </h3>
                 </div>
                 <dl
-                    class="grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-2 text-center sm:grid-cols-4 dark:bg-slate-950"
+                    class="grid w-full grid-cols-2 gap-2 rounded-xl bg-slate-50 p-2 text-center sm:w-[34rem] sm:grid-cols-4 dark:bg-slate-950"
                     data-testid="cockpit-pay-code-results-density-summary"
                 >
-                    <div class="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                    <div class="min-w-0 rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
                         <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Showing
                         </dt>
-                        <dd class="mt-1 text-sm font-semibold text-slate-950 dark:text-slate-50">
+                        <dd class="mt-1 whitespace-nowrap font-mono text-sm font-semibold tabular-nums text-slate-950 dark:text-slate-50">
                             {{ firstVisibleRecordNumber }}–{{ lastVisibleRecordNumber }} of {{ records.length }}
                         </dd>
                     </div>
-                    <div class="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                    <div class="min-w-0 rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
                         <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Total Rows
                         </dt>
-                        <dd class="mt-1 text-sm font-semibold text-slate-950 dark:text-slate-50">
+                        <dd class="mt-1 whitespace-nowrap font-mono text-sm font-semibold tabular-nums text-slate-950 dark:text-slate-50">
                             {{ records.length }}
                         </dd>
                     </div>
-                    <div class="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                    <div class="min-w-0 rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
                         <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Links
                         </dt>
-                        <dd class="mt-1 text-sm font-semibold text-slate-950 dark:text-slate-50">
+                        <dd class="mt-1 whitespace-nowrap font-mono text-sm font-semibold tabular-nums text-slate-950 dark:text-slate-50">
                             {{ totalEnabledActionCount() }}
                         </dd>
                     </div>
-                    <div class="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                    <div class="min-w-0 rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
                         <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Disabled
                         </dt>
-                        <dd class="mt-1 text-sm font-semibold text-slate-950 dark:text-slate-50">
+                        <dd class="mt-1 whitespace-nowrap font-mono text-sm font-semibold tabular-nums text-slate-950 dark:text-slate-50">
                             {{ totalDisabledActionCount() }}
                         </dd>
                     </div>

@@ -3758,3 +3758,11 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/584-pay-code-explorer-pagination-navigation-slice-2-closure.md`.
 - Boundary remains unchanged: presentation-only pagination; no route behavior, backend queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, then choose the next page-focused Cockpit target or a real integration wiring wave.
+
+## 2026-07-20 Update — Pay Code Explorer Result Metric Width Stability
+
+- Stabilized the `/x/cockpit/pay-codes` Results metric cards so `Showing`, `Total Rows`, `Links`, and `Disabled` do not visually resize while paging.
+- Added a stable desktop metric grid width and monospaced, tabular, non-wrapping metric values for range copy such as `1–25 of 356` and `26–50 of 356`.
+- UI/report: `../ui-cockpit/reports/585-pay-code-explorer-result-metric-width-stability.md`.
+- Boundary remains unchanged: presentation-only width stabilization; no route behavior, backend queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, then choose the next page-focused Cockpit target or a real integration wiring wave.

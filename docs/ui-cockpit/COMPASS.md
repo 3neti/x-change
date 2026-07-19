@@ -4,12 +4,20 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Pay Code Explorer Pagination Navigation
+Current slice: Pay Code Explorer Result Metric Width Stability
 Status: Closed / pending human inspection
 Last updated: 2026-07-20
 
 ## Completed
 
+- Completed Pay Code Explorer Result Metric Width Stability:
+  - Stabilized the Results metric cards for `Showing`, `Total Rows`, `Links`, and `Disabled`.
+  - Added a stable desktop metric grid width while keeping the existing mobile two-column layout.
+  - Rendered metric values with monospaced, tabular, non-wrapping numeric styling so range text such as `1–25 of 356` and `26–50 of 356` does not visually jump.
+  - Preserved pagination, result counts, row links, search/status filters, and read-only boundary.
+  - Confirmed no routes, controllers, backend queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, artifact generation, or money movement were changed.
+  - Report: `reports/585-pay-code-explorer-result-metric-width-stability.md`.
+  - Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, then continue page-focused Cockpit polish or pick the next real integration wiring wave.
 - Completed Pay Code Explorer Pagination Navigation Slice 2 / Closure:
   - Published package Cockpit assets to the host app.
   - Confirmed published Cockpit assets match package source.

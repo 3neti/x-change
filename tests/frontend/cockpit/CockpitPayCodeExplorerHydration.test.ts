@@ -278,6 +278,7 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         const scanGuide = wrapper.find('[data-testid="cockpit-pay-code-results-scan-guide"]');
 
         expect(density.exists()).toBe(true);
+        expect(density.classes()).toContain('sm:w-[34rem]');
         expect(density.text()).toContain('Showing');
         expect(density.text()).toContain('2 of 2');
         expect(density.text()).toContain('Total Rows');
@@ -289,6 +290,26 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(scanGuide.exists()).toBe(true);
         expect(scanGuide.element.tagName.toLowerCase()).toBe('details');
         expect(scanGuide.text()).toContain('How to scan these rows');
+    });
+
+    it('keeps result metric values stable while pagination range text changes', () => {
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: payCodesReadModel,
+            },
+        });
+
+        const density = wrapper.find('[data-testid="cockpit-pay-code-results-density-summary"]');
+        const metricValues = density.findAll('dd');
+
+        expect(metricValues).toHaveLength(4);
+        expect(density.classes()).toContain('sm:w-[34rem]');
+
+        metricValues.forEach((metricValue) => {
+            expect(metricValue.classes()).toContain('whitespace-nowrap');
+            expect(metricValue.classes()).toContain('font-mono');
+            expect(metricValue.classes()).toContain('tabular-nums');
+        });
     });
 
     it('paginates high-volume result rendering while preserving total counts and navigation safety', async () => {
