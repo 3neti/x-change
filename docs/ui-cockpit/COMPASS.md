@@ -5,11 +5,22 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Distribution Workspace Secondary Panel Copy Polish
-Status: In progress
+Status: Complete
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Distribution Workspace Secondary Panel Copy Polish Slice 2 / Closure:
+  - Published package Cockpit assets to the host app.
+  - Confirmed published Cockpit assets match package source.
+  - Verified focused Distribution Workspace frontend coverage.
+  - Verified focused backend architecture documentation coverage.
+  - Verified authenticated Dusk browser smoke coverage for Voucher Detail and Distribution Workspace.
+  - Verified the host production frontend build.
+  - Confirmed the lower Distribution Workspace panels now use clearer copy for notification readiness, printable handouts, share options, and status evidence.
+  - Confirmed no routes, controllers, queries, read-model hydration, distribution links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, artifact generation, or money movement were changed.
+  - Report: `reports/569-distribution-workspace-secondary-panel-copy-polish-slice-2-closure.md`.
+  - Next recommended checkpoint: manually inspect `/x/cockpit/pay-codes/{code}/distribution`, then continue page-focused Cockpit polish or pick the next real integration wiring wave.
 - Completed Distribution Workspace Secondary Panel Copy Polish Slice 1:
   - Replaced lower Distribution Workspace secondary-panel language with friendlier operator copy.
   - Renamed delivery copy to notification readiness, print copy to printable handout options, share copy to share options, and operational evidence to status evidence.
