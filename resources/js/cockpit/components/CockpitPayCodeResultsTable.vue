@@ -419,6 +419,37 @@ function totalDisabledActionCount(): number {
             </table>
         </div>
 
+        <nav
+            v-if="isResultLimited"
+            aria-label="Pay Code result pages footer"
+            class="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800 dark:bg-slate-950"
+            data-testid="cockpit-pay-code-result-pagination-footer"
+        >
+            <p class="text-sm font-medium text-slate-700 dark:text-slate-200">
+                Showing {{ firstVisibleRecordNumber }}–{{ lastVisibleRecordNumber }} of {{ records.length }}
+            </p>
+            <div class="flex flex-wrap gap-2">
+                <button
+                    :disabled="!hasPreviousPage"
+                    type="button"
+                    class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+                    data-testid="cockpit-pay-code-result-pagination-footer-previous"
+                    @click="goToPreviousPage"
+                >
+                    Previous
+                </button>
+                <button
+                    :disabled="!hasNextPage"
+                    type="button"
+                    class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+                    data-testid="cockpit-pay-code-result-pagination-footer-next"
+                    @click="goToNextPage"
+                >
+                    Next
+                </button>
+            </div>
+        </nav>
+
         <div
             v-if="records.length === 0"
             class="border-t border-slate-200 p-5 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400"

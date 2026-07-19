@@ -3784,3 +3784,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/587-pay-code-explorer-page-size-control-slice-2-closure.md`.
 - Boundary remains unchanged: presentation-only client-side density control; no route behavior, backend queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, then choose the next page-focused Cockpit target or a real integration wiring wave.
+
+## 2026-07-20 Update — Pay Code Explorer Bottom Pagination Affordance — Slice 1
+
+- Started the Pay Code Explorer Bottom Pagination Affordance wave.
+- Added footer `Previous` and `Next` pagination controls below the result rows so operators can continue paging after scanning the table/cards.
+- The footer uses the same browser-local pagination state and range copy as the header controls.
+- UI/report: `../ui-cockpit/reports/588-pay-code-explorer-bottom-pagination-affordance-slice-1.md`.
+- Boundary remains unchanged: presentation-only client-side pagination affordance; no route behavior, backend queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next checkpoint: host publish, asset drift, authenticated browser smoke, build, and closure.

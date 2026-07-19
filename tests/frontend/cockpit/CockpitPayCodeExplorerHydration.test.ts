@@ -345,9 +345,12 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         const density = wrapper.find('[data-testid="cockpit-pay-code-results-density-summary"]');
         const notice = wrapper.find('[data-testid="cockpit-pay-code-result-limit-notice"]');
         const pagination = wrapper.find('[data-testid="cockpit-pay-code-result-pagination"]');
+        const footerPagination = wrapper.find('[data-testid="cockpit-pay-code-result-pagination-footer"]');
         const pageSize = wrapper.find('[data-testid="cockpit-pay-code-result-page-size"]');
         const previous = wrapper.find('[data-testid="cockpit-pay-code-result-pagination-previous"]');
         const next = wrapper.find('[data-testid="cockpit-pay-code-result-pagination-next"]');
+        const footerPrevious = wrapper.find('[data-testid="cockpit-pay-code-result-pagination-footer-previous"]');
+        const footerNext = wrapper.find('[data-testid="cockpit-pay-code-result-pagination-footer-next"]');
 
         expect(density.text()).toContain('Showing');
         expect(density.text()).toContain('1–25 of 30');
@@ -358,6 +361,8 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(notice.text()).toContain('pagination changes only the browser view');
         expect(pagination.exists()).toBe(true);
         expect(pagination.text()).toContain('Page 1 of 2');
+        expect(footerPagination.exists()).toBe(true);
+        expect(footerPagination.text()).toContain('Showing 1–25 of 30');
         expect(pageSize.exists()).toBe(true);
         expect(pageSize.element.tagName.toLowerCase()).toBe('select');
         expect(pageSize.text()).toContain('10 per page');
@@ -365,6 +370,8 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(pageSize.text()).toContain('50 per page');
         expect(previous.attributes('disabled')).toBeDefined();
         expect(next.attributes('disabled')).toBeUndefined();
+        expect(footerPrevious.attributes('disabled')).toBeDefined();
+        expect(footerNext.attributes('disabled')).toBeUndefined();
         expect(wrapper.findAll('[data-testid="cockpit-pay-code-row"]')).toHaveLength(25);
         expect(wrapper.findAll('[data-testid="cockpit-pay-code-mobile-row"]')).toHaveLength(25);
         expect(wrapper.text()).toContain('PC-VOLUME-025');
@@ -382,8 +389,11 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(density.text()).toContain('26–30 of 30');
         expect(notice.text()).toContain('Showing 26–30 of 30 Pay Codes.');
         expect(pagination.text()).toContain('Page 2 of 2');
+        expect(footerPagination.text()).toContain('Showing 26–30 of 30');
         expect(wrapper.find('[data-testid="cockpit-pay-code-result-pagination-previous"]').attributes('disabled')).toBeUndefined();
         expect(wrapper.find('[data-testid="cockpit-pay-code-result-pagination-next"]').attributes('disabled')).toBeDefined();
+        expect(wrapper.find('[data-testid="cockpit-pay-code-result-pagination-footer-previous"]').attributes('disabled')).toBeUndefined();
+        expect(wrapper.find('[data-testid="cockpit-pay-code-result-pagination-footer-next"]').attributes('disabled')).toBeDefined();
         expect(wrapper.findAll('[data-testid="cockpit-pay-code-row"]')).toHaveLength(5);
         expect(wrapper.findAll('[data-testid="cockpit-pay-code-mobile-row"]')).toHaveLength(5);
         expect(wrapper.text()).not.toContain('PC-VOLUME-025');
@@ -394,6 +404,46 @@ describe('Cockpit Pay Code Explorer hydration', () => {
 
         expect(density.text()).toContain('1–25 of 30');
         expect(pagination.text()).toContain('Page 1 of 2');
+        expect(footerPagination.text()).toContain('Showing 1–25 of 30');
+    });
+
+    it('lets operators page from the footer after scanning result rows', async () => {
+        const records = Array.from({ length: 30 }, (_, index) => ({
+            ...payCodesReadModel.records[0],
+            code: `PC-FOOTER-${String(index + 1).padStart(3, '0')}`,
+        }));
+
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: {
+                    ...payCodesReadModel,
+                    stats: {
+                        ...payCodesReadModel.stats,
+                        total: 30,
+                        filtered: 30,
+                    },
+                    records,
+                },
+            },
+        });
+
+        const density = wrapper.find('[data-testid="cockpit-pay-code-results-density-summary"]');
+        const footerPagination = wrapper.find('[data-testid="cockpit-pay-code-result-pagination-footer"]');
+
+        expect(footerPagination.exists()).toBe(true);
+        expect(footerPagination.text()).toContain('Showing 1–25 of 30');
+
+        await wrapper.find('[data-testid="cockpit-pay-code-result-pagination-footer-next"]').trigger('click');
+
+        expect(density.text()).toContain('26–30 of 30');
+        expect(footerPagination.text()).toContain('Showing 26–30 of 30');
+        expect(wrapper.text()).toContain('PC-FOOTER-030');
+
+        await wrapper.find('[data-testid="cockpit-pay-code-result-pagination-footer-previous"]').trigger('click');
+
+        expect(density.text()).toContain('1–25 of 30');
+        expect(footerPagination.text()).toContain('Showing 1–25 of 30');
+        expect(wrapper.text()).toContain('PC-FOOTER-001');
     });
 
     it('lets operators choose result density without changing the read-only result set', async () => {

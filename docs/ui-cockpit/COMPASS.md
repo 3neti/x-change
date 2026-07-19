@@ -4,12 +4,20 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Pay Code Explorer Page Size Control
-Status: Closed / pending human inspection
+Current slice: Pay Code Explorer Bottom Pagination Affordance
+Status: In progress
 Last updated: 2026-07-20
 
 ## Completed
 
+- Started Pay Code Explorer Bottom Pagination Affordance Slice 1:
+  - Added footer pagination below the Pay Code Explorer result rows.
+  - Reused the same browser-local `Previous` and `Next` state as the top pagination controls.
+  - Added compact footer range copy so operators can page after scanning rows without returning to the header.
+  - Preserved the top pagination controls, rows-per-page selector, full sanitized read-model totals, search/status filters, detail links, distribution links, and read-only boundary.
+  - Confirmed no routes, controllers, backend queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, artifact generation, or money movement were changed.
+  - Report: `reports/588-pay-code-explorer-bottom-pagination-affordance-slice-1.md`.
+  - Next recommended checkpoint: Pay Code Explorer Bottom Pagination Affordance Slice 2 — host publish / asset drift / browser / build closure.
 - Completed Pay Code Explorer Page Size Control Slice 2 / Closure:
   - Published package Cockpit assets to the host app.
   - Confirmed published Cockpit assets match package source.
