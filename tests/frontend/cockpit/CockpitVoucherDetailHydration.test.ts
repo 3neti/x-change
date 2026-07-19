@@ -563,9 +563,12 @@ describe('Cockpit Voucher Detail hydration', () => {
                         authorized: true,
                         deliveries: [
                             {
-                                id: 'delivery-1',
+                                delivery_id: 'delivery-1',
                                 channel: 'sms',
                                 status: 'delivered',
+                                attempt_count: 1,
+                                max_attempts: 3,
+                                provider_status: 'ACCEPTED',
                                 recipient: '+639170000000',
                                 provider_payload: 'must-not-render',
                                 raw_payload: 'must-not-render',
@@ -585,6 +588,8 @@ describe('Cockpit Voucher Detail hydration', () => {
 
         expect(wrapper.text()).toContain('SMS');
         expect(wrapper.text()).toContain('delivered');
+        expect(wrapper.text()).toContain('Provider status: ACCEPTED');
+        expect(wrapper.text()).toContain('Attempts: 1/3');
         expect(wrapper.text()).toContain('communication-delivery-summary-only');
         expect(wrapper.text()).toContain('Feedback delivery remains read-only from Cockpit.');
         expect(wrapper.text()).not.toContain('+639170000000');

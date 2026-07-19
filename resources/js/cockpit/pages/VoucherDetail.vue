@@ -321,6 +321,20 @@ function stringValue(value: unknown): string | null {
     return null;
 }
 
+function numberValue(value: unknown): number | null {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+    }
+
+    if (typeof value === 'string' && value.trim() !== '') {
+        const parsed = Number(value);
+
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    return null;
+}
+
 function campaignValueLabel(value: unknown, labels: Record<string, string>): string {
     const normalized = stringValue(value);
 
@@ -532,12 +546,24 @@ function feedbackDistributionItem(
         ?? 'feedback';
     const status = stringValue(deliveryItem.status) ?? 'available';
     const payloadPolicy = stringValue(feedbackRedactions?.payloads) ?? 'communication-delivery-summary-only';
+    const providerStatus = stringValue(deliveryItem.provider_status);
+    const attemptCount = numberValue(deliveryItem.attempt_count);
+    const maxAttempts = numberValue(deliveryItem.max_attempts);
+    const attemptSummary = attemptCount === null
+        ? null
+        : `Attempts: ${attemptCount}${maxAttempts === null ? '' : `/${maxAttempts}`}`;
+    const helperParts = [
+        payloadPolicy,
+        providerStatus === null ? null : `Provider status: ${providerStatus}`,
+        attemptSummary,
+        'Feedback delivery remains read-only from Cockpit.',
+    ].filter((part): part is string => part !== null && part.trim() !== '');
 
     return {
-        id: stringValue(deliveryItem.id) ?? `feedback-${index + 1}`,
+        id: stringValue(deliveryItem.delivery_id) ?? stringValue(deliveryItem.id) ?? `feedback-${index + 1}`,
         channel: channelLabel(channel),
         status,
-        helper: `${payloadPolicy} · Feedback delivery remains read-only from Cockpit.`,
+        helper: helperParts.join(' · '),
     };
 }
 
