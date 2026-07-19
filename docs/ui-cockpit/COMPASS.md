@@ -3625,3 +3625,25 @@ Current boundary:
 - Distribution Workspace can now display connected x-journal evidence summaries as read-only audit guidance without exposing raw journal payloads or mutable internals.
 - Report: `reports/540-distribution-workspace-x-journal-read-model-slice-3-closure.md`.
 - Boundary remains unchanged: connected read-model presentation only; no journal write, x-action execution, feedback delivery, campaign mutation, voucher mutation, claim execution, driver execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+
+# 2026-07-19 — Distribution Workspace Page Polish — Slice 1
+
+- Started the Distribution Workspace Page Polish wave.
+- Added a `Connected context` summary to the primary Distribution Workspace area for claim URL readiness, delivery evidence, follow-up guidance, and audit evidence.
+- Report: `reports/541-distribution-workspace-page-polish-slice-1.md`.
+- Boundary remains unchanged: presentation-only UI polish; no route behavior, read-model hydration, distribution dispatch, feedback delivery, x-action execution, journal write, voucher mutation, provider call, artifact generation, persistence, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-19 — Distribution Workspace Page Polish — Slice 2
+
+- Replaced engineering-leaning panel copy with operator-facing labels such as `Delivery channels`, `Message and follow-up status`, `Audit and operational status`, and `Evidence Facts`.
+- Published package-owned Cockpit assets into the host app and confirmed published assets match package source.
+- Report: `reports/542-distribution-workspace-page-polish-slice-2.md`.
+- Boundary remains unchanged: presentation-copy update only; no route behavior, read-model hydration, distribution dispatch, feedback delivery, x-action execution, journal write, voucher mutation, provider call, artifact generation, persistence, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-19 — Distribution Workspace Page Polish — Slice 3 Closure
+
+- Closed the Distribution Workspace Page Polish wave.
+- Focused frontend, asset drift, and host build verification passed.
+- Distribution Workspace now has a more operator-facing primary scan path and less engineering-oriented panel copy.
+- Report: `reports/543-distribution-workspace-page-polish-slice-3-closure.md`.
+- Boundary remains unchanged: presentation-only polish; no route behavior, read-model hydration, distribution dispatch, feedback delivery, x-action execution, journal write, voucher mutation, provider call, artifact generation, persistence, wallet behavior, Treasury behavior, public API behavior, or money movement changed.

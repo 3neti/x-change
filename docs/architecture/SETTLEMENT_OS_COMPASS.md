@@ -3485,3 +3485,27 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/540-distribution-workspace-x-journal-read-model-slice-3-closure.md`.
 - Boundary remains unchanged: connected x-journal presentation only; no journal write, x-action execution, feedback delivery, campaign mutation, voucher mutation, claim execution, driver execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next recommended checkpoint: pause connected-service wiring and manually inspect the five primary Cockpit pages, or continue page-focused polish for `/x/cockpit/pay-codes/{code}/distribution`.
+
+## 2026-07-19 Update — Distribution Workspace Page Polish — Slice 1
+
+- Started the Distribution Workspace Page Polish wave.
+- Added a primary `Connected context` summary for claim URL readiness, x-feedback delivery evidence, x-action follow-up guidance, and x-journal audit evidence.
+- UI/report: `../ui-cockpit/reports/541-distribution-workspace-page-polish-slice-1.md`.
+- Boundary remains unchanged: presentation-only UI polish; no route behavior, read-model hydration, distribution dispatch, feedback delivery, x-action execution, journal write, voucher mutation, provider call, artifact generation, persistence, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next checkpoint: polish Distribution Workspace panel copy.
+
+## 2026-07-19 Update — Distribution Workspace Page Polish — Slice 2
+
+- Replaced technical Distribution Workspace labels with operator-facing copy.
+- Host-published Cockpit assets match package source.
+- UI/report: `../ui-cockpit/reports/542-distribution-workspace-page-polish-slice-2.md`.
+- Boundary remains unchanged: presentation-copy update only; no route behavior, read-model hydration, distribution dispatch, feedback delivery, x-action execution, journal write, voucher mutation, provider call, artifact generation, persistence, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next checkpoint: close the polish wave with focused frontend/build verification.
+
+## 2026-07-19 Update — Distribution Workspace Page Polish — Slice 3 Closure
+
+- Closed the Distribution Workspace Page Polish wave.
+- Distribution Workspace now has a more operator-facing primary scan path and less engineering-oriented panel copy.
+- UI/report: `../ui-cockpit/reports/543-distribution-workspace-page-polish-slice-3-closure.md`.
+- Boundary remains unchanged: presentation-only polish; no route behavior, read-model hydration, distribution dispatch, feedback delivery, x-action execution, journal write, voucher mutation, provider call, artifact generation, persistence, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next recommended checkpoint: manually inspect the five primary Cockpit pages, or start the next page-focused polish wave for Voucher Detail.
