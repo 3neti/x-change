@@ -4,12 +4,19 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Distribution Workspace Readiness Consolidation
-Status: Complete
+Current slice: Distribution Workspace Readiness Consolidation Acceptance
+Status: In progress
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Distribution Workspace Readiness Consolidation Acceptance Slice 1:
+  - Added a targeted human acceptance checklist for the consolidated Distribution Workspace readiness layout.
+  - Strengthened authenticated browser smoke coverage to assert the `Detailed readiness panels` bridge is visible.
+  - Strengthened browser smoke coverage to assert the old `Channel and artifact readiness` repeated metric grid is absent.
+  - Confirmed no routes, controllers, queries, read-model hydration, distribution links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, artifact generation, or money movement were changed.
+  - Report: `reports/575-distribution-workspace-readiness-consolidation-acceptance-slice-1-checklist.md`.
+  - Next recommended checkpoint: Distribution Workspace Readiness Consolidation Acceptance Slice 2 — automated verification closure while pending human visual evidence.
 - Completed Distribution Workspace Readiness Consolidation Slice 2 / Closure:
   - Published package Cockpit assets to the host app.
   - Confirmed published Cockpit assets match package source.

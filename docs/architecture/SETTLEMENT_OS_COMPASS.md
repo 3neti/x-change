@@ -3666,3 +3666,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/574-distribution-workspace-readiness-consolidation-slice-2-closure.md`.
 - Boundary remains unchanged: presentation-only consolidation and publish verification; no route behavior, read-model hydration, distribution dispatch, feedback delivery, x-action execution, journal write, campaign mutation, voucher mutation, claim execution, driver execution, provider call, artifact generation, persistence, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next recommended checkpoint: manual inspection of `/x/cockpit/pay-codes/{code}/distribution`, or pick the next page-focused Cockpit polish / integration wiring wave.
+
+## 2026-07-19 Update — Distribution Workspace Readiness Consolidation Acceptance — Slice 1
+
+- Started the Distribution Workspace Readiness Consolidation Acceptance wave.
+- Added a human acceptance checklist for the consolidated Distribution Workspace readiness layout.
+- Strengthened authenticated Dusk smoke coverage to assert the detailed-readiness bridge is visible and the old repeated channel/artifact readiness grid is absent.
+- UI/report: `../ui-cockpit/reports/575-distribution-workspace-readiness-consolidation-acceptance-slice-1-checklist.md`.
+- Boundary remains unchanged: acceptance scaffolding only; no route behavior, read-model hydration, distribution dispatch, feedback delivery, x-action execution, journal write, campaign mutation, voucher mutation, claim execution, driver execution, provider call, artifact generation, persistence, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next checkpoint: automated verification closure while pending human visual evidence.
