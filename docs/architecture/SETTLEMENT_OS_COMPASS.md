@@ -3458,3 +3458,30 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/537-distribution-workspace-x-action-read-model-slice-3-closure.md`.
 - Boundary remains unchanged: connected x-action presentation only; no x-action execution, authorization, durable run persistence, journal write, feedback delivery, campaign mutation, voucher mutation, claim execution, driver execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next recommended checkpoint: connect Distribution Workspace x-journal evidence summaries as read-only audit guidance, or pause connected-service work and inspect the five primary Cockpit pages manually.
+
+## 2026-07-19 Update — Distribution Workspace x-journal Read Model — Slice 1
+
+- Started the Distribution Workspace x-journal Read Model wave.
+- Distribution Workspace can hydrate real x-journal voucher evidence summaries for a matching Pay Code context.
+- x-change projects x-journal evidence into read-only Distribution Workspace analytics rows.
+- UI/report: `../ui-cockpit/reports/538-distribution-workspace-x-journal-read-model-slice-1.md`.
+- Boundary remains unchanged: read-only x-journal evidence projection only; no journal write, x-action execution, feedback delivery, campaign mutation, voucher mutation, claim execution, driver execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next checkpoint: render connected journal metadata cleanly in Distribution Workspace and publish host assets.
+
+## 2026-07-19 Update — Distribution Workspace x-journal Read Model — Slice 2
+
+- Distribution Workspace renders connected x-journal evidence summaries as audit guidance.
+- Operator-visible analytics disclosures show safe event type, payload policy, evidence-only status, and no-write semantics.
+- Host-published Cockpit assets match package source.
+- UI/report: `../ui-cockpit/reports/539-distribution-workspace-x-journal-read-model-slice-2.md`.
+- Boundary remains unchanged: read-only presentation only; no journal write, x-action execution, feedback delivery, campaign mutation, voucher mutation, claim execution, driver execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next checkpoint: close the wave with focused backend/frontend/build verification.
+
+## 2026-07-19 Update — Distribution Workspace x-journal Read Model — Slice 3 Closure
+
+- Closed the Distribution Workspace x-journal Read Model wave.
+- Distribution Workspace now has verified read-only consumption and rendering of x-journal evidence summaries.
+- Raw payloads, provider payloads, wallet data, secrets, and mutable journal internals remain excluded from Cockpit payloads.
+- UI/report: `../ui-cockpit/reports/540-distribution-workspace-x-journal-read-model-slice-3-closure.md`.
+- Boundary remains unchanged: connected x-journal presentation only; no journal write, x-action execution, feedback delivery, campaign mutation, voucher mutation, claim execution, driver execution, provider call, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next recommended checkpoint: pause connected-service wiring and manually inspect the five primary Cockpit pages, or continue page-focused polish for `/x/cockpit/pay-codes/{code}/distribution`.
