@@ -33,7 +33,7 @@ This Compass is the program-level memory. Future workstream compasses should be 
 ## Current Position
 
 Current wave: Cockpit Distribution Workspace Manual Acceptance
-Current status: In progress; Distribution Workspace manual acceptance checklist scaffolded
+Current status: Automated green; pending Distribution Workspace human visual acceptance
 Last updated: 2026-07-19
 
 | Wave | Workstream | Role | Status | Compass |
@@ -42,7 +42,7 @@ Last updated: 2026-07-19
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Distribution Workspace manual acceptance pending human review | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Distribution Workspace manual acceptance automated green / pending human review | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -62,6 +62,10 @@ Last updated: 2026-07-19
 
 ### Current Cockpit Host Integration
 
+- Cockpit Distribution Workspace Manual Acceptance Slice 2 complete:
+  - Automated evidence for `/x/cockpit/pay-codes/{code}/distribution` is green.
+  - Human visual acceptance remains pending; no pass is claimed until evidence is supplied.
+  - Report: [../ui-cockpit/reports/566-distribution-workspace-manual-acceptance-slice-2-automated-closure.md](../ui-cockpit/reports/566-distribution-workspace-manual-acceptance-slice-2-automated-closure.md).
 - Cockpit Distribution Workspace Manual Acceptance Slice 1 complete:
   - Manual acceptance checklist now records what must be inspected on `/x/cockpit/pay-codes/{code}/distribution`.
   - Status remains pending human visual acceptance; no pass is claimed until evidence is supplied.
