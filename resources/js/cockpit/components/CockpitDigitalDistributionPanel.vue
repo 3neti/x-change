@@ -65,10 +65,10 @@ function actionMetadata(action: CockpitDistributionAction): Array<{ label: strin
         data-testid="cockpit-digital-distribution-panel"
     >
         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-            Digital Distribution
+            Delivery channels
         </p>
         <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-            Delivery channel status
+            Message and follow-up status
         </h3>
 
         <div
@@ -85,7 +85,7 @@ function actionMetadata(action: CockpitDistributionAction): Array<{ label: strin
             </div>
             <div>
                 <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Available Actions
+                    Available Follow-Ups
                 </p>
                 <p class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
                     {{ enabledActionCount() }}
@@ -93,7 +93,7 @@ function actionMetadata(action: CockpitDistributionAction): Array<{ label: strin
             </div>
             <div>
                 <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Blocked Actions
+                    Disabled Follow-Ups
                 </p>
                 <p class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
                     {{ disabledActionCount() }}
@@ -159,7 +159,7 @@ function actionMetadata(action: CockpitDistributionAction): Array<{ label: strin
                     data-testid="cockpit-distribution-action-disclosure"
                 >
                     <summary class="cursor-pointer font-medium text-slate-600 dark:text-slate-300">
-                        Action status details
+                        Follow-up details
                     </summary>
                     <p class="mt-2 leading-5">
                         {{ action.reason }}

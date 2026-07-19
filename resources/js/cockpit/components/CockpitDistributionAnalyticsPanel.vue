@@ -43,10 +43,10 @@ function metricMetadata(metric: CockpitDistributionMetric): Array<{ label: strin
         data-testid="cockpit-distribution-analytics-panel"
     >
         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-            Operational Analytics
+            Audit and operational status
         </p>
         <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-            Distribution status summary
+            Read-only evidence summary
         </h3>
 
         <div
@@ -54,7 +54,7 @@ function metricMetadata(metric: CockpitDistributionMetric): Array<{ label: strin
             data-testid="cockpit-distribution-analytics-density-summary"
         >
             <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Analytics Facts
+                Evidence Facts
             </p>
             <p class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
                 {{ metricSummary() }}
@@ -79,7 +79,7 @@ function metricMetadata(metric: CockpitDistributionMetric): Array<{ label: strin
                     data-testid="cockpit-distribution-metric-disclosure"
                 >
                     <summary class="cursor-pointer font-medium text-slate-600 dark:text-slate-300">
-                        Metric details
+                        Evidence details
                     </summary>
                     <p class="mt-2 leading-5">
                         {{ metric.helper }}

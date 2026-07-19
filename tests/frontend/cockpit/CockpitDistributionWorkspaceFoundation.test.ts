@@ -27,14 +27,15 @@ describe('Cockpit Distribution Workspace foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Delivery channel status');
+        expect(wrapper.text()).toContain('Delivery channels');
+        expect(wrapper.text()).toContain('Message and follow-up status');
         expect(wrapper.text()).toContain('SMS handoff');
         expect(wrapper.text()).toContain('Email handoff');
         expect(wrapper.text()).toContain('In-app notification handoff');
         expect(wrapper.text()).toContain('Manual branch release');
         expect(wrapper.findAll('[data-testid="cockpit-distribution-channel"]')).toHaveLength(4);
         expect(wrapper.find('[data-testid="cockpit-distribution-density-summary"]').text()).toContain('Channels');
-        expect(wrapper.find('[data-testid="cockpit-distribution-density-summary"]').text()).toContain('Blocked Actions');
+        expect(wrapper.find('[data-testid="cockpit-distribution-density-summary"]').text()).toContain('Disabled Follow-Ups');
         expect(wrapper.find('[data-testid="cockpit-distribution-density-summary"]').text()).toContain('4');
 
         const actions = wrapper.findAll('[data-testid="cockpit-distribution-action"]');
@@ -91,13 +92,14 @@ describe('Cockpit Distribution Workspace foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Distribution status summary');
+        expect(wrapper.text()).toContain('Audit and operational status');
+        expect(wrapper.text()).toContain('Read-only evidence summary');
         expect(wrapper.text()).toContain('Planned sends');
         expect(wrapper.text()).toContain('Printed assets');
         expect(wrapper.text()).toContain('Delivery state');
         expect(wrapper.text()).toContain('Campaign state');
         expect(wrapper.text()).toContain('Campaign behavior is deferred until Wave 5');
-        expect(wrapper.find('[data-testid="cockpit-distribution-analytics-density-summary"]').text()).toContain('Analytics Facts');
+        expect(wrapper.find('[data-testid="cockpit-distribution-analytics-density-summary"]').text()).toContain('Evidence Facts');
         expect(wrapper.find('[data-testid="cockpit-distribution-analytics-density-summary"]').text()).toContain('4 read-only facts');
         expect(wrapper.findAll('[data-testid="cockpit-distribution-metric"]')).toHaveLength(4);
         expect(wrapper.findAll('[data-testid="cockpit-distribution-metric-disclosure"]')).toHaveLength(4);
@@ -114,10 +116,10 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.find('[data-testid="cockpit-distribution-primary-summary"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="cockpit-distribution-primary-detail-link"]').text()).toContain('Back to Pay Code Detail');
         expect(wrapper.find('[data-testid="cockpit-distribution-primary-explorer-link"]').text()).toContain('Back to Pay Codes');
-        expect(wrapper.text()).toContain('Digital Distribution');
+        expect(wrapper.text()).toContain('Delivery channels');
         expect(wrapper.text()).toContain('Print Templates');
         expect(wrapper.text()).toContain('Share / QR');
-        expect(wrapper.text()).toContain('Operational Analytics');
+        expect(wrapper.text()).toContain('Audit and operational status');
         expect(wrapper.find('[aria-current="page"]').text()).toContain('Pay Codes');
         expect(wrapper.text()).toContain('does not dispatch distribution');
         expect(wrapper.text()).toContain('send feedback');
