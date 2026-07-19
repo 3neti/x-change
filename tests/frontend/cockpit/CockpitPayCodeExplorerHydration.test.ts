@@ -278,7 +278,9 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         const scanGuide = wrapper.find('[data-testid="cockpit-pay-code-results-scan-guide"]');
 
         expect(density.exists()).toBe(true);
-        expect(density.text()).toContain('Rows');
+        expect(density.text()).toContain('Showing');
+        expect(density.text()).toContain('2 of 2');
+        expect(density.text()).toContain('Total Rows');
         expect(density.text()).toContain('2');
         expect(density.text()).toContain('Links');
         expect(density.text()).toContain('2');
@@ -287,6 +289,59 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(scanGuide.exists()).toBe(true);
         expect(scanGuide.element.tagName.toLowerCase()).toBe('details');
         expect(scanGuide.text()).toContain('How to scan these rows');
+    });
+
+    it('limits high-volume result rendering while preserving total counts and navigation safety', () => {
+        const records = Array.from({ length: 30 }, (_, index) => ({
+            ...payCodesReadModel.records[0],
+            code: `PC-VOLUME-${String(index + 1).padStart(3, '0')}`,
+            actions: payCodesReadModel.records[0].actions?.map((action) => ({
+                ...action,
+                href:
+                    action.href && action.enabled
+                        ? action.href.replace(
+                              'PC-HYDRATED-001',
+                              `PC-VOLUME-${String(index + 1).padStart(3, '0')}`,
+                          )
+                        : action.href,
+            })),
+        }));
+
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: {
+                    ...payCodesReadModel,
+                    stats: {
+                        ...payCodesReadModel.stats,
+                        total: 30,
+                        filtered: 30,
+                    },
+                    records,
+                },
+            },
+        });
+
+        const density = wrapper.find('[data-testid="cockpit-pay-code-results-density-summary"]');
+        const notice = wrapper.find('[data-testid="cockpit-pay-code-result-limit-notice"]');
+
+        expect(density.text()).toContain('Showing');
+        expect(density.text()).toContain('25 of 30');
+        expect(density.text()).toContain('Total Rows');
+        expect(density.text()).toContain('30');
+        expect(notice.exists()).toBe(true);
+        expect(notice.text()).toContain('Showing the first 25 of 30 Pay Codes.');
+        expect(notice.text()).toContain('Use search or status filters to narrow the list');
+        expect(wrapper.findAll('[data-testid="cockpit-pay-code-row"]')).toHaveLength(25);
+        expect(wrapper.findAll('[data-testid="cockpit-pay-code-mobile-row"]')).toHaveLength(25);
+        expect(wrapper.text()).toContain('PC-VOLUME-025');
+        expect(wrapper.text()).not.toContain('PC-VOLUME-026');
+        expect(wrapper.text()).toContain('Links');
+        expect(wrapper.text()).toContain('60');
+        expect(wrapper.text()).toContain('Disabled');
+        expect(wrapper.text()).toContain('30');
+        expect(wrapper.text()).toContain('Filters use read-only GET navigation.');
+        expect(wrapper.text()).not.toContain('provider_payload');
+        expect(wrapper.text()).not.toContain('raw_payload');
     });
 
     it('summarizes row action safety before the result rows', () => {

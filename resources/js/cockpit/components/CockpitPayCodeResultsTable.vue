@@ -1,14 +1,34 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import type {
     CockpitPayCodeExplorerRecord,
     CockpitPayCodeRowAction,
 } from '../types';
 
+const defaultVisibleRecordLimit = 25;
+
 const props = defineProps<{
     records: CockpitPayCodeExplorerRecord[];
     actions: CockpitPayCodeRowAction[];
+    visibleLimit?: number;
 }>();
+
+const effectiveVisibleLimit = computed(() =>
+    props.visibleLimit && props.visibleLimit > 0
+        ? props.visibleLimit
+        : defaultVisibleRecordLimit,
+);
+
+const visibleRecords = computed(() =>
+    props.records.slice(0, effectiveVisibleLimit.value),
+);
+
+const hiddenRecordCount = computed(() =>
+    Math.max(props.records.length - visibleRecords.value.length, 0),
+);
+
+const isResultLimited = computed(() => hiddenRecordCount.value > 0);
 
 const scanFields = [
     {
@@ -77,12 +97,20 @@ function totalDisabledActionCount(): number {
                     </h3>
                 </div>
                 <dl
-                    class="grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-2 text-center dark:bg-slate-950"
+                    class="grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-2 text-center sm:grid-cols-4 dark:bg-slate-950"
                     data-testid="cockpit-pay-code-results-density-summary"
                 >
                     <div class="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
                         <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Rows
+                            Showing
+                        </dt>
+                        <dd class="mt-1 text-sm font-semibold text-slate-950 dark:text-slate-50">
+                            {{ visibleRecords.length }} of {{ records.length }}
+                        </dd>
+                    </div>
+                    <div class="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Total Rows
                         </dt>
                         <dd class="mt-1 text-sm font-semibold text-slate-950 dark:text-slate-50">
                             {{ records.length }}
@@ -132,6 +160,15 @@ function totalDisabledActionCount(): number {
                     </article>
                 </div>
             </details>
+
+            <div
+                v-if="isResultLimited"
+                class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
+                data-testid="cockpit-pay-code-result-limit-notice"
+            >
+                Showing the first {{ visibleRecords.length }} of {{ records.length }} Pay Codes.
+                Use search or status filters to narrow the list; no voucher data is changed.
+            </div>
         </div>
 
         <div
@@ -139,7 +176,7 @@ function totalDisabledActionCount(): number {
             data-testid="cockpit-pay-code-mobile-results"
         >
             <article
-                v-for="record in records"
+                v-for="record in visibleRecords"
                 :key="`mobile-${record.code}`"
                 class="space-y-4 p-4"
                 data-testid="cockpit-pay-code-mobile-row"
@@ -222,7 +259,7 @@ function totalDisabledActionCount(): number {
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                     <tr
-                        v-for="record in records"
+                        v-for="record in visibleRecords"
                         :key="record.code"
                         data-testid="cockpit-pay-code-row"
                     >

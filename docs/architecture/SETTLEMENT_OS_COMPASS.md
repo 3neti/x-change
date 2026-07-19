@@ -3721,3 +3721,13 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/580-pay-code-explorer-manual-acceptance-slice-3-human-pass.md`.
 - Boundary remains unchanged: human evidence record only; no route behavior, queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next recommended checkpoint: Pay Code Explorer Result Volume / Pagination Polish, or pick the next real integration wiring wave.
+
+## 2026-07-20 Update — Pay Code Explorer Result Volume / Pagination Polish — Slice 1
+
+- Started the Pay Code Explorer Result Volume / Pagination Polish wave.
+- Pay Code Explorer now limits default rendered rows to the first 25 records and shows `Showing N of Total` copy.
+- High-volume result sets now show an operator notice directing users to search/status filters.
+- Full sanitized read-model totals, link counts, and disabled-action counts remain visible.
+- UI/report: `../ui-cockpit/reports/581-pay-code-explorer-result-volume-pagination-polish-slice-1.md`.
+- Boundary remains unchanged: presentation-only client-side result limiting; no route behavior, backend queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next checkpoint: host publish, asset drift, authenticated browser smoke, build, and closure.

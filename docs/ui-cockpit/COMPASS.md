@@ -4,12 +4,21 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Pay Code Explorer Manual Acceptance
-Status: Passed with UI follow-up
+Current slice: Pay Code Explorer Result Volume / Pagination Polish
+Status: Slice 1 scaffolded
 Last updated: 2026-07-20
 
 ## Completed
 
+- Completed Pay Code Explorer Result Volume / Pagination Polish Slice 1:
+  - Limited default rendered Pay Code rows to the first 25 records.
+  - Added `Showing N of Total` result-density copy.
+  - Added an operator notice when a high-volume result set is limited.
+  - Preserved full read-model counts for rows, navigation links, and disabled/unavailable actions.
+  - Preserved desktop table, mobile cards, detail links, distribution links, and read-only filter guidance.
+  - Confirmed no routes, controllers, backend queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, artifact generation, or money movement were changed.
+  - Report: `reports/581-pay-code-explorer-result-volume-pagination-polish-slice-1.md`.
+  - Next recommended checkpoint: Pay Code Explorer Result Volume / Pagination Polish Slice 2 — host publish / asset drift / browser / build closure.
 - Completed Pay Code Explorer Manual Acceptance Slice 3:
   - Recorded supplied human browser scrape evidence for `/x/cockpit/pay-codes`.
   - Accepted the current Pay Code Explorer as `Pass with UI follow-up`.
