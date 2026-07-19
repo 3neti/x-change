@@ -5,11 +5,22 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Dashboard Connected Services Productization
-Status: Slice 1 complete; package dashboard now exposes a six-service read-only overview before operator actions
+Status: Closed; dashboard connected services are scan-first and host-published
 Last updated: 2026-07-19
 
 ## Completed
 
+- Completed Dashboard Connected Services Productization Slice 2 / Closure:
+  - Published package Cockpit assets to the host app.
+  - Confirmed published Cockpit assets match package source.
+  - Verified focused frontend dashboard hydration coverage.
+  - Verified focused backend architecture documentation coverage.
+  - Verified authenticated Dusk browser smoke coverage for the dashboard service overview and activity filters.
+  - Verified the host production frontend build.
+  - Confirmed `/x/cockpit` now shows Audit Trail, Follow-Up Actions, Notifications, Campaigns, Balances, and Execution Evidence as scan-first read-only service cards.
+  - Confirmed no journal writes, action execution, feedback sends, campaign mutation, provider calls, wallet behavior changes, Treasury behavior changes, persistence changes, public API changes, or money movement were added.
+  - Report: `reports/548-dashboard-connected-services-productization-slice-2-closure.md`.
+  - Next recommended wave: continue page-focused Cockpit UI/UX productization, likely Quick Generate result clarity or a concrete connected-service read model integration.
 - Completed Dashboard Connected Services Productization Slice 1:
   - Promoted connected-service readiness into a visible `/x/cockpit` overview above operator actions.
   - Added scan-friendly cards for Audit Trail / x-journal, Follow-Up Actions / x-action, Notifications / x-feedback, Campaigns / x-campaign, Balances / Treasury posture, and Execution Evidence.
