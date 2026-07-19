@@ -116,32 +116,6 @@ const connectedContextSummary = computed(() => [
         helper: 'Read-only x-journal evidence rows shown as audit guidance.',
     },
 ]);
-const channelArtifactSummary = computed(() => [
-    {
-        key: 'channels',
-        label: 'Channels',
-        value: `${distributionChannels.value.length} planned`,
-        helper: 'Status is read-only and owned by x-feedback or host read models.',
-    },
-    {
-        key: 'operator-actions',
-        label: 'Operator Actions',
-        value: `${distributionActions.value.length} blocked`,
-        helper: 'No dispatch action is authorized from Cockpit.',
-    },
-    {
-        key: 'print',
-        label: 'Print Assets',
-        value: `${printTemplates.value.length} preview`,
-        helper: 'Templates are visible, but artifacts are not generated.',
-    },
-    {
-        key: 'share',
-        label: 'Share Assets',
-        value: `${shareAssets.value.length} display`,
-        helper: 'Copy text, QR, and short-link facts remain read-only.',
-    },
-]);
 const manualDistributionChecklist = [
     'Verify the intended recipient outside Cockpit.',
     'Copy the beneficiary claim URL from this page.',
@@ -561,39 +535,21 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
 
                 <div
                     class="mt-4 rounded-xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/60 dark:bg-slate-950/70"
-                    data-testid="cockpit-distribution-channel-artifact-readiness"
+                    data-testid="cockpit-distribution-readiness-panel-guide"
                 >
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
-                                Channel and artifact readiness
+                                Detailed readiness panels
                             </p>
                             <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                                These are read-only planning facts. Cockpit does not send messages, generate QR assets, create short links, or print artifacts from this workspace.
+                                Notification, print, evidence, and share details are grouped below so this summary does not repeat the same counts. Those panels remain read-only and do not send messages, generate QR assets, create short links, or print artifacts from this workspace.
                             </p>
                         </div>
                         <span class="w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200">
-                            no dispatch
+                            details below
                         </span>
                     </div>
-                    <dl class="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
-                        <div
-                            v-for="item in channelArtifactSummary"
-                            :key="item.key"
-                            class="rounded-lg border border-slate-200 p-3 dark:border-slate-800"
-                            data-testid="cockpit-distribution-channel-artifact-readiness-item"
-                        >
-                            <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                                {{ item.label }}
-                            </dt>
-                            <dd class="mt-1 text-base font-semibold text-slate-950 dark:text-slate-50">
-                                {{ item.value }}
-                            </dd>
-                            <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                                {{ item.helper }}
-                            </p>
-                        </div>
-                    </dl>
                 </div>
             </section>
 

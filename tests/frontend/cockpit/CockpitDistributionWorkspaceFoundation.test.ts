@@ -435,7 +435,7 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.find('[data-testid="cockpit-distribution-primary-explorer-link"]').attributes('href')).toBe('/x/cockpit/pay-codes');
     });
 
-    it('summarizes channel and artifact readiness without dispatch controls', () => {
+    it('guides operators to detailed readiness panels without repeating readiness cards', () => {
         const wrapper = mount(DistributionWorkspace, {
             props: {
                 context: { code: 'PC-DIST-001' },
@@ -519,22 +519,15 @@ describe('Cockpit Distribution Workspace foundation', () => {
             },
         });
 
-        const readiness = wrapper.find('[data-testid="cockpit-distribution-channel-artifact-readiness"]');
-        const items = readiness.findAll('[data-testid="cockpit-distribution-channel-artifact-readiness-item"]');
+        const readiness = wrapper.find('[data-testid="cockpit-distribution-readiness-panel-guide"]');
 
         expect(readiness.exists()).toBe(true);
-        expect(readiness.text()).toContain('Channel and artifact readiness');
-        expect(readiness.text()).toContain('no dispatch');
-        expect(readiness.text()).toContain('Channels');
-        expect(readiness.text()).toContain('1 planned');
-        expect(readiness.text()).toContain('Operator Actions');
-        expect(readiness.text()).toContain('1 blocked');
-        expect(readiness.text()).toContain('Print Assets');
-        expect(readiness.text()).toContain('1 preview');
-        expect(readiness.text()).toContain('Share Assets');
-        expect(readiness.text()).toContain('2 display');
-        expect(readiness.text()).toContain('does not send messages');
-        expect(items).toHaveLength(4);
+        expect(readiness.text()).toContain('Detailed readiness panels');
+        expect(readiness.text()).toContain('details below');
+        expect(readiness.text()).toContain('Notification, print, evidence, and share details are grouped below');
+        expect(readiness.text()).toContain('do not send messages');
+        expect(wrapper.find('[data-testid="cockpit-distribution-channel-artifact-readiness"]').exists()).toBe(false);
+        expect(wrapper.findAll('[data-testid="cockpit-distribution-channel-artifact-readiness-item"]')).toHaveLength(0);
     });
 
     it('renders a manual distribution checklist near the primary summary', () => {

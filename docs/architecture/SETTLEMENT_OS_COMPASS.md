@@ -3648,3 +3648,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/572-distribution-workspace-copy-acceptance-slice-3-human-pass.md`.
 - Boundary remains unchanged: human evidence record only; no route behavior, read-model hydration, distribution dispatch, feedback delivery, x-action execution, journal write, campaign mutation, voucher mutation, claim execution, driver execution, provider call, artifact generation, persistence, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next recommended checkpoint: Distribution Workspace Readiness Consolidation to reduce redundant readiness panels, or pick the next real integration wiring wave.
+
+## 2026-07-19 Update — Distribution Workspace Readiness Consolidation — Slice 1
+
+- Started the Distribution Workspace Readiness Consolidation wave.
+- Replaced the repeated `Channel and artifact readiness` four-card grid with a compact `Detailed readiness panels` bridge.
+- The detailed notification, print, status evidence, and share panels remain below the primary summary.
+- UI/report: `../ui-cockpit/reports/573-distribution-workspace-readiness-consolidation-slice-1.md`.
+- Boundary remains unchanged: presentation-only consolidation; no route behavior, read-model hydration, distribution dispatch, feedback delivery, x-action execution, journal write, campaign mutation, voucher mutation, claim execution, driver execution, provider call, artifact generation, persistence, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+- Next checkpoint: publish host assets and close with focused frontend, drift, Dusk, and build verification.
