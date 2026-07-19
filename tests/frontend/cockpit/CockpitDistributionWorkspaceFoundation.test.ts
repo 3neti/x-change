@@ -214,6 +214,21 @@ describe('Cockpit Distribution Workspace foundation', () => {
             ],
             analytics: [
                 {
+                    key: 'ERN-COCKPIT-DISTRIBUTION-JOURNAL-001',
+                    label: 'Journal: distribution.audit.recorded',
+                    status: 'available',
+                    description: 'Distribution audit guidance from x-journal. · 2026-07-19T10:00:00Z · journal-evidence-summary-only',
+                    read_only: true,
+                    available: true,
+                    source: 'x-journal',
+                    metadata: {
+                        event_type: 'distribution.audit.recorded',
+                        payload_policy: 'journal-evidence-summary-only',
+                        evidence_only: true,
+                        writes_journal: false,
+                    },
+                },
+                {
                     key: 'delivery-state',
                     label: 'Delivery state',
                     status: 'not_wired',
@@ -282,6 +297,13 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).toContain('true');
         expect(wrapper.text()).toContain('Receipt card');
         expect(wrapper.text()).toContain('Delivery state');
+        expect(wrapper.text()).toContain('Journal: distribution.audit.recorded');
+        expect(wrapper.text()).toContain('Distribution audit guidance from x-journal');
+        expect(wrapper.text()).toContain('Event Type');
+        expect(wrapper.text()).toContain('Payload Policy');
+        expect(wrapper.text()).toContain('Evidence Only');
+        expect(wrapper.text()).toContain('Writes Journal');
+        expect(wrapper.text()).toContain('journal-evidence-summary-only');
         expect(wrapper.text()).toContain('Review Manual Distribution');
         expect(wrapper.text()).toContain('available');
         expect(wrapper.text()).toContain('Target Route');

@@ -8,6 +8,33 @@ const props = defineProps<{
 function metricSummary(): string {
     return `${props.metrics.length} read-only facts`;
 }
+
+function stringValue(value: unknown): string | null {
+    if (typeof value === 'string' && value.trim() !== '') {
+        return value.trim();
+    }
+
+    if (typeof value === 'number' || typeof value === 'boolean') {
+        return String(value);
+    }
+
+    return null;
+}
+
+function metricMetadata(metric: CockpitDistributionMetric): Array<{ label: string; value: string }> {
+    const metadata = metric.metadata ?? {};
+    const eventType = stringValue(metadata.event_type);
+    const payloadPolicy = stringValue(metadata.payload_policy);
+    const evidenceOnly = stringValue(metadata.evidence_only);
+    const writesJournal = stringValue(metadata.writes_journal);
+
+    return [
+        eventType === null ? null : { label: 'Event Type', value: eventType },
+        payloadPolicy === null ? null : { label: 'Payload Policy', value: payloadPolicy },
+        evidenceOnly === null ? null : { label: 'Evidence Only', value: evidenceOnly },
+        writesJournal === null ? null : { label: 'Writes Journal', value: writesJournal },
+    ].filter((item): item is { label: string; value: string } => item !== null);
+}
 </script>
 
 <template>
@@ -57,6 +84,23 @@ function metricSummary(): string {
                     <p class="mt-2 leading-5">
                         {{ metric.helper }}
                     </p>
+                    <dl
+                        v-if="metricMetadata(metric).length > 0"
+                        class="mt-3 grid gap-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-950/50 sm:grid-cols-2"
+                        data-testid="cockpit-distribution-metric-metadata"
+                    >
+                        <div
+                            v-for="item in metricMetadata(metric)"
+                            :key="`${metric.key}-${item.label}`"
+                        >
+                            <dt class="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                {{ item.label }}
+                            </dt>
+                            <dd class="mt-1 break-words text-slate-700 dark:text-slate-200">
+                                {{ item.value }}
+                            </dd>
+                        </div>
+                    </dl>
                 </details>
             </article>
         </div>
