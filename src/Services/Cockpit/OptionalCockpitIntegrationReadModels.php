@@ -107,7 +107,7 @@ class OptionalCockpitIntegrationReadModels
 
             return new CockpitFeedbackReadModelData(
                 status: 'available',
-                deliveries: $this->listValue($payload['records'] ?? []),
+                deliveries: $this->feedbackDeliveries($payload),
                 redactions: [
                     'payloads' => 'communication-delivery-summary-only',
                     'source' => 'x-feedback',
@@ -760,6 +760,33 @@ class OptionalCockpitIntegrationReadModels
         return array_filter([
             'correlation_id' => $query->correlationId ?: $query->code,
         ], fn (?string $value): bool => $value !== null && trim($value) !== '');
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<int, array<string, mixed>>
+     */
+    private function feedbackDeliveries(array $payload): array
+    {
+        return collect($this->listValue($payload['records'] ?? []))
+            ->map(fn (array $record): array => array_filter([
+                'delivery_id' => $record['delivery_id'] ?? null,
+                'intent_key' => $record['intent_key'] ?? null,
+                'channel' => $record['channel'] ?? null,
+                'status' => $record['status'] ?? null,
+                'attempt_count' => $record['attempt_count'] ?? null,
+                'max_attempts' => $record['max_attempts'] ?? null,
+                'provider_status' => $record['provider_status'] ?? null,
+                'correlation_id' => $record['correlation_id'] ?? null,
+                'last_attempted_at' => $record['last_attempted_at'] ?? null,
+                'delivered_at' => $record['delivered_at'] ?? null,
+                'failed_at' => $record['failed_at'] ?? null,
+                'expires_at' => $record['expires_at'] ?? null,
+                'in_app_state' => $record['in_app_state'] ?? null,
+                'meta' => $this->arrayValue($record['meta'] ?? []),
+            ], fn (mixed $value): bool => $value !== null))
+            ->values()
+            ->all();
     }
 
     private function journalUnavailable(string $reason, ?Throwable $exception = null): CockpitJournalReadModelData
