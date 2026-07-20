@@ -5,11 +5,23 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Pay Code Explorer Top Control Strip Simplification
-Status: In progress
+Status: Closed / pending human inspection and Dusk rerun
 Last updated: 2026-07-20
 
 ## Completed
 
+- Completed Pay Code Explorer Top Control Strip Simplification Slice 2 / Closure:
+  - Published package Cockpit assets to the host app.
+  - Confirmed the published host Pay Code Explorer includes the `Page details` disclosure.
+  - Confirmed row action guidance, list totals, connected service badges, and connected service readiness remain available under the disclosure.
+  - Verified focused Pay Code Explorer frontend hydration coverage.
+  - Verified backend architecture documentation and package/host asset guards.
+  - Verified x-change asset drift check.
+  - Verified the host production frontend build.
+  - Kept Dusk browser visual acceptance pending because this sandbox has recently blocked ChromeDriver port binding for this page family.
+  - Confirmed no routes, controllers, backend queries, read-model hydration, campaign context propagation, row action destinations, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, artifact generation, or money movement were changed.
+  - Report: `reports/599-pay-code-explorer-top-control-strip-simplification-slice-2-closure.md`.
+  - Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, rerun Dusk from a shell where ChromeDriver can bind to port `9515`, then continue page-focused Cockpit polish or pick the next real integration wiring wave.
 - Started Pay Code Explorer Top Control Strip Simplification Slice 1:
   - Added a single `Page details` disclosure for secondary Explorer metadata.
   - Moved row action guidance, list totals, connected service badges, and connected service readiness under that disclosure.
