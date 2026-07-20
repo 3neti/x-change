@@ -4,12 +4,20 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Pay Code Explorer Results Header Compression
-Status: Closed / pending human inspection and Dusk rerun
+Current slice: Pay Code Explorer Shell Header Compression
+Status: In progress
 Last updated: 2026-07-20
 
 ## Completed
 
+- Started Pay Code Explorer Shell Header Compression Slice 1:
+  - Reduced the shell header padding.
+  - Converted the read-model, records, and payload-policy facts into compact pill facts.
+  - Kept the page title and read-only boundary copy visible.
+  - Preserved the primary summary, search/filter behavior, pagination, row actions, route links, and read-only boundaries.
+  - Confirmed no routes, controllers, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, artifact generation, or money movement were changed.
+  - Report: `reports/606-pay-code-explorer-shell-header-compression-slice-1.md`.
+  - Next recommended checkpoint: Pay Code Explorer Shell Header Compression Slice 2 — host publish / asset drift / browser / build closure.
 - Completed Pay Code Explorer Results Header Compression Slice 2 / Closure:
   - Published package Cockpit assets to the host app.
   - Confirmed the host Pay Code Explorer results header uses tighter padding and a pill-style density metric strip.

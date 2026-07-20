@@ -3958,3 +3958,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/605-pay-code-explorer-results-header-compression-slice-2-closure.md`.
 - Boundary remains unchanged: presentation-only results header compression; no route behavior, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, rerun Dusk from a shell where ChromeDriver can bind to port `9515`, then choose the next page-focused Cockpit target or a real integration wiring wave.
+
+## 2026-07-20 Update — Pay Code Explorer Shell Header Compression — Slice 1
+
+- Started the Pay Code Explorer Shell Header Compression wave.
+- Pay Code Explorer shell header now uses tighter padding and compact pill facts for read-model status, record count, and payload policy.
+- The page title, read-only boundary copy, primary summary, search/filter behavior, pagination, row actions, route links, and read-only boundaries remain available.
+- UI/report: `../ui-cockpit/reports/606-pay-code-explorer-shell-header-compression-slice-1.md`.
+- Boundary remains unchanged: presentation-only shell header compression; no route behavior, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next checkpoint: host publish, asset drift, authenticated browser smoke if available, build, and closure.

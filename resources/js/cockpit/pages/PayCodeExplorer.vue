@@ -517,21 +517,27 @@ function integrationBadge(
 <template>
     <CockpitLayout active-navigation="pay-codes">
         <section class="space-y-6" data-testid="cockpit-pay-code-explorer-shell">
-            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                    Pay Code operations
-                </p>
-                <h2 class="mt-2 text-2xl font-semibold text-slate-950 dark:text-slate-50">
-                    Pay Code Explorer
-                </h2>
-                <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    Find and inspect Pay Codes using sanitized list facts. This
-                    screen remains read-only: it does not mutate vouchers,
-                    execute drivers, approve claims, send feedback, write
-                    journal entries, call providers, or move money.
-                </p>
-                <dl class="mt-5 grid gap-3 text-sm sm:grid-cols-3">
-                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
+            <div
+                class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-pay-code-explorer-shell-header"
+            >
+                <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                            Pay Code operations
+                        </p>
+                        <h2 class="mt-1 text-xl font-semibold text-slate-950 dark:text-slate-50">
+                            Pay Code Explorer
+                        </h2>
+                        <p class="mt-2 max-w-4xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                            Find and inspect Pay Codes using sanitized list facts. This screen remains read-only: it does not mutate vouchers, execute drivers, approve claims, send feedback, write journal entries, call providers, or move money.
+                        </p>
+                    </div>
+                    <dl
+                        class="grid w-full gap-2 text-sm sm:grid-cols-3 xl:w-[32rem]"
+                        data-testid="cockpit-pay-code-explorer-shell-facts"
+                    >
+                        <div class="rounded-full bg-slate-50 px-3 py-2 dark:bg-slate-950">
                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Read model
                         </dt>
@@ -539,7 +545,7 @@ function integrationBadge(
                             {{ status }}
                         </dd>
                     </div>
-                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
+                        <div class="rounded-full bg-slate-50 px-3 py-2 dark:bg-slate-950">
                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Records
                         </dt>
@@ -547,7 +553,7 @@ function integrationBadge(
                             {{ records.length }}
                         </dd>
                     </div>
-                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
+                        <div class="rounded-full bg-slate-50 px-3 py-2 dark:bg-slate-950">
                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Payload policy
                         </dt>
@@ -555,7 +561,8 @@ function integrationBadge(
                             {{ payloadPolicy }}
                         </dd>
                     </div>
-                </dl>
+                    </dl>
+                </div>
             </div>
 
             <section

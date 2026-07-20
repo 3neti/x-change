@@ -225,6 +225,30 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(summaryItems[0].find('p').classes()).toContain('line-clamp-2');
     });
 
+    it('renders the explorer shell header as a compact page intro', () => {
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: payCodesReadModel,
+            },
+        });
+
+        const header = wrapper.find('[data-testid="cockpit-pay-code-explorer-shell-header"]');
+        const facts = wrapper.find('[data-testid="cockpit-pay-code-explorer-shell-facts"]');
+
+        expect(header.exists()).toBe(true);
+        expect(header.classes()).toContain('p-4');
+        expect(header.text()).toContain('Pay Code operations');
+        expect(header.text()).toContain('Find and inspect Pay Codes using sanitized list facts.');
+        expect(header.text()).toContain('does not mutate vouchers');
+        expect(facts.exists()).toBe(true);
+        expect(facts.classes()).toContain('xl:w-[32rem]');
+        expect(facts.findAll('div')).toHaveLength(3);
+        expect(facts.find('div').classes()).toContain('rounded-full');
+        expect(facts.text()).toContain('Read model');
+        expect(facts.text()).toContain('Records');
+        expect(facts.text()).toContain('Payload policy');
+    });
+
     it('renders a primary operator list summary with safe navigation actions', () => {
         const wrapper = mount(PayCodeExplorer, {
             props: {
