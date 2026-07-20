@@ -13,27 +13,24 @@ const visibleFilterCount = computed(() => props.filters.length);
 
 <template>
     <details
-        class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+        class="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
         data-testid="cockpit-pay-code-filter-builder"
     >
         <summary class="cursor-pointer list-none">
-            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                    <h3 class="text-sm font-semibold text-slate-950 dark:text-slate-50">
                         Filter Details
-                    </p>
-                    <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                        Read-only query criteria
                     </h3>
-                    <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                        Open this panel to inspect all filter metadata. Filtering uses normal GET navigation and only changes what the operator sees.
+                    <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                        Read-only query criteria.
                     </p>
                 </div>
                 <dl
-                    class="grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-2 text-center dark:bg-slate-950"
+                    class="grid w-full grid-cols-3 gap-1.5 rounded-full bg-slate-50 p-1.5 text-center sm:w-72 dark:bg-slate-950"
                     data-testid="cockpit-pay-code-filter-density-summary"
                 >
-                    <div class="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                    <div class="rounded-full bg-white px-3 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
                         <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Active
                         </dt>
@@ -41,7 +38,7 @@ const visibleFilterCount = computed(() => props.filters.length);
                             {{ activeFilterCount }}
                         </dd>
                     </div>
-                    <div class="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                    <div class="rounded-full bg-white px-3 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
                         <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Context
                         </dt>
@@ -49,7 +46,7 @@ const visibleFilterCount = computed(() => props.filters.length);
                             {{ contextFilterCount }}
                         </dd>
                     </div>
-                    <div class="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                    <div class="rounded-full bg-white px-3 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
                         <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Total
                         </dt>
@@ -61,11 +58,15 @@ const visibleFilterCount = computed(() => props.filters.length);
             </div>
         </summary>
 
-        <div class="mt-5 grid gap-3 md:grid-cols-3">
+        <p class="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
+            Filtering uses normal GET navigation and only changes what the operator sees.
+        </p>
+
+        <div class="mt-3 grid gap-2 md:grid-cols-3">
             <article
                 v-for="filter in filters"
                 :key="filter.key"
-                class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-950/60"
+                class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-950/60"
                 data-testid="cockpit-pay-code-filter"
             >
                 <p class="text-sm font-semibold text-slate-950 dark:text-slate-50">

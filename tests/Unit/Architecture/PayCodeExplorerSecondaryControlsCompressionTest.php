@@ -21,3 +21,22 @@ it('documents pay code explorer secondary controls compression slice 1', functio
         ->and($frontendTest)->toContain('Read-only rules, totals, and connected-service context.')
         ->and($frontendTest)->toContain('py-3');
 });
+
+it('documents pay code explorer secondary controls compression slice 2', function (): void {
+    $packageRoot = dirname(__DIR__, 3);
+
+    $report = file_get_contents($packageRoot.'/docs/ui-cockpit/reports/614-pay-code-explorer-secondary-controls-compression-slice-2.md');
+    $filterBuilder = file_get_contents($packageRoot.'/resources/js/cockpit/components/CockpitPayCodeFilterBuilder.vue');
+    $frontendTest = file_get_contents($packageRoot.'/tests/frontend/cockpit/CockpitPayCodeExplorerFoundation.test.ts');
+
+    expect($report)
+        ->toContain('Pay Code Explorer Secondary Controls Compression — Slice 2')
+        ->toContain('compact Filter Details disclosure')
+        ->toContain('Presentation-only filter detail compression')
+        ->and($filterBuilder)->toContain('Read-only query criteria.')
+        ->and($filterBuilder)->toContain('rounded-full bg-slate-50 p-1.5')
+        ->and($filterBuilder)->toContain('px-4 py-3')
+        ->and($filterBuilder)->toContain('Filtering uses normal GET navigation and only changes what the operator sees.')
+        ->and($frontendTest)->toContain('rounded-full')
+        ->and($frontendTest)->toContain('py-3');
+});

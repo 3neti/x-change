@@ -44,7 +44,9 @@ describe('Cockpit Pay Code Explorer foundation', () => {
         expect(wrapper.text()).toContain(
             'Filtering uses normal GET navigation',
         );
+        expect(wrapper.classes()).toContain('py-3');
         expect(wrapper.find('[data-testid="cockpit-pay-code-filter-density-summary"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="cockpit-pay-code-filter-density-summary"]').classes()).toContain('rounded-full');
         expect(wrapper.text()).toContain('Active');
         expect(wrapper.text()).toContain('Context');
         expect(wrapper.text()).toContain('Total');
