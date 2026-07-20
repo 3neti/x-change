@@ -4,12 +4,20 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Pay Code Explorer Top Control Strip Simplification
-Status: Closed / pending human inspection and Dusk rerun
+Current slice: Pay Code Explorer Search Toolbar Density Polish
+Status: In progress
 Last updated: 2026-07-20
 
 ## Completed
 
+- Started Pay Code Explorer Search Toolbar Density Polish Slice 1:
+  - Converted the search section into a compact toolbar with title, active-filter summary, search input, status selector, submit action, and clear action.
+  - Shortened visible submit/clear labels to `Apply` and `Clear`.
+  - Standardized search controls to stable `h-10` rounded controls.
+  - Preserved hidden campaign/context fields, active filter summary, read-only GET form behavior, and clear-filter destination.
+  - Confirmed no routes, controllers, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, artifact generation, or money movement were changed.
+  - Report: `reports/600-pay-code-explorer-search-toolbar-density-polish-slice-1.md`.
+  - Next recommended checkpoint: Pay Code Explorer Search Toolbar Density Polish Slice 2 — host publish / asset drift / browser / build closure.
 - Completed Pay Code Explorer Top Control Strip Simplification Slice 2 / Closure:
   - Published package Cockpit assets to the host app.
   - Confirmed the published host Pay Code Explorer includes the `Page details` disclosure.

@@ -146,14 +146,25 @@ describe('Cockpit Pay Code Explorer hydration', () => {
 
         const search = wrapper.find('[data-testid="cockpit-pay-code-search-input"]');
         const status = wrapper.find('[data-testid="cockpit-pay-code-status-filter"]');
+        const submit = wrapper.find('[data-testid="cockpit-pay-code-filter-submit"]');
+        const activeSummary = wrapper.find('[data-testid="cockpit-pay-code-active-filter-summary"]');
 
         expect(search.element).toHaveProperty('value', 'PC-HYDRATED');
+        expect(search.classes()).toContain('h-10');
+        expect(search.classes()).toContain('rounded-full');
         expect(status.element).toHaveProperty('value', 'redeemed');
+        expect(status.classes()).toContain('h-10');
+        expect(status.classes()).toContain('rounded-full');
+        expect(submit.text()).toBe('Apply');
+        expect(submit.classes()).toContain('h-10');
+        expect(activeSummary.text()).toContain('Filters: search “PC-HYDRATED” · status redeemed');
         expect(wrapper.find('form').attributes('method')).toBe('get');
         expect(wrapper.find('form').attributes('action')).toBe('/x/cockpit/pay-codes');
         expect(wrapper.text()).toContain('Filters: search “PC-HYDRATED” · status redeemed');
         expect(wrapper.text()).toContain('Filters use read-only GET navigation.');
+        expect(wrapper.text()).toContain('Find Pay Codes');
         expect(wrapper.find('[data-testid="cockpit-pay-code-clear-filters"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="cockpit-pay-code-clear-filters"]').text()).toBe('Clear');
     });
 
     it('renders pay code explorer functional parity stats from the read model', () => {
