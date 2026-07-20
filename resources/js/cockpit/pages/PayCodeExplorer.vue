@@ -67,7 +67,7 @@ const primarySummaryItems = computed(() => [
     },
     {
         key: 'attention',
-        label: 'Needs Attention',
+        label: 'Attention',
         value: String(attentionCount.value),
         helper: 'Expired, pending, failed, or awaiting approval.',
     },
@@ -538,8 +538,8 @@ function integrationBadge(
                         <h2 class="mt-1 text-xl font-semibold text-slate-950 dark:text-slate-50">
                             Pay Code Explorer
                         </h2>
-                        <p class="mt-2 max-w-4xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                            Find and inspect Pay Codes using sanitized list facts. This screen remains read-only: it does not mutate vouchers, execute drivers, approve claims, send feedback, write journal entries, call providers, or move money.
+                        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                            Search, filter, and open read-only Pay Code workspaces.
                         </p>
                     </div>
                     <div class="flex flex-wrap gap-2">
@@ -566,42 +566,33 @@ function integrationBadge(
             </div>
 
             <section
-                class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm dark:border-emerald-900/70 dark:bg-emerald-950/40"
+                class="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 shadow-sm dark:border-emerald-900/70 dark:bg-emerald-950/40"
                 data-testid="cockpit-pay-code-explorer-primary-summary"
             >
-                <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
-                            Voucher status summary
-                        </p>
-                        <h3 class="mt-2 text-xl font-semibold text-slate-950 dark:text-slate-50">
-                            Focus the list by lifecycle state
-                        </h3>
-                        <p class="mt-1 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                            Start with active, redeemed, expired, or attention counts, then use Search to narrow the voucher list.
-                        </p>
-                    </div>
-                </div>
-
-                <dl class="mt-4 grid gap-2 text-sm sm:grid-cols-2 xl:grid-cols-5">
+                <dl class="grid gap-2 text-sm sm:grid-cols-2 xl:grid-cols-5" data-testid="cockpit-pay-code-explorer-status-pills">
                     <div
                         v-for="item in primarySummaryItems"
                         :key="item.key"
-                        class="rounded-xl bg-white/80 p-3 dark:bg-slate-950/70"
+                        class="flex min-h-14 items-center justify-between gap-3 rounded-full bg-white/85 px-4 py-2 ring-1 ring-emerald-100 dark:bg-slate-950/70 dark:ring-emerald-900/70"
                         data-testid="cockpit-pay-code-explorer-primary-summary-item"
                     >
-                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        <dt class="truncate text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             {{ item.label }}
                         </dt>
-                        <dd class="mt-1 text-base font-semibold text-slate-950 dark:text-slate-50">
+                        <dd class="font-mono text-base font-semibold tabular-nums text-slate-950 dark:text-slate-50">
                             {{ item.value }}
                         </dd>
-                        <p class="mt-1 line-clamp-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                            {{ item.helper }}
-                        </p>
                     </div>
                 </dl>
 
+                <CockpitPayCodeSearchBar
+                    :clear-href="campaignExplorerBaseHref"
+                    :filters="readModel?.filters ?? []"
+                    :hidden-fields="campaignExplorerContextParams"
+                    :query="query"
+                    :status-filter="statusFilter"
+                    class="mt-3"
+                />
             </section>
 
             <section
@@ -697,6 +688,7 @@ function integrationBadge(
                 </summary>
                 <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
                     Open this panel for row-action rules, list totals, and connected-service readiness. The main scan path above stays focused on search and results.
+                    This Explorer does not mutate vouchers, execute drivers, approve claims, send feedback, write journal entries, call providers, or move money.
                 </p>
 
                 <div class="mt-4 grid gap-4">
@@ -948,13 +940,6 @@ function integrationBadge(
                 </div>
             </div>
 
-            <CockpitPayCodeSearchBar
-                :clear-href="campaignExplorerBaseHref"
-                :filters="readModel?.filters ?? []"
-                :hidden-fields="campaignExplorerContextParams"
-                :query="query"
-                :status-filter="statusFilter"
-            />
             <CockpitPayCodeFilterBuilder :filters="filters" />
             <CockpitPayCodeResultsTable
                 :records="records"

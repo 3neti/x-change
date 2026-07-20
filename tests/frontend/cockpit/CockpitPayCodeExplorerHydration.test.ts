@@ -127,7 +127,7 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Find and inspect Pay Codes');
+        expect(wrapper.text()).toContain('Search, filter, and open read-only Pay Code workspaces.');
         expect(wrapper.text()).toContain('PC-HYDRATED-001');
         expect(wrapper.text()).toContain('PC-HYDRATED-002');
         expect(wrapper.text()).toContain('₱1,500.75');
@@ -150,19 +150,18 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         const activeSummary = wrapper.find('[data-testid="cockpit-pay-code-active-filter-summary"]');
 
         expect(search.element).toHaveProperty('value', 'PC-HYDRATED');
-        expect(search.classes()).toContain('h-10');
+        expect(search.classes()).toContain('h-9');
         expect(search.classes()).toContain('rounded-full');
         expect(status.element).toHaveProperty('value', 'redeemed');
-        expect(status.classes()).toContain('h-10');
+        expect(status.classes()).toContain('h-9');
         expect(status.classes()).toContain('rounded-full');
         expect(submit.text()).toBe('Search');
-        expect(submit.classes()).toContain('h-10');
+        expect(submit.classes()).toContain('h-9');
         expect(activeSummary.text()).toContain('Filters: search “PC-HYDRATED” · status redeemed');
         expect(wrapper.find('form').attributes('method')).toBe('get');
         expect(wrapper.find('form').attributes('action')).toBe('/x/cockpit/pay-codes');
         expect(wrapper.text()).toContain('Filters: search “PC-HYDRATED” · status redeemed');
-        expect(wrapper.text()).toContain('Search and filters only change this list.');
-        expect(wrapper.text()).toContain('Find Pay Codes');
+        expect(wrapper.text()).toContain('Search Pay Codes');
         expect(wrapper.find('[data-testid="cockpit-pay-code-clear-filters"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="cockpit-pay-code-clear-filters"]').text()).toBe('Clear');
     });
@@ -213,16 +212,18 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         const currentSearch = wrapper.find('[data-testid="cockpit-pay-code-explorer-current-search-disclosure"]');
         const summaryItems = summary.findAll('[data-testid="cockpit-pay-code-explorer-primary-summary-item"]');
 
-        expect(summary.classes()).toContain('p-4');
-        expect(summary.text()).toContain('Voucher status summary');
-        expect(summary.text()).toContain('Focus the list by lifecycle state');
+        expect(summary.classes()).toContain('p-3');
+        expect(summary.text()).toContain('Search Pay Codes');
+        expect(summary.text()).not.toContain('Voucher status summary');
+        expect(summary.text()).not.toContain('Focus the list by lifecycle state');
         expect(currentSearch.exists()).toBe(true);
         expect(currentSearch.element.tagName.toLowerCase()).toBe('details');
         expect(currentSearch.find('summary').text()).toContain('Current search and read model');
         expect(summaryItems).toHaveLength(5);
-        expect(summaryItems[0].classes()).toContain('p-3');
+        expect(summary.find('[data-testid="cockpit-pay-code-explorer-status-pills"]').exists()).toBe(true);
+        expect(summaryItems[0].classes()).toContain('rounded-full');
         expect(summaryItems[0].find('dd').classes()).toContain('text-base');
-        expect(summaryItems[0].find('p').classes()).toContain('line-clamp-2');
+        expect(summaryItems[0].find('p').exists()).toBe(false);
     });
 
     it('renders the explorer shell header as a compact page intro', () => {
@@ -237,8 +238,8 @@ describe('Cockpit Pay Code Explorer hydration', () => {
 
         expect(header.exists()).toBe(true);
         expect(header.text()).toContain('Pay Code operations');
-        expect(header.text()).toContain('Find and inspect Pay Codes using sanitized list facts.');
-        expect(header.text()).toContain('does not mutate vouchers');
+        expect(header.text()).toContain('Search, filter, and open read-only Pay Code workspaces.');
+        expect(header.text()).not.toContain('does not mutate vouchers');
         expect(header.text()).toContain('Quick Generate');
         expect(header.text()).toContain('Read-only');
         expect(facts.exists()).toBe(true);
@@ -261,14 +262,13 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         const items = summary.findAll('[data-testid="cockpit-pay-code-explorer-primary-summary-item"]');
 
         expect(summary.exists()).toBe(true);
-        expect(summary.text()).toContain('Voucher status summary');
-        expect(summary.text()).toContain('Focus the list by lifecycle state');
+        expect(summary.text()).toContain('Search Pay Codes');
         expect(summary.text()).toContain('Total');
         expect(summary.text()).toContain('4');
         expect(summary.text()).toContain('Active');
         expect(summary.text()).toContain('Redeemed');
         expect(summary.text()).toContain('Expired');
-        expect(summary.text()).toContain('Needs Attention');
+        expect(summary.text()).toContain('Attention');
         expect(summary.text()).toContain('1');
         expect(wrapper.text()).toContain('Payload policy');
         expect(wrapper.text()).toContain('sanitized-list-only');
@@ -609,7 +609,7 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(wrapper.text()).toContain('60');
         expect(wrapper.text()).toContain('Disabled');
         expect(wrapper.text()).toContain('30');
-        expect(wrapper.text()).toContain('Search and filters only change this list.');
+        expect(wrapper.text()).toContain('Search Pay Codes');
         expect(wrapper.text()).not.toContain('provider_payload');
         expect(wrapper.text()).not.toContain('raw_payload');
 

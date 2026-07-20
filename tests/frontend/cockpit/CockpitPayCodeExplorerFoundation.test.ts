@@ -25,7 +25,8 @@ describe('Cockpit Pay Code Explorer foundation', () => {
         expect(input.element).toHaveProperty('readOnly', false);
         expect(input.element).toHaveProperty('value', 'PC-READY');
         expect(wrapper.find('form').exists()).toBe(true);
-        expect(wrapper.text()).toContain('Search and filters only change this list.');
+        expect(wrapper.text()).toContain('Search Pay Codes');
+        expect(input.classes()).toContain('h-9');
 
         expect(wrapper.find('[type="submit"]').exists()).toBe(true);
     });
@@ -112,8 +113,6 @@ describe('Cockpit Pay Code Explorer foundation', () => {
             'Pay Codes',
         );
         expect(wrapper.text()).toContain('does not mutate vouchers');
-        expect(wrapper.text()).toContain('execute drivers');
-        expect(wrapper.text()).toContain('approve claims');
         expect(wrapper.text()).toContain('send feedback');
         expect(wrapper.text()).toContain('write journal entries');
         expect(wrapper.text()).toContain('move money');

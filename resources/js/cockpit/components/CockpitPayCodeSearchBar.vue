@@ -42,16 +42,13 @@ const activeSummary = computed(() => {
 
 <template>
     <section
-        class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+        class="rounded-xl border border-emerald-100 bg-white/90 p-3 dark:border-emerald-900/70 dark:bg-slate-950/70"
         data-testid="cockpit-pay-code-search-bar"
     >
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                    Search
-                </p>
-                <h3 class="mt-1 text-base font-semibold text-slate-950 dark:text-slate-50">
-                    Find Pay Codes
+                <h3 class="text-sm font-semibold text-slate-950 dark:text-slate-50">
+                    Search Pay Codes
                 </h3>
             </div>
             <span
@@ -61,7 +58,7 @@ const activeSummary = computed(() => {
                 {{ activeSummary }}
             </span>
         </div>
-        <form action="/x/cockpit/pay-codes" class="mt-4 grid gap-2 lg:grid-cols-[minmax(0,1fr)_12rem_auto_auto] lg:items-center" method="get">
+        <form action="/x/cockpit/pay-codes" class="mt-3 grid gap-2 lg:grid-cols-[minmax(0,1fr)_12rem_auto_auto] lg:items-center" method="get">
             <input
                 v-for="field in hiddenFields ?? []"
                 :key="field.name"
@@ -77,7 +74,7 @@ const activeSummary = computed(() => {
                     name="search"
                     type="search"
                     placeholder="Search by code, recipient, amount, campaign, or status..."
-                    class="h-10 w-full rounded-full border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:focus:border-emerald-500 dark:focus:ring-emerald-900/60"
+                    class="h-9 w-full rounded-full border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:focus:border-emerald-500 dark:focus:ring-emerald-900/60"
                     data-testid="cockpit-pay-code-search-input"
                 />
             </label>
@@ -86,7 +83,7 @@ const activeSummary = computed(() => {
                 <select
                     :value="statusFilter ?? 'all'"
                     name="status"
-                    class="h-10 w-full rounded-full border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:focus:border-emerald-500 dark:focus:ring-emerald-900/60"
+                    class="h-9 w-full rounded-full border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:focus:border-emerald-500 dark:focus:ring-emerald-900/60"
                     data-testid="cockpit-pay-code-status-filter"
                 >
                     <option
@@ -101,7 +98,7 @@ const activeSummary = computed(() => {
             </label>
             <button
                 type="submit"
-                class="inline-flex h-10 items-center justify-center rounded-full border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                class="inline-flex h-9 items-center justify-center rounded-full border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                 data-testid="cockpit-pay-code-filter-submit"
             >
                 Search
@@ -109,14 +106,11 @@ const activeSummary = computed(() => {
             <a
                 v-if="query || statusFilter"
                 :href="clearHref ?? '/x/cockpit/pay-codes'"
-                class="inline-flex h-10 items-center justify-center rounded-full border border-slate-200 px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                class="inline-flex h-9 items-center justify-center rounded-full border border-slate-200 px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                 data-testid="cockpit-pay-code-clear-filters"
             >
                 Clear
             </a>
         </form>
-        <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
-            Search and filters only change this list.
-        </p>
     </section>
 </template>
