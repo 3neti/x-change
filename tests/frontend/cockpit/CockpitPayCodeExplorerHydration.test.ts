@@ -308,6 +308,26 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(mobileStatusBadges[2].text()).toBe('Awaiting Approval');
     });
 
+    it('renders scan-friendly amount values without mutating amount facts', () => {
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: payCodesReadModel,
+            },
+        });
+
+        const desktopAmounts = wrapper.findAll('[data-testid="cockpit-pay-code-amount"]');
+        const mobileAmounts = wrapper.findAll('[data-testid="cockpit-pay-code-mobile-amount"]');
+
+        expect(desktopAmounts).toHaveLength(2);
+        expect(desktopAmounts[0].text()).toBe('₱1,500.75');
+        expect(desktopAmounts[0].classes()).toContain('text-right');
+        expect(desktopAmounts[0].classes()).toContain('font-mono');
+        expect(desktopAmounts[0].classes()).toContain('tabular-nums');
+        expect(mobileAmounts[0].text()).toBe('₱1,500.75');
+        expect(mobileAmounts[0].classes()).toContain('font-mono');
+        expect(mobileAmounts[0].classes()).toContain('tabular-nums');
+    });
+
     it('summarizes pay code result density before the rows', () => {
         const wrapper = mount(PayCodeExplorer, {
             props: {

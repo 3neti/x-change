@@ -323,7 +323,10 @@ function statusBadgeClass(status: string): string {
                         <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Amount
                         </dt>
-                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                        <dd
+                            class="mt-1 font-mono font-semibold tabular-nums text-slate-950 dark:text-slate-50"
+                            data-testid="cockpit-pay-code-mobile-amount"
+                        >
                             {{ record.amount }}
                         </dd>
                     </div>
@@ -373,7 +376,7 @@ function statusBadgeClass(status: string): string {
                     <tr>
                         <th class="px-5 py-3">Pay Code</th>
                         <th class="px-5 py-3">Template</th>
-                        <th class="px-5 py-3">Amount</th>
+                        <th class="px-5 py-3 text-right">Amount</th>
                         <th class="px-5 py-3">Status</th>
                         <th class="px-5 py-3">Owner</th>
                         <th class="px-5 py-3">Last Activity</th>
@@ -392,7 +395,10 @@ function statusBadgeClass(status: string): string {
                         <td class="px-5 py-4 text-slate-700 dark:text-slate-200">
                             {{ record.template }}
                         </td>
-                        <td class="px-5 py-4 text-slate-700 dark:text-slate-200">
+                        <td
+                            class="px-5 py-4 text-right font-mono tabular-nums text-slate-700 dark:text-slate-200"
+                            data-testid="cockpit-pay-code-amount"
+                        >
                             {{ record.amount }}
                         </td>
                         <td class="px-5 py-4">

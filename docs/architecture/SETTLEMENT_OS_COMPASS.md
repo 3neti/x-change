@@ -3820,3 +3820,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/591-pay-code-explorer-status-badge-polish-slice-2-closure.md`.
 - Boundary remains unchanged: presentation-only status badge polish; no route behavior, backend queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, then choose the next page-focused Cockpit target or a real integration wiring wave.
+
+## 2026-07-20 Update — Pay Code Explorer Amount Scan Polish — Slice 1
+
+- Started the Pay Code Explorer Amount Scan Polish wave.
+- Pay Code Explorer desktop amount values now right-align and use monospaced tabular numeric styling.
+- Mobile amount values now use the same tabular numeric treatment while preserving the sanitized formatted amount string.
+- UI/report: `../ui-cockpit/reports/592-pay-code-explorer-amount-scan-polish-slice-1.md`.
+- Boundary remains unchanged: presentation-only amount scan polish; no route behavior, backend queries, read-model hydration, amount calculation, pricing, funding, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next checkpoint: host publish, asset drift, authenticated browser smoke, build, and closure.

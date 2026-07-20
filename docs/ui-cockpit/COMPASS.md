@@ -4,12 +4,19 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Pay Code Explorer Status Badge Polish
-Status: Closed / pending human inspection
+Current slice: Pay Code Explorer Amount Scan Polish
+Status: In progress
 Last updated: 2026-07-20
 
 ## Completed
 
+- Started Pay Code Explorer Amount Scan Polish Slice 1:
+  - Right-aligned the desktop `Amount` column header and values.
+  - Rendered desktop and mobile amount values with monospaced, tabular numeric styling.
+  - Preserved the formatted amount string supplied by the sanitized read model.
+  - Confirmed no routes, controllers, backend queries, read-model hydration, amount calculation, pricing, funding, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, artifact generation, or money movement were changed.
+  - Report: `reports/592-pay-code-explorer-amount-scan-polish-slice-1.md`.
+  - Next recommended checkpoint: Pay Code Explorer Amount Scan Polish Slice 2 — host publish / asset drift / browser / build closure.
 - Completed Pay Code Explorer Status Badge Polish Slice 2 / Closure:
   - Published package Cockpit assets to the host app.
   - Confirmed published Cockpit assets match package source.
