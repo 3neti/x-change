@@ -15,7 +15,7 @@ it('documents pay code explorer top control strip simplification slice 1', funct
         ->toContain('Presentation-only top control strip simplification')
         ->and($page)->toContain('data-testid="cockpit-pay-code-page-details-disclosure"')
         ->and($page)->toContain('Page details')
-        ->and($page)->toContain('Open this panel for row-action rules, list totals, and connected-service readiness.')
+        ->and($page)->toContain('Read-only rules, totals, and connected-service context.')
         ->and($frontendTest)->toContain('groups secondary utility panels behind one page details disclosure')
         ->and($frontendTest)->toContain('cockpit-pay-code-page-details-disclosure');
 });

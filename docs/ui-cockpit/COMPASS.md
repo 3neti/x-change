@@ -4313,3 +4313,28 @@ Current boundary:
 - Authenticated Dusk browser smoke remains pending because this sandbox has recently blocked ChromeDriver port binding for this page family.
 - Report: `reports/612-pay-code-explorer-compact-operations-table-slice-3-closure.md`.
 - Boundary remains unchanged: presentation-only compactness; no route behavior, backend queries, read-model hydration, filter semantics, pagination semantics, campaign context propagation, row action destinations, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+
+# 2026-07-21 — Pay Code Explorer Secondary Controls Compression — Slice 1
+
+- Started the Pay Code Explorer Secondary Controls Compression wave.
+- `Page details` is now a slim utility disclosure instead of a competing card.
+- Current-search facts, read-model facts, list totals, row-action guidance, and connected-service details remain under disclosure.
+- Report: `reports/613-pay-code-explorer-secondary-controls-compression-slice-1.md`.
+- Boundary remains unchanged: presentation-only secondary control compression; no route behavior, backend queries, read-model hydration, filter semantics, pagination semantics, campaign context propagation, row action destinations, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+
+# 2026-07-21 — Pay Code Explorer Secondary Controls Compression — Slice 2
+
+- `Filter Details` is now a compact secondary metadata disclosure.
+- Filter count metrics use a slim pill strip and expanded filter rows have tighter padding.
+- Report: `reports/614-pay-code-explorer-secondary-controls-compression-slice-2.md`.
+- Boundary remains unchanged: presentation-only filter detail compression; no route behavior, backend queries, read-model hydration, filter semantics, pagination semantics, campaign context propagation, row action destinations, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+
+# 2026-07-21 — Pay Code Explorer Secondary Controls Compression — Slice 3 Closure
+
+- Completed Pay Code Explorer Secondary Controls Compression Slice 3 / Closure.
+- Host-published Cockpit assets now use compressed `Page details` and `Filter Details` disclosures on `/x/cockpit/pay-codes`.
+- Search and result rows remain the primary scan path; secondary metadata remains available on demand.
+- Focused frontend, asset drift, backend architecture documentation, package/host asset guard, and host build verification passed.
+- Authenticated Dusk browser smoke remains pending because this sandbox has recently blocked ChromeDriver port binding for this page family.
+- Report: `reports/615-pay-code-explorer-secondary-controls-compression-slice-3-closure.md`.
+- Boundary remains unchanged: presentation-only secondary control compression; no route behavior, backend queries, read-model hydration, filter semantics, pagination semantics, campaign context propagation, row action destinations, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.

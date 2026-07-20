@@ -40,3 +40,28 @@ it('documents pay code explorer secondary controls compression slice 2', functio
         ->and($frontendTest)->toContain('rounded-full')
         ->and($frontendTest)->toContain('py-3');
 });
+
+it('documents pay code explorer secondary controls compression slice 3 closure', function (): void {
+    $packageRoot = dirname(__DIR__, 3);
+    $hostRoot = dirname($packageRoot, 2);
+
+    $report = file_get_contents($packageRoot.'/docs/ui-cockpit/reports/615-pay-code-explorer-secondary-controls-compression-slice-3-closure.md');
+    $page = file_get_contents($packageRoot.'/resources/js/cockpit/pages/PayCodeExplorer.vue');
+    $hostPage = file_get_contents($hostRoot.'/resources/js/cockpit/pages/PayCodeExplorer.vue');
+    $filterBuilder = file_get_contents($packageRoot.'/resources/js/cockpit/components/CockpitPayCodeFilterBuilder.vue');
+    $hostFilterBuilder = file_get_contents($hostRoot.'/resources/js/cockpit/components/CockpitPayCodeFilterBuilder.vue');
+    $compass = file_get_contents($packageRoot.'/docs/ui-cockpit/COMPASS.md');
+    $settlementCompass = file_get_contents($packageRoot.'/docs/architecture/SETTLEMENT_OS_COMPASS.md');
+
+    expect($report)
+        ->toContain('Pay Code Explorer Secondary Controls Compression — Slice 3 / Closure')
+        ->toContain('Published package-owned Cockpit assets')
+        ->toContain('Closed / pending human browser inspection')
+        ->and($page)->toContain('Read-only rules, totals, and connected-service context.')
+        ->and($hostPage)->toContain('Read-only rules, totals, and connected-service context.')
+        ->and($filterBuilder)->toContain('Read-only query criteria.')
+        ->and($hostFilterBuilder)->toContain('Read-only query criteria.')
+        ->and($hostFilterBuilder)->toContain('rounded-full bg-slate-50 p-1.5')
+        ->and($compass)->toContain('Completed Pay Code Explorer Secondary Controls Compression Slice 3 / Closure')
+        ->and($settlementCompass)->toContain('Pay Code Explorer Secondary Controls Compression — Slice 3');
+});

@@ -4026,3 +4026,27 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/612-pay-code-explorer-compact-operations-table-slice-3-closure.md`.
 - Boundary remains unchanged: presentation-only compactness; no route behavior, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`; then continue with the next page-focused pass on Pay Code Explorer table density, Voucher Detail, Distribution Workspace, or Quick Generate depending on inspection feedback.
+
+## 2026-07-21 Update — Pay Code Explorer Secondary Controls Compression — Slice 1
+
+- Started the Pay Code Explorer Secondary Controls Compression wave.
+- `Page details` is now a slim disclosure, keeping current-search facts, read-model facts, list totals, row-action guidance, and connected-service details available without competing with the table.
+- UI/report: `../ui-cockpit/reports/613-pay-code-explorer-secondary-controls-compression-slice-1.md`.
+- Boundary remains unchanged: presentation-only secondary control compression; no route behavior, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+
+## 2026-07-21 Update — Pay Code Explorer Secondary Controls Compression — Slice 2
+
+- `Filter Details` is now a compact secondary metadata disclosure with slim metric pills and tighter expanded rows.
+- UI/report: `../ui-cockpit/reports/614-pay-code-explorer-secondary-controls-compression-slice-2.md`.
+- Boundary remains unchanged: presentation-only filter detail compression; no route behavior, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+
+## 2026-07-21 Update — Pay Code Explorer Secondary Controls Compression — Slice 3
+
+- Closed the Pay Code Explorer Secondary Controls Compression wave.
+- Host-published Cockpit assets now use compressed `Page details` and `Filter Details` disclosures on `/x/cockpit/pay-codes`.
+- Search and result rows remain the primary scan path; secondary metadata remains available on demand.
+- Focused frontend, asset drift, backend architecture documentation, package/host asset guard, and host build verification passed.
+- Authenticated Dusk browser smoke remains pending because this sandbox has recently blocked ChromeDriver port binding for this page family.
+- UI/report: `../ui-cockpit/reports/615-pay-code-explorer-secondary-controls-compression-slice-3-closure.md`.
+- Boundary remains unchanged: presentation-only secondary control compression; no route behavior, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next recommended checkpoint: browser inspection of `/x/cockpit/pay-codes`, then continue Pay Code Explorer table content density or move to Voucher Detail/Distribution Workspace page polish.
