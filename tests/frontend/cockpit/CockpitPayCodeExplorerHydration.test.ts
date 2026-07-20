@@ -202,6 +202,29 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(pageDetails.find('[data-testid="cockpit-pay-code-integration-readiness"]').exists()).toBe(true);
     });
 
+    it('renders the operator list summary as a compact scan strip', () => {
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: payCodesReadModel,
+            },
+        });
+
+        const summary = wrapper.find('[data-testid="cockpit-pay-code-explorer-primary-summary"]');
+        const currentSearch = wrapper.find('[data-testid="cockpit-pay-code-explorer-current-search-disclosure"]');
+        const summaryItems = summary.findAll('[data-testid="cockpit-pay-code-explorer-primary-summary-item"]');
+
+        expect(summary.classes()).toContain('p-4');
+        expect(summary.text()).toContain('Find Pay Codes, open detail/distribution workspaces');
+        expect(summary.text()).toContain('read-only');
+        expect(currentSearch.exists()).toBe(true);
+        expect(currentSearch.element.tagName.toLowerCase()).toBe('details');
+        expect(currentSearch.find('summary').text()).toContain('Current Search');
+        expect(summaryItems).toHaveLength(4);
+        expect(summaryItems[0].classes()).toContain('p-3');
+        expect(summaryItems[0].find('dd').classes()).toContain('text-base');
+        expect(summaryItems[0].find('p').classes()).toContain('line-clamp-2');
+    });
+
     it('renders a primary operator list summary with safe navigation actions', () => {
         const wrapper = mount(PayCodeExplorer, {
             props: {

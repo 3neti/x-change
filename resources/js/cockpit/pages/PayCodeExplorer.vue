@@ -559,10 +559,10 @@ function integrationBadge(
             </div>
 
             <section
-                class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm dark:border-emerald-900/70 dark:bg-emerald-950/40"
+                class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm dark:border-emerald-900/70 dark:bg-emerald-950/40"
                 data-testid="cockpit-pay-code-explorer-primary-summary"
             >
-                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
                             Operator list summary
@@ -570,38 +570,57 @@ function integrationBadge(
                         <h3 class="mt-2 text-xl font-semibold text-slate-950 dark:text-slate-50">
                             Pay Code Explorer
                         </h3>
-                        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                            This page helps operators find Pay Codes using sanitized list facts. It can navigate to detail and distribution workspaces, but it does not mutate vouchers, execute drivers, send feedback, write journal entries, call providers, or move money.
+                        <p class="mt-1 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                            Find Pay Codes, open detail/distribution workspaces, and keep lifecycle-changing work outside this read-only list.
                         </p>
                     </div>
-                    <span class="w-fit rounded-full bg-white px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-slate-950 dark:text-emerald-200 dark:ring-emerald-800">
-                        read-only
-                    </span>
+                    <div class="flex flex-wrap gap-2">
+                        <a
+                            :href="quickGenerateHref"
+                            class="inline-flex h-9 items-center rounded-full bg-emerald-700 px-4 text-xs font-semibold text-white transition hover:bg-emerald-800"
+                            data-testid="cockpit-pay-code-explorer-primary-quick-generate-link"
+                        >
+                            Quick Generate
+                        </a>
+                        <a
+                            :href="campaignExplorerBaseHref"
+                            class="inline-flex h-9 items-center rounded-full border border-emerald-300 bg-white/80 px-4 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-700 dark:bg-slate-950 dark:text-emerald-200 dark:hover:bg-emerald-900/50"
+                            data-testid="cockpit-pay-code-explorer-primary-clear-link"
+                        >
+                            Clear filters
+                        </a>
+                        <span class="inline-flex h-9 items-center rounded-full bg-white px-3 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-slate-950 dark:text-emerald-200 dark:ring-emerald-800">
+                            read-only
+                        </span>
+                    </div>
                 </div>
 
-                <dl class="mt-5 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
+                <dl class="mt-4 grid gap-2 text-sm md:grid-cols-2 xl:grid-cols-4">
                     <div
                         v-for="item in primarySummaryItems"
                         :key="item.key"
-                        class="rounded-xl bg-white/80 p-4 dark:bg-slate-950/70"
+                        class="rounded-xl bg-white/80 p-3 dark:bg-slate-950/70"
                         data-testid="cockpit-pay-code-explorer-primary-summary-item"
                     >
                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             {{ item.label }}
                         </dt>
-                        <dd class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">
+                        <dd class="mt-1 text-base font-semibold text-slate-950 dark:text-slate-50">
                             {{ item.value }}
                         </dd>
-                        <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                        <p class="mt-1 line-clamp-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
                             {{ item.helper }}
                         </p>
                     </div>
                 </dl>
 
-                <div class="mt-5 rounded-xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/60 dark:bg-slate-950/70">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                <details
+                    class="mt-3 rounded-xl border border-emerald-200 bg-white/80 p-3 dark:border-emerald-900/60 dark:bg-slate-950/70"
+                    data-testid="cockpit-pay-code-explorer-current-search-disclosure"
+                >
+                    <summary class="cursor-pointer text-sm font-semibold text-emerald-800 dark:text-emerald-200">
                         Current Search
-                    </p>
+                    </summary>
                     <dl
                         class="mt-3 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4"
                         data-testid="cockpit-pay-code-explorer-current-search"
@@ -624,25 +643,9 @@ function integrationBadge(
                         </div>
                     </dl>
                     <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                        Search and filters only change the current list view. Row actions remain navigation-only unless a future authorized mutation slice explicitly changes that boundary.
+                        Search and filters only change the current list view; filtering does not mutate vouchers. Row actions remain navigation-only unless a future authorized mutation slice explicitly changes that boundary.
                     </p>
-                    <div class="mt-4 flex flex-wrap gap-3">
-                        <a
-                            :href="quickGenerateHref"
-                            class="inline-flex items-center rounded-full bg-emerald-700 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-800"
-                            data-testid="cockpit-pay-code-explorer-primary-quick-generate-link"
-                        >
-                            Quick Generate
-                        </a>
-                        <a
-                            :href="campaignExplorerBaseHref"
-                            class="inline-flex items-center rounded-full border border-emerald-300 px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-700 dark:text-emerald-200 dark:hover:bg-emerald-900/50"
-                            data-testid="cockpit-pay-code-explorer-primary-clear-link"
-                        >
-                            Clear filters
-                        </a>
-                    </div>
-                </div>
+                </details>
             </section>
 
             <section
