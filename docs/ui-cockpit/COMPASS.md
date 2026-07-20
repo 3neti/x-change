@@ -4,12 +4,20 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Pay Code Explorer Row Action Noise Reduction
-Status: Closed / pending human inspection and Dusk rerun
+Current slice: Pay Code Explorer Top Control Strip Simplification
+Status: In progress
 Last updated: 2026-07-20
 
 ## Completed
 
+- Started Pay Code Explorer Top Control Strip Simplification Slice 1:
+  - Added a single `Page details` disclosure for secondary Explorer metadata.
+  - Moved row action guidance, list totals, connected service badges, and connected service readiness under that disclosure.
+  - Preserved existing secondary facts and `data-testid` contracts for tests and inspection.
+  - Preserved primary Quick Generate, Clear filters, Search, pagination, detail links, and distribution links.
+  - Confirmed no routes, controllers, backend queries, read-model hydration, campaign context propagation, row action destinations, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, artifact generation, or money movement were changed.
+  - Report: `reports/598-pay-code-explorer-top-control-strip-simplification-slice-1.md`.
+  - Next recommended checkpoint: Pay Code Explorer Top Control Strip Simplification Slice 2 — host publish / asset drift / browser / build closure.
 - Completed Pay Code Explorer Row Action Noise Reduction Slice 2 / Closure:
   - Published package Cockpit assets to the host app.
   - Confirmed published host Pay Code Explorer rows use quiet `More` disclosures instead of repeated visible `N unavailable` labels.

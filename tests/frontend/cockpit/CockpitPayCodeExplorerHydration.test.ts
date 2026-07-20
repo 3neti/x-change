@@ -172,6 +172,25 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(wrapper.text()).toContain('Needs attention');
     });
 
+    it('groups secondary utility panels behind one page details disclosure', () => {
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: payCodesReadModel,
+            },
+        });
+
+        const pageDetails = wrapper.find('[data-testid="cockpit-pay-code-page-details-disclosure"]');
+
+        expect(pageDetails.exists()).toBe(true);
+        expect(pageDetails.element.tagName.toLowerCase()).toBe('details');
+        expect(pageDetails.find('summary').text()).toContain('Page details');
+        expect(pageDetails.text()).toContain('Open this panel for row-action rules, list totals, and connected-service readiness.');
+        expect(pageDetails.find('[data-testid="cockpit-pay-code-row-action-guidance"]').exists()).toBe(true);
+        expect(pageDetails.find('[data-testid="cockpit-pay-code-stats-summary"]').exists()).toBe(true);
+        expect(pageDetails.find('[data-testid="cockpit-pay-code-integration-badges"]').exists()).toBe(true);
+        expect(pageDetails.find('[data-testid="cockpit-pay-code-integration-readiness"]').exists()).toBe(true);
+    });
+
     it('renders a primary operator list summary with safe navigation actions', () => {
         const wrapper = mount(PayCodeExplorer, {
             props: {

@@ -730,135 +730,149 @@ function integrationBadge(
             </section>
 
             <details
-                class="rounded-xl border border-emerald-200 bg-white p-5 shadow-sm dark:border-emerald-900/70 dark:bg-slate-900"
-                data-testid="cockpit-pay-code-row-action-guidance"
-            >
-                <summary class="cursor-pointer text-sm font-semibold text-emerald-800 dark:text-emerald-200">
-                    Row action guidance
-                </summary>
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
-                            Row action guidance
-                        </p>
-                        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                            Row actions open inspection workspaces or remain disabled when the destination is not authorized. This page does not execute actions, deliver feedback, mutate vouchers, or call providers from a list row.
-                        </p>
-                    </div>
-                    <span class="w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200">
-                        Links only
-                    </span>
-                </div>
-                <dl class="mt-4 grid gap-3 text-sm md:grid-cols-3">
-                    <div
-                        v-for="item in rowActionGuidance"
-                        :key="item.key"
-                        class="rounded-lg border border-slate-200 p-3 dark:border-slate-800"
-                        data-testid="cockpit-pay-code-row-action-guidance-item"
-                    >
-                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            {{ item.label }}
-                        </dt>
-                        <dd class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                            {{ item.value }}
-                        </dd>
-                        <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                            {{ item.helper }}
-                        </p>
-                    </div>
-                </dl>
-            </details>
-
-            <details
                 class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                data-testid="cockpit-pay-code-stats-summary"
+                data-testid="cockpit-pay-code-page-details-disclosure"
             >
                 <summary class="cursor-pointer text-sm font-semibold text-slate-800 dark:text-slate-200">
-                    List totals
+                    Page details
                 </summary>
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                    Read-only totals
-                </p>
-                <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Filtered</p>
-                        <p class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">{{ stats.filtered }}</p>
-                    </div>
-                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Total</p>
-                        <p class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">{{ stats.total }}</p>
-                    </div>
-                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Active</p>
-                        <p class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">{{ stats.active }}</p>
-                    </div>
-                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Needs attention</p>
-                        <p class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                            {{ stats.awaitingApproval + stats.pending + stats.failed + stats.expired }}
-                        </p>
-                    </div>
-                </div>
-            </details>
-
-            <details
-                class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                data-testid="cockpit-pay-code-integration-badges"
-            >
-                <summary class="cursor-pointer text-sm font-semibold text-slate-800 dark:text-slate-200">
-                    Connected service badges
-                </summary>
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                    Connected services
-                </p>
-                <div class="mt-4 flex flex-wrap gap-2">
-                    <span
-                        v-for="badge in integrationBadges"
-                        :key="badge.key"
-                        class="rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200"
-                        data-testid="cockpit-pay-code-integration-badge"
-                    >
-                        {{ badge.label }}: {{ badge.status }}
-                        <span class="ml-1 font-normal opacity-70">{{ badge.policy }}</span>
-                    </span>
-                </div>
-            </details>
-
-            <details
-                class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                data-testid="cockpit-pay-code-integration-readiness"
-            >
-                <summary class="cursor-pointer text-sm font-semibold text-slate-800 dark:text-slate-200">
-                    Connected service details
-                </summary>
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                    Connected service readiness
-                </p>
                 <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    These cards summarize read-only integration context for the list. They do not write journal entries, execute actions, send feedback, or change voucher lifecycle state.
+                    Open this panel for row-action rules, list totals, and connected-service readiness. The main scan path above stays focused on search and results.
                 </p>
-                <div class="mt-4 grid gap-3 md:grid-cols-3">
-                    <article
-                        v-for="card in integrationReadinessCards"
-                        :key="card.key"
-                        class="rounded-lg border border-slate-200 p-4 dark:border-slate-800"
-                        data-testid="cockpit-pay-code-integration-readiness-card"
+
+                <div class="mt-4 grid gap-4">
+                    <details
+                        class="rounded-xl border border-emerald-200 bg-white p-5 dark:border-emerald-900/70 dark:bg-slate-950"
+                        data-testid="cockpit-pay-code-row-action-guidance"
                     >
-                        <div class="flex items-center justify-between gap-3">
-                            <h3 class="font-semibold text-slate-950 dark:text-slate-50">
-                                {{ card.label }}
-                            </h3>
-                            <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                                {{ card.status }}
+                        <summary class="cursor-pointer text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+                            Row action guidance
+                        </summary>
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
+                                    Row action guidance
+                                </p>
+                                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                                    Row actions open inspection workspaces or remain disabled when the destination is not authorized. This page does not execute actions, deliver feedback, mutate vouchers, or call providers from a list row.
+                                </p>
+                            </div>
+                            <span class="w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200">
+                                Links only
                             </span>
                         </div>
-                        <p class="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            {{ card.policy }}
+                        <dl class="mt-4 grid gap-3 text-sm md:grid-cols-3">
+                            <div
+                                v-for="item in rowActionGuidance"
+                                :key="item.key"
+                                class="rounded-lg border border-slate-200 p-3 dark:border-slate-800"
+                                data-testid="cockpit-pay-code-row-action-guidance-item"
+                            >
+                                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                    {{ item.label }}
+                                </dt>
+                                <dd class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">
+                                    {{ item.value }}
+                                </dd>
+                                <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                    {{ item.helper }}
+                                </p>
+                            </div>
+                        </dl>
+                    </details>
+
+                    <details
+                        class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950"
+                        data-testid="cockpit-pay-code-stats-summary"
+                    >
+                        <summary class="cursor-pointer text-sm font-semibold text-slate-800 dark:text-slate-200">
+                            List totals
+                        </summary>
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                            Read-only totals
                         </p>
-                        <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                            {{ card.helper }}
+                        <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                            <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-900">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Filtered</p>
+                                <p class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">{{ stats.filtered }}</p>
+                            </div>
+                            <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-900">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Total</p>
+                                <p class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">{{ stats.total }}</p>
+                            </div>
+                            <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-900">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Active</p>
+                                <p class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">{{ stats.active }}</p>
+                            </div>
+                            <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-900">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Needs attention</p>
+                                <p class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">
+                                    {{ stats.awaitingApproval + stats.pending + stats.failed + stats.expired }}
+                                </p>
+                            </div>
+                        </div>
+                    </details>
+
+                    <details
+                        class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950"
+                        data-testid="cockpit-pay-code-integration-badges"
+                    >
+                        <summary class="cursor-pointer text-sm font-semibold text-slate-800 dark:text-slate-200">
+                            Connected service badges
+                        </summary>
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                            Connected services
                         </p>
-                    </article>
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            <span
+                                v-for="badge in integrationBadges"
+                                :key="badge.key"
+                                class="rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200"
+                                data-testid="cockpit-pay-code-integration-badge"
+                            >
+                                {{ badge.label }}: {{ badge.status }}
+                                <span class="ml-1 font-normal opacity-70">{{ badge.policy }}</span>
+                            </span>
+                        </div>
+                    </details>
+
+                    <details
+                        class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950"
+                        data-testid="cockpit-pay-code-integration-readiness"
+                    >
+                        <summary class="cursor-pointer text-sm font-semibold text-slate-800 dark:text-slate-200">
+                            Connected service details
+                        </summary>
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                            Connected service readiness
+                        </p>
+                        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                            These cards summarize read-only integration context for the list. They do not write journal entries, execute actions, send feedback, or change voucher lifecycle state.
+                        </p>
+                        <div class="mt-4 grid gap-3 md:grid-cols-3">
+                            <article
+                                v-for="card in integrationReadinessCards"
+                                :key="card.key"
+                                class="rounded-lg border border-slate-200 p-4 dark:border-slate-800"
+                                data-testid="cockpit-pay-code-integration-readiness-card"
+                            >
+                                <div class="flex items-center justify-between gap-3">
+                                    <h3 class="font-semibold text-slate-950 dark:text-slate-50">
+                                        {{ card.label }}
+                                    </h3>
+                                    <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                                        {{ card.status }}
+                                    </span>
+                                </div>
+                                <p class="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                    {{ card.policy }}
+                                </p>
+                                <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                                    {{ card.helper }}
+                                </p>
+                            </article>
+                        </div>
+                    </details>
                 </div>
             </details>
 

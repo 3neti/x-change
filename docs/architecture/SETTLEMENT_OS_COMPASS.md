@@ -3878,3 +3878,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/597-pay-code-explorer-row-action-noise-reduction-slice-2-closure.md`.
 - Boundary remains unchanged: presentation-only row action noise reduction; no route behavior, backend queries, read-model hydration, campaign context propagation, row action destinations, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, rerun Dusk from a shell where ChromeDriver can bind to port `9515`, then choose the next page-focused Cockpit target or a real integration wiring wave.
+
+## 2026-07-20 Update — Pay Code Explorer Top Control Strip Simplification — Slice 1
+
+- Started the Pay Code Explorer Top Control Strip Simplification wave.
+- Pay Code Explorer now groups row action guidance, list totals, connected service badges, and connected service readiness under one `Page details` disclosure.
+- Primary scan flow remains focused on Quick Generate, Clear filters, Search, pagination, detail links, and distribution links.
+- UI/report: `../ui-cockpit/reports/598-pay-code-explorer-top-control-strip-simplification-slice-1.md`.
+- Boundary remains unchanged: presentation-only top control strip simplification; no route behavior, backend queries, read-model hydration, campaign context propagation, row action destinations, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next checkpoint: host publish, asset drift, authenticated browser smoke if available, build, and closure.
