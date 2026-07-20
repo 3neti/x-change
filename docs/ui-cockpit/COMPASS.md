@@ -4289,3 +4289,27 @@ Current boundary:
 - Voucher Detail now has a more scan-friendly primary context and cleaner operator-facing connected-service language.
 - Report: `reports/546-voucher-detail-page-polish-slice-3-closure.md`.
 - Boundary remains unchanged: presentation-only polish; no route behavior, read-model hydration, distribution dispatch, feedback delivery, x-action execution, journal write, voucher mutation, provider call, persistence, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
+
+# 2026-07-20 — Pay Code Explorer Compact Operations Table — Slice 1
+
+- Started the Pay Code Explorer Compact Operations Table wave.
+- `/x/cockpit/pay-codes` now uses slim lifecycle status pills and moves Search into the primary operations band above the table.
+- Current-search facts, read-model facts, payload policy, and read-only boundary copy remain available under Page details.
+- Report: `reports/610-pay-code-explorer-compact-operations-table-slice-1.md`.
+- Boundary remains unchanged: presentation-only compactness; no route behavior, backend queries, read-model hydration, filter semantics, pagination semantics, campaign context propagation, row action destinations, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+
+# 2026-07-20 — Pay Code Explorer Compact Operations Table — Slice 2
+
+- Desktop Pay Code result rows now use compact icon-first row actions with accessible labels.
+- Desktop result row padding is tighter; mobile row actions remain text-first.
+- Report: `reports/611-pay-code-explorer-compact-operations-table-slice-2.md`.
+- Boundary remains unchanged: presentation-only table compactness; no route behavior, backend queries, read-model hydration, filter semantics, pagination semantics, campaign context propagation, row action destinations, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+
+# 2026-07-20 — Pay Code Explorer Compact Operations Table — Slice 3 Closure
+
+- Completed Pay Code Explorer Compact Operations Table Slice 3 / Closure.
+- Host-published Cockpit assets now use the compact operations band, slim lifecycle status pills, compact Search, and icon-first desktop row actions on `/x/cockpit/pay-codes`.
+- Focused frontend, asset drift, backend architecture documentation, package/host asset guard, and host build verification passed.
+- Authenticated Dusk browser smoke remains pending because this sandbox has recently blocked ChromeDriver port binding for this page family.
+- Report: `reports/612-pay-code-explorer-compact-operations-table-slice-3-closure.md`.
+- Boundary remains unchanged: presentation-only compactness; no route behavior, backend queries, read-model hydration, filter semantics, pagination semantics, campaign context propagation, row action destinations, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.

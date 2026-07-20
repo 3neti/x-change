@@ -4001,3 +4001,28 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/609-pay-code-explorer-voucher-list-rationalization-slice-2-closure.md`.
 - Boundary remains unchanged: presentation-only Explorer rationalization; no route behavior, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, rerun Dusk from a shell where ChromeDriver can bind to port `9515`, then continue page-focused Cockpit polish or pick the next page completion pass.
+
+## 2026-07-20 Update — Pay Code Explorer Compact Operations Table — Slice 1
+
+- Started the Pay Code Explorer Compact Operations Table wave.
+- `/x/cockpit/pay-codes` now uses slim lifecycle status pills with Search in the primary operations band.
+- Current-search metadata, read-model status, record count, payload policy, and mutation-boundary copy remain tucked under Page details.
+- UI/report: `../ui-cockpit/reports/610-pay-code-explorer-compact-operations-table-slice-1.md`.
+- Boundary remains unchanged: presentation-only compactness; no route behavior, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+
+## 2026-07-20 Update — Pay Code Explorer Compact Operations Table — Slice 2
+
+- Desktop Pay Code result rows now use compact icon-first actions with accessible labels.
+- Desktop table rows use tighter padding while mobile row actions remain text-first.
+- UI/report: `../ui-cockpit/reports/611-pay-code-explorer-compact-operations-table-slice-2.md`.
+- Boundary remains unchanged: presentation-only table compactness; no route behavior, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+
+## 2026-07-20 Update — Pay Code Explorer Compact Operations Table — Slice 3
+
+- Closed the Pay Code Explorer Compact Operations Table wave.
+- Host-published Cockpit assets now show the compact operations band, slim lifecycle status pills, compact Search controls, and icon-first desktop row actions on `/x/cockpit/pay-codes`.
+- Focused frontend, asset drift, backend architecture documentation, package/host asset guard, and host build verification passed.
+- Authenticated Dusk browser smoke remains pending because this sandbox has recently blocked ChromeDriver port binding for this page family.
+- UI/report: `../ui-cockpit/reports/612-pay-code-explorer-compact-operations-table-slice-3-closure.md`.
+- Boundary remains unchanged: presentation-only compactness; no route behavior, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`; then continue with the next page-focused pass on Pay Code Explorer table density, Voucher Detail, Distribution Workspace, or Quick Generate depending on inspection feedback.
