@@ -27,6 +27,7 @@ const query = computed(() => stringValue(readModel.value?.query) ?? '');
 const statusFilter = computed(() => stringValue(readModel.value?.status_filter) ?? null);
 const payloadPolicy = computed(() => stringValue(readModel.value?.redactions?.payloads) ?? 'not-loaded');
 const status = computed(() => stringValue(readModel.value?.status) ?? 'not_wired');
+const hasActiveFilters = computed(() => query.value.trim() !== '' || (statusFilter.value !== null && statusFilter.value !== 'all'));
 const stats = computed(() => ({
     total: numberValue(readModel.value?.stats?.total),
     active: numberValue(readModel.value?.stats?.active),
@@ -41,28 +42,34 @@ const attentionCount = computed(() => stats.value.awaitingApproval + stats.value
 const quickGenerateHref = computed(() => '/x/cockpit/quick-generate');
 const primarySummaryItems = computed(() => [
     {
-        key: 'filtered',
-        label: 'Visible',
-        value: String(stats.value.filtered || records.value.length),
-        helper: 'Sanitized rows matching the current read model.',
-    },
-    {
         key: 'total',
         label: 'Total',
         value: String(stats.value.total || records.value.length),
-        helper: 'Total available from the read-model summary.',
+        helper: 'All Pay Codes in the sanitized read model.',
+    },
+    {
+        key: 'active',
+        label: 'Active',
+        value: String(stats.value.active),
+        helper: 'Currently claimable or available summaries.',
+    },
+    {
+        key: 'redeemed',
+        label: 'Redeemed',
+        value: String(stats.value.redeemed),
+        helper: 'Completed redemption summaries.',
+    },
+    {
+        key: 'expired',
+        label: 'Expired',
+        value: String(stats.value.expired),
+        helper: 'Expired Pay Codes from lifecycle summaries.',
     },
     {
         key: 'attention',
         label: 'Needs Attention',
         value: String(attentionCount.value),
-        helper: 'Expired, pending, failed, or awaiting approval summaries.',
-    },
-    {
-        key: 'payload-policy',
-        label: 'Payload Policy',
-        value: payloadPolicy.value,
-        helper: 'List rows are sanitized before display.',
+        helper: 'Expired, pending, failed, or awaiting approval.',
     },
 ]);
 const currentSearchItems = computed(() => [
@@ -401,6 +408,8 @@ function sanitizeRecord(record: CockpitPayCodeExplorerReadModelRecord): CockpitP
         status: stringValue(record.display_status) ?? stringValue(record.status) ?? 'not_wired',
         owner: stringValue(record.owner) ?? 'Redacted',
         lastActivity: stringValue(record.last_activity) ?? 'Read model activity pending',
+        createdAt: stringValue(record.created_at) ?? '—',
+        expiresAt: stringValue(record.expires_at) ?? '—',
         actions: Array.isArray(record.actions)
             ? record.actions
                 .map((action) => sanitizeRowAction(action))
@@ -517,11 +526,11 @@ function integrationBadge(
 <template>
     <CockpitLayout active-navigation="pay-codes">
         <section class="space-y-6" data-testid="cockpit-pay-code-explorer-shell">
-            <div
-                class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                data-testid="cockpit-pay-code-explorer-shell-header"
-            >
-                <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div
+                    class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between"
+                    data-testid="cockpit-pay-code-explorer-shell-header"
+                >
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
                             Pay Code operations
@@ -533,54 +542,6 @@ function integrationBadge(
                             Find and inspect Pay Codes using sanitized list facts. This screen remains read-only: it does not mutate vouchers, execute drivers, approve claims, send feedback, write journal entries, call providers, or move money.
                         </p>
                     </div>
-                    <dl
-                        class="grid w-full gap-2 text-sm sm:grid-cols-3 xl:w-[32rem]"
-                        data-testid="cockpit-pay-code-explorer-shell-facts"
-                    >
-                        <div class="rounded-full bg-slate-50 px-3 py-2 dark:bg-slate-950">
-                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Read model
-                        </dt>
-                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                            {{ status }}
-                        </dd>
-                    </div>
-                        <div class="rounded-full bg-slate-50 px-3 py-2 dark:bg-slate-950">
-                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Records
-                        </dt>
-                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                            {{ records.length }}
-                        </dd>
-                    </div>
-                        <div class="rounded-full bg-slate-50 px-3 py-2 dark:bg-slate-950">
-                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Payload policy
-                        </dt>
-                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                            {{ payloadPolicy }}
-                        </dd>
-                    </div>
-                    </dl>
-                </div>
-            </div>
-
-            <section
-                class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm dark:border-emerald-900/70 dark:bg-emerald-950/40"
-                data-testid="cockpit-pay-code-explorer-primary-summary"
-            >
-                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
-                            Operator list summary
-                        </p>
-                        <h3 class="mt-2 text-xl font-semibold text-slate-950 dark:text-slate-50">
-                            Pay Code Explorer
-                        </h3>
-                        <p class="mt-1 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                            Find Pay Codes, open detail/distribution workspaces, and keep lifecycle-changing work outside this read-only list.
-                        </p>
-                    </div>
                     <div class="flex flex-wrap gap-2">
                         <a
                             :href="quickGenerateHref"
@@ -590,19 +551,39 @@ function integrationBadge(
                             Quick Generate
                         </a>
                         <a
+                            v-if="hasActiveFilters"
                             :href="campaignExplorerBaseHref"
-                            class="inline-flex h-9 items-center rounded-full border border-emerald-300 bg-white/80 px-4 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-700 dark:bg-slate-950 dark:text-emerald-200 dark:hover:bg-emerald-900/50"
+                            class="inline-flex h-9 items-center rounded-full border border-slate-200 px-4 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                             data-testid="cockpit-pay-code-explorer-primary-clear-link"
                         >
                             Clear filters
                         </a>
-                        <span class="inline-flex h-9 items-center rounded-full bg-white px-3 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-slate-950 dark:text-emerald-200 dark:ring-emerald-800">
-                            read-only
+                        <span class="inline-flex h-9 items-center rounded-full bg-slate-100 px-3 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                            Read-only
                         </span>
                     </div>
                 </div>
+            </div>
 
-                <dl class="mt-4 grid gap-2 text-sm md:grid-cols-2 xl:grid-cols-4">
+            <section
+                class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm dark:border-emerald-900/70 dark:bg-emerald-950/40"
+                data-testid="cockpit-pay-code-explorer-primary-summary"
+            >
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
+                            Voucher status summary
+                        </p>
+                        <h3 class="mt-2 text-xl font-semibold text-slate-950 dark:text-slate-50">
+                            Focus the list by lifecycle state
+                        </h3>
+                        <p class="mt-1 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                            Start with active, redeemed, expired, or attention counts, then use Search to narrow the voucher list.
+                        </p>
+                    </div>
+                </div>
+
+                <dl class="mt-4 grid gap-2 text-sm sm:grid-cols-2 xl:grid-cols-5">
                     <div
                         v-for="item in primarySummaryItems"
                         :key="item.key"
@@ -621,38 +602,6 @@ function integrationBadge(
                     </div>
                 </dl>
 
-                <details
-                    class="mt-3 rounded-xl border border-emerald-200 bg-white/80 p-3 dark:border-emerald-900/60 dark:bg-slate-950/70"
-                    data-testid="cockpit-pay-code-explorer-current-search-disclosure"
-                >
-                    <summary class="cursor-pointer text-sm font-semibold text-emerald-800 dark:text-emerald-200">
-                        Current Search
-                    </summary>
-                    <dl
-                        class="mt-3 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4"
-                        data-testid="cockpit-pay-code-explorer-current-search"
-                    >
-                        <div
-                            v-for="item in currentSearchItems"
-                            :key="item.key"
-                            class="rounded-lg border border-emerald-100 bg-emerald-50/70 p-3 dark:border-emerald-900/70 dark:bg-emerald-950/30"
-                            data-testid="cockpit-pay-code-explorer-current-search-item"
-                        >
-                            <dt class="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
-                                {{ item.label }}
-                            </dt>
-                            <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                                {{ item.value }}
-                            </dd>
-                            <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                                {{ item.helper }}
-                            </p>
-                        </div>
-                    </dl>
-                    <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                        Search and filters only change the current list view; filtering does not mutate vouchers. Row actions remain navigation-only unless a future authorized mutation slice explicitly changes that boundary.
-                    </p>
-                </details>
             </section>
 
             <section
@@ -751,6 +700,67 @@ function integrationBadge(
                 </p>
 
                 <div class="mt-4 grid gap-4">
+                    <details
+                        class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950"
+                        data-testid="cockpit-pay-code-explorer-current-search-disclosure"
+                    >
+                        <summary class="cursor-pointer text-sm font-semibold text-slate-800 dark:text-slate-200">
+                            Current search and read model
+                        </summary>
+                        <dl
+                            class="mt-3 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4"
+                            data-testid="cockpit-pay-code-explorer-current-search"
+                        >
+                            <div
+                                v-for="item in currentSearchItems"
+                                :key="item.key"
+                                class="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900"
+                                data-testid="cockpit-pay-code-explorer-current-search-item"
+                            >
+                                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                    {{ item.label }}
+                                </dt>
+                                <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                                    {{ item.value }}
+                                </dd>
+                                <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                    {{ item.helper }}
+                                </p>
+                            </div>
+                        </dl>
+                        <dl
+                            class="mt-3 grid w-full gap-2 text-sm sm:grid-cols-3 xl:w-[32rem]"
+                            data-testid="cockpit-pay-code-explorer-shell-facts"
+                        >
+                            <div class="rounded-full bg-slate-100 px-3 py-2 dark:bg-slate-900">
+                                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                    Read model
+                                </dt>
+                                <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                                    {{ status }}
+                                </dd>
+                            </div>
+                            <div class="rounded-full bg-slate-100 px-3 py-2 dark:bg-slate-900">
+                                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                    Records
+                                </dt>
+                                <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                                    {{ records.length }}
+                                </dd>
+                            </div>
+                            <div class="rounded-full bg-slate-100 px-3 py-2 dark:bg-slate-900">
+                                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                    Payload policy
+                                </dt>
+                                <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                                    {{ payloadPolicy }}
+                                </dd>
+                            </div>
+                        </dl>
+                        <p class="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                            Search and filters only change the current list view; filtering does not mutate vouchers. Row actions remain navigation-only unless a future authorized mutation slice explicitly changes that boundary.
+                        </p>
+                    </details>
                     <details
                         class="rounded-xl border border-emerald-200 bg-white p-5 dark:border-emerald-900/70 dark:bg-slate-950"
                         data-testid="cockpit-pay-code-row-action-guidance"

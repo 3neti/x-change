@@ -4,12 +4,22 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Pay Code Explorer Shell Header Compression
-Status: Closed / pending human inspection and Dusk rerun
+Current slice: Pay Code Explorer Voucher List Rationalization
+Status: In progress
 Last updated: 2026-07-20
 
 ## Completed
 
+- Started Pay Code Explorer Voucher List Rationalization Slice 1:
+  - Moved Quick Generate, Clear filters, and Read-only into the compact page header.
+  - Replaced the old operator summary with voucher lifecycle summary cards: Total, Active, Redeemed, Expired, and Needs Attention.
+  - Moved current-search, read-model status, record count, and payload policy into Page details.
+  - Updated search copy to match the `/vouchers` mental model.
+  - Reordered the result table to `Pay Code`, `Amount`, `Type / Template`, `Status`, `Created`, `Expires`, and `Actions`.
+  - Tucked Owner and Last Activity into row disclosures.
+  - Confirmed no routes, controllers, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, artifact generation, or money movement were changed.
+  - Report: `reports/608-pay-code-explorer-voucher-list-rationalization-slice-1.md`.
+  - Next recommended checkpoint: Pay Code Explorer Voucher List Rationalization Slice 2 — host publish / asset drift / browser / build closure.
 - Completed Pay Code Explorer Shell Header Compression Slice 2 / Closure:
   - Published package Cockpit assets to the host app.
   - Confirmed the host Pay Code Explorer shell header uses tighter padding.

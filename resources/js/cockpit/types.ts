@@ -777,6 +777,8 @@ export type CockpitPayCodeExplorerRecord = {
     status: string;
     owner: string;
     lastActivity: string;
+    createdAt?: string;
+    expiresAt?: string;
     actions?: CockpitPayCodeRowAction[];
 };
 
@@ -909,6 +911,8 @@ export type CockpitPayCodeExplorerReadModelRecord = {
     display_status?: string | null;
     owner?: string | null;
     last_activity?: string | null;
+    created_at?: string | null;
+    expires_at?: string | null;
     actions?: CockpitPayCodeRowAction[];
     [key: string]: unknown;
 };

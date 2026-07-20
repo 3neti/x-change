@@ -3978,3 +3978,14 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/607-pay-code-explorer-shell-header-compression-slice-2-closure.md`.
 - Boundary remains unchanged: presentation-only shell header compression; no route behavior, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, rerun Dusk from a shell where ChromeDriver can bind to port `9515`, then choose the next page-focused Cockpit target or a real integration wiring wave.
+
+## 2026-07-20 Update — Pay Code Explorer Voucher List Rationalization — Slice 1
+
+- Started the Pay Code Explorer Voucher List Rationalization wave.
+- `/x/cockpit/pay-codes` now prioritizes voucher lifecycle summary cards, search/filter controls, and the voucher result list.
+- Quick Generate, Clear filters, and Read-only are in the compact page header.
+- Current-search metadata, read-model status, record count, and payload policy are tucked under Page details.
+- Result columns now follow the voucher-list mental model: Pay Code, Amount, Type / Template, Status, Created, Expires, and Actions.
+- UI/report: `../ui-cockpit/reports/608-pay-code-explorer-voucher-list-rationalization-slice-1.md`.
+- Boundary remains unchanged: presentation-only Explorer rationalization; no route behavior, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next checkpoint: host publish, asset drift, authenticated browser smoke if available, build, and closure.

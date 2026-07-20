@@ -25,9 +25,7 @@ describe('Cockpit Pay Code Explorer foundation', () => {
         expect(input.element).toHaveProperty('readOnly', false);
         expect(input.element).toHaveProperty('value', 'PC-READY');
         expect(wrapper.find('form').exists()).toBe(true);
-        expect(wrapper.text()).toContain(
-            'Filters use read-only GET navigation.',
-        );
+        expect(wrapper.text()).toContain('Search and filters only change this list.');
 
         expect(wrapper.find('[type="submit"]').exists()).toBe(true);
     });

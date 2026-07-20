@@ -132,7 +132,7 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(wrapper.text()).toContain('PC-HYDRATED-002');
         expect(wrapper.text()).toContain('₱1,500.75');
         expect(wrapper.text()).toContain('ready');
-        expect(wrapper.text()).toContain('Treasury Desk');
+        expect(wrapper.find('[data-testid="cockpit-pay-code-row-secondary-facts"]').text()).toContain('Treasury Desk');
         expect(wrapper.text()).toContain('sanitized-list-only');
         expect(wrapper.findAll('[data-testid="cockpit-pay-code-row"]')).toHaveLength(2);
     });
@@ -155,13 +155,13 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(status.element).toHaveProperty('value', 'redeemed');
         expect(status.classes()).toContain('h-10');
         expect(status.classes()).toContain('rounded-full');
-        expect(submit.text()).toBe('Apply');
+        expect(submit.text()).toBe('Search');
         expect(submit.classes()).toContain('h-10');
         expect(activeSummary.text()).toContain('Filters: search “PC-HYDRATED” · status redeemed');
         expect(wrapper.find('form').attributes('method')).toBe('get');
         expect(wrapper.find('form').attributes('action')).toBe('/x/cockpit/pay-codes');
         expect(wrapper.text()).toContain('Filters: search “PC-HYDRATED” · status redeemed');
-        expect(wrapper.text()).toContain('Filters use read-only GET navigation.');
+        expect(wrapper.text()).toContain('Search and filters only change this list.');
         expect(wrapper.text()).toContain('Find Pay Codes');
         expect(wrapper.find('[data-testid="cockpit-pay-code-clear-filters"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="cockpit-pay-code-clear-filters"]').text()).toBe('Clear');
@@ -214,12 +214,12 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         const summaryItems = summary.findAll('[data-testid="cockpit-pay-code-explorer-primary-summary-item"]');
 
         expect(summary.classes()).toContain('p-4');
-        expect(summary.text()).toContain('Find Pay Codes, open detail/distribution workspaces');
-        expect(summary.text()).toContain('read-only');
+        expect(summary.text()).toContain('Voucher status summary');
+        expect(summary.text()).toContain('Focus the list by lifecycle state');
         expect(currentSearch.exists()).toBe(true);
         expect(currentSearch.element.tagName.toLowerCase()).toBe('details');
-        expect(currentSearch.find('summary').text()).toContain('Current Search');
-        expect(summaryItems).toHaveLength(4);
+        expect(currentSearch.find('summary').text()).toContain('Current search and read model');
+        expect(summaryItems).toHaveLength(5);
         expect(summaryItems[0].classes()).toContain('p-3');
         expect(summaryItems[0].find('dd').classes()).toContain('text-base');
         expect(summaryItems[0].find('p').classes()).toContain('line-clamp-2');
@@ -236,10 +236,11 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         const facts = wrapper.find('[data-testid="cockpit-pay-code-explorer-shell-facts"]');
 
         expect(header.exists()).toBe(true);
-        expect(header.classes()).toContain('p-4');
         expect(header.text()).toContain('Pay Code operations');
         expect(header.text()).toContain('Find and inspect Pay Codes using sanitized list facts.');
         expect(header.text()).toContain('does not mutate vouchers');
+        expect(header.text()).toContain('Quick Generate');
+        expect(header.text()).toContain('Read-only');
         expect(facts.exists()).toBe(true);
         expect(facts.classes()).toContain('xl:w-[32rem]');
         expect(facts.findAll('div')).toHaveLength(3);
@@ -260,26 +261,27 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         const items = summary.findAll('[data-testid="cockpit-pay-code-explorer-primary-summary-item"]');
 
         expect(summary.exists()).toBe(true);
-        expect(summary.text()).toContain('Operator list summary');
-        expect(summary.text()).toContain('Pay Code Explorer');
-        expect(summary.text()).toContain('Visible');
-        expect(summary.text()).toContain('2');
+        expect(summary.text()).toContain('Voucher status summary');
+        expect(summary.text()).toContain('Focus the list by lifecycle state');
         expect(summary.text()).toContain('Total');
         expect(summary.text()).toContain('4');
+        expect(summary.text()).toContain('Active');
+        expect(summary.text()).toContain('Redeemed');
+        expect(summary.text()).toContain('Expired');
         expect(summary.text()).toContain('Needs Attention');
         expect(summary.text()).toContain('1');
-        expect(summary.text()).toContain('Payload Policy');
-        expect(summary.text()).toContain('sanitized-list-only');
-        expect(summary.text()).toContain('Current Search');
+        expect(wrapper.text()).toContain('Payload policy');
+        expect(wrapper.text()).toContain('sanitized-list-only');
+        expect(wrapper.text()).toContain('Current search and read model');
         expect(summary.text()).toContain('Search');
-        expect(summary.text()).toContain('PC-HYDRATED');
-        expect(summary.text()).toContain('Status');
-        expect(summary.text()).toContain('redeemed');
-        expect(summary.text()).toContain('Campaign Context');
-        expect(summary.text()).toContain('None');
-        expect(summary.text()).toContain('Search and filters only change the current list view');
-        expect(summary.text()).toContain('does not mutate vouchers');
-        expect(items).toHaveLength(4);
+        expect(wrapper.text()).toContain('PC-HYDRATED');
+        expect(wrapper.text()).toContain('Status');
+        expect(wrapper.text()).toContain('redeemed');
+        expect(wrapper.text()).toContain('Campaign Context');
+        expect(wrapper.text()).toContain('None');
+        expect(wrapper.text()).toContain('Search and filters only change the current list view');
+        expect(wrapper.text()).toContain('does not mutate vouchers');
+        expect(items).toHaveLength(5);
         expect(wrapper.findAll('[data-testid="cockpit-pay-code-explorer-current-search-item"]')).toHaveLength(4);
         expect(wrapper.find('[data-testid="cockpit-pay-code-explorer-primary-quick-generate-link"]').attributes('href')).toBe('/x/cockpit/quick-generate');
         expect(wrapper.find('[data-testid="cockpit-pay-code-explorer-primary-clear-link"]').attributes('href')).toBe('/x/cockpit/pay-codes');
@@ -386,7 +388,7 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(mobileRows[0].text()).toContain('PC-HYDRATED-001');
         expect(mobileRows[0].text()).toContain('Money Changer');
         expect(mobileRows[0].text()).toContain('₱1,500.75');
-        expect(mobileRows[0].text()).toContain('Treasury Desk');
+        expect(mobileRows[0].find('[data-testid="cockpit-pay-code-mobile-row-secondary-facts"]').text()).toContain('Treasury Desk');
         expect(mobileRows[0].text()).toContain('More');
         expect(mobileRows[0].text()).toContain('1 unavailable actions');
         expect(mobileLinks).toHaveLength(2);
@@ -607,7 +609,7 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(wrapper.text()).toContain('60');
         expect(wrapper.text()).toContain('Disabled');
         expect(wrapper.text()).toContain('30');
-        expect(wrapper.text()).toContain('Filters use read-only GET navigation.');
+        expect(wrapper.text()).toContain('Search and filters only change this list.');
         expect(wrapper.text()).not.toContain('provider_payload');
         expect(wrapper.text()).not.toContain('raw_payload');
 

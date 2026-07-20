@@ -332,18 +332,26 @@ function statusBadgeClass(status: string): string {
                     </div>
                     <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
                         <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Owner
+                            Type / Template
                         </dt>
                         <dd class="mt-1 truncate font-semibold text-slate-950 dark:text-slate-50">
-                            {{ record.owner }}
+                            {{ record.template }}
                         </dd>
                     </div>
-                    <div class="col-span-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
+                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
                         <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Last Activity
+                            Created
                         </dt>
                         <dd class="mt-1 text-slate-700 dark:text-slate-200">
-                            {{ record.lastActivity }}
+                            {{ record.createdAt ?? '—' }}
+                        </dd>
+                    </div>
+                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
+                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Expires
+                        </dt>
+                        <dd class="mt-1 text-slate-700 dark:text-slate-200">
+                            {{ record.expiresAt ?? '—' }}
                         </dd>
                     </div>
                 </dl>
@@ -374,6 +382,27 @@ function statusBadgeClass(status: string): string {
                             </span>
                         </summary>
                         <div class="mt-2 flex flex-wrap gap-2">
+                            <dl
+                                class="grid w-full gap-2 rounded-lg bg-slate-50 p-2 text-left text-xs dark:bg-slate-900"
+                                data-testid="cockpit-pay-code-mobile-row-secondary-facts"
+                            >
+                                <div>
+                                    <dt class="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                        Owner
+                                    </dt>
+                                    <dd class="mt-0.5 text-slate-700 dark:text-slate-200">
+                                        {{ record.owner }}
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt class="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                        Last Activity
+                                    </dt>
+                                    <dd class="mt-0.5 text-slate-700 dark:text-slate-200">
+                                        {{ record.lastActivity }}
+                                    </dd>
+                                </div>
+                            </dl>
                             <button
                                 v-for="action in disabledActions(record)"
                                 :key="action.key"
@@ -396,11 +425,11 @@ function statusBadgeClass(status: string): string {
                 <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-950 dark:text-slate-400">
                     <tr>
                         <th class="px-5 py-3">Pay Code</th>
-                        <th class="px-5 py-3">Template</th>
                         <th class="px-5 py-3 text-right">Amount</th>
+                        <th class="px-5 py-3">Type / Template</th>
                         <th class="px-5 py-3">Status</th>
-                        <th class="px-5 py-3">Owner</th>
-                        <th class="px-5 py-3">Last Activity</th>
+                        <th class="px-5 py-3">Created</th>
+                        <th class="px-5 py-3">Expires</th>
                         <th class="px-5 py-3">Actions</th>
                     </tr>
                 </thead>
@@ -413,14 +442,14 @@ function statusBadgeClass(status: string): string {
                         <td class="px-5 py-4 font-mono text-slate-950 dark:text-slate-50">
                             {{ record.code }}
                         </td>
-                        <td class="px-5 py-4 text-slate-700 dark:text-slate-200">
-                            {{ record.template }}
-                        </td>
                         <td
                             class="px-5 py-4 text-right font-mono tabular-nums text-slate-700 dark:text-slate-200"
                             data-testid="cockpit-pay-code-amount"
                         >
                             {{ record.amount }}
+                        </td>
+                        <td class="px-5 py-4 text-slate-700 dark:text-slate-200">
+                            {{ record.template }}
                         </td>
                         <td class="px-5 py-4">
                             <span
@@ -432,10 +461,10 @@ function statusBadgeClass(status: string): string {
                             </span>
                         </td>
                         <td class="px-5 py-4 text-slate-700 dark:text-slate-200">
-                            {{ record.owner }}
+                            {{ record.createdAt ?? '—' }}
                         </td>
                         <td class="px-5 py-4 text-slate-500 dark:text-slate-400">
-                            {{ record.lastActivity }}
+                            {{ record.expiresAt ?? '—' }}
                         </td>
                         <td class="px-5 py-4">
                             <div class="flex w-52 flex-col gap-2">
@@ -463,6 +492,27 @@ function statusBadgeClass(status: string): string {
                                         </span>
                                     </summary>
                                     <div class="mt-2 flex flex-wrap gap-2">
+                                        <dl
+                                            class="grid w-full gap-2 rounded-lg bg-slate-50 p-2 text-left text-xs dark:bg-slate-900"
+                                            data-testid="cockpit-pay-code-row-secondary-facts"
+                                        >
+                                            <div>
+                                                <dt class="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                                    Owner
+                                                </dt>
+                                                <dd class="mt-0.5 text-slate-700 dark:text-slate-200">
+                                                    {{ record.owner }}
+                                                </dd>
+                                            </div>
+                                            <div>
+                                                <dt class="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                                    Last Activity
+                                                </dt>
+                                                <dd class="mt-0.5 text-slate-700 dark:text-slate-200">
+                                                    {{ record.lastActivity }}
+                                                </dd>
+                                            </div>
+                                        </dl>
                                         <button
                                             v-for="action in disabledActions(record)"
                                             :key="action.key"

@@ -76,7 +76,7 @@ const activeSummary = computed(() => {
                     :value="query ?? ''"
                     name="search"
                     type="search"
-                    placeholder="Search by Pay Code, recipient, template, status, or amount"
+                    placeholder="Search by code, recipient, amount, campaign, or status..."
                     class="h-10 w-full rounded-full border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:focus:border-emerald-500 dark:focus:ring-emerald-900/60"
                     data-testid="cockpit-pay-code-search-input"
                 />
@@ -104,7 +104,7 @@ const activeSummary = computed(() => {
                 class="inline-flex h-10 items-center justify-center rounded-full border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                 data-testid="cockpit-pay-code-filter-submit"
             >
-                Apply
+                Search
             </button>
             <a
                 v-if="query || statusFilter"
@@ -116,7 +116,7 @@ const activeSummary = computed(() => {
             </a>
         </form>
         <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
-            Filters use read-only GET navigation. They do not mutate vouchers, call providers, or move money.
+            Search and filters only change this list.
         </p>
     </section>
 </template>
