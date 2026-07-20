@@ -24,3 +24,23 @@ it('documents pay code explorer compact operations table slice 1', function (): 
         ->and($frontendTest)->toContain('renders the operator list summary as a compact scan strip')
         ->and($frontendTest)->toContain('cockpit-pay-code-explorer-status-pills');
 });
+
+it('documents pay code explorer compact operations table slice 2', function (): void {
+    $packageRoot = dirname(__DIR__, 3);
+
+    $report = file_get_contents($packageRoot.'/docs/ui-cockpit/reports/611-pay-code-explorer-compact-operations-table-slice-2.md');
+    $table = file_get_contents($packageRoot.'/resources/js/cockpit/components/CockpitPayCodeResultsTable.vue');
+    $frontendTest = file_get_contents($packageRoot.'/tests/frontend/cockpit/CockpitPayCodeExplorerHydration.test.ts');
+
+    expect($report)
+        ->toContain('Pay Code Explorer Compact Operations Table — Slice 2')
+        ->toContain('icon-first desktop row actions')
+        ->toContain('Presentation-only table compactness slice')
+        ->and($table)->toContain('lucide-vue-next')
+        ->and($table)->toContain('h-8 w-8 items-center justify-center')
+        ->and($table)->toContain('flex justify-end gap-1.5')
+        ->and($table)->toContain('px-4 py-2.5')
+        ->and($table)->toContain('MoreHorizontal')
+        ->and($frontendTest)->toContain('aria-label')
+        ->and($frontendTest)->toContain('py-2.5');
+});

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
+import { Eye, MoreHorizontal, Share2 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import type {
     CockpitPayCodeExplorerRecord,
@@ -144,6 +145,10 @@ function statusBadgeClass(status: string): string {
     }
 
     return 'bg-slate-100 text-slate-700 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700';
+}
+
+function actionIcon(action: CockpitPayCodeRowAction): 'distribution' | 'inspect' {
+    return action.key.toLowerCase().includes('distribution') ? 'distribution' : 'inspect';
 }
 </script>
 
@@ -424,13 +429,13 @@ function statusBadgeClass(status: string): string {
             <table class="min-w-full divide-y divide-slate-200 text-left text-sm dark:divide-slate-800">
                 <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-950 dark:text-slate-400">
                     <tr>
-                        <th class="px-5 py-3">Pay Code</th>
-                        <th class="px-5 py-3 text-right">Amount</th>
-                        <th class="px-5 py-3">Type / Template</th>
-                        <th class="px-5 py-3">Status</th>
-                        <th class="px-5 py-3">Created</th>
-                        <th class="px-5 py-3">Expires</th>
-                        <th class="px-5 py-3">Actions</th>
+                        <th class="px-4 py-2">Pay Code</th>
+                        <th class="px-4 py-2 text-right">Amount</th>
+                        <th class="px-4 py-2">Type / Template</th>
+                        <th class="px-4 py-2">Status</th>
+                        <th class="px-4 py-2">Created</th>
+                        <th class="px-4 py-2">Expires</th>
+                        <th class="px-4 py-2 text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -439,19 +444,19 @@ function statusBadgeClass(status: string): string {
                         :key="record.code"
                         data-testid="cockpit-pay-code-row"
                     >
-                        <td class="px-5 py-4 font-mono text-slate-950 dark:text-slate-50">
+                        <td class="px-4 py-2.5 font-mono text-slate-950 dark:text-slate-50">
                             {{ record.code }}
                         </td>
                         <td
-                            class="px-5 py-4 text-right font-mono tabular-nums text-slate-700 dark:text-slate-200"
+                            class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-700 dark:text-slate-200"
                             data-testid="cockpit-pay-code-amount"
                         >
                             {{ record.amount }}
                         </td>
-                        <td class="px-5 py-4 text-slate-700 dark:text-slate-200">
+                        <td class="px-4 py-2.5 text-slate-700 dark:text-slate-200">
                             {{ record.template }}
                         </td>
-                        <td class="px-5 py-4">
+                        <td class="px-4 py-2.5">
                             <span
                                 :class="statusBadgeClass(record.status)"
                                 class="rounded-full px-2.5 py-1 text-xs font-semibold ring-1"
@@ -460,24 +465,35 @@ function statusBadgeClass(status: string): string {
                                 {{ displayStatus(record.status) }}
                             </span>
                         </td>
-                        <td class="px-5 py-4 text-slate-700 dark:text-slate-200">
+                        <td class="px-4 py-2.5 text-slate-700 dark:text-slate-200">
                             {{ record.createdAt ?? '—' }}
                         </td>
-                        <td class="px-5 py-4 text-slate-500 dark:text-slate-400">
+                        <td class="px-4 py-2.5 text-slate-500 dark:text-slate-400">
                             {{ record.expiresAt ?? '—' }}
                         </td>
-                        <td class="px-5 py-4">
-                            <div class="flex w-52 flex-col gap-2">
-                                <div class="grid grid-cols-1 gap-2">
+                        <td class="px-4 py-2.5">
+                            <div class="flex justify-end gap-1.5">
+                                <div class="flex gap-1.5">
                                     <Link
                                         v-for="action in enabledActions(record)"
                                         :key="action.key"
                                         :href="action.href ?? '#'"
-                                        :title="action.reason ?? undefined"
-                                        class="inline-flex min-h-8 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-center text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:border-emerald-700"
+                                        :aria-label="action.label"
+                                        :title="action.label"
+                                        class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:border-emerald-700"
                                         data-testid="cockpit-pay-code-row-action-link"
                                     >
-                                        {{ action.label }}
+                                        <Share2
+                                            v-if="actionIcon(action) === 'distribution'"
+                                            aria-hidden="true"
+                                            class="h-4 w-4"
+                                        />
+                                        <Eye
+                                            v-else
+                                            aria-hidden="true"
+                                            class="h-4 w-4"
+                                        />
+                                        <span class="sr-only">{{ action.label }}</span>
                                     </Link>
                                 </div>
                                 <details
@@ -485,8 +501,12 @@ function statusBadgeClass(status: string): string {
                                     class="group text-xs text-slate-500 dark:text-slate-400"
                                     data-testid="cockpit-pay-code-row-unavailable-actions"
                                 >
-                                    <summary class="flex min-h-8 cursor-pointer items-center justify-center rounded-full bg-slate-100 px-3 py-1 text-center font-medium text-slate-500 transition hover:text-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:text-slate-200">
-                                        More
+                                    <summary
+                                        aria-label="More row actions"
+                                        class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:text-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+                                        title="More row actions"
+                                    >
+                                        <MoreHorizontal aria-hidden="true" class="h-4 w-4" />
                                         <span class="sr-only">
                                             — {{ disabledActions(record).length }} unavailable actions
                                         </span>

@@ -313,17 +313,23 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(actionLinks).toHaveLength(2);
         expect(actionLinks[0].attributes('href')).toBe('/x/cockpit/pay-codes/PC-HYDRATED-001');
         expect(actionLinks[0].text()).toContain('View details');
-        expect(actionLinks[0].classes()).toContain('min-h-8');
+        expect(actionLinks[0].attributes('aria-label')).toBe('View details');
+        expect(actionLinks[0].attributes('title')).toBe('View details');
+        expect(actionLinks[0].classes()).toContain('h-8');
+        expect(actionLinks[0].classes()).toContain('w-8');
         expect(actionLinks[0].classes()).toContain('justify-center');
-        expect(actionLinks[0].classes()).toContain('text-center');
+        expect(actionLinks[0].find('svg').exists()).toBe(true);
         expect(actionLinks[1].attributes('href')).toBe('/x/cockpit/pay-codes/PC-HYDRATED-001/distribution');
+        expect(actionLinks[1].attributes('aria-label')).toBe('Distribution');
         expect(actionLinks[1].text()).toContain('Distribution');
         expect(disabledActions.some((action) => action.text().includes('Notify recipient'))).toBe(true);
         const unavailableSummary = wrapper.find('[data-testid="cockpit-pay-code-row-unavailable-actions"] summary');
 
         expect(wrapper.find('[data-testid="cockpit-pay-code-row-unavailable-actions"]').text()).toContain('1 unavailable');
-        expect(unavailableSummary.text()).toContain('More');
-        expect(unavailableSummary.classes()).toContain('min-h-8');
+        expect(unavailableSummary.attributes('aria-label')).toBe('More row actions');
+        expect(unavailableSummary.classes()).toContain('h-8');
+        expect(unavailableSummary.classes()).toContain('w-8');
+        expect(unavailableSummary.find('svg').exists()).toBe(true);
         expect(wrapper.find('[data-testid="cockpit-pay-code-results-table"]').text()).not.toContain('Execute');
         expect(wrapper.text()).not.toContain('provider_payload');
     });
@@ -336,10 +342,14 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         });
 
         const desktopActionColumn = wrapper.find('[data-testid="cockpit-pay-code-row"] td:last-child > div');
+        const desktopAmountCell = wrapper.find('[data-testid="cockpit-pay-code-amount"]');
         const mobileLinks = wrapper.findAll('[data-testid="cockpit-pay-code-mobile-row-action-link"]');
         const mobileDisabledSummary = wrapper.find('[data-testid="cockpit-pay-code-mobile-row-disabled-summary"]');
 
-        expect(desktopActionColumn.classes()).toContain('w-52');
+        expect(desktopAmountCell.classes()).toContain('py-2.5');
+        expect(desktopActionColumn.classes()).toContain('justify-end');
+        expect(desktopActionColumn.classes()).toContain('gap-1.5');
+        expect(desktopActionColumn.findAll('svg').length).toBeGreaterThan(0);
         expect(mobileLinks[0].classes()).toContain('min-h-9');
         expect(mobileLinks[0].classes()).toContain('justify-center');
         expect(mobileLinks[0].classes()).toContain('text-center');
@@ -361,9 +371,9 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         const mobileUnavailable = wrapper.find('[data-testid="cockpit-pay-code-mobile-row-unavailable-actions"]');
         const mobileSummary = wrapper.find('[data-testid="cockpit-pay-code-mobile-row-disabled-summary"]');
 
-        expect(desktopSummary.text()).toContain('More');
         expect(desktopSummary.text()).toContain('1 unavailable actions');
         expect(desktopSummary.text()).not.toBe('1 unavailable');
+        expect(desktopSummary.find('svg').exists()).toBe(true);
         expect(desktopUnavailable.findAll('[data-testid="cockpit-pay-code-row-action-disabled"]')).toHaveLength(1);
         expect(mobileUnavailable.exists()).toBe(true);
         expect(mobileSummary.text()).toContain('More');
