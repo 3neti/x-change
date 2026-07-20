@@ -20,3 +20,25 @@ it('documents pay code explorer row action width polish slice 1', function (): v
         ->and($frontendTest)->toContain('w-52')
         ->and($frontendTest)->toContain('min-h-9');
 });
+
+it('documents pay code explorer row action width polish slice 2 closure', function (): void {
+    $packageRoot = dirname(__DIR__, 3);
+    $hostRoot = dirname($packageRoot, 2);
+
+    $report = file_get_contents($packageRoot.'/docs/ui-cockpit/reports/595-pay-code-explorer-row-action-width-polish-slice-2-closure.md');
+    $component = file_get_contents($packageRoot.'/resources/js/cockpit/components/CockpitPayCodeResultsTable.vue');
+    $hostComponent = file_get_contents($hostRoot.'/resources/js/cockpit/components/CockpitPayCodeResultsTable.vue');
+    $compass = file_get_contents($packageRoot.'/docs/ui-cockpit/COMPASS.md');
+    $settlementCompass = file_get_contents($packageRoot.'/docs/architecture/SETTLEMENT_OS_COMPASS.md');
+
+    expect($report)
+        ->toContain('Pay Code Explorer Row Action Width Polish — Slice 2 / Closure')
+        ->toContain('Published Cockpit package assets')
+        ->toContain('Closed / pending human browser inspection')
+        ->and($component)->toContain('flex w-52 flex-col gap-2')
+        ->and($hostComponent)->toContain('flex w-52 flex-col gap-2')
+        ->and($hostComponent)->toContain('min-h-8 items-center justify-center')
+        ->and($hostComponent)->toContain('min-h-9 items-center justify-center')
+        ->and($compass)->toContain('Completed Pay Code Explorer Row Action Width Polish Slice 2 / Closure')
+        ->and($settlementCompass)->toContain('Pay Code Explorer Row Action Width Polish — Slice 2');
+});

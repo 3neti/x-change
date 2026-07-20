@@ -3848,3 +3848,13 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/594-pay-code-explorer-row-action-width-polish-slice-1.md`.
 - Boundary remains unchanged: presentation-only row action width polish; no route behavior, backend queries, read-model hydration, campaign context propagation, row action destinations, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next checkpoint: host publish, asset drift, authenticated browser smoke if ChromeDriver is available, build, and closure.
+
+## 2026-07-20 Update — Pay Code Explorer Row Action Width Polish — Slice 2
+
+- Closed the Pay Code Explorer Row Action Width Polish wave.
+- Host-published Cockpit assets now include the fixed desktop action column and centered stable-height row action controls for `/x/cockpit/pay-codes`.
+- Focused frontend, asset drift, backend architecture documentation, package/host asset guard, and host build verification passed.
+- Authenticated Dusk browser smoke remains pending because this sandbox has recently blocked ChromeDriver port binding for this page family.
+- UI/report: `../ui-cockpit/reports/595-pay-code-explorer-row-action-width-polish-slice-2-closure.md`.
+- Boundary remains unchanged: presentation-only row action width polish; no route behavior, backend queries, read-model hydration, campaign context propagation, row action destinations, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, rerun Dusk from a shell where ChromeDriver can bind to port `9515`, then choose the next page-focused Cockpit target or a real integration wiring wave.
