@@ -240,8 +240,11 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(actionLinks[1].attributes('href')).toBe('/x/cockpit/pay-codes/PC-HYDRATED-001/distribution');
         expect(actionLinks[1].text()).toContain('Distribution');
         expect(disabledActions.some((action) => action.text().includes('Notify recipient'))).toBe(true);
+        const unavailableSummary = wrapper.find('[data-testid="cockpit-pay-code-row-unavailable-actions"] summary');
+
         expect(wrapper.find('[data-testid="cockpit-pay-code-row-unavailable-actions"]').text()).toContain('1 unavailable');
-        expect(wrapper.find('[data-testid="cockpit-pay-code-row-unavailable-actions"] summary').classes()).toContain('min-h-8');
+        expect(unavailableSummary.text()).toContain('More');
+        expect(unavailableSummary.classes()).toContain('min-h-8');
         expect(wrapper.find('[data-testid="cockpit-pay-code-results-table"]').text()).not.toContain('Execute');
         expect(wrapper.text()).not.toContain('provider_payload');
     });
@@ -261,9 +264,32 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(mobileLinks[0].classes()).toContain('min-h-9');
         expect(mobileLinks[0].classes()).toContain('justify-center');
         expect(mobileLinks[0].classes()).toContain('text-center');
+        expect(mobileDisabledSummary.text()).toContain('More');
         expect(mobileDisabledSummary.classes()).toContain('min-h-9');
         expect(mobileDisabledSummary.classes()).toContain('justify-center');
         expect(mobileDisabledSummary.classes()).toContain('text-center');
+    });
+
+    it('keeps unavailable row action counts behind a quiet disclosure', () => {
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: payCodesReadModel,
+            },
+        });
+
+        const desktopUnavailable = wrapper.find('[data-testid="cockpit-pay-code-row-unavailable-actions"]');
+        const desktopSummary = desktopUnavailable.find('summary');
+        const mobileUnavailable = wrapper.find('[data-testid="cockpit-pay-code-mobile-row-unavailable-actions"]');
+        const mobileSummary = wrapper.find('[data-testid="cockpit-pay-code-mobile-row-disabled-summary"]');
+
+        expect(desktopSummary.text()).toContain('More');
+        expect(desktopSummary.text()).toContain('1 unavailable actions');
+        expect(desktopSummary.text()).not.toBe('1 unavailable');
+        expect(desktopUnavailable.findAll('[data-testid="cockpit-pay-code-row-action-disabled"]')).toHaveLength(1);
+        expect(mobileUnavailable.exists()).toBe(true);
+        expect(mobileSummary.text()).toContain('More');
+        expect(mobileSummary.text()).toContain('1 unavailable actions');
+        expect(mobileUnavailable.findAll('[data-testid="cockpit-pay-code-mobile-row-action-disabled"]')).toHaveLength(1);
     });
 
     it('renders mobile-first Pay Code result cards without duplicating desktop row test contracts', () => {
@@ -284,7 +310,8 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(mobileRows[0].text()).toContain('Money Changer');
         expect(mobileRows[0].text()).toContain('₱1,500.75');
         expect(mobileRows[0].text()).toContain('Treasury Desk');
-        expect(mobileRows[0].text()).toContain('1 unavailable');
+        expect(mobileRows[0].text()).toContain('More');
+        expect(mobileRows[0].text()).toContain('1 unavailable actions');
         expect(mobileLinks).toHaveLength(2);
         expect(mobileLinks[0].attributes('href')).toBe('/x/cockpit/pay-codes/PC-HYDRATED-001');
         expect(mobileLinks[1].attributes('href')).toBe('/x/cockpit/pay-codes/PC-HYDRATED-001/distribution');

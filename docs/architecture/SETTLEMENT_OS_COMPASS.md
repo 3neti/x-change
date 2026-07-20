@@ -3858,3 +3858,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/595-pay-code-explorer-row-action-width-polish-slice-2-closure.md`.
 - Boundary remains unchanged: presentation-only row action width polish; no route behavior, backend queries, read-model hydration, campaign context propagation, row action destinations, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, rerun Dusk from a shell where ChromeDriver can bind to port `9515`, then choose the next page-focused Cockpit target or a real integration wiring wave.
+
+## 2026-07-20 Update — Pay Code Explorer Row Action Noise Reduction — Slice 1
+
+- Started the Pay Code Explorer Row Action Noise Reduction wave.
+- Pay Code Explorer rows now show a quieter `More` disclosure instead of repeating visible `N unavailable` labels on every row.
+- Disabled action counts remain available to assistive technology and disabled action labels/reasons remain inspectable inside each disclosure.
+- UI/report: `../ui-cockpit/reports/596-pay-code-explorer-row-action-noise-reduction-slice-1.md`.
+- Boundary remains unchanged: presentation-only row action noise reduction; no route behavior, backend queries, read-model hydration, campaign context propagation, row action destinations, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next checkpoint: host publish, asset drift, authenticated browser smoke if available, build, and closure.

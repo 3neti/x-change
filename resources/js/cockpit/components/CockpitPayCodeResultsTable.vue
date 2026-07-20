@@ -359,13 +359,34 @@ function statusBadgeClass(status: string): string {
                     >
                         {{ action.label }}
                     </Link>
-                    <span
+                    <details
                         v-if="disabledActions(record).length > 0"
-                        class="inline-flex min-h-9 items-center justify-center rounded-full bg-slate-100 px-3 py-1.5 text-center text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-                        data-testid="cockpit-pay-code-mobile-row-disabled-summary"
+                        class="group sm:col-span-2"
+                        data-testid="cockpit-pay-code-mobile-row-unavailable-actions"
                     >
-                        {{ disabledActions(record).length }} unavailable
-                    </span>
+                        <summary
+                            class="inline-flex min-h-9 w-full cursor-pointer items-center justify-center rounded-full bg-slate-100 px-3 py-1.5 text-center text-xs font-medium text-slate-500 transition hover:text-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+                            data-testid="cockpit-pay-code-mobile-row-disabled-summary"
+                        >
+                            More
+                            <span class="sr-only">
+                                — {{ disabledActions(record).length }} unavailable actions
+                            </span>
+                        </summary>
+                        <div class="mt-2 flex flex-wrap gap-2">
+                            <button
+                                v-for="action in disabledActions(record)"
+                                :key="action.key"
+                                :disabled="action.disabled !== false"
+                                :title="action.reason ?? undefined"
+                                type="button"
+                                class="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:text-slate-300"
+                                data-testid="cockpit-pay-code-mobile-row-action-disabled"
+                            >
+                                {{ action.label }}
+                            </button>
+                        </div>
+                    </details>
                 </div>
             </article>
         </div>
@@ -436,7 +457,10 @@ function statusBadgeClass(status: string): string {
                                     data-testid="cockpit-pay-code-row-unavailable-actions"
                                 >
                                     <summary class="flex min-h-8 cursor-pointer items-center justify-center rounded-full bg-slate-100 px-3 py-1 text-center font-medium text-slate-500 transition hover:text-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:text-slate-200">
-                                        {{ disabledActions(record).length }} unavailable
+                                        More
+                                        <span class="sr-only">
+                                            — {{ disabledActions(record).length }} unavailable actions
+                                        </span>
                                     </summary>
                                     <div class="mt-2 flex flex-wrap gap-2">
                                         <button
