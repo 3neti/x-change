@@ -680,20 +680,31 @@ function integrationBadge(
             </section>
 
             <details
-                class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                class="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 data-testid="cockpit-pay-code-page-details-disclosure"
             >
-                <summary class="cursor-pointer text-sm font-semibold text-slate-800 dark:text-slate-200">
-                    Page details
+                <summary class="cursor-pointer list-none">
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                                Page details
+                            </p>
+                            <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                                Read-only rules, totals, and connected-service context.
+                            </p>
+                        </div>
+                        <span class="inline-flex w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                            Details
+                        </span>
+                    </div>
                 </summary>
-                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    Open this panel for row-action rules, list totals, and connected-service readiness. The main scan path above stays focused on search and results.
-                    This Explorer does not mutate vouchers, execute drivers, approve claims, send feedback, write journal entries, call providers, or move money.
+                <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    The main scan path stays focused on search and results. This Explorer does not mutate vouchers, execute drivers, approve claims, send feedback, write journal entries, call providers, or move money.
                 </p>
 
-                <div class="mt-4 grid gap-4">
+                <div class="mt-3 grid gap-3">
                     <details
-                        class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950"
+                        class="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950"
                         data-testid="cockpit-pay-code-explorer-current-search-disclosure"
                     >
                         <summary class="cursor-pointer text-sm font-semibold text-slate-800 dark:text-slate-200">
@@ -754,7 +765,7 @@ function integrationBadge(
                         </p>
                     </details>
                     <details
-                        class="rounded-xl border border-emerald-200 bg-white p-5 dark:border-emerald-900/70 dark:bg-slate-950"
+                        class="rounded-xl border border-emerald-200 bg-white p-3 dark:border-emerald-900/70 dark:bg-slate-950"
                         data-testid="cockpit-pay-code-row-action-guidance"
                     >
                         <summary class="cursor-pointer text-sm font-semibold text-emerald-800 dark:text-emerald-200">
@@ -794,7 +805,7 @@ function integrationBadge(
                     </details>
 
                     <details
-                        class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950"
+                        class="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950"
                         data-testid="cockpit-pay-code-stats-summary"
                     >
                         <summary class="cursor-pointer text-sm font-semibold text-slate-800 dark:text-slate-200">
@@ -826,7 +837,7 @@ function integrationBadge(
                     </details>
 
                     <details
-                        class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950"
+                        class="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950"
                         data-testid="cockpit-pay-code-integration-badges"
                     >
                         <summary class="cursor-pointer text-sm font-semibold text-slate-800 dark:text-slate-200">
@@ -849,7 +860,7 @@ function integrationBadge(
                     </details>
 
                     <details
-                        class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950"
+                        class="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950"
                         data-testid="cockpit-pay-code-integration-readiness"
                     >
                         <summary class="cursor-pointer text-sm font-semibold text-slate-800 dark:text-slate-200">

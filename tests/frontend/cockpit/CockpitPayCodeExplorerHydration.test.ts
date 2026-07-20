@@ -194,7 +194,9 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(pageDetails.exists()).toBe(true);
         expect(pageDetails.element.tagName.toLowerCase()).toBe('details');
         expect(pageDetails.find('summary').text()).toContain('Page details');
-        expect(pageDetails.text()).toContain('Open this panel for row-action rules, list totals, and connected-service readiness.');
+        expect(pageDetails.text()).toContain('Read-only rules, totals, and connected-service context.');
+        expect(pageDetails.text()).toContain('The main scan path stays focused on search and results.');
+        expect(pageDetails.classes()).toContain('py-3');
         expect(pageDetails.find('[data-testid="cockpit-pay-code-row-action-guidance"]').exists()).toBe(true);
         expect(pageDetails.find('[data-testid="cockpit-pay-code-stats-summary"]').exists()).toBe(true);
         expect(pageDetails.find('[data-testid="cockpit-pay-code-integration-badges"]').exists()).toBe(true);
