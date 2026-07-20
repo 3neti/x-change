@@ -5,11 +5,24 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Pay Code Explorer Shell Header Compression
-Status: In progress
+Status: Closed / pending human inspection and Dusk rerun
 Last updated: 2026-07-20
 
 ## Completed
 
+- Completed Pay Code Explorer Shell Header Compression Slice 2 / Closure:
+  - Published package Cockpit assets to the host app.
+  - Confirmed the host Pay Code Explorer shell header uses tighter padding.
+  - Confirmed read-model status, record count, and payload policy render as compact pill facts in the host asset.
+  - Confirmed page title, read-only boundary copy, primary summary, search/filter behavior, pagination, row actions, route links, and read-only boundaries remain available.
+  - Verified focused Pay Code Explorer frontend hydration coverage.
+  - Verified backend architecture documentation and package/host asset guards.
+  - Verified x-change asset drift check.
+  - Verified the host production frontend build.
+  - Kept Dusk browser visual acceptance pending because this sandbox has recently blocked ChromeDriver port binding for this page family.
+  - Confirmed no routes, controllers, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, artifact generation, or money movement were changed.
+  - Report: `reports/607-pay-code-explorer-shell-header-compression-slice-2-closure.md`.
+  - Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, rerun Dusk from a shell where ChromeDriver can bind to port `9515`, then continue page-focused Cockpit polish or pick the next real integration wiring wave.
 - Started Pay Code Explorer Shell Header Compression Slice 1:
   - Reduced the shell header padding.
   - Converted the read-model, records, and payload-policy facts into compact pill facts.

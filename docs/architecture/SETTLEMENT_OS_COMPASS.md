@@ -3967,3 +3967,14 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/606-pay-code-explorer-shell-header-compression-slice-1.md`.
 - Boundary remains unchanged: presentation-only shell header compression; no route behavior, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next checkpoint: host publish, asset drift, authenticated browser smoke if available, build, and closure.
+
+## 2026-07-20 Update — Pay Code Explorer Shell Header Compression — Slice 2
+
+- Closed the Pay Code Explorer Shell Header Compression wave.
+- Host-published Cockpit assets now use the compressed shell header on `/x/cockpit/pay-codes`.
+- Tighter header padding and compact pill facts for read-model status, record count, and payload policy are present in package and host assets.
+- Focused frontend, asset drift, backend architecture documentation, package/host asset guard, and host build verification passed.
+- Authenticated Dusk browser smoke remains pending because this sandbox has recently blocked ChromeDriver port binding for this page family.
+- UI/report: `../ui-cockpit/reports/607-pay-code-explorer-shell-header-compression-slice-2-closure.md`.
+- Boundary remains unchanged: presentation-only shell header compression; no route behavior, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, rerun Dusk from a shell where ChromeDriver can bind to port `9515`, then choose the next page-focused Cockpit target or a real integration wiring wave.
