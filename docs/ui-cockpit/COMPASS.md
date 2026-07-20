@@ -5,11 +5,25 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Pay Code Explorer Voucher List Rationalization
-Status: In progress
+Status: Closed / pending human inspection and Dusk rerun
 Last updated: 2026-07-20
 
 ## Completed
 
+- Completed Pay Code Explorer Voucher List Rationalization Slice 2 / Closure:
+  - Published package Cockpit assets to the host app.
+  - Confirmed the host Explorer prioritizes voucher lifecycle cards, search/filter controls, and result rows.
+  - Confirmed current-search, read-model status, record count, and payload policy remain available under Page details.
+  - Confirmed the host result table uses `Pay Code`, `Amount`, `Type / Template`, `Status`, `Created`, `Expires`, and `Actions`.
+  - Confirmed Owner and Last Activity remain tucked into row disclosures.
+  - Verified focused Pay Code Explorer frontend hydration, foundation, and campaign-navigation coverage.
+  - Verified backend architecture documentation and package/host asset guards.
+  - Verified x-change asset drift check.
+  - Verified the host production frontend build.
+  - Kept Dusk browser visual acceptance pending because this sandbox has recently blocked ChromeDriver port binding for this page family.
+  - Confirmed no routes, controllers, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, artifact generation, or money movement were changed.
+  - Report: `reports/609-pay-code-explorer-voucher-list-rationalization-slice-2-closure.md`.
+  - Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, rerun Dusk from a shell where ChromeDriver can bind to port `9515`, then continue page-focused Cockpit polish or pick the next page completion pass.
 - Started Pay Code Explorer Voucher List Rationalization Slice 1:
   - Moved Quick Generate, Clear filters, and Read-only into the compact page header.
   - Replaced the old operator summary with voucher lifecycle summary cards: Total, Active, Redeemed, Expired, and Needs Attention.

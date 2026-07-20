@@ -3989,3 +3989,15 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/608-pay-code-explorer-voucher-list-rationalization-slice-1.md`.
 - Boundary remains unchanged: presentation-only Explorer rationalization; no route behavior, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next checkpoint: host publish, asset drift, authenticated browser smoke if available, build, and closure.
+
+## 2026-07-20 Update — Pay Code Explorer Voucher List Rationalization — Slice 2
+
+- Closed the Pay Code Explorer Voucher List Rationalization wave.
+- Host-published Cockpit assets now prioritize voucher lifecycle cards, search/filter controls, and result rows on `/x/cockpit/pay-codes`.
+- Current-search metadata, read-model status, record count, payload policy, Owner, and Last Activity remain available under disclosures.
+- The host result table uses the voucher-list columns: Pay Code, Amount, Type / Template, Status, Created, Expires, and Actions.
+- Focused frontend, asset drift, backend architecture documentation, package/host asset guard, and host build verification passed.
+- Authenticated Dusk browser smoke remains pending because this sandbox has recently blocked ChromeDriver port binding for this page family.
+- UI/report: `../ui-cockpit/reports/609-pay-code-explorer-voucher-list-rationalization-slice-2-closure.md`.
+- Boundary remains unchanged: presentation-only Explorer rationalization; no route behavior, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, rerun Dusk from a shell where ChromeDriver can bind to port `9515`, then continue page-focused Cockpit polish or pick the next page completion pass.
