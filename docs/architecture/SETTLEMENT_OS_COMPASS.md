@@ -3839,3 +3839,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/593-pay-code-explorer-amount-scan-polish-slice-2-closure.md`.
 - Boundary remains unchanged: presentation-only amount scan polish; no route behavior, backend queries, read-model hydration, amount calculation, pricing, funding, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, then choose the next page-focused Cockpit target or a real integration wiring wave.
+
+## 2026-07-20 Update — Pay Code Explorer Row Action Width Polish — Slice 1
+
+- Started the Pay Code Explorer Row Action Width Polish wave.
+- Pay Code Explorer desktop and mobile row action controls now use centered, stable-height pills for enabled links and unavailable summaries.
+- The desktop action column now has a fixed scan width while preserving existing read-only detail/distribution destinations.
+- UI/report: `../ui-cockpit/reports/594-pay-code-explorer-row-action-width-polish-slice-1.md`.
+- Boundary remains unchanged: presentation-only row action width polish; no route behavior, backend queries, read-model hydration, campaign context propagation, row action destinations, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next checkpoint: host publish, asset drift, authenticated browser smoke if ChromeDriver is available, build, and closure.

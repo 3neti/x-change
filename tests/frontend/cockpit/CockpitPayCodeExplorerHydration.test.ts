@@ -234,12 +234,36 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(actionLinks).toHaveLength(2);
         expect(actionLinks[0].attributes('href')).toBe('/x/cockpit/pay-codes/PC-HYDRATED-001');
         expect(actionLinks[0].text()).toContain('View details');
+        expect(actionLinks[0].classes()).toContain('min-h-8');
+        expect(actionLinks[0].classes()).toContain('justify-center');
+        expect(actionLinks[0].classes()).toContain('text-center');
         expect(actionLinks[1].attributes('href')).toBe('/x/cockpit/pay-codes/PC-HYDRATED-001/distribution');
         expect(actionLinks[1].text()).toContain('Distribution');
         expect(disabledActions.some((action) => action.text().includes('Notify recipient'))).toBe(true);
         expect(wrapper.find('[data-testid="cockpit-pay-code-row-unavailable-actions"]').text()).toContain('1 unavailable');
+        expect(wrapper.find('[data-testid="cockpit-pay-code-row-unavailable-actions"] summary').classes()).toContain('min-h-8');
         expect(wrapper.find('[data-testid="cockpit-pay-code-results-table"]').text()).not.toContain('Execute');
         expect(wrapper.text()).not.toContain('provider_payload');
+    });
+
+    it('keeps row action controls stable-width and centered for scan quality', () => {
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: payCodesReadModel,
+            },
+        });
+
+        const desktopActionColumn = wrapper.find('[data-testid="cockpit-pay-code-row"] td:last-child > div');
+        const mobileLinks = wrapper.findAll('[data-testid="cockpit-pay-code-mobile-row-action-link"]');
+        const mobileDisabledSummary = wrapper.find('[data-testid="cockpit-pay-code-mobile-row-disabled-summary"]');
+
+        expect(desktopActionColumn.classes()).toContain('w-52');
+        expect(mobileLinks[0].classes()).toContain('min-h-9');
+        expect(mobileLinks[0].classes()).toContain('justify-center');
+        expect(mobileLinks[0].classes()).toContain('text-center');
+        expect(mobileDisabledSummary.classes()).toContain('min-h-9');
+        expect(mobileDisabledSummary.classes()).toContain('justify-center');
+        expect(mobileDisabledSummary.classes()).toContain('text-center');
     });
 
     it('renders mobile-first Pay Code result cards without duplicating desktop row test contracts', () => {

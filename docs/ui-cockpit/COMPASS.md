@@ -4,12 +4,20 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Pay Code Explorer Amount Scan Polish
-Status: Closed / pending human inspection and Dusk rerun
+Current slice: Pay Code Explorer Row Action Width Polish
+Status: In progress
 Last updated: 2026-07-20
 
 ## Completed
 
+- Started Pay Code Explorer Row Action Width Polish Slice 1:
+  - Stabilized desktop row action column width.
+  - Rendered enabled row action links and unavailable summaries as centered, stable-height controls.
+  - Applied the same centered, stable-height treatment to mobile row action controls.
+  - Preserved existing read-only detail and distribution link destinations.
+  - Confirmed no routes, controllers, backend queries, read-model hydration, campaign context propagation, row action destinations, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, artifact generation, or money movement were changed.
+  - Report: `reports/594-pay-code-explorer-row-action-width-polish-slice-1.md`.
+  - Next recommended checkpoint: Pay Code Explorer Row Action Width Polish Slice 2 — host publish / asset drift / browser / build closure.
 - Completed Pay Code Explorer Amount Scan Polish Slice 2 / Closure:
   - Published package Cockpit assets to the host app.
   - Confirmed published Cockpit assets match package source.

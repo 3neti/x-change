@@ -348,20 +348,20 @@ function statusBadgeClass(status: string): string {
                     </div>
                 </dl>
 
-                <div class="flex flex-wrap gap-2">
+                <div class="grid gap-2 sm:grid-cols-2">
                     <Link
                         v-for="action in enabledActions(record)"
                         :key="action.key"
                         :href="action.href ?? '#'"
                         :title="action.reason ?? undefined"
-                        class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:border-emerald-700"
+                        class="inline-flex min-h-9 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-center text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:border-emerald-700"
                         data-testid="cockpit-pay-code-mobile-row-action-link"
                     >
                         {{ action.label }}
                     </Link>
                     <span
                         v-if="disabledActions(record).length > 0"
-                        class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                        class="inline-flex min-h-9 items-center justify-center rounded-full bg-slate-100 px-3 py-1.5 text-center text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400"
                         data-testid="cockpit-pay-code-mobile-row-disabled-summary"
                     >
                         {{ disabledActions(record).length }} unavailable
@@ -417,14 +417,14 @@ function statusBadgeClass(status: string): string {
                             {{ record.lastActivity }}
                         </td>
                         <td class="px-5 py-4">
-                            <div class="flex min-w-44 flex-col gap-2">
-                                <div class="flex flex-wrap gap-2">
+                            <div class="flex w-52 flex-col gap-2">
+                                <div class="grid grid-cols-1 gap-2">
                                     <Link
                                         v-for="action in enabledActions(record)"
                                         :key="action.key"
                                         :href="action.href ?? '#'"
                                         :title="action.reason ?? undefined"
-                                        class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:border-emerald-700"
+                                        class="inline-flex min-h-8 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-center text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:border-emerald-700"
                                         data-testid="cockpit-pay-code-row-action-link"
                                     >
                                         {{ action.label }}
@@ -432,10 +432,10 @@ function statusBadgeClass(status: string): string {
                                 </div>
                                 <details
                                     v-if="disabledActions(record).length > 0"
-                                    class="group w-fit text-xs text-slate-500 dark:text-slate-400"
+                                    class="group text-xs text-slate-500 dark:text-slate-400"
                                     data-testid="cockpit-pay-code-row-unavailable-actions"
                                 >
-                                    <summary class="cursor-pointer font-medium text-slate-500 transition hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">
+                                    <summary class="flex min-h-8 cursor-pointer items-center justify-center rounded-full bg-slate-100 px-3 py-1 text-center font-medium text-slate-500 transition hover:text-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:text-slate-200">
                                         {{ disabledActions(record).length }} unavailable
                                     </summary>
                                     <div class="mt-2 flex flex-wrap gap-2">

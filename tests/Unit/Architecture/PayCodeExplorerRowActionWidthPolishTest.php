@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+it('documents pay code explorer row action width polish slice 1', function (): void {
+    $packageRoot = dirname(__DIR__, 3);
+
+    $report = file_get_contents($packageRoot.'/docs/ui-cockpit/reports/594-pay-code-explorer-row-action-width-polish-slice-1.md');
+    $component = file_get_contents($packageRoot.'/resources/js/cockpit/components/CockpitPayCodeResultsTable.vue');
+    $frontendTest = file_get_contents($packageRoot.'/tests/frontend/cockpit/CockpitPayCodeExplorerHydration.test.ts');
+
+    expect($report)
+        ->toContain('Pay Code Explorer Row Action Width Polish — Slice 1')
+        ->toContain('fixed scan width')
+        ->toContain('Presentation-only row action width polish')
+        ->and($component)->toContain('flex w-52 flex-col gap-2')
+        ->and($component)->toContain('min-h-8 items-center justify-center')
+        ->and($component)->toContain('min-h-9 items-center justify-center')
+        ->and($frontendTest)->toContain('keeps row action controls stable-width')
+        ->and($frontendTest)->toContain('w-52')
+        ->and($frontendTest)->toContain('min-h-9');
+});
