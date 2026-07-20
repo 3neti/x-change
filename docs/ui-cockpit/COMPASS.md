@@ -5,11 +5,24 @@
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
 Current slice: Pay Code Explorer Amount Scan Polish
-Status: In progress
+Status: Closed / pending human inspection and Dusk rerun
 Last updated: 2026-07-20
 
 ## Completed
 
+- Completed Pay Code Explorer Amount Scan Polish Slice 2 / Closure:
+  - Published package Cockpit assets to the host app.
+  - Confirmed published Cockpit assets match package source.
+  - Verified focused Pay Code Explorer frontend hydration coverage.
+  - Verified focused backend architecture documentation coverage.
+  - Attempted authenticated Dusk browser smoke coverage for `/x/cockpit/pay-codes`; ChromeDriver could not bind to port `9515` in this sandbox after escalated approval timed out twice.
+  - Verified the host production frontend build.
+  - Confirmed desktop Pay Code Explorer amount values are right-aligned.
+  - Confirmed desktop and mobile amount values use monospaced, tabular numeric styling.
+  - Confirmed sanitized formatted amount strings remain unchanged.
+  - Confirmed no routes, controllers, backend queries, read-model hydration, amount calculation, pricing, funding, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public APIs, persistence, artifact generation, or money movement were changed.
+  - Report: `reports/593-pay-code-explorer-amount-scan-polish-slice-2-closure.md`.
+  - Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, rerun Dusk from a shell where ChromeDriver can bind to port `9515`, then continue page-focused Cockpit polish or pick the next real integration wiring wave.
 - Started Pay Code Explorer Amount Scan Polish Slice 1:
   - Right-aligned the desktop `Amount` column header and values.
   - Rendered desktop and mobile amount values with monospaced, tabular numeric styling.

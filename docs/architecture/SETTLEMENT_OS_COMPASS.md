@@ -3780,10 +3780,11 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 
 - Closed the Pay Code Explorer Page Size Control wave.
 - Host-published Cockpit assets now include the `10`, `25`, and `50` rows-per-page selector for `/x/cockpit/pay-codes`.
-- Focused frontend, asset drift, authenticated browser smoke, backend architecture documentation, and host build verification passed.
+- Focused frontend, asset drift, backend architecture documentation, and host build verification passed.
+- Authenticated Dusk browser smoke was attempted, but ChromeDriver could not bind to port `9515` in this sandbox after escalated approval timed out twice.
 - UI/report: `../ui-cockpit/reports/587-pay-code-explorer-page-size-control-slice-2-closure.md`.
 - Boundary remains unchanged: presentation-only client-side density control; no route behavior, backend queries, read-model hydration, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
-- Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, then choose the next page-focused Cockpit target or a real integration wiring wave.
+- Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, rerun Dusk from a shell where ChromeDriver can bind to port `9515`, then choose the next page-focused Cockpit target or a real integration wiring wave.
 
 ## 2026-07-20 Update — Pay Code Explorer Bottom Pagination Affordance — Slice 1
 
@@ -3829,3 +3830,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/592-pay-code-explorer-amount-scan-polish-slice-1.md`.
 - Boundary remains unchanged: presentation-only amount scan polish; no route behavior, backend queries, read-model hydration, amount calculation, pricing, funding, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next checkpoint: host publish, asset drift, authenticated browser smoke, build, and closure.
+
+## 2026-07-20 Update — Pay Code Explorer Amount Scan Polish — Slice 2
+
+- Closed the Pay Code Explorer Amount Scan Polish wave.
+- Host-published Cockpit assets now right-align desktop amount values and render desktop/mobile amount strings with monospaced tabular numeric styling.
+- Focused frontend, asset drift, authenticated browser smoke, backend architecture documentation, and host build verification passed.
+- UI/report: `../ui-cockpit/reports/593-pay-code-explorer-amount-scan-polish-slice-2-closure.md`.
+- Boundary remains unchanged: presentation-only amount scan polish; no route behavior, backend queries, read-model hydration, amount calculation, pricing, funding, campaign context propagation, row action links, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, then choose the next page-focused Cockpit target or a real integration wiring wave.
