@@ -152,21 +152,21 @@ function statusBadgeClass(status: string): string {
         class="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
         data-testid="cockpit-pay-code-results-table"
     >
-        <div class="border-b border-slate-200 p-5 dark:border-slate-800">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div class="border-b border-slate-200 p-4 dark:border-slate-800">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
                         Results
                     </p>
-                    <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
+                    <h3 class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">
                         Pay Code results
                     </h3>
                 </div>
                 <dl
-                    class="grid w-full grid-cols-2 gap-2 rounded-xl bg-slate-50 p-2 text-center sm:w-[34rem] sm:grid-cols-4 dark:bg-slate-950"
+                    class="grid w-full grid-cols-2 gap-1.5 rounded-full bg-slate-50 p-1.5 text-center sm:w-[30rem] sm:grid-cols-4 dark:bg-slate-950"
                     data-testid="cockpit-pay-code-results-density-summary"
                 >
-                    <div class="min-w-0 rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                    <div class="min-w-0 rounded-full bg-white px-3 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
                         <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Showing
                         </dt>
@@ -174,7 +174,7 @@ function statusBadgeClass(status: string): string {
                             {{ firstVisibleRecordNumber }}–{{ lastVisibleRecordNumber }} of {{ records.length }}
                         </dd>
                     </div>
-                    <div class="min-w-0 rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                    <div class="min-w-0 rounded-full bg-white px-3 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
                         <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Total Rows
                         </dt>
@@ -182,7 +182,7 @@ function statusBadgeClass(status: string): string {
                             {{ records.length }}
                         </dd>
                     </div>
-                    <div class="min-w-0 rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                    <div class="min-w-0 rounded-full bg-white px-3 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
                         <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Links
                         </dt>
@@ -190,7 +190,7 @@ function statusBadgeClass(status: string): string {
                             {{ totalEnabledActionCount() }}
                         </dd>
                     </div>
-                    <div class="min-w-0 rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                    <div class="min-w-0 rounded-full bg-white px-3 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
                         <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Disabled
                         </dt>
@@ -229,7 +229,7 @@ function statusBadgeClass(status: string): string {
 
             <div
                 v-if="isResultLimited"
-                class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
+                class="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300"
                 data-testid="cockpit-pay-code-result-limit-notice"
             >
                 Showing {{ firstVisibleRecordNumber }}–{{ lastVisibleRecordNumber }} of {{ records.length }} Pay Codes.
@@ -239,7 +239,7 @@ function statusBadgeClass(status: string): string {
             <nav
                 v-if="isResultLimited"
                 aria-label="Pay Code result pages"
-                class="mt-4 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 lg:flex-row lg:items-center lg:justify-between dark:border-slate-800 dark:bg-slate-900"
+                class="mt-3 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-2.5 lg:flex-row lg:items-center lg:justify-between dark:border-slate-800 dark:bg-slate-900"
                 data-testid="cockpit-pay-code-result-pagination"
             >
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center">

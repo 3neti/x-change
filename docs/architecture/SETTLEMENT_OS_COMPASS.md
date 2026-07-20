@@ -3938,3 +3938,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/603-pay-code-explorer-primary-summary-compression-slice-2-closure.md`.
 - Boundary remains unchanged: presentation-only primary summary compression; no route behavior, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, rerun Dusk from a shell where ChromeDriver can bind to port `9515`, then choose the next page-focused Cockpit target or a real integration wiring wave.
+
+## 2026-07-20 Update — Pay Code Explorer Results Header Compression — Slice 1
+
+- Started the Pay Code Explorer Results Header Compression wave.
+- Pay Code Explorer results now use a tighter header, pill-style density metric strip, lighter result-limit notice, and tighter top pagination toolbar.
+- The scan guide disclosure, pagination controls, row rendering, mobile cards, search/filter behavior, route links, and read-only boundaries remain available.
+- UI/report: `../ui-cockpit/reports/604-pay-code-explorer-results-header-compression-slice-1.md`.
+- Boundary remains unchanged: presentation-only results header compression; no route behavior, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next checkpoint: host publish, asset drift, authenticated browser smoke if available, build, and closure.

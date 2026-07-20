@@ -443,7 +443,7 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         const scanGuide = wrapper.find('[data-testid="cockpit-pay-code-results-scan-guide"]');
 
         expect(density.exists()).toBe(true);
-        expect(density.classes()).toContain('sm:w-[34rem]');
+        expect(density.classes()).toContain('sm:w-[30rem]');
         expect(density.text()).toContain('Showing');
         expect(density.text()).toContain('2 of 2');
         expect(density.text()).toContain('Total Rows');
@@ -468,13 +468,51 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         const metricValues = density.findAll('dd');
 
         expect(metricValues).toHaveLength(4);
-        expect(density.classes()).toContain('sm:w-[34rem]');
+        expect(density.classes()).toContain('sm:w-[30rem]');
+        expect(density.classes()).toContain('rounded-full');
 
         metricValues.forEach((metricValue) => {
             expect(metricValue.classes()).toContain('whitespace-nowrap');
             expect(metricValue.classes()).toContain('font-mono');
             expect(metricValue.classes()).toContain('tabular-nums');
         });
+    });
+
+    it('renders the results header as a compact pagination toolbar', () => {
+        const records = Array.from({ length: 30 }, (_, index) => ({
+            ...payCodesReadModel.records[0],
+            code: `PC-TOOLBAR-${String(index + 1).padStart(3, '0')}`,
+        }));
+
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: {
+                    ...payCodesReadModel,
+                    stats: {
+                        ...payCodesReadModel.stats,
+                        total: 30,
+                        filtered: 30,
+                    },
+                    records,
+                },
+            },
+        });
+
+        const table = wrapper.find('[data-testid="cockpit-pay-code-results-table"]');
+        const density = wrapper.find('[data-testid="cockpit-pay-code-results-density-summary"]');
+        const notice = wrapper.find('[data-testid="cockpit-pay-code-result-limit-notice"]');
+        const pagination = wrapper.find('[data-testid="cockpit-pay-code-result-pagination"]');
+
+        expect(table.find('.border-b').classes()).toContain('p-4');
+        expect(density.classes()).toContain('rounded-full');
+        expect(density.classes()).toContain('p-1.5');
+        expect(density.find('div').classes()).toContain('rounded-full');
+        expect(density.find('div').classes()).toContain('py-1.5');
+        expect(notice.classes()).toContain('mt-3');
+        expect(notice.classes()).toContain('text-slate-600');
+        expect(pagination.classes()).toContain('mt-3');
+        expect(pagination.classes()).toContain('p-2.5');
+        expect(pagination.text()).toContain('Page 1 of 2');
     });
 
     it('paginates high-volume result rendering while preserving total counts and navigation safety', async () => {
