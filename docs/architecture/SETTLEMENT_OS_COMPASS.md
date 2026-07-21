@@ -4050,3 +4050,27 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/615-pay-code-explorer-secondary-controls-compression-slice-3-closure.md`.
 - Boundary remains unchanged: presentation-only secondary control compression; no route behavior, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next recommended checkpoint: browser inspection of `/x/cockpit/pay-codes`, then continue Pay Code Explorer table content density or move to Voucher Detail/Distribution Workspace page polish.
+
+## 2026-07-21 Update — Pay Code Explorer Table Content Density — Slice 1
+
+- Started the Pay Code Explorer Table Content Density wave.
+- Desktop Pay Code rows now group identity and lifecycle facts into five scan columns without dropping sanitized list facts.
+- UI/report: `../ui-cockpit/reports/616-pay-code-explorer-table-content-density-slice-1.md`.
+- Boundary remains unchanged: presentation-only table content density; no route behavior, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+
+## 2026-07-21 Update — Pay Code Explorer Table Content Density — Slice 2
+
+- Mobile Pay Code rows now use a compact identity, status, amount, and lifecycle fact hierarchy.
+- Duplicate template rendering and repeated mobile fact cards were removed while read-only actions remain unchanged.
+- UI/report: `../ui-cockpit/reports/617-pay-code-explorer-table-content-density-slice-2.md`.
+- Boundary remains unchanged: presentation-only mobile content density; no route behavior, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+
+## 2026-07-21 Update — Pay Code Explorer Table Content Density — Slice 3
+
+- Closed the Pay Code Explorer Table Content Density wave.
+- Host-published Cockpit assets now use the compact five-column desktop result table and compact mobile fact hierarchy on `/x/cockpit/pay-codes`.
+- Focused frontend, asset drift, backend architecture documentation, package/host asset guard, and host build verification passed.
+- Authenticated Dusk browser smoke remains pending because this sandbox has recently blocked ChromeDriver port binding for this page family.
+- UI/report: `../ui-cockpit/reports/618-pay-code-explorer-table-content-density-slice-3-closure.md`.
+- Boundary remains unchanged: presentation-only table content density closure; no route behavior, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+- Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, then move to Distribution Workspace page polish.

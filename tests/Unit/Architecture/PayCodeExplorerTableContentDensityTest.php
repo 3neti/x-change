@@ -36,3 +36,25 @@ it('documents pay code explorer table content density slice 2', function (): voi
         ->and($table)->toContain('divide-x divide-slate-200')
         ->and($frontendTest)->toContain('keeps mobile row facts compact without duplicating identity content');
 });
+
+it('documents pay code explorer table content density slice 3 closure', function (): void {
+    $packageRoot = dirname(__DIR__, 3);
+    $hostRoot = dirname($packageRoot, 2);
+
+    $report = file_get_contents($packageRoot.'/docs/ui-cockpit/reports/618-pay-code-explorer-table-content-density-slice-3-closure.md');
+    $table = file_get_contents($packageRoot.'/resources/js/cockpit/components/CockpitPayCodeResultsTable.vue');
+    $hostTable = file_get_contents($hostRoot.'/resources/js/cockpit/components/CockpitPayCodeResultsTable.vue');
+    $compass = file_get_contents($packageRoot.'/docs/ui-cockpit/COMPASS.md');
+    $settlementCompass = file_get_contents($packageRoot.'/docs/architecture/SETTLEMENT_OS_COMPASS.md');
+
+    expect($report)
+        ->toContain('Pay Code Explorer Table Content Density — Slice 3 / Closure')
+        ->toContain('Published package-owned Cockpit assets')
+        ->toContain('Closed / pending human browser inspection')
+        ->and($hostTable)->toContain($table)
+        ->and($hostTable)->toContain('data-testid="cockpit-pay-code-row-identity"')
+        ->and($hostTable)->toContain('data-testid="cockpit-pay-code-row-lifecycle-dates"')
+        ->and($hostTable)->toContain('data-testid="cockpit-pay-code-mobile-lifecycle-dates"')
+        ->and($compass)->toContain('Completed Pay Code Explorer Table Content Density Slice 3 / Closure')
+        ->and($settlementCompass)->toContain('Pay Code Explorer Table Content Density — Slice 3');
+});
