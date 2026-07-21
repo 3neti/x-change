@@ -459,6 +459,29 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.find('[data-testid="cockpit-distribution-primary-explorer-link"]').attributes('href')).toBe('/x/cockpit/pay-codes');
     });
 
+    it('compresses primary readiness around the manual next step', () => {
+        const wrapper = mount(DistributionWorkspace, {
+            props: {
+                context: { code: 'PC-DIST-001' },
+            },
+        });
+
+        const summary = wrapper.find('[data-testid="cockpit-distribution-primary-summary"]');
+        const readinessStrip = wrapper.find('[data-testid="cockpit-distribution-primary-readiness-strip"]');
+        const readinessItems = readinessStrip.findAll('[data-testid="cockpit-distribution-primary-readiness-item"]');
+        const checklist = wrapper.find('[data-testid="cockpit-distribution-manual-checklist"]');
+
+        expect(summary.classes()).toContain('p-4');
+        expect(summary.text()).toContain('delivery remains external');
+        expect(readinessStrip.classes()).toContain('p-2');
+        expect(readinessItems).toHaveLength(4);
+        expect(readinessItems[0].classes()).toContain('py-2');
+        expect(checklist.element.tagName.toLowerCase()).toBe('details');
+        expect(checklist.find('summary').text()).toContain('Manual distribution checklist');
+        expect(checklist.find('summary').text()).toContain('5 steps');
+        expect(checklist.findAll('[data-testid="cockpit-distribution-manual-checklist-item"]')).toHaveLength(5);
+    });
+
     it('guides operators to detailed readiness panels without repeating readiness cards', () => {
         const wrapper = mount(DistributionWorkspace, {
             props: {
@@ -589,7 +612,9 @@ describe('Cockpit Distribution Workspace foundation', () => {
         const items = checklist.findAll('[data-testid="cockpit-distribution-manual-checklist-item"]');
 
         expect(checklist.exists()).toBe(true);
+        expect(checklist.element.tagName.toLowerCase()).toBe('details');
         expect(checklist.text()).toContain('Manual distribution checklist');
+        expect(checklist.find('summary').text()).toContain('5 steps');
         expect(checklist.text()).toContain('Verify the intended recipient outside Cockpit');
         expect(checklist.text()).toContain('Copy the beneficiary claim URL from this page');
         expect(checklist.text()).toContain('approved external workflow');

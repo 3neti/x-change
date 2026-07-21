@@ -422,10 +422,10 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
             </div>
 
             <section
-                class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm dark:border-emerald-900/70 dark:bg-emerald-950/40"
+                class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm dark:border-emerald-900/70 dark:bg-emerald-950/40"
                 data-testid="cockpit-distribution-primary-summary"
             >
-                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
                             Manual distribution summary
@@ -433,8 +433,8 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                         <h3 class="mt-2 text-xl font-semibold text-slate-950 dark:text-slate-50">
                             Pay Code {{ code }}
                         </h3>
-                        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                            This summary keeps the operator focused on safe manual distribution. Cockpit can expose and copy the beneficiary URL, but it does not deliver messages, dispatch campaigns, generate artifacts, call providers, or mutate voucher state.
+                        <p class="mt-1 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
+                            Copy the beneficiary URL only after recipient verification. Cockpit does not deliver messages; delivery remains external.
                         </p>
                     </div>
                     <span class="w-fit rounded-full bg-white px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-slate-950 dark:text-emerald-200 dark:ring-emerald-800">
@@ -442,27 +442,30 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                     </span>
                 </div>
 
-                <dl class="mt-5 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
+                <dl
+                    class="mt-4 grid gap-2 rounded-xl bg-white/50 p-2 text-sm md:grid-cols-2 xl:grid-cols-4 dark:bg-slate-950/30"
+                    data-testid="cockpit-distribution-primary-readiness-strip"
+                >
                     <div
                         v-for="item in readinessSummary"
                         :key="item.key"
-                        class="rounded-xl bg-white/80 p-4 dark:bg-slate-950/70"
+                        class="rounded-xl bg-white/80 px-3 py-2 dark:bg-slate-950/70"
                         data-testid="cockpit-distribution-primary-readiness-item"
                     >
-                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             {{ item.label }}
                         </dt>
-                        <dd class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">
+                        <dd class="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50">
                             {{ item.value }}
                         </dd>
-                        <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                        <p class="mt-0.5 text-[0.7rem] leading-4 text-slate-500 dark:text-slate-400">
                             {{ item.helper }}
                         </p>
                     </div>
                 </dl>
 
-                <div class="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.95fr)]">
-                    <div class="rounded-xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/60 dark:bg-slate-950/70">
+                <div class="mt-4 grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.95fr)]">
+                    <div class="rounded-xl border border-emerald-200 bg-white/80 p-3 dark:border-emerald-900/60 dark:bg-slate-950/70">
                         <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
                             Manual next step
                         </p>
@@ -472,7 +475,7 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                         <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
                             {{ primaryDistributionStep.description }}
                         </p>
-                        <div class="mt-4 flex flex-wrap gap-3">
+                        <div class="mt-3 flex flex-wrap gap-2">
                             <a
                                 v-if="beneficiaryRedeemUrl"
                                 :href="beneficiaryRedeemUrl"
@@ -503,18 +506,21 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                         </div>
                     </div>
 
-                    <div
-                        class="rounded-xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/60 dark:bg-slate-950/70"
+                    <details
+                        class="rounded-xl border border-emerald-200 bg-white/80 p-3 dark:border-emerald-900/60 dark:bg-slate-950/70"
                         data-testid="cockpit-distribution-manual-checklist"
                     >
-                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
-                            Manual distribution checklist
-                        </p>
-                        <ol class="mt-4 grid gap-3 text-sm">
+                        <summary class="flex cursor-pointer list-none items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                            <span>Manual distribution checklist</span>
+                            <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-[0.65rem] tracking-normal text-emerald-700 normal-case dark:bg-emerald-950 dark:text-emerald-200">
+                                5 steps
+                            </span>
+                        </summary>
+                        <ol class="mt-3 grid gap-2 text-sm">
                             <li
                                 v-for="(item, index) in manualDistributionChecklist"
                                 :key="item"
-                                class="flex gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-800"
+                                class="flex gap-2 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-800"
                                 data-testid="cockpit-distribution-manual-checklist-item"
                             >
                                 <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200">
@@ -525,7 +531,7 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                                 </span>
                             </li>
                         </ol>
-                    </div>
+                    </details>
                 </div>
 
                 <div
