@@ -4362,3 +4362,27 @@ Current boundary:
 - Authenticated Dusk browser smoke remains pending because this sandbox has recently blocked ChromeDriver port binding for this page family.
 - Report: `reports/618-pay-code-explorer-table-content-density-slice-3-closure.md`.
 - Boundary remains unchanged: presentation-only table content density closure; no route behavior, backend queries, read-model hydration, filter semantics, pagination semantics, campaign context propagation, row action destinations, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
+
+# 2026-07-21 — Distribution Workspace Primary Workflow Compression — Slice 1
+
+- Started the Distribution Workspace Primary Workflow Compression wave.
+- The workspace shell is now a compact operational header with Pay Code, status, and payload-policy facts.
+- The complete side-effect boundary remains available under `Workspace rules`.
+- Report: `reports/619-distribution-workspace-primary-workflow-compression-slice-1.md`.
+- Boundary remains unchanged: presentation-only shell compression; no route behavior, read-model hydration, beneficiary URL generation, copy behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle behavior, execution drivers, artifact generation, journal writes, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+
+# 2026-07-21 — Distribution Workspace Primary Workflow Compression — Slice 2
+
+- Primary claim, delivery, artifact, and payload facts now use a compact readiness strip.
+- The manual next step remains prominent while the complete five-step checklist is available under disclosure.
+- Report: `reports/620-distribution-workspace-primary-workflow-compression-slice-2.md`.
+- Boundary remains unchanged: presentation-only primary workflow compression; no route behavior, read-model hydration, beneficiary URL generation, copy behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle behavior, execution drivers, artifact generation, journal writes, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+
+# 2026-07-21 — Distribution Workspace Primary Workflow Compression — Slice 3 Closure
+
+- Completed Distribution Workspace Primary Workflow Compression Slice 3 / Closure.
+- Host-published Cockpit assets now use the compact shell, readiness strip, primary manual next step, and disclosed checklist on `/x/cockpit/pay-codes/{code}/distribution`.
+- Focused frontend, asset drift, architecture documentation, package/host asset guard, and host build verification passed.
+- Authenticated Dusk browser smoke remains pending because this sandbox has recently blocked ChromeDriver port binding for this page family.
+- Report: `reports/621-distribution-workspace-primary-workflow-compression-slice-3-closure.md`.
+- Boundary remains unchanged: presentation-only primary workflow closure; no route behavior, read-model hydration, beneficiary URL generation, copy behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle behavior, execution drivers, artifact generation, journal writes, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.

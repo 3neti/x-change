@@ -4074,3 +4074,27 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/618-pay-code-explorer-table-content-density-slice-3-closure.md`.
 - Boundary remains unchanged: presentation-only table content density closure; no route behavior, backend queries, read-model hydration, filter semantics, campaign context propagation, row action destinations, pagination semantics, voucher lifecycle behavior, execution drivers, journal writes, action execution, feedback delivery, campaign mutation, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, artifact generation, or money movement changed.
 - Next recommended checkpoint: manual browser inspection of `/x/cockpit/pay-codes`, then move to Distribution Workspace page polish.
+
+## 2026-07-21 Update — Distribution Workspace Primary Workflow Compression — Slice 1
+
+- Started the Distribution Workspace Primary Workflow Compression wave.
+- The workspace shell now uses a compact operational header and three-fact strip while the full side-effect boundary remains under disclosure.
+- UI/report: `../ui-cockpit/reports/619-distribution-workspace-primary-workflow-compression-slice-1.md`.
+- Boundary remains unchanged: presentation-only shell compression; no route behavior, read-model hydration, beneficiary URL generation, copy behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle behavior, execution drivers, artifact generation, journal writes, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+
+## 2026-07-21 Update — Distribution Workspace Primary Workflow Compression — Slice 2
+
+- Primary readiness now uses a compact four-item strip around the beneficiary URL next step.
+- The five-step manual checklist remains complete under disclosure.
+- UI/report: `../ui-cockpit/reports/620-distribution-workspace-primary-workflow-compression-slice-2.md`.
+- Boundary remains unchanged: presentation-only primary workflow compression; no route behavior, read-model hydration, beneficiary URL generation, copy behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle behavior, execution drivers, artifact generation, journal writes, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+
+## 2026-07-21 Update — Distribution Workspace Primary Workflow Compression — Slice 3
+
+- Closed the Distribution Workspace Primary Workflow Compression wave.
+- Host-published Cockpit assets now use the compact shell, readiness strip, primary manual next step, and disclosed checklist on `/x/cockpit/pay-codes/{code}/distribution`.
+- Focused frontend, asset drift, architecture documentation, package/host asset guard, and host build verification passed.
+- Authenticated Dusk browser smoke remains pending because this sandbox has recently blocked ChromeDriver port binding for this page family.
+- UI/report: `../ui-cockpit/reports/621-distribution-workspace-primary-workflow-compression-slice-3-closure.md`.
+- Boundary remains unchanged: presentation-only primary workflow closure; no route behavior, read-model hydration, beneficiary URL generation, copy behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle behavior, execution drivers, artifact generation, journal writes, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+- Next recommended checkpoint: manual browser inspection of Distribution Workspace, then compress connected context and claim-link details if the primary scan path is accepted.
