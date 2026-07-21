@@ -139,6 +139,30 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).toContain('move money');
     });
 
+    it('renders the workspace shell as a compact operational header', () => {
+        const wrapper = mount(DistributionWorkspace, {
+            props: {
+                context: { code: 'PC-DIST-001' },
+            },
+        });
+
+        const header = wrapper.find('[data-testid="cockpit-distribution-workspace-header"]');
+        const facts = wrapper.find('[data-testid="cockpit-distribution-workspace-header-facts"]');
+        const boundary = wrapper.find('[data-testid="cockpit-distribution-workspace-boundary"]');
+
+        expect(header.exists()).toBe(true);
+        expect(header.classes()).toContain('p-4');
+        expect(header.text()).toContain('Distribution Workspace');
+        expect(header.text()).toContain('Inspect manual distribution readiness and beneficiary URL availability.');
+        expect(header.text()).toContain('read-only');
+        expect(facts.findAll('[data-testid="cockpit-distribution-workspace-header-fact"]')).toHaveLength(3);
+        expect(facts.find('[data-testid="cockpit-distribution-workspace-header-fact"]').classes()).toContain('rounded-full');
+        expect(boundary.element.tagName.toLowerCase()).toBe('details');
+        expect(boundary.find('summary').text()).toContain('Workspace rules');
+        expect(boundary.text()).toContain('does not dispatch distribution');
+        expect(boundary.text()).toContain('move money');
+    });
+
     it('renders hydrated read-only distribution workspace facts from route props', () => {
         const distributionWorkspaceReadModel = {
             schema: 'x-change.cockpit.distribution-workspace.v1',

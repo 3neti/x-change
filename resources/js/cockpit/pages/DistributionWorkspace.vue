@@ -348,45 +348,77 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
 <template>
     <CockpitLayout active-navigation="pay-codes">
         <section class="space-y-6" data-testid="cockpit-distribution-workspace-shell">
-            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                    Distribution inspection
-                </p>
-                <h2 class="mt-2 text-2xl font-semibold text-slate-950 dark:text-slate-50">
-                    Distribution Workspace
-                </h2>
-                <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    Inspect manual distribution readiness, beneficiary URL availability, delivery
-                    channel status, and share assets for a Pay Code. This page does not dispatch
-                    distribution, send feedback, create campaigns, mutate vouchers, execute drivers,
-                    write journal entries, call providers, generate artifacts, or move money.
-                </p>
-                <dl class="mt-5 grid gap-3 text-sm sm:grid-cols-3">
-                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
+            <div
+                class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-distribution-workspace-header"
+            >
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+                            Distribution inspection
+                        </p>
+                        <h2 class="mt-1 text-xl font-semibold text-slate-950 dark:text-slate-50">
+                            Distribution Workspace
+                        </h2>
+                        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                            Inspect manual distribution readiness and beneficiary URL availability.
+                        </p>
+                    </div>
+                    <span class="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                        read-only
+                    </span>
+                </div>
+                <dl
+                    class="mt-4 grid gap-2 rounded-xl bg-slate-50 p-2 text-sm sm:grid-cols-3 dark:bg-slate-950"
+                    data-testid="cockpit-distribution-workspace-header-facts"
+                >
+                    <div
+                        class="min-w-0 rounded-full bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800"
+                        data-testid="cockpit-distribution-workspace-header-fact"
+                    >
                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Pay Code
                         </dt>
-                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                        <dd class="mt-0.5 truncate font-semibold text-slate-950 dark:text-slate-50">
                             {{ code }}
                         </dd>
                     </div>
-                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
+                    <div
+                        class="min-w-0 rounded-full bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800"
+                        data-testid="cockpit-distribution-workspace-header-fact"
+                    >
                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Distribution status
                         </dt>
-                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                        <dd class="mt-0.5 truncate font-semibold text-slate-950 dark:text-slate-50">
                             {{ status }}
                         </dd>
                     </div>
-                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
+                    <div
+                        class="min-w-0 rounded-full bg-white px-3 py-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800"
+                        data-testid="cockpit-distribution-workspace-header-fact"
+                    >
                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Payload policy
                         </dt>
-                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                        <dd class="mt-0.5 truncate font-semibold text-slate-950 dark:text-slate-50">
                             {{ payloadPolicy }}
                         </dd>
                     </div>
                 </dl>
+                <details
+                    class="mt-3 border-t border-slate-200 pt-3 dark:border-slate-800"
+                    data-testid="cockpit-distribution-workspace-boundary"
+                >
+                    <summary class="cursor-pointer text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        Workspace rules
+                    </summary>
+                    <p class="mt-2 max-w-4xl text-xs leading-5 text-slate-500 dark:text-slate-400">
+                        This page does not dispatch distribution, send feedback, create campaigns,
+                        mutate vouchers, execute drivers, write journal entries, call providers,
+                        generate artifacts, or move money.
+                    </p>
+                </details>
             </div>
 
             <section
