@@ -392,7 +392,7 @@ function actionIcon(
             <article
                 v-for="record in visibleRecords"
                 :key="`mobile-${record.code}`"
-                class="space-y-4 p-4"
+                class="space-y-3 px-4 py-3"
                 data-testid="cockpit-pay-code-mobile-row"
             >
                 <div class="flex items-start justify-between gap-3">
@@ -408,58 +408,48 @@ function actionIcon(
                             {{ record.template }}
                         </p>
                     </div>
-                    <span
-                        :class="statusBadgeClass(record.status)"
-                        class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ring-1"
-                        data-testid="cockpit-pay-code-mobile-status-badge"
-                    >
-                        {{ displayStatus(record.status) }}
-                    </span>
-                </div>
-
-                <dl class="grid grid-cols-2 gap-3 text-sm">
-                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
-                        <dt
-                            class="text-[0.65rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                    <div class="shrink-0 text-right">
+                        <span
+                            :class="statusBadgeClass(record.status)"
+                            class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1"
+                            data-testid="cockpit-pay-code-mobile-status-badge"
                         >
-                            Amount
-                        </dt>
-                        <dd
-                            class="mt-1 font-mono font-semibold text-slate-950 tabular-nums dark:text-slate-50"
+                            {{ displayStatus(record.status) }}
+                        </span>
+                        <p
+                            class="mt-1.5 text-right font-mono text-sm font-semibold text-slate-950 tabular-nums dark:text-slate-50"
                             data-testid="cockpit-pay-code-mobile-amount"
                         >
                             {{ record.amount }}
-                        </dd>
+                        </p>
                     </div>
-                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
-                        <dt
-                            class="text-[0.65rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
-                        >
-                            Type / Template
-                        </dt>
-                        <dd
-                            class="mt-1 truncate font-semibold text-slate-950 dark:text-slate-50"
-                        >
-                            {{ record.template }}
-                        </dd>
-                    </div>
-                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
+                </div>
+
+                <dl
+                    class="grid grid-cols-2 divide-x divide-slate-200 rounded-lg bg-slate-50 px-3 py-2 text-xs dark:divide-slate-800 dark:bg-slate-950"
+                    data-testid="cockpit-pay-code-mobile-lifecycle-dates"
+                >
+                    <div class="min-w-0 pr-3">
                         <dt
                             class="text-[0.65rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
                         >
                             Created
                         </dt>
-                        <dd class="mt-1 text-slate-700 dark:text-slate-200">
+                        <dd
+                            class="mt-0.5 truncate text-slate-700 dark:text-slate-200"
+                        >
                             {{ record.createdAt ?? '—' }}
                         </dd>
                     </div>
-                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
+                    <div class="min-w-0 pl-3">
                         <dt
                             class="text-[0.65rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
                         >
                             Expires
                         </dt>
-                        <dd class="mt-1 text-slate-700 dark:text-slate-200">
+                        <dd
+                            class="mt-0.5 truncate text-slate-700 dark:text-slate-200"
+                        >
                             {{ record.expiresAt ?? '—' }}
                         </dd>
                     </div>
@@ -667,9 +657,7 @@ function actionIcon(
                                         />
                                         <span class="sr-only">
                                             —
-                                            {{
-                                                disabledActions(record).length
-                                            }}
+                                            {{ disabledActions(record).length }}
                                             unavailable actions
                                         </span>
                                     </summary>

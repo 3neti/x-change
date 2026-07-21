@@ -577,6 +577,34 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         ).toHaveLength(2);
     });
 
+    it('keeps mobile row facts compact without duplicating identity content', () => {
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: payCodesReadModel,
+            },
+        });
+
+        const mobileRow = wrapper.find(
+            '[data-testid="cockpit-pay-code-mobile-row"]',
+        );
+        const lifecycleDates = mobileRow.find(
+            '[data-testid="cockpit-pay-code-mobile-lifecycle-dates"]',
+        );
+        const amount = mobileRow.find(
+            '[data-testid="cockpit-pay-code-mobile-amount"]',
+        );
+
+        expect(mobileRow.classes()).toContain('space-y-3');
+        expect(mobileRow.classes()).toContain('py-3');
+        expect(mobileRow.text().match(/Money Changer/g)).toHaveLength(1);
+        expect(amount.text()).toBe('₱1,500.75');
+        expect(amount.classes()).toContain('text-right');
+        expect(lifecycleDates.classes()).toContain('divide-x');
+        expect(lifecycleDates.classes()).toContain('py-2');
+        expect(lifecycleDates.text()).toContain('Created');
+        expect(lifecycleDates.text()).toContain('Expires');
+    });
+
     it('renders scan-friendly status badges without mutating status facts', () => {
         const wrapper = mount(PayCodeExplorer, {
             props: {
