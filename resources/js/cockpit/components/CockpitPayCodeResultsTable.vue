@@ -35,11 +35,17 @@ const firstVisibleRecordNumber = computed(() =>
 );
 
 const lastVisibleRecordNumber = computed(() =>
-    Math.min(currentPage.value * selectedVisibleLimit.value, props.records.length),
+    Math.min(
+        currentPage.value * selectedVisibleLimit.value,
+        props.records.length,
+    ),
 );
 
 const visibleRecords = computed(() =>
-    props.records.slice(firstVisibleRecordNumber.value - 1, lastVisibleRecordNumber.value),
+    props.records.slice(
+        firstVisibleRecordNumber.value - 1,
+        lastVisibleRecordNumber.value,
+    ),
 );
 
 const hiddenRecordCount = computed(() =>
@@ -89,20 +95,37 @@ const scanFields = [
     },
 ];
 
-function rowActions(record: CockpitPayCodeExplorerRecord, fallbackActions: CockpitPayCodeRowAction[]): CockpitPayCodeRowAction[] {
-    return record.actions && record.actions.length > 0 ? record.actions : fallbackActions;
+function rowActions(
+    record: CockpitPayCodeExplorerRecord,
+    fallbackActions: CockpitPayCodeRowAction[],
+): CockpitPayCodeRowAction[] {
+    return record.actions && record.actions.length > 0
+        ? record.actions
+        : fallbackActions;
 }
 
 function isEnabledAction(action: CockpitPayCodeRowAction): boolean {
-    return action.enabled === true && typeof action.href === 'string' && action.href.trim() !== '';
+    return (
+        action.enabled === true &&
+        typeof action.href === 'string' &&
+        action.href.trim() !== ''
+    );
 }
 
-function enabledActions(record: CockpitPayCodeExplorerRecord): CockpitPayCodeRowAction[] {
-    return rowActions(record, props.actions).filter((action) => isEnabledAction(action));
+function enabledActions(
+    record: CockpitPayCodeExplorerRecord,
+): CockpitPayCodeRowAction[] {
+    return rowActions(record, props.actions).filter((action) =>
+        isEnabledAction(action),
+    );
 }
 
-function disabledActions(record: CockpitPayCodeExplorerRecord): CockpitPayCodeRowAction[] {
-    return rowActions(record, props.actions).filter((action) => !isEnabledAction(action));
+function disabledActions(
+    record: CockpitPayCodeExplorerRecord,
+): CockpitPayCodeRowAction[] {
+    return rowActions(record, props.actions).filter(
+        (action) => !isEnabledAction(action),
+    );
 }
 
 function enabledActionCount(record: CockpitPayCodeExplorerRecord): number {
@@ -114,25 +137,38 @@ function disabledActionCount(record: CockpitPayCodeExplorerRecord): number {
 }
 
 function totalEnabledActionCount(): number {
-    return props.records.reduce((count, record) => count + enabledActionCount(record), 0);
+    return props.records.reduce(
+        (count, record) => count + enabledActionCount(record),
+        0,
+    );
 }
 
 function totalDisabledActionCount(): number {
-    return props.records.reduce((count, record) => count + disabledActionCount(record), 0);
+    return props.records.reduce(
+        (count, record) => count + disabledActionCount(record),
+        0,
+    );
 }
 
 function displayStatus(status: string): string {
     return status
         .split(/[_\s-]+/)
         .filter((part) => part.trim() !== '')
-        .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1).toLowerCase()}`)
+        .map(
+            (part) =>
+                `${part.charAt(0).toUpperCase()}${part.slice(1).toLowerCase()}`,
+        )
         .join(' ');
 }
 
 function statusBadgeClass(status: string): string {
     const normalizedStatus = status.toLowerCase().replaceAll('_', '-');
 
-    if (['active', 'issued', 'ready', 'redeemed', 'completed'].includes(normalizedStatus)) {
+    if (
+        ['active', 'issued', 'ready', 'redeemed', 'completed'].includes(
+            normalizedStatus,
+        )
+    ) {
         return 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800';
     }
 
@@ -140,15 +176,23 @@ function statusBadgeClass(status: string): string {
         return 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800';
     }
 
-    if (['expired', 'failed', 'cancelled', 'canceled'].includes(normalizedStatus)) {
+    if (
+        ['expired', 'failed', 'cancelled', 'canceled'].includes(
+            normalizedStatus,
+        )
+    ) {
         return 'bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950 dark:text-rose-200 dark:ring-rose-800';
     }
 
     return 'bg-slate-100 text-slate-700 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700';
 }
 
-function actionIcon(action: CockpitPayCodeRowAction): 'distribution' | 'inspect' {
-    return action.key.toLowerCase().includes('distribution') ? 'distribution' : 'inspect';
+function actionIcon(
+    action: CockpitPayCodeRowAction,
+): 'distribution' | 'inspect' {
+    return action.key.toLowerCase().includes('distribution')
+        ? 'distribution'
+        : 'inspect';
 }
 </script>
 
@@ -158,12 +202,18 @@ function actionIcon(action: CockpitPayCodeRowAction): 'distribution' | 'inspect'
         data-testid="cockpit-pay-code-results-table"
     >
         <div class="border-b border-slate-200 p-4 dark:border-slate-800">
-            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div
+                class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
+            >
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                    <p
+                        class="text-xs font-semibold tracking-[0.2em] text-slate-500 uppercase dark:text-slate-400"
+                    >
                         Results
                     </p>
-                    <h3 class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">
+                    <h3
+                        class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50"
+                    >
                         Pay Code results
                     </h3>
                 </div>
@@ -171,35 +221,62 @@ function actionIcon(action: CockpitPayCodeRowAction): 'distribution' | 'inspect'
                     class="grid w-full grid-cols-2 gap-1.5 rounded-full bg-slate-50 p-1.5 text-center sm:w-[30rem] sm:grid-cols-4 dark:bg-slate-950"
                     data-testid="cockpit-pay-code-results-density-summary"
                 >
-                    <div class="min-w-0 rounded-full bg-white px-3 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
-                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <div
+                        class="min-w-0 rounded-full bg-white px-3 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800"
+                    >
+                        <dt
+                            class="text-[0.65rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                        >
                             Showing
                         </dt>
-                        <dd class="mt-1 whitespace-nowrap font-mono text-sm font-semibold tabular-nums text-slate-950 dark:text-slate-50">
-                            {{ firstVisibleRecordNumber }}–{{ lastVisibleRecordNumber }} of {{ records.length }}
+                        <dd
+                            class="mt-1 font-mono text-sm font-semibold whitespace-nowrap text-slate-950 tabular-nums dark:text-slate-50"
+                        >
+                            {{ firstVisibleRecordNumber }}–{{
+                                lastVisibleRecordNumber
+                            }}
+                            of {{ records.length }}
                         </dd>
                     </div>
-                    <div class="min-w-0 rounded-full bg-white px-3 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
-                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <div
+                        class="min-w-0 rounded-full bg-white px-3 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800"
+                    >
+                        <dt
+                            class="text-[0.65rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                        >
                             Total Rows
                         </dt>
-                        <dd class="mt-1 whitespace-nowrap font-mono text-sm font-semibold tabular-nums text-slate-950 dark:text-slate-50">
+                        <dd
+                            class="mt-1 font-mono text-sm font-semibold whitespace-nowrap text-slate-950 tabular-nums dark:text-slate-50"
+                        >
                             {{ records.length }}
                         </dd>
                     </div>
-                    <div class="min-w-0 rounded-full bg-white px-3 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
-                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <div
+                        class="min-w-0 rounded-full bg-white px-3 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800"
+                    >
+                        <dt
+                            class="text-[0.65rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                        >
                             Links
                         </dt>
-                        <dd class="mt-1 whitespace-nowrap font-mono text-sm font-semibold tabular-nums text-slate-950 dark:text-slate-50">
+                        <dd
+                            class="mt-1 font-mono text-sm font-semibold whitespace-nowrap text-slate-950 tabular-nums dark:text-slate-50"
+                        >
                             {{ totalEnabledActionCount() }}
                         </dd>
                     </div>
-                    <div class="min-w-0 rounded-full bg-white px-3 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
-                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <div
+                        class="min-w-0 rounded-full bg-white px-3 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800"
+                    >
+                        <dt
+                            class="text-[0.65rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                        >
                             Disabled
                         </dt>
-                        <dd class="mt-1 whitespace-nowrap font-mono text-sm font-semibold tabular-nums text-slate-950 dark:text-slate-50">
+                        <dd
+                            class="mt-1 font-mono text-sm font-semibold whitespace-nowrap text-slate-950 tabular-nums dark:text-slate-50"
+                        >
                             {{ totalDisabledActionCount() }}
                         </dd>
                     </div>
@@ -210,7 +287,9 @@ function actionIcon(action: CockpitPayCodeRowAction): 'distribution' | 'inspect'
                 class="mt-4 rounded-xl bg-slate-50 p-3 dark:bg-slate-950"
                 data-testid="cockpit-pay-code-results-scan-guide"
             >
-                <summary class="cursor-pointer text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                <summary
+                    class="cursor-pointer text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
+                >
                     How to scan these rows
                 </summary>
                 <div class="mt-3 grid gap-3 sm:grid-cols-3">
@@ -219,13 +298,19 @@ function actionIcon(action: CockpitPayCodeRowAction): 'distribution' | 'inspect'
                         :key="field.label"
                         class="rounded-lg bg-white p-3 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800"
                     >
-                        <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                        <p
+                            class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
+                        >
                             {{ field.label }}
                         </p>
-                        <p class="mt-1 text-sm font-semibold text-slate-950 dark:text-slate-50">
+                        <p
+                            class="mt-1 text-sm font-semibold text-slate-950 dark:text-slate-50"
+                        >
                             {{ field.value }}
                         </p>
-                        <p class="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">
+                        <p
+                            class="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300"
+                        >
                             {{ field.helper }}
                         </p>
                     </article>
@@ -237,8 +322,11 @@ function actionIcon(action: CockpitPayCodeRowAction): 'distribution' | 'inspect'
                 class="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300"
                 data-testid="cockpit-pay-code-result-limit-notice"
             >
-                Showing {{ firstVisibleRecordNumber }}–{{ lastVisibleRecordNumber }} of {{ records.length }} Pay Codes.
-                Use search or status filters to narrow the list; pagination changes only the browser view.
+                Showing {{ firstVisibleRecordNumber }}–{{
+                    lastVisibleRecordNumber
+                }}
+                of {{ records.length }} Pay Codes. Use search or status filters
+                to narrow the list; pagination changes only the browser view.
             </div>
 
             <nav
@@ -248,18 +336,20 @@ function actionIcon(action: CockpitPayCodeRowAction): 'distribution' | 'inspect'
                 data-testid="cockpit-pay-code-result-pagination"
             >
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <p class="text-sm font-medium text-slate-700 dark:text-slate-200">
+                    <p
+                        class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                    >
                         Page {{ currentPage }} of {{ totalPages }}
                     </p>
                     <label
-                        class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                        class="flex items-center gap-2 text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
                         for="cockpit-pay-code-page-size"
                     >
                         Rows
                         <select
                             id="cockpit-pay-code-page-size"
                             v-model.number="selectedVisibleLimit"
-                            class="h-9 rounded-full border border-slate-200 bg-white px-3 text-sm font-semibold normal-case tracking-normal text-slate-700 shadow-sm transition focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-emerald-500 dark:focus:ring-emerald-900/60"
+                            class="h-9 rounded-full border border-slate-200 bg-white px-3 text-sm font-semibold tracking-normal text-slate-700 normal-case shadow-sm transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 focus:outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-emerald-500 dark:focus:ring-emerald-900/60"
                             data-testid="cockpit-pay-code-result-page-size"
                         >
                             <option
@@ -307,10 +397,14 @@ function actionIcon(action: CockpitPayCodeRowAction): 'distribution' | 'inspect'
             >
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
-                        <p class="font-mono text-base font-semibold text-slate-950 dark:text-slate-50">
+                        <p
+                            class="font-mono text-base font-semibold text-slate-950 dark:text-slate-50"
+                        >
                             {{ record.code }}
                         </p>
-                        <p class="mt-1 truncate text-sm text-slate-600 dark:text-slate-300">
+                        <p
+                            class="mt-1 truncate text-sm text-slate-600 dark:text-slate-300"
+                        >
                             {{ record.template }}
                         </p>
                     </div>
@@ -325,26 +419,34 @@ function actionIcon(action: CockpitPayCodeRowAction): 'distribution' | 'inspect'
 
                 <dl class="grid grid-cols-2 gap-3 text-sm">
                     <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
-                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        <dt
+                            class="text-[0.65rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                        >
                             Amount
                         </dt>
                         <dd
-                            class="mt-1 font-mono font-semibold tabular-nums text-slate-950 dark:text-slate-50"
+                            class="mt-1 font-mono font-semibold text-slate-950 tabular-nums dark:text-slate-50"
                             data-testid="cockpit-pay-code-mobile-amount"
                         >
                             {{ record.amount }}
                         </dd>
                     </div>
                     <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
-                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        <dt
+                            class="text-[0.65rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                        >
                             Type / Template
                         </dt>
-                        <dd class="mt-1 truncate font-semibold text-slate-950 dark:text-slate-50">
+                        <dd
+                            class="mt-1 truncate font-semibold text-slate-950 dark:text-slate-50"
+                        >
                             {{ record.template }}
                         </dd>
                     </div>
                     <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
-                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        <dt
+                            class="text-[0.65rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                        >
                             Created
                         </dt>
                         <dd class="mt-1 text-slate-700 dark:text-slate-200">
@@ -352,7 +454,9 @@ function actionIcon(action: CockpitPayCodeRowAction): 'distribution' | 'inspect'
                         </dd>
                     </div>
                     <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
-                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        <dt
+                            class="text-[0.65rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                        >
                             Expires
                         </dt>
                         <dd class="mt-1 text-slate-700 dark:text-slate-200">
@@ -383,7 +487,9 @@ function actionIcon(action: CockpitPayCodeRowAction): 'distribution' | 'inspect'
                         >
                             More
                             <span class="sr-only">
-                                — {{ disabledActions(record).length }} unavailable actions
+                                —
+                                {{ disabledActions(record).length }} unavailable
+                                actions
                             </span>
                         </summary>
                         <div class="mt-2 flex flex-wrap gap-2">
@@ -392,18 +498,26 @@ function actionIcon(action: CockpitPayCodeRowAction): 'distribution' | 'inspect'
                                 data-testid="cockpit-pay-code-mobile-row-secondary-facts"
                             >
                                 <div>
-                                    <dt class="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                    <dt
+                                        class="font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                                    >
                                         Owner
                                     </dt>
-                                    <dd class="mt-0.5 text-slate-700 dark:text-slate-200">
+                                    <dd
+                                        class="mt-0.5 text-slate-700 dark:text-slate-200"
+                                    >
                                         {{ record.owner }}
                                     </dd>
                                 </div>
                                 <div>
-                                    <dt class="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                    <dt
+                                        class="font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                                    >
                                         Last Activity
                                     </dt>
-                                    <dd class="mt-0.5 text-slate-700 dark:text-slate-200">
+                                    <dd
+                                        class="mt-0.5 text-slate-700 dark:text-slate-200"
+                                    >
                                         {{ record.lastActivity }}
                                     </dd>
                                 </div>
@@ -426,15 +540,17 @@ function actionIcon(action: CockpitPayCodeRowAction): 'distribution' | 'inspect'
         </div>
 
         <div class="hidden overflow-x-auto md:block">
-            <table class="min-w-full divide-y divide-slate-200 text-left text-sm dark:divide-slate-800">
-                <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-950 dark:text-slate-400">
+            <table
+                class="w-full min-w-[52rem] divide-y divide-slate-200 text-left text-sm dark:divide-slate-800"
+            >
+                <thead
+                    class="bg-slate-50 text-xs tracking-wide text-slate-500 uppercase dark:bg-slate-950 dark:text-slate-400"
+                >
                     <tr>
-                        <th class="px-4 py-2">Pay Code</th>
-                        <th class="px-4 py-2 text-right">Amount</th>
-                        <th class="px-4 py-2">Type / Template</th>
-                        <th class="px-4 py-2">Status</th>
-                        <th class="px-4 py-2">Created</th>
-                        <th class="px-4 py-2">Expires</th>
+                        <th class="w-[30%] px-4 py-2">Pay Code</th>
+                        <th class="w-[16%] px-4 py-2 text-right">Amount</th>
+                        <th class="w-[16%] px-4 py-2">Status</th>
+                        <th class="w-[24%] px-4 py-2">Lifecycle dates</th>
                         <th class="px-4 py-2 text-right">Actions</th>
                     </tr>
                 </thead>
@@ -444,17 +560,26 @@ function actionIcon(action: CockpitPayCodeRowAction): 'distribution' | 'inspect'
                         :key="record.code"
                         data-testid="cockpit-pay-code-row"
                     >
-                        <td class="px-4 py-2.5 font-mono text-slate-950 dark:text-slate-50">
-                            {{ record.code }}
+                        <td
+                            class="min-w-0 px-4 py-2.5"
+                            data-testid="cockpit-pay-code-row-identity"
+                        >
+                            <p
+                                class="truncate font-mono font-semibold text-slate-950 dark:text-slate-50"
+                            >
+                                {{ record.code }}
+                            </p>
+                            <p
+                                class="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400"
+                            >
+                                {{ record.template }}
+                            </p>
                         </td>
                         <td
-                            class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-700 dark:text-slate-200"
+                            class="px-4 py-2.5 text-right font-mono text-slate-700 tabular-nums dark:text-slate-200"
                             data-testid="cockpit-pay-code-amount"
                         >
                             {{ record.amount }}
-                        </td>
-                        <td class="px-4 py-2.5 text-slate-700 dark:text-slate-200">
-                            {{ record.template }}
                         </td>
                         <td class="px-4 py-2.5">
                             <span
@@ -465,11 +590,36 @@ function actionIcon(action: CockpitPayCodeRowAction): 'distribution' | 'inspect'
                                 {{ displayStatus(record.status) }}
                             </span>
                         </td>
-                        <td class="px-4 py-2.5 text-slate-700 dark:text-slate-200">
-                            {{ record.createdAt ?? '—' }}
-                        </td>
-                        <td class="px-4 py-2.5 text-slate-500 dark:text-slate-400">
-                            {{ record.expiresAt ?? '—' }}
+                        <td
+                            class="px-4 py-2.5"
+                            data-testid="cockpit-pay-code-row-lifecycle-dates"
+                        >
+                            <dl class="grid gap-0.5 text-xs">
+                                <div class="flex min-w-0 items-baseline gap-2">
+                                    <dt
+                                        class="w-12 shrink-0 font-semibold tracking-wide text-slate-400 uppercase dark:text-slate-500"
+                                    >
+                                        Created
+                                    </dt>
+                                    <dd
+                                        class="truncate text-slate-700 dark:text-slate-200"
+                                    >
+                                        {{ record.createdAt ?? '—' }}
+                                    </dd>
+                                </div>
+                                <div class="flex min-w-0 items-baseline gap-2">
+                                    <dt
+                                        class="w-12 shrink-0 font-semibold tracking-wide text-slate-400 uppercase dark:text-slate-500"
+                                    >
+                                        Expires
+                                    </dt>
+                                    <dd
+                                        class="truncate text-slate-500 dark:text-slate-400"
+                                    >
+                                        {{ record.expiresAt ?? '—' }}
+                                    </dd>
+                                </div>
+                            </dl>
                         </td>
                         <td class="px-4 py-2.5">
                             <div class="flex justify-end gap-1.5">
@@ -484,7 +634,10 @@ function actionIcon(action: CockpitPayCodeRowAction): 'distribution' | 'inspect'
                                         data-testid="cockpit-pay-code-row-action-link"
                                     >
                                         <Share2
-                                            v-if="actionIcon(action) === 'distribution'"
+                                            v-if="
+                                                actionIcon(action) ===
+                                                'distribution'
+                                            "
                                             aria-hidden="true"
                                             class="h-4 w-4"
                                         />
@@ -493,7 +646,9 @@ function actionIcon(action: CockpitPayCodeRowAction): 'distribution' | 'inspect'
                                             aria-hidden="true"
                                             class="h-4 w-4"
                                         />
-                                        <span class="sr-only">{{ action.label }}</span>
+                                        <span class="sr-only">{{
+                                            action.label
+                                        }}</span>
                                     </Link>
                                 </div>
                                 <details
@@ -506,9 +661,16 @@ function actionIcon(action: CockpitPayCodeRowAction): 'distribution' | 'inspect'
                                         class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:text-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
                                         title="More row actions"
                                     >
-                                        <MoreHorizontal aria-hidden="true" class="h-4 w-4" />
+                                        <MoreHorizontal
+                                            aria-hidden="true"
+                                            class="h-4 w-4"
+                                        />
                                         <span class="sr-only">
-                                            — {{ disabledActions(record).length }} unavailable actions
+                                            —
+                                            {{
+                                                disabledActions(record).length
+                                            }}
+                                            unavailable actions
                                         </span>
                                     </summary>
                                     <div class="mt-2 flex flex-wrap gap-2">
@@ -517,26 +679,38 @@ function actionIcon(action: CockpitPayCodeRowAction): 'distribution' | 'inspect'
                                             data-testid="cockpit-pay-code-row-secondary-facts"
                                         >
                                             <div>
-                                                <dt class="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                                <dt
+                                                    class="font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                                                >
                                                     Owner
                                                 </dt>
-                                                <dd class="mt-0.5 text-slate-700 dark:text-slate-200">
+                                                <dd
+                                                    class="mt-0.5 text-slate-700 dark:text-slate-200"
+                                                >
                                                     {{ record.owner }}
                                                 </dd>
                                             </div>
                                             <div>
-                                                <dt class="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                                <dt
+                                                    class="font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                                                >
                                                     Last Activity
                                                 </dt>
-                                                <dd class="mt-0.5 text-slate-700 dark:text-slate-200">
+                                                <dd
+                                                    class="mt-0.5 text-slate-700 dark:text-slate-200"
+                                                >
                                                     {{ record.lastActivity }}
                                                 </dd>
                                             </div>
                                         </dl>
                                         <button
-                                            v-for="action in disabledActions(record)"
+                                            v-for="action in disabledActions(
+                                                record,
+                                            )"
                                             :key="action.key"
-                                            :disabled="action.disabled !== false"
+                                            :disabled="
+                                                action.disabled !== false
+                                            "
                                             :title="action.reason ?? undefined"
                                             type="button"
                                             class="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:text-slate-300"
@@ -560,7 +734,10 @@ function actionIcon(action: CockpitPayCodeRowAction): 'distribution' | 'inspect'
             data-testid="cockpit-pay-code-result-pagination-footer"
         >
             <p class="text-sm font-medium text-slate-700 dark:text-slate-200">
-                Showing {{ firstVisibleRecordNumber }}–{{ lastVisibleRecordNumber }} of {{ records.length }}
+                Showing {{ firstVisibleRecordNumber }}–{{
+                    lastVisibleRecordNumber
+                }}
+                of {{ records.length }}
             </p>
             <div class="flex flex-wrap gap-2">
                 <button

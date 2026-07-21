@@ -127,14 +127,22 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Search, filter, and open read-only Pay Code workspaces.');
+        expect(wrapper.text()).toContain(
+            'Search, filter, and open read-only Pay Code workspaces.',
+        );
         expect(wrapper.text()).toContain('PC-HYDRATED-001');
         expect(wrapper.text()).toContain('PC-HYDRATED-002');
         expect(wrapper.text()).toContain('₱1,500.75');
         expect(wrapper.text()).toContain('ready');
-        expect(wrapper.find('[data-testid="cockpit-pay-code-row-secondary-facts"]').text()).toContain('Treasury Desk');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-row-secondary-facts"]')
+                .text(),
+        ).toContain('Treasury Desk');
         expect(wrapper.text()).toContain('sanitized-list-only');
-        expect(wrapper.findAll('[data-testid="cockpit-pay-code-row"]')).toHaveLength(2);
+        expect(
+            wrapper.findAll('[data-testid="cockpit-pay-code-row"]'),
+        ).toHaveLength(2);
     });
 
     it('renders search and status filters as read-only GET navigation during hydration', () => {
@@ -144,10 +152,18 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        const search = wrapper.find('[data-testid="cockpit-pay-code-search-input"]');
-        const status = wrapper.find('[data-testid="cockpit-pay-code-status-filter"]');
-        const submit = wrapper.find('[data-testid="cockpit-pay-code-filter-submit"]');
-        const activeSummary = wrapper.find('[data-testid="cockpit-pay-code-active-filter-summary"]');
+        const search = wrapper.find(
+            '[data-testid="cockpit-pay-code-search-input"]',
+        );
+        const status = wrapper.find(
+            '[data-testid="cockpit-pay-code-status-filter"]',
+        );
+        const submit = wrapper.find(
+            '[data-testid="cockpit-pay-code-filter-submit"]',
+        );
+        const activeSummary = wrapper.find(
+            '[data-testid="cockpit-pay-code-active-filter-summary"]',
+        );
 
         expect(search.element).toHaveProperty('value', 'PC-HYDRATED');
         expect(search.classes()).toContain('h-9');
@@ -157,13 +173,27 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(status.classes()).toContain('rounded-full');
         expect(submit.text()).toBe('Search');
         expect(submit.classes()).toContain('h-9');
-        expect(activeSummary.text()).toContain('Filters: search “PC-HYDRATED” · status redeemed');
+        expect(activeSummary.text()).toContain(
+            'Filters: search “PC-HYDRATED” · status redeemed',
+        );
         expect(wrapper.find('form').attributes('method')).toBe('get');
-        expect(wrapper.find('form').attributes('action')).toBe('/x/cockpit/pay-codes');
-        expect(wrapper.text()).toContain('Filters: search “PC-HYDRATED” · status redeemed');
+        expect(wrapper.find('form').attributes('action')).toBe(
+            '/x/cockpit/pay-codes',
+        );
+        expect(wrapper.text()).toContain(
+            'Filters: search “PC-HYDRATED” · status redeemed',
+        );
         expect(wrapper.text()).toContain('Search Pay Codes');
-        expect(wrapper.find('[data-testid="cockpit-pay-code-clear-filters"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="cockpit-pay-code-clear-filters"]').text()).toBe('Clear');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-clear-filters"]')
+                .exists(),
+        ).toBe(true);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-clear-filters"]')
+                .text(),
+        ).toBe('Clear');
     });
 
     it('renders pay code explorer functional parity stats from the read model', () => {
@@ -173,8 +203,16 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="cockpit-pay-code-stats-summary"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="cockpit-pay-code-stats-summary"]').element.tagName.toLowerCase()).toBe('details');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-stats-summary"]')
+                .exists(),
+        ).toBe(true);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-stats-summary"]')
+                .element.tagName.toLowerCase(),
+        ).toBe('details');
         expect(wrapper.text()).toContain('List totals');
         expect(wrapper.text()).toContain('Read-only totals');
         expect(wrapper.text()).toContain('Filtered');
@@ -189,18 +227,40 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        const pageDetails = wrapper.find('[data-testid="cockpit-pay-code-page-details-disclosure"]');
+        const pageDetails = wrapper.find(
+            '[data-testid="cockpit-pay-code-page-details-disclosure"]',
+        );
 
         expect(pageDetails.exists()).toBe(true);
         expect(pageDetails.element.tagName.toLowerCase()).toBe('details');
         expect(pageDetails.find('summary').text()).toContain('Page details');
-        expect(pageDetails.text()).toContain('Read-only rules, totals, and connected-service context.');
-        expect(pageDetails.text()).toContain('The main scan path stays focused on search and results.');
+        expect(pageDetails.text()).toContain(
+            'Read-only rules, totals, and connected-service context.',
+        );
+        expect(pageDetails.text()).toContain(
+            'The main scan path stays focused on search and results.',
+        );
         expect(pageDetails.classes()).toContain('py-3');
-        expect(pageDetails.find('[data-testid="cockpit-pay-code-row-action-guidance"]').exists()).toBe(true);
-        expect(pageDetails.find('[data-testid="cockpit-pay-code-stats-summary"]').exists()).toBe(true);
-        expect(pageDetails.find('[data-testid="cockpit-pay-code-integration-badges"]').exists()).toBe(true);
-        expect(pageDetails.find('[data-testid="cockpit-pay-code-integration-readiness"]').exists()).toBe(true);
+        expect(
+            pageDetails
+                .find('[data-testid="cockpit-pay-code-row-action-guidance"]')
+                .exists(),
+        ).toBe(true);
+        expect(
+            pageDetails
+                .find('[data-testid="cockpit-pay-code-stats-summary"]')
+                .exists(),
+        ).toBe(true);
+        expect(
+            pageDetails
+                .find('[data-testid="cockpit-pay-code-integration-badges"]')
+                .exists(),
+        ).toBe(true);
+        expect(
+            pageDetails
+                .find('[data-testid="cockpit-pay-code-integration-readiness"]')
+                .exists(),
+        ).toBe(true);
     });
 
     it('renders the operator list summary as a compact scan strip', () => {
@@ -210,19 +270,33 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        const summary = wrapper.find('[data-testid="cockpit-pay-code-explorer-primary-summary"]');
-        const currentSearch = wrapper.find('[data-testid="cockpit-pay-code-explorer-current-search-disclosure"]');
-        const summaryItems = summary.findAll('[data-testid="cockpit-pay-code-explorer-primary-summary-item"]');
+        const summary = wrapper.find(
+            '[data-testid="cockpit-pay-code-explorer-primary-summary"]',
+        );
+        const currentSearch = wrapper.find(
+            '[data-testid="cockpit-pay-code-explorer-current-search-disclosure"]',
+        );
+        const summaryItems = summary.findAll(
+            '[data-testid="cockpit-pay-code-explorer-primary-summary-item"]',
+        );
 
         expect(summary.classes()).toContain('p-3');
         expect(summary.text()).toContain('Search Pay Codes');
         expect(summary.text()).not.toContain('Voucher status summary');
-        expect(summary.text()).not.toContain('Focus the list by lifecycle state');
+        expect(summary.text()).not.toContain(
+            'Focus the list by lifecycle state',
+        );
         expect(currentSearch.exists()).toBe(true);
         expect(currentSearch.element.tagName.toLowerCase()).toBe('details');
-        expect(currentSearch.find('summary').text()).toContain('Current search and read model');
+        expect(currentSearch.find('summary').text()).toContain(
+            'Current search and read model',
+        );
         expect(summaryItems).toHaveLength(5);
-        expect(summary.find('[data-testid="cockpit-pay-code-explorer-status-pills"]').exists()).toBe(true);
+        expect(
+            summary
+                .find('[data-testid="cockpit-pay-code-explorer-status-pills"]')
+                .exists(),
+        ).toBe(true);
         expect(summaryItems[0].classes()).toContain('rounded-full');
         expect(summaryItems[0].find('dd').classes()).toContain('text-base');
         expect(summaryItems[0].find('p').exists()).toBe(false);
@@ -235,12 +309,18 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        const header = wrapper.find('[data-testid="cockpit-pay-code-explorer-shell-header"]');
-        const facts = wrapper.find('[data-testid="cockpit-pay-code-explorer-shell-facts"]');
+        const header = wrapper.find(
+            '[data-testid="cockpit-pay-code-explorer-shell-header"]',
+        );
+        const facts = wrapper.find(
+            '[data-testid="cockpit-pay-code-explorer-shell-facts"]',
+        );
 
         expect(header.exists()).toBe(true);
         expect(header.text()).toContain('Pay Code operations');
-        expect(header.text()).toContain('Search, filter, and open read-only Pay Code workspaces.');
+        expect(header.text()).toContain(
+            'Search, filter, and open read-only Pay Code workspaces.',
+        );
         expect(header.text()).not.toContain('does not mutate vouchers');
         expect(header.text()).toContain('Quick Generate');
         expect(header.text()).toContain('Read-only');
@@ -260,8 +340,12 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        const summary = wrapper.find('[data-testid="cockpit-pay-code-explorer-primary-summary"]');
-        const items = summary.findAll('[data-testid="cockpit-pay-code-explorer-primary-summary-item"]');
+        const summary = wrapper.find(
+            '[data-testid="cockpit-pay-code-explorer-primary-summary"]',
+        );
+        const items = summary.findAll(
+            '[data-testid="cockpit-pay-code-explorer-primary-summary-item"]',
+        );
 
         expect(summary.exists()).toBe(true);
         expect(summary.text()).toContain('Search Pay Codes');
@@ -281,12 +365,30 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(wrapper.text()).toContain('redeemed');
         expect(wrapper.text()).toContain('Campaign Context');
         expect(wrapper.text()).toContain('None');
-        expect(wrapper.text()).toContain('Search and filters only change the current list view');
+        expect(wrapper.text()).toContain(
+            'Search and filters only change the current list view',
+        );
         expect(wrapper.text()).toContain('does not mutate vouchers');
         expect(items).toHaveLength(5);
-        expect(wrapper.findAll('[data-testid="cockpit-pay-code-explorer-current-search-item"]')).toHaveLength(4);
-        expect(wrapper.find('[data-testid="cockpit-pay-code-explorer-primary-quick-generate-link"]').attributes('href')).toBe('/x/cockpit/quick-generate');
-        expect(wrapper.find('[data-testid="cockpit-pay-code-explorer-primary-clear-link"]').attributes('href')).toBe('/x/cockpit/pay-codes');
+        expect(
+            wrapper.findAll(
+                '[data-testid="cockpit-pay-code-explorer-current-search-item"]',
+            ),
+        ).toHaveLength(4);
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-pay-code-explorer-primary-quick-generate-link"]',
+                )
+                .attributes('href'),
+        ).toBe('/x/cockpit/quick-generate');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-pay-code-explorer-primary-clear-link"]',
+                )
+                .attributes('href'),
+        ).toBe('/x/cockpit/pay-codes');
     });
 
     it('does not render unsafe fields from hydrated list records', () => {
@@ -309,11 +411,17 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        const actionLinks = wrapper.findAll('[data-testid="cockpit-pay-code-row-action-link"]');
-        const disabledActions = wrapper.findAll('[data-testid="cockpit-pay-code-row-action-disabled"]');
+        const actionLinks = wrapper.findAll(
+            '[data-testid="cockpit-pay-code-row-action-link"]',
+        );
+        const disabledActions = wrapper.findAll(
+            '[data-testid="cockpit-pay-code-row-action-disabled"]',
+        );
 
         expect(actionLinks).toHaveLength(2);
-        expect(actionLinks[0].attributes('href')).toBe('/x/cockpit/pay-codes/PC-HYDRATED-001');
+        expect(actionLinks[0].attributes('href')).toBe(
+            '/x/cockpit/pay-codes/PC-HYDRATED-001',
+        );
         expect(actionLinks[0].text()).toContain('View details');
         expect(actionLinks[0].attributes('aria-label')).toBe('View details');
         expect(actionLinks[0].attributes('title')).toBe('View details');
@@ -321,18 +429,38 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(actionLinks[0].classes()).toContain('w-8');
         expect(actionLinks[0].classes()).toContain('justify-center');
         expect(actionLinks[0].find('svg').exists()).toBe(true);
-        expect(actionLinks[1].attributes('href')).toBe('/x/cockpit/pay-codes/PC-HYDRATED-001/distribution');
+        expect(actionLinks[1].attributes('href')).toBe(
+            '/x/cockpit/pay-codes/PC-HYDRATED-001/distribution',
+        );
         expect(actionLinks[1].attributes('aria-label')).toBe('Distribution');
         expect(actionLinks[1].text()).toContain('Distribution');
-        expect(disabledActions.some((action) => action.text().includes('Notify recipient'))).toBe(true);
-        const unavailableSummary = wrapper.find('[data-testid="cockpit-pay-code-row-unavailable-actions"] summary');
+        expect(
+            disabledActions.some((action) =>
+                action.text().includes('Notify recipient'),
+            ),
+        ).toBe(true);
+        const unavailableSummary = wrapper.find(
+            '[data-testid="cockpit-pay-code-row-unavailable-actions"] summary',
+        );
 
-        expect(wrapper.find('[data-testid="cockpit-pay-code-row-unavailable-actions"]').text()).toContain('1 unavailable');
-        expect(unavailableSummary.attributes('aria-label')).toBe('More row actions');
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-pay-code-row-unavailable-actions"]',
+                )
+                .text(),
+        ).toContain('1 unavailable');
+        expect(unavailableSummary.attributes('aria-label')).toBe(
+            'More row actions',
+        );
         expect(unavailableSummary.classes()).toContain('h-8');
         expect(unavailableSummary.classes()).toContain('w-8');
         expect(unavailableSummary.find('svg').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="cockpit-pay-code-results-table"]').text()).not.toContain('Execute');
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-results-table"]')
+                .text(),
+        ).not.toContain('Execute');
         expect(wrapper.text()).not.toContain('provider_payload');
     });
 
@@ -343,10 +471,18 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        const desktopActionColumn = wrapper.find('[data-testid="cockpit-pay-code-row"] td:last-child > div');
-        const desktopAmountCell = wrapper.find('[data-testid="cockpit-pay-code-amount"]');
-        const mobileLinks = wrapper.findAll('[data-testid="cockpit-pay-code-mobile-row-action-link"]');
-        const mobileDisabledSummary = wrapper.find('[data-testid="cockpit-pay-code-mobile-row-disabled-summary"]');
+        const desktopActionColumn = wrapper.find(
+            '[data-testid="cockpit-pay-code-row"] td:last-child > div',
+        );
+        const desktopAmountCell = wrapper.find(
+            '[data-testid="cockpit-pay-code-amount"]',
+        );
+        const mobileLinks = wrapper.findAll(
+            '[data-testid="cockpit-pay-code-mobile-row-action-link"]',
+        );
+        const mobileDisabledSummary = wrapper.find(
+            '[data-testid="cockpit-pay-code-mobile-row-disabled-summary"]',
+        );
 
         expect(desktopAmountCell.classes()).toContain('py-2.5');
         expect(desktopActionColumn.classes()).toContain('justify-end');
@@ -368,19 +504,33 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        const desktopUnavailable = wrapper.find('[data-testid="cockpit-pay-code-row-unavailable-actions"]');
+        const desktopUnavailable = wrapper.find(
+            '[data-testid="cockpit-pay-code-row-unavailable-actions"]',
+        );
         const desktopSummary = desktopUnavailable.find('summary');
-        const mobileUnavailable = wrapper.find('[data-testid="cockpit-pay-code-mobile-row-unavailable-actions"]');
-        const mobileSummary = wrapper.find('[data-testid="cockpit-pay-code-mobile-row-disabled-summary"]');
+        const mobileUnavailable = wrapper.find(
+            '[data-testid="cockpit-pay-code-mobile-row-unavailable-actions"]',
+        );
+        const mobileSummary = wrapper.find(
+            '[data-testid="cockpit-pay-code-mobile-row-disabled-summary"]',
+        );
 
         expect(desktopSummary.text()).toContain('1 unavailable actions');
         expect(desktopSummary.text()).not.toBe('1 unavailable');
         expect(desktopSummary.find('svg').exists()).toBe(true);
-        expect(desktopUnavailable.findAll('[data-testid="cockpit-pay-code-row-action-disabled"]')).toHaveLength(1);
+        expect(
+            desktopUnavailable.findAll(
+                '[data-testid="cockpit-pay-code-row-action-disabled"]',
+            ),
+        ).toHaveLength(1);
         expect(mobileUnavailable.exists()).toBe(true);
         expect(mobileSummary.text()).toContain('More');
         expect(mobileSummary.text()).toContain('1 unavailable actions');
-        expect(mobileUnavailable.findAll('[data-testid="cockpit-pay-code-mobile-row-action-disabled"]')).toHaveLength(1);
+        expect(
+            mobileUnavailable.findAll(
+                '[data-testid="cockpit-pay-code-mobile-row-action-disabled"]',
+            ),
+        ).toHaveLength(1);
     });
 
     it('renders mobile-first Pay Code result cards without duplicating desktop row test contracts', () => {
@@ -390,9 +540,15 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        const mobileResults = wrapper.find('[data-testid="cockpit-pay-code-mobile-results"]');
-        const mobileRows = wrapper.findAll('[data-testid="cockpit-pay-code-mobile-row"]');
-        const mobileLinks = wrapper.findAll('[data-testid="cockpit-pay-code-mobile-row-action-link"]');
+        const mobileResults = wrapper.find(
+            '[data-testid="cockpit-pay-code-mobile-results"]',
+        );
+        const mobileRows = wrapper.findAll(
+            '[data-testid="cockpit-pay-code-mobile-row"]',
+        );
+        const mobileLinks = wrapper.findAll(
+            '[data-testid="cockpit-pay-code-mobile-row-action-link"]',
+        );
 
         expect(mobileResults.exists()).toBe(true);
         expect(mobileResults.classes()).toContain('md:hidden');
@@ -400,13 +556,25 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(mobileRows[0].text()).toContain('PC-HYDRATED-001');
         expect(mobileRows[0].text()).toContain('Money Changer');
         expect(mobileRows[0].text()).toContain('₱1,500.75');
-        expect(mobileRows[0].find('[data-testid="cockpit-pay-code-mobile-row-secondary-facts"]').text()).toContain('Treasury Desk');
+        expect(
+            mobileRows[0]
+                .find(
+                    '[data-testid="cockpit-pay-code-mobile-row-secondary-facts"]',
+                )
+                .text(),
+        ).toContain('Treasury Desk');
         expect(mobileRows[0].text()).toContain('More');
         expect(mobileRows[0].text()).toContain('1 unavailable actions');
         expect(mobileLinks).toHaveLength(2);
-        expect(mobileLinks[0].attributes('href')).toBe('/x/cockpit/pay-codes/PC-HYDRATED-001');
-        expect(mobileLinks[1].attributes('href')).toBe('/x/cockpit/pay-codes/PC-HYDRATED-001/distribution');
-        expect(wrapper.findAll('[data-testid="cockpit-pay-code-row"]')).toHaveLength(2);
+        expect(mobileLinks[0].attributes('href')).toBe(
+            '/x/cockpit/pay-codes/PC-HYDRATED-001',
+        );
+        expect(mobileLinks[1].attributes('href')).toBe(
+            '/x/cockpit/pay-codes/PC-HYDRATED-001/distribution',
+        );
+        expect(
+            wrapper.findAll('[data-testid="cockpit-pay-code-row"]'),
+        ).toHaveLength(2);
     });
 
     it('renders scan-friendly status badges without mutating status facts', () => {
@@ -437,8 +605,12 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        const statusBadges = wrapper.findAll('[data-testid="cockpit-pay-code-status-badge"]');
-        const mobileStatusBadges = wrapper.findAll('[data-testid="cockpit-pay-code-mobile-status-badge"]');
+        const statusBadges = wrapper.findAll(
+            '[data-testid="cockpit-pay-code-status-badge"]',
+        );
+        const mobileStatusBadges = wrapper.findAll(
+            '[data-testid="cockpit-pay-code-mobile-status-badge"]',
+        );
 
         expect(statusBadges).toHaveLength(3);
         expect(statusBadges[0].text()).toBe('Issued');
@@ -457,8 +629,12 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        const desktopAmounts = wrapper.findAll('[data-testid="cockpit-pay-code-amount"]');
-        const mobileAmounts = wrapper.findAll('[data-testid="cockpit-pay-code-mobile-amount"]');
+        const desktopAmounts = wrapper.findAll(
+            '[data-testid="cockpit-pay-code-amount"]',
+        );
+        const mobileAmounts = wrapper.findAll(
+            '[data-testid="cockpit-pay-code-mobile-amount"]',
+        );
 
         expect(desktopAmounts).toHaveLength(2);
         expect(desktopAmounts[0].text()).toBe('₱1,500.75');
@@ -470,6 +646,40 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(mobileAmounts[0].classes()).toContain('tabular-nums');
     });
 
+    it('groups desktop row identity and lifecycle facts into compact scan columns', () => {
+        const wrapper = mount(PayCodeExplorer, {
+            props: {
+                pay_codes_read_model: payCodesReadModel,
+            },
+        });
+
+        const table = wrapper.find(
+            '[data-testid="cockpit-pay-code-results-table"] table',
+        );
+        const identity = wrapper.find(
+            '[data-testid="cockpit-pay-code-row-identity"]',
+        );
+        const lifecycleDates = wrapper.find(
+            '[data-testid="cockpit-pay-code-row-lifecycle-dates"]',
+        );
+        const headers = table.findAll('th');
+
+        expect(table.classes()).toContain('min-w-[52rem]');
+        expect(headers).toHaveLength(5);
+        expect(headers.map((header) => header.text())).toEqual([
+            'Pay Code',
+            'Amount',
+            'Status',
+            'Lifecycle dates',
+            'Actions',
+        ]);
+        expect(identity.text()).toContain('PC-HYDRATED-001');
+        expect(identity.text()).toContain('Money Changer');
+        expect(identity.find('p').classes()).toContain('font-semibold');
+        expect(lifecycleDates.text()).toContain('Created');
+        expect(lifecycleDates.text()).toContain('Expires');
+    });
+
     it('summarizes pay code result density before the rows', () => {
         const wrapper = mount(PayCodeExplorer, {
             props: {
@@ -477,8 +687,12 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        const density = wrapper.find('[data-testid="cockpit-pay-code-results-density-summary"]');
-        const scanGuide = wrapper.find('[data-testid="cockpit-pay-code-results-scan-guide"]');
+        const density = wrapper.find(
+            '[data-testid="cockpit-pay-code-results-density-summary"]',
+        );
+        const scanGuide = wrapper.find(
+            '[data-testid="cockpit-pay-code-results-scan-guide"]',
+        );
 
         expect(density.exists()).toBe(true);
         expect(density.classes()).toContain('sm:w-[30rem]');
@@ -502,7 +716,9 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        const density = wrapper.find('[data-testid="cockpit-pay-code-results-density-summary"]');
+        const density = wrapper.find(
+            '[data-testid="cockpit-pay-code-results-density-summary"]',
+        );
         const metricValues = density.findAll('dd');
 
         expect(metricValues).toHaveLength(4);
@@ -536,10 +752,18 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        const table = wrapper.find('[data-testid="cockpit-pay-code-results-table"]');
-        const density = wrapper.find('[data-testid="cockpit-pay-code-results-density-summary"]');
-        const notice = wrapper.find('[data-testid="cockpit-pay-code-result-limit-notice"]');
-        const pagination = wrapper.find('[data-testid="cockpit-pay-code-result-pagination"]');
+        const table = wrapper.find(
+            '[data-testid="cockpit-pay-code-results-table"]',
+        );
+        const density = wrapper.find(
+            '[data-testid="cockpit-pay-code-results-density-summary"]',
+        );
+        const notice = wrapper.find(
+            '[data-testid="cockpit-pay-code-result-limit-notice"]',
+        );
+        const pagination = wrapper.find(
+            '[data-testid="cockpit-pay-code-result-pagination"]',
+        );
 
         expect(table.find('.border-b').classes()).toContain('p-4');
         expect(density.classes()).toContain('rounded-full');
@@ -583,15 +807,33 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        const density = wrapper.find('[data-testid="cockpit-pay-code-results-density-summary"]');
-        const notice = wrapper.find('[data-testid="cockpit-pay-code-result-limit-notice"]');
-        const pagination = wrapper.find('[data-testid="cockpit-pay-code-result-pagination"]');
-        const footerPagination = wrapper.find('[data-testid="cockpit-pay-code-result-pagination-footer"]');
-        const pageSize = wrapper.find('[data-testid="cockpit-pay-code-result-page-size"]');
-        const previous = wrapper.find('[data-testid="cockpit-pay-code-result-pagination-previous"]');
-        const next = wrapper.find('[data-testid="cockpit-pay-code-result-pagination-next"]');
-        const footerPrevious = wrapper.find('[data-testid="cockpit-pay-code-result-pagination-footer-previous"]');
-        const footerNext = wrapper.find('[data-testid="cockpit-pay-code-result-pagination-footer-next"]');
+        const density = wrapper.find(
+            '[data-testid="cockpit-pay-code-results-density-summary"]',
+        );
+        const notice = wrapper.find(
+            '[data-testid="cockpit-pay-code-result-limit-notice"]',
+        );
+        const pagination = wrapper.find(
+            '[data-testid="cockpit-pay-code-result-pagination"]',
+        );
+        const footerPagination = wrapper.find(
+            '[data-testid="cockpit-pay-code-result-pagination-footer"]',
+        );
+        const pageSize = wrapper.find(
+            '[data-testid="cockpit-pay-code-result-page-size"]',
+        );
+        const previous = wrapper.find(
+            '[data-testid="cockpit-pay-code-result-pagination-previous"]',
+        );
+        const next = wrapper.find(
+            '[data-testid="cockpit-pay-code-result-pagination-next"]',
+        );
+        const footerPrevious = wrapper.find(
+            '[data-testid="cockpit-pay-code-result-pagination-footer-previous"]',
+        );
+        const footerNext = wrapper.find(
+            '[data-testid="cockpit-pay-code-result-pagination-footer-next"]',
+        );
 
         expect(density.text()).toContain('Showing');
         expect(density.text()).toContain('1–25 of 30');
@@ -599,7 +841,9 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(density.text()).toContain('30');
         expect(notice.exists()).toBe(true);
         expect(notice.text()).toContain('Showing 1–25 of 30 Pay Codes.');
-        expect(notice.text()).toContain('pagination changes only the browser view');
+        expect(notice.text()).toContain(
+            'pagination changes only the browser view',
+        );
         expect(pagination.exists()).toBe(true);
         expect(pagination.text()).toContain('Page 1 of 2');
         expect(footerPagination.exists()).toBe(true);
@@ -613,8 +857,12 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(next.attributes('disabled')).toBeUndefined();
         expect(footerPrevious.attributes('disabled')).toBeDefined();
         expect(footerNext.attributes('disabled')).toBeUndefined();
-        expect(wrapper.findAll('[data-testid="cockpit-pay-code-row"]')).toHaveLength(25);
-        expect(wrapper.findAll('[data-testid="cockpit-pay-code-mobile-row"]')).toHaveLength(25);
+        expect(
+            wrapper.findAll('[data-testid="cockpit-pay-code-row"]'),
+        ).toHaveLength(25);
+        expect(
+            wrapper.findAll('[data-testid="cockpit-pay-code-mobile-row"]'),
+        ).toHaveLength(25);
         expect(wrapper.text()).toContain('PC-VOLUME-025');
         expect(wrapper.text()).not.toContain('PC-VOLUME-026');
         expect(wrapper.text()).toContain('Links');
@@ -631,17 +879,45 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(notice.text()).toContain('Showing 26–30 of 30 Pay Codes.');
         expect(pagination.text()).toContain('Page 2 of 2');
         expect(footerPagination.text()).toContain('Showing 26–30 of 30');
-        expect(wrapper.find('[data-testid="cockpit-pay-code-result-pagination-previous"]').attributes('disabled')).toBeUndefined();
-        expect(wrapper.find('[data-testid="cockpit-pay-code-result-pagination-next"]').attributes('disabled')).toBeDefined();
-        expect(wrapper.find('[data-testid="cockpit-pay-code-result-pagination-footer-previous"]').attributes('disabled')).toBeUndefined();
-        expect(wrapper.find('[data-testid="cockpit-pay-code-result-pagination-footer-next"]').attributes('disabled')).toBeDefined();
-        expect(wrapper.findAll('[data-testid="cockpit-pay-code-row"]')).toHaveLength(5);
-        expect(wrapper.findAll('[data-testid="cockpit-pay-code-mobile-row"]')).toHaveLength(5);
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-pay-code-result-pagination-previous"]',
+                )
+                .attributes('disabled'),
+        ).toBeUndefined();
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-result-pagination-next"]')
+                .attributes('disabled'),
+        ).toBeDefined();
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-pay-code-result-pagination-footer-previous"]',
+                )
+                .attributes('disabled'),
+        ).toBeUndefined();
+        expect(
+            wrapper
+                .find(
+                    '[data-testid="cockpit-pay-code-result-pagination-footer-next"]',
+                )
+                .attributes('disabled'),
+        ).toBeDefined();
+        expect(
+            wrapper.findAll('[data-testid="cockpit-pay-code-row"]'),
+        ).toHaveLength(5);
+        expect(
+            wrapper.findAll('[data-testid="cockpit-pay-code-mobile-row"]'),
+        ).toHaveLength(5);
         expect(wrapper.text()).not.toContain('PC-VOLUME-025');
         expect(wrapper.text()).toContain('PC-VOLUME-026');
         expect(wrapper.text()).toContain('PC-VOLUME-030');
 
-        await wrapper.find('[data-testid="cockpit-pay-code-result-pagination-previous"]').trigger('click');
+        await wrapper
+            .find('[data-testid="cockpit-pay-code-result-pagination-previous"]')
+            .trigger('click');
 
         expect(density.text()).toContain('1–25 of 30');
         expect(pagination.text()).toContain('Page 1 of 2');
@@ -668,19 +944,31 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        const density = wrapper.find('[data-testid="cockpit-pay-code-results-density-summary"]');
-        const footerPagination = wrapper.find('[data-testid="cockpit-pay-code-result-pagination-footer"]');
+        const density = wrapper.find(
+            '[data-testid="cockpit-pay-code-results-density-summary"]',
+        );
+        const footerPagination = wrapper.find(
+            '[data-testid="cockpit-pay-code-result-pagination-footer"]',
+        );
 
         expect(footerPagination.exists()).toBe(true);
         expect(footerPagination.text()).toContain('Showing 1–25 of 30');
 
-        await wrapper.find('[data-testid="cockpit-pay-code-result-pagination-footer-next"]').trigger('click');
+        await wrapper
+            .find(
+                '[data-testid="cockpit-pay-code-result-pagination-footer-next"]',
+            )
+            .trigger('click');
 
         expect(density.text()).toContain('26–30 of 30');
         expect(footerPagination.text()).toContain('Showing 26–30 of 30');
         expect(wrapper.text()).toContain('PC-FOOTER-030');
 
-        await wrapper.find('[data-testid="cockpit-pay-code-result-pagination-footer-previous"]').trigger('click');
+        await wrapper
+            .find(
+                '[data-testid="cockpit-pay-code-result-pagination-footer-previous"]',
+            )
+            .trigger('click');
 
         expect(density.text()).toContain('1–25 of 30');
         expect(footerPagination.text()).toContain('Showing 1–25 of 30');
@@ -707,23 +995,35 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        const density = wrapper.find('[data-testid="cockpit-pay-code-results-density-summary"]');
-        const pagination = wrapper.find('[data-testid="cockpit-pay-code-result-pagination"]');
-        const pageSize = wrapper.find('[data-testid="cockpit-pay-code-result-page-size"]');
+        const density = wrapper.find(
+            '[data-testid="cockpit-pay-code-results-density-summary"]',
+        );
+        const pagination = wrapper.find(
+            '[data-testid="cockpit-pay-code-result-pagination"]',
+        );
+        const pageSize = wrapper.find(
+            '[data-testid="cockpit-pay-code-result-page-size"]',
+        );
 
         expect(density.text()).toContain('1–25 of 30');
         expect(pagination.text()).toContain('Page 1 of 2');
-        expect(wrapper.findAll('[data-testid="cockpit-pay-code-row"]')).toHaveLength(25);
+        expect(
+            wrapper.findAll('[data-testid="cockpit-pay-code-row"]'),
+        ).toHaveLength(25);
 
         await pageSize.setValue('10');
 
         expect(density.text()).toContain('1–10 of 30');
         expect(pagination.text()).toContain('Page 1 of 3');
-        expect(wrapper.findAll('[data-testid="cockpit-pay-code-row"]')).toHaveLength(10);
+        expect(
+            wrapper.findAll('[data-testid="cockpit-pay-code-row"]'),
+        ).toHaveLength(10);
         expect(wrapper.text()).toContain('PC-SIZE-010');
         expect(wrapper.text()).not.toContain('PC-SIZE-011');
 
-        await wrapper.find('[data-testid="cockpit-pay-code-result-pagination-next"]').trigger('click');
+        await wrapper
+            .find('[data-testid="cockpit-pay-code-result-pagination-next"]')
+            .trigger('click');
 
         expect(density.text()).toContain('11–20 of 30');
         expect(pagination.text()).toContain('Page 2 of 3');
@@ -731,8 +1031,14 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         await pageSize.setValue('50');
 
         expect(density.text()).toContain('1–30 of 30');
-        expect(wrapper.find('[data-testid="cockpit-pay-code-result-pagination"]').exists()).toBe(false);
-        expect(wrapper.findAll('[data-testid="cockpit-pay-code-row"]')).toHaveLength(30);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-result-pagination"]')
+                .exists(),
+        ).toBe(false);
+        expect(
+            wrapper.findAll('[data-testid="cockpit-pay-code-row"]'),
+        ).toHaveLength(30);
         expect(wrapper.text()).toContain('PC-SIZE-030');
     });
 
@@ -743,8 +1049,12 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        const guidance = wrapper.find('[data-testid="cockpit-pay-code-row-action-guidance"]');
-        const items = guidance.findAll('[data-testid="cockpit-pay-code-row-action-guidance-item"]');
+        const guidance = wrapper.find(
+            '[data-testid="cockpit-pay-code-row-action-guidance"]',
+        );
+        const items = guidance.findAll(
+            '[data-testid="cockpit-pay-code-row-action-guidance-item"]',
+        );
 
         expect(guidance.exists()).toBe(true);
         expect(guidance.element.tagName.toLowerCase()).toBe('details');
@@ -755,9 +1065,13 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(guidance.text()).toContain('Blocked Actions');
         expect(guidance.text()).toContain('1');
         expect(guidance.text()).toContain('Rows');
-        expect(guidance.text()).toContain('open inspection workspaces or remain disabled');
+        expect(guidance.text()).toContain(
+            'open inspection workspaces or remain disabled',
+        );
         expect(guidance.text()).toContain('does not execute actions');
-        expect(guidance.text()).toContain('does not execute actions, deliver feedback, mutate vouchers, or call providers');
+        expect(guidance.text()).toContain(
+            'does not execute actions, deliver feedback, mutate vouchers, or call providers',
+        );
         expect(items).toHaveLength(3);
     });
 
@@ -774,8 +1088,12 @@ describe('Cockpit Pay Code Explorer hydration', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('No Pay Codes available in the sanitized read model.');
-        expect(wrapper.findAll('[data-testid="cockpit-pay-code-row"]')).toHaveLength(0);
+        expect(wrapper.text()).toContain(
+            'No Pay Codes available in the sanitized read model.',
+        );
+        expect(
+            wrapper.findAll('[data-testid="cockpit-pay-code-row"]'),
+        ).toHaveLength(0);
     });
 
     it('forwards route adapter props into the Cockpit Pay Code Explorer page', () => {
@@ -787,7 +1105,11 @@ describe('Cockpit Pay Code Explorer hydration', () => {
 
         expect(wrapper.text()).toContain('PC-HYDRATED-001');
         expect(wrapper.text()).toContain('₱1,500.75');
-        expect(wrapper.find('[data-testid="cockpit-pay-code-explorer-shell"]').exists()).toBe(true);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-pay-code-explorer-shell"]')
+                .exists(),
+        ).toBe(true);
     });
 
     it('renders read-only integration status badges from the read model bundle', () => {
@@ -799,19 +1121,25 @@ describe('Cockpit Pay Code Explorer hydration', () => {
                         status: 'available',
                         authorized: true,
                         entries: [{ id: 'journal-1' }],
-                        redactions: { payloads: 'journal-evidence-summary-only' },
+                        redactions: {
+                            payloads: 'journal-evidence-summary-only',
+                        },
                     },
                     actions: {
                         status: 'available',
                         authorized: true,
                         actions: [{ key: 'review' }],
-                        redactions: { payloads: 'safe-action-host-summary-only' },
+                        redactions: {
+                            payloads: 'safe-action-host-summary-only',
+                        },
                     },
                     feedback: {
                         status: 'available',
                         authorized: true,
                         deliveries: [{ id: 'delivery-1' }],
-                        redactions: { payloads: 'communication-delivery-summary-only' },
+                        redactions: {
+                            payloads: 'communication-delivery-summary-only',
+                        },
                     },
                     raw_payload: 'must-not-render',
                 },
@@ -825,7 +1153,11 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(wrapper.text()).toContain('Feedback: available');
         expect(wrapper.text()).toContain('journal-evidence-summary-only');
         expect(wrapper.text()).not.toContain('must-not-render');
-        expect(wrapper.findAll('[data-testid="cockpit-pay-code-integration-badge"]')).toHaveLength(3);
+        expect(
+            wrapper.findAll(
+                '[data-testid="cockpit-pay-code-integration-badge"]',
+            ),
+        ).toHaveLength(3);
     });
 
     it('keeps explorer integration badges authorization and redaction safe', () => {
@@ -904,27 +1236,37 @@ describe('Cockpit Pay Code Explorer hydration', () => {
                         status: 'available',
                         authorized: true,
                         entries: [{ id: 'journal-1' }],
-                        redactions: { payloads: 'journal-evidence-summary-only' },
+                        redactions: {
+                            payloads: 'journal-evidence-summary-only',
+                        },
                     },
                     actions: {
                         status: 'available',
                         authorized: true,
                         actions: [{ key: 'review' }],
-                        redactions: { payloads: 'safe-action-host-summary-only' },
+                        redactions: {
+                            payloads: 'safe-action-host-summary-only',
+                        },
                     },
                     feedback: {
                         status: 'available',
                         authorized: true,
                         deliveries: [{ id: 'delivery-1' }],
-                        redactions: { payloads: 'communication-delivery-summary-only' },
+                        redactions: {
+                            payloads: 'communication-delivery-summary-only',
+                        },
                     },
                     raw_payload: 'must-not-render',
                 },
             },
         });
 
-        const readiness = wrapper.find('[data-testid="cockpit-pay-code-integration-readiness"]');
-        const cards = readiness.findAll('[data-testid="cockpit-pay-code-integration-readiness-card"]');
+        const readiness = wrapper.find(
+            '[data-testid="cockpit-pay-code-integration-readiness"]',
+        );
+        const cards = readiness.findAll(
+            '[data-testid="cockpit-pay-code-integration-readiness-card"]',
+        );
 
         expect(readiness.exists()).toBe(true);
         expect(readiness.element.tagName.toLowerCase()).toBe('details');
@@ -932,13 +1274,19 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(readiness.text()).toContain('Connected service readiness');
         expect(readiness.text()).toContain('Journal');
         expect(readiness.text()).toContain('journal-evidence-summary-only');
-        expect(readiness.text()).toContain('Journal evidence remains read-only audit context');
+        expect(readiness.text()).toContain(
+            'Journal evidence remains read-only audit context',
+        );
         expect(readiness.text()).toContain('Actions');
         expect(readiness.text()).toContain('safe-action-host-summary-only');
         expect(readiness.text()).toContain('presentation-only');
         expect(readiness.text()).toContain('Feedback');
-        expect(readiness.text()).toContain('communication-delivery-summary-only');
-        expect(readiness.text()).toContain('communication status, not lifecycle truth');
+        expect(readiness.text()).toContain(
+            'communication-delivery-summary-only',
+        );
+        expect(readiness.text()).toContain(
+            'communication status, not lifecycle truth',
+        );
         expect(readiness.text()).toContain('do not write journal entries');
         expect(cards).toHaveLength(3);
         expect(readiness.text()).not.toContain('must-not-render');
@@ -958,7 +1306,11 @@ describe('Cockpit Pay Code Explorer hydration', () => {
         expect(wrapper.text()).toContain('pay_code_explorer');
         expect(wrapper.text()).toContain('activity-navigation-read-only');
         expect(wrapper.text()).toContain('activity-navigation-context-only');
-        expect(wrapper.find('[data-testid="cockpit-activity-navigation-context"]').exists()).toBe(true);
+        expect(
+            wrapper
+                .find('[data-testid="cockpit-activity-navigation-context"]')
+                .exists(),
+        ).toBe(true);
         expect(wrapper.text()).not.toContain('must-not-render');
         expect(wrapper.text()).not.toContain('provider_payload');
         expect(wrapper.text()).not.toContain('raw_payload');
