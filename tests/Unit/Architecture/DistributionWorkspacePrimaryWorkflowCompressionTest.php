@@ -17,7 +17,7 @@ it('documents distribution workspace primary workflow compression slice 1', func
         ->and($page)->toContain('data-testid="cockpit-distribution-workspace-header-facts"')
         ->and($page)->toContain('data-testid="cockpit-distribution-workspace-boundary"')
         ->and($page)->toContain('Workspace rules')
-        ->and($frontendTest)->toContain('renders the workspace shell as a compact operational header');
+        ->and($frontendTest)->toContain('renders the workspace shell as a sleek operational header');
 });
 
 it('documents distribution workspace primary workflow compression slice 2', function (): void {
