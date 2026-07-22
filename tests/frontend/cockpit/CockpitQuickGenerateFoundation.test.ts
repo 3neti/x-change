@@ -108,6 +108,14 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(
             wrapper.find('[data-testid="cockpit-generate-button"]').exists(),
         ).toBe(false);
+        const panel = wrapper.find(
+            '[data-testid="cockpit-generate-action-panel"]',
+        );
+
+        expect(panel.element.tagName.toLowerCase()).toBe('details');
+        expect(panel.attributes('open')).toBeUndefined();
+        expect(panel.classes()).toContain('py-3');
+        expect(panel.find('summary').text()).toContain('4 safeguards');
         expect(wrapper.text()).toContain('Issuance handoff status');
         expect(wrapper.text()).toContain(
             'Quick Generate uses the existing GeneratePayCode path',
@@ -227,6 +235,27 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(
             wrapper.find('[data-testid="reference-slot"]').text(),
         ).toContain('Template Selector');
+    });
+
+    it('renders compact reference disclosures without opening them by default', () => {
+        const wrapper = mount(CockpitDiagnosticsDisclosure, {
+            props: {
+                title: 'Template and runtime reference',
+                summary: 'Use the Quick Generate form below.',
+                eyebrow: 'Reference guide',
+                actionLabel: 'Show template reference',
+                compact: true,
+            },
+        });
+
+        const disclosure = wrapper.find(
+            '[data-testid="cockpit-diagnostics-disclosure"]',
+        );
+
+        expect(disclosure.element.tagName.toLowerCase()).toBe('details');
+        expect(disclosure.attributes('open')).toBeUndefined();
+        expect(disclosure.classes()).toContain('py-3');
+        expect(disclosure.classes()).not.toContain('p-4');
     });
 
     it('renders the issuance boundary plan without a mutation form', () => {
@@ -2054,6 +2083,13 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(headerBoundary.find('summary').text()).toContain(
             'Workflow limits',
         );
+        const referenceGuide = wrapper.find(
+            '[data-testid="cockpit-quick-generate-reference-guide"]',
+        );
+
+        expect(referenceGuide.exists()).toBe(true);
+        expect(referenceGuide.classes()).toContain('py-3');
+        expect(referenceGuide.attributes('open')).toBeUndefined();
         expect(wrapper.text()).toContain('Template Selector');
         expect(wrapper.text()).toContain('Runtime Inputs');
         expect(wrapper.text()).toContain('Pricing and Funding');

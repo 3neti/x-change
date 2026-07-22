@@ -4200,3 +4200,10 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - The existing issuance and side-effect boundary remains available through a closed disclosure.
 - UI/report: `../ui-cockpit/reports/634-quick-generate-primary-workflow-compression-slice-1.md`.
 - Boundary remains unchanged: presentation-only shell compression; no route behavior, form payloads, validation, idempotency, pricing, funding, issuance, voucher compilation, provider calls, wallet behavior, journal writes, action execution, feedback delivery, campaign mutation, persistence, public API behavior, or money movement changed.
+
+## 2026-07-22 Update — Quick Generate Primary Workflow Compression — Slice 2
+
+- Quick Generate reference content now uses the shared compact disclosure density.
+- Existing issuance ownership and all four handoff safeguards remain available through a closed status disclosure.
+- UI/report: `../ui-cockpit/reports/635-quick-generate-primary-workflow-compression-slice-2.md`.
+- Boundary remains unchanged: presentation-only secondary-control compression; no template selection, runtime inputs, form submission, route behavior, validation, pricing, funding, issuance ownership, result behavior, provider calls, wallet behavior, journal writes, action execution, feedback delivery, campaign mutation, persistence, public API behavior, or money movement changed.

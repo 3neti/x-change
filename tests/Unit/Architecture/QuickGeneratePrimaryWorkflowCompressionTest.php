@@ -23,3 +23,28 @@ it('documents quick generate primary workflow compression slice 1', function ():
         ->and($compass)->toContain('Quick Generate Primary Workflow Compression — Slice 1')
         ->and($settlementCompass)->toContain('Quick Generate Primary Workflow Compression — Slice 1');
 });
+
+it('documents quick generate primary workflow compression slice 2', function (): void {
+    $packageRoot = dirname(__DIR__, 3);
+
+    $report = file_get_contents($packageRoot.'/docs/ui-cockpit/reports/635-quick-generate-primary-workflow-compression-slice-2.md');
+    $page = file_get_contents($packageRoot.'/resources/js/cockpit/pages/QuickGenerate.vue');
+    $disclosure = file_get_contents($packageRoot.'/resources/js/cockpit/components/CockpitDiagnosticsDisclosure.vue');
+    $handoff = file_get_contents($packageRoot.'/resources/js/cockpit/components/CockpitGenerateActionPanel.vue');
+    $frontendTest = file_get_contents($packageRoot.'/tests/frontend/cockpit/CockpitQuickGenerateFoundation.test.ts');
+    $compass = file_get_contents($packageRoot.'/docs/ui-cockpit/COMPASS.md');
+    $settlementCompass = file_get_contents($packageRoot.'/docs/architecture/SETTLEMENT_OS_COMPASS.md');
+
+    expect($report)
+        ->toContain('Quick Generate Primary Workflow Compression — Slice 2')
+        ->toContain('closed handoff-status disclosure')
+        ->toContain('Presentation-only secondary-control compression')
+        ->and($page)->toContain('data-testid="cockpit-quick-generate-reference-guide"')
+        ->and($page)->toContain('compact')
+        ->and($disclosure)->toContain('compact?: boolean')
+        ->and($handoff)->toContain('4 safeguards')
+        ->and($frontendTest)->toContain("expect(panel.attributes('open')).toBeUndefined()")
+        ->and($frontendTest)->toContain("expect(disclosure.classes()).toContain('py-3')")
+        ->and($compass)->toContain('Quick Generate Primary Workflow Compression — Slice 2')
+        ->and($settlementCompass)->toContain('Quick Generate Primary Workflow Compression — Slice 2');
+});

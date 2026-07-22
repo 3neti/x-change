@@ -4490,3 +4490,11 @@ Current boundary:
 - Full template-first handoff and preflight boundary copy remains available through `Workflow limits`.
 - Report: `reports/634-quick-generate-primary-workflow-compression-slice-1.md`.
 - Boundary remains unchanged: presentation-only shell compression; no route behavior, form payloads, validation, idempotency, pricing, funding, issuance, voucher compilation, provider calls, wallet behavior, journal writes, action execution, feedback delivery, campaign mutation, persistence, public API behavior, or money movement changed.
+
+# 2026-07-22 — Quick Generate Primary Workflow Compression — Slice 2
+
+- The template/runtime reference guide now uses compact disclosure density.
+- Issuance handoff status is now a closed disclosure with the existing path and safeguard count visible.
+- All four handoff safeguards remain available in the expanded state.
+- Report: `reports/635-quick-generate-primary-workflow-compression-slice-2.md`.
+- Boundary remains unchanged: presentation-only secondary-control compression; no template selection, runtime inputs, form submission, route behavior, validation, pricing, funding, issuance ownership, result behavior, provider calls, wallet behavior, journal writes, action execution, feedback delivery, campaign mutation, persistence, public API behavior, or money movement changed.

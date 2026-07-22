@@ -1188,10 +1188,12 @@ function stringValue(value: unknown): string | null {
             </div>
 
             <CockpitDiagnosticsDisclosure
+                compact
                 title="Template and runtime reference"
                 summary="These read-only cards describe the available product templates and runtime inputs. Use the Quick Generate form below for the active operator workflow."
                 eyebrow="Reference guide"
                 action-label="Show template reference"
+                data-testid="cockpit-quick-generate-reference-guide"
             >
                 <div class="grid gap-4 xl:grid-cols-2">
                     <CockpitTemplateSelector
