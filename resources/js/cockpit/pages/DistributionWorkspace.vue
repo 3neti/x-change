@@ -416,12 +416,11 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                     data-testid="cockpit-distribution-workspace-boundary"
                 >
                     <summary class="cursor-pointer text-[0.7rem] font-semibold text-slate-500 dark:text-slate-400">
-                        Workspace rules
+                        Read-only limits
                     </summary>
                     <p class="mt-2 max-w-4xl text-xs leading-5 text-slate-500 dark:text-slate-400">
-                        This page does not dispatch distribution, send feedback, create campaigns,
-                        mutate vouchers, execute drivers, write journal entries, call providers,
-                        generate artifacts, or move money.
+                        Inspection only. This page can display and copy the claim URL, but it cannot
+                        send messages, change the Pay Code, generate distribution assets, or move money.
                     </p>
                 </details>
             </div>

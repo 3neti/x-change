@@ -129,13 +129,11 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).toContain('Share options');
         expect(wrapper.text()).toContain('Status evidence');
         expect(wrapper.find('[aria-current="page"]').text()).toContain('Pay Codes');
-        expect(wrapper.text()).toContain('does not dispatch distribution');
-        expect(wrapper.text()).toContain('send feedback');
-        expect(wrapper.text()).toContain('create campaigns');
-        expect(wrapper.text()).toContain('mutate vouchers');
-        expect(wrapper.text()).toContain('execute drivers');
-        expect(wrapper.text()).toContain('write journal entries');
-        expect(wrapper.text()).toContain('call providers');
+        expect(wrapper.text()).toContain('Inspection only');
+        expect(wrapper.text()).toContain('display and copy the claim URL');
+        expect(wrapper.text()).toContain('cannot send messages');
+        expect(wrapper.text()).toContain('change the Pay Code');
+        expect(wrapper.text()).toContain('generate distribution assets');
         expect(wrapper.text()).toContain('move money');
     });
 
@@ -165,9 +163,15 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(boundary.element.tagName.toLowerCase()).toBe('details');
         expect(boundary.classes()).toContain('mt-2');
         expect(boundary.classes()).toContain('pt-2');
-        expect(boundary.find('summary').text()).toContain('Workspace rules');
-        expect(boundary.text()).toContain('does not dispatch distribution');
+        expect(boundary.find('summary').text()).toContain('Read-only limits');
+        expect(boundary.text()).toContain('Inspection only');
+        expect(boundary.text()).toContain('display and copy the claim URL');
+        expect(boundary.text()).toContain('cannot send messages');
+        expect(boundary.text()).toContain('change the Pay Code');
+        expect(boundary.text()).toContain('generate distribution assets');
         expect(boundary.text()).toContain('move money');
+        expect(boundary.text()).not.toContain('mutate vouchers');
+        expect(boundary.text()).not.toContain('execute drivers');
     });
 
     it('renders hydrated read-only distribution workspace facts from route props', () => {

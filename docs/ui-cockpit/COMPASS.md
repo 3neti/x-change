@@ -4386,3 +4386,11 @@ Current boundary:
 - Authenticated Dusk browser smoke remains pending because this sandbox has recently blocked ChromeDriver port binding for this page family.
 - Report: `reports/621-distribution-workspace-primary-workflow-compression-slice-3-closure.md`.
 - Boundary remains unchanged: presentation-only primary workflow closure; no route behavior, read-model hydration, beneficiary URL generation, copy behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle behavior, execution drivers, artifact generation, journal writes, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+
+# 2026-07-22 — Distribution Workspace Secondary Content Compression — Slice 1
+
+- Started the Distribution Workspace Secondary Content Compression wave.
+- Replaced `Workspace rules` implementation jargon with concise operator-facing `Read-only limits`.
+- The full architectural side-effect boundary remains unchanged and documented outside the operator copy.
+- Report: `reports/622-distribution-workspace-secondary-content-compression-slice-1.md`.
+- Boundary remains unchanged: presentation-only boundary-language compression; no route behavior, read-model hydration, beneficiary URL generation, copy behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle behavior, execution drivers, artifact generation, journal writes, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.

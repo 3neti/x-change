@@ -4098,3 +4098,10 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/621-distribution-workspace-primary-workflow-compression-slice-3-closure.md`.
 - Boundary remains unchanged: presentation-only primary workflow closure; no route behavior, read-model hydration, beneficiary URL generation, copy behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle behavior, execution drivers, artifact generation, journal writes, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
 - Next recommended checkpoint: manual browser inspection of Distribution Workspace, then compress connected context and claim-link details if the primary scan path is accepted.
+
+## 2026-07-22 Update — Distribution Workspace Secondary Content Compression — Slice 1
+
+- Started the Distribution Workspace Secondary Content Compression wave after browser acceptance of the primary header and fact strip.
+- The header disclosure now presents operator-facing `Read-only limits` without implementation vocabulary.
+- UI/report: `../ui-cockpit/reports/622-distribution-workspace-secondary-content-compression-slice-1.md`.
+- Boundary remains unchanged: presentation-only boundary-language compression; no route behavior, read-model hydration, beneficiary URL generation, copy behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle behavior, execution drivers, artifact generation, journal writes, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
