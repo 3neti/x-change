@@ -28,7 +28,11 @@ describe('Cockpit Voucher Detail foundation', () => {
         expect(wrapper.text()).toContain('PC-READY-001');
         expect(wrapper.text()).toContain('Execution ID');
         expect(wrapper.text()).toContain('Deferred');
+        expect(wrapper.find('[data-testid="cockpit-voucher-overview-panel"]').element.tagName.toLowerCase()).toBe('details');
+        expect(wrapper.find('[data-testid="cockpit-voucher-overview-panel"]').attributes('open')).toBeUndefined();
+        expect(wrapper.find('summary').text()).toContain('6 facts');
         expect(wrapper.findAll('[data-testid="cockpit-voucher-overview-item"]')).toHaveLength(6);
+        expect(wrapper.findAll('[data-testid="cockpit-voucher-overview-item"]')[0].classes()).toContain('p-3');
     });
 
     it('renders lifecycle timeline placeholders without invoking execution', () => {
@@ -44,6 +48,9 @@ describe('Cockpit Voucher Detail foundation', () => {
         expect(wrapper.text()).toContain('Execution outcome');
         expect(wrapper.text()).toContain('Notification status');
         expect(wrapper.text()).toContain('no driver is invoked here');
+        expect(wrapper.find('[data-testid="cockpit-voucher-timeline-panel"]').element.tagName.toLowerCase()).toBe('details');
+        expect(wrapper.find('[data-testid="cockpit-voucher-timeline-panel"]').attributes('open')).toBeUndefined();
+        expect(wrapper.find('summary').text()).toContain('4 events');
         expect(wrapper.findAll('[data-testid="cockpit-voucher-timeline-item"]')).toHaveLength(4);
     });
 
@@ -63,6 +70,9 @@ describe('Cockpit Voucher Detail foundation', () => {
         expect(evidence.text()).toContain('Evidence status');
         expect(evidence.text()).toContain('Identity evidence');
         expect(evidence.text()).toContain('Settlement envelope evidence');
+        expect(evidence.find('[data-testid="cockpit-voucher-evidence-panel"]').element.tagName.toLowerCase()).toBe('details');
+        expect(evidence.find('[data-testid="cockpit-voucher-evidence-panel"]').attributes('open')).toBeUndefined();
+        expect(evidence.find('summary').text()).toContain('3 facts');
         expect(evidence.find('[data-testid="cockpit-voucher-evidence-density-summary"]').text()).toContain('Evidence Facts');
         expect(evidence.find('[data-testid="cockpit-voucher-evidence-density-summary"]').text()).toContain('3');
         expect(evidence.findAll('[data-testid="cockpit-voucher-evidence-item-metadata"]')).toHaveLength(0);
@@ -72,6 +82,9 @@ describe('Cockpit Voucher Detail foundation', () => {
         expect(distribution.text()).toContain('SMS');
         expect(distribution.text()).toContain('Email');
         expect(distribution.text()).toContain('In-app');
+        expect(distribution.find('[data-testid="cockpit-voucher-distribution-panel"]').element.tagName.toLowerCase()).toBe('details');
+        expect(distribution.find('[data-testid="cockpit-voucher-distribution-panel"]').attributes('open')).toBeUndefined();
+        expect(distribution.find('summary').text()).toContain('3 channels');
         expect(distribution.find('[data-testid="cockpit-voucher-distribution-density-summary"]').text()).toContain('Channels');
         expect(distribution.find('[data-testid="cockpit-voucher-distribution-density-summary"]').text()).toContain('Status Summary');
         expect(distribution.find('[data-testid="cockpit-voucher-distribution-density-summary"]').text()).toContain('3');
@@ -92,6 +105,8 @@ describe('Cockpit Voucher Detail foundation', () => {
         expect(wrapper.text()).toContain('Follow-up guidance');
         expect(wrapper.text()).toContain('Provider callbacks');
         expect(wrapper.find('[data-testid="cockpit-voucher-audit-panel"]').element.tagName.toLowerCase()).toBe('details');
+        expect(wrapper.find('[data-testid="cockpit-voucher-audit-panel"]').attributes('open')).toBeUndefined();
+        expect(wrapper.find('[data-testid="cockpit-voucher-audit-panel"]').classes()).toContain('py-3');
         expect(wrapper.find('[data-testid="cockpit-voucher-audit-density-summary"]').text()).toContain('Evidence');
         expect(wrapper.find('[data-testid="cockpit-voucher-audit-density-summary"]').text()).toContain('3');
         expect(wrapper.find('[data-testid="cockpit-voucher-audit-density-summary"]').text()).toContain('Connected');
@@ -127,6 +142,9 @@ describe('Cockpit Voucher Detail foundation', () => {
         expect(wrapper.text()).toContain('Evidence');
         expect(wrapper.text()).toContain('Distribution');
         expect(wrapper.text()).toContain('Audit');
+        expect(wrapper.find('[data-testid="cockpit-voucher-secondary-content"]').classes()).toContain('space-y-3');
+        expect(wrapper.find('[data-testid="cockpit-voucher-supporting-evidence-grid"]').classes()).toContain('gap-3');
+        expect(wrapper.find('[data-testid="cockpit-voucher-supporting-evidence-stack"]').classes()).toContain('space-y-3');
         expect(wrapper.find('[aria-current="page"]').text()).toContain('Pay Codes');
         expect(wrapper.text()).toContain('Inspection only');
         expect(wrapper.text()).toContain('cannot change the Pay Code');

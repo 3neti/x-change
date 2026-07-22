@@ -4472,3 +4472,13 @@ Current boundary:
 - Audit, follow-up, and notification statuses, counts, policies, and unavailable reasons remain available on demand.
 - Report: `reports/632-voucher-detail-secondary-content-compression-slice-2.md`.
 - Boundary remains unchanged: presentation-only integration-summary compression; no journal evidence changes, action availability changes, notification delivery, read-model authorization, payload redaction, provider behavior, voucher mutation, persistence, public API behavior, or money movement changed.
+
+# 2026-07-22 — Voucher Detail Secondary Content Compression — Slice 3 Closure
+
+- Completed Voucher Detail Secondary Content Compression Slice 3 / Closure.
+- Overview, timeline, evidence, distribution, and audit now use compact closed disclosures with visible counts.
+- Expanded details retain all facts, status summaries, metadata, and disabled follow-up guidance.
+- Lower secondary content now uses a cohesive three-unit spacing rhythm.
+- Published package-owned Cockpit assets and verified package/host parity.
+- Report: `reports/633-voucher-detail-secondary-content-compression-slice-3-closure.md`.
+- Boundary remains unchanged: presentation-only secondary-content compression closure; no voucher facts, lifecycle events, evidence sources, notification state, audit evidence, follow-up availability, claim URL behavior, delivery, provider behavior, voucher mutation, persistence, public API behavior, or money movement changed.

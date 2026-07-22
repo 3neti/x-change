@@ -4182,3 +4182,13 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - All connected audit, follow-up, and notification summary facts retain their existing read-model sources.
 - UI/report: `../ui-cockpit/reports/632-voucher-detail-secondary-content-compression-slice-2.md`.
 - Boundary remains unchanged: presentation-only integration-summary compression; no journal evidence changes, action availability changes, notification delivery, read-model authorization, payload redaction, provider behavior, voucher mutation, persistence, public API behavior, or money movement changed.
+
+## 2026-07-22 Update — Voucher Detail Secondary Content Compression — Slice 3
+
+- Closed the Voucher Detail Secondary Content Compression wave.
+- Lower read-model facts now remain available through compact count-bearing disclosures with tighter expanded density.
+- The secondary-content layout uses a cohesive three-unit spacing rhythm while preserving its responsive structure.
+- Host-published Cockpit assets match package source.
+- UI/report: `../ui-cockpit/reports/633-voucher-detail-secondary-content-compression-slice-3-closure.md`.
+- Boundary remains unchanged: presentation-only secondary-content compression closure; no voucher facts, lifecycle events, evidence sources, notification state, audit evidence, follow-up availability, claim URL behavior, delivery, provider behavior, voucher mutation, persistence, public API behavior, or money movement changed.
+- Next recommended checkpoint: browser acceptance of the collapsed Voucher Detail secondary summaries and expanded detail density; then select the next Cockpit page wave.

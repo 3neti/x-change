@@ -1276,12 +1276,13 @@ function policyLabel(value: string): string {
                 </details>
             </details>
 
-            <CockpitVoucherOverviewPanel :items="overviewItems" />
+            <div class="space-y-3" data-testid="cockpit-voucher-secondary-content">
+                <CockpitVoucherOverviewPanel :items="overviewItems" />
 
-            <details
-                class="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                data-testid="cockpit-voucher-integration-summary-panel"
-            >
+                <details
+                    class="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                    data-testid="cockpit-voucher-integration-summary-panel"
+                >
                 <summary class="flex cursor-pointer list-none flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div class="min-w-0">
                         <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
@@ -1321,20 +1322,24 @@ function policyLabel(value: string): string {
                         </p>
                     </article>
                 </div>
-            </details>
+                </details>
 
-            <div class="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-                <CockpitVoucherTimelinePanel :items="timelineItems" />
-                <div class="space-y-6">
-                    <CockpitVoucherEvidencePanel
-                        :heading="evidenceHeading"
-                        :items="evidenceItems"
-                    />
-                    <CockpitVoucherDistributionPanel :items="distributionItems" />
-                    <CockpitVoucherAuditPanel
-                        :audits="auditItems"
-                        :actions="detailActions"
-                    />
+                <div
+                    class="grid gap-3 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]"
+                    data-testid="cockpit-voucher-supporting-evidence-grid"
+                >
+                    <CockpitVoucherTimelinePanel :items="timelineItems" />
+                    <div class="space-y-3" data-testid="cockpit-voucher-supporting-evidence-stack">
+                        <CockpitVoucherEvidencePanel
+                            :heading="evidenceHeading"
+                            :items="evidenceItems"
+                        />
+                        <CockpitVoucherDistributionPanel :items="distributionItems" />
+                        <CockpitVoucherAuditPanel
+                            :audits="auditItems"
+                            :actions="detailActions"
+                        />
+                    </div>
                 </div>
             </div>
         </section>

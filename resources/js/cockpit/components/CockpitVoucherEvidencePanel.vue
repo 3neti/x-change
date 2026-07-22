@@ -24,18 +24,25 @@ function statusSummary(): string {
 </script>
 
 <template>
-    <section
-        class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+    <details
+        class="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
         data-testid="cockpit-voucher-evidence-panel"
     >
-        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-            Evidence
-        </p>
-        <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-            {{ heading ?? 'Evidence status' }}
-        </h3>
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-3">
+            <div>
+                <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                    Evidence
+                </p>
+                <h3 class="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50">
+                    {{ heading ?? 'Evidence status' }}
+                </h3>
+            </div>
+            <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.7rem] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                {{ items.length }} facts
+            </span>
+        </summary>
         <dl
-            class="mt-4 grid gap-2 rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-950 sm:grid-cols-2"
+            class="mt-3 grid gap-2 border-t border-slate-200 pt-3 text-xs dark:border-slate-800 sm:grid-cols-2"
             data-testid="cockpit-voucher-evidence-density-summary"
         >
             <div>
@@ -56,22 +63,22 @@ function statusSummary(): string {
             </div>
         </dl>
 
-        <div class="mt-5 grid gap-3">
+        <div class="mt-3 grid gap-2">
             <article
                 v-for="item in items"
                 :key="item.id"
-                class="rounded-lg border border-slate-200 p-4 dark:border-slate-800"
+                class="rounded-lg border border-slate-200 p-3 dark:border-slate-800"
                 data-testid="cockpit-voucher-evidence-item"
             >
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <p class="font-semibold text-slate-950 dark:text-slate-50">
                         {{ item.label }}
                     </p>
-                    <span class="rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-950 dark:text-amber-200">
+                    <span class="rounded-full bg-amber-50 px-2 py-0.5 text-[0.7rem] font-semibold text-amber-700 dark:bg-amber-950 dark:text-amber-200">
                         {{ item.status }}
                     </span>
                 </div>
-                <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                <p class="mt-1.5 text-xs leading-5 text-slate-600 dark:text-slate-300">
                     {{ item.helper }}
                 </p>
                 <details
@@ -99,5 +106,5 @@ function statusSummary(): string {
                 </details>
             </article>
         </div>
-    </section>
+    </details>
 </template>
