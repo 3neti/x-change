@@ -4465,3 +4465,10 @@ Current boundary:
 - Full URL, path, source, delivery, payload policy, and browser-local copy remain available on demand.
 - Report: `reports/631-voucher-detail-secondary-content-compression-slice-1.md`.
 - Boundary remains unchanged: presentation-only claim-link compression; no claim URL generation changes, copy behavior changes, distribution delivery, feedback behavior, campaign mutation, artifact generation, journal writes, provider calls, voucher mutation, persistence, public API behavior, or money movement changed.
+
+# 2026-07-22 — Voucher Detail Secondary Content Compression — Slice 2
+
+- Voucher Integration Summary now uses a closed three-service disclosure.
+- Audit, follow-up, and notification statuses, counts, policies, and unavailable reasons remain available on demand.
+- Report: `reports/632-voucher-detail-secondary-content-compression-slice-2.md`.
+- Boundary remains unchanged: presentation-only integration-summary compression; no journal evidence changes, action availability changes, notification delivery, read-model authorization, payload redaction, provider behavior, voucher mutation, persistence, public API behavior, or money movement changed.

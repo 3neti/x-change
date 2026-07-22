@@ -4175,3 +4175,10 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Duplicate claim-link metadata now remains available through a compact closed `URL details` disclosure.
 - UI/report: `../ui-cockpit/reports/631-voucher-detail-secondary-content-compression-slice-1.md`.
 - Boundary remains unchanged: presentation-only claim-link compression; no claim URL generation changes, copy behavior changes, distribution delivery, feedback behavior, campaign mutation, artifact generation, journal writes, provider calls, voucher mutation, persistence, public API behavior, or money movement changed.
+
+## 2026-07-22 Update — Voucher Detail Secondary Content Compression — Slice 2
+
+- Voucher Integration Summary now remains available through a closed three-service disclosure.
+- All connected audit, follow-up, and notification summary facts retain their existing read-model sources.
+- UI/report: `../ui-cockpit/reports/632-voucher-detail-secondary-content-compression-slice-2.md`.
+- Boundary remains unchanged: presentation-only integration-summary compression; no journal evidence changes, action availability changes, notification delivery, read-model authorization, payload redaction, provider behavior, voucher mutation, persistence, public API behavior, or money movement changed.

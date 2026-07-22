@@ -702,11 +702,18 @@ describe('Cockpit Voucher Detail hydration', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Audit, follow-up, and notification status');
+        const panel = wrapper.find('[data-testid="cockpit-voucher-integration-summary-panel"]');
+        const cards = panel.findAll('[data-testid="cockpit-voucher-integration-summary-card"]');
+
+        expect(panel.element.tagName.toLowerCase()).toBe('details');
+        expect(panel.attributes('open')).toBeUndefined();
+        expect(panel.find('summary').text()).toContain('3 service summaries');
+        expect(panel.text()).toContain('Audit, follow-up, and notification status');
         expect(wrapper.text()).toContain('2 entries');
         expect(wrapper.text()).toContain('1 actions');
         expect(wrapper.text()).toContain('1 deliveries');
-        expect(wrapper.findAll('[data-testid="cockpit-voucher-integration-summary-card"]')).toHaveLength(3);
+        expect(cards).toHaveLength(3);
+        expect(cards[0].classes()).toContain('p-3');
     });
 
     it('renders voucher integration unavailable reasons without exception messages', () => {
