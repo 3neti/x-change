@@ -39,49 +39,50 @@ function metricMetadata(metric: CockpitDistributionMetric): Array<{ label: strin
 
 <template>
     <details
-        class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+        class="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
         data-testid="cockpit-distribution-analytics-panel"
     >
-        <summary class="cursor-pointer list-none">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                        Status evidence
-                    </p>
-                    <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                        Delivery and campaign signals
-                    </h3>
-                    <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                        These are read-only status facts from connected summaries. Open a row only if you need source details.
-                    </p>
-                </div>
-                <dl
-                    class="flex flex-wrap gap-2 text-xs"
-                    data-testid="cockpit-distribution-analytics-density-summary"
-                >
-                    <div class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                        <dt>Evidence Facts</dt>
-                        <dd class="font-semibold">{{ metricSummary() }}</dd>
-                    </div>
-                </dl>
+        <summary class="flex cursor-pointer list-none flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div class="min-w-0">
+                <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                    Status evidence
+                </p>
+                <h3 class="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50">
+                    Delivery and campaign signals
+                </h3>
             </div>
+            <dl
+                class="flex flex-wrap gap-1.5 text-[0.7rem]"
+                data-testid="cockpit-distribution-analytics-density-summary"
+            >
+                <div class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    <dt>Evidence Facts</dt>
+                    <dd class="font-semibold">{{ metricSummary() }}</dd>
+                </div>
+            </dl>
         </summary>
 
-        <div class="mt-5 grid gap-3 sm:grid-cols-2">
+        <div class="mt-3 border-t border-slate-200 pt-3 dark:border-slate-800">
+            <p class="max-w-2xl text-xs leading-5 text-slate-600 dark:text-slate-300">
+                These are read-only status facts from connected summaries. Open a row only if you need source details.
+            </p>
+        </div>
+
+        <div class="mt-3 grid gap-2 sm:grid-cols-2">
             <article
                 v-for="metric in metrics"
                 :key="metric.key"
-                class="rounded-lg border border-slate-200 p-4 dark:border-slate-800"
+                class="rounded-lg border border-slate-200 p-3 dark:border-slate-800"
                 data-testid="cockpit-distribution-metric"
             >
-                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                <p class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     {{ metric.label }}
                 </p>
-                <p class="mt-2 text-2xl font-semibold text-slate-950 dark:text-slate-50">
+                <p class="mt-1 text-xl font-semibold text-slate-950 dark:text-slate-50">
                     {{ metric.value }}
                 </p>
                 <details
-                    class="mt-2 text-xs text-slate-500 dark:text-slate-400"
+                    class="mt-1.5 text-xs text-slate-500 dark:text-slate-400"
                     data-testid="cockpit-distribution-metric-disclosure"
                 >
                     <summary class="cursor-pointer font-medium text-slate-600 dark:text-slate-300">
@@ -92,7 +93,7 @@ function metricMetadata(metric: CockpitDistributionMetric): Array<{ label: strin
                     </p>
                     <dl
                         v-if="metricMetadata(metric).length > 0"
-                        class="mt-3 grid gap-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-950/50 sm:grid-cols-2"
+                        class="mt-2 grid gap-1.5 rounded-lg bg-slate-50 p-2 dark:bg-slate-950/50 sm:grid-cols-2"
                         data-testid="cockpit-distribution-metric-metadata"
                     >
                         <div

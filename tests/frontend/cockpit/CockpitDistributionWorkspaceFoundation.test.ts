@@ -66,7 +66,12 @@ describe('Cockpit Distribution Workspace foundation', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="cockpit-print-template-panel"]').element.tagName.toLowerCase()).toBe('details');
+        const panel = wrapper.find('[data-testid="cockpit-print-template-panel"]');
+        const templates = wrapper.findAll('[data-testid="cockpit-print-template"]');
+
+        expect(panel.element.tagName.toLowerCase()).toBe('details');
+        expect(panel.classes()).toContain('py-3');
+        expect(panel.classes()).not.toContain('p-5');
         expect(wrapper.text()).toContain('Printable handout options');
         expect(wrapper.text()).toContain('future handout ideas only');
         expect(wrapper.text()).toContain('Receipt card');
@@ -75,7 +80,8 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).toContain('Print assets are not generated or persisted');
         expect(wrapper.find('[data-testid="cockpit-print-template-density-summary"]').text()).toContain('Templates');
         expect(wrapper.find('[data-testid="cockpit-print-template-density-summary"]').text()).toContain('3');
-        expect(wrapper.findAll('[data-testid="cockpit-print-template"]')).toHaveLength(3);
+        expect(templates).toHaveLength(3);
+        expect(templates[0].classes()).toContain('p-3');
         expect(wrapper.findAll('[data-testid="cockpit-print-template-disclosure"]')).toHaveLength(3);
     });
 
@@ -106,7 +112,12 @@ describe('Cockpit Distribution Workspace foundation', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="cockpit-distribution-analytics-panel"]').element.tagName.toLowerCase()).toBe('details');
+        const panel = wrapper.find('[data-testid="cockpit-distribution-analytics-panel"]');
+        const metrics = wrapper.findAll('[data-testid="cockpit-distribution-metric"]');
+
+        expect(panel.element.tagName.toLowerCase()).toBe('details');
+        expect(panel.classes()).toContain('py-3');
+        expect(panel.classes()).not.toContain('p-5');
         expect(wrapper.text()).toContain('Status evidence');
         expect(wrapper.text()).toContain('Delivery and campaign signals');
         expect(wrapper.text()).toContain('Open a row only if you need source details');
@@ -117,7 +128,8 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).toContain('Campaign behavior is deferred until Wave 5');
         expect(wrapper.find('[data-testid="cockpit-distribution-analytics-density-summary"]').text()).toContain('Evidence Facts');
         expect(wrapper.find('[data-testid="cockpit-distribution-analytics-density-summary"]').text()).toContain('4 read-only facts');
-        expect(wrapper.findAll('[data-testid="cockpit-distribution-metric"]')).toHaveLength(4);
+        expect(metrics).toHaveLength(4);
+        expect(metrics[0].classes()).toContain('p-3');
         expect(wrapper.findAll('[data-testid="cockpit-distribution-metric-disclosure"]')).toHaveLength(4);
     });
 

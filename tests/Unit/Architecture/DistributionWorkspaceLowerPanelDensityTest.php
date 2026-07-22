@@ -22,3 +22,25 @@ it('documents distribution workspace lower panel density slice 1', function (): 
         ->and($compass)->toContain('Distribution Workspace Lower-Panel Density — Slice 1')
         ->and($settlementCompass)->toContain('Distribution Workspace Lower-Panel Density — Slice 1');
 });
+
+it('documents distribution workspace lower panel density slice 2', function (): void {
+    $packageRoot = dirname(__DIR__, 3);
+
+    $report = file_get_contents($packageRoot.'/docs/ui-cockpit/reports/626-distribution-workspace-lower-panel-density-slice-2.md');
+    $printPanel = file_get_contents($packageRoot.'/resources/js/cockpit/components/CockpitPrintTemplatePanel.vue');
+    $analyticsPanel = file_get_contents($packageRoot.'/resources/js/cockpit/components/CockpitDistributionAnalyticsPanel.vue');
+    $frontendTest = file_get_contents($packageRoot.'/tests/frontend/cockpit/CockpitDistributionWorkspaceFoundation.test.ts');
+    $compass = file_get_contents($packageRoot.'/docs/ui-cockpit/COMPASS.md');
+    $settlementCompass = file_get_contents($packageRoot.'/docs/architecture/SETTLEMENT_OS_COMPASS.md');
+
+    expect($report)
+        ->toContain('Distribution Workspace Lower-Panel Density — Slice 2')
+        ->toContain('compact print and evidence summaries')
+        ->toContain('Presentation-only supporting-evidence density')
+        ->and($printPanel)->toContain('data-testid="cockpit-print-template-panel"')
+        ->and($analyticsPanel)->toContain('data-testid="cockpit-distribution-analytics-panel"')
+        ->and($frontendTest)->toContain("expect(templates[0].classes()).toContain('p-3')")
+        ->and($frontendTest)->toContain("expect(metrics[0].classes()).toContain('p-3')")
+        ->and($compass)->toContain('Distribution Workspace Lower-Panel Density — Slice 2')
+        ->and($settlementCompass)->toContain('Distribution Workspace Lower-Panel Density — Slice 2');
+});

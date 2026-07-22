@@ -4128,3 +4128,10 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Notification channels now use a compact summary while all channel evidence and disabled follow-up explanations remain available when expanded.
 - UI/report: `../ui-cockpit/reports/625-distribution-workspace-lower-panel-density-slice-1.md`.
 - Boundary remains unchanged: presentation-only notification-panel density; no distribution dispatch, channel availability, feedback delivery, follow-up execution, campaign mutation, artifact generation, journal writes, provider calls, voucher state, persistence, public API behavior, or money movement changed.
+
+## 2026-07-22 Update — Distribution Workspace Lower-Panel Density — Slice 2
+
+- Print Templates and Status Evidence now match the compact lower-panel disclosure hierarchy.
+- All planned template facts and read-only evidence metadata remain available in the expanded states.
+- UI/report: `../ui-cockpit/reports/626-distribution-workspace-lower-panel-density-slice-2.md`.
+- Boundary remains unchanged: presentation-only supporting-evidence density; no print generation, file creation, delivery-evidence mutation, campaign mutation, journal writes, provider calls, payload exposure, persistence, public API behavior, or money movement changed.

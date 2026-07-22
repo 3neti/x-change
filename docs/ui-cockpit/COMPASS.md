@@ -4417,3 +4417,10 @@ Current boundary:
 - Notification readiness now uses a compact collapsed summary and tighter expanded channel and disabled-action rows.
 - Report: `reports/625-distribution-workspace-lower-panel-density-slice-1.md`.
 - Boundary remains unchanged: presentation-only notification-panel density; no distribution dispatch, channel availability, feedback delivery, follow-up execution, campaign mutation, artifact generation, journal writes, provider calls, voucher state, persistence, public API behavior, or money movement changed.
+
+# 2026-07-22 — Distribution Workspace Lower-Panel Density — Slice 2
+
+- Print Templates and Status Evidence now use compact collapsed summaries and tighter expanded fact cards.
+- Planned templates, status facts, helper explanations, and evidence metadata remain available on demand.
+- Report: `reports/626-distribution-workspace-lower-panel-density-slice-2.md`.
+- Boundary remains unchanged: presentation-only supporting-evidence density; no print generation, file creation, delivery-evidence mutation, campaign mutation, journal writes, provider calls, payload exposure, persistence, public API behavior, or money movement changed.
