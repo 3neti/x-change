@@ -331,8 +331,16 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).toContain('Delivery Evidence');
         expect(wrapper.text()).toContain('Follow-Up Guidance');
         expect(wrapper.text()).toContain('Audit Evidence');
-        expect(wrapper.find('[data-testid="cockpit-distribution-connected-context-summary"]').exists()).toBe(true);
-        expect(wrapper.findAll('[data-testid="cockpit-distribution-connected-context-item"]')).toHaveLength(4);
+        const connectedContext = wrapper.find('[data-testid="cockpit-distribution-connected-context-summary"]');
+
+        expect(connectedContext.exists()).toBe(true);
+        expect(connectedContext.element.tagName.toLowerCase()).toBe('details');
+        expect(connectedContext.attributes('open')).toBeUndefined();
+        expect(connectedContext.find('summary').text()).toContain('Connected context');
+        expect(connectedContext.find('summary').text()).toContain('4 read-only facts');
+        expect(connectedContext.find('summary').text()).toContain('inspection only');
+        expect(connectedContext.findAll('[data-testid="cockpit-distribution-connected-context-item"]')).toHaveLength(4);
+        expect(connectedContext.find('[data-testid="cockpit-distribution-connected-context-item"]').classes()).toContain('py-2');
         expect(wrapper.find('[data-testid="cockpit-distribution-workspace-links-panel"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="cockpit-distribution-workspace-beneficiary-url-link"]').attributes('href')).toBe('https://example.test/x/claim/PC-DIST-001/experience');
         expect(wrapper.text()).toContain('Copy text');

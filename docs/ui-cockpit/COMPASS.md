@@ -4394,3 +4394,10 @@ Current boundary:
 - The full architectural side-effect boundary remains unchanged and documented outside the operator copy.
 - Report: `reports/622-distribution-workspace-secondary-content-compression-slice-1.md`.
 - Boundary remains unchanged: presentation-only boundary-language compression; no route behavior, read-model hydration, beneficiary URL generation, copy behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle behavior, execution drivers, artifact generation, journal writes, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+
+# 2026-07-22 — Distribution Workspace Secondary Content Compression — Slice 2
+
+- Connected context is now a collapsed secondary disclosure with a four-fact count.
+- Claim URL, delivery evidence, follow-up guidance, audit evidence, and their helper text remain available on demand.
+- Report: `reports/623-distribution-workspace-secondary-content-compression-slice-2.md`.
+- Boundary remains unchanged: presentation-only connected-context compression; no route behavior, read-model hydration, beneficiary URL generation, copy behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle behavior, execution drivers, artifact generation, journal writes, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.

@@ -4105,3 +4105,10 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - The header disclosure now presents operator-facing `Read-only limits` without implementation vocabulary.
 - UI/report: `../ui-cockpit/reports/622-distribution-workspace-secondary-content-compression-slice-1.md`.
 - Boundary remains unchanged: presentation-only boundary-language compression; no route behavior, read-model hydration, beneficiary URL generation, copy behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle behavior, execution drivers, artifact generation, journal writes, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+
+## 2026-07-22 Update — Distribution Workspace Secondary Content Compression — Slice 2
+
+- Connected context now defaults to a slim four-fact disclosure below the manual next step.
+- Expanded Claim URL, delivery evidence, follow-up guidance, and audit evidence remain hydrated from the same read models.
+- UI/report: `../ui-cockpit/reports/623-distribution-workspace-secondary-content-compression-slice-2.md`.
+- Boundary remains unchanged: presentation-only connected-context compression; no route behavior, read-model hydration, beneficiary URL generation, copy behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle behavior, execution drivers, artifact generation, journal writes, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
