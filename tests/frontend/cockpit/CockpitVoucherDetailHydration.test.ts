@@ -214,11 +214,18 @@ describe('Cockpit Voucher Detail hydration', () => {
         });
 
         const summary = wrapper.find('[data-testid="cockpit-voucher-detail-primary-summary"]');
+        const readinessStrip = wrapper.find('[data-testid="cockpit-voucher-detail-primary-readiness-strip"]');
+        const readinessItems = readinessStrip.findAll('[data-testid="cockpit-voucher-detail-primary-readiness-item"]');
         const claimUrl = wrapper.find('[data-testid="cockpit-voucher-detail-primary-claim-url-link"]');
         const distribution = wrapper.find('[data-testid="cockpit-voucher-detail-primary-distribution-link"]');
         const explorer = wrapper.find('[data-testid="cockpit-voucher-detail-primary-explorer-link"]');
 
         expect(summary.exists()).toBe(true);
+        expect(summary.classes()).toContain('p-4');
+        expect(summary.classes()).not.toContain('p-5');
+        expect(readinessStrip.classes()).toContain('p-2');
+        expect(readinessItems).toHaveLength(4);
+        expect(readinessItems[0].classes()).toContain('py-2');
         expect(summary.text()).toContain('Operator detail summary');
         expect(summary.text()).toContain('Pay Code PC-HYDRATED-001');
         expect(summary.text()).toContain('ready');
@@ -351,6 +358,8 @@ describe('Cockpit Voucher Detail hydration', () => {
         const guidance = wrapper.find('[data-testid="cockpit-voucher-detail-lifecycle-guidance"]');
 
         expect(guidance.exists()).toBe(true);
+        expect(guidance.element.tagName.toLowerCase()).toBe('details');
+        expect(guidance.attributes('open')).toBeUndefined();
         expect(guidance.text()).toContain('Lifecycle guidance');
         expect(guidance.text()).toContain('Available');
         expect(guidance.text()).toContain('ready');

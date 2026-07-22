@@ -786,18 +786,18 @@ function policyLabel(value: string): string {
             </div>
 
             <section
-                class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm dark:border-emerald-900/70 dark:bg-emerald-950/40"
+                class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm dark:border-emerald-900/70 dark:bg-emerald-950/40"
                 data-testid="cockpit-voucher-detail-primary-summary"
             >
-                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
                             Operator detail summary
                         </p>
-                        <h3 class="mt-2 text-xl font-semibold text-slate-950 dark:text-slate-50">
+                        <h3 class="mt-1 text-xl font-semibold text-slate-950 dark:text-slate-50">
                             Pay Code {{ code }}
                         </h3>
-                        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                        <p class="mt-1 max-w-3xl text-sm leading-5 text-slate-600 dark:text-slate-300">
                             This summary is built from sanitized voucher read-model facts. It gives operators the current
                             lifecycle state, beneficiary URL readiness, and safe next steps without mutating the Pay Code
                             or triggering delivery.
@@ -808,68 +808,83 @@ function policyLabel(value: string): string {
                     </span>
                 </div>
 
-                <dl class="mt-5 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
-                    <div class="rounded-xl bg-white/80 p-4 dark:bg-slate-950/70">
-                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                <dl
+                    class="mt-4 grid gap-2 rounded-xl bg-white/50 p-2 text-sm md:grid-cols-2 xl:grid-cols-4 dark:bg-slate-950/30"
+                    data-testid="cockpit-voucher-detail-primary-readiness-strip"
+                >
+                    <div
+                        class="rounded-xl bg-white/80 px-3 py-2 dark:bg-slate-950/70"
+                        data-testid="cockpit-voucher-detail-primary-readiness-item"
+                    >
+                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Lifecycle
                         </dt>
-                        <dd class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">
+                        <dd class="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50">
                             {{ status }}
                         </dd>
-                        <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                        <p class="mt-0.5 text-[0.7rem] leading-4 text-slate-500 dark:text-slate-400">
                             Display state only; no execution is invoked.
                         </p>
                     </div>
-                    <div class="rounded-xl bg-white/80 p-4 dark:bg-slate-950/70">
-                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <div
+                        class="rounded-xl bg-white/80 px-3 py-2 dark:bg-slate-950/70"
+                        data-testid="cockpit-voucher-detail-primary-readiness-item"
+                    >
+                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Amount
                         </dt>
-                        <dd class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">
+                        <dd class="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50">
                             {{ amountDisplay }}
                         </dd>
-                        <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                        <p class="mt-0.5 text-[0.7rem] leading-4 text-slate-500 dark:text-slate-400">
                             Sanitized summary amount only.
                         </p>
                     </div>
-                    <div class="rounded-xl bg-white/80 p-4 dark:bg-slate-950/70">
-                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <div
+                        class="rounded-xl bg-white/80 px-3 py-2 dark:bg-slate-950/70"
+                        data-testid="cockpit-voucher-detail-primary-readiness-item"
+                    >
+                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Claim State
                         </dt>
-                        <dd class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">
+                        <dd class="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50">
                             {{ claimStateDisplay }}
                         </dd>
-                        <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                        <p class="mt-0.5 text-[0.7rem] leading-4 text-slate-500 dark:text-slate-400">
                             Claim payloads remain redacted.
                         </p>
                     </div>
-                    <div class="rounded-xl bg-white/80 p-4 dark:bg-slate-950/70">
-                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <div
+                        class="rounded-xl bg-white/80 px-3 py-2 dark:bg-slate-950/70"
+                        data-testid="cockpit-voucher-detail-primary-readiness-item"
+                    >
+                        <dt class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Claim URL
                         </dt>
-                        <dd class="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-50">
+                        <dd class="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50">
                             {{ distributionLinksAvailable ? 'ready' : 'not available' }}
                         </dd>
-                        <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                        <p class="mt-0.5 text-[0.7rem] leading-4 text-slate-500 dark:text-slate-400">
                             {{ distributionLinksAvailable ? 'Manual copy/inspection only.' : 'Waiting for distribution link read model.' }}
                         </p>
                     </div>
                 </dl>
 
-                <div class="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
-                    <div class="rounded-xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/60 dark:bg-slate-950/70">
+                <div class="mt-4 grid gap-3 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
+                    <div class="rounded-xl border border-emerald-200 bg-white/80 p-3 dark:border-emerald-900/60 dark:bg-slate-950/70">
                         <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
                             Operator next step
                         </p>
-                        <p class="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50">
+                        <p class="mt-1.5 text-sm font-semibold text-slate-950 dark:text-slate-50">
                             {{ primaryNextStep.label }}
                         </p>
                         <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
                             {{ primaryNextStep.description }}
                         </p>
-                        <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                        <p class="mt-1.5 text-xs leading-5 text-slate-500 dark:text-slate-400">
                             Availability: {{ availabilityDisplay }} · Payload policy: {{ redactions.payloads ?? 'not-loaded' }}
                         </p>
-                        <div class="mt-4 flex flex-wrap gap-3">
+                        <div class="mt-3 flex flex-wrap gap-2">
                             <a
                                 v-if="beneficiaryRedeemUrl"
                                 :href="beneficiaryRedeemUrl"
@@ -900,8 +915,8 @@ function policyLabel(value: string): string {
                         </div>
                     </div>
 
-                    <div
-                        class="rounded-xl border p-4"
+                    <details
+                        class="rounded-xl border p-3"
                         :class="
                             lifecycleGuidance.tone === 'warning'
                                 ? 'border-amber-200 bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/30'
@@ -913,24 +928,26 @@ function policyLabel(value: string): string {
                         "
                         data-testid="cockpit-voucher-detail-lifecycle-guidance"
                     >
-                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                            Lifecycle guidance
-                        </p>
-                        <div class="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                            <p class="text-sm font-semibold text-slate-950 dark:text-slate-50">
-                                {{ lifecycleGuidance.label }}
+                        <summary class="cursor-pointer list-none">
+                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                                Lifecycle guidance
                             </p>
-                            <span class="w-fit rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-200 dark:ring-slate-800">
-                                {{ lifecycleGuidance.tone }}
+                            <span class="mt-1.5 flex flex-wrap items-center justify-between gap-2">
+                                <span class="text-sm font-semibold text-slate-950 dark:text-slate-50">
+                                    {{ lifecycleGuidance.label }}
+                                </span>
+                                <span class="rounded-full bg-white px-2.5 py-0.5 text-[0.7rem] font-semibold text-slate-700 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-200 dark:ring-slate-800">
+                                    {{ lifecycleGuidance.tone }}
+                                </span>
                             </span>
-                        </div>
-                        <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                        </summary>
+                        <p class="mt-2 border-t border-current/10 pt-2 text-xs leading-5 text-slate-600 dark:text-slate-300">
                             {{ lifecycleGuidance.message }}
                         </p>
-                        <p class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                        <p class="mt-1 text-[0.7rem] leading-4 text-slate-500 dark:text-slate-400">
                             Derived from display status only; Cockpit does not enforce lifecycle policy from this page.
                         </p>
-                    </div>
+                    </details>
                 </div>
 
                 <div

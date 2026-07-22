@@ -4152,3 +4152,10 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Voucher Detail now begins with a compact operational header and operator-facing read-only limits.
 - UI/report: `../ui-cockpit/reports/628-voucher-detail-primary-workflow-compression-slice-1.md`.
 - Boundary remains unchanged: presentation-only shell compression; no route behavior, read-model hydration, claim URL generation, copy behavior, lifecycle mutation, distribution navigation, feedback delivery, action execution, journal writes, provider calls, voucher mutation, persistence, public API behavior, or money movement changed.
+
+## 2026-07-22 Update — Voucher Detail Primary Workflow Compression — Slice 2
+
+- Voucher Detail primary readiness now uses a compact four-item strip around the operator next step.
+- Lifecycle guidance retains its visible state and tone in a closed-by-default disclosure.
+- UI/report: `../ui-cockpit/reports/629-voucher-detail-primary-workflow-compression-slice-2.md`.
+- Boundary remains unchanged: presentation-only primary-workflow compression; no read-model changes, lifecycle evaluation changes, claim URL generation, copy behavior, navigation behavior, distribution dispatch, feedback delivery, action execution, journal writes, provider calls, voucher mutation, persistence, public API behavior, or money movement changed.
