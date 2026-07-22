@@ -292,14 +292,14 @@ describe('Cockpit read-only UI/UX scenario validation checkpoint', () => {
         expect(wrapper.text()).toContain('Review basic_cash');
         expect(wrapper.text()).toContain('SMS');
         expect(wrapper.text()).toContain(
-            'Feedback delivery remains read-only from Cockpit.',
+            'Notification delivery remains read-only from Cockpit.',
         );
         expect(wrapper.text()).toContain(
-            'Action execution remains disabled from Cockpit.',
+            'This page does not execute actions or write audit entries.',
         );
         expect(
             wrapper.findAll(
-                '[data-testid="cockpit-voucher-integration-summary-card"]',
+                '[data-testid="cockpit-voucher-detail-primary-evidence-readiness-item"]',
             ),
         ).toHaveLength(3);
         expectNoUnsafeText(wrapper.text());
