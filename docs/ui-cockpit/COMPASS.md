@@ -4540,3 +4540,12 @@ Current boundary:
 - Expanded configured/resolved/fallback evidence uses tighter rows and metadata density.
 - Report: `reports/640-runtime-profile-compact-diagnostics-slice-2.md`.
 - Boundary remains unchanged: presentation-only component-inventory compression; no component resolution, configuration values, fallback selection, repository behavior, runtime handoffs, journal writes, action execution, feedback delivery, provider calls, voucher behavior, persistence, public API behavior, or money movement changed.
+
+# 2026-07-22 — Runtime Profile Compact Diagnostics — Slice 3 Closure
+
+- Completed Runtime Profile Compact Diagnostics Slice 3 / Closure.
+- Page safety and Runtime safety now use matching closed summaries with visible flag counts.
+- Expanded flag rows and the two-column safety grid use tighter density.
+- Published package-owned Cockpit assets and verified package/host parity.
+- Report: `reports/641-runtime-profile-compact-diagnostics-slice-3-closure.md`.
+- Boundary remains unchanged: presentation-only safety-panel compression closure; no safety values, runtime opt-in rules, configuration mutation, component resolution, handoff enablement, journal writes, action execution, feedback delivery, provider calls, voucher behavior, persistence, public API behavior, or money movement changed.

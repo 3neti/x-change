@@ -4249,3 +4249,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Expanded component rows use tighter density without changing resolution facts.
 - UI/report: `../ui-cockpit/reports/640-runtime-profile-compact-diagnostics-slice-2.md`.
 - Boundary remains unchanged: presentation-only component-inventory compression; no component resolution, configuration values, fallback selection, repository behavior, runtime handoffs, journal writes, action execution, feedback delivery, provider calls, voucher behavior, persistence, public API behavior, or money movement changed.
+
+## 2026-07-22 Update — Runtime Profile Compact Diagnostics — Slice 3
+
+- Closed the Runtime Profile Compact Diagnostics wave.
+- Page and Runtime safety now use matching closed summaries with visible flag counts and tighter expanded rows.
+- Host-published Cockpit assets match package source.
+- UI/report: `../ui-cockpit/reports/641-runtime-profile-compact-diagnostics-slice-3-closure.md`.
+- Boundary remains unchanged: presentation-only safety-panel compression closure; no safety values, runtime opt-in rules, configuration mutation, component resolution, handoff enablement, journal writes, action execution, feedback delivery, provider calls, voucher behavior, persistence, public API behavior, or money movement changed.
+- Next recommended checkpoint: browser acceptance of the compact Runtime Profile header, component inventory, and safety summaries; then select the next Cockpit completion pass.

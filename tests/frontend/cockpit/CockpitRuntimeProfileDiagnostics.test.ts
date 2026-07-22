@@ -104,6 +104,17 @@ describe('Cockpit runtime profile diagnostics', () => {
         expect(componentPanel.find('summary').text()).toContain('2 components');
         expect(componentRows).toHaveLength(2);
         expect(componentRows[0].classes()).toContain('p-3');
+        const safetyGrid = wrapper.find('[data-testid="cockpit-runtime-profile-safety-grid"]');
+        const pageSafety = wrapper.find('[data-testid="cockpit-runtime-profile-page-safety"]');
+        const runtimeSafety = wrapper.find('[data-testid="cockpit-runtime-profile-runtime-safety"]');
+
+        expect(safetyGrid.classes()).toContain('gap-3');
+        expect(pageSafety.element.tagName.toLowerCase()).toBe('details');
+        expect(pageSafety.attributes('open')).toBeUndefined();
+        expect(pageSafety.find('summary').text()).toContain('8 flags');
+        expect(runtimeSafety.element.tagName.toLowerCase()).toBe('details');
+        expect(runtimeSafety.attributes('open')).toBeUndefined();
+        expect(runtimeSafety.find('summary').text()).toContain('8 flags');
     });
 
     it('does not render mutation affordances or unsafe payload labels', () => {
