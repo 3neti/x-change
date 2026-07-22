@@ -43,3 +43,27 @@ it('documents distribution workspace secondary content compression slice 2', fun
         ->and($compass)->toContain('Distribution Workspace Secondary Content Compression — Slice 2')
         ->and($settlementCompass)->toContain('Distribution Workspace Secondary Content Compression — Slice 2');
 });
+
+it('documents distribution workspace secondary content compression slice 3 closure', function (): void {
+    $packageRoot = dirname(__DIR__, 3);
+    $hostRoot = dirname($packageRoot, 2);
+
+    $report = file_get_contents($packageRoot.'/docs/ui-cockpit/reports/624-distribution-workspace-secondary-content-compression-slice-3-closure.md');
+    $page = file_get_contents($packageRoot.'/resources/js/cockpit/pages/DistributionWorkspace.vue');
+    $hostPage = file_get_contents($hostRoot.'/resources/js/cockpit/pages/DistributionWorkspace.vue');
+    $frontendTest = file_get_contents($packageRoot.'/tests/frontend/cockpit/CockpitDistributionWorkspaceFoundation.test.ts');
+    $compass = file_get_contents($packageRoot.'/docs/ui-cockpit/COMPASS.md');
+    $settlementCompass = file_get_contents($packageRoot.'/docs/architecture/SETTLEMENT_OS_COMPASS.md');
+
+    expect($report)
+        ->toContain('Distribution Workspace Secondary Content Compression — Slice 3 / Closure')
+        ->toContain('Published package-owned Cockpit assets')
+        ->toContain('Closed / pending human browser inspection')
+        ->and($page)->toContain('data-testid="cockpit-distribution-workspace-links-panel"')
+        ->and($page)->toContain('URL details')
+        ->and($hostPage)->toContain($page)
+        ->and($frontendTest)->toContain("expect(claimLinkDetails.element.tagName.toLowerCase()).toBe('details')")
+        ->and($frontendTest)->toContain("expect(readiness.element.tagName.toLowerCase()).toBe('details')")
+        ->and($compass)->toContain('Distribution Workspace Secondary Content Compression — Slice 3 Closure')
+        ->and($settlementCompass)->toContain('Distribution Workspace Secondary Content Compression — Slice 3');
+});

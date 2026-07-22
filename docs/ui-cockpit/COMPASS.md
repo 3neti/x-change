@@ -4401,3 +4401,12 @@ Current boundary:
 - Claim URL, delivery evidence, follow-up guidance, audit evidence, and their helper text remain available on demand.
 - Report: `reports/623-distribution-workspace-secondary-content-compression-slice-2.md`.
 - Boundary remains unchanged: presentation-only connected-context compression; no route behavior, read-model hydration, beneficiary URL generation, copy behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle behavior, execution drivers, artifact generation, journal writes, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+
+# 2026-07-22 — Distribution Workspace Secondary Content Compression — Slice 3 Closure
+
+- Completed Distribution Workspace Secondary Content Compression Slice 3 / Closure.
+- Claim-link metadata and the detailed-readiness explanation now use closed-by-default secondary disclosures.
+- Primary Open/Copy actions remain immediately visible, while full URL facts and manual guidance remain available on demand.
+- Published package-owned Cockpit assets and verified package/host parity.
+- Report: `reports/624-distribution-workspace-secondary-content-compression-slice-3-closure.md`.
+- Boundary remains unchanged: presentation-only secondary-content compression closure; no route behavior, read-model hydration, beneficiary URL generation, copy behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle behavior, execution drivers, artifact generation, journal writes, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.

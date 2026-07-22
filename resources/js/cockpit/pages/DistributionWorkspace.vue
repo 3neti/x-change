@@ -576,24 +576,20 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                     </dl>
                 </details>
 
-                <div
-                    class="mt-4 rounded-xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/60 dark:bg-slate-950/70"
+                <details
+                    class="mt-3 border-t border-emerald-200 pt-3 dark:border-emerald-900/60"
                     data-testid="cockpit-distribution-readiness-panel-guide"
                 >
-                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
-                                Detailed readiness panels
-                            </p>
-                            <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                                Notification, print, evidence, and share details are grouped below so this summary does not repeat the same counts. Those panels remain read-only and do not send messages, generate QR assets, create short links, or print artifacts from this workspace.
-                            </p>
-                        </div>
-                        <span class="w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200">
+                    <summary class="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                        <span>Detailed readiness panels</span>
+                        <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[0.65rem] tracking-normal text-emerald-700 normal-case dark:bg-emerald-950 dark:text-emerald-200">
                             details below
                         </span>
-                    </div>
-                </div>
+                    </summary>
+                    <p class="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300">
+                        Notification, print, evidence, and share details are grouped below. Those panels remain read-only and cannot send messages, generate QR assets, create short links, or print artifacts.
+                    </p>
+                </details>
             </section>
 
             <section
@@ -712,24 +708,36 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                 </div>
             </section>
 
-            <section
+            <details
                 v-if="distributionLinksAvailable"
-                class="rounded-xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm dark:border-emerald-900/70 dark:bg-emerald-950/40"
+                class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-sm dark:border-emerald-900/70 dark:bg-emerald-950/40"
                 data-testid="cockpit-distribution-workspace-links-panel"
             >
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
-                    Read-only claim link
-                </p>
-                <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                    Beneficiary Pay Code URL
-                </h3>
-                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    This workspace can display the canonical beneficiary claim URL for manual copy or inspection. It remains read-only;
-                    delivery disabled means Cockpit does not send feedback, dispatch campaigns, create short links, generate QR assets,
-                    write journal entries, call providers, mutate vouchers, or move money from this panel.
-                </p>
-                <dl class="mt-5 grid gap-3 text-sm md:grid-cols-3">
-                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70 md:col-span-2">
+                <summary class="cursor-pointer list-none">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                                Read-only claim link
+                            </p>
+                            <h3 class="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50">
+                                Beneficiary Pay Code URL
+                            </h3>
+                        </div>
+                        <span class="rounded-full bg-white/80 px-2 py-0.5 text-[0.65rem] font-semibold text-emerald-700 dark:bg-slate-950/70 dark:text-emerald-200">
+                            URL details
+                        </span>
+                    </div>
+                    <p class="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">
+                        Inspect the canonical claim URL, source metadata, and manual distribution guidance.
+                    </p>
+                </summary>
+                <div class="mt-3 border-t border-emerald-200 pt-3 dark:border-emerald-900/60">
+                    <p class="text-xs leading-5 text-slate-600 dark:text-slate-300">
+                        Copying is browser-local. Recipient verification and delivery remain external.
+                    </p>
+                </div>
+                <dl class="mt-3 grid gap-2 text-xs md:grid-cols-3">
+                    <div class="rounded-lg bg-white/80 p-2.5 dark:bg-slate-950/70 md:col-span-2">
                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Full URL
                         </dt>
@@ -747,7 +755,7 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                             </span>
                         </dd>
                     </div>
-                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
+                    <div class="rounded-lg bg-white/80 p-2.5 dark:bg-slate-950/70">
                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Path
                         </dt>
@@ -755,7 +763,7 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                             {{ beneficiaryRedeemPath ?? 'path unavailable' }}
                         </dd>
                     </div>
-                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
+                    <div class="rounded-lg bg-white/80 p-2.5 dark:bg-slate-950/70">
                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Source
                         </dt>
@@ -763,7 +771,7 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                             {{ distributionLinks?.source ?? 'x-change.claim.experience' }}
                         </dd>
                     </div>
-                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
+                    <div class="rounded-lg bg-white/80 p-2.5 dark:bg-slate-950/70">
                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Delivery
                         </dt>
@@ -771,7 +779,7 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                             delivery disabled
                         </dd>
                     </div>
-                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
+                    <div class="rounded-lg bg-white/80 p-2.5 dark:bg-slate-950/70">
                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Payload policy
                         </dt>
@@ -780,20 +788,20 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                         </dd>
                     </div>
                 </dl>
-                <div class="mt-5">
+                <div class="mt-3">
                     <CockpitManualCopyButton
                         :value="beneficiaryRedeemUrl ?? beneficiaryRedeemPath"
                         label="Copy beneficiary URL"
                     />
                 </div>
                 <div
-                    class="mt-5 rounded-lg border border-emerald-200 bg-white/80 p-4 text-sm leading-6 text-slate-600 dark:border-emerald-900/60 dark:bg-slate-950/70 dark:text-slate-300"
+                    class="mt-3 rounded-lg border border-emerald-200 bg-white/80 p-3 text-xs leading-5 text-slate-600 dark:border-emerald-900/60 dark:bg-slate-950/70 dark:text-slate-300"
                     data-testid="cockpit-distribution-workspace-manual-distribution-guidance"
                 >
                     <p class="font-semibold text-slate-950 dark:text-slate-50">
                         Manual distribution guidance
                     </p>
-                    <ul class="mt-3 list-disc space-y-1 pl-5">
+                    <ul class="mt-2 list-disc space-y-1 pl-5">
                         <li>Use this copied link for manual distribution only.</li>
                         <li>Share it only through an approved external workflow after verifying the recipient.</li>
                         <li>Cockpit does not send SMS, email, webhook, in-app notification, or campaign delivery from this panel.</li>
@@ -801,7 +809,7 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                         <li>Treat this beneficiary URL as sensitive settlement access material.</li>
                     </ul>
                 </div>
-            </section>
+            </details>
 
             <CockpitDigitalDistributionPanel
                 :channels="distributionChannels"

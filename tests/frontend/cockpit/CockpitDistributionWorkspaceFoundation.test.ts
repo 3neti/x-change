@@ -341,7 +341,13 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(connectedContext.find('summary').text()).toContain('inspection only');
         expect(connectedContext.findAll('[data-testid="cockpit-distribution-connected-context-item"]')).toHaveLength(4);
         expect(connectedContext.find('[data-testid="cockpit-distribution-connected-context-item"]').classes()).toContain('py-2');
-        expect(wrapper.find('[data-testid="cockpit-distribution-workspace-links-panel"]').exists()).toBe(true);
+        const claimLinkDetails = wrapper.find('[data-testid="cockpit-distribution-workspace-links-panel"]');
+
+        expect(claimLinkDetails.exists()).toBe(true);
+        expect(claimLinkDetails.element.tagName.toLowerCase()).toBe('details');
+        expect(claimLinkDetails.attributes('open')).toBeUndefined();
+        expect(claimLinkDetails.find('summary').text()).toContain('Beneficiary Pay Code URL');
+        expect(claimLinkDetails.find('summary').text()).toContain('URL details');
         expect(wrapper.find('[data-testid="cockpit-distribution-workspace-beneficiary-url-link"]').attributes('href')).toBe('https://example.test/x/claim/PC-DIST-001/experience');
         expect(wrapper.text()).toContain('Copy text');
         expect(wrapper.text()).toContain('preview');
@@ -588,10 +594,12 @@ describe('Cockpit Distribution Workspace foundation', () => {
         const readiness = wrapper.find('[data-testid="cockpit-distribution-readiness-panel-guide"]');
 
         expect(readiness.exists()).toBe(true);
+        expect(readiness.element.tagName.toLowerCase()).toBe('details');
+        expect(readiness.attributes('open')).toBeUndefined();
         expect(readiness.text()).toContain('Detailed readiness panels');
         expect(readiness.text()).toContain('details below');
         expect(readiness.text()).toContain('Notification, print, evidence, and share details are grouped below');
-        expect(readiness.text()).toContain('do not send messages');
+        expect(readiness.text()).toContain('cannot send messages');
         expect(wrapper.find('[data-testid="cockpit-distribution-channel-artifact-readiness"]').exists()).toBe(false);
         expect(wrapper.findAll('[data-testid="cockpit-distribution-channel-artifact-readiness-item"]')).toHaveLength(0);
     });

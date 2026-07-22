@@ -4112,3 +4112,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Expanded Claim URL, delivery evidence, follow-up guidance, and audit evidence remain hydrated from the same read models.
 - UI/report: `../ui-cockpit/reports/623-distribution-workspace-secondary-content-compression-slice-2.md`.
 - Boundary remains unchanged: presentation-only connected-context compression; no route behavior, read-model hydration, beneficiary URL generation, copy behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle behavior, execution drivers, artifact generation, journal writes, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+
+## 2026-07-22 Update — Distribution Workspace Secondary Content Compression — Slice 3
+
+- Closed the Distribution Workspace Secondary Content Compression wave.
+- Claim-link metadata and detailed-readiness guidance now remain available through slim closed disclosures beneath the primary manual workflow.
+- Host-published Cockpit assets match package source.
+- UI/report: `../ui-cockpit/reports/624-distribution-workspace-secondary-content-compression-slice-3-closure.md`.
+- Boundary remains unchanged: presentation-only secondary-content compression closure; no route behavior, read-model hydration, beneficiary URL generation, copy behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle behavior, execution drivers, artifact generation, journal writes, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+- Next recommended checkpoint: browser inspection of the closed Connected context, URL details, and detailed-readiness disclosures; then continue with Distribution Workspace lower-panel density or the next Cockpit page.
