@@ -106,12 +106,15 @@ describe('Cockpit Voucher Detail foundation', () => {
         expect(wrapper.text()).toContain('Provider callbacks');
         expect(wrapper.find('[data-testid="cockpit-voucher-audit-panel"]').element.tagName.toLowerCase()).toBe('details');
         expect(wrapper.find('[data-testid="cockpit-voucher-audit-panel"]').attributes('open')).toBeUndefined();
-        expect(wrapper.find('[data-testid="cockpit-voucher-audit-panel"]').classes()).toContain('py-3');
-        expect(wrapper.find('[data-testid="cockpit-voucher-audit-density-summary"]').text()).toContain('Evidence');
+        expect(wrapper.find('[data-testid="cockpit-voucher-audit-panel"]').classes()).toContain('py-2.5');
+        expect(wrapper.find('[data-testid="cockpit-voucher-audit-summary"]').classes()).toContain('sm:flex-row');
+        expect(wrapper.find('[data-testid="cockpit-voucher-audit-summary"]').text()).not.toContain('View details');
+        expect(wrapper.find('[data-testid="cockpit-voucher-audit-density-summary"]').text()).toContain('evidence');
         expect(wrapper.find('[data-testid="cockpit-voucher-audit-density-summary"]').text()).toContain('3');
-        expect(wrapper.find('[data-testid="cockpit-voucher-audit-density-summary"]').text()).toContain('Connected');
-        expect(wrapper.find('[data-testid="cockpit-voucher-audit-density-summary"]').text()).toContain('Follow-Ups');
+        expect(wrapper.find('[data-testid="cockpit-voucher-audit-density-summary"]').text()).toContain('connected');
+        expect(wrapper.find('[data-testid="cockpit-voucher-audit-density-summary"]').text()).toContain('disabled follow-ups');
         expect(wrapper.find('[data-testid="cockpit-voucher-audit-density-summary"]').text()).toContain('4');
+        expect(wrapper.find('[data-testid="cockpit-voucher-audit-guidance"]').text()).toContain('does not execute actions');
         expect(wrapper.find('[data-testid="cockpit-voucher-disabled-actions-disclosure"]').exists()).toBe(true);
         expect(wrapper.findAll('[data-testid="cockpit-voucher-audit-item"]')).toHaveLength(3);
 

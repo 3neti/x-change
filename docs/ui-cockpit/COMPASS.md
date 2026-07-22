@@ -4508,3 +4508,10 @@ Current boundary:
 - Published package-owned Cockpit assets and verified package/host parity.
 - Report: `reports/636-quick-generate-primary-workflow-compression-slice-3-closure.md`.
 - Boundary remains unchanged: presentation-only primary-workflow compression closure; no readiness evaluation, gate status, form submission, route behavior, validation, idempotency, pricing, funding, issuance, result behavior, voucher compilation, provider calls, wallet behavior, journal writes, action execution, feedback delivery, campaign mutation, persistence, public API behavior, or money movement changed.
+
+# 2026-07-22 — Voucher Detail Browser Feedback Refinement — Slice 1
+
+- Audit and Follow-Up now collapses to one scan row with a single evidence/connected/disabled count summary.
+- Guidance, evidence cards, and disabled follow-up details remain inside the expanded body.
+- Report: `reports/637-voucher-detail-browser-feedback-refinement-slice-1.md`.
+- Boundary remains unchanged: presentation-only audit-summary compression; no audit evidence, connected-state evaluation, follow-up availability, action execution, journal writes, provider calls, voucher state, persistence, public API behavior, or money movement changed.
