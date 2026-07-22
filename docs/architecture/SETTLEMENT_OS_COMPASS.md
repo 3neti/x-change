@@ -4121,3 +4121,10 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/624-distribution-workspace-secondary-content-compression-slice-3-closure.md`.
 - Boundary remains unchanged: presentation-only secondary-content compression closure; no route behavior, read-model hydration, beneficiary URL generation, copy behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle behavior, execution drivers, artifact generation, journal writes, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
 - Next recommended checkpoint: browser inspection of the closed Connected context, URL details, and detailed-readiness disclosures; then continue with Distribution Workspace lower-panel density or the next Cockpit page.
+
+## 2026-07-22 Update — Distribution Workspace Lower-Panel Density — Slice 1
+
+- Started the Distribution Workspace Lower-Panel Density wave.
+- Notification channels now use a compact summary while all channel evidence and disabled follow-up explanations remain available when expanded.
+- UI/report: `../ui-cockpit/reports/625-distribution-workspace-lower-panel-density-slice-1.md`.
+- Boundary remains unchanged: presentation-only notification-panel density; no distribution dispatch, channel availability, feedback delivery, follow-up execution, campaign mutation, artifact generation, journal writes, provider calls, voucher state, persistence, public API behavior, or money movement changed.

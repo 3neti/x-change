@@ -4410,3 +4410,10 @@ Current boundary:
 - Published package-owned Cockpit assets and verified package/host parity.
 - Report: `reports/624-distribution-workspace-secondary-content-compression-slice-3-closure.md`.
 - Boundary remains unchanged: presentation-only secondary-content compression closure; no route behavior, read-model hydration, beneficiary URL generation, copy behavior, distribution dispatch, feedback delivery, campaign mutation, voucher lifecycle behavior, execution drivers, artifact generation, journal writes, provider calls, wallet behavior, Treasury behavior, public API behavior, persistence, or money movement changed.
+
+# 2026-07-22 — Distribution Workspace Lower-Panel Density — Slice 1
+
+- Started the Distribution Workspace Lower-Panel Density wave.
+- Notification readiness now uses a compact collapsed summary and tighter expanded channel and disabled-action rows.
+- Report: `reports/625-distribution-workspace-lower-panel-density-slice-1.md`.
+- Boundary remains unchanged: presentation-only notification-panel density; no distribution dispatch, channel availability, feedback delivery, follow-up execution, campaign mutation, artifact generation, journal writes, provider calls, voucher state, persistence, public API behavior, or money movement changed.

@@ -34,8 +34,14 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).toContain('Email handoff');
         expect(wrapper.text()).toContain('In-app notification handoff');
         expect(wrapper.text()).toContain('Manual branch release');
-        expect(wrapper.find('[data-testid="cockpit-digital-distribution-panel"]').element.tagName.toLowerCase()).toBe('details');
-        expect(wrapper.findAll('[data-testid="cockpit-distribution-channel"]')).toHaveLength(4);
+        const panel = wrapper.find('[data-testid="cockpit-digital-distribution-panel"]');
+        const channels = wrapper.findAll('[data-testid="cockpit-distribution-channel"]');
+
+        expect(panel.element.tagName.toLowerCase()).toBe('details');
+        expect(panel.classes()).toContain('py-3');
+        expect(panel.classes()).not.toContain('p-5');
+        expect(channels).toHaveLength(4);
+        expect(channels[0].classes()).toContain('p-3');
         expect(wrapper.find('[data-testid="cockpit-distribution-density-summary"]').text()).toContain('Channels');
         expect(wrapper.find('[data-testid="cockpit-distribution-density-summary"]').text()).toContain('Disabled Follow-Ups');
         expect(wrapper.find('[data-testid="cockpit-distribution-density-summary"]').text()).toContain('4');
@@ -43,6 +49,8 @@ describe('Cockpit Distribution Workspace foundation', () => {
         const actions = wrapper.findAll('[data-testid="cockpit-distribution-action"]');
 
         expect(actions).toHaveLength(4);
+        expect(wrapper.findAll('[data-testid="cockpit-distribution-action-row"]')).toHaveLength(4);
+        expect(actions[0].classes()).toContain('py-1.5');
         expect(wrapper.findAll('[data-testid="cockpit-distribution-action-disclosure"]')).toHaveLength(4);
 
         for (const action of actions) {
