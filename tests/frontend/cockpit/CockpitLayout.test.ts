@@ -120,6 +120,7 @@ describe('Cockpit shell layout baseline', () => {
         expect(wrapper.text()).not.toContain('Summary not connected');
         expect(wrapper.text()).not.toContain('Provider not connected');
         expect(wrapper.text()).toContain('Operating as: Treasury Operations');
+        expect(wrapper.find('[data-testid="cockpit-balance-hud"]').classes()).toContain('xl:min-w-[44rem]');
     });
 
     it('keeps the balance HUD as supplied summary text', () => {
@@ -140,7 +141,7 @@ describe('Cockpit shell layout baseline', () => {
         expect(wrapper.findAll('[data-testid="cockpit-balance-metric"]')).toHaveLength(1);
     });
 
-    it('reserves a consistent label row so balance values align', () => {
+    it('centers single-line labels and values in width-aware balance columns', () => {
         const wrapper = mount(CockpitBalanceHud, {
             props: {
                 balances: [
@@ -160,14 +161,20 @@ describe('Cockpit shell layout baseline', () => {
 
         const labelRows = wrapper.findAll('[data-testid="cockpit-balance-label"]');
         const valueRows = wrapper.findAll('[data-testid="cockpit-balance-value"]');
+        const hud = wrapper.find('[data-testid="cockpit-balance-hud"]');
 
         expect(labelRows).toHaveLength(2);
         expect(valueRows).toHaveLength(2);
+        expect(hud.classes()).toContain('xl:grid-cols-[4fr_6fr_4fr_8fr]');
 
         for (const labelRow of labelRows) {
-            expect(labelRow.classes()).toContain('min-h-8');
-            expect(labelRow.classes()).toContain('items-end');
-            expect(labelRow.classes()).toContain('leading-4');
+            expect(labelRow.classes()).toContain('text-center');
+            expect(labelRow.classes()).toContain('whitespace-nowrap');
+        }
+
+        for (const valueRow of valueRows) {
+            expect(valueRow.classes()).toContain('text-center');
+            expect(valueRow.classes()).toContain('whitespace-nowrap');
         }
     });
 });

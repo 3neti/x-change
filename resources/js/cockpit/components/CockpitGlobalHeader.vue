@@ -63,7 +63,7 @@ withDefaults(defineProps<{
                 </p>
             </div>
 
-            <CockpitBalanceHud :balances="balances" class="xl:min-w-[34rem]" />
+            <CockpitBalanceHud :balances="balances" class="xl:min-w-[44rem]" />
         </div>
     </header>
 </template>
