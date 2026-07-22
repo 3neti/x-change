@@ -1,45 +1,33 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import CockpitGlobalHeader from '../components/CockpitGlobalHeader.vue';
 import CockpitSidebar from '../components/CockpitSidebar.vue';
-import type { CockpitBalanceMetric } from '../types';
+import type { CockpitBalanceMetric, CockpitHeaderReadModel } from '../types';
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
     activeNavigation?: string;
     institution?: string;
     operatingIdentity?: string;
     connectivity?: string;
     balances?: CockpitBalanceMetric[];
+    cockpitHeaderReadModel?: CockpitHeaderReadModel;
 }>(), {
     activeNavigation: 'dashboard',
     institution: 'x-change Cockpit',
     operatingIdentity: 'Treasury Operations',
     connectivity: 'Online',
-    balances: () => [
-        {
-            key: 'internal',
-            label: 'Internal Balance',
-            value: 'Internal balance not connected',
-            tone: 'neutral',
-        },
-        {
-            key: 'outstanding',
-            label: 'Outstanding Pay Codes',
-            value: 'Liability summary not connected',
-            tone: 'neutral',
-        },
-        {
-            key: 'usable',
-            label: 'Usable Balance',
-            value: 'Usable balance not connected',
-            tone: 'neutral',
-        },
-        {
-            key: 'live',
-            label: 'Live Balance',
-            value: 'Provider balance not connected',
-            tone: 'neutral',
-        },
-    ],
+});
+
+const headerBalances = computed(() => {
+    if (Array.isArray(props.balances) && props.balances.length > 0) {
+        return props.balances;
+    }
+
+    const sharedBalances = props.cockpitHeaderReadModel?.balances;
+
+    return Array.isArray(sharedBalances) && sharedBalances.length > 0
+        ? sharedBalances
+        : undefined;
 });
 </script>
 
@@ -56,7 +44,7 @@ withDefaults(defineProps<{
                     :institution="institution"
                     :operating-identity="operatingIdentity"
                     :connectivity="connectivity"
-                    :balances="balances"
+                    :balances="headerBalances"
                 />
 
                 <main class="flex-1 overflow-y-auto p-4 lg:p-6" data-testid="cockpit-workspace">

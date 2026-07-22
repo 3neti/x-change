@@ -61,6 +61,52 @@ describe('Cockpit shell layout baseline', () => {
         }
     });
 
+    it('hydrates the global balance HUD from the shared cockpit header read model', () => {
+        const wrapper = mount(CockpitLayout, {
+            props: {
+                cockpitHeaderReadModel: {
+                    schema: 'x-change.cockpit.header-read-model.v1',
+                    authorized: true,
+                    read_only: true,
+                    balances: [
+                        {
+                            key: 'internal',
+                            label: 'Internal Balance',
+                            value: '₱9,876.50',
+                            tone: 'healthy',
+                        },
+                        {
+                            key: 'outstanding',
+                            label: 'Outstanding Pay Codes',
+                            value: '₱25.00',
+                            tone: 'warning',
+                        },
+                        {
+                            key: 'usable',
+                            label: 'Usable Balance',
+                            value: '₱9,851.50',
+                            tone: 'healthy',
+                        },
+                        {
+                            key: 'live',
+                            label: 'Live Balance',
+                            value: 'Provider balance not connected',
+                            tone: 'neutral',
+                        },
+                    ],
+                },
+            },
+        });
+
+        const header = wrapper.find('[data-testid="cockpit-global-header"]');
+
+        expect(header.text()).toContain('₱9,876.50');
+        expect(header.text()).toContain('₱25.00');
+        expect(header.text()).toContain('₱9,851.50');
+        expect(header.text()).toContain('Provider balance not connected');
+        expect(header.text()).not.toContain('Internal balance not connected');
+    });
+
     it('renders balance metrics as header HUD presentation only', () => {
         const wrapper = mount(CockpitGlobalHeader, {
             props: {},

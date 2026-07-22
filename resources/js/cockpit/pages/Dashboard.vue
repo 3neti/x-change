@@ -45,7 +45,6 @@ const headerBalances = computed(() => {
         ? balances
         : undefined;
 });
-
 const metrics = computed<CockpitDashboardMetric[]>(() => {
     if (!readModel.value?.authorized || !Array.isArray(readModel.value.metrics) || readModel.value.metrics.length === 0) {
         return cockpitDashboardMetrics;
@@ -488,7 +487,10 @@ function areIntegrationDetailsExpanded(key: string): boolean {
 </script>
 
 <template>
-    <CockpitLayout active-navigation="dashboard" :balances="headerBalances">
+    <CockpitLayout
+        active-navigation="dashboard"
+        :cockpit-header-read-model="props.cockpit_header_read_model"
+    >
         <section class="space-y-6" data-testid="cockpit-dashboard-shell">
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">

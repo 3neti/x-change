@@ -33,7 +33,6 @@ class CockpitDashboardPageController extends Controller
             campaignRecipientReference: $this->optionalString($request->query('campaign_recipient_reference')),
             campaignPurpose: $this->optionalString($request->query('campaign_purpose')),
             operatorId: is_scalar($operatorId) ? (string) $operatorId : null,
-            operator: $operator,
             operatorActivityFilters: CockpitOperatorIssuanceActivitySearchFilterData::normalize(
                 search: $this->optionalString($request->query('activity_search')),
                 statuses: $this->queryStringList($request->query('activity_status')),

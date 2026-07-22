@@ -25,6 +25,7 @@ use LBHurtado\XChange\Http\Controllers\Web\LinkPaynamicsWalletController;
 use LBHurtado\XChange\Http\Controllers\Web\PayCodeCreatePageController;
 use LBHurtado\XChange\Http\Controllers\Web\PayCodeIndexPageController;
 use LBHurtado\XChange\Http\Controllers\Web\PayCodeShowPageController;
+use LBHurtado\XChange\Http\Middleware\ShareCockpitHeaderReadModel;
 use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
 
 $middleware = config('x-change.routes.web_middleware', ['web', 'auth']);
@@ -33,7 +34,7 @@ $middleware = config('x-change.routes.web_middleware', ['web', 'auth']);
 Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->group(function (): void {
     Route::get('dashboard', DashboardPageController::class)->name('x-change.dashboard');
 
-    Route::prefix('cockpit')->group(function (): void {
+    Route::prefix('cockpit')->middleware(ShareCockpitHeaderReadModel::class)->group(function (): void {
         Route::get('/', CockpitDashboardPageController::class)->name('x-change.cockpit.dashboard');
         Route::get('quick-generate', CockpitQuickGeneratePageController::class)->name('x-change.cockpit.quick-generate');
         Route::post('quick-generate', CockpitQuickGenerateMutationRouteShellController::class)->name('x-change.cockpit.quick-generate.store');

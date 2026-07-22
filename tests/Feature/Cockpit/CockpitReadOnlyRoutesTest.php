@@ -37,7 +37,16 @@ it('renders cockpit pages as read-only inertia endpoints', function (string $rou
         ->assertJsonPath('props.can.call_providers', false)
         ->assertJsonPath('props.can.move_money', false)
         ->assertJsonPath('props.redaction.policy', 'default-cockpit-redaction')
-        ->assertJsonPath('props.redaction.payloads', 'redacted-until-authorized-read-models-exist');
+        ->assertJsonPath('props.redaction.payloads', 'redacted-until-authorized-read-models-exist')
+        ->assertJsonPath('props.cockpit_header_read_model.schema', 'x-change.cockpit.header-read-model.v1')
+        ->assertJsonPath('props.cockpit_header_read_model.authorized', true)
+        ->assertJsonPath('props.cockpit_header_read_model.read_only', true)
+        ->assertJsonPath('props.cockpit_header_read_model.balances.0.key', 'internal')
+        ->assertJsonPath('props.cockpit_header_read_model.balances.1.key', 'outstanding')
+        ->assertJsonPath('props.cockpit_header_read_model.balances.2.key', 'usable')
+        ->assertJsonPath('props.cockpit_header_read_model.balances.3.key', 'live')
+        ->assertJsonPath('props.cockpit_header_read_model.balances.3.value', 'Provider balance not connected')
+        ->assertJsonPath('props.cockpit_header_read_model.redactions.calls_providers', false);
 })->with([
     'dashboard' => ['x-change.cockpit.dashboard', [], 'x-change/cockpit/Dashboard'],
     'quick generate' => ['x-change.cockpit.quick-generate', [], 'x-change/cockpit/QuickGenerate'],

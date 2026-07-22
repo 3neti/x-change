@@ -524,7 +524,10 @@ function integrationBadge(
 </script>
 
 <template>
-    <CockpitLayout active-navigation="pay-codes">
+    <CockpitLayout
+        active-navigation="pay-codes"
+        :cockpit-header-read-model="props.cockpit_header_read_model"
+    >
         <section class="space-y-6" data-testid="cockpit-pay-code-explorer-shell">
             <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div

@@ -707,7 +707,10 @@ function policyLabel(value: string): string {
 </script>
 
 <template>
-    <CockpitLayout active-navigation="pay-codes">
+    <CockpitLayout
+        active-navigation="pay-codes"
+        :cockpit-header-read-model="props.cockpit_header_read_model"
+    >
         <section class="space-y-6" data-testid="cockpit-voucher-detail-shell">
             <div
                 class="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
