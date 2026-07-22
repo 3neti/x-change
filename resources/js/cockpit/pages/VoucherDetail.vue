@@ -884,7 +884,10 @@ function policyLabel(value: string): string {
                         <p class="mt-1.5 text-xs leading-5 text-slate-500 dark:text-slate-400">
                             Availability: {{ availabilityDisplay }} · Payload policy: {{ redactions.payloads ?? 'not-loaded' }}
                         </p>
-                        <div class="mt-3 flex flex-wrap gap-2">
+                        <div
+                            class="mt-3 flex flex-wrap items-start gap-2"
+                            data-testid="cockpit-voucher-detail-primary-actions"
+                        >
                             <a
                                 v-if="beneficiaryRedeemUrl"
                                 :href="beneficiaryRedeemUrl"
@@ -916,7 +919,7 @@ function policyLabel(value: string): string {
                     </div>
 
                     <details
-                        class="rounded-xl border p-3"
+                        class="self-start rounded-xl border p-3"
                         :class="
                             lifecycleGuidance.tone === 'warning'
                                 ? 'border-amber-200 bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/30'
@@ -1286,7 +1289,7 @@ function policyLabel(value: string): string {
                 <CockpitVoucherOverviewPanel :items="overviewItems" />
 
                 <div
-                    class="grid gap-3 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]"
+                    class="grid items-start gap-3 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]"
                     data-testid="cockpit-voucher-supporting-evidence-grid"
                 >
                     <CockpitVoucherTimelinePanel :items="timelineItems" />

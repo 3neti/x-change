@@ -50,6 +50,7 @@ describe('Cockpit Voucher Detail foundation', () => {
         expect(wrapper.text()).toContain('no driver is invoked here');
         expect(wrapper.find('[data-testid="cockpit-voucher-timeline-panel"]').element.tagName.toLowerCase()).toBe('details');
         expect(wrapper.find('[data-testid="cockpit-voucher-timeline-panel"]').attributes('open')).toBeUndefined();
+        expect(wrapper.find('[data-testid="cockpit-voucher-timeline-panel"]').classes()).toContain('self-start');
         expect(wrapper.find('summary').text()).toContain('4 events');
         expect(wrapper.findAll('[data-testid="cockpit-voucher-timeline-item"]')).toHaveLength(4);
     });
@@ -138,6 +139,8 @@ describe('Cockpit Voucher Detail foundation', () => {
         expect(wrapper.text()).toContain('Operator next step');
         expect(wrapper.text()).toContain('Lifecycle guidance');
         expect(wrapper.find('[data-testid="cockpit-voucher-detail-primary-summary"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="cockpit-voucher-detail-primary-actions"]').classes()).toContain('items-start');
+        expect(wrapper.find('[data-testid="cockpit-voucher-detail-lifecycle-guidance"]').classes()).toContain('self-start');
         expect(wrapper.find('[data-testid="cockpit-voucher-detail-primary-distribution-link"]').text()).toContain('Open distribution workspace');
         expect(wrapper.find('[data-testid="cockpit-voucher-detail-primary-explorer-link"]').text()).toContain('Back to Pay Codes');
         expect(wrapper.text()).toContain('Overview');
@@ -147,6 +150,7 @@ describe('Cockpit Voucher Detail foundation', () => {
         expect(wrapper.text()).toContain('Audit');
         expect(wrapper.find('[data-testid="cockpit-voucher-secondary-content"]').classes()).toContain('space-y-3');
         expect(wrapper.find('[data-testid="cockpit-voucher-supporting-evidence-grid"]').classes()).toContain('gap-3');
+        expect(wrapper.find('[data-testid="cockpit-voucher-supporting-evidence-grid"]').classes()).toContain('items-start');
         expect(wrapper.find('[data-testid="cockpit-voucher-supporting-evidence-stack"]').classes()).toContain('space-y-3');
         expect(wrapper.find('[aria-current="page"]').text()).toContain('Pay Codes');
         expect(wrapper.text()).toContain('Inspection only');
