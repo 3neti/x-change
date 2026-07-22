@@ -23,3 +23,24 @@ it('documents runtime profile compact diagnostics slice 1', function (): void {
         ->and($compass)->toContain('Runtime Profile Compact Diagnostics — Slice 1')
         ->and($settlementCompass)->toContain('Runtime Profile Compact Diagnostics — Slice 1');
 });
+
+it('documents runtime profile compact diagnostics slice 2', function (): void {
+    $packageRoot = dirname(__DIR__, 3);
+
+    $report = file_get_contents($packageRoot.'/docs/ui-cockpit/reports/640-runtime-profile-compact-diagnostics-slice-2.md');
+    $page = file_get_contents($packageRoot.'/resources/js/cockpit/pages/RuntimeProfile.vue');
+    $frontendTest = file_get_contents($packageRoot.'/tests/frontend/cockpit/CockpitRuntimeProfileDiagnostics.test.ts');
+    $compass = file_get_contents($packageRoot.'/docs/ui-cockpit/COMPASS.md');
+    $settlementCompass = file_get_contents($packageRoot.'/docs/architecture/SETTLEMENT_OS_COMPASS.md');
+
+    expect($report)
+        ->toContain('Runtime Profile Compact Diagnostics — Slice 2')
+        ->toContain('closed count-bearing disclosure')
+        ->toContain('Presentation-only component-inventory compression')
+        ->and($page)->toContain('data-testid="cockpit-runtime-profile-components"')
+        ->and($page)->toContain('{{ components.length }} components')
+        ->and($frontendTest)->toContain("expect(componentPanel.attributes('open')).toBeUndefined()")
+        ->and($frontendTest)->toContain("expect(componentRows[0].classes()).toContain('p-3')")
+        ->and($compass)->toContain('Runtime Profile Compact Diagnostics — Slice 2')
+        ->and($settlementCompass)->toContain('Runtime Profile Compact Diagnostics — Slice 2');
+});

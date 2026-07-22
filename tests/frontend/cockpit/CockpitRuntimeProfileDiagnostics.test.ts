@@ -96,7 +96,14 @@ describe('Cockpit runtime profile diagnostics', () => {
         expect(context.element.tagName.toLowerCase()).toBe('details');
         expect(context.attributes('open')).toBeUndefined();
         expect(context.find('summary').text()).toContain('Runtime profile context');
-        expect(wrapper.findAll('[data-testid="cockpit-runtime-profile-component"]')).toHaveLength(2);
+        const componentPanel = wrapper.find('[data-testid="cockpit-runtime-profile-components"]');
+        const componentRows = componentPanel.findAll('[data-testid="cockpit-runtime-profile-component"]');
+
+        expect(componentPanel.element.tagName.toLowerCase()).toBe('details');
+        expect(componentPanel.attributes('open')).toBeUndefined();
+        expect(componentPanel.find('summary').text()).toContain('2 components');
+        expect(componentRows).toHaveLength(2);
+        expect(componentRows[0].classes()).toContain('p-3');
     });
 
     it('does not render mutation affordances or unsafe payload labels', () => {

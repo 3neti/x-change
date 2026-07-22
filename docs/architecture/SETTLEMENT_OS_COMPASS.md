@@ -4242,3 +4242,10 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Helper explanations remain available through a closed context disclosure.
 - UI/report: `../ui-cockpit/reports/639-runtime-profile-compact-diagnostics-slice-1.md`.
 - Boundary remains unchanged: presentation-only runtime-profile shell compression; no runtime configuration, repository resolution, handoff enablement, safety evaluation, journal writes, action execution, feedback delivery, provider calls, voucher behavior, persistence, public API behavior, or money movement changed.
+
+## 2026-07-22 Update — Runtime Profile Compact Diagnostics — Slice 2
+
+- Runtime component configuration and fallback evidence now remains available through a closed count-bearing disclosure.
+- Expanded component rows use tighter density without changing resolution facts.
+- UI/report: `../ui-cockpit/reports/640-runtime-profile-compact-diagnostics-slice-2.md`.
+- Boundary remains unchanged: presentation-only component-inventory compression; no component resolution, configuration values, fallback selection, repository behavior, runtime handoffs, journal writes, action execution, feedback delivery, provider calls, voucher behavior, persistence, public API behavior, or money movement changed.
