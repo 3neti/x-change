@@ -4192,3 +4192,11 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/633-voucher-detail-secondary-content-compression-slice-3-closure.md`.
 - Boundary remains unchanged: presentation-only secondary-content compression closure; no voucher facts, lifecycle events, evidence sources, notification state, audit evidence, follow-up availability, claim URL behavior, delivery, provider behavior, voucher mutation, persistence, public API behavior, or money movement changed.
 - Next recommended checkpoint: browser acceptance of the collapsed Voucher Detail secondary summaries and expanded detail density; then select the next Cockpit page wave.
+
+## 2026-07-22 Update — Quick Generate Primary Workflow Compression — Slice 1
+
+- Started the Quick Generate Primary Workflow Compression wave.
+- Quick Generate now begins with a slim operational header and three concise workflow facts.
+- The existing issuance and side-effect boundary remains available through a closed disclosure.
+- UI/report: `../ui-cockpit/reports/634-quick-generate-primary-workflow-compression-slice-1.md`.
+- Boundary remains unchanged: presentation-only shell compression; no route behavior, form payloads, validation, idempotency, pricing, funding, issuance, voucher compilation, provider calls, wallet behavior, journal writes, action execution, feedback delivery, campaign mutation, persistence, public API behavior, or money movement changed.

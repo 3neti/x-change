@@ -2033,6 +2033,27 @@ describe('Cockpit Quick Generate foundation', () => {
         ).toBe(true);
         expect(wrapper.text()).toContain('Quick Generate');
         expect(wrapper.text()).toContain('Pay Code generation');
+        const header = wrapper.find(
+            '[data-testid="cockpit-quick-generate-header"]',
+        );
+        const headerFacts = wrapper.find(
+            '[data-testid="cockpit-quick-generate-header-facts"]',
+        );
+        const headerBoundary = wrapper.find(
+            '[data-testid="cockpit-quick-generate-header-boundary"]',
+        );
+
+        expect(header.classes()).toContain('py-3');
+        expect(header.classes()).not.toContain('p-6');
+        expect(headerFacts.findAll('div')).toHaveLength(3);
+        expect(headerFacts.text()).toContain('Template-first');
+        expect(headerFacts.text()).toContain('GeneratePayCode');
+        expect(headerFacts.text()).toContain('Separately gated');
+        expect(headerBoundary.element.tagName.toLowerCase()).toBe('details');
+        expect(headerBoundary.attributes('open')).toBeUndefined();
+        expect(headerBoundary.find('summary').text()).toContain(
+            'Workflow limits',
+        );
         expect(wrapper.text()).toContain('Template Selector');
         expect(wrapper.text()).toContain('Runtime Inputs');
         expect(wrapper.text()).toContain('Pricing and Funding');

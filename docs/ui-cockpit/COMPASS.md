@@ -4482,3 +4482,11 @@ Current boundary:
 - Published package-owned Cockpit assets and verified package/host parity.
 - Report: `reports/633-voucher-detail-secondary-content-compression-slice-3-closure.md`.
 - Boundary remains unchanged: presentation-only secondary-content compression closure; no voucher facts, lifecycle events, evidence sources, notification state, audit evidence, follow-up availability, claim URL behavior, delivery, provider behavior, voucher mutation, persistence, public API behavior, or money movement changed.
+
+# 2026-07-22 — Quick Generate Primary Workflow Compression — Slice 1
+
+- Started the Quick Generate Primary Workflow Compression wave.
+- The tall introductory hero is now a slim operational header with workflow, issuance-owner, and external-effect facts.
+- Full template-first handoff and preflight boundary copy remains available through `Workflow limits`.
+- Report: `reports/634-quick-generate-primary-workflow-compression-slice-1.md`.
+- Boundary remains unchanged: presentation-only shell compression; no route behavior, form payloads, validation, idempotency, pricing, funding, issuance, voucher compilation, provider calls, wallet behavior, journal writes, action execution, feedback delivery, campaign mutation, persistence, public API behavior, or money movement changed.

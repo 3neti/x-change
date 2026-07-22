@@ -1111,27 +1111,80 @@ function stringValue(value: unknown): string | null {
     <CockpitLayout active-navigation="quick-generate">
         <section class="space-y-6" data-testid="cockpit-quick-generate-shell">
             <div
-                class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                class="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-quick-generate-header"
             >
-                <p
-                    class="text-xs font-semibold tracking-[0.22em] text-slate-500 uppercase dark:text-slate-400"
+                <div
+                    class="flex flex-col gap-3 lg:flex-row lg:items-center"
+                    data-testid="cockpit-quick-generate-header-row"
                 >
-                    Pay Code generation
-                </p>
-                <h2
-                    class="mt-2 text-2xl font-semibold text-slate-950 dark:text-slate-50"
+                    <div class="min-w-0 lg:w-72 lg:shrink-0">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <p
+                                class="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400"
+                            >
+                                Pay Code generation
+                            </p>
+                            <span
+                                class="rounded-full bg-emerald-50 px-2 py-0.5 text-[0.65rem] font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200"
+                            >
+                                approved handoff
+                            </span>
+                        </div>
+                        <h2
+                            class="mt-1 text-lg font-semibold leading-6 text-slate-950 dark:text-slate-50"
+                        >
+                            Quick Generate
+                        </h2>
+                        <p
+                            class="mt-0.5 text-xs leading-4 text-slate-600 dark:text-slate-300"
+                        >
+                            Template-first issuance through the existing action.
+                        </p>
+                    </div>
+
+                    <dl
+                        class="grid w-full gap-1.5 rounded-lg bg-slate-50 p-1.5 text-xs sm:grid-cols-3 lg:min-w-0 lg:flex-1 dark:bg-slate-950"
+                        data-testid="cockpit-quick-generate-header-facts"
+                    >
+                        <div class="rounded-lg bg-white px-2.5 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                            <dt class="text-[0.6rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400">
+                                Workflow
+                            </dt>
+                            <dd class="text-xs font-semibold leading-4 text-slate-950 dark:text-slate-50">
+                                Template-first
+                            </dd>
+                        </div>
+                        <div class="rounded-lg bg-white px-2.5 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                            <dt class="text-[0.6rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400">
+                                Issuance owner
+                            </dt>
+                            <dd class="text-xs font-semibold leading-4 text-slate-950 dark:text-slate-50">
+                                GeneratePayCode
+                            </dd>
+                        </div>
+                        <div class="rounded-lg bg-white px-2.5 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                            <dt class="text-[0.6rem] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400">
+                                External effects
+                            </dt>
+                            <dd class="text-xs font-semibold leading-4 text-slate-950 dark:text-slate-50">
+                                Separately gated
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+
+                <details
+                    class="mt-2 border-t border-slate-200 pt-2 dark:border-slate-800"
+                    data-testid="cockpit-quick-generate-header-boundary"
                 >
-                    Quick Generate
-                </h2>
-                <p
-                    class="mt-3 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300"
-                >
-                    Create a Pay Code through the approved template-first
-                    handoff to the existing x-change GeneratePayCode action.
-                    Pricing and funding preflights are informational, while
-                    journal, action, feedback, provider, and campaign mutations
-                    remain separately gated.
-                </p>
+                    <summary class="cursor-pointer text-[0.7rem] font-semibold text-slate-500 dark:text-slate-400">
+                        Workflow limits
+                    </summary>
+                    <p class="mt-2 max-w-4xl text-xs leading-5 text-slate-500 dark:text-slate-400">
+                        Create a Pay Code through the approved template-first handoff to the existing x-change GeneratePayCode action. Pricing and funding preflights are informational, while journal, action, feedback, provider, and campaign mutations remain separately gated.
+                    </p>
+                </details>
             </div>
 
             <CockpitDiagnosticsDisclosure
