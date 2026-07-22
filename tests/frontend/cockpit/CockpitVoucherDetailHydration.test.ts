@@ -415,11 +415,15 @@ describe('Cockpit Voucher Detail hydration', () => {
         const link = wrapper.find('[data-testid="cockpit-voucher-detail-beneficiary-url-link"]');
 
         expect(panel.exists()).toBe(true);
+        expect(panel.element.tagName.toLowerCase()).toBe('details');
+        expect(panel.attributes('open')).toBeUndefined();
+        expect(panel.find('summary').text()).toContain('URL details');
         expect(panel.text()).toContain('Beneficiary Pay Code URL');
         expect(panel.text()).toContain('https://example.test/x/claim/PC-HYDRATED-001/experience');
         expect(panel.text()).toContain('/x/claim/PC-HYDRATED-001/experience');
-        expect(panel.text()).toContain('read-only');
-        expect(panel.text()).toContain('delivery disabled');
+        expect(panel.text()).toContain('Read-only');
+        expect(panel.text()).toContain('Delivery');
+        expect(panel.text()).toContain('Disabled');
         expect(panel.text()).toContain('distribution-links-only');
         expect(wrapper.find('[data-testid="cockpit-voucher-detail-distribution-link-density-summary"]').text()).toContain('Claim URL');
         expect(wrapper.find('[data-testid="cockpit-voucher-detail-distribution-link-density-summary"]').text()).toContain('Ready');

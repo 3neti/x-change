@@ -4457,3 +4457,11 @@ Current boundary:
 - Published package-owned Cockpit assets and verified package/host parity.
 - Report: `reports/630-voucher-detail-primary-workflow-compression-slice-3-closure.md`.
 - Boundary remains unchanged: presentation-only primary-workflow compression closure; no read-model changes, claim URL generation, copy behavior, lifecycle evaluation changes, notification delivery, action execution, journal writes, provider calls, voucher mutation, persistence, public API behavior, or money movement changed.
+
+# 2026-07-22 — Voucher Detail Secondary Content Compression — Slice 1
+
+- Started the Voucher Detail Secondary Content Compression wave.
+- Beneficiary claim-link metadata and manual guidance now sit behind a compact closed `URL details` disclosure.
+- Full URL, path, source, delivery, payload policy, and browser-local copy remain available on demand.
+- Report: `reports/631-voucher-detail-secondary-content-compression-slice-1.md`.
+- Boundary remains unchanged: presentation-only claim-link compression; no claim URL generation changes, copy behavior changes, distribution delivery, feedback behavior, campaign mutation, artifact generation, journal writes, provider calls, voucher mutation, persistence, public API behavior, or money movement changed.

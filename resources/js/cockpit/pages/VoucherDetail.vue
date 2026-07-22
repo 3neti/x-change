@@ -1142,31 +1142,43 @@ function policyLabel(value: string): string {
                 </div>
             </section>
 
-            <section
+            <details
                 v-if="distributionLinksAvailable"
-                class="rounded-xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm dark:border-emerald-900/70 dark:bg-emerald-950/40"
+                class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-sm dark:border-emerald-900/70 dark:bg-emerald-950/40"
                 data-testid="cockpit-voucher-detail-distribution-links-panel"
             >
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
-                    Read-only distribution link
-                </p>
-                <h3 class="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-50">
-                    Beneficiary Pay Code URL
-                </h3>
-                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    This card exposes the canonical beneficiary claim URL for manual operator inspection. It is read-only;
-                    delivery disabled means Cockpit does not send SMS, email, webhook, in-app feedback, campaign dispatch,
-                    journal entries, provider calls, or money movement from this panel.
-                </p>
+                <summary class="cursor-pointer list-none">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                                Read-only claim link
+                            </p>
+                            <h3 class="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50">
+                                Beneficiary Pay Code URL
+                            </h3>
+                        </div>
+                        <span class="rounded-full bg-white/80 px-2 py-0.5 text-[0.65rem] font-semibold text-emerald-700 dark:bg-slate-950/70 dark:text-emerald-200">
+                            URL details
+                        </span>
+                    </div>
+                    <p class="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">
+                        Inspect the canonical claim URL, source metadata, and manual distribution guidance.
+                    </p>
+                </summary>
+                <div class="mt-3 border-t border-emerald-200 pt-3 dark:border-emerald-900/60">
+                    <p class="text-xs leading-5 text-slate-600 dark:text-slate-300">
+                        Copying is browser-local; delivery disabled means recipient verification and delivery remain external.
+                    </p>
+                </div>
                 <div
-                    class="mt-5 grid gap-3 rounded-lg border border-emerald-200 bg-white/70 p-3 text-sm dark:border-emerald-900/60 dark:bg-slate-950/60 sm:grid-cols-3"
+                    class="mt-3 grid gap-2 rounded-lg border border-emerald-200 bg-white/70 p-2.5 text-xs dark:border-emerald-900/60 dark:bg-slate-950/60 sm:grid-cols-3"
                     data-testid="cockpit-voucher-detail-distribution-link-density-summary"
                 >
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">
                             Claim URL
                         </p>
-                        <p class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                        <p class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50">
                             {{ beneficiaryRedeemUrl ? 'Ready' : 'Path only' }}
                         </p>
                     </div>
@@ -1174,7 +1186,7 @@ function policyLabel(value: string): string {
                         <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">
                             Delivery
                         </p>
-                        <p class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                        <p class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50">
                             Disabled
                         </p>
                     </div>
@@ -1182,13 +1194,13 @@ function policyLabel(value: string): string {
                         <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">
                             Copy
                         </p>
-                        <p class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                        <p class="mt-0.5 font-semibold text-slate-950 dark:text-slate-50">
                             Browser-local
                         </p>
                     </div>
                 </div>
-                <dl class="mt-5 grid gap-3 text-sm">
-                    <div class="rounded-lg bg-white/80 p-3 dark:bg-slate-950/70">
+                <dl class="mt-3 grid gap-2 text-xs">
+                    <div class="rounded-lg bg-white/80 p-2.5 dark:bg-slate-950/70">
                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Full URL
                         </dt>
@@ -1208,13 +1220,13 @@ function policyLabel(value: string): string {
                     </div>
                 </dl>
                 <details
-                    class="mt-3 rounded-lg border border-emerald-200 bg-white/70 p-3 text-sm text-slate-600 dark:border-emerald-900/60 dark:bg-slate-950/60 dark:text-slate-300"
+                    class="mt-2 rounded-lg border border-emerald-200 bg-white/70 p-2.5 text-xs text-slate-600 dark:border-emerald-900/60 dark:bg-slate-950/60 dark:text-slate-300"
                     data-testid="cockpit-voucher-detail-distribution-link-metadata"
                 >
                     <summary class="cursor-pointer font-semibold text-slate-700 dark:text-slate-200">
                         Link details
                     </summary>
-                    <dl class="mt-3 grid gap-3 md:grid-cols-3">
+                    <dl class="mt-2 grid gap-2 md:grid-cols-3">
                         <div>
                             <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                                 Path
@@ -1241,20 +1253,20 @@ function policyLabel(value: string): string {
                         </div>
                     </dl>
                 </details>
-                <div class="mt-5">
+                <div class="mt-3">
                     <CockpitManualCopyButton
                         :value="beneficiaryRedeemUrl ?? beneficiaryRedeemPath"
                         label="Copy beneficiary URL"
                     />
                 </div>
                 <details
-                    class="mt-5 rounded-lg border border-emerald-200 bg-white/80 p-4 text-sm leading-6 text-slate-600 dark:border-emerald-900/60 dark:bg-slate-950/70 dark:text-slate-300"
+                    class="mt-3 rounded-lg border border-emerald-200 bg-white/80 p-3 text-xs leading-5 text-slate-600 dark:border-emerald-900/60 dark:bg-slate-950/70 dark:text-slate-300"
                     data-testid="cockpit-voucher-detail-manual-distribution-guidance"
                 >
                     <summary class="cursor-pointer font-semibold text-slate-950 dark:text-slate-50">
                         Manual distribution guidance
                     </summary>
-                    <ul class="mt-3 list-disc space-y-1 pl-5">
+                    <ul class="mt-2 list-disc space-y-1 pl-5">
                         <li>Use this copied link for manual distribution only.</li>
                         <li>Share it only through an approved external workflow after verifying the recipient.</li>
                         <li>Cockpit does not send SMS, email, webhook, in-app notification, or campaign delivery from this panel.</li>
@@ -1262,7 +1274,7 @@ function policyLabel(value: string): string {
                         <li>Treat this beneficiary URL as sensitive settlement access material.</li>
                     </ul>
                 </details>
-            </section>
+            </details>
 
             <CockpitVoucherOverviewPanel :items="overviewItems" />
 
