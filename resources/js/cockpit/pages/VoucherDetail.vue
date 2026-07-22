@@ -709,45 +709,80 @@ function policyLabel(value: string): string {
 <template>
     <CockpitLayout active-navigation="pay-codes">
         <section class="space-y-6" data-testid="cockpit-voucher-detail-shell">
-            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                    Pay Code inspection
-                </p>
-                <h2 class="mt-2 text-2xl font-semibold text-slate-950 dark:text-slate-50">
-                    Pay Code Detail
-                </h2>
-                <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    Inspect sanitized Pay Code facts, lifecycle state, claim URL readiness, and
-                    integration evidence from one read-only workspace. This page does not mutate
-                    vouchers, execute drivers, write journal entries, send feedback, call providers,
-                    or move money.
-                </p>
-                <dl class="mt-5 grid gap-3 text-sm sm:grid-cols-3">
-                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
-                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Code
-                        </dt>
-                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                            {{ code }}
-                        </dd>
+            <div
+                class="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-voucher-detail-header"
+            >
+                <div
+                    class="flex flex-col gap-3 lg:flex-row lg:items-center"
+                    data-testid="cockpit-voucher-detail-header-row"
+                >
+                    <div class="min-w-0 lg:w-64 lg:shrink-0 xl:w-72">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                                Pay Code inspection
+                            </p>
+                            <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                read-only
+                            </span>
+                        </div>
+                        <h2 class="mt-1 text-lg font-semibold leading-6 text-slate-950 dark:text-slate-50">
+                            Pay Code Detail
+                        </h2>
+                        <p class="mt-0.5 text-xs leading-4 text-slate-600 dark:text-slate-300">
+                            Inspect lifecycle state, claim readiness, and connected evidence.
+                        </p>
                     </div>
-                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
-                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Status
-                        </dt>
-                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                            {{ status }}
-                        </dd>
-                    </div>
-                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
-                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Payload policy
-                        </dt>
-                        <dd class="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                            {{ redactions.payloads ?? 'not-loaded' }}
-                        </dd>
-                    </div>
-                </dl>
+                    <dl
+                        class="grid w-full gap-1.5 rounded-lg bg-slate-50 p-1.5 text-xs sm:grid-cols-3 lg:min-w-0 lg:flex-1 dark:bg-slate-950"
+                        data-testid="cockpit-voucher-detail-header-facts"
+                    >
+                        <div
+                            class="min-w-0 rounded-lg bg-white px-2.5 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800"
+                            data-testid="cockpit-voucher-detail-header-fact"
+                        >
+                            <dt class="text-[0.6rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                Pay Code
+                            </dt>
+                            <dd class="truncate text-xs font-semibold leading-4 text-slate-950 dark:text-slate-50">
+                                {{ code }}
+                            </dd>
+                        </div>
+                        <div
+                            class="min-w-0 rounded-lg bg-white px-2.5 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800"
+                            data-testid="cockpit-voucher-detail-header-fact"
+                        >
+                            <dt class="text-[0.6rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                Lifecycle status
+                            </dt>
+                            <dd class="truncate text-xs font-semibold leading-4 text-slate-950 dark:text-slate-50">
+                                {{ status }}
+                            </dd>
+                        </div>
+                        <div
+                            class="min-w-0 rounded-lg bg-white px-2.5 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800"
+                            data-testid="cockpit-voucher-detail-header-fact"
+                        >
+                            <dt class="text-[0.6rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                Payload policy
+                            </dt>
+                            <dd class="truncate text-xs font-semibold leading-4 text-slate-950 dark:text-slate-50">
+                                {{ redactions.payloads ?? 'not-loaded' }}
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+                <details
+                    class="mt-2 border-t border-slate-200 pt-2 dark:border-slate-800"
+                    data-testid="cockpit-voucher-detail-boundary"
+                >
+                    <summary class="cursor-pointer text-[0.7rem] font-semibold text-slate-500 dark:text-slate-400">
+                        Read-only limits
+                    </summary>
+                    <p class="mt-2 max-w-4xl text-xs leading-5 text-slate-500 dark:text-slate-400">
+                        Inspection only. This page can open or copy the claim URL, but it cannot change the Pay Code, send messages, call providers, or move money.
+                    </p>
+                </details>
             </div>
 
             <section

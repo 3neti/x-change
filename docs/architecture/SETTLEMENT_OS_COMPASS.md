@@ -4145,3 +4145,10 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/627-distribution-workspace-lower-panel-density-slice-3-closure.md`.
 - Boundary remains unchanged: presentation-only lower-panel density closure; no claim URL copy changes, QR or short-link generation, artifact availability changes, notification delivery, follow-up execution, print generation, delivery-evidence mutation, campaign mutation, journal writes, provider calls, persistence, public API behavior, or money movement changed.
 - Next recommended checkpoint: browser inspection of the four compact lower-panel summaries; then choose the next Cockpit page completion pass.
+
+## 2026-07-22 Update — Voucher Detail Primary Workflow Compression — Slice 1
+
+- Started the Voucher Detail Primary Workflow Compression wave.
+- Voucher Detail now begins with a compact operational header and operator-facing read-only limits.
+- UI/report: `../ui-cockpit/reports/628-voucher-detail-primary-workflow-compression-slice-1.md`.
+- Boundary remains unchanged: presentation-only shell compression; no route behavior, read-model hydration, claim URL generation, copy behavior, lifecycle mutation, distribution navigation, feedback delivery, action execution, journal writes, provider calls, voucher mutation, persistence, public API behavior, or money movement changed.
