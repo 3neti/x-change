@@ -495,6 +495,9 @@ describe('Cockpit Distribution Workspace foundation', () => {
 
         const summary = wrapper.find('[data-testid="cockpit-distribution-primary-summary"]');
         const readiness = summary.findAll('[data-testid="cockpit-distribution-primary-readiness-item"]');
+        const primaryActions = wrapper.find('[data-testid="cockpit-distribution-primary-actions"]');
+        const claimUrlLink = wrapper.find('[data-testid="cockpit-distribution-primary-claim-url-link"]');
+        const copyButton = wrapper.find('[data-testid="cockpit-manual-copy-button"]');
 
         expect(summary.exists()).toBe(true);
         expect(summary.text()).toContain('Manual distribution summary');
@@ -510,7 +513,10 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(summary.text()).toContain('Copy or inspect the beneficiary claim URL');
         expect(summary.text()).toContain('does not deliver messages');
         expect(readiness).toHaveLength(4);
-        expect(wrapper.find('[data-testid="cockpit-distribution-primary-claim-url-link"]').attributes('href')).toBe('https://example.test/x/claim/PC-DIST-001/experience');
+        expect(primaryActions.classes()).toContain('items-start');
+        expect(claimUrlLink.classes()).toContain('py-2');
+        expect(copyButton.classes()).toContain('py-2');
+        expect(claimUrlLink.attributes('href')).toBe('https://example.test/x/claim/PC-DIST-001/experience');
         expect(wrapper.find('[data-testid="cockpit-distribution-primary-detail-link"]').attributes('href')).toBe('/x/cockpit/pay-codes/PC-DIST-001');
         expect(wrapper.find('[data-testid="cockpit-distribution-primary-explorer-link"]').attributes('href')).toBe('/x/cockpit/pay-codes');
     });

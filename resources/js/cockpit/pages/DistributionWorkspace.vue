@@ -482,7 +482,10 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                         <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
                             {{ primaryDistributionStep.description }}
                         </p>
-                        <div class="mt-3 flex flex-wrap gap-2">
+                        <div
+                            class="mt-3 flex flex-wrap items-start gap-2"
+                            data-testid="cockpit-distribution-primary-actions"
+                        >
                             <a
                                 v-if="beneficiaryRedeemUrl"
                                 :href="beneficiaryRedeemUrl"
