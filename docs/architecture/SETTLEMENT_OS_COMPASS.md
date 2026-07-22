@@ -4234,3 +4234,11 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - UI/report: `../ui-cockpit/reports/638-voucher-detail-browser-feedback-refinement-slice-2-closure.md`.
 - Boundary remains unchanged: presentation-only service-summary rationalization; no connected read models, service status evaluation, count calculation, redaction policy, audit evidence, action availability, notification delivery, provider behavior, voucher state, persistence, public API behavior, or money movement changed.
 - Next recommended checkpoint: browser reinspection of the one-line audit summary and the single Connected services disclosure.
+
+## 2026-07-22 Update — Runtime Profile Compact Diagnostics — Slice 1
+
+- Started the Runtime Profile Compact Diagnostics wave.
+- Runtime Profile now begins with a slim operational header and four compact configuration facts.
+- Helper explanations remain available through a closed context disclosure.
+- UI/report: `../ui-cockpit/reports/639-runtime-profile-compact-diagnostics-slice-1.md`.
+- Boundary remains unchanged: presentation-only runtime-profile shell compression; no runtime configuration, repository resolution, handoff enablement, safety evaluation, journal writes, action execution, feedback delivery, provider calls, voucher behavior, persistence, public API behavior, or money movement changed.

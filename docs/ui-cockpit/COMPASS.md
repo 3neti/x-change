@@ -4525,3 +4525,11 @@ Current boundary:
 - Published package-owned Cockpit assets and verified package/host parity.
 - Report: `reports/638-voucher-detail-browser-feedback-refinement-slice-2-closure.md`.
 - Boundary remains unchanged: presentation-only service-summary rationalization; no connected read models, service status evaluation, count calculation, redaction policy, audit evidence, action availability, notification delivery, provider behavior, voucher state, persistence, public API behavior, or money movement changed.
+
+# 2026-07-22 — Runtime Profile Compact Diagnostics — Slice 1
+
+- Started the Runtime Profile Compact Diagnostics wave.
+- The tall hero and four summary cards are now one slim operational header with a compact fact strip.
+- Helper explanations remain available through `Runtime profile context`.
+- Report: `reports/639-runtime-profile-compact-diagnostics-slice-1.md`.
+- Boundary remains unchanged: presentation-only runtime-profile shell compression; no runtime configuration, repository resolution, handoff enablement, safety evaluation, journal writes, action execution, feedback delivery, provider calls, voucher behavior, persistence, public API behavior, or money movement changed.

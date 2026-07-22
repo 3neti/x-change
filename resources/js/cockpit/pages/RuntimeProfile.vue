@@ -74,35 +74,65 @@ function booleanLabel(value: unknown): string {
 <template>
     <CockpitLayout active-navigation="runtime-profile">
         <section class="space-y-6" data-testid="cockpit-runtime-profile-shell">
-            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                    {{ runtime_profile_read_model.copy.eyebrow }}
-                </p>
-                <h2 class="mt-2 text-2xl font-semibold text-slate-950 dark:text-slate-50">
-                    {{ runtime_profile_read_model.copy.title }}
-                </h2>
-                <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    {{ runtime_profile_read_model.copy.description }}
-                </p>
-            </div>
-
-            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <article
-                    v-for="card in summaryCards"
-                    :key="card.key"
-                    class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                    data-testid="cockpit-runtime-profile-summary-card"
+            <div
+                class="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-runtime-profile-header"
+            >
+                <div
+                    class="flex flex-col gap-3 lg:flex-row lg:items-center"
+                    data-testid="cockpit-runtime-profile-header-row"
                 >
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                        {{ card.label }}
-                    </p>
-                    <p class="mt-3 text-xl font-semibold text-slate-950 dark:text-slate-50">
-                        {{ card.value }}
-                    </p>
-                    <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                        {{ card.helper }}
-                    </p>
-                </article>
+                    <div class="min-w-0 lg:w-72 lg:shrink-0">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                                {{ runtime_profile_read_model.copy.eyebrow }}
+                            </p>
+                            <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                                read-only
+                            </span>
+                        </div>
+                        <h2 class="mt-1 text-lg font-semibold leading-6 text-slate-950 dark:text-slate-50">
+                            {{ runtime_profile_read_model.copy.title }}
+                        </h2>
+                        <p class="mt-0.5 text-xs leading-4 text-slate-600 dark:text-slate-300">
+                            {{ runtime_profile_read_model.copy.description }}
+                        </p>
+                    </div>
+
+                    <dl
+                        class="grid w-full gap-1.5 rounded-lg bg-slate-50 p-1.5 text-xs sm:grid-cols-2 lg:min-w-0 lg:flex-1 xl:grid-cols-4 dark:bg-slate-950"
+                        data-testid="cockpit-runtime-profile-header-facts"
+                    >
+                        <div
+                            v-for="card in summaryCards"
+                            :key="card.key"
+                            class="min-w-0 rounded-lg bg-white px-2.5 py-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800"
+                            data-testid="cockpit-runtime-profile-summary-card"
+                        >
+                            <dt class="text-[0.6rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                {{ card.label }}
+                            </dt>
+                            <dd class="truncate text-xs font-semibold leading-4 text-slate-950 dark:text-slate-50">
+                                {{ card.value }}
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+
+                <details
+                    class="mt-2 border-t border-slate-200 pt-2 dark:border-slate-800"
+                    data-testid="cockpit-runtime-profile-header-context"
+                >
+                    <summary class="cursor-pointer text-[0.7rem] font-semibold text-slate-500 dark:text-slate-400">
+                        Runtime profile context
+                    </summary>
+                    <ul class="mt-2 grid gap-1 text-xs leading-5 text-slate-500 sm:grid-cols-2 dark:text-slate-400">
+                        <li v-for="card in summaryCards" :key="card.key">
+                            <span class="font-semibold text-slate-700 dark:text-slate-300">{{ card.label }}:</span>
+                            {{ card.helper }}
+                        </li>
+                    </ul>
+                </details>
             </div>
 
             <section

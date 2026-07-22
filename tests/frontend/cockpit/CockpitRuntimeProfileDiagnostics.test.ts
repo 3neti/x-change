@@ -85,7 +85,17 @@ describe('Cockpit runtime profile diagnostics', () => {
         expect(text).toContain('NullCockpitOperatorIssuanceActivityJournalHandoff');
         expect(text).toContain('This diagnostics surface is read-only');
         expect(text).toContain('Runtime capabilities remain explicit opt-in');
-        expect(wrapper.findAll('[data-testid="cockpit-runtime-profile-summary-card"]')).toHaveLength(4);
+        const header = wrapper.find('[data-testid="cockpit-runtime-profile-header"]');
+        const facts = wrapper.find('[data-testid="cockpit-runtime-profile-header-facts"]');
+        const context = wrapper.find('[data-testid="cockpit-runtime-profile-header-context"]');
+
+        expect(header.classes()).toContain('py-3');
+        expect(header.classes()).not.toContain('p-6');
+        expect(facts.classes()).toContain('p-1.5');
+        expect(facts.findAll('[data-testid="cockpit-runtime-profile-summary-card"]')).toHaveLength(4);
+        expect(context.element.tagName.toLowerCase()).toBe('details');
+        expect(context.attributes('open')).toBeUndefined();
+        expect(context.find('summary').text()).toContain('Runtime profile context');
         expect(wrapper.findAll('[data-testid="cockpit-runtime-profile-component"]')).toHaveLength(2);
     });
 
