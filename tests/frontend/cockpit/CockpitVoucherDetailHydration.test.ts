@@ -702,18 +702,21 @@ describe('Cockpit Voucher Detail hydration', () => {
             },
         });
 
-        const panel = wrapper.find('[data-testid="cockpit-voucher-integration-summary-panel"]');
-        const cards = panel.findAll('[data-testid="cockpit-voucher-integration-summary-card"]');
+        const panel = wrapper.find('[data-testid="cockpit-voucher-detail-primary-evidence-readiness"]');
+        const cards = panel.findAll('[data-testid="cockpit-voucher-detail-primary-evidence-readiness-item"]');
+        const reasons = panel.findAll('[data-testid="cockpit-voucher-detail-primary-evidence-readiness-reason"]');
 
         expect(panel.element.tagName.toLowerCase()).toBe('details');
         expect(panel.attributes('open')).toBeUndefined();
         expect(panel.find('summary').text()).toContain('3 service summaries');
-        expect(panel.text()).toContain('Audit, follow-up, and notification status');
+        expect(panel.text()).toContain('Connected services');
         expect(wrapper.text()).toContain('2 entries');
         expect(wrapper.text()).toContain('1 actions');
         expect(wrapper.text()).toContain('1 deliveries');
         expect(cards).toHaveLength(3);
-        expect(cards[0].classes()).toContain('p-3');
+        expect(reasons).toHaveLength(3);
+        expect(reasons[0].text()).toContain('Ready for display');
+        expect(wrapper.find('[data-testid="cockpit-voucher-integration-summary-panel"]').exists()).toBe(false);
     });
 
     it('renders voucher integration unavailable reasons without exception messages', () => {
@@ -737,7 +740,7 @@ describe('Cockpit Voucher Detail hydration', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Audit, follow-up, and notification status');
+        expect(wrapper.text()).toContain('Connected services');
         expect(wrapper.text()).toContain('Read model unavailable');
         expect(wrapper.text()).not.toContain('RuntimeException');
         expect(wrapper.text()).not.toContain('must-not-render');
@@ -839,7 +842,7 @@ describe('Cockpit Voucher Detail hydration', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('Audit, follow-up, and notification status');
+        expect(wrapper.text()).toContain('Connected services');
         expect(wrapper.text()).toContain('Audit summary only');
         expect(wrapper.text()).toContain('Follow-up summary only');
         expect(wrapper.text()).toContain('Notification summary only');

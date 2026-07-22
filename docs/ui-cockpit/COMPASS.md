@@ -4515,3 +4515,13 @@ Current boundary:
 - Guidance, evidence cards, and disabled follow-up details remain inside the expanded body.
 - Report: `reports/637-voucher-detail-browser-feedback-refinement-slice-1.md`.
 - Boundary remains unchanged: presentation-only audit-summary compression; no audit evidence, connected-state evaluation, follow-up availability, action execution, journal writes, provider calls, voucher state, persistence, public API behavior, or money movement changed.
+
+# 2026-07-22 — Voucher Detail Browser Feedback Refinement — Slice 2 Closure
+
+- Completed Voucher Detail Browser Feedback Refinement Slice 2 / Closure.
+- `Connected services` is now the single canonical audit/follow-up/notification summary.
+- Statuses, counts, payload policies, and reason metadata remain available there.
+- Removed the duplicated lower Voucher Integration Summary disclosure.
+- Published package-owned Cockpit assets and verified package/host parity.
+- Report: `reports/638-voucher-detail-browser-feedback-refinement-slice-2-closure.md`.
+- Boundary remains unchanged: presentation-only service-summary rationalization; no connected read models, service status evaluation, count calculation, redaction policy, audit evidence, action availability, notification delivery, provider behavior, voucher state, persistence, public API behavior, or money movement changed.

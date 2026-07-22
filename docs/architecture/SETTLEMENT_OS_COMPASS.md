@@ -4224,3 +4224,13 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - The closed panel now uses one scan row while all evidence and guidance remain available when expanded.
 - UI/report: `../ui-cockpit/reports/637-voucher-detail-browser-feedback-refinement-slice-1.md`.
 - Boundary remains unchanged: presentation-only audit-summary compression; no audit evidence, connected-state evaluation, follow-up availability, action execution, journal writes, provider calls, voucher state, persistence, public API behavior, or money movement changed.
+
+## 2026-07-22 Update — Voucher Detail Browser Feedback Refinement — Slice 2
+
+- Closed the Voucher Detail Browser Feedback Refinement wave.
+- The primary Connected services disclosure is now the sole audit/follow-up/notification service summary.
+- The former lower duplicate was removed without dropping status, count, policy, or reason metadata.
+- Host-published Cockpit assets match package source.
+- UI/report: `../ui-cockpit/reports/638-voucher-detail-browser-feedback-refinement-slice-2-closure.md`.
+- Boundary remains unchanged: presentation-only service-summary rationalization; no connected read models, service status evaluation, count calculation, redaction policy, audit evidence, action availability, notification delivery, provider behavior, voucher state, persistence, public API behavior, or money movement changed.
+- Next recommended checkpoint: browser reinspection of the one-line audit summary and the single Connected services disclosure.

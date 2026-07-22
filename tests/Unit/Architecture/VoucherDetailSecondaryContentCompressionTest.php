@@ -36,10 +36,10 @@ it('documents voucher detail secondary content compression slice 2', function ()
         ->toContain('Voucher Detail Secondary Content Compression — Slice 2')
         ->toContain('closed three-service disclosure')
         ->toContain('Presentation-only integration-summary compression')
-        ->and($page)->toContain('data-testid="cockpit-voucher-integration-summary-panel"')
+        ->and($page)->toContain('data-testid="cockpit-voucher-detail-primary-evidence-readiness"')
         ->and($page)->toContain('3 service summaries')
         ->and($frontendTest)->toContain("expect(panel.attributes('open')).toBeUndefined()")
-        ->and($frontendTest)->toContain("expect(cards[0].classes()).toContain('p-3')")
+        ->and($frontendTest)->toContain('cockpit-voucher-detail-primary-evidence-readiness-reason')
         ->and($compass)->toContain('Voucher Detail Secondary Content Compression — Slice 2')
         ->and($settlementCompass)->toContain('Voucher Detail Secondary Content Compression — Slice 2');
 });
