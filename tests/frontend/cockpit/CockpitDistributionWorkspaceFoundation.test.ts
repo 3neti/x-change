@@ -92,7 +92,12 @@ describe('Cockpit Distribution Workspace foundation', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="cockpit-share-qr-panel"]').element.tagName.toLowerCase()).toBe('details');
+        const panel = wrapper.find('[data-testid="cockpit-share-qr-panel"]');
+        const assets = wrapper.findAll('[data-testid="cockpit-share-asset"]');
+
+        expect(panel.element.tagName.toLowerCase()).toBe('details');
+        expect(panel.classes()).toContain('py-3');
+        expect(panel.classes()).not.toContain('p-5');
         expect(wrapper.text()).toContain('Copy, QR, and short-link readiness');
         expect(wrapper.text()).toContain('Only the claim URL can be copied today');
         expect(wrapper.text()).toContain('QR asset');
@@ -101,7 +106,8 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).toContain('QR generation must use an approved Pay Code representation');
         expect(wrapper.find('[data-testid="cockpit-share-asset-density-summary"]').text()).toContain('Assets');
         expect(wrapper.find('[data-testid="cockpit-share-asset-density-summary"]').text()).toContain('Deferred');
-        expect(wrapper.findAll('[data-testid="cockpit-share-asset"]')).toHaveLength(3);
+        expect(assets).toHaveLength(3);
+        expect(assets[0].classes()).toContain('p-3');
         expect(wrapper.findAll('[data-testid="cockpit-share-asset-disclosure"]')).toHaveLength(3);
     });
 
@@ -135,6 +141,8 @@ describe('Cockpit Distribution Workspace foundation', () => {
 
     it('renders the full distribution workspace page with Pay Codes navigation and side-effect boundaries', () => {
         const wrapper = mount(DistributionWorkspace);
+        const supportingGrid = wrapper.find('[data-testid="cockpit-distribution-supporting-readiness-grid"]');
+        const supportingStack = wrapper.find('[data-testid="cockpit-distribution-supporting-readiness-stack"]');
 
         expect(wrapper.find('[data-testid="cockpit-distribution-workspace-shell"]').exists()).toBe(true);
         expect(wrapper.text()).toContain('Distribution inspection');
@@ -149,6 +157,9 @@ describe('Cockpit Distribution Workspace foundation', () => {
         expect(wrapper.text()).toContain('Share options');
         expect(wrapper.text()).toContain('Status evidence');
         expect(wrapper.find('[aria-current="page"]').text()).toContain('Pay Codes');
+        expect(supportingGrid.classes()).toContain('gap-3');
+        expect(supportingGrid.classes()).not.toContain('gap-6');
+        expect(supportingStack.classes()).toContain('space-y-3');
         expect(wrapper.text()).toContain('Inspection only');
         expect(wrapper.text()).toContain('display and copy the claim URL');
         expect(wrapper.text()).toContain('cannot send messages');

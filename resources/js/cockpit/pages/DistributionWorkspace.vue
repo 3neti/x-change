@@ -816,8 +816,14 @@ function setParam(params: URLSearchParams, key: string, value: string | null | u
                 :actions="distributionActions"
             />
 
-            <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
-                <div class="space-y-6">
+            <div
+                class="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]"
+                data-testid="cockpit-distribution-supporting-readiness-grid"
+            >
+                <div
+                    class="space-y-3"
+                    data-testid="cockpit-distribution-supporting-readiness-stack"
+                >
                     <CockpitPrintTemplatePanel :templates="printTemplates" />
                     <CockpitDistributionAnalyticsPanel :metrics="distributionMetrics" />
                 </div>
