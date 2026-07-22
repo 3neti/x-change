@@ -4549,3 +4549,15 @@ Current boundary:
 - Published package-owned Cockpit assets and verified package/host parity.
 - Report: `reports/641-runtime-profile-compact-diagnostics-slice-3-closure.md`.
 - Boundary remains unchanged: presentation-only safety-panel compression closure; no safety values, runtime opt-in rules, configuration mutation, component resolution, handoff enablement, journal writes, action execution, feedback delivery, provider calls, voucher behavior, persistence, public API behavior, or money movement changed.
+
+# 2026-07-23 — Cockpit Visual Acceptance Wave Closure
+
+- Closed the page-focused visual acceptance wave across Dashboard, Quick Generate, Pay Code Explorer, Pay Code Detail, Distribution Workspace, and Runtime Profile.
+- Human acceptance covered the compact global header, operator-scoped Internal / Outstanding / Usable balance hydration, centered single-line balance metrics, collapsed-card alignment, rationalized service summaries, and normalized Open / Copy claim action sizing.
+- Live Balance remains explicitly disconnected until its provider integration is enabled.
+- Refreshed the read-only scenario checkpoint to follow the accepted notification copy, audit boundary language, and canonical Connected services summary.
+- The complete Cockpit frontend matrix passed: 18 files and 183 tests.
+- Browser-control discovery returned no connected browser backends, so this closure does not claim a new automated desktop/mobile browser pass. The browser checkpoint was conditional on control availability and is recorded as unavailable rather than silently substituted with another browser surface.
+- Published Cockpit asset parity and the production frontend build remain required closure checks.
+- Boundary remains unchanged: no distribution dispatch, feedback delivery, action execution, journal writes, provider calls, Live Balance enablement, voucher mutation, persistence, public API behavior, or money movement changed.
+- Next recommended wave: hydrate Quick Generate funding and issuance-preflight facts from the existing internal balance authority while preserving the disconnected Live Balance boundary.
