@@ -139,4 +139,35 @@ describe('Cockpit shell layout baseline', () => {
         expect(wrapper.text()).toContain('Summary not connected');
         expect(wrapper.findAll('[data-testid="cockpit-balance-metric"]')).toHaveLength(1);
     });
+
+    it('reserves a consistent label row so balance values align', () => {
+        const wrapper = mount(CockpitBalanceHud, {
+            props: {
+                balances: [
+                    {
+                        key: 'internal',
+                        label: 'Internal Balance',
+                        value: '₱8,241.70',
+                    },
+                    {
+                        key: 'outstanding',
+                        label: 'Outstanding Pay Codes',
+                        value: '₱0.00',
+                    },
+                ],
+            },
+        });
+
+        const labelRows = wrapper.findAll('[data-testid="cockpit-balance-label"]');
+        const valueRows = wrapper.findAll('[data-testid="cockpit-balance-value"]');
+
+        expect(labelRows).toHaveLength(2);
+        expect(valueRows).toHaveLength(2);
+
+        for (const labelRow of labelRows) {
+            expect(labelRow.classes()).toContain('min-h-8');
+            expect(labelRow.classes()).toContain('items-end');
+            expect(labelRow.classes()).toContain('leading-4');
+        }
+    });
 });

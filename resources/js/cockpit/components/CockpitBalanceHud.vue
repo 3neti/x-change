@@ -30,13 +30,18 @@ const toneClass = (tone: CockpitBalanceMetric['tone'] = 'neutral'): string => {
             ]"
             data-testid="cockpit-balance-metric"
         >
-            <p class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] opacity-70">
+            <p
+                class="flex min-h-8 items-end text-[0.65rem] font-semibold uppercase leading-4 tracking-[0.18em] opacity-70"
+                data-testid="cockpit-balance-label"
+            >
                 {{ balance.label }}
             </p>
-            <p class="mt-1 text-sm font-semibold tabular-nums">
+            <p
+                class="mt-1 text-sm font-semibold tabular-nums"
+                data-testid="cockpit-balance-value"
+            >
                 {{ balance.value }}
             </p>
         </article>
     </section>
 </template>
-
