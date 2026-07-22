@@ -212,6 +212,22 @@ describe('Cockpit Quick Generate foundation', () => {
                 '[data-testid="cockpit-quick-generate-diagnostics-summary-item"]',
             ),
         ).toHaveLength(8);
+        expect(
+            wrapper.find(
+                '[data-testid="cockpit-quick-generate-diagnostics-summary"]',
+            ).classes(),
+        ).toContain('py-3');
+        expect(
+            wrapper.find(
+                '[data-testid="cockpit-quick-generate-diagnostics-summary-grid"]',
+            ).classes(),
+        ).toContain('gap-2');
+        expect(
+            wrapper.find(
+                '[data-testid="cockpit-quick-generate-diagnostics-summary-item"]',
+            ).classes(),
+        ).toContain('p-2.5');
+        expect(wrapper.text()).toContain('8 checks');
     });
 
     it('can render a non-diagnostic disclosure for operator reference content', () => {
@@ -2090,6 +2106,21 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(referenceGuide.exists()).toBe(true);
         expect(referenceGuide.classes()).toContain('py-3');
         expect(referenceGuide.attributes('open')).toBeUndefined();
+        const workflowStack = wrapper.find(
+            '[data-testid="cockpit-quick-generate-primary-workflow-stack"]',
+        );
+        const engineeringDiagnostics = wrapper.find(
+            '[data-testid="cockpit-quick-generate-engineering-diagnostics"]',
+        );
+        const fullHistory = wrapper.find(
+            '[data-testid="cockpit-quick-generate-full-history"]',
+        );
+
+        expect(workflowStack.classes()).toContain('space-y-3');
+        expect(engineeringDiagnostics.classes()).toContain('py-3');
+        expect(engineeringDiagnostics.attributes('open')).toBeUndefined();
+        expect(fullHistory.classes()).toContain('py-3');
+        expect(fullHistory.attributes('open')).toBeUndefined();
         expect(wrapper.text()).toContain('Template Selector');
         expect(wrapper.text()).toContain('Runtime Inputs');
         expect(wrapper.text()).toContain('Pricing and Funding');

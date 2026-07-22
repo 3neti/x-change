@@ -1205,7 +1205,10 @@ function stringValue(value: unknown): string | null {
                 </div>
             </CockpitDiagnosticsDisclosure>
 
-            <div class="space-y-4">
+            <div
+                class="space-y-3"
+                data-testid="cockpit-quick-generate-primary-workflow-stack"
+            >
                 <CockpitQuickGenerateSubmitPanel
                     :mutation-contract="mutationContract"
                     :draft-contract="draftContract"
@@ -1218,10 +1221,12 @@ function stringValue(value: unknown): string | null {
                     :runtime-enabled="true"
                 />
                 <CockpitDiagnosticsDisclosure
+                    compact
                     title="Engineering diagnostics"
                     summary="A compact readiness summary is shown first. Open the full architecture history only when debugging gate provenance or old slice decisions."
                     eyebrow="Optional diagnostics"
                     action-label="Show diagnostics"
+                    data-testid="cockpit-quick-generate-engineering-diagnostics"
                 >
                     <CockpitQuickGenerateDiagnosticsSummary
                         :mutation-contract="mutationContract"
@@ -1240,10 +1245,12 @@ function stringValue(value: unknown): string | null {
                     />
 
                     <CockpitDiagnosticsDisclosure
+                        compact
                         title="Full architecture history"
                         summary="These older panels are retained as engineering evidence. They should not be used as the primary operator workflow."
                         eyebrow="Detailed history"
                         action-label="Show full history"
+                        data-testid="cockpit-quick-generate-full-history"
                     >
                         <CockpitPricingFundingSummary
                             :summaries="pricingSummaries"

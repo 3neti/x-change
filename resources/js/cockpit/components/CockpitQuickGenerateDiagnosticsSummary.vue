@@ -105,23 +105,23 @@ function displayStatus(value?: string | number | null): string {
 
 <template>
     <section
-        class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
+        class="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-950"
         data-testid="cockpit-quick-generate-diagnostics-summary"
     >
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <p
-                    class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400"
+                    class="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400"
                 >
                     Readiness summary
                 </p>
                 <h3
-                    class="mt-1 text-base font-semibold text-slate-950 dark:text-slate-50"
+                    class="mt-0.5 text-sm font-semibold text-slate-950 dark:text-slate-50"
                 >
                     Quick Generate handoff status
                 </h3>
                 <p
-                    class="mt-1 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400"
+                    class="mt-0.5 max-w-2xl text-xs leading-4 text-slate-600 dark:text-slate-400"
                 >
                     This summary replaces the old wall of gate panels for
                     normal review. The full architecture history remains
@@ -129,18 +129,26 @@ function displayStatus(value?: string | number | null): string {
                 </p>
             </div>
 
-            <span
-                class="inline-flex w-fit rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/40 dark:text-emerald-300"
-            >
-                {{ recommendation }}
-            </span>
+            <div class="flex flex-wrap gap-1.5">
+                <span class="inline-flex w-fit rounded-full bg-slate-100 px-2 py-0.5 text-[0.7rem] font-semibold text-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                    {{ items.length }} checks
+                </span>
+                <span
+                    class="inline-flex w-fit rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[0.7rem] font-semibold text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/40 dark:text-emerald-300"
+                >
+                    {{ recommendation }}
+                </span>
+            </div>
         </div>
 
-        <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div
+            class="mt-3 grid gap-2 border-t border-slate-200 pt-3 md:grid-cols-2 xl:grid-cols-4 dark:border-slate-800"
+            data-testid="cockpit-quick-generate-diagnostics-summary-grid"
+        >
             <article
                 v-for="item in items"
                 :key="item.key"
-                class="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/60"
+                class="rounded-lg border border-slate-200 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-900/60"
                 data-testid="cockpit-quick-generate-diagnostics-summary-item"
             >
                 <p class="text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -151,7 +159,7 @@ function displayStatus(value?: string | number | null): string {
                 >
                     {{ item.status }}
                 </p>
-                <p class="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-400">
+                <p class="mt-1 text-xs leading-4 text-slate-600 dark:text-slate-400">
                     {{ item.helper }}
                 </p>
             </article>
