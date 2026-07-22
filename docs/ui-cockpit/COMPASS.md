@@ -4448,3 +4448,12 @@ Current boundary:
 - The operator next step remains visible while lifecycle guidance is available through a closed disclosure.
 - Report: `reports/629-voucher-detail-primary-workflow-compression-slice-2.md`.
 - Boundary remains unchanged: presentation-only primary-workflow compression; no read-model changes, lifecycle evaluation changes, claim URL generation, copy behavior, navigation behavior, distribution dispatch, feedback delivery, action execution, journal writes, provider calls, voucher mutation, persistence, public API behavior, or money movement changed.
+
+# 2026-07-22 — Voucher Detail Primary Workflow Compression — Slice 3 Closure
+
+- Completed Voucher Detail Primary Workflow Compression Slice 3 / Closure.
+- Connected context and Connected services now use slim closed disclosures with visible fact counts.
+- All claim, notification, follow-up, audit, and connected-service summaries remain available on demand.
+- Published package-owned Cockpit assets and verified package/host parity.
+- Report: `reports/630-voucher-detail-primary-workflow-compression-slice-3-closure.md`.
+- Boundary remains unchanged: presentation-only primary-workflow compression closure; no read-model changes, claim URL generation, copy behavior, lifecycle evaluation changes, notification delivery, action execution, journal writes, provider calls, voucher mutation, persistence, public API behavior, or money movement changed.

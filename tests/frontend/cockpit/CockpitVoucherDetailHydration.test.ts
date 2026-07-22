@@ -285,6 +285,9 @@ describe('Cockpit Voucher Detail hydration', () => {
         const items = readiness.findAll('[data-testid="cockpit-voucher-detail-primary-evidence-readiness-item"]');
 
         expect(readiness.exists()).toBe(true);
+        expect(readiness.element.tagName.toLowerCase()).toBe('details');
+        expect(readiness.attributes('open')).toBeUndefined();
+        expect(readiness.find('summary').text()).toContain('3 service summaries');
         expect(readiness.text()).toContain('Connected services');
         expect(readiness.text()).toContain('Read-only audit, follow-up, and notification state');
         expect(readiness.text()).toContain('summary only');
@@ -331,6 +334,9 @@ describe('Cockpit Voucher Detail hydration', () => {
         const items = context.findAll('[data-testid="cockpit-voucher-detail-connected-context-item"]');
 
         expect(context.exists()).toBe(true);
+        expect(context.element.tagName.toLowerCase()).toBe('details');
+        expect(context.attributes('open')).toBeUndefined();
+        expect(context.find('summary').text()).toContain('4 read-only facts');
         expect(context.text()).toContain('Connected context');
         expect(context.text()).toContain('claim access, notification state, follow-up guidance, and audit evidence');
         expect(context.text()).toContain('Claim URL');
@@ -345,6 +351,7 @@ describe('Cockpit Voucher Detail hydration', () => {
         expect(context.text()).not.toContain('provider_payload');
         expect(context.text()).not.toContain('raw_payload');
         expect(items).toHaveLength(4);
+        expect(items[0].classes()).toContain('py-2');
     });
 
     it('renders lifecycle guidance from display status without enforcing policy', () => {

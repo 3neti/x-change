@@ -950,86 +950,88 @@ function policyLabel(value: string): string {
                     </details>
                 </div>
 
-                <div
-                    class="mt-4 rounded-xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/60 dark:bg-slate-950/70"
+                <details
+                    class="mt-3 border-t border-emerald-200 pt-3 dark:border-emerald-900/60"
                     data-testid="cockpit-voucher-detail-connected-context"
                 >
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
-                                Connected context
-                            </p>
-                            <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                                Main inspection facts for claim access, notification state, follow-up guidance, and audit evidence.
-                            </p>
-                        </div>
-                        <span class="w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200">
+                    <summary class="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                        <span class="flex flex-wrap items-center gap-2">
+                            <span>Connected context</span>
+                            <span class="rounded-full bg-white/80 px-2 py-0.5 text-[0.65rem] tracking-normal text-emerald-700 normal-case dark:bg-slate-950/70 dark:text-emerald-200">
+                                4 read-only facts
+                            </span>
+                        </span>
+                        <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[0.65rem] tracking-normal text-emerald-700 normal-case dark:bg-emerald-950 dark:text-emerald-200">
                             read-only
                         </span>
-                    </div>
-                    <dl class="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
+                    </summary>
+                    <p class="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300">
+                        Main inspection facts for claim access, notification state, follow-up guidance, and audit evidence.
+                    </p>
+                    <dl class="mt-2 grid gap-1.5 text-xs sm:grid-cols-2 xl:grid-cols-4">
                         <div
                             v-for="item in connectedContextSummaries"
                             :key="item.key"
-                            class="rounded-lg border border-slate-200 p-3 dark:border-slate-800"
+                            class="rounded-lg bg-white/70 px-2.5 py-2 ring-1 ring-slate-200 dark:bg-slate-950/60 dark:ring-slate-800"
                             data-testid="cockpit-voucher-detail-connected-context-item"
                         >
-                            <dt class="flex items-center justify-between gap-3">
-                                <span class="font-semibold text-slate-950 dark:text-slate-50">
+                            <dt class="flex items-center justify-between gap-2">
+                                <span class="text-xs font-semibold text-slate-950 dark:text-slate-50">
                                     {{ item.label }}
                                 </span>
-                                <span class="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                                <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
                                     {{ item.status }}
                                 </span>
                             </dt>
-                            <dd class="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50">
+                            <dd class="mt-1 text-xs font-semibold text-slate-950 dark:text-slate-50">
                                 {{ item.count }}
                             </dd>
-                            <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                            <p class="mt-0.5 text-[0.7rem] leading-4 text-slate-500 dark:text-slate-400">
                                 {{ item.source }}
                             </p>
                         </div>
                     </dl>
-                </div>
+                </details>
 
-                <div
-                    class="mt-4 rounded-xl border border-emerald-200 bg-white/80 p-4 dark:border-emerald-900/60 dark:bg-slate-950/70"
+                <details
+                    class="mt-3 border-t border-emerald-200 pt-3 dark:border-emerald-900/60"
                     data-testid="cockpit-voucher-detail-primary-evidence-readiness"
                 >
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
-                                Connected services
-                            </p>
-                            <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                                Read-only audit, follow-up, and notification state. These facts do not execute actions, send notifications, or write journal entries.
-                            </p>
-                        </div>
-                        <span class="w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200">
+                    <summary class="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                        <span class="flex flex-wrap items-center gap-2">
+                            <span>Connected services</span>
+                            <span class="rounded-full bg-white/80 px-2 py-0.5 text-[0.65rem] tracking-normal text-emerald-700 normal-case dark:bg-slate-950/70 dark:text-emerald-200">
+                                3 service summaries
+                            </span>
+                        </span>
+                        <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[0.65rem] tracking-normal text-emerald-700 normal-case dark:bg-emerald-950 dark:text-emerald-200">
                             summary only
                         </span>
-                    </div>
-                    <dl class="mt-4 grid gap-3 text-sm md:grid-cols-3">
+                    </summary>
+                    <p class="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300">
+                        Read-only audit, follow-up, and notification state. These facts do not execute actions, send notifications, or write journal entries.
+                    </p>
+                    <dl class="mt-2 grid gap-1.5 text-xs md:grid-cols-3">
                         <div
                             v-for="item in primaryEvidenceReadiness"
                             :key="item.key"
-                            class="rounded-lg border border-slate-200 p-3 dark:border-slate-800"
+                            class="rounded-lg bg-white/70 px-2.5 py-2 ring-1 ring-slate-200 dark:bg-slate-950/60 dark:ring-slate-800"
                             data-testid="cockpit-voucher-detail-primary-evidence-readiness-item"
                         >
-                            <dt class="flex items-center justify-between gap-3">
-                                <span class="font-semibold text-slate-950 dark:text-slate-50">
+                            <dt class="flex items-center justify-between gap-2">
+                                <span class="text-xs font-semibold text-slate-950 dark:text-slate-50">
                                     {{ item.label }}
                                 </span>
-                                <span class="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                                <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
                                     {{ item.status }}
                                 </span>
                             </dt>
-                            <dd class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                            <dd class="mt-1 text-[0.7rem] leading-4 text-slate-500 dark:text-slate-400">
                                 {{ item.count }} · {{ item.policy }}
                             </dd>
                         </div>
                     </dl>
-                </div>
+                </details>
             </section>
 
             <section

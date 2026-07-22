@@ -4159,3 +4159,12 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Lifecycle guidance retains its visible state and tone in a closed-by-default disclosure.
 - UI/report: `../ui-cockpit/reports/629-voucher-detail-primary-workflow-compression-slice-2.md`.
 - Boundary remains unchanged: presentation-only primary-workflow compression; no read-model changes, lifecycle evaluation changes, claim URL generation, copy behavior, navigation behavior, distribution dispatch, feedback delivery, action execution, journal writes, provider calls, voucher mutation, persistence, public API behavior, or money movement changed.
+
+## 2026-07-22 Update — Voucher Detail Primary Workflow Compression — Slice 3
+
+- Closed the Voucher Detail Primary Workflow Compression wave.
+- Connected context and Connected services now remain available through slim closed disclosures below the operator next step.
+- Host-published Cockpit assets match package source.
+- UI/report: `../ui-cockpit/reports/630-voucher-detail-primary-workflow-compression-slice-3-closure.md`.
+- Boundary remains unchanged: presentation-only primary-workflow compression closure; no read-model changes, claim URL generation, copy behavior, lifecycle evaluation changes, notification delivery, action execution, journal writes, provider calls, voucher mutation, persistence, public API behavior, or money movement changed.
+- Next recommended checkpoint: browser inspection of the Voucher Detail header, readiness strip, lifecycle disclosure, and secondary connected summaries; then compress claim-link and lower evidence panels if accepted.
