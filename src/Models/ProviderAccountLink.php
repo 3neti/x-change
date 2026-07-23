@@ -30,8 +30,19 @@ class ProviderAccountLink extends Model
         'identity_level',
         'capabilities',
         'metadata',
+        'routing_profile_ciphertext',
+        'routing_fingerprint',
+        'display_reference',
         'ready_at',
         'last_synced_at',
+        'verified_at',
+        'activated_at',
+        'disabled_at',
+    ];
+
+    protected $hidden = [
+        'routing_profile_ciphertext',
+        'routing_fingerprint',
     ];
 
     protected function casts(): array
@@ -39,8 +50,12 @@ class ProviderAccountLink extends Model
         return [
             'capabilities' => 'array',
             'metadata' => 'array',
+            'routing_profile_ciphertext' => 'encrypted:array',
             'ready_at' => 'datetime',
             'last_synced_at' => 'datetime',
+            'verified_at' => 'immutable_datetime',
+            'activated_at' => 'immutable_datetime',
+            'disabled_at' => 'immutable_datetime',
         ];
     }
 
@@ -51,6 +66,8 @@ class ProviderAccountLink extends Model
 
     public function isReady(): bool
     {
-        return $this->status === 'ready' && $this->ready_at !== null;
+        return $this->status === 'ready'
+            && $this->ready_at !== null
+            && $this->disabled_at === null;
     }
 }

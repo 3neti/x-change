@@ -8,8 +8,10 @@ use DateTimeImmutable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use LBHurtado\EmiCore\Data\Funding\FundingDestinationData;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionRequestData;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionsData;
+use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Exceptions\FundingIntentTransitionDenied;
 use LBHurtado\XChange\Models\FundingIntent;
@@ -20,6 +22,7 @@ class IssueFundingInstructions
 {
     public function __construct(
         private readonly FundingProviderAdapterRegistry $providers,
+        private readonly FundingDestinationResolverContract $destinations,
     ) {}
 
     public function handle(FundingIntent $intent, string $actorType, string $actorId): FundingIntent
@@ -66,6 +69,7 @@ class IssueFundingInstructions
                 metadata: [
                     'funding_intent_reference' => $current->reference,
                 ],
+                destination: $this->destination($current),
             ));
 
         $this->assertInstructionsMatch($current, $instructions);
@@ -159,5 +163,14 @@ class IssueFundingInstructions
         }
 
         return hash_hmac('sha256', $value, $key);
+    }
+
+    private function destination(FundingIntent $intent): FundingDestinationData
+    {
+        $snapshot = $intent->destination_snapshot_ciphertext;
+
+        return is_array($snapshot)
+            ? FundingDestinationData::from($snapshot)
+            : $this->destinations->shared($intent->provider_code, $intent->account_reference);
     }
 }

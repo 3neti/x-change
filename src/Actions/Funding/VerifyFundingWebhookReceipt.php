@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Actions\Funding\RecordProviderFundingObservation;
+use LBHurtado\EmiCore\Data\Funding\FundingDestinationData;
 use LBHurtado\EmiCore\Data\Funding\FundingVerificationData;
 use LBHurtado\EmiCore\Exceptions\ProviderFundingNotObserved;
 use LBHurtado\EmiCore\Exceptions\ProviderFundingVerificationIndeterminate;
@@ -162,6 +163,7 @@ class VerifyFundingWebhookReceipt
                     providerRequestId: $intent->provider_request_id,
                     fundingAddress: $intent->funding_address_ciphertext,
                     webhookReceiptId: $receipt->getKey(),
+                    destination: $this->destination($intent),
                 ));
         } catch (ProviderFundingNotObserved) {
             $this->transition->handle($intent, $this->transitionData(
@@ -231,6 +233,7 @@ class VerifyFundingWebhookReceipt
                     providerRequestId: $intent->provider_request_id,
                     fundingAddress: $intent->funding_address_ciphertext,
                     webhookReceiptId: $receipt->getKey(),
+                    destination: $this->destination($intent),
                 ));
         } catch (ProviderFundingNotObserved) {
             return;
@@ -366,5 +369,12 @@ class VerifyFundingWebhookReceipt
                 'provider' => $receipt->provider_code,
             ],
         );
+    }
+
+    private function destination(FundingIntent $intent): ?FundingDestinationData
+    {
+        $snapshot = $intent->destination_snapshot_ciphertext;
+
+        return is_array($snapshot) ? FundingDestinationData::from($snapshot) : null;
     }
 }

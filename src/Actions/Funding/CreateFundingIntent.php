@@ -67,6 +67,8 @@ class CreateFundingIntent
                     'created_by_id' => $actorId,
                     'expires_at' => $data->expiresAt,
                     'metadata' => $data->metadata,
+                    'destination_snapshot_ciphertext' => $data->destination?->toArray(),
+                    'destination_fingerprint' => $data->destination?->fingerprint,
                 ]);
 
                 $intent->events()->create([

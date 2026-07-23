@@ -143,6 +143,12 @@ abstract class TestCase extends Orchestra
             'sms_feedback' => 0.0,
         ]);
 
+        $app['config']->set('payment-gateway.netbank.funding.corporate_account_number', '113001000019');
+        $app['config']->set('payment-gateway.netbank.funding.corporate_account_name', 'X Change Treasury');
+        $app['config']->set('payment-gateway.netbank.funding.vca_alias', '91500');
+        $app['config']->set('payment-gateway.netbank.funding.vca_alias_token', 'test-vca-alias-token');
+        $app['config']->set('constellation.funding.wallet_id', 'CNSTWLLT000001');
+
         $app['config']->set('data.validation_strategy', 'always');
         $app['config']->set('data.max_transformation_depth', 6);
         $app['config']->set('data.throw_when_max_transformation_depth_reached', 6);

@@ -31,6 +31,8 @@ class FundingIntent extends Model
         'funding_address_ciphertext',
         'funding_address_hash',
         'instructions_ciphertext',
+        'destination_snapshot_ciphertext',
+        'destination_fingerprint',
         'matched_observation_id',
         'provider_transaction_id',
         'instructions_created_at',
@@ -50,6 +52,8 @@ class FundingIntent extends Model
         'funding_address_ciphertext',
         'funding_address_hash',
         'instructions_ciphertext',
+        'destination_snapshot_ciphertext',
+        'destination_fingerprint',
     ];
 
     protected static function booted(): void
@@ -75,6 +79,7 @@ class FundingIntent extends Model
             'version' => 'integer',
             'funding_address_ciphertext' => 'encrypted',
             'instructions_ciphertext' => 'encrypted:array',
+            'destination_snapshot_ciphertext' => 'encrypted:array',
             'matched_observation_id' => 'integer',
             'instructions_created_at' => 'immutable_datetime',
             'evidence_received_at' => 'immutable_datetime',

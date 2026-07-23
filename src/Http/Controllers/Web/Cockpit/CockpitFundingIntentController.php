@@ -10,6 +10,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Number;
 use LBHurtado\XChange\Actions\Funding\CreateFundingIntent;
 use LBHurtado\XChange\Actions\Funding\IssueFundingInstructions;
+use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Data\Funding\CreateFundingIntentData;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCockpitFundingIntentRequest;
@@ -21,14 +22,16 @@ class CockpitFundingIntentController extends Controller
     public function __invoke(
         CreateCockpitFundingIntentRequest $request,
         WalletAccessContract $wallets,
+        FundingDestinationResolverContract $destinations,
         CreateFundingIntent $createFundingIntent,
         IssueFundingInstructions $issueFundingInstructions,
     ): RedirectResponse {
         $actor = $request->user();
         $wallet = $wallets->resolveForUser($actor);
+        $accountReference = $this->accountReference($wallet);
         $validated = $request->validated();
         $intent = $createFundingIntent->handle(new CreateFundingIntentData(
-            accountReference: $this->accountReference($wallet),
+            accountReference: $accountReference,
             provider: $validated['provider'],
             expectedAmountMinor: $validated['amount_minor'],
             currency: $validated['currency'],
@@ -41,6 +44,11 @@ class CockpitFundingIntentController extends Controller
             metadata: [
                 'source' => 'x-change.cockpit',
             ],
+            destination: $destinations->resolve(
+                owner: $actor,
+                provider: $validated['provider'],
+                accountReference: $accountReference,
+            ),
         ));
         $intent = $issueFundingInstructions->handle(
             intent: $intent,

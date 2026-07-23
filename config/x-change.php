@@ -8,6 +8,7 @@ use LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Contracts\FundingAccountRecoveryContract;
+use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
 use LBHurtado\XChange\Contracts\IdempotencyStoreContract;
 use LBHurtado\XChange\Contracts\IssuerOnboardingContract;
 use LBHurtado\XChange\Contracts\IssuerResolverContract;
@@ -77,6 +78,7 @@ use LBHurtado\XChange\Services\Execution\XFeedbackExecutionResultFeedbackHandoff
 use LBHurtado\XChange\Services\Execution\XJournalExecutionResultHandoffSummaryJournalWriter;
 use LBHurtado\XChange\Services\Execution\XJournalExecutionResultJournalHandoff;
 use LBHurtado\XChange\Services\Funding\BavixFundingAccountCredit;
+use LBHurtado\XChange\Services\Funding\DefaultFundingDestinationResolver;
 use LBHurtado\XChange\Services\LedgerPooledProviderTopology;
 use LBHurtado\XChange\Services\ManualProviderTopology;
 use LBHurtado\XChange\Services\NullClaimOtpChallengeService;
@@ -314,6 +316,7 @@ return [
         'issuance' => PayCodeIssuanceService::class,
         'wallet_access' => WalletAccessService::class,
         'funding_account_credit' => BavixFundingAccountCredit::class,
+        'funding_destination_resolver' => DefaultFundingDestinationResolver::class,
         'idempotency_store' => CacheIdempotencyStore::class,
         'issuer_onboarding' => DefaultIssuerOnboardingService::class,
         'onboarding_gateway' => DefaultXChangeOnboardingGateway::class,
@@ -354,6 +357,7 @@ return [
         WalletAccessContract::class => 'wallet_access',
         FundingAccountCreditContract::class => 'funding_account_credit',
         FundingAccountRecoveryContract::class => 'funding_account_credit',
+        FundingDestinationResolverContract::class => 'funding_destination_resolver',
         IdempotencyStoreContract::class => 'idempotency_store',
         IssuerOnboardingContract::class => 'issuer_onboarding',
         XChangeOnboardingGatewayContract::class => 'onboarding_gateway',
