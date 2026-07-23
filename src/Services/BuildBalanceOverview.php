@@ -9,6 +9,7 @@ use LBHurtado\XChange\Contracts\ProviderAccountLinkRepositoryContract;
 use LBHurtado\XChange\Contracts\ProviderProvisioningGatewayContract;
 use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
+use LBHurtado\XChange\Models\ProviderBalanceSnapshot;
 use Throwable;
 
 class BuildBalanceOverview
@@ -20,6 +21,7 @@ class BuildBalanceOverview
         protected WalletAccessContract $wallets,
         protected ?SyncPaynamicsWalletBalance $paynamicsBalances = null,
         protected ?CheckNetbankSourceAccountReadiness $netbankSourceAccount = null,
+        protected ?ProviderBalanceSnapshotStore $providerBalanceSnapshots = null,
     ) {}
 
     /**
@@ -37,7 +39,7 @@ class BuildBalanceOverview
         $providerBalance = $topology === 'provider_customer_wallet'
             ? $this->providerWalletBalance($owner, $provider, $syncIfStale)
             : null;
-        $netbankSourceBalance = $this->netbankSourceAccountBalance($provider, $topology);
+        $netbankSourceBalance = $this->netbankSourceAccountBalance($provider, $topology, $syncIfStale);
 
         $balances = array_values(array_filter([
             $providerBalance,
@@ -193,23 +195,57 @@ class BuildBalanceOverview
     /**
      * @return array<string, mixed>|null
      */
-    protected function netbankSourceAccountBalance(string $provider, string $topology): ?array
-    {
+    protected function netbankSourceAccountBalance(
+        string $provider,
+        string $topology,
+        bool $syncIfStale,
+    ): ?array {
         if ($provider !== 'netbank' || $topology !== 'ledger_pooled') {
             return null;
         }
 
+        $this->providerBalanceSnapshots ??= app(ProviderBalanceSnapshotStore::class);
+
+        if (! $syncIfStale) {
+            return $this->netbankSourceAccountBalanceFromSnapshot(
+                $this->providerBalanceSnapshots->find('netbank', 'netbank_source_account'),
+            );
+        }
+
         $this->netbankSourceAccount ??= app(CheckNetbankSourceAccountReadiness::class);
         $readiness = $this->netbankSourceAccount->handle();
+        $checked = (bool) ($readiness['checked'] ?? false);
+        $ready = (bool) ($readiness['ready'] ?? false);
+
+        if (
+            $checked
+            && $ready
+            && array_key_exists('available_balance_minor', $readiness)
+        ) {
+            $this->providerBalanceSnapshots->recordSuccess(
+                'netbank',
+                'netbank_source_account',
+                $readiness,
+            );
+        } elseif ($checked) {
+            $snapshot = $this->providerBalanceSnapshots->recordFailure(
+                'netbank',
+                'netbank_source_account',
+                (string) ($readiness['message'] ?? 'NetBank source account refresh failed.'),
+            );
+
+            if ($snapshot !== null) {
+                return $this->netbankSourceAccountBalanceFromSnapshot($snapshot);
+            }
+        }
+
         $availableMinor = array_key_exists('available_balance_minor', $readiness)
             ? (int) $readiness['available_balance_minor']
             : null;
         $balanceMinor = array_key_exists('balance_minor', $readiness)
             ? (int) $readiness['balance_minor']
             : $availableMinor;
-        $checked = (bool) ($readiness['checked'] ?? false);
         $enabled = (bool) ($readiness['enabled'] ?? false);
-        $ready = (bool) ($readiness['ready'] ?? false);
         $syncStatus = match (true) {
             ! $enabled => 'disabled',
             $checked && $ready => 'fresh',
@@ -230,10 +266,66 @@ class BuildBalanceOverview
             'available_balance_minor' => $availableMinor,
             'balance' => $availableMinor !== null ? $availableMinor / 100 : null,
             'currency' => (string) ($readiness['currency'] ?? config('x-change.pricing.currency', 'PHP')),
-            'checked_at' => $readiness['as_of'] ?? ($checked ? now()->toIso8601String() : null),
+            'checked_at' => $readiness['fetched_at'] ?? ($checked ? now()->toIso8601String() : null),
+            'provider_as_of' => $readiness['as_of'] ?? null,
             'account_number_masked' => $readiness['account_number_masked'] ?? null,
             'sync_status' => $syncStatus,
             'sync_message' => $readiness['message'] ?? 'NetBank source account readiness was not checked.',
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function netbankSourceAccountBalanceFromSnapshot(?ProviderBalanceSnapshot $snapshot): array
+    {
+        if ($snapshot === null) {
+            return [
+                'key' => 'netbank_source_account',
+                'label' => 'NetBank Source Account Balance',
+                'description' => 'No cached NetBank liquidity snapshot is available.',
+                'authority' => 'provider_source_account',
+                'source' => 'netbank',
+                'is_authoritative' => false,
+                'is_liquidity_guard' => true,
+                'is_stale' => true,
+                'balance_minor' => null,
+                'available_balance_minor' => null,
+                'balance' => null,
+                'currency' => (string) config('x-change.pricing.currency', 'PHP'),
+                'checked_at' => null,
+                'provider_as_of' => null,
+                'account_number_masked' => null,
+                'sync_status' => 'unavailable',
+                'sync_message' => 'Open Balances to refresh NetBank liquidity.',
+            ];
+        }
+
+        $availableMinor = $snapshot->available_balance_minor;
+        $maxAge = (int) config('x-change.funding.provider_balance_max_age_seconds', 300);
+        $isStale = $snapshot->refresh_status !== 'fresh'
+            || $snapshot->fetched_at === null
+            || $snapshot->fetched_at->lessThan(now()->subSeconds($maxAge));
+
+        return [
+            'key' => $snapshot->balance_key,
+            'label' => 'NetBank Source Account Balance',
+            'description' => 'Cached provider-side mother account liquidity used to back NetBank Pay Code issuance.',
+            'authority' => 'provider_source_account',
+            'source' => $snapshot->provider_code,
+            'is_authoritative' => false,
+            'is_liquidity_guard' => true,
+            'is_stale' => $isStale,
+            'balance_minor' => $snapshot->balance_minor,
+            'available_balance_minor' => $availableMinor,
+            'balance' => $availableMinor !== null ? $availableMinor / 100 : null,
+            'currency' => $snapshot->currency,
+            'checked_at' => $snapshot->fetched_at?->toIso8601String(),
+            'provider_as_of' => $snapshot->provider_as_of?->toIso8601String(),
+            'account_number_masked' => $snapshot->account_reference_masked,
+            'sync_status' => $isStale ? $snapshot->refresh_status : 'cached',
+            'sync_message' => $snapshot->failure_reason
+                ?? 'Cached NetBank liquidity snapshot; no provider call was made.',
         ];
     }
 

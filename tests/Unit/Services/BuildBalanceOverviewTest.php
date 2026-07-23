@@ -16,6 +16,7 @@ use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Enums\ProviderProvisioningMode;
 use LBHurtado\XChange\Services\BuildBalanceOverview;
 use LBHurtado\XChange\Services\CheckNetbankSourceAccountReadiness;
+use LBHurtado\XChange\Services\ProviderBalanceSnapshotStore;
 use LBHurtado\XChange\Services\SyncPaynamicsWalletBalance;
 use LBHurtado\XChange\Tests\Fakes\User;
 
@@ -96,6 +97,53 @@ it('includes NetBank source account liquidity when the provider uses ledger pool
         ->and($sourceBalance['account_number_masked'])->toBe('**********0001')
         ->and($sourceBalance['sync_message'])->toBe('NetBank source account balance was refreshed.')
         ->and($overview['sync_status'])->toBe('fresh');
+});
+
+it('reads cached NetBank liquidity without calling the provider when synchronization is disabled', function () {
+    $owner = new stdClass;
+    $wallet = (object) ['balance' => 250000];
+
+    $settings = Mockery::mock(ProviderRuntimeSettingsResolverContract::class);
+    $settings->shouldReceive('provider')->once()->with(null)->andReturn('netbank');
+    $settings->shouldReceive('topology')->once()->with('netbank')->andReturn('ledger_pooled');
+
+    $links = Mockery::mock(ProviderAccountLinkRepositoryContract::class);
+    $provisioning = Mockery::mock(ProviderProvisioningGatewayContract::class);
+
+    $wallets = Mockery::mock(WalletAccessContract::class);
+    $wallets->shouldReceive('resolveForUser')->once()->with($owner)->andReturn($wallet);
+    $wallets->shouldReceive('getBalance')->once()->with($wallet)->andReturn(250000);
+
+    $sourceAccount = Mockery::mock(CheckNetbankSourceAccountReadiness::class);
+    $sourceAccount->shouldNotReceive('handle');
+
+    $snapshots = app(ProviderBalanceSnapshotStore::class);
+    $snapshots->recordSuccess('netbank', 'netbank_source_account', [
+        'balance_minor' => 150000,
+        'available_balance_minor' => 124852,
+        'currency' => 'PHP',
+        'account_number_masked' => '********0001',
+        'as_of' => now()->subDay(),
+        'fetched_at' => now(),
+    ]);
+
+    $overview = (new BuildBalanceOverview(
+        $settings,
+        $links,
+        $provisioning,
+        $wallets,
+        null,
+        $sourceAccount,
+        $snapshots,
+    ))->handle($owner, null, false);
+
+    $sourceBalance = collect($overview['balances'])->firstWhere('key', 'netbank_source_account');
+
+    expect($sourceBalance['available_balance_minor'])->toBe(124852)
+        ->and($sourceBalance['sync_status'])->toBe('cached')
+        ->and($sourceBalance['is_stale'])->toBeFalse()
+        ->and($sourceBalance['checked_at'])->not->toBeNull()
+        ->and($sourceBalance['provider_as_of'])->not->toBe($sourceBalance['checked_at']);
 });
 
 it('refreshes a stale Paynamics provider wallet projection before building the overview', function () {

@@ -75,6 +75,7 @@ class CheckNetbankSourceAccountReadiness
                 'enabled' => true,
                 'ready' => $ready,
                 'checked' => true,
+                'fetched_at' => now()->toIso8601String(),
                 'account_number' => $accountNumber,
                 'account_number_masked' => $this->maskAccountNumber($accountNumber),
                 'balance_minor' => $balanceMinor,
