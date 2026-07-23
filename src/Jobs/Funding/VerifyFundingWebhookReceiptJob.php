@@ -9,8 +9,12 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\EmiCore\Models\WebhookReceipt;
+use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
 use LBHurtado\XChange\Actions\Funding\VerifyFundingWebhookReceipt;
+use LBHurtado\XChange\Enums\FundingIntentStatus;
+use LBHurtado\XChange\Models\FundingIntent;
 
 class VerifyFundingWebhookReceiptJob implements ShouldQueue
 {
@@ -28,8 +32,25 @@ class VerifyFundingWebhookReceiptJob implements ShouldQueue
         public readonly int $webhookReceiptId,
     ) {}
 
-    public function handle(VerifyFundingWebhookReceipt $verify): void
-    {
-        $verify->handle(WebhookReceipt::query()->findOrFail($this->webhookReceiptId));
+    public function handle(
+        VerifyFundingWebhookReceipt $verify,
+        SettleVerifiedFundingIntent $settle,
+    ): void {
+        $receipt = WebhookReceipt::query()->findOrFail($this->webhookReceiptId);
+
+        $verify->handle($receipt);
+
+        $observationIds = ProviderFundingObservation::query()
+            ->where('webhook_receipt_id', $receipt->getKey())
+            ->pluck('id');
+
+        if ($observationIds->isEmpty()) {
+            return;
+        }
+
+        FundingIntent::query()
+            ->where('status', FundingIntentStatus::Verified)
+            ->whereIn('matched_observation_id', $observationIds)
+            ->eachById(fn (FundingIntent $intent) => $settle->handle($intent));
     }
 }

@@ -12,12 +12,15 @@ use LBHurtado\EmiCore\Exceptions\ProviderFundingNotObserved;
 use LBHurtado\EmiCore\Exceptions\ProviderFundingVerificationIndeterminate;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\EmiCore\Models\WebhookReceipt;
+use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\XChange\Actions\Funding\CreateFundingIntent;
 use LBHurtado\XChange\Actions\Funding\IssueFundingInstructions;
 use LBHurtado\XChange\Actions\Funding\VerifyFundingWebhookReceipt;
 use LBHurtado\XChange\Data\Funding\CreateFundingIntentData;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
+use LBHurtado\XChange\Jobs\Funding\VerifyFundingWebhookReceiptJob;
 use LBHurtado\XChange\Models\FundingIntent;
+use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
 
@@ -60,6 +63,40 @@ it('records authoritative evidence and stops at verified without crediting the A
         ])
         ->and((int) $wallet->fresh()->balance)->toBe($balanceBefore)
         ->and($wallet->transactions()->count())->toBe($transactionCountBefore);
+});
+
+it('settles authoritative evidence through the retryable verification job', function () {
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $intent = verifiedFundingIntent('wallet:'.$wallet->uuid);
+    $receipt = authenticatedFundingReceipt('queued-settlement');
+
+    app()->call([new VerifyFundingWebhookReceiptJob($receipt->getKey()), 'handle']);
+    app()->call([new VerifyFundingWebhookReceiptJob($receipt->getKey()), 'handle']);
+
+    expect($intent->refresh()->status)->toBe(FundingIntentStatus::Settled)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and(FundingSettlement::query()->count())->toBe(1)
+        ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(24_950)
+        ->and($receipt->refresh()->processing_status)->toBe('processed');
+});
+
+it('recovers settlement after verification completed on an earlier attempt', function () {
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $intent = verifiedFundingIntent('wallet:'.$wallet->uuid);
+    $receipt = authenticatedFundingReceipt('settlement-recovery');
+
+    app(VerifyFundingWebhookReceipt::class)->handle($receipt);
+
+    expect($intent->refresh()->status)->toBe(FundingIntentStatus::Verified)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0);
+
+    app()->call([new VerifyFundingWebhookReceiptJob($receipt->getKey()), 'handle']);
+
+    expect($intent->refresh()->status)->toBe(FundingIntentStatus::Settled)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and(FundingSettlement::query()->count())->toBe(1);
 });
 
 it('returns an intent to awaiting funds when the provider has not observed a transfer', function () {
