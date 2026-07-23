@@ -18,10 +18,12 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountScenarioControl
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDistributionWorkspacePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingDestinationController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingInstructionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingIntentController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingReconciliationApprovalController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingReconciliationRequestController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingVerificationCheckController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitNetbankTokenRotationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeExplorerPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQrPhFundingSimulationController;
@@ -79,6 +81,16 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         });
         Route::get('funding', CockpitFundingPageController::class)->name('x-change.cockpit.funding.index');
         Route::post('funding/intents', CockpitFundingIntentController::class)->name('x-change.cockpit.funding.intents.store');
+        Route::get(
+            'funding/intents/{intent:reference}/instructions',
+            CockpitFundingInstructionController::class,
+        )->middleware((array) config('x-change.funding.instruction_access_middleware', []))
+            ->name('x-change.cockpit.funding.intents.instructions.show');
+        Route::post(
+            'funding/intents/{intent:reference}/verification-checks',
+            CockpitFundingVerificationCheckController::class,
+        )->middleware((array) config('x-change.funding.manual_check_middleware', []))
+            ->name('x-change.cockpit.funding.intents.verification-checks.store');
         Route::post(
             'funding/scenarios/qrph',
             CockpitQrPhFundingSimulationController::class,

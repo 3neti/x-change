@@ -44,6 +44,13 @@ it('encrypts provider instructions and advances the intent without crediting an 
         ->and($issued->instructions_created_at)->not->toBeNull()
         ->and($issued->funding_address_ciphertext)->toBe('915001234567890123456')
         ->and($issued->instructions_ciphertext['funding_address'])->toBe('915001234567890123456')
+        ->and($issued->instructions_ciphertext['qr_code'])->toMatchArray([
+            'mime_type' => 'image/png',
+            'qr_mode' => 'dynamic',
+            'transaction_type' => 'p2m',
+            'embedded_amount' => true,
+            'provider_generated' => true,
+        ])
         ->and($issued->provider_reference)->toStartWith('sha256:')
         ->and($issued->provider_reference)->not->toContain('915001234567890123456')
         ->and($issued->provider_request_id)->toBe('915001234567890123456')
@@ -54,6 +61,7 @@ it('encrypts provider instructions and advances the intent without crediting an 
         ))
         ->and($raw->funding_address_ciphertext)->not->toContain('915001234567890123456')
         ->and($raw->instructions_ciphertext)->not->toContain('915001234567890123456')
+        ->and($raw->instructions_ciphertext)->not->toContain('iVBORw0KGgo')
         ->and($issued->events)->toHaveCount(2)
         ->and($issued->events->last()->event_type)->toBe('provider_instructions_created')
         ->and($issued->events->last()->metadata)->not->toHaveKey('funding_address');

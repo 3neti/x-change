@@ -480,6 +480,10 @@ export type CockpitFundingIntent = {
     amount: string;
     currency: string;
     status: string;
+    can_check_provider: boolean;
+    can_reopen_instructions: boolean;
+    verification_status: string;
+    last_checked_at?: string | null;
     created_at?: string | null;
     expires_at?: string | null;
     settled_at?: string | null;
@@ -547,6 +551,7 @@ export type CockpitFundingPageProps = CockpitHeaderPageProps & {
     funding_read_model: CockpitFundingReadModel;
     funding_instruction?: CockpitFundingInstruction | null;
     funding_notice?: string | null;
+    funding_poll_interval?: number;
     funding_simulation?: CockpitQrPhFundingSimulation;
 };
 
@@ -607,6 +612,11 @@ export type CockpitFundingInstruction = {
     institution?: string | null;
     account_name?: string | null;
     delivery?: string | null;
+    qr_code?: string | null;
+    qr_mode?: string | null;
+    transaction_type?: string | null;
+    embedded_amount?: boolean;
+    provider_generated?: boolean;
     balance_changed: false;
     simulation_only?: boolean;
     sensitive: boolean;

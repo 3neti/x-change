@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Queue;
+use LBHurtado\XChange\Enums\FundingIntentStatus;
+use LBHurtado\XChange\Jobs\Funding\VerifyFundingIntentJob;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
@@ -47,6 +50,14 @@ it('creates exact one-time instructions without changing the Account balance', f
         ->assertSessionHas('funding_instruction.amount', '₱250.00')
         ->assertSessionHas('funding_instruction.status', 'awaiting_funds')
         ->assertSessionHas('funding_instruction.funding_address', '915001234567890123456')
+        ->assertSessionHas(
+            'funding_instruction.qr_code',
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/lDoLpwAAAABJRU5ErkJggg==',
+        )
+        ->assertSessionHas('funding_instruction.qr_mode', 'dynamic')
+        ->assertSessionHas('funding_instruction.transaction_type', 'p2m')
+        ->assertSessionHas('funding_instruction.embedded_amount', true)
+        ->assertSessionHas('funding_instruction.provider_generated', true)
         ->assertSessionHas('funding_instruction.balance_changed', false)
         ->assertSessionHas('funding_instruction.sensitive', true)
         ->assertSessionMissing('funding_instruction.provider_request_id')
@@ -66,6 +77,10 @@ it('creates exact one-time instructions without changing the Account balance', f
         ->assertOk()
         ->assertJsonPath('props.funding_instruction.reference', $intent->reference)
         ->assertJsonPath('props.funding_instruction.funding_address', '915001234567890123456')
+        ->assertJsonPath(
+            'props.funding_instruction.qr_code',
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/lDoLpwAAAABJRU5ErkJggg==',
+        )
         ->assertJsonPath('props.funding_instruction.balance_changed', false)
         ->assertJsonMissingPath('props.funding_instruction.provider_request_id')
         ->assertJsonMissingPath('props.funding_instruction.provider_transaction_id');
@@ -125,6 +140,123 @@ it('keeps browser retries idempotent and does not issue duplicate instructions',
 
     expect(FundingIntent::query()->count())->toBe(1)
         ->and($this->fundingAdapter->instructionCalls)->toBe(1);
+});
+
+it('lets only the owner reopen an unexpired QR without caching it', function () {
+    $operator = actingAsTestUser();
+
+    $this->post(route('x-change.cockpit.funding.intents.store'), [
+        'provider' => 'netbank',
+        'amount_minor' => 25_000,
+        'currency' => 'PHP',
+        'idempotency_key' => 'cockpit-funding-reopen-1001',
+    ])->assertRedirect();
+
+    $intent = FundingIntent::query()->sole();
+    $response = $this->getJson(route(
+        'x-change.cockpit.funding.intents.instructions.show',
+        $intent,
+    ));
+
+    $response
+        ->assertOk()
+        ->assertHeader('Pragma', 'no-cache')
+        ->assertJsonPath('instruction.reference', $intent->reference)
+        ->assertJsonPath('instruction.amount', '₱250.00')
+        ->assertJsonPath('instruction.qr_mode', 'dynamic')
+        ->assertJsonPath('instruction.embedded_amount', true)
+        ->assertJsonPath(
+            'instruction.qr_code',
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/lDoLpwAAAABJRU5ErkJggg==',
+        )
+        ->assertJsonMissingPath('instruction.provider_request_id')
+        ->assertJsonMissingPath('instruction.provider_transaction_id');
+
+    expect($response->headers->get('Cache-Control'))->toContain('no-store')
+        ->toContain('private');
+
+    actingAsTestUser();
+
+    $this->getJson(route(
+        'x-change.cockpit.funding.intents.instructions.show',
+        $intent,
+    ))->assertForbidden();
+
+    $this->actingAs($operator);
+    $intent->forceFill(['expires_at' => now()->subMinute()])->saveQuietly();
+
+    $this->getJson(route(
+        'x-change.cockpit.funding.intents.instructions.show',
+        $intent,
+    ))->assertGone();
+});
+
+it('queues an owner-authorized NetBank check without accepting settlement facts', function () {
+    $operator = actingAsTestUser();
+
+    $this->post(route('x-change.cockpit.funding.intents.store'), [
+        'provider' => 'netbank',
+        'amount_minor' => 25_000,
+        'currency' => 'PHP',
+        'idempotency_key' => 'cockpit-funding-check-1001',
+    ])->assertRedirect();
+
+    $intent = FundingIntent::query()->sole();
+    Queue::fake();
+
+    $this->post(route(
+        'x-change.cockpit.funding.intents.verification-checks.store',
+        $intent,
+    ), [
+        'amount_minor' => 999_999_999,
+        'account' => 'forged-account',
+        'provider_transaction_id' => 'forged-transaction',
+    ])->assertRedirect(route('x-change.cockpit.funding.index'))
+        ->assertSessionHas(
+            'funding_notice',
+            'NetBank verification queued. Provider history will determine the result.',
+        );
+
+    Queue::assertPushed(
+        VerifyFundingIntentJob::class,
+        fn (VerifyFundingIntentJob $job): bool => $job->fundingIntentId === $intent->getKey()
+            && $job->providerCode === 'netbank'
+            && $job->actorId === (string) $operator->getAuthIdentifier()
+            && $job->webhookReceiptId === null,
+    );
+
+    expect($intent->fresh()->expected_amount_minor)->toBe(25_000)
+        ->and($intent->funding_address_ciphertext)->toBe('915001234567890123456');
+});
+
+it('rejects checks from other owners and ineligible intent states', function () {
+    $operator = actingAsTestUser();
+
+    $this->post(route('x-change.cockpit.funding.intents.store'), [
+        'provider' => 'netbank',
+        'amount_minor' => 25_000,
+        'currency' => 'PHP',
+        'idempotency_key' => 'cockpit-funding-check-guard-1001',
+    ])->assertRedirect();
+
+    $intent = FundingIntent::query()->sole();
+    Queue::fake();
+    actingAsTestUser();
+
+    $this->postJson(route(
+        'x-change.cockpit.funding.intents.verification-checks.store',
+        $intent,
+    ))->assertForbidden();
+
+    $this->actingAs($operator);
+    $intent->forceFill(['status' => FundingIntentStatus::Suspense])->saveQuietly();
+
+    $this->postJson(route(
+        'x-change.cockpit.funding.intents.verification-checks.store',
+        $intent,
+    ))->assertConflict();
+
+    Queue::assertNotPushed(VerifyFundingIntentJob::class);
 });
 
 it('rejects invalid amounts and disabled providers before creating an intent', function () {

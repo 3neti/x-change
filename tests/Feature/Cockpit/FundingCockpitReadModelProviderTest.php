@@ -88,6 +88,12 @@ it('presents operator scoped funding controls without exposing provider evidence
         ->and($readModel['summary']['open_suspense'])->toBe(1)
         ->and($readModel['summary']['recovery_outstanding'])->toBe('₱200.00')
         ->and($readModel['intents'])->toHaveCount(2)
+        ->and($readModel['intents'][0])->toHaveKeys([
+            'can_check_provider',
+            'can_reopen_instructions',
+            'verification_status',
+            'last_checked_at',
+        ])
         ->and($readModel['suspense_cases'][0])->toMatchArray([
             'provider' => 'netbank',
             'reason' => 'amount_mismatch',
@@ -127,6 +133,44 @@ it('presents operator scoped funding controls without exposing provider evidence
         ->not->toContain((string) $settledIntent->provider_request_id)
         ->not->toContain((string) $settledIntent->account_reference)
         ->not->toContain('001234567890');
+});
+
+it('offers checks and QR reopening only for the owners unexpired NetBank intents', function () {
+    config()->set('x-change.funding.providers.netbank.enabled', true);
+    $operator = actingAsTestUser(0);
+    $wallet = $operator->wallet()->where('slug', 'platform')->firstOrFail();
+    $intent = fundingCockpitIntent($operator, $wallet, FundingIntentStatus::AwaitingFunds);
+    $intent->events()->create([
+        'sequence' => 5,
+        'event_type' => 'provider_funds_not_observed',
+        'from_status' => FundingIntentStatus::Verifying,
+        'to_status' => FundingIntentStatus::AwaitingFunds,
+        'actor_type' => 'operator',
+        'actor_id' => (string) $operator->getAuthIdentifier(),
+        'evidence_reference' => 'provider-query:operator:'.$intent->reference,
+        'metadata' => ['trigger' => 'operator'],
+        'occurred_at' => now()->subMinute(),
+    ]);
+
+    $summary = app(FundingCockpitReadModelProvider::class)
+        ->forOperator($operator)
+        ->toArray()['intents'][0];
+
+    expect($summary)->toMatchArray([
+        'reference' => $intent->reference,
+        'provider' => 'netbank',
+        'status' => 'awaiting_funds',
+        'can_check_provider' => true,
+        'can_reopen_instructions' => true,
+        'verification_status' => 'awaiting_funds',
+    ])
+        ->and($summary['last_checked_at'])->not->toBeNull()
+        ->and($summary)->not->toHaveKeys([
+            'funding_address',
+            'qr_code',
+            'provider_transaction_id',
+            'provider_request_id',
+        ]);
 });
 
 it('blocks an unverified dedicated destination in the Funding read model', function () {

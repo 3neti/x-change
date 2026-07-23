@@ -3,6 +3,22 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
 import Funding from '../../../resources/js/cockpit/pages/Funding.vue';
 
+const { usePollMock } = vi.hoisted(() => ({
+    usePollMock: vi.fn(() => ({
+        start: vi.fn(),
+        stop: vi.fn(),
+    })),
+}));
+
+vi.mock('@inertiajs/vue3', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('@inertiajs/vue3')>();
+
+    return {
+        ...actual,
+        usePoll: usePollMock,
+    };
+});
+
 const fundingReadModel = {
     schema: 'x-change.cockpit.funding-read-model.v1',
     status: 'available',
@@ -41,6 +57,10 @@ const fundingReadModel = {
             amount: '₱250.00',
             currency: 'PHP',
             status: 'awaiting_funds',
+            can_check_provider: true,
+            can_reopen_instructions: true,
+            verification_status: 'awaiting_funds',
+            last_checked_at: null,
             created_at: '2026-07-23T08:00:00+08:00',
         },
     ],
@@ -153,6 +173,7 @@ const fundingSimulationResult = {
 describe('Cockpit Funding foundation', () => {
     afterEach(() => {
         vi.unstubAllGlobals();
+        usePollMock.mockClear();
     });
 
     it('renders provider-verified funding posture and operational facts', () => {
@@ -170,6 +191,11 @@ describe('Cockpit Funding foundation', () => {
                     institution: 'NetBank',
                     account_name: 'X-Change Treasury',
                     delivery: 'manual-bank-or-wallet-transfer',
+                    qr_code: 'data:image/png;base64,AA==',
+                    qr_mode: 'dynamic',
+                    transaction_type: 'p2m',
+                    embedded_amount: true,
+                    provider_generated: true,
                     balance_changed: false,
                     sensitive: true,
                 },
@@ -197,12 +223,78 @@ describe('Cockpit Funding foundation', () => {
         expect(wrapper.text()).toContain('Treasury Inventory');
         expect(wrapper.text()).toContain('Create Funding Intent');
         expect(wrapper.text()).toContain('Transfer exactly ₱250.00');
+        expect(wrapper.text()).toContain('Scan to pay exactly ₱250.00');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-funding-qr"] img')
+                .attributes('src'),
+        ).toBe('data:image/png;base64,AA==');
         expect(wrapper.text()).toContain('915001234567890123456');
+        expect(wrapper.text()).toContain('Check NetBank');
+        expect(wrapper.text()).toContain('Reopen QR');
         expect(wrapper.text()).toContain(
             'The Account changes only after independent provider verification',
         );
         expect(wrapper.text()).not.toContain('provider transaction');
         expect(wrapper.findAll('table tbody tr')).toHaveLength(1);
+        expect(wrapper.get('table').classes()).toContain('min-w-[56rem]');
+        expect(usePollMock).toHaveBeenCalledWith(
+            5000,
+            {
+                only: ['funding_read_model', 'funding_notice'],
+            },
+            {
+                autoStart: true,
+                mode: 'rest',
+            },
+        );
+    });
+
+    it('reopens an owner-scoped QR without placing it in the general read model', async () => {
+        const fetch = vi.fn().mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({
+                instruction: {
+                    reference: '01J-FUNDING-1',
+                    provider: 'netbank',
+                    amount: '₱250.00',
+                    currency: 'PHP',
+                    status: 'awaiting_funds',
+                    expires_at: '2026-07-23T08:30:00+08:00',
+                    qr_code: 'data:image/png;base64,REOPENED',
+                    embedded_amount: true,
+                    provider_generated: true,
+                    balance_changed: false,
+                    sensitive: true,
+                },
+            }),
+        });
+        vi.stubGlobal('fetch', fetch);
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: fundingReadModel,
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="reopen-funding-instructions-01J-FUNDING-1"]')
+            .trigger('click');
+        await nextTick();
+        await nextTick();
+
+        expect(fetch).toHaveBeenCalledWith(
+            '/x/cockpit/funding/intents/01J-FUNDING-1/instructions',
+            expect.objectContaining({
+                method: 'GET',
+                credentials: 'same-origin',
+            }),
+        );
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-funding-qr"] img')
+                .attributes('src'),
+        ).toBe('data:image/png;base64,REOPENED');
     });
 
     it('renders safe empty states when no funding records exist', () => {

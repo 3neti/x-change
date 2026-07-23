@@ -72,6 +72,16 @@ export default defineConfig({
                 __dirname,
                 'tests/frontend/stubs/useRiderStagePhase.ts',
             ),
+            '@/routes/x-change/cockpit/funding/intents/instructions':
+                path.resolve(
+                    __dirname,
+                    'tests/frontend/stubs/funding-instruction-route.ts',
+                ),
+            '@/routes/x-change/cockpit/funding/intents/verification-checks':
+                path.resolve(
+                    __dirname,
+                    'tests/frontend/stubs/funding-verification-check-route.ts',
+                ),
             '@/routes/x-change/cockpit/funding/intents': path.resolve(
                 __dirname,
                 'tests/frontend/stubs/funding-intent-route.ts',

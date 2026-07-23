@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Tests\Fakes;
 use LBHurtado\EmiCore\Contracts\FundingProviderAdapter;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionRequestData;
 use LBHurtado\EmiCore\Data\Funding\FundingInstructionsData;
+use LBHurtado\EmiCore\Data\Funding\FundingQrCodeData;
 use LBHurtado\EmiCore\Data\Funding\FundingVerificationData;
 use LBHurtado\EmiCore\Data\Funding\ProviderEventHintData;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
@@ -57,6 +58,14 @@ class FakeFundingProviderAdapter implements FundingProviderAdapter
                 'amount_minor' => $request->amountMinor,
                 'currency' => $request->currency,
             ],
+            qrCode: new FundingQrCodeData(
+                mimeType: 'image/png',
+                base64Payload: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/lDoLpwAAAABJRU5ErkJggg==',
+                qrMode: 'dynamic',
+                transactionType: 'p2m',
+                embeddedAmount: true,
+                providerGenerated: true,
+            ),
         );
     }
 

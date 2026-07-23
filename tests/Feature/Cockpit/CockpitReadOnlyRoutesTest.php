@@ -1197,6 +1197,7 @@ it('registers only the guarded issuance, funding, and Account Cockpit mutation r
         'x-change.cockpit.accounts.providers.funding-destination.update',
         'x-change.cockpit.accounts.providers.netbank.token-rotation.store',
         'x-change.cockpit.funding.intents.store',
+        'x-change.cockpit.funding.intents.verification-checks.store',
         'x-change.cockpit.funding.scenarios.qrph.store',
         'x-change.cockpit.funding.suspense.reconciliation-requests.store',
         'x-change.cockpit.funding.reconciliations.approve',

@@ -37,6 +37,10 @@ class CockpitFundingPageController extends Controller
             'funding_read_model' => $this->funding->forOperator($operator)->toArray(),
             'funding_instruction' => $request->session()->pull('funding_instruction'),
             'funding_notice' => $request->session()->pull('funding_notice'),
+            'funding_poll_interval' => max(
+                1000,
+                (int) config('x-change.funding.ui_refresh_interval_milliseconds', 5000),
+            ),
             'funding_simulation' => [
                 'enabled' => (bool) config('x-change.cockpit.qrph_funding_simulation.enabled', false),
                 'mode' => 'rollback-only',

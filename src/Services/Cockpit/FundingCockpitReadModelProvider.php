@@ -160,19 +160,51 @@ class FundingCockpitReadModelProvider
     private function intents(Builder $query): array
     {
         return (clone $query)
+            ->with('events')
             ->latest('created_at')
             ->limit(20)
             ->get()
-            ->map(fn (FundingIntent $intent): array => [
-                'reference' => $intent->reference,
-                'provider' => $intent->provider_code,
-                'amount' => $this->formatMoney($intent->expected_amount_minor, $intent->currency),
-                'currency' => $intent->currency,
-                'status' => $intent->status->value,
-                'created_at' => $intent->created_at?->toIso8601String(),
-                'expires_at' => $intent->expires_at?->toIso8601String(),
-                'settled_at' => $intent->settled_at?->toIso8601String(),
-            ])
+            ->map(function (FundingIntent $intent): array {
+                $lastCheck = $intent->events->last(
+                    fn ($event): bool => in_array($event->event_type, [
+                        'provider_verification_started',
+                        'provider_funds_not_observed',
+                        'provider_verification_unavailable',
+                        'provider_settlement_pending',
+                        'provider_settlement_verified',
+                        'provider_verification_indeterminate',
+                        'provider_evidence_mismatch',
+                    ], true),
+                );
+                $unexpired = $intent->expires_at?->isFuture() === true;
+                $open = in_array($intent->status->value, [
+                    'awaiting_funds',
+                    'evidence_received',
+                    'verifying',
+                ], true);
+
+                return [
+                    'reference' => $intent->reference,
+                    'provider' => $intent->provider_code,
+                    'amount' => $this->formatMoney($intent->expected_amount_minor, $intent->currency),
+                    'currency' => $intent->currency,
+                    'status' => $intent->status->value,
+                    'can_check_provider' => $intent->provider_code === 'netbank'
+                        && $intent->status->value === 'awaiting_funds'
+                        && $unexpired
+                        && (bool) config('x-change.funding.providers.netbank.enabled', false),
+                    'can_reopen_instructions' => $intent->provider_code === 'netbank'
+                        && $open
+                        && $unexpired,
+                    'verification_status' => $intent->status->value === 'verifying'
+                        ? 'checking'
+                        : $intent->status->value,
+                    'last_checked_at' => $lastCheck?->occurred_at?->toIso8601String(),
+                    'created_at' => $intent->created_at?->toIso8601String(),
+                    'expires_at' => $intent->expires_at?->toIso8601String(),
+                    'settled_at' => $intent->settled_at?->toIso8601String(),
+                ];
+            })
             ->all();
     }
 

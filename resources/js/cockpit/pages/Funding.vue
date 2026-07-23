@@ -1,22 +1,31 @@
 <script setup lang="ts">
-import { useForm } from '@inertiajs/vue3';
+import { useForm, usePoll } from '@inertiajs/vue3';
 import { approve as approveReconciliation } from '@/routes/x-change/cockpit/funding/reconciliations';
+import { show as showFundingInstructions } from '@/routes/x-change/cockpit/funding/intents/instructions';
 import { store as storeFundingIntent } from '@/routes/x-change/cockpit/funding/intents';
+import { store as storeVerificationCheck } from '@/routes/x-change/cockpit/funding/intents/verification-checks';
 import { store as runQrPhFundingSimulationRoute } from '@/routes/x-change/cockpit/funding/scenarios/qrph';
 import { store as storeReconciliationRequest } from '@/routes/x-change/cockpit/funding/suspense/reconciliation-requests';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import CockpitManualCopyButton from '../components/CockpitManualCopyButton.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
 import type {
     CockpitFundingPageProps,
+    CockpitFundingInstruction,
     CockpitQrPhFundingSimulationResult,
 } from '../types';
 
 const props = defineProps<CockpitFundingPageProps>();
+const currentInstruction = ref<CockpitFundingInstruction | null>(
+    props.funding_instruction ?? null,
+);
 const amount = ref('');
 const amountError = ref<string | null>(null);
 const activeReconciliationCase = ref<string | null>(null);
 const activeApproval = ref<string | null>(null);
+const activeVerificationCheck = ref<string | null>(null);
+const activeInstructionRequest = ref<string | null>(null);
+const instructionError = ref<string | null>(null);
 const simulationRunning = ref(false);
 const simulationError = ref<string | null>(null);
 const simulationResult = ref<CockpitQrPhFundingSimulationResult | null>(null);
@@ -29,6 +38,23 @@ const availableFundingProviders = computed(() =>
     props.funding_read_model.providers.filter(
         (provider) => provider.status === 'available',
     ),
+);
+const hasOpenFundingIntents = computed(() =>
+    props.funding_read_model.intents.some((intent) =>
+        ['awaiting_funds', 'evidence_received', 'verifying'].includes(
+            intent.status,
+        ),
+    ),
+);
+const { start: startFundingPoll, stop: stopFundingPoll } = usePoll(
+    Math.max(1000, props.funding_poll_interval ?? 5000),
+    {
+        only: ['funding_read_model', 'funding_notice'],
+    },
+    {
+        autoStart: hasOpenFundingIntents.value,
+        mode: 'rest',
+    },
 );
 const form = useForm({
     provider: availableFundingProviders.value[0]?.code ?? '',
@@ -48,6 +74,7 @@ const reconciliationForm = useForm({
     action: '',
 });
 const approvalForm = useForm({});
+const verificationForm = useForm({});
 const clientAmountError = computed(() => {
     if (amount.value === '' || amountToMinor(amount.value) !== null) {
         return null;
@@ -55,6 +82,25 @@ const clientAmountError = computed(() => {
 
     return 'Enter an amount greater than zero with no more than two decimal places.';
 });
+
+watch(hasOpenFundingIntents, (hasOpenIntents) => {
+    if (hasOpenIntents) {
+        startFundingPoll();
+
+        return;
+    }
+
+    stopFundingPoll();
+});
+
+watch(
+    () => props.funding_instruction,
+    (instruction) => {
+        if (instruction) {
+            currentInstruction.value = instruction;
+        }
+    },
+);
 
 const summaryCards = computed(() => [
     {
@@ -185,6 +231,64 @@ function approveFundingReconciliation(reference: string): void {
             activeApproval.value = null;
         },
     });
+}
+
+function checkNetBank(reference: string): void {
+    if (activeVerificationCheck.value !== null) {
+        return;
+    }
+
+    activeVerificationCheck.value = reference;
+
+    verificationForm.post(storeVerificationCheck(reference), {
+        preserveScroll: true,
+        onFinish: () => {
+            activeVerificationCheck.value = null;
+        },
+    });
+}
+
+async function reopenFundingInstructions(reference: string): Promise<void> {
+    if (activeInstructionRequest.value !== null) {
+        return;
+    }
+
+    activeInstructionRequest.value = reference;
+    instructionError.value = null;
+    const route = showFundingInstructions(reference);
+
+    try {
+        const response = await fetch(route.url, {
+            method: route.method.toUpperCase(),
+            credentials: 'same-origin',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+        const body = await safeJson(response);
+
+        if (
+            !response.ok ||
+            typeof body.instruction !== 'object' ||
+            body.instruction === null
+        ) {
+            instructionError.value =
+                response.status === 410
+                    ? 'These one-time instructions have expired.'
+                    : 'The one-time instructions could not be reopened.';
+
+            return;
+        }
+
+        currentInstruction.value =
+            body.instruction as CockpitFundingInstruction;
+    } catch {
+        instructionError.value =
+            'The one-time instructions could not reach the Cockpit service.';
+    } finally {
+        activeInstructionRequest.value = null;
+    }
 }
 
 function reconciliationActionLabel(action: string): string {
@@ -704,13 +808,13 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 <article
                     class="rounded-xl border p-5 shadow-sm"
                     :class="
-                        funding_instruction
+                        currentInstruction
                             ? 'border-sky-200 bg-sky-50/70 dark:border-sky-900 dark:bg-sky-950/20'
                             : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'
                     "
                     data-testid="cockpit-funding-instruction"
                 >
-                    <div v-if="funding_instruction">
+                    <div v-if="currentInstruction">
                         <div
                             class="flex flex-wrap items-start justify-between gap-3"
                         >
@@ -722,14 +826,40 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 </p>
                                 <h2 class="mt-1 text-lg font-semibold">
                                     Transfer exactly
-                                    {{ funding_instruction.amount }}
+                                    {{ currentInstruction.amount }}
                                 </h2>
                             </div>
                             <span
                                 class="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-sky-700 shadow-sm dark:bg-slate-900 dark:text-sky-300"
                             >
-                                {{ displayLabel(funding_instruction.status) }}
+                                {{ displayLabel(currentInstruction.status) }}
                             </span>
+                        </div>
+
+                        <div
+                            v-if="currentInstruction.qr_code"
+                            class="mt-4 flex flex-col items-center gap-4 rounded-xl border border-sky-200 bg-white p-4 text-center sm:flex-row sm:text-left dark:border-sky-900 dark:bg-slate-950"
+                            data-testid="cockpit-funding-qr"
+                        >
+                            <img
+                                :src="currentInstruction.qr_code"
+                                :alt="`Exact ${currentInstruction.amount} NetBank QR Ph code`"
+                                class="size-40 shrink-0 rounded-lg bg-white object-contain"
+                            />
+                            <div>
+                                <p class="text-sm font-semibold">
+                                    Scan to pay exactly
+                                    {{ currentInstruction.amount }}
+                                </p>
+                                <p
+                                    class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400"
+                                >
+                                    Dynamic P2M QR · one Funding Intent · one
+                                    destination. Payment does not credit the
+                                    Account until NetBank transaction history
+                                    confirms settlement.
+                                </p>
+                            </div>
                         </div>
 
                         <dl class="mt-4 grid gap-3 sm:grid-cols-2">
@@ -741,9 +871,9 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 </dt>
                                 <dd class="mt-1 text-sm font-medium">
                                     {{
-                                        funding_instruction.institution ??
+                                        currentInstruction.institution ??
                                         displayLabel(
-                                            funding_instruction.provider,
+                                            currentInstruction.provider,
                                         )
                                     }}
                                 </dd>
@@ -757,19 +887,19 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 <dd class="mt-1 text-sm font-medium">
                                     {{
                                         displayTime(
-                                            funding_instruction.expires_at,
+                                            currentInstruction.expires_at,
                                         )
                                     }}
                                 </dd>
                             </div>
-                            <div v-if="funding_instruction.account_name">
+                            <div v-if="currentInstruction.account_name">
                                 <dt
                                     class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
                                 >
                                     Account name
                                 </dt>
                                 <dd class="mt-1 text-sm font-medium">
-                                    {{ funding_instruction.account_name }}
+                                    {{ currentInstruction.account_name }}
                                 </dd>
                             </div>
                             <div>
@@ -779,13 +909,13 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                     Funding Intent
                                 </dt>
                                 <dd class="mt-1 font-mono text-xs">
-                                    {{ funding_instruction.reference }}
+                                    {{ currentInstruction.reference }}
                                 </dd>
                             </div>
                         </dl>
 
                         <div
-                            v-if="funding_instruction.funding_address"
+                            v-if="currentInstruction.funding_address"
                             class="mt-4 rounded-lg border border-sky-200 bg-white p-3 dark:border-sky-900 dark:bg-slate-950"
                         >
                             <p
@@ -799,10 +929,10 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 <p
                                     class="font-mono text-sm font-semibold break-all"
                                 >
-                                    {{ funding_instruction.funding_address }}
+                                    {{ currentInstruction.funding_address }}
                                 </p>
                                 <CockpitManualCopyButton
-                                    :value="funding_instruction.funding_address"
+                                    :value="currentInstruction.funding_address"
                                     label="Copy account"
                                     helper="Browser-local copy only."
                                 />
@@ -810,8 +940,8 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         </div>
 
                         <a
-                            v-if="funding_instruction.action_url"
-                            :href="funding_instruction.action_url"
+                            v-if="currentInstruction.action_url"
+                            :href="currentInstruction.action_url"
                             target="_blank"
                             rel="noopener noreferrer"
                             class="mt-4 inline-flex rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-700"
@@ -820,7 +950,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         </a>
 
                         <p
-                            v-if="funding_instruction.simulation_only"
+                            v-if="currentInstruction.simulation_only"
                             class="mt-4 text-xs leading-5 text-emerald-700 dark:text-emerald-300"
                         >
                             Local simulation only. Do not transfer money to this
@@ -854,6 +984,13 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             the sensitive instruction payload.
                         </p>
                     </div>
+                    <p
+                        v-if="instructionError"
+                        class="mt-3 text-xs font-medium text-rose-700 dark:text-rose-300"
+                        role="alert"
+                    >
+                        {{ instructionError }}
+                    </p>
                 </article>
             </section>
 
@@ -1028,7 +1165,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     v-if="funding_read_model.intents.length"
                     class="overflow-x-auto"
                 >
-                    <table class="w-full min-w-[44rem] text-left text-sm">
+                    <table class="w-full min-w-[56rem] text-left text-sm">
                         <thead
                             class="bg-slate-50 text-xs tracking-wide text-slate-500 uppercase dark:bg-slate-950/40 dark:text-slate-400"
                         >
@@ -1041,7 +1178,10 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 </th>
                                 <th class="px-5 py-3 font-semibold">Amount</th>
                                 <th class="px-5 py-3 font-semibold">Status</th>
-                                <th class="px-5 py-3 font-semibold">Created</th>
+                                <th class="px-5 py-3 font-semibold">
+                                    Last checked
+                                </th>
+                                <th class="px-5 py-3 font-semibold">Actions</th>
                             </tr>
                         </thead>
                         <tbody
@@ -1066,13 +1206,66 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                     <span
                                         class="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200"
                                     >
-                                        {{ displayLabel(intent.status) }}
+                                        {{
+                                            displayLabel(
+                                                intent.verification_status,
+                                            )
+                                        }}
                                     </span>
                                 </td>
                                 <td
                                     class="px-5 py-3 text-slate-500 dark:text-slate-400"
                                 >
-                                    {{ displayTime(intent.created_at) }}
+                                    {{ displayTime(intent.last_checked_at) }}
+                                </td>
+                                <td class="px-5 py-3">
+                                    <div
+                                        class="flex min-w-52 flex-wrap items-center gap-2"
+                                    >
+                                        <button
+                                            v-if="
+                                                intent.can_reopen_instructions
+                                            "
+                                            type="button"
+                                            class="h-8 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-sky-400 hover:text-sky-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                                            :disabled="
+                                                activeInstructionRequest !==
+                                                null
+                                            "
+                                            :data-testid="`reopen-funding-instructions-${intent.reference}`"
+                                            @click="
+                                                reopenFundingInstructions(
+                                                    intent.reference,
+                                                )
+                                            "
+                                        >
+                                            {{
+                                                activeInstructionRequest ===
+                                                intent.reference
+                                                    ? 'Opening…'
+                                                    : 'Reopen QR'
+                                            }}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="h-8 rounded-lg bg-sky-600 px-3 text-xs font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                            :disabled="
+                                                !intent.can_check_provider ||
+                                                activeVerificationCheck !== null
+                                            "
+                                            :data-testid="`check-netbank-${intent.reference}`"
+                                            @click="
+                                                checkNetBank(intent.reference)
+                                            "
+                                        >
+                                            {{
+                                                activeVerificationCheck ===
+                                                intent.reference
+                                                    ? 'Checking…'
+                                                    : 'Check NetBank'
+                                            }}
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>

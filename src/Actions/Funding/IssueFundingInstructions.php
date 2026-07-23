@@ -152,6 +152,16 @@ class IssueFundingInstructions
             'funding_address' => $instructions->fundingAddress,
             'action_url' => $instructions->actionUrl,
             'display_data' => $instructions->displayData,
+            'qr_code' => $instructions->qrCode === null
+                ? null
+                : [
+                    'mime_type' => $instructions->qrCode->mimeType,
+                    'base64_payload' => $instructions->qrCode->base64Payload,
+                    'qr_mode' => $instructions->qrCode->qrMode,
+                    'transaction_type' => $instructions->qrCode->transactionType,
+                    'embedded_amount' => $instructions->qrCode->embeddedAmount,
+                    'provider_generated' => $instructions->qrCode->providerGenerated,
+                ],
         ];
     }
 

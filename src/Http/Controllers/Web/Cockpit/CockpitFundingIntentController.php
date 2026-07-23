@@ -7,14 +7,13 @@ namespace LBHurtado\XChange\Http\Controllers\Web\Cockpit;
 use DateTimeImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Number;
 use LBHurtado\XChange\Actions\Funding\CreateFundingIntent;
 use LBHurtado\XChange\Actions\Funding\IssueFundingInstructions;
 use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Data\Funding\CreateFundingIntentData;
 use LBHurtado\XChange\Http\Requests\Web\Cockpit\CreateCockpitFundingIntentRequest;
-use LBHurtado\XChange\Models\FundingIntent;
+use LBHurtado\XChange\Services\Cockpit\FundingInstructionPresenter;
 use RuntimeException;
 
 class CockpitFundingIntentController extends Controller
@@ -25,6 +24,7 @@ class CockpitFundingIntentController extends Controller
         FundingDestinationResolverContract $destinations,
         CreateFundingIntent $createFundingIntent,
         IssueFundingInstructions $issueFundingInstructions,
+        FundingInstructionPresenter $instructions,
     ): RedirectResponse {
         $actor = $request->user();
         $wallet = $wallets->resolveForUser($actor);
@@ -58,7 +58,7 @@ class CockpitFundingIntentController extends Controller
 
         return redirect()
             ->route('x-change.cockpit.funding.index')
-            ->with('funding_instruction', $this->instruction($intent));
+            ->with('funding_instruction', $instructions->forIntent($intent));
     }
 
     private function accountReference(mixed $wallet): string
@@ -74,56 +74,5 @@ class CockpitFundingIntentController extends Controller
         }
 
         throw new RuntimeException('Funding Account reference could not be resolved.');
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function instruction(FundingIntent $intent): array
-    {
-        $instructions = (array) $intent->instructions_ciphertext;
-        $display = is_array($instructions['display_data'] ?? null)
-            ? $instructions['display_data']
-            : [];
-        $simulationOnly = $intent->provider_code === 'qrph_simulator';
-
-        return [
-            'reference' => $intent->reference,
-            'provider' => $intent->provider_code,
-            'amount' => Number::currency($intent->expected_amount_minor / 100, in: $intent->currency),
-            'currency' => $intent->currency,
-            'status' => $intent->status->value,
-            'expires_at' => $intent->expires_at?->toIso8601String(),
-            'funding_address' => $this->optionalString($instructions['funding_address'] ?? null),
-            'action_url' => $this->safeActionUrl($instructions['action_url'] ?? null),
-            'institution' => $this->optionalString($display['institution'] ?? null),
-            'account_name' => $this->optionalString($display['account_name'] ?? null),
-            'delivery' => $this->optionalString($display['delivery'] ?? null),
-            'balance_changed' => false,
-            'simulation_only' => $simulationOnly,
-            'sensitive' => ! $simulationOnly,
-        ];
-    }
-
-    private function safeActionUrl(mixed $value): ?string
-    {
-        $url = $this->optionalString($value);
-
-        if ($url === null || filter_var($url, FILTER_VALIDATE_URL) === false) {
-            return null;
-        }
-
-        return in_array(parse_url($url, PHP_URL_SCHEME), ['https'], true) ? $url : null;
-    }
-
-    private function optionalString(mixed $value): ?string
-    {
-        if (! is_scalar($value)) {
-            return null;
-        }
-
-        $normalized = trim((string) $value);
-
-        return $normalized !== '' ? $normalized : null;
     }
 }
