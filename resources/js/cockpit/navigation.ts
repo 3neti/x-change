@@ -61,6 +61,13 @@ export const cockpitNavigationItems: CockpitNavigationItem[] = [
             'Operations Cockpit route has not been implemented yet.',
     },
     {
+        key: 'accounts',
+        label: 'Accounts',
+        href: '/x/cockpit/accounts',
+        group: 'secondary',
+        description: 'Provider funding destinations',
+    },
+    {
         key: 'runtime-profile',
         label: 'Runtime Profile',
         href: '/x/cockpit/diagnostics/runtime-profile',

@@ -85,6 +85,16 @@ export default defineConfig({
                     __dirname,
                     'tests/frontend/stubs/funding-reconciliation-request-route.ts',
                 ),
+            '@/routes/x-change/cockpit/accounts/providers/funding-destination':
+                path.resolve(
+                    __dirname,
+                    'tests/frontend/stubs/funding-destination-route.ts',
+                ),
+            '@/routes/x-change/cockpit/accounts/providers/netbank/token-rotation':
+                path.resolve(
+                    __dirname,
+                    'tests/frontend/stubs/netbank-token-rotation-route.ts',
+                ),
 
             '@': path.resolve(__dirname, 'resources/js'),
         },

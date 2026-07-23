@@ -323,6 +323,73 @@ export type CockpitHeaderPageProps = {
     cockpit_header_read_model?: CockpitHeaderReadModel;
 };
 
+export type CockpitFundingDestinationSummary = {
+    status: string;
+    display_reference?: string | null;
+    managed_by?: string;
+};
+
+export type CockpitDedicatedFundingDestinationSummary = {
+    configured: boolean;
+    display_reference?: string | null;
+    status: string;
+    verification_status: string;
+    verified_at?: string | null;
+    last_synced_at?: string | null;
+    can_activate: boolean;
+    can_rotate_token: boolean;
+    ownership_verification_required: boolean;
+};
+
+export type CockpitAccountProvider = {
+    code: 'netbank' | 'paynamics_constellation';
+    label: string;
+    mode: 'shared' | 'dedicated';
+    shared: CockpitFundingDestinationSummary;
+    dedicated: CockpitDedicatedFundingDestinationSummary;
+};
+
+export type CockpitAccountConnectionHistory = {
+    id: string;
+    provider: string;
+    display_reference?: string | null;
+    status: string;
+    verification_status: string;
+    created_at?: string | null;
+    disabled_at?: string | null;
+};
+
+export type CockpitAccountReadModel = {
+    schema: string;
+    status: string;
+    account: {
+        reference: string;
+        currency: string;
+        ledger_authority: string;
+        funding_credit_policy: string;
+    };
+    providers: CockpitAccountProvider[];
+    connection_history: CockpitAccountConnectionHistory[];
+    controls: {
+        shared_is_default: boolean;
+        dedicated_fallback_enabled: boolean;
+        pin_confirmation_required: boolean;
+        manual_balance_adjustment_enabled: boolean;
+        provider_webhook_settlement_required: boolean;
+    };
+    redactions: {
+        account_numbers: string;
+        wallet_ids: string;
+        routing_tokens: string;
+        credentials_exposed: boolean;
+    };
+};
+
+export type CockpitAccountsPageProps = CockpitHeaderPageProps & {
+    account_read_model: CockpitAccountReadModel;
+    funding_account_notice?: string | null;
+};
+
 export type CockpitDashboardPageProps = CockpitHeaderPageProps & {
     dashboard_read_model?: CockpitDashboardReadModel;
     campaign_read_model?: CockpitCampaignReadModel;

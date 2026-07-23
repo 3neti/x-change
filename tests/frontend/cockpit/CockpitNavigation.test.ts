@@ -19,23 +19,29 @@ describe('Cockpit navigation baseline', () => {
         ]);
 
         expect(cockpitSecondaryNavigation.map((item) => item.label)).toEqual([
+            'Accounts',
             'Runtime Profile',
             'Approvals',
             'Administration',
         ]);
 
-        expect(cockpitNavigationItems).toHaveLength(11);
+        expect(cockpitNavigationItems).toHaveLength(12);
     });
 
     it('marks only implemented Cockpit routes as enabled navigation links', () => {
-        const enabledItems = cockpitNavigationItems.filter((item) => item.enabled !== false);
-        const disabledItems = cockpitNavigationItems.filter((item) => item.enabled === false);
+        const enabledItems = cockpitNavigationItems.filter(
+            (item) => item.enabled !== false,
+        );
+        const disabledItems = cockpitNavigationItems.filter(
+            (item) => item.enabled === false,
+        );
 
         expect(enabledItems.map((item) => item.key)).toEqual([
             'dashboard',
             'quick-generate',
             'funding',
             'pay-codes',
+            'accounts',
             'runtime-profile',
         ]);
 
@@ -50,7 +56,9 @@ describe('Cockpit navigation baseline', () => {
 
         for (const item of disabledItems) {
             expect(item.disabledLabel).toBe('Coming soon');
-            expect(item.disabledReason).toContain('Cockpit route has not been implemented yet.');
+            expect(item.disabledReason).toContain(
+                'Cockpit route has not been implemented yet.',
+            );
         }
     });
 
