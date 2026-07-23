@@ -436,6 +436,18 @@ return [
             'XCHANGE_FUNDING_VERIFICATION_PROVIDER_RATE_LIMIT_PER_MINUTE',
             30,
         ),
+        'scheduled_verification_enabled' => (bool) env(
+            'XCHANGE_FUNDING_SCHEDULED_VERIFICATION_ENABLED',
+            true,
+        ),
+        'scheduled_verification_batch_size' => (int) env(
+            'XCHANGE_FUNDING_SCHEDULED_VERIFICATION_BATCH_SIZE',
+            100,
+        ),
+        'settlement_grace_seconds' => (int) env(
+            'XCHANGE_FUNDING_SETTLEMENT_GRACE_SECONDS',
+            300,
+        ),
         'simulator' => [
             'enabled' => (bool) env(
                 'XCHANGE_QRPH_SIMULATOR_ENABLED',

@@ -9,6 +9,7 @@ use FrittenKeeZ\Vouchers\Models\Voucher;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Pipeline\Pipeline;
@@ -43,6 +44,7 @@ use LBHurtado\XChange\Console\Commands\Cockpit\SeedCockpitDiagnosticActivityComm
 use LBHurtado\XChange\Console\Commands\Cockpit\ShowCockpitOperatorActivityRuntimeProfileCommand;
 use LBHurtado\XChange\Console\Commands\Disbursement\CheckDisbursementStatusCommand;
 use LBHurtado\XChange\Console\Commands\DoctorXChangeCommand;
+use LBHurtado\XChange\Console\Commands\Funding\VerifyOpenFundingIntentsCommand;
 use LBHurtado\XChange\Console\Commands\InstallXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Lifecycle\PrepareLifecycleEnvironmentCommand;
 use LBHurtado\XChange\Console\Commands\Lifecycle\RunLifecycleScenarioCommand;
@@ -821,6 +823,7 @@ class XChangeServiceProvider extends ServiceProvider
         $this->decorateOnboardingCompletionHook();
         $this->bootConfig();
         $this->bootFundingVerificationRateLimiter();
+        $this->bootFundingVerificationSchedule();
         $this->bootRoutes();
         $this->bootMobileFirstFortify();
         $this->bootExceptionRendering();
@@ -837,6 +840,7 @@ class XChangeServiceProvider extends ServiceProvider
                 LoadPayCodeRedemptionCompletionContextCommand::class,
                 SubmitPayCodeClaimCommand::class,
                 CheckDisbursementStatusCommand::class,
+                VerifyOpenFundingIntentsCommand::class,
                 ReconcilePendingDisbursementsCommand::class,
 
                 PrepareLifecycleEnvironmentCommand::class,
@@ -876,6 +880,26 @@ class XChangeServiceProvider extends ServiceProvider
                 1,
                 (int) config('x-change.funding.verification_provider_rate_limit_per_minute', 30),
             ))->by((string) data_get($job, 'providerCode', 'unknown'));
+        });
+    }
+
+    protected function bootFundingVerificationSchedule(): void
+    {
+        if (! (bool) config('x-change.funding.scheduled_verification_enabled', true)) {
+            return;
+        }
+
+        $batchSize = max(
+            1,
+            (int) config('x-change.funding.scheduled_verification_batch_size', 100),
+        );
+
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule) use ($batchSize): void {
+            $schedule
+                ->command("xchange:funding:verify-open --provider=netbank --limit={$batchSize}")
+                ->name('xchange:funding:verify-open:netbank')
+                ->everyMinute()
+                ->withoutOverlapping(5);
         });
     }
 
