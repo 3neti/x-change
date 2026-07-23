@@ -167,6 +167,24 @@ it('blocks an unverified dedicated destination in the Funding read model', funct
     ]);
 });
 
+it('keeps installed funding providers visible when live intake is disabled', function () {
+    config([
+        'x-change.funding.providers.netbank.enabled' => false,
+        'x-change.funding.providers.paynamics_constellation.enabled' => false,
+        'x-change.funding.providers.qrph_simulator.enabled' => true,
+    ]);
+
+    $operator = actingAsTestUser(0);
+    $providers = app(FundingCockpitReadModelProvider::class)
+        ->forOperator($operator)
+        ->toArray()['providers'];
+
+    expect(collect($providers)->pluck('code')->all())
+        ->toBe(['netbank', 'paynamics_constellation'])
+        ->and(collect($providers)->pluck('status')->all())
+        ->toBe(['disabled', 'disabled']);
+});
+
 function fundingCockpitIntent(
     User $operator,
     Wallet $wallet,

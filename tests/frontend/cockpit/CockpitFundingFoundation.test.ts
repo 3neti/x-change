@@ -257,6 +257,36 @@ describe('Cockpit Funding foundation', () => {
         expect(wrapper.text()).toContain('no more than two decimal places');
     });
 
+    it('shows installed providers while keeping disabled funding intake locked', () => {
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: {
+                    ...fundingReadModel,
+                    providers: fundingReadModel.providers.map((provider) => ({
+                        ...provider,
+                        status: 'disabled',
+                    })),
+                },
+            },
+        });
+
+        const provider = wrapper.get(
+            '[data-testid="cockpit-funding-provider"]',
+        );
+        const providerText = provider.text().replace(/\s+/g, ' ');
+
+        expect(providerText).toContain('No funding provider enabled');
+        expect(providerText).toContain('NetBank · Shared (disabled)');
+        expect(providerText).toContain('Paynamics · Shared (disabled)');
+        expect(wrapper.text()).toContain('2 installed');
+        expect(wrapper.text()).toContain('Funding Intake stays locked');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-funding-submit"]')
+                .attributes('disabled'),
+        ).toBeDefined();
+    });
+
     it('runs and steps through the rollback-only QR Ph funding simulation', async () => {
         const fetch = vi.fn().mockResolvedValue({
             ok: true,

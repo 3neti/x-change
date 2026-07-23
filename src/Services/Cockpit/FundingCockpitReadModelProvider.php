@@ -104,8 +104,9 @@ class FundingCockpitReadModelProvider
     private function providers(string $actorType, string $actorId): array
     {
         return collect((array) config('x-change.funding.providers', []))
-            ->filter(fn (mixed $provider): bool => is_array($provider) && ($provider['enabled'] ?? false) === true)
+            ->filter(fn (mixed $provider, string $code): bool => is_array($provider) && $code !== 'qrph_simulator')
             ->map(function (array $provider, string $code) use ($actorType, $actorId): array {
+                $enabled = ($provider['enabled'] ?? false) === true;
                 $preference = FundingDestinationPreference::query()
                     ->with('providerAccountLink')
                     ->where('owner_type', $actorType)
@@ -128,7 +129,9 @@ class FundingCockpitReadModelProvider
                         'paynamics', 'paynamics_constellation' => 'Paynamics',
                         default => str($code)->headline()->toString(),
                     },
-                    'status' => $dedicatedReady ? 'available' : 'blocked',
+                    'status' => ! $enabled
+                        ? 'disabled'
+                        : ($dedicatedReady ? 'available' : 'blocked'),
                     'authoritative_verification' => true,
                     'destination_mode' => $mode,
                     'destination_status' => $mode === 'shared'

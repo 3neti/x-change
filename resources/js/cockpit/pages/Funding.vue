@@ -27,7 +27,7 @@ const activeSimulationStep = computed(
 );
 const availableFundingProviders = computed(() =>
     props.funding_read_model.providers.filter(
-        (provider) => provider.status !== 'blocked',
+        (provider) => provider.status === 'available',
     ),
 );
 const form = useForm({
@@ -577,10 +577,19 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 data-testid="cockpit-funding-provider"
                             >
                                 <option
+                                    v-if="
+                                        availableFundingProviders.length === 0
+                                    "
+                                    disabled
+                                    value=""
+                                >
+                                    No funding provider enabled
+                                </option>
+                                <option
                                     v-for="provider in funding_read_model.providers"
                                     :key="provider.code"
                                     :value="provider.code"
-                                    :disabled="provider.status === 'blocked'"
+                                    :disabled="provider.status !== 'available'"
                                 >
                                     {{ provider.label }} ·
                                     {{
@@ -590,9 +599,9 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                         )
                                     }}
                                     {{
-                                        provider.status === 'blocked'
-                                            ? ' (blocked)'
-                                            : ''
+                                        provider.status === 'available'
+                                            ? ''
+                                            : ` (${provider.status})`
                                     }}
                                 </option>
                             </select>
@@ -601,6 +610,16 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 class="mt-1 block text-xs text-rose-600"
                                 >{{ form.errors.provider }}</span
                             >
+                            <span
+                                v-else-if="
+                                    availableFundingProviders.length === 0
+                                "
+                                class="mt-1 block text-xs leading-5 text-amber-700 dark:text-amber-300"
+                            >
+                                NetBank and Paynamics are installed, but Funding
+                                Intake stays locked until a provider is
+                                explicitly enabled.
+                            </span>
                         </label>
 
                         <label class="block">
@@ -862,7 +881,8 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         <span
                             class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                         >
-                            {{ funding_read_model.providers.length }} connected
+                            {{ availableFundingProviders.length }} ready ·
+                            {{ funding_read_model.providers.length }} installed
                         </span>
                     </div>
                     <div
@@ -882,11 +902,14 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 </p>
                                 <span
                                     class="rounded-full px-2 py-1 text-[0.65rem] font-semibold tracking-wide uppercase"
-                                    :class="
-                                        provider.status === 'blocked'
-                                            ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
-                                            : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
-                                    "
+                                    :class="{
+                                        'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300':
+                                            provider.status === 'blocked',
+                                        'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300':
+                                            provider.status === 'disabled',
+                                        'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300':
+                                            provider.status === 'available',
+                                    }"
                                 >
                                     {{ provider.status }}
                                 </span>
@@ -911,7 +934,9 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 {{
                                     provider.status === 'blocked'
                                         ? 'Dedicated funding is unavailable until authoritative destination verification succeeds.'
-                                        : 'Signed intake plus independent authoritative status verification.'
+                                        : provider.status === 'disabled'
+                                          ? 'Adapter installed; Funding Intake remains locked until this provider is explicitly enabled.'
+                                          : 'Signed intake plus independent authoritative status verification.'
                                 }}
                             </p>
                         </div>
