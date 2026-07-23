@@ -8,18 +8,23 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
+use LBHurtado\PaymentGateway\Enums\NetbankStandingAddressScheme;
+use LBHurtado\PaymentGateway\Funding\NetbankStandingAddressProfile;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
-use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Data\Funding\NetbankReusableFundingAddressData;
 use LBHurtado\XChange\Enums\FundingRecognitionMode;
+use LBHurtado\XChange\Models\StandingFundingAddress;
+use LBHurtado\XChange\Services\Funding\StandingFundingDestinationResolver;
+use LBHurtado\XChange\Support\Auth\MobileNumber;
 use RuntimeException;
 
 final class GenerateNetbankReusableFundingAddress
 {
     public function __construct(
         private readonly WalletAccessContract $wallets,
-        private readonly FundingDestinationResolverContract $destinations,
+        private readonly StandingFundingDestinationResolver $destinations,
+        private readonly NetbankStandingAddressProfile $profile,
         private readonly ProvisionStandingFundingAddress $provision,
         private readonly AuditLoggerContract $audit,
     ) {}
@@ -40,7 +45,8 @@ final class GenerateNetbankReusableFundingAddress
             purpose: FundingAddressPurpose::AccountFunding,
             recognitionMode: $mode,
             currency: 'PHP',
-            destination: $this->destinations->resolve($owner, 'netbank', $accountReference),
+            destination: $this->destinations->resolve($owner, $accountReference),
+            routingReference: $this->routingReference($owner, $accountReference),
         );
         $address = $provisioned->address;
         $providerAddress = $provisioned->providerAddress;
@@ -94,6 +100,41 @@ final class GenerateNetbankReusableFundingAddress
         }
 
         throw new RuntimeException('Funding Account reference could not be resolved.');
+    }
+
+    private function routingReference(Model $owner, string $accountReference): ?string
+    {
+        if ($this->profile->scheme() !== NetbankStandingAddressScheme::MobileV1) {
+            return null;
+        }
+
+        $existing = StandingFundingAddress::query()
+            ->whereMorphedTo('owner', $owner)
+            ->where('account_reference', $accountReference)
+            ->where('provider_code', 'netbank')
+            ->where('purpose', FundingAddressPurpose::AccountFunding)
+            ->where('currency', 'PHP')
+            ->exists();
+
+        if ($existing) {
+            return null;
+        }
+
+        if ($owner->getAttribute('mobile_verified_at') === null) {
+            throw ValidationException::withMessages([
+                'standing_funding_address' => 'Verify the Account mobile before creating this funding address.',
+            ]);
+        }
+
+        $mobile = MobileNumber::normalize($owner->getAttribute('mobile'));
+
+        if (! is_string($mobile) || preg_match('/\A639\d{9}\z/', $mobile) !== 1) {
+            throw ValidationException::withMessages([
+                'standing_funding_address' => 'A valid verified Philippine mobile is required.',
+            ]);
+        }
+
+        return '0'.substr($mobile, 2);
     }
 
     private function assertEnabled(): void

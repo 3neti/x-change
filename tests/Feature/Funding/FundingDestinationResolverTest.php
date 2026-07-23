@@ -26,6 +26,17 @@ it('defaults existing owners to the shared platform destination', function () {
         ->and($destination->routingCredential)->toBe('test-vca-alias-token');
 });
 
+it('keeps the one-time NetBank destination unavailable without its alias token', function () {
+    $owner = actingAsTestUser();
+    config()->set('payment-gateway.netbank.funding.vca_alias_token');
+
+    expect(fn () => app(FundingDestinationResolverContract::class)->resolve(
+        $owner,
+        'netbank',
+        'wallet:shared',
+    ))->toThrow(FundingDestinationUnavailable::class, 'vca_alias_token');
+});
+
 it('resolves an active dedicated NetBank destination and encrypts its routing profile', function () {
     $owner = actingAsTestUser();
     $link = ProviderAccountLink::query()->create([

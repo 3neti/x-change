@@ -679,6 +679,14 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             >
                                 Purpose bound
                             </span>
+                            <span
+                                class="rounded-full bg-slate-100 px-2 py-1 text-[0.65rem] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                                data-testid="standing-funding-address-scheme"
+                            >
+                                {{
+                                    standing_funding_address.scheme_label
+                                }}
+                            </span>
                         </div>
                         <h2 class="mt-1.5 text-lg font-semibold">
                             Stable NetBank QR Ph address
@@ -691,6 +699,13 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             payer chooses the amount; payer mobile, amount,
                             timing, and merchant text never decide where the
                             credit goes.
+                        </p>
+                        <p
+                            v-if="standing_funding_address.scheme_warning"
+                            class="mt-2 max-w-4xl text-xs leading-5 text-amber-700 dark:text-amber-300"
+                            data-testid="standing-funding-address-scheme-warning"
+                        >
+                            {{ standing_funding_address.scheme_warning }}
                         </p>
                     </div>
                     <div class="flex flex-wrap gap-2 lg:justify-end">

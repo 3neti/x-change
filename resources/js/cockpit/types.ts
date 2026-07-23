@@ -562,6 +562,10 @@ export type CockpitStandingFundingAddressAvailability = {
     status: string;
     provider: 'netbank';
     exists: boolean;
+    address_scheme?: string | null;
+    scheme_label: string;
+    scheme_warning?: string | null;
+    production_safe: boolean;
     purpose: 'account_funding';
     recognition_mode: 'observe_only' | 'supervised' | 'automatic';
     address_status?: 'active' | 'suspended' | 'retired' | null;

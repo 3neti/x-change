@@ -6,6 +6,7 @@ use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use LBHurtado\XChange\Models\FundingIntent;
+use LBHurtado\XChange\Models\StandingFundingAddress;
 
 beforeEach(function () {
     Cache::clear();
@@ -23,6 +24,10 @@ beforeEach(function () {
         'payment-gateway.netbank.funding.vca_alias' => '91500',
         'payment-gateway.netbank.funding.vca_alias_token' => 'alias-token',
         'payment-gateway.netbank.funding.reference_key' => 'reusable-reference-key',
+        'payment-gateway.netbank.funding.standing_address.scheme' => 'netbank-mobile-v1',
+        'payment-gateway.netbank.funding.standing_address.reference_length' => 11,
+        'payment-gateway.netbank.funding.standing_address.hmac_key_id' => null,
+        'payment-gateway.netbank.funding.standing_address.hmac_key' => null,
         'payment-gateway.netbank.funding.qr_endpoint' => 'https://api.netbank.test/v1/qrph/generate',
         'payment-gateway.netbank.funding.qr_merchant_name' => 'X Change',
         'payment-gateway.netbank.funding.qr_merchant_city' => 'Manila',
@@ -34,7 +39,7 @@ beforeEach(function () {
 });
 
 it('generates an owner-stable Account Funding Address without creating or crediting a Funding Intent', function () {
-    $operator = actingAsTestUser();
+    $operator = actingAsVerifiedFundingOperator();
     $wallet = $operator->wallet;
     $balanceBefore = (int) $wallet->balance;
     $transactionsBefore = $wallet->transactions()->count();
@@ -75,7 +80,7 @@ it('generates an owner-stable Account Funding Address without creating or credit
 
     expect($response->headers->get('Cache-Control'))->toContain('no-store')
         ->toContain('private');
-    expect((string) $response->json('address.funding_address'))->toMatch('/\A91500\d{16}\z/')
+    expect((string) $response->json('address.funding_address'))->toBe('9150009173011987')
         ->and(FundingIntent::query()->count())->toBe(0)
         ->and((int) $wallet->fresh()->balance)->toBe($balanceBefore)
         ->and($wallet->transactions()->count())->toBe($transactionsBefore);
@@ -94,7 +99,7 @@ it('generates an owner-stable Account Funding Address without creating or credit
 });
 
 it('checks authoritative VCA history without exposing raw provider or payer facts', function () {
-    $operator = actingAsTestUser();
+    $operator = actingAsVerifiedFundingOperator();
     $wallet = $operator->wallet;
     $balanceBefore = (int) $wallet->balance;
 
@@ -166,7 +171,7 @@ it('checks authoritative VCA history without exposing raw provider or payer fact
 });
 
 it('requires explicit acknowledgement and fails closed while disabled', function () {
-    actingAsTestUser();
+    actingAsVerifiedFundingOperator();
 
     $this->postJson(
         route('x-change.cockpit.funding.standing-addresses.netbank.store'),
@@ -185,7 +190,7 @@ it('requires explicit acknowledgement and fails closed while disabled', function
 });
 
 it('keeps the sensitive QR and address out of initial Inertia props', function () {
-    actingAsTestUser();
+    actingAsVerifiedFundingOperator();
 
     $this->withHeader('X-Inertia', 'true')
         ->get(route('x-change.cockpit.funding.index'))
@@ -200,7 +205,7 @@ it('keeps the sensitive QR and address out of initial Inertia props', function (
 });
 
 it('fails closed when the configured corporate account name is missing', function () {
-    actingAsTestUser();
+    actingAsVerifiedFundingOperator();
     config()->set('payment-gateway.netbank.funding.corporate_account_name');
 
     $this->withHeader('X-Inertia', 'true')
@@ -210,16 +215,87 @@ it('fails closed when the configured corporate account name is missing', functio
         ->assertJsonPath('props.standing_funding_address.status', 'not_configured');
 });
 
-it('fails closed when the VCA alias token is missing', function () {
-    actingAsTestUser();
+it('does not require a VCA alias token for a shared reusable address', function () {
+    actingAsVerifiedFundingOperator();
     config()->set('payment-gateway.netbank.funding.vca_alias_token');
 
     $this->withHeader('X-Inertia', 'true')
         ->get(route('x-change.cockpit.funding.index'))
         ->assertOk()
-        ->assertJsonPath('props.standing_funding_address.available', false)
-        ->assertJsonPath('props.standing_funding_address.status', 'not_configured');
+        ->assertJsonPath('props.standing_funding_address.available', true)
+        ->assertJsonPath('props.standing_funding_address.status', 'available');
 });
+
+it('requires a verified mobile before creating a mobile-derived address', function () {
+    $operator = actingAsTestUser();
+    $operator->forceFill([
+        'mobile' => '639173011987',
+        'mobile_verified_at' => null,
+    ])->save();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.funding.index'))
+        ->assertOk()
+        ->assertJsonPath('props.standing_funding_address.available', false)
+        ->assertJsonPath('props.standing_funding_address.status', 'mobile_not_verified');
+});
+
+it('keeps a persisted HMAC address stable across key rotation', function () {
+    actingAsTestUser();
+    config([
+        'payment-gateway.netbank.funding.standing_address.scheme' => 'netbank-account-hmac-v2',
+        'payment-gateway.netbank.funding.standing_address.hmac_key_id' => 'v2-2026-01',
+        'payment-gateway.netbank.funding.standing_address.hmac_key' => 'base64:'.base64_encode(
+            str_repeat('a', 32),
+        ),
+    ]);
+    Http::fake([
+        'https://auth.netbank.test/oauth2/token' => Http::response([
+            'access_token' => 'access-token',
+            'expires_in' => 3600,
+        ]),
+        'https://api.netbank.test/v1/qrph/generate' => Http::response([
+            'qr_code' => reusableFundingTestPng(),
+        ]),
+    ]);
+
+    $first = $this->postJson(
+        route('x-change.cockpit.funding.standing-addresses.netbank.store'),
+        ['confirm_account_funding_address' => true],
+    )->assertOk();
+    $firstAddress = (string) $first->json('address.funding_address');
+
+    config([
+        'payment-gateway.netbank.funding.standing_address.hmac_key_id' => 'v3-2027-01',
+        'payment-gateway.netbank.funding.standing_address.hmac_key' => 'base64:'.base64_encode(
+            str_repeat('b', 32),
+        ),
+    ]);
+
+    $second = $this->postJson(
+        route('x-change.cockpit.funding.standing-addresses.netbank.store'),
+        ['confirm_account_funding_address' => true],
+    )->assertOk();
+    $stored = StandingFundingAddress::query()->sole();
+
+    expect($firstAddress)->toMatch('/\A91500\d{11}\z/')
+        ->and($second->json('address.funding_address'))->toBe($firstAddress)
+        ->and($stored->derivation_scheme)->toBe('netbank-account-hmac-v2')
+        ->and($stored->derivation_key_id)->toBe('v2-2026-01')
+        ->and($stored->derivation_counter)->toBe(0)
+        ->and(StandingFundingAddress::query()->count())->toBe(1);
+});
+
+function actingAsVerifiedFundingOperator(): object
+{
+    $operator = actingAsTestUser();
+    $operator->forceFill([
+        'mobile' => '639173011987',
+        'mobile_verified_at' => now(),
+    ])->save();
+
+    return $operator;
+}
 
 function reusableFundingTestPng(): string
 {

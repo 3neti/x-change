@@ -176,6 +176,11 @@ const standingFundingAvailability = {
     status: 'available',
     provider: 'netbank' as const,
     exists: false,
+    address_scheme: 'netbank-mobile-v1',
+    scheme_label: 'Verified mobile suffix',
+    scheme_warning:
+        'Development-friendly but easier to correlate; production rejects this scheme.',
+    production_safe: false,
     purpose: 'account_funding' as const,
     recognition_mode: 'supervised' as const,
     address_status: null,
@@ -251,6 +256,10 @@ describe('Cockpit Funding foundation', () => {
         expect(wrapper.text()).toContain('915001234567890123456');
         expect(wrapper.text()).toContain('Check NetBank');
         expect(wrapper.text()).toContain('Account Funding Address');
+        expect(wrapper.text()).toContain('Verified mobile suffix');
+        expect(wrapper.text()).toContain(
+            'production rejects this scheme',
+        );
         expect(wrapper.text()).toContain('Create Account Funding QR');
         expect(wrapper.text()).toContain(
             'payer mobile, amount, timing, and merchant text never decide',
