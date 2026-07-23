@@ -260,6 +260,7 @@ class XChangeServiceProvider extends ServiceProvider
             $this->packagePath('config/x-change.php'),
             'x-change'
         );
+        $this->mergeLifecycleScenarioDefaults();
 
         $this->alignWalletDefaults();
         $this->alignVoucherDefaults();
@@ -1416,6 +1417,22 @@ class XChangeServiceProvider extends ServiceProvider
         return $path !== ''
             ? $base.DIRECTORY_SEPARATOR.ltrim($path, DIRECTORY_SEPARATOR)
             : $base;
+    }
+
+    protected function mergeLifecycleScenarioDefaults(): void
+    {
+        $packageLifecycle = require $this->packagePath('config/lifecycle-scenarios.php');
+        $packageScenarios = $packageLifecycle['scenarios'] ?? null;
+        $configuredScenarios = $this->app['config']->get('x-change.lifecycle.scenarios');
+
+        if (! is_array($packageScenarios) || ! is_array($configuredScenarios)) {
+            return;
+        }
+
+        $this->app['config']->set(
+            'x-change.lifecycle.scenarios',
+            array_replace($packageScenarios, $configuredScenarios),
+        );
     }
 
     protected function alignWalletDefaults(): void

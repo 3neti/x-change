@@ -10,6 +10,7 @@ use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioRunOptions;
 use LBHurtado\XChange\Models\FundingDestinationPreference;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\ProviderAccountLink;
+use LBHurtado\XChange\Providers\XChangeServiceProvider;
 use LBHurtado\XChange\Tests\Fakes\User as FakeLifecycleUser;
 
 function prepareAccountManagementLifecycleIssuer(): FakeLifecycleUser
@@ -135,4 +136,20 @@ it('runs the account-management scenario through the lifecycle command', functio
     expect(FundingDestinationPreference::query()->count())->toBe(0)
         ->and(ProviderAccountLink::query()->count())->toBe(0)
         ->and(FundingIntent::query()->count())->toBe(0);
+});
+
+it('merges new package scenarios into an existing published host configuration', function () {
+    config()->set('x-change.lifecycle.scenarios', [
+        'host_defined_scenario' => [
+            'label' => 'Host-defined scenario',
+            'mode' => 'default',
+        ],
+    ]);
+
+    (new XChangeServiceProvider(app()))->register();
+
+    expect(config('x-change.lifecycle.scenarios.host_defined_scenario.label'))
+        ->toBe('Host-defined scenario')
+        ->and(config('x-change.lifecycle.scenarios.account_management_funding_destinations_demo.mode'))
+        ->toBe('account_management');
 });
