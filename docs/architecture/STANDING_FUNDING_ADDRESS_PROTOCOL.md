@@ -304,7 +304,25 @@ XCHANGE_STANDING_FUNDING_MAXIMUM_AMOUNT_MINOR
 XCHANGE_STANDING_FUNDING_DAILY_LIMIT_MINOR
 ```
 
-NetBank also requires its funding API/token endpoints, OAuth credentials, corporate account, five-digit VCA alias, reference key, QR endpoint, and merchant fields.
+NetBank also requires its funding API/token endpoints, OAuth credentials, corporate account, five-digit VCA alias, reference key, QR endpoint, and merchant fields. The Cockpit control fails closed unless every prerequisite is present, including:
+
+```text
+NETBANK_FUNDING_CORPORATE_ACCOUNT_NUMBER
+NETBANK_FUNDING_CORPORATE_ACCOUNT_NAME
+NETBANK_FUNDING_VCA_ALIAS
+NETBANK_FUNDING_VCA_ALIAS_TOKEN
+```
+
+The alias token is a provider-issued credential. It must never be guessed, copied from an unrelated integration, exposed in the UI, or recorded in documentation.
+
+## Browser Acceptance
+
+The package UI is accepted at desktop and mobile widths in two explicit states:
+
+- **Ready:** the create/reopen control may call NetBank and return the private, `no-store` QR response.
+- **Not configured:** the control is disabled before any provider call when a required credential or corporate-account fact is absent.
+
+Acceptance verifies no page-level horizontal overflow, contained activity tables, responsive controls, and no browser console errors. A real scan and payment remains a separately authorized live UAT gate.
 
 ## Rollout Gates
 
