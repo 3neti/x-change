@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-it('documents wallet treasury phase 0 through 5 consumer mapping without runtime wiring', function () {
+it('documents the historical wallet treasury consumer boundary and current runtime dependency', function () {
     $packageRoot = dirname(__DIR__, 3);
     $reportPath = $packageRoot.'/docs/ui-cockpit/reports/455-treasury-consumer-review-wallet-phase-0-5.md';
 
@@ -27,7 +27,7 @@ it('documents wallet treasury phase 0 through 5 consumer mapping without runtime
         ->and($settlementCompass)->toContain('../ui-cockpit/reports/455-treasury-consumer-review-wallet-phase-0-5.md')
         ->and($settlementCompass)->toContain('x-change bridge values remain authoritative for Cockpit display until wallet Treasury reports real persisted facts')
         ->and($settlementCompass)->toContain('x-change must not treat `NullTreasuryPlanningRuntime` output as an executed allocation')
-        ->and($composer['require'] ?? [])->not->toHaveKey('3neti/wallet');
+        ->and($composer['require']['3neti/wallet'] ?? null)->toBe('^1.1');
 });
 
 it('keeps wallet treasury implementation classes out of x-change production code for the consumer review slice', function () {
