@@ -63,6 +63,41 @@ An intent submission produces instructions only. Balance changes after authorita
 
 Connection history is retained for investigation and audit. A prior connection does not become active merely because it appears in history. Use the current mode and provider status at the top of each card as the operational state.
 
+## Lifecycle Walkthrough
+
+Use **Run safe walkthrough** on the Accounts page to inspect the complete destination lifecycle without changing the Account.
+
+The walkthrough runs all seven scenario states in one rollback-only request and then presents them through Previous, Next, and Restart controls. It demonstrates:
+
+- shared provider defaults;
+- dedicated NetBank eligibility;
+- immutable Funding Intent destination snapshots;
+- separate NetBank token rotation;
+- Paynamics reachability blocked without ownership proof;
+- ownership-verified Paynamics eligibility;
+- return to shared mode with connection history.
+
+The walkthrough must always show:
+
+- rollback confirmed;
+- zero provider calls;
+- unchanged balance;
+- no retained records;
+- no Funding instructions or webhook processing.
+
+If the walkthrough reports that rollback could not be confirmed, stop using it and investigate the application database transaction state. Do not interpret any walkthrough state as provider evidence.
+
+Engineering and CI may run the same scenario with:
+
+```bash
+php artisan xchange:lifecycle:run \
+    account_management_funding_destinations_demo \
+    --issuer=<operator-id> \
+    --json
+```
+
+The Cockpit control is enabled by default outside production. Production requires `XCHANGE_COCKPIT_ACCOUNT_SCENARIO_ENABLED=true`.
+
 ## Incident Handling
 
 | Condition | Operator response |
@@ -85,6 +120,9 @@ Check desktop and narrow mobile widths:
 - Dedicated fields appear only when dedicated mode is selected.
 - Imported NetBank token uses a password input and is never prefilled.
 - Paynamics warning remains visible in dedicated mode.
+- Lifecycle walkthrough advances through all seven masked steps.
+- Walkthrough controls stack without overflow on narrow screens.
+- Walkthrough completion shows rollback, unchanged balance, and no persistence.
 - Blocked provider options are disabled on Funding.
 - Profile provider cards contain no mutation forms and link to Accounts.
 - No unmasked account number, wallet ID, or token appears in page text or browser history.

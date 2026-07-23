@@ -188,6 +188,24 @@ It provides:
 
 The Funding page consumes the same preference read model. A blocked dedicated destination is visible but cannot be selected for a new Funding Intent. Profile provider cards are summaries and link to Accounts; they no longer mutate provider destinations.
 
+## Rollback Lifecycle Scenario
+
+The package registers `account_management_funding_destinations_demo` with the lifecycle runtime. It demonstrates the Account-management state machine without contacting NetBank or Paynamics and without retaining database or balance changes.
+
+The runner:
+
+1. selects shared destinations;
+2. activates a synthetic dedicated NetBank destination;
+3. creates an encrypted Funding Intent destination snapshot;
+4. demonstrates separate write-only token rotation;
+5. proves a reachable Paynamics wallet remains blocked;
+6. applies synthetic ownership evidence and proves eligibility;
+7. returns to shared mode while showing retained connection history.
+
+Execution occurs inside a nested transaction. The runner always rolls back to the transaction level that existed before execution and compares the owner's funding state before and after rollback. Its public result contains only masked references and explicitly reports provider calls, balance changes, persistence, instructions, and webhooks as absent.
+
+The scenario is available through the lifecycle CLI and the protected Cockpit Accounts walkthrough. It is blocked from the generic lifecycle HTTP API. Cockpit availability defaults to non-production environments and requires `XCHANGE_COCKPIT_ACCOUNT_SCENARIO_ENABLED=true` in production.
+
 ## Configuration and Rollout
 
 1. Configure and test shared provider credentials first.

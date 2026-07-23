@@ -127,6 +127,36 @@ php artisan xchange:lifecycle:run-group demo \
 
 ---
 
+## `account_management_funding_destinations_demo`
+
+### Classification
+
+| Field | Value |
+|---|---|
+| Category | demo |
+| Demo Suitability | excellent |
+| Risk | low |
+| Persistence | rollback only |
+
+### Purpose
+
+Demonstrates why Account funding destinations are explicit, masked, and fail-closed:
+
+- shared treasury routing is the default;
+- dedicated NetBank routing is eligible only with a supplied credential;
+- Funding Intents retain immutable destination snapshots;
+- token rotation is separate from destination selection;
+- Paynamics reachability is insufficient without ownership evidence;
+- returning to shared mode preserves connection history.
+
+The scenario never contacts a provider, issues Funding instructions, receives a webhook, changes a balance, or retains scenario records.
+
+### Recommended Usage
+
+Use the guided Accounts-page stepper for operator training and presentations. Use the lifecycle CLI with `--json` for CI and contract verification.
+
+---
+
 ## `basic_cash`
 
 ### Classification

@@ -232,6 +232,33 @@ Capabilities exercised:
 
 ---
 
+## Demo Scenarios
+
+### `account_management_funding_destinations_demo`
+
+| Field | Value |
+|---|---|
+| Category | demo |
+| Mode | account_management |
+| Risk | low |
+| Generic lifecycle API | blocked |
+
+Demonstrates the shared/dedicated funding destination lifecycle for NetBank and Paynamics.
+
+Capabilities exercised:
+
+- masked Account-management read models
+- encrypted provider routing records
+- immutable Funding Intent destination snapshots
+- separate NetBank credential rotation
+- Paynamics ownership fail-closed behavior
+- connection-history retention
+- nested transaction rollback verification
+
+The scenario performs no provider calls, Funding instructions, webhooks, ledger postings, or durable writes.
+
+---
+
 ## Sequential Claim Scenarios
 
 ### `divisible_open_three_slices`
@@ -414,6 +441,19 @@ Useful for:
 - operational dashboards
 - partner integrations
 - machine-readable validation
+
+---
+
+## Run the Account Management Walkthrough
+
+```bash
+php artisan xchange:lifecycle:run \
+    account_management_funding_destinations_demo \
+    --issuer=<operator-id> \
+    --json
+```
+
+This scenario is also available as a guided stepper on `/x/cockpit/accounts`. It is intentionally unavailable through the generic lifecycle HTTP endpoint.
 
 ---
 
