@@ -429,6 +429,10 @@ return [
         'verification_lock_seconds' => (int) env('XCHANGE_FUNDING_VERIFICATION_LOCK_SECONDS', 120),
         'verification_lock_wait_seconds' => (int) env('XCHANGE_FUNDING_VERIFICATION_LOCK_WAIT_SECONDS', 5),
         'verification_candidate_limit' => (int) env('XCHANGE_FUNDING_VERIFICATION_CANDIDATE_LIMIT', 100),
+        'verification_provider_rate_limit_per_minute' => (int) env(
+            'XCHANGE_FUNDING_VERIFICATION_PROVIDER_RATE_LIMIT_PER_MINUTE',
+            30,
+        ),
         'simulator' => [
             'enabled' => (bool) env(
                 'XCHANGE_QRPH_SIMULATOR_ENABLED',

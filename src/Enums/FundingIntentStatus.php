@@ -24,7 +24,7 @@ enum FundingIntentStatus: string
     {
         return match ($this) {
             self::PendingInstructions => [self::AwaitingFunds, self::Suspense, self::Expired, self::Cancelled],
-            self::AwaitingFunds => [self::EvidenceReceived, self::Suspense, self::Expired, self::Cancelled],
+            self::AwaitingFunds => [self::EvidenceReceived, self::Verifying, self::Suspense, self::Expired, self::Cancelled],
             self::EvidenceReceived => [self::Verifying, self::Suspense, self::Expired],
             self::Verifying => [self::AwaitingFunds, self::Verified, self::Suspense, self::Expired],
             self::Verified => [self::Settled, self::Suspense],

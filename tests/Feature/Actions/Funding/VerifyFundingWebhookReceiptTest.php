@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Illuminate\Queue\Middleware\RateLimited;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Support\Facades\Queue;
 use LBHurtado\EmiCore\Actions\Funding\StoreProviderWebhookReceipt;
 use LBHurtado\EmiCore\Data\Funding\FundingVerificationData;
@@ -18,10 +21,14 @@ use LBHurtado\XChange\Actions\Funding\ApproveFundingReconciliation;
 use LBHurtado\XChange\Actions\Funding\CreateFundingIntent;
 use LBHurtado\XChange\Actions\Funding\IssueFundingInstructions;
 use LBHurtado\XChange\Actions\Funding\RequestFundingReconciliation;
+use LBHurtado\XChange\Actions\Funding\VerifyFundingIntent;
 use LBHurtado\XChange\Actions\Funding\VerifyFundingWebhookReceipt;
 use LBHurtado\XChange\Data\Funding\CreateFundingIntentData;
+use LBHurtado\XChange\Data\Funding\FundingIntentVerificationData;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\FundingReconciliationAction;
+use LBHurtado\XChange\Enums\FundingVerificationTrigger;
+use LBHurtado\XChange\Jobs\Funding\VerifyFundingIntentJob;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingWebhookReceiptJob;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingRecovery;
@@ -202,6 +209,123 @@ it('returns pending observations to awaiting funds', function () {
     app(VerifyFundingWebhookReceipt::class)->handle(authenticatedFundingReceipt('pending'));
 
     expect($intent->fresh()->status)->toBe(FundingIntentStatus::AwaitingFunds);
+});
+
+it('verifies direct provider checks without fabricating webhook evidence', function (
+    FundingVerificationTrigger $trigger,
+) {
+    $intent = verifiedFundingIntent();
+
+    $verified = app(VerifyFundingIntent::class)->handle($intent, new FundingIntentVerificationData(
+        trigger: $trigger,
+        actorId: $trigger === FundingVerificationTrigger::Operator ? 'operator-42' : 'scheduler',
+    ));
+
+    expect($verified->status)->toBe(FundingIntentStatus::Verified)
+        ->and($this->fundingAdapter->lastVerification?->webhookReceiptId)->toBeNull()
+        ->and($verified->events->pluck('event_type')->all())->toBe([
+            'created',
+            'provider_instructions_created',
+            'provider_verification_started',
+            'provider_settlement_verified',
+        ])
+        ->and($verified->events->pluck('metadata.trigger')->filter()->unique()->values()->all())
+        ->toBe([$trigger->value]);
+})->with([
+    'operator' => FundingVerificationTrigger::Operator,
+    'schedule' => FundingVerificationTrigger::Schedule,
+]);
+
+it('settles once when direct verification jobs are replayed', function (
+    FundingVerificationTrigger $trigger,
+) {
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $intent = verifiedFundingIntent('wallet:'.$wallet->uuid);
+    $job = new VerifyFundingIntentJob(
+        fundingIntentId: $intent->getKey(),
+        providerCode: 'netbank',
+        trigger: $trigger,
+        actorId: $trigger === FundingVerificationTrigger::Operator ? 'operator-42' : 'scheduler',
+    );
+
+    app()->call([$job, 'handle']);
+    app()->call([$job, 'handle']);
+
+    expect($intent->refresh()->status)->toBe(FundingIntentStatus::Settled)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and(FundingSettlement::query()->count())->toBe(1)
+        ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(24_950);
+})->with([
+    'operator' => FundingVerificationTrigger::Operator,
+    'schedule' => FundingVerificationTrigger::Schedule,
+]);
+
+it('returns provider outages to awaiting funds with only a sanitized failure event', function () {
+    $this->fundingAdapter = new class extends FakeFundingProviderAdapter
+    {
+        public function verifyFunding(FundingVerificationData $verification): ProviderFundingObservationData
+        {
+            throw new RuntimeException('secret provider response and account 113001000019');
+        }
+    };
+    replaceFundingAdapter($this->fundingAdapter);
+    $intent = verifiedFundingIntent();
+
+    $checked = app(VerifyFundingIntent::class)->handle($intent, new FundingIntentVerificationData(
+        trigger: FundingVerificationTrigger::Operator,
+        actorId: 'operator-42',
+    ));
+    $event = $checked->events->last();
+
+    expect($checked->status)->toBe(FundingIntentStatus::AwaitingFunds)
+        ->and($event?->event_type)->toBe('provider_verification_unavailable')
+        ->and($event?->metadata)->toMatchArray([
+            'trigger' => 'operator',
+            'provider' => 'netbank',
+            'failure_type' => 'RuntimeException',
+        ])
+        ->and(json_encode($event?->metadata))->not->toContain('secret')
+        ->not->toContain('113001000019');
+});
+
+it('makes provider verification jobs unique, non-overlapping, and provider rate limited', function () {
+    $intent = verifiedFundingIntent();
+    $operatorJob = new VerifyFundingIntentJob(
+        fundingIntentId: $intent->getKey(),
+        providerCode: 'netbank',
+        trigger: FundingVerificationTrigger::Operator,
+        actorId: 'operator-42',
+    );
+    $scheduledJob = new VerifyFundingIntentJob(
+        fundingIntentId: $intent->getKey(),
+        providerCode: 'netbank',
+        trigger: FundingVerificationTrigger::Schedule,
+        actorId: 'scheduler',
+    );
+
+    expect($operatorJob)->toBeInstanceOf(ShouldBeUnique::class)
+        ->and($operatorJob->uniqueId())->toBe($scheduledJob->uniqueId())
+        ->and($operatorJob->middleware()[0])->toBeInstanceOf(WithoutOverlapping::class)
+        ->and($operatorJob->middleware()[1])->toBeInstanceOf(RateLimited::class);
+});
+
+it('moves a mismatched direct provider check to suspense without a webhook receipt', function () {
+    $this->fundingAdapter->fundingObservation = fundingObservation([
+        'grossAmountMinor' => 24_000,
+        'netAmountMinor' => 23_950,
+    ]);
+    $intent = verifiedFundingIntent();
+
+    $checked = app(VerifyFundingIntent::class)->handle($intent, new FundingIntentVerificationData(
+        trigger: FundingVerificationTrigger::Operator,
+        actorId: 'operator-42',
+    ));
+    $case = FundingSuspenseCase::query()->sole();
+
+    expect($checked->status)->toBe(FundingIntentStatus::Suspense)
+        ->and($case->webhook_receipt_id)->toBeNull()
+        ->and($case->reason_code)->toBe('provider_evidence_mismatch');
 });
 
 it('marks authenticated evidence unmatched when no active intent exists', function () {

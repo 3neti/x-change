@@ -8,11 +8,13 @@ use App\Models\User;
 use FrittenKeeZ\Vouchers\Models\Voucher;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Pipeline\Pipeline;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -818,6 +820,7 @@ class XChangeServiceProvider extends ServiceProvider
     {
         $this->decorateOnboardingCompletionHook();
         $this->bootConfig();
+        $this->bootFundingVerificationRateLimiter();
         $this->bootRoutes();
         $this->bootMobileFirstFortify();
         $this->bootExceptionRendering();
@@ -864,6 +867,16 @@ class XChangeServiceProvider extends ServiceProvider
             DisbursementConfirmed::class,
             HandleConfirmedDisbursement::class
         );
+    }
+
+    protected function bootFundingVerificationRateLimiter(): void
+    {
+        RateLimiter::for('x-change-funding-verification', function (object $job): Limit {
+            return Limit::perMinute(max(
+                1,
+                (int) config('x-change.funding.verification_provider_rate_limit_per_minute', 30),
+            ))->by((string) data_get($job, 'providerCode', 'unknown'));
+        });
     }
 
     protected function decorateOnboardingCompletionHook(): void

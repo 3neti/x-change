@@ -24,6 +24,8 @@ class FakeFundingProviderAdapter implements FundingProviderAdapter
 
     public ?ProviderFundingObservationData $fundingObservation = null;
 
+    public ?FundingVerificationData $lastVerification = null;
+
     public function __construct(
         private readonly string $provider = 'netbank',
     ) {
@@ -70,6 +72,8 @@ class FakeFundingProviderAdapter implements FundingProviderAdapter
 
     public function verifyFunding(FundingVerificationData $verification): ProviderFundingObservationData
     {
+        $this->lastVerification = $verification;
+
         return $this->fundingObservation ?? new ProviderFundingObservationData(
             provider: $verification->provider,
             providerTransactionId: 'provider-transaction-123',
