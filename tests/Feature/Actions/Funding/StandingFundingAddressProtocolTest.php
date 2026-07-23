@@ -218,6 +218,63 @@ it('classifies payment-purpose observations without crediting the Account', func
         ->and(TreasuryInventoryOperation::query()->count())->toBe(0);
 });
 
+it('retries an HMAC derivation collision with the next persisted counter', function () {
+    $provider = new StandingFundingAddressProviderFake;
+    $provider->counterZeroAddress = '9150000000000000';
+    bindStandingFundingProvider($provider);
+
+    $firstOwner = actingAsTestUser(0);
+    $firstWallet = $firstOwner->wallet()->where('slug', 'platform')->firstOrFail();
+    $first = provisionStandingAddress(
+        $firstOwner,
+        'wallet:'.$firstWallet->uuid,
+        FundingAddressPurpose::AccountFunding,
+        FundingRecognitionMode::ObserveOnly,
+    );
+
+    $secondOwner = actingAsTestUser(0);
+    $secondWallet = $secondOwner->wallet()->where('slug', 'platform')->firstOrFail();
+    $second = provisionStandingAddress(
+        $secondOwner,
+        'wallet:'.$secondWallet->uuid,
+        FundingAddressPurpose::AccountFunding,
+        FundingRecognitionMode::ObserveOnly,
+    );
+
+    expect($first->funding_address_ciphertext)->toBe('9150000000000000')
+        ->and($first->derivation_counter)->toBe(0)
+        ->and($second->funding_address_ciphertext)->not->toBe($first->funding_address_ciphertext)
+        ->and($second->derivation_counter)->toBe(1)
+        ->and(StandingFundingAddress::query()->count())->toBe(2);
+});
+
+it('fails closed when two mobile-derived bindings resolve to the same address', function () {
+    $provider = new StandingFundingAddressProviderFake;
+    $provider->scheme = 'netbank-mobile-v1';
+    $provider->counterZeroAddress = '9150009173011987';
+    bindStandingFundingProvider($provider);
+
+    $firstOwner = actingAsTestUser(0);
+    $firstWallet = $firstOwner->wallet()->where('slug', 'platform')->firstOrFail();
+    provisionStandingAddress(
+        $firstOwner,
+        'wallet:'.$firstWallet->uuid,
+        FundingAddressPurpose::AccountFunding,
+        FundingRecognitionMode::ObserveOnly,
+    );
+
+    $secondOwner = actingAsTestUser(0);
+    $secondWallet = $secondOwner->wallet()->where('slug', 'platform')->firstOrFail();
+
+    expect(fn () => provisionStandingAddress(
+        $secondOwner,
+        'wallet:'.$secondWallet->uuid,
+        FundingAddressPurpose::AccountFunding,
+        FundingRecognitionMode::ObserveOnly,
+    ))->toThrow(InvalidArgumentException::class, 'already bound to another Account');
+    expect(StandingFundingAddress::query()->count())->toBe(1);
+});
+
 function bindStandingFundingProvider(StandingFundingAddressProviderFake $provider): void
 {
     app()->instance(
@@ -271,6 +328,10 @@ final class StandingFundingAddressProviderFake implements StandingFundingAddress
 {
     public string $fundingAddress = '9150012345678901';
 
+    public string $scheme = 'netbank-account-hmac-v2';
+
+    public ?string $counterZeroAddress = null;
+
     /** @var list<ProviderFundingObservationData> */
     public array $observations = [];
 
@@ -287,15 +348,17 @@ final class StandingFundingAddressProviderFake implements StandingFundingAddress
     ): StandingFundingAddressData {
         $this->requests[] = $request;
         $this->fundingAddress = $request->existingFundingAddress
-            ?? '91500'.str_pad(
-                (string) (hexdec(substr(hash(
-                    'sha256',
-                    $request->ownerReference.'|'.$request->purpose->value.'|'.$request->derivationCounter,
-                ), 0, 8)) % 100_000_000_000),
-                11,
-                '0',
-                STR_PAD_LEFT,
-            );
+            ?? ($request->derivationCounter === 0 && $this->counterZeroAddress !== null
+                ? $this->counterZeroAddress
+                : '91500'.str_pad(
+                    (string) (hexdec(substr(hash(
+                        'sha256',
+                        $request->ownerReference.'|'.$request->purpose->value.'|'.$request->derivationCounter,
+                    ), 0, 8)) % 100_000_000_000),
+                    11,
+                    '0',
+                    STR_PAD_LEFT,
+                ));
 
         return new StandingFundingAddressData(
             provider: 'netbank',
@@ -314,9 +377,10 @@ final class StandingFundingAddressProviderFake implements StandingFundingAddress
             ),
             displayData: [
                 'derivation_scheme' => $request->existingFundingAddress === null
-                    ? 'netbank-account-hmac-v2'
+                    ? $this->scheme
                     : null,
                 'derivation_key_id' => $request->existingFundingAddress === null
+                    && $this->scheme === 'netbank-account-hmac-v2'
                     ? 'test-key-v2'
                     : null,
                 'derivation_counter' => $request->existingFundingAddress === null
