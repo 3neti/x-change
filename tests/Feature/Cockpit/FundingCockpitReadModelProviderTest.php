@@ -78,7 +78,7 @@ it('presents operator scoped funding controls without exposing provider evidence
                 'webhook_direct_credit_enabled' => false,
                 'authoritative_provider_verification_required' => true,
                 'dual_control_reconciliation_required' => true,
-                'live_provider_balance_connected' => false,
+                'live_provider_balance_connected' => true,
             ],
         ])
         ->and($readModel['redactions']['payloads'])->toBe('funding-operations-summary-only')
