@@ -417,6 +417,12 @@ return [
         'verification_lock_seconds' => (int) env('XCHANGE_FUNDING_VERIFICATION_LOCK_SECONDS', 120),
         'verification_lock_wait_seconds' => (int) env('XCHANGE_FUNDING_VERIFICATION_LOCK_WAIT_SECONDS', 5),
         'verification_candidate_limit' => (int) env('XCHANGE_FUNDING_VERIFICATION_CANDIDATE_LIMIT', 100),
+        'simulator' => [
+            'enabled' => (bool) env('XCHANGE_QRPH_SIMULATOR_ENABLED', false),
+            'allowed_environments' => ['local', 'testing'],
+            'signing_key' => env('XCHANGE_QRPH_SIMULATOR_SIGNING_KEY', env('APP_KEY')),
+            'mobile_hash_key' => env('XCHANGE_QRPH_SIMULATOR_MOBILE_HASH_KEY', env('APP_KEY')),
+        ],
         'providers' => [
             'netbank' => [
                 'enabled' => (bool) env('XCHANGE_FUNDING_NETBANK_ENABLED', false),
@@ -434,6 +440,15 @@ return [
                     'inventory_reference' => 'inventory:paynamics:wallet-float',
                     'settlement_resource_reference' => 'resource:paynamics:corporate-wallet',
                     'resource_type' => 'emi_wallet_float',
+                ],
+            ],
+            'qrph_simulator' => [
+                'enabled' => (bool) env('XCHANGE_QRPH_SIMULATOR_ENABLED', false),
+                'signature_header' => 'X-XChange-Simulator-Signature',
+                'treasury' => [
+                    'inventory_reference' => 'inventory:qrph-simulator:local-clearing',
+                    'settlement_resource_reference' => 'resource:qrph-simulator:local-clearing',
+                    'resource_type' => 'simulated_cash_at_bank',
                 ],
             ],
         ],

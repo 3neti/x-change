@@ -62,10 +62,25 @@ class DefaultFundingDestinationResolver implements FundingDestinationResolverCon
         return match ($provider) {
             'netbank' => $this->sharedNetbank($accountReference),
             'paynamics_constellation' => $this->sharedPaynamics($accountReference),
+            'qrph_simulator' => $this->sharedQrPhSimulator($accountReference),
             default => throw new FundingDestinationUnavailable(
                 "Shared funding destination [{$provider}] is unsupported.",
             ),
         };
+    }
+
+    private function sharedQrPhSimulator(string $accountReference): FundingDestinationData
+    {
+        return new FundingDestinationData(
+            provider: 'qrph_simulator',
+            mode: 'shared',
+            destinationType: 'wallet',
+            accountReference: $accountReference,
+            displayReference: 'Local simulated clearing',
+            fingerprint: $this->fingerprint('qrph_simulator', 'local-simulated-clearing'),
+            verificationStatus: 'simulation_only',
+            providerWalletId: 'qrph-simulator-clearing',
+        );
     }
 
     private function sharedNetbank(string $accountReference): FundingDestinationData

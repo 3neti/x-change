@@ -222,6 +222,7 @@ use LBHurtado\XChange\Services\Execution\XChangeSettlementEnvelopeExecutionGatew
 use LBHurtado\XChange\Services\Execution\XChangeStoredValueExecutionGateway;
 use LBHurtado\XChange\Services\Funding\DefaultFundingDestinationResolver;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
+use LBHurtado\XChange\Services\Funding\QrPhSimulatorFundingProviderAdapter;
 use LBHurtado\XChange\Services\InstructionBackedPricingService;
 use LBHurtado\XChange\Services\NullClaimApprovalNotificationService;
 use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
@@ -265,6 +266,12 @@ class XChangeServiceProvider extends ServiceProvider
         $this->alignWalletDefaults();
         $this->alignVoucherDefaults();
         $this->alignAccountSystemUser();
+
+        $this->app->singleton(QrPhSimulatorFundingProviderAdapter::class);
+        $this->app->tag(
+            QrPhSimulatorFundingProviderAdapter::class,
+            'emi.funding-provider-adapters',
+        );
 
         $this->app->singleton(
             FundingProviderAdapterRegistry::class,
