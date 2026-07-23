@@ -4,6 +4,8 @@ import { approve as approveReconciliation } from '@/routes/x-change/cockpit/fund
 import { show as showFundingInstructions } from '@/routes/x-change/cockpit/funding/intents/instructions';
 import { store as storeFundingIntent } from '@/routes/x-change/cockpit/funding/intents';
 import { store as storeVerificationCheck } from '@/routes/x-change/cockpit/funding/intents/verification-checks';
+import { store as generateReusableFundingAddressRoute } from '@/routes/x-change/cockpit/funding/reusable-addresses/netbank';
+import { store as checkReusableFundingHistoryRoute } from '@/routes/x-change/cockpit/funding/reusable-addresses/netbank/history-checks';
 import { store as runQrPhFundingSimulationRoute } from '@/routes/x-change/cockpit/funding/scenarios/qrph';
 import { store as storeReconciliationRequest } from '@/routes/x-change/cockpit/funding/suspense/reconciliation-requests';
 import { computed, ref, watch } from 'vue';
@@ -13,6 +15,8 @@ import type {
     CockpitFundingPageProps,
     CockpitFundingInstruction,
     CockpitQrPhFundingSimulationResult,
+    CockpitReusableFundingAddress,
+    CockpitReusableFundingObservation,
 } from '../types';
 
 const props = defineProps<CockpitFundingPageProps>();
@@ -29,6 +33,12 @@ const instructionError = ref<string | null>(null);
 const simulationRunning = ref(false);
 const simulationError = ref<string | null>(null);
 const simulationResult = ref<CockpitQrPhFundingSimulationResult | null>(null);
+const reusableAddress = ref<CockpitReusableFundingAddress | null>(null);
+const reusableObservations = ref<CockpitReusableFundingObservation[]>([]);
+const reusableAddressLoading = ref(false);
+const reusableHistoryLoading = ref(false);
+const reusableAddressError = ref<string | null>(null);
+const reusableHistoryCheckedAt = ref<string | null>(null);
 const activeSimulationStepIndex = ref(0);
 const activeSimulationStep = computed(
     () =>
@@ -355,6 +365,118 @@ async function runQrPhFundingSimulation(): Promise<void> {
     }
 }
 
+async function generateReusableFundingAddress(): Promise<void> {
+    if (
+        reusableAddressLoading.value ||
+        props.reusable_funding_address?.available !== true
+    ) {
+        return;
+    }
+
+    reusableAddressLoading.value = true;
+    reusableAddressError.value = null;
+    const route = generateReusableFundingAddressRoute();
+
+    try {
+        const response = await fetch(route.url, {
+            method: route.method.toUpperCase(),
+            credentials: 'same-origin',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                ...csrfHeader(),
+            },
+            body: JSON.stringify({
+                confirm_temporary_reusable_address: true,
+            }),
+        });
+        const body = await safeJson(response);
+
+        if (
+            !response.ok ||
+            body.schema !==
+                'x-change.cockpit.netbank-reusable-funding-address.v1' ||
+            typeof body.address !== 'object' ||
+            body.address === null
+        ) {
+            reusableAddressError.value =
+                typeof body.message === 'string'
+                    ? body.message
+                    : 'NetBank could not generate the temporary reusable address.';
+
+            return;
+        }
+
+        reusableAddress.value = body.address as CockpitReusableFundingAddress;
+        reusableObservations.value = [];
+        reusableHistoryCheckedAt.value = null;
+    } catch {
+        reusableAddressError.value =
+            'The temporary reusable address could not reach NetBank.';
+    } finally {
+        reusableAddressLoading.value = false;
+    }
+}
+
+async function checkReusableFundingHistory(): Promise<void> {
+    if (reusableHistoryLoading.value || reusableAddress.value === null) {
+        return;
+    }
+
+    reusableHistoryLoading.value = true;
+    reusableAddressError.value = null;
+    const route = checkReusableFundingHistoryRoute();
+
+    try {
+        const response = await fetch(route.url, {
+            method: route.method.toUpperCase(),
+            credentials: 'same-origin',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                ...csrfHeader(),
+            },
+            body: JSON.stringify({
+                confirm_temporary_reusable_address: true,
+            }),
+        });
+        const body = await safeJson(response);
+
+        if (
+            !response.ok ||
+            body.schema !==
+                'x-change.cockpit.netbank-reusable-funding-history.v1' ||
+            !Array.isArray(body.observations)
+        ) {
+            reusableAddressError.value =
+                typeof body.message === 'string'
+                    ? body.message
+                    : 'NetBank history could not be checked.';
+
+            return;
+        }
+
+        reusableObservations.value =
+            body.observations as CockpitReusableFundingObservation[];
+        reusableHistoryCheckedAt.value =
+            typeof body.checked_at === 'string' ? body.checked_at : null;
+    } catch {
+        reusableAddressError.value =
+            'The NetBank history check could not reach the provider.';
+    } finally {
+        reusableHistoryLoading.value = false;
+    }
+}
+
+function hideReusableFundingAddress(): void {
+    reusableAddress.value = null;
+    reusableObservations.value = [];
+    reusableHistoryCheckedAt.value = null;
+    reusableAddressError.value = null;
+}
+
 function csrfHeader(): Record<string, string> {
     if (typeof document === 'undefined') {
         return {};
@@ -447,6 +569,266 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             atomically.
                         </p>
                     </div>
+                </div>
+            </section>
+
+            <section
+                v-if="reusable_funding_address"
+                class="overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-sm dark:border-amber-950 dark:bg-slate-900"
+                data-testid="cockpit-reusable-funding-address"
+            >
+                <div
+                    class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start"
+                >
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <p
+                                class="text-xs font-semibold tracking-[0.16em] text-amber-700 uppercase dark:text-amber-300"
+                            >
+                                Reusable Funding Address
+                            </p>
+                            <span
+                                class="rounded-full bg-amber-100 px-2 py-1 text-[0.65rem] font-semibold text-amber-800 uppercase dark:bg-amber-950 dark:text-amber-200"
+                            >
+                                Temporary
+                            </span>
+                            <span
+                                class="rounded-full bg-slate-100 px-2 py-1 text-[0.65rem] font-semibold text-slate-600 uppercase dark:bg-slate-800 dark:text-slate-300"
+                            >
+                                Real NetBank call
+                            </span>
+                        </div>
+                        <h2 class="mt-1.5 text-lg font-semibold">
+                            Open-amount QR Ph receiving address
+                        </h2>
+                        <p
+                            class="mt-1 max-w-4xl text-sm leading-6 text-slate-600 dark:text-slate-400"
+                        >
+                            Generate one stable, provider-issued QR for this
+                            Cockpit operator. A payer chooses the amount.
+                            Checking history reads this exact VCA from NetBank;
+                            it does not create a Funding Intent or credit the
+                            Account.
+                        </p>
+                    </div>
+                    <div class="flex flex-wrap gap-2 lg:justify-end">
+                        <button
+                            v-if="reusableAddress === null"
+                            type="button"
+                            class="h-10 rounded-lg bg-amber-600 px-4 text-sm font-semibold text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            :disabled="
+                                reusableAddressLoading ||
+                                reusable_funding_address.available !== true
+                            "
+                            data-testid="generate-reusable-funding-address"
+                            @click="generateReusableFundingAddress"
+                        >
+                            {{
+                                reusableAddressLoading
+                                    ? 'Contacting NetBank…'
+                                    : reusable_funding_address.available
+                                      ? 'Generate reusable QR'
+                                      : 'Reusable address unavailable'
+                            }}
+                        </button>
+                        <template v-else>
+                            <button
+                                type="button"
+                                class="h-10 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-amber-400 dark:text-slate-950 dark:hover:bg-amber-300"
+                                :disabled="reusableHistoryLoading"
+                                data-testid="check-reusable-funding-history"
+                                @click="checkReusableFundingHistory"
+                            >
+                                {{
+                                    reusableHistoryLoading
+                                        ? 'Checking NetBank…'
+                                        : 'Check NetBank history'
+                                }}
+                            </button>
+                            <button
+                                type="button"
+                                class="h-10 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                                data-testid="hide-reusable-funding-address"
+                                @click="hideReusableFundingAddress"
+                            >
+                                Hide sensitive QR
+                            </button>
+                        </template>
+                    </div>
+                </div>
+
+                <div
+                    v-if="reusableAddress"
+                    class="border-t border-amber-100 bg-amber-50/50 p-5 dark:border-amber-950 dark:bg-amber-950/10"
+                >
+                    <div
+                        class="grid gap-5 md:grid-cols-[12rem_minmax(0,1fr)] md:items-start"
+                    >
+                        <div
+                            class="mx-auto rounded-xl border border-amber-200 bg-white p-2 shadow-sm md:mx-0 dark:border-amber-900"
+                        >
+                            <img
+                                :src="reusableAddress.qr_code"
+                                alt="Temporary reusable NetBank QR Ph receiving address"
+                                class="size-44 object-contain"
+                                data-testid="reusable-funding-address-qr"
+                            />
+                        </div>
+                        <div class="min-w-0">
+                            <p
+                                class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
+                            >
+                                NetBank VCA
+                            </p>
+                            <p
+                                class="mt-1 font-mono text-base font-semibold break-all"
+                                data-testid="reusable-funding-address-value"
+                            >
+                                {{ reusableAddress.funding_address }}
+                            </p>
+                            <div class="mt-3">
+                                <CockpitManualCopyButton
+                                    :value="reusableAddress.funding_address"
+                                    label="Copy receiving address"
+                                    helper="Browser-local copy only."
+                                />
+                            </div>
+                            <dl class="mt-4 grid gap-3 text-xs sm:grid-cols-3">
+                                <div
+                                    class="rounded-lg bg-white px-3 py-2 dark:bg-slate-950"
+                                >
+                                    <dt class="text-slate-500">QR mode</dt>
+                                    <dd class="mt-0.5 font-semibold">
+                                        Static · reusable
+                                    </dd>
+                                </div>
+                                <div
+                                    class="rounded-lg bg-white px-3 py-2 dark:bg-slate-950"
+                                >
+                                    <dt class="text-slate-500">
+                                        Embedded amount
+                                    </dt>
+                                    <dd class="mt-0.5 font-semibold">None</dd>
+                                </div>
+                                <div
+                                    class="rounded-lg bg-white px-3 py-2 dark:bg-slate-950"
+                                >
+                                    <dt class="text-slate-500">
+                                        Automatic credit
+                                    </dt>
+                                    <dd class="mt-0.5 font-semibold">
+                                        Disabled
+                                    </dd>
+                                </div>
+                            </dl>
+                            <p
+                                class="mt-4 text-xs leading-5 text-amber-800 dark:text-amber-200"
+                            >
+                                Temporary inspection path: payment may reach
+                                NetBank, but it remains outside the exact-amount
+                                Funding Intent settlement flow. Provider history
+                                is authoritative; observing a transfer here does
+                                not change Internal Balance or Issuance
+                                Capacity.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div
+                        class="mt-5 overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
+                    >
+                        <div
+                            class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3 dark:border-slate-800"
+                        >
+                            <div>
+                                <h3 class="text-sm font-semibold">
+                                    Observed NetBank transactions
+                                </h3>
+                                <p class="mt-0.5 text-xs text-slate-500">
+                                    Sanitized VCA history only. No payer account
+                                    or raw provider payload is shown.
+                                </p>
+                            </div>
+                            <span class="text-xs text-slate-500">
+                                {{
+                                    reusableHistoryCheckedAt
+                                        ? `Checked ${displayTime(
+                                              reusableHistoryCheckedAt,
+                                          )}`
+                                        : 'Not checked yet'
+                                }}
+                            </span>
+                        </div>
+                        <div
+                            v-if="reusableObservations.length"
+                            class="overflow-x-auto"
+                        >
+                            <table
+                                class="w-full min-w-[42rem] text-left text-sm"
+                            >
+                                <thead
+                                    class="bg-slate-50 text-xs text-slate-500 uppercase dark:bg-slate-900"
+                                >
+                                    <tr>
+                                        <th class="px-4 py-2.5">Reference</th>
+                                        <th class="px-4 py-2.5">Amount</th>
+                                        <th class="px-4 py-2.5">Status</th>
+                                        <th class="px-4 py-2.5">Observed</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr
+                                        v-for="observation in reusableObservations"
+                                        :key="observation.reference"
+                                        class="border-t border-slate-100 dark:border-slate-800"
+                                    >
+                                        <td
+                                            class="px-4 py-3 font-mono text-xs font-semibold"
+                                        >
+                                            {{ observation.reference }}
+                                        </td>
+                                        <td class="px-4 py-3 font-semibold">
+                                            {{ observation.gross_amount }}
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            {{
+                                                displayLabel(
+                                                    observation.provider_status,
+                                                )
+                                            }}
+                                        </td>
+                                        <td class="px-4 py-3 text-slate-500">
+                                            {{
+                                                displayTime(
+                                                    observation.settled_at ??
+                                                        observation.occurred_at,
+                                                )
+                                            }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p
+                            v-else
+                            class="px-4 py-5 text-sm text-slate-500"
+                            data-testid="reusable-funding-history-empty"
+                        >
+                            {{
+                                reusableHistoryCheckedAt
+                                    ? 'NetBank returned no incoming transactions for this address in the configured lookback window.'
+                                    : 'Check NetBank after a human scans and pays the QR.'
+                            }}
+                        </p>
+                    </div>
+                </div>
+
+                <div
+                    v-if="reusableAddressError"
+                    class="border-t border-rose-200 bg-rose-50 px-5 py-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/20 dark:text-rose-200"
+                    role="alert"
+                >
+                    {{ reusableAddressError }}
                 </div>
             </section>
 

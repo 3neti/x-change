@@ -170,6 +170,17 @@ const fundingSimulationResult = {
     ],
 };
 
+const reusableFundingAvailability = {
+    enabled: true,
+    available: true,
+    status: 'available',
+    provider: 'netbank' as const,
+    temporary: true as const,
+    provider_calls: true as const,
+    funding_intent_created: false as const,
+    automatic_credit_enabled: false as const,
+};
+
 describe('Cockpit Funding foundation', () => {
     afterEach(() => {
         vi.unstubAllGlobals();
@@ -199,6 +210,7 @@ describe('Cockpit Funding foundation', () => {
                     balance_changed: false,
                     sensitive: true,
                 },
+                reusable_funding_address: reusableFundingAvailability,
             },
         });
 
@@ -231,6 +243,11 @@ describe('Cockpit Funding foundation', () => {
         ).toBe('data:image/png;base64,AA==');
         expect(wrapper.text()).toContain('915001234567890123456');
         expect(wrapper.text()).toContain('Check NetBank');
+        expect(wrapper.text()).toContain('Reusable Funding Address');
+        expect(wrapper.text()).toContain('Generate reusable QR');
+        expect(wrapper.text()).toContain(
+            'it does not create a Funding Intent or credit the Account',
+        );
         expect(wrapper.text()).toContain('Reopen QR');
         expect(wrapper.text()).toContain(
             'The Account changes only after independent provider verification',
@@ -248,6 +265,123 @@ describe('Cockpit Funding foundation', () => {
                 mode: 'rest',
             },
         );
+    });
+
+    it('generates a temporary reusable QR and checks sanitized NetBank history', async () => {
+        const fetch = vi
+            .fn()
+            .mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: async () => ({
+                    schema: 'x-change.cockpit.netbank-reusable-funding-address.v1',
+                    address: {
+                        provider: 'netbank',
+                        funding_address: '915001234567890123456',
+                        masked_funding_address: '•••• 123456',
+                        currency: 'PHP',
+                        institution: 'NetBank',
+                        merchant_name: 'X Change',
+                        qr_code: 'data:image/png;base64,REUSABLE',
+                        qr_mode: 'static',
+                        transaction_type: 'p2m',
+                        embedded_amount: false,
+                        provider_generated: true,
+                        temporary: true,
+                        funding_intent_created: false,
+                        automatic_credit_enabled: false,
+                    },
+                }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: async () => ({
+                    schema: 'x-change.cockpit.netbank-reusable-funding-history.v1',
+                    observations: [
+                        {
+                            reference: 'NB-ABC123',
+                            gross_amount_minor: 2500,
+                            fee_amount_minor: 0,
+                            net_amount_minor: 2500,
+                            gross_amount: '₱25.00',
+                            net_amount: '₱25.00',
+                            currency: 'PHP',
+                            provider_status: 'settled',
+                            occurred_at: '2026-07-23T01:05:00+00:00',
+                            settled_at: '2026-07-23T01:06:00+00:00',
+                        },
+                    ],
+                    checked_at: '2026-07-23T01:07:00+00:00',
+                    balance_changed: false,
+                    funding_intent_created: false,
+                }),
+            });
+        vi.stubGlobal('fetch', fetch);
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: fundingReadModel,
+                reusable_funding_address: reusableFundingAvailability,
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="generate-reusable-funding-address"]')
+            .trigger('click');
+        await nextTick();
+        await nextTick();
+
+        expect(fetch).toHaveBeenNthCalledWith(
+            1,
+            '/x/cockpit/funding/reusable-addresses/netbank',
+            expect.objectContaining({
+                method: 'POST',
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    confirm_temporary_reusable_address: true,
+                }),
+            }),
+        );
+        expect(
+            wrapper
+                .get('[data-testid="reusable-funding-address-qr"]')
+                .attributes('src'),
+        ).toBe('data:image/png;base64,REUSABLE');
+        expect(
+            wrapper
+                .get('[data-testid="reusable-funding-address-value"]')
+                .text(),
+        ).toContain('915001234567890123456');
+        expect(wrapper.text()).toContain('Automatic credit');
+        expect(wrapper.text()).toContain('Disabled');
+
+        await wrapper
+            .get('[data-testid="check-reusable-funding-history"]')
+            .trigger('click');
+        await nextTick();
+        await nextTick();
+
+        expect(fetch).toHaveBeenNthCalledWith(
+            2,
+            '/x/cockpit/funding/reusable-addresses/netbank/history-checks',
+            expect.objectContaining({
+                method: 'POST',
+                credentials: 'same-origin',
+            }),
+        );
+        expect(wrapper.text()).toContain('NB-ABC123');
+        expect(wrapper.text()).toContain('₱25.00');
+        expect(wrapper.text()).toContain('Settled');
+
+        await wrapper
+            .get('[data-testid="hide-reusable-funding-address"]')
+            .trigger('click');
+
+        expect(
+            wrapper
+                .find('[data-testid="reusable-funding-address-qr"]')
+                .exists(),
+        ).toBe(false);
     });
 
     it('reopens an owner-scoped QR without placing it in the general read model', async () => {

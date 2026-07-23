@@ -553,6 +553,48 @@ export type CockpitFundingPageProps = CockpitHeaderPageProps & {
     funding_notice?: string | null;
     funding_poll_interval?: number;
     funding_simulation?: CockpitQrPhFundingSimulation;
+    reusable_funding_address?: CockpitReusableFundingAddressAvailability;
+};
+
+export type CockpitReusableFundingAddressAvailability = {
+    enabled: boolean;
+    available: boolean;
+    status: string;
+    provider: 'netbank';
+    temporary: true;
+    provider_calls: true;
+    funding_intent_created: false;
+    automatic_credit_enabled: false;
+};
+
+export type CockpitReusableFundingAddress = {
+    provider: 'netbank';
+    funding_address: string;
+    masked_funding_address: string;
+    currency: string;
+    institution: string;
+    merchant_name: string;
+    qr_code: string;
+    qr_mode: 'static';
+    transaction_type: 'p2m';
+    embedded_amount: false;
+    provider_generated: true;
+    temporary: true;
+    funding_intent_created: false;
+    automatic_credit_enabled: false;
+};
+
+export type CockpitReusableFundingObservation = {
+    reference: string;
+    gross_amount_minor: number;
+    fee_amount_minor: number;
+    net_amount_minor: number;
+    gross_amount: string;
+    net_amount: string;
+    currency: string;
+    provider_status: string;
+    occurred_at?: string | null;
+    settled_at?: string | null;
 };
 
 export type CockpitQrPhFundingSimulation = {
