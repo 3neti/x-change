@@ -330,6 +330,76 @@ export type CockpitDashboardPageProps = CockpitHeaderPageProps & {
     read_model?: CockpitReadModelBundle;
 };
 
+export type CockpitFundingSummary = {
+    awaiting_funds: number;
+    settled_funding: string;
+    open_suspense: number;
+    recovery_outstanding: string;
+};
+
+export type CockpitFundingProvider = {
+    code: string;
+    label: string;
+    status: string;
+    authoritative_verification: boolean;
+};
+
+export type CockpitFundingIntent = {
+    reference: string;
+    provider: string;
+    amount: string;
+    currency: string;
+    status: string;
+    created_at?: string | null;
+    expires_at?: string | null;
+    settled_at?: string | null;
+};
+
+export type CockpitFundingSuspenseCase = {
+    reference: string;
+    provider: string;
+    reason: string;
+    status: string;
+    opened_at?: string | null;
+    pending_approval: boolean;
+};
+
+export type CockpitFundingRecoveryHold = {
+    reference: string;
+    status: string;
+    hold_status: string;
+    outstanding: string;
+    currency: string;
+    opened_at?: string | null;
+};
+
+export type CockpitTreasuryPosition = {
+    provider: string;
+    currency: string;
+    status: string;
+    recognized: string;
+    has_treasury_facts: boolean;
+};
+
+export type CockpitFundingReadModel = {
+    schema: string;
+    status: string;
+    authorized: boolean;
+    read_only: boolean;
+    summary: CockpitFundingSummary;
+    providers: CockpitFundingProvider[];
+    intents: CockpitFundingIntent[];
+    suspense_cases: CockpitFundingSuspenseCase[];
+    recovery_holds: CockpitFundingRecoveryHold[];
+    treasury_positions: CockpitTreasuryPosition[];
+    controls: Record<string, boolean | string>;
+    redactions: CockpitReadModelRedactions;
+};
+
+export type CockpitFundingPageProps = CockpitHeaderPageProps & {
+    funding_read_model: CockpitFundingReadModel;
+};
+
 export type CockpitRuntimeProfileComponent = {
     key: string;
     configured?: string | null;

@@ -15,6 +15,7 @@ use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRe
 
 it('registers read-only cockpit routes under the x cockpit namespace', function () {
     expect(route('x-change.cockpit.dashboard'))->toBe('http://localhost/x/cockpit')
+        ->and(route('x-change.cockpit.funding.index'))->toBe('http://localhost/x/cockpit/funding')
         ->and(route('x-change.cockpit.quick-generate'))->toBe('http://localhost/x/cockpit/quick-generate')
         ->and(route('x-change.cockpit.diagnostics.runtime-profile'))->toBe('http://localhost/x/cockpit/diagnostics/runtime-profile')
         ->and(route('x-change.cockpit.pay-codes.index'))->toBe('http://localhost/x/cockpit/pay-codes')
@@ -49,12 +50,40 @@ it('renders cockpit pages as read-only inertia endpoints', function (string $rou
         ->assertJsonPath('props.cockpit_header_read_model.redactions.calls_providers', false);
 })->with([
     'dashboard' => ['x-change.cockpit.dashboard', [], 'x-change/cockpit/Dashboard'],
+    'funding' => ['x-change.cockpit.funding.index', [], 'x-change/cockpit/Funding'],
     'quick generate' => ['x-change.cockpit.quick-generate', [], 'x-change/cockpit/QuickGenerate'],
     'runtime profile' => ['x-change.cockpit.diagnostics.runtime-profile', [], 'x-change/cockpit/RuntimeProfile'],
     'pay code explorer' => ['x-change.cockpit.pay-codes.index', [], 'x-change/cockpit/PayCodeExplorer'],
     'voucher detail' => ['x-change.cockpit.pay-codes.show', ['code' => 'PC-READY-001'], 'x-change/cockpit/VoucherDetail'],
     'distribution workspace' => ['x-change.cockpit.pay-codes.distribution', ['code' => 'PC-READY-001'], 'x-change/cockpit/DistributionWorkspace'],
 ]);
+
+it('hydrates funding operations with secure read-only controls', function () {
+    actingAsTestUser();
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.funding.index'))
+        ->assertOk()
+        ->assertJsonPath('component', 'x-change/cockpit/Funding')
+        ->assertJsonPath('props.funding_read_model.schema', 'x-change.cockpit.funding-read-model.v1')
+        ->assertJsonPath('props.funding_read_model.authorized', true)
+        ->assertJsonPath('props.funding_read_model.read_only', true)
+        ->assertJsonPath('props.funding_read_model.summary.awaiting_funds', 0)
+        ->assertJsonPath('props.funding_read_model.summary.open_suspense', 0)
+        ->assertJsonPath('props.funding_read_model.controls.funding_intent_required', true)
+        ->assertJsonPath('props.funding_read_model.controls.manual_balance_adjustment_enabled', false)
+        ->assertJsonPath('props.funding_read_model.controls.webhook_direct_credit_enabled', false)
+        ->assertJsonPath('props.funding_read_model.controls.authoritative_provider_verification_required', true)
+        ->assertJsonPath('props.funding_read_model.controls.dual_control_reconciliation_required', true)
+        ->assertJsonPath('props.funding_read_model.redactions.payloads', 'funding-operations-summary-only')
+        ->assertJsonPath('props.funding_read_model.redactions.webhook_payloads_exposed', false)
+        ->assertJsonPath('props.funding_read_model.redactions.raw_evidence_exposed', false)
+        ->assertJsonMissingPath('props.funding_read_model.provider_transaction_id')
+        ->assertJsonMissingPath('props.funding_read_model.provider_request_id')
+        ->assertJsonMissingPath('props.funding_read_model.funding_address')
+        ->assertJsonMissingPath('props.funding_read_model.account_reference')
+        ->assertJsonMissingPath('props.funding_read_model.webhook_payload');
+});
 
 it('renders the runtime profile diagnostics page as read-only configuration visibility', function () {
     actingAsTestUser();

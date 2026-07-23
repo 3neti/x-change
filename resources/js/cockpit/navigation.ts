@@ -21,9 +21,6 @@ export const cockpitNavigationItems: CockpitNavigationItem[] = [
         href: '/x/cockpit/funding',
         group: 'primary',
         description: 'Liquidity and funding state',
-        enabled: false,
-        disabledLabel: 'Coming soon',
-        disabledReason: 'Funding Cockpit route has not been implemented yet.',
     },
     {
         key: 'pay-codes',
@@ -60,7 +57,8 @@ export const cockpitNavigationItems: CockpitNavigationItem[] = [
         description: 'Execution and exceptions',
         enabled: false,
         disabledLabel: 'Coming soon',
-        disabledReason: 'Operations Cockpit route has not been implemented yet.',
+        disabledReason:
+            'Operations Cockpit route has not been implemented yet.',
     },
     {
         key: 'runtime-profile',
@@ -97,7 +95,8 @@ export const cockpitNavigationItems: CockpitNavigationItem[] = [
         description: 'Configuration and controls',
         enabled: false,
         disabledLabel: 'Coming soon',
-        disabledReason: 'Administration Cockpit route has not been implemented yet.',
+        disabledReason:
+            'Administration Cockpit route has not been implemented yet.',
     },
 ];
 
