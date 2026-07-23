@@ -362,6 +362,22 @@ export type CockpitFundingSuspenseCase = {
     status: string;
     opened_at?: string | null;
     pending_approval: boolean;
+    pending_action?: string | null;
+    allowed_actions: string[];
+};
+
+export type CockpitFundingApproval = {
+    reference: string;
+    case_reference: string;
+    provider: string;
+    reason: string;
+    action: string;
+    status: string;
+    requested_at?: string | null;
+    requested_by_self: boolean;
+    can_approve: boolean;
+    amount_input_allowed: false;
+    evidence_input_allowed: false;
 };
 
 export type CockpitFundingRecoveryHold = {
@@ -390,6 +406,7 @@ export type CockpitFundingReadModel = {
     providers: CockpitFundingProvider[];
     intents: CockpitFundingIntent[];
     suspense_cases: CockpitFundingSuspenseCase[];
+    approval_queue: CockpitFundingApproval[];
     recovery_holds: CockpitFundingRecoveryHold[];
     treasury_positions: CockpitTreasuryPosition[];
     controls: Record<string, boolean | string>;
@@ -399,6 +416,7 @@ export type CockpitFundingReadModel = {
 export type CockpitFundingPageProps = CockpitHeaderPageProps & {
     funding_read_model: CockpitFundingReadModel;
     funding_instruction?: CockpitFundingInstruction | null;
+    funding_notice?: string | null;
 };
 
 export type CockpitFundingInstruction = {

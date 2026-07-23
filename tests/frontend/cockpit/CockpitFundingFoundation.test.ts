@@ -45,6 +45,23 @@ const fundingReadModel = {
             reason: 'amount_mismatch',
             status: 'open',
             pending_approval: false,
+            pending_action: null,
+            allowed_actions: ['match_verified_observation'],
+        },
+    ],
+    approval_queue: [
+        {
+            reference: '01J-APPROVAL-1',
+            case_reference: '01J-SUSPENSE-2',
+            provider: 'netbank',
+            reason: 'verified_posting_interrupted',
+            action: 'compensate_verified_posting',
+            status: 'pending_approval',
+            requested_at: '2026-07-23T08:05:00+08:00',
+            requested_by_self: false,
+            can_approve: true,
+            amount_input_allowed: false,
+            evidence_input_allowed: false,
         },
     ],
     recovery_holds: [
@@ -107,6 +124,12 @@ describe('Cockpit Funding foundation', () => {
         expect(wrapper.text()).toContain('Paynamics');
         expect(wrapper.text()).toContain('₱24,950.00');
         expect(wrapper.text()).toContain('Amount Mismatch');
+        expect(wrapper.text()).toContain('Request exact evidence match');
+        expect(wrapper.text()).toContain('Reconciliation approval queue');
+        expect(wrapper.text()).toContain('Approve and execute');
+        expect(wrapper.text()).toContain(
+            'amount and evidence inputs are disabled',
+        );
         expect(wrapper.text()).toContain('Treasury Inventory');
         expect(wrapper.text()).toContain('Create Funding Intent');
         expect(wrapper.text()).toContain('Transfer exactly ₱250.00');
@@ -131,6 +154,7 @@ describe('Cockpit Funding foundation', () => {
                     },
                     intents: [],
                     suspense_cases: [],
+                    approval_queue: [],
                     recovery_holds: [],
                     treasury_positions: [],
                 },
@@ -139,6 +163,9 @@ describe('Cockpit Funding foundation', () => {
 
         expect(wrapper.text()).toContain('No Funding Intents yet');
         expect(wrapper.text()).toContain('No open funding exceptions.');
+        expect(wrapper.text()).toContain(
+            'No reconciliation requests are awaiting approval.',
+        );
         expect(wrapper.text()).toContain('No active funding recovery holds.');
         expect(wrapper.text()).toContain(
             'No Treasury Inventory has been recognized',

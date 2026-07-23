@@ -76,6 +76,15 @@ export default defineConfig({
                 __dirname,
                 'tests/frontend/stubs/funding-intent-route.ts',
             ),
+            '@/routes/x-change/cockpit/funding/reconciliations': path.resolve(
+                __dirname,
+                'tests/frontend/stubs/funding-reconciliation-routes.ts',
+            ),
+            '@/routes/x-change/cockpit/funding/suspense/reconciliation-requests':
+                path.resolve(
+                    __dirname,
+                    'tests/frontend/stubs/funding-reconciliation-request-route.ts',
+                ),
 
             '@': path.resolve(__dirname, 'resources/js'),
         },

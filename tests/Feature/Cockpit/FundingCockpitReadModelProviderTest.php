@@ -9,6 +9,7 @@ use LBHurtado\XChange\Actions\Funding\ReverseSettledFundingIntent;
 use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Models\FundingIntent;
+use LBHurtado\XChange\Models\FundingReconciliationRequest;
 use LBHurtado\XChange\Models\FundingSuspenseCase;
 use LBHurtado\XChange\Services\Cockpit\FundingCockpitReadModelProvider;
 use LBHurtado\XChange\Tests\Fakes\User;
@@ -38,7 +39,7 @@ it('presents operator scoped funding controls without exposing provider evidence
     );
 
     $suspenseIntent = fundingCockpitIntent($operator, $wallet, FundingIntentStatus::Suspense);
-    FundingSuspenseCase::query()->create([
+    $suspenseCase = FundingSuspenseCase::query()->create([
         'case_key' => hash('sha256', 'cockpit-suspense'),
         'funding_intent_id' => $suspenseIntent->getKey(),
         'provider_code' => 'netbank',
@@ -46,6 +47,16 @@ it('presents operator scoped funding controls without exposing provider evidence
         'status' => 'open',
         'details' => ['provider_transaction_id' => 'must-not-leak'],
         'opened_at' => now(),
+    ]);
+    FundingReconciliationRequest::query()->create([
+        'request_key' => hash('sha256', 'cockpit-reconciliation'),
+        'funding_suspense_case_id' => $suspenseCase->getKey(),
+        'action' => 'retry_verification',
+        'status' => 'pending_approval',
+        'payload' => [],
+        'requested_by_type' => $otherOperator::class,
+        'requested_by_id' => (string) $otherOperator->getAuthIdentifier(),
+        'requested_at' => now(),
     ]);
     fundingCockpitIntent($otherOperator, $otherWallet, FundingIntentStatus::AwaitingFunds);
 
@@ -78,7 +89,19 @@ it('presents operator scoped funding controls without exposing provider evidence
             'provider' => 'netbank',
             'reason' => 'amount_mismatch',
             'status' => 'open',
-            'pending_approval' => false,
+            'pending_approval' => true,
+            'pending_action' => 'retry_verification',
+            'allowed_actions' => [],
+        ])
+        ->and($readModel['approval_queue'][0])->toMatchArray([
+            'case_reference' => $suspenseCase->reference,
+            'provider' => 'netbank',
+            'action' => 'retry_verification',
+            'status' => 'pending_approval',
+            'requested_by_self' => false,
+            'can_approve' => true,
+            'amount_input_allowed' => false,
+            'evidence_input_allowed' => false,
         ])
         ->and($readModel['recovery_holds'][0])->toMatchArray([
             'status' => 'open',

@@ -12,6 +12,7 @@ use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\XChange\Data\Cockpit\CockpitFundingReadModelData;
 use LBHurtado\XChange\Models\FundingAccountHold;
 use LBHurtado\XChange\Models\FundingIntent;
+use LBHurtado\XChange\Models\FundingReconciliationRequest;
 use LBHurtado\XChange\Models\FundingRecovery;
 use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\FundingSuspenseCase;
@@ -33,6 +34,7 @@ class FundingCockpitReadModelProvider
         $openSuspenseCases = FundingSuspenseCase::query()
             ->whereIn('funding_intent_id', $intentIds)
             ->whereIn('status', ['open', 'monitoring'])
+            ->with(['fundingIntent', 'reconciliationRequests'])
             ->latest('opened_at')
             ->get();
         $activeRecoveries = FundingRecovery::query()
@@ -46,6 +48,7 @@ class FundingCockpitReadModelProvider
             providers: $this->providers(),
             intents: $this->intents($intentsQuery),
             suspense_cases: $this->suspenseCases($openSuspenseCases),
+            approval_queue: $this->approvalQueue($actorType, $actorId),
             recovery_holds: $this->recoveryHolds($activeRecoveries),
             treasury_positions: $this->treasuryPositions($settlements),
             controls: [
@@ -146,17 +149,78 @@ class FundingCockpitReadModelProvider
     {
         return $cases
             ->take(20)
-            ->map(fn (FundingSuspenseCase $case): array => [
-                'reference' => $case->reference,
-                'provider' => $case->provider_code,
-                'reason' => $case->reason_code,
-                'status' => $case->status,
-                'opened_at' => $case->opened_at?->toIso8601String(),
-                'pending_approval' => $case->reconciliationRequests()
-                    ->where('status', 'pending_approval')
-                    ->exists(),
-            ])
+            ->map(function (FundingSuspenseCase $case): array {
+                $pendingRequest = $case->reconciliationRequests
+                    ->firstWhere('status', 'pending_approval');
+
+                return [
+                    'reference' => $case->reference,
+                    'provider' => $case->provider_code,
+                    'reason' => $case->reason_code,
+                    'status' => $case->status,
+                    'opened_at' => $case->opened_at?->toIso8601String(),
+                    'pending_approval' => $pendingRequest !== null,
+                    'pending_action' => $pendingRequest?->action->value,
+                    'allowed_actions' => $pendingRequest === null
+                        ? $this->allowedReconciliationActions($case)
+                        : [],
+                ];
+            })
             ->all();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function approvalQueue(string $actorType, string $actorId): array
+    {
+        return FundingReconciliationRequest::query()
+            ->where('status', 'pending_approval')
+            ->with('suspenseCase')
+            ->oldest('requested_at')
+            ->limit(50)
+            ->get()
+            ->map(function (FundingReconciliationRequest $request) use ($actorType, $actorId): array {
+                $requestedBySelf = $request->requested_by_type === $actorType
+                    && $request->requested_by_id === $actorId;
+
+                return [
+                    'reference' => $request->reference,
+                    'case_reference' => $request->suspenseCase->reference,
+                    'provider' => $request->suspenseCase->provider_code,
+                    'reason' => $request->suspenseCase->reason_code,
+                    'action' => $request->action->value,
+                    'status' => $request->status,
+                    'requested_at' => $request->requested_at?->toIso8601String(),
+                    'requested_by_self' => $requestedBySelf,
+                    'can_approve' => ! $requestedBySelf,
+                    'amount_input_allowed' => false,
+                    'evidence_input_allowed' => false,
+                ];
+            })
+            ->all();
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function allowedReconciliationActions(FundingSuspenseCase $case): array
+    {
+        $actions = [];
+
+        if ($case->fundingIntent?->status?->value === 'suspense' && $case->webhook_receipt_id !== null) {
+            $actions[] = 'retry_verification';
+        }
+
+        if ($case->fundingIntent?->status?->value === 'suspense' && $case->provider_funding_observation_id !== null) {
+            $actions[] = 'match_verified_observation';
+        }
+
+        if ($case->fundingIntent?->status?->value === 'verified') {
+            $actions[] = 'compensate_verified_posting';
+        }
+
+        return $actions;
     }
 
     /**

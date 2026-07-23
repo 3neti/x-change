@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
+import { approve as approveReconciliation } from '@/routes/x-change/cockpit/funding/reconciliations';
 import { store as storeFundingIntent } from '@/routes/x-change/cockpit/funding/intents';
+import { store as storeReconciliationRequest } from '@/routes/x-change/cockpit/funding/suspense/reconciliation-requests';
 import { computed, ref } from 'vue';
 import CockpitManualCopyButton from '../components/CockpitManualCopyButton.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
@@ -9,12 +11,18 @@ import type { CockpitFundingPageProps } from '../types';
 const props = defineProps<CockpitFundingPageProps>();
 const amount = ref('');
 const amountError = ref<string | null>(null);
+const activeReconciliationCase = ref<string | null>(null);
+const activeApproval = ref<string | null>(null);
 const form = useForm({
     provider: props.funding_read_model.providers[0]?.code ?? '',
     amount_minor: 0,
     currency: 'PHP',
     idempotency_key: newIdempotencyKey(),
 });
+const reconciliationForm = useForm({
+    action: '',
+});
+const approvalForm = useForm({});
 const clientAmountError = computed(() => {
     if (amount.value === '' || amountToMinor(amount.value) !== null) {
         return null;
@@ -132,6 +140,37 @@ function submitFundingIntent(): void {
         },
     });
 }
+
+function requestReconciliation(caseReference: string, action: string): void {
+    activeReconciliationCase.value = caseReference;
+    reconciliationForm.action = action;
+    reconciliationForm.post(storeReconciliationRequest(caseReference), {
+        preserveScroll: true,
+        onFinish: () => {
+            activeReconciliationCase.value = null;
+        },
+    });
+}
+
+function approveFundingReconciliation(reference: string): void {
+    activeApproval.value = reference;
+    approvalForm.post(approveReconciliation(reference), {
+        preserveScroll: true,
+        onFinish: () => {
+            activeApproval.value = null;
+        },
+    });
+}
+
+function reconciliationActionLabel(action: string): string {
+    return (
+        {
+            retry_verification: 'Request verification retry',
+            match_verified_observation: 'Request exact evidence match',
+            compensate_verified_posting: 'Request verified posting',
+        }[action] ?? displayLabel(action)
+    );
+}
 </script>
 
 <template>
@@ -143,6 +182,13 @@ function submitFundingIntent(): void {
             class="mx-auto max-w-7xl space-y-5"
             data-testid="cockpit-funding-page"
         >
+            <div
+                v-if="funding_notice"
+                class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200"
+                role="status"
+            >
+                {{ funding_notice }}
+            </div>
             <section
                 class="overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 text-white shadow-sm dark:border-slate-800"
             >
@@ -663,6 +709,101 @@ function submitFundingIntent(): void {
                 </div>
             </section>
 
+            <section
+                class="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-funding-approval-queue"
+            >
+                <div
+                    class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-800"
+                >
+                    <div>
+                        <p
+                            class="text-xs font-semibold tracking-[0.16em] text-indigo-700 uppercase dark:text-indigo-300"
+                        >
+                            Dual control
+                        </p>
+                        <h2 class="mt-1 text-lg font-semibold">
+                            Reconciliation approval queue
+                        </h2>
+                        <p class="mt-1 text-xs text-slate-500">
+                            Requests are visible across Treasury operators so a
+                            different person can approve.
+                        </p>
+                    </div>
+                    <span
+                        class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                    >
+                        {{ funding_read_model.approval_queue.length }} pending
+                    </span>
+                </div>
+                <div
+                    v-if="funding_read_model.approval_queue.length"
+                    class="divide-y divide-slate-100 dark:divide-slate-800"
+                >
+                    <div
+                        v-for="approval in funding_read_model.approval_queue"
+                        :key="approval.reference"
+                        class="flex flex-col gap-3 px-5 py-4 lg:flex-row lg:items-center lg:justify-between"
+                    >
+                        <div class="min-w-0">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <p class="font-semibold">
+                                    {{
+                                        reconciliationActionLabel(
+                                            approval.action,
+                                        )
+                                    }}
+                                </p>
+                                <span
+                                    class="rounded-full bg-indigo-50 px-2 py-1 text-[0.65rem] font-semibold tracking-wide text-indigo-700 uppercase dark:bg-indigo-950/50 dark:text-indigo-300"
+                                >
+                                    {{ displayLabel(approval.provider) }}
+                                </span>
+                            </div>
+                            <p class="mt-1 text-xs text-slate-500">
+                                Case {{ approval.case_reference }} ·
+                                {{ displayLabel(approval.reason) }} ·
+                                {{ displayTime(approval.requested_at) }}
+                            </p>
+                            <p class="mt-1 text-xs text-slate-500">
+                                Exact immutable evidence only; amount and
+                                evidence inputs are disabled by contract.
+                            </p>
+                        </div>
+                        <button
+                            v-if="approval.can_approve"
+                            type="button"
+                            class="shrink-0 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            :disabled="approvalForm.processing"
+                            @click="
+                                approveFundingReconciliation(approval.reference)
+                            "
+                        >
+                            {{
+                                activeApproval === approval.reference
+                                    ? 'Approving…'
+                                    : 'Approve and execute'
+                            }}
+                        </button>
+                        <span
+                            v-else
+                            class="shrink-0 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-500 dark:border-slate-700"
+                        >
+                            Awaiting another operator
+                        </span>
+                    </div>
+                </div>
+                <p v-else class="px-5 py-6 text-sm text-slate-500">
+                    No reconciliation requests are awaiting approval.
+                </p>
+                <p
+                    v-if="approvalForm.errors.approval"
+                    class="border-t border-rose-200 bg-rose-50 px-5 py-3 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950/20 dark:text-rose-300"
+                >
+                    {{ approvalForm.errors.approval }}
+                </p>
+            </section>
+
             <section class="grid gap-5 xl:grid-cols-2">
                 <article
                     class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
@@ -709,10 +850,41 @@ function submitFundingIntent(): void {
                                         : 'Awaiting a controlled reconciliation request.'
                                 }}
                             </p>
+                            <div
+                                v-if="item.allowed_actions.length"
+                                class="mt-3 flex flex-wrap gap-2"
+                            >
+                                <button
+                                    v-for="action in item.allowed_actions"
+                                    :key="action"
+                                    type="button"
+                                    class="rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-amber-800 dark:bg-slate-900 dark:text-amber-300 dark:hover:bg-amber-950/40"
+                                    :disabled="reconciliationForm.processing"
+                                    @click="
+                                        requestReconciliation(
+                                            item.reference,
+                                            action,
+                                        )
+                                    "
+                                >
+                                    {{
+                                        activeReconciliationCase ===
+                                        item.reference
+                                            ? 'Submitting…'
+                                            : reconciliationActionLabel(action)
+                                    }}
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <p v-else class="mt-4 text-sm text-slate-500">
                         No open funding exceptions.
+                    </p>
+                    <p
+                        v-if="reconciliationForm.errors.reconciliation"
+                        class="mt-3 text-xs text-rose-600 dark:text-rose-300"
+                    >
+                        {{ reconciliationForm.errors.reconciliation }}
                     </p>
                 </article>
 

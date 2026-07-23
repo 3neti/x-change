@@ -13,6 +13,7 @@ class CockpitFundingReadModelData extends Data
      * @param  array<int, array<string, mixed>>  $providers
      * @param  array<int, array<string, mixed>>  $intents
      * @param  array<int, array<string, mixed>>  $suspense_cases
+     * @param  array<int, array<string, mixed>>  $approval_queue
      * @param  array<int, array<string, mixed>>  $recovery_holds
      * @param  array<int, array<string, mixed>>  $treasury_positions
      * @param  array<string, bool|string>  $controls
@@ -27,6 +28,7 @@ class CockpitFundingReadModelData extends Data
         public readonly array $providers = [],
         public readonly array $intents = [],
         public readonly array $suspense_cases = [],
+        public readonly array $approval_queue = [],
         public readonly array $recovery_holds = [],
         public readonly array $treasury_positions = [],
         public readonly array $controls = [],
