@@ -138,7 +138,7 @@ NetBank’s profile is:
 
 ```text
 five-digit alias + eleven-digit reference = sixteen-digit VCA
-91500            + 09173011987            = 9150009173011987
+91500            + 09171234567            = 9150009171234567
 ```
 
 The reference is selected by one configured scheme:
@@ -367,6 +367,22 @@ The package UI is accepted at desktop and mobile widths in two explicit states:
 - **Legacy address requires retirement:** a persisted non-16-digit address remains untouched and cannot be reopened through the new profile.
 
 Acceptance verifies no page-level horizontal overflow, contained activity tables, responsive controls, and no browser console errors. A real scan and payment remains a separately authorized live UAT gate.
+
+### Configurable scheme wave acceptance — 2026-07-24
+
+- `emi-core` standing request serialization and compatibility: 8 tests, 85 assertions;
+- `emi-netbank` reusable/funding adapter derivation and failure paths: 41 tests, 178 assertions;
+- `x-change` persistence, collision, destination, and Cockpit behavior: 21 tests, 149 assertions;
+- complete x-change frontend suite: 81 files, 581 tests;
+- package asset diagnostics and production build passed;
+- the sandbox migration persisted the derivation scheme, key ID, counter, and reference length;
+- desktop at 1440×1000 and mobile at 390×844 had no document-level horizontal overflow;
+- Cockpit displayed the development scheme warning and produced a provider-generated static QR for a 16-digit `netbank-mobile-v1` address;
+- reload changed the action from create to reopen, proving the binding persisted;
+- **Check NetBank** completed with zero matching receipts and left Internal Balance unchanged;
+- no browser console warning/error was recorded.
+
+No scan or real-money payment was performed. The sensitive QR was hidden after acceptance. Production HMAC behavior, key rotation, collision retry, mobile collision rejection, and the one-time alias-token boundary are covered by automated tests.
 
 ## Rollout Gates
 
