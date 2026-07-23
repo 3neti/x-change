@@ -96,6 +96,8 @@ use LBHurtado\XChange\Contracts\ExecutionResultFeedbackHandoffContract;
 use LBHurtado\XChange\Contracts\ExecutionResultHandoffPipelineContract;
 use LBHurtado\XChange\Contracts\ExecutionResultHandoffSummaryJournalWriterContract;
 use LBHurtado\XChange\Contracts\ExecutionResultJournalHandoffContract;
+use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
+use LBHurtado\XChange\Contracts\FundingAccountRecoveryContract;
 use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
 use LBHurtado\XChange\Contracts\MinimumWithdrawalPolicyResolverContract;
 use LBHurtado\XChange\Contracts\MoneyMovementAccountingDecisionContract;
@@ -222,6 +224,7 @@ use LBHurtado\XChange\Services\Execution\NullExecutionResultJournalHandoff;
 use LBHurtado\XChange\Services\Execution\XChangeLiveCashExecutionDriver;
 use LBHurtado\XChange\Services\Execution\XChangeSettlementEnvelopeExecutionGateway;
 use LBHurtado\XChange\Services\Execution\XChangeStoredValueExecutionGateway;
+use LBHurtado\XChange\Services\Funding\BavixFundingAccountCredit;
 use LBHurtado\XChange\Services\Funding\DefaultFundingDestinationResolver;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Funding\QrPhSimulatorFundingProviderAdapter;
@@ -283,6 +286,7 @@ class XChangeServiceProvider extends ServiceProvider
         );
 
         $this->registerServices();
+        $this->registerFundingAccountServices();
         $this->registerIntegrations();
         $this->registerServiceContracts();
         $this->registerFundingDestinationResolver();
@@ -972,6 +976,23 @@ class XChangeServiceProvider extends ServiceProvider
             $this->app->singleton(FundingDestinationResolverContract::class, function ($app) {
                 return $app->make('x-change.services.funding_destination_resolver');
             });
+        }
+    }
+
+    protected function registerFundingAccountServices(): void
+    {
+        if (! $this->app->bound('x-change.services.funding_account_credit')) {
+            $this->app->singleton('x-change.services.funding_account_credit', function ($app) {
+                return $app->make(BavixFundingAccountCredit::class);
+            });
+        }
+
+        foreach ([FundingAccountCreditContract::class, FundingAccountRecoveryContract::class] as $contract) {
+            if (! $this->app->bound($contract)) {
+                $this->app->singleton($contract, function ($app) {
+                    return $app->make('x-change.services.funding_account_credit');
+                });
+            }
         }
     }
 
