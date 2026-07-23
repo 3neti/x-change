@@ -230,6 +230,8 @@ it('prevents suspense review evidence from being rewritten or deleted directly',
 });
 
 it('requires dual control before queueing a preserved-evidence verification retry', function () {
+    $operator = actingAsTestUser(0);
+    $wallet = $operator->wallet()->where('slug', 'platform')->firstOrFail();
     $this->fundingAdapter = new class extends FakeFundingProviderAdapter
     {
         public function verifyFunding(FundingVerificationData $verification): ProviderFundingObservationData
@@ -238,7 +240,7 @@ it('requires dual control before queueing a preserved-evidence verification retr
         }
     };
     replaceFundingAdapter($this->fundingAdapter);
-    $intent = verifiedFundingIntent();
+    $intent = verifiedFundingIntent('wallet:'.$wallet->uuid);
     $receipt = authenticatedFundingReceipt('dual-control-retry');
     app(VerifyFundingWebhookReceipt::class)->handle($receipt);
     $case = FundingSuspenseCase::query()->sole();
@@ -266,6 +268,58 @@ it('requires dual control before queueing a preserved-evidence verification retr
         VerifyFundingWebhookReceiptJob::class,
         fn (VerifyFundingWebhookReceiptJob $job): bool => $job->webhookReceiptId === $receipt->getKey(),
     );
+
+    $this->fundingAdapter = new FakeFundingProviderAdapter;
+    replaceFundingAdapter($this->fundingAdapter);
+    app()->call([new VerifyFundingWebhookReceiptJob($receipt->getKey()), 'handle']);
+
+    expect($intent->refresh()->status)->toBe(FundingIntentStatus::Settled)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and($case->refresh()->status)->toBe('resolved')
+        ->and($case->resolution_code)->toBe('verification_retry_settled')
+        ->and($case->resolution)->toBe([
+            'funding_intent_status' => 'settled',
+        ]);
+});
+
+it('closes monitoring when an approved retry confirms funds are still not observed', function () {
+    $this->fundingAdapter = new class extends FakeFundingProviderAdapter
+    {
+        public function verifyFunding(FundingVerificationData $verification): ProviderFundingObservationData
+        {
+            throw new ProviderFundingVerificationIndeterminate('Ambiguous provider evidence.');
+        }
+    };
+    replaceFundingAdapter($this->fundingAdapter);
+    $intent = verifiedFundingIntent();
+    $receipt = authenticatedFundingReceipt('dual-control-not-observed');
+    app(VerifyFundingWebhookReceipt::class)->handle($receipt);
+    $case = FundingSuspenseCase::query()->sole();
+    $request = app(RequestFundingReconciliation::class)->handle(
+        case: $case,
+        action: FundingReconciliationAction::RetryVerification,
+        actorType: 'operator',
+        actorId: 'maker-1',
+    );
+    Queue::fake();
+    app(ApproveFundingReconciliation::class)->handle($request, 'operator', 'checker-2');
+
+    $this->fundingAdapter = new class extends FakeFundingProviderAdapter
+    {
+        public function verifyFunding(FundingVerificationData $verification): ProviderFundingObservationData
+        {
+            throw new ProviderFundingNotObserved('No transfer observed.');
+        }
+    };
+    replaceFundingAdapter($this->fundingAdapter);
+    app()->call([new VerifyFundingWebhookReceiptJob($receipt->getKey()), 'handle']);
+
+    expect($intent->refresh()->status)->toBe(FundingIntentStatus::AwaitingFunds)
+        ->and($case->refresh()->status)->toBe('resolved')
+        ->and($case->resolution_code)->toBe('verification_retry_no_funds_observed')
+        ->and($case->resolution)->toBe([
+            'funding_intent_status' => 'awaiting_funds',
+        ]);
 });
 
 function verifiedFundingIntent(string $accountReference = 'wallet:account-1001'): FundingIntent
