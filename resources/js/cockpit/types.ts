@@ -388,6 +388,64 @@ export type CockpitAccountReadModel = {
 export type CockpitAccountsPageProps = CockpitHeaderPageProps & {
     account_read_model: CockpitAccountReadModel;
     funding_account_notice?: string | null;
+    account_scenario?: {
+        enabled: boolean;
+        mode: 'rollback-only';
+        provider_calls: boolean;
+        balance_changes: boolean;
+    };
+};
+
+export type CockpitAccountScenarioFact = {
+    label: string;
+    value: string;
+};
+
+export type CockpitAccountScenarioProvider = {
+    code: 'netbank' | 'paynamics_constellation';
+    label: string;
+    mode: string;
+    shared: {
+        status: string;
+        display_reference?: string | null;
+    };
+    dedicated: {
+        configured: boolean;
+        display_reference?: string | null;
+        status: string;
+        verification_status: string;
+        can_activate: boolean;
+        can_rotate_token: boolean;
+        ownership_verification_required: boolean;
+    };
+};
+
+export type CockpitAccountScenarioStep = {
+    key: string;
+    label: string;
+    outcome: 'ready' | 'blocked' | 'protected' | 'complete' | 'failed';
+    summary: string;
+    providers: CockpitAccountScenarioProvider[];
+    facts: CockpitAccountScenarioFact[];
+};
+
+export type CockpitAccountScenarioResult = {
+    schema: 'x-change.lifecycle.account-management-scenario.v1';
+    scenario: string;
+    label: string;
+    mode: 'account_management';
+    success: boolean;
+    message: string;
+    rollback_completed: boolean;
+    simulation: {
+        rollback_only: boolean;
+        provider_calls: number;
+        balance_changed: boolean;
+        persisted: boolean;
+        funding_instructions_issued: boolean;
+        webhooks_received: boolean;
+    };
+    steps: CockpitAccountScenarioStep[];
 };
 
 export type CockpitDashboardPageProps = CockpitHeaderPageProps & {

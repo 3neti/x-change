@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
 import Accounts from '../../../resources/js/cockpit/pages/Accounts.vue';
 
@@ -72,6 +72,84 @@ const accountReadModel = {
     },
 };
 
+const scenarioResult = {
+    schema: 'x-change.lifecycle.account-management-scenario.v1',
+    scenario: 'account_management_funding_destinations_demo',
+    label: 'Account Management Funding Destinations',
+    mode: 'account_management',
+    success: true,
+    message: 'Rollback-only account-management lifecycle completed.',
+    rollback_completed: true,
+    simulation: {
+        rollback_only: true,
+        provider_calls: 0,
+        balance_changed: false,
+        persisted: false,
+        funding_instructions_issued: false,
+        webhooks_received: false,
+    },
+    steps: [
+        {
+            key: 'shared_defaults',
+            label: 'Shared destinations are the safe default',
+            outcome: 'ready',
+            summary: 'Shared treasury routing is selected.',
+            providers: [
+                {
+                    code: 'netbank',
+                    label: 'NetBank',
+                    mode: 'shared',
+                    shared: {
+                        status: 'ready',
+                        display_reference: '•••• 1111 · VCA 91001',
+                    },
+                    dedicated: {
+                        configured: false,
+                        display_reference: null,
+                        status: 'not_configured',
+                        verification_status: 'not_configured',
+                        can_activate: false,
+                        can_rotate_token: false,
+                        ownership_verification_required: false,
+                    },
+                },
+            ],
+            facts: [{ label: 'Balance impact', value: 'None' }],
+        },
+        {
+            key: 'netbank_dedicated_ready',
+            label: 'NetBank dedicated routing becomes eligible',
+            outcome: 'ready',
+            summary: 'A write-only credential activates dedicated routing.',
+            providers: [
+                {
+                    code: 'netbank',
+                    label: 'NetBank',
+                    mode: 'dedicated',
+                    shared: {
+                        status: 'ready',
+                        display_reference: '•••• 1111 · VCA 91001',
+                    },
+                    dedicated: {
+                        configured: true,
+                        display_reference: '•••• 4242 · VCA 54321',
+                        status: 'ready',
+                        verification_status: 'credential_supplied',
+                        can_activate: true,
+                        can_rotate_token: true,
+                        ownership_verification_required: false,
+                    },
+                },
+            ],
+            facts: [{ label: 'Verification', value: 'Credential supplied' }],
+        },
+    ],
+};
+
+afterEach(() => {
+    vi.restoreAllMocks();
+});
+
 describe('Cockpit Accounts foundation', () => {
     it('renders masked provider destinations and the secure credit boundary', () => {
         const wrapper = mount(Accounts, {
@@ -120,5 +198,78 @@ describe('Cockpit Accounts foundation', () => {
         expect(
             wrapper.find('[data-testid="paynamics-ownership-warning"]').text(),
         ).toContain('reachable wallet is not proof of ownership');
+    });
+
+    it('keeps the lifecycle walkthrough disabled when the environment gate is off', () => {
+        const wrapper = mount(Accounts, {
+            props: {
+                account_read_model: accountReadModel,
+                account_scenario: {
+                    enabled: false,
+                    mode: 'rollback-only',
+                    provider_calls: false,
+                    balance_changes: false,
+                },
+            },
+        });
+
+        const button = wrapper.get('[data-testid="run-account-scenario"]');
+
+        expect(button.attributes('disabled')).toBeDefined();
+        expect(button.text()).toContain('Unavailable in this environment');
+    });
+
+    it('guides operators through returned rollback snapshots', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi.fn().mockResolvedValue({
+                ok: true,
+                json: async () => scenarioResult,
+            }),
+        );
+        const wrapper = mount(Accounts, {
+            props: {
+                account_read_model: accountReadModel,
+                account_scenario: {
+                    enabled: true,
+                    mode: 'rollback-only',
+                    provider_calls: false,
+                    balance_changes: false,
+                },
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="run-account-scenario"]')
+            .trigger('click');
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(
+            wrapper.get('[data-testid="account-scenario-stepper"]').text(),
+        ).toContain('Shared destinations are the safe default');
+        expect(wrapper.text()).toContain(
+            'Rollback confirmed · balance unchanged · nothing persisted',
+        );
+
+        await wrapper
+            .get('[data-testid="next-scenario-step"]')
+            .trigger('click');
+
+        expect(
+            wrapper.get('[data-testid="account-scenario-stepper"]').text(),
+        ).toContain('NetBank dedicated routing becomes eligible');
+        expect(wrapper.text()).not.toContain(
+            'scenario-write-only-netbank-token',
+        );
+
+        await wrapper
+            .get(
+                '[aria-label="Open step 1: Shared destinations are the safe default"]',
+            )
+            .trigger('click');
+
+        expect(
+            wrapper.get('[data-testid="account-scenario-stepper"]').text(),
+        ).toContain('Shared destinations are the safe default');
     });
 });

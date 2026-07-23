@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
+import { store as runFundingDestinationScenario } from '@/routes/x-change/cockpit/accounts/scenarios/funding-destinations';
 import { update as updateFundingDestination } from '@/routes/x-change/cockpit/accounts/providers/funding-destination';
 import { store as storeNetbankTokenRotation } from '@/routes/x-change/cockpit/accounts/providers/netbank/token-rotation';
 import { computed, ref } from 'vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
 import type {
     CockpitAccountProvider,
+    CockpitAccountScenarioResult,
     CockpitAccountsPageProps,
 } from '../types';
 
@@ -16,6 +18,13 @@ const paynamics = computed(() => provider('paynamics_constellation'));
 const netbankMode = ref(netbank.value.mode);
 const netbankEnrollment = ref('generate');
 const paynamicsMode = ref(paynamics.value.mode);
+const scenarioRunning = ref(false);
+const scenarioError = ref<string | null>(null);
+const scenarioResult = ref<CockpitAccountScenarioResult | null>(null);
+const activeScenarioStepIndex = ref(0);
+const activeScenarioStep = computed(
+    () => scenarioResult.value?.steps[activeScenarioStepIndex.value] ?? null,
+);
 
 const netbankForm = useForm({
     mode: netbank.value.mode,
@@ -110,6 +119,99 @@ function displayTime(value?: string | null): string {
               timeStyle: 'short',
           }).format(date);
 }
+
+async function runAccountScenario(): Promise<void> {
+    if (scenarioRunning.value || props.account_scenario?.enabled !== true) {
+        return;
+    }
+
+    scenarioRunning.value = true;
+    scenarioError.value = null;
+    const route = runFundingDestinationScenario();
+
+    try {
+        const response = await fetch(route.url, {
+            method: route.method.toUpperCase(),
+            credentials: 'same-origin',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                ...csrfHeader(),
+            },
+        });
+        const body = await safeJson(response);
+
+        if (!response.ok) {
+            scenarioError.value =
+                typeof body.message === 'string'
+                    ? body.message
+                    : 'The rollback walkthrough could not be completed.';
+
+            return;
+        }
+
+        if (
+            body.schema !==
+                'x-change.lifecycle.account-management-scenario.v1' ||
+            !Array.isArray(body.steps)
+        ) {
+            scenarioError.value =
+                'The rollback walkthrough returned an unexpected response.';
+
+            return;
+        }
+
+        scenarioResult.value = body as CockpitAccountScenarioResult;
+        activeScenarioStepIndex.value = 0;
+    } catch {
+        scenarioError.value =
+            'The rollback walkthrough could not reach the Cockpit service.';
+    } finally {
+        scenarioRunning.value = false;
+    }
+}
+
+function previousScenarioStep(): void {
+    activeScenarioStepIndex.value = Math.max(
+        0,
+        activeScenarioStepIndex.value - 1,
+    );
+}
+
+function nextScenarioStep(): void {
+    activeScenarioStepIndex.value = Math.min(
+        (scenarioResult.value?.steps.length ?? 1) - 1,
+        activeScenarioStepIndex.value + 1,
+    );
+}
+
+function restartScenario(): void {
+    activeScenarioStepIndex.value = 0;
+}
+
+function csrfHeader(): Record<string, string> {
+    if (typeof document === 'undefined') {
+        return {};
+    }
+
+    const token = document.querySelector<HTMLMetaElement>(
+        'meta[name="csrf-token"]',
+    )?.content;
+
+    return token ? { 'X-CSRF-TOKEN': token } : {};
+}
+
+async function safeJson(response: Response): Promise<Record<string, unknown>> {
+    try {
+        const body = await response.json();
+
+        return typeof body === 'object' && body !== null
+            ? (body as Record<string, unknown>)
+            : {};
+    } catch {
+        return {};
+    }
+}
 </script>
 
 <template>
@@ -178,6 +280,255 @@ function displayTime(value?: string | null): string {
                         </dd>
                     </div>
                 </dl>
+            </section>
+
+            <section
+                class="overflow-hidden rounded-2xl border border-sky-200 bg-white shadow-sm dark:border-sky-900 dark:bg-slate-950"
+                data-testid="account-lifecycle-scenario"
+            >
+                <div
+                    class="grid gap-4 px-5 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+                >
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <p
+                                class="text-xs font-semibold tracking-[0.16em] text-sky-700 uppercase dark:text-sky-300"
+                            >
+                                Lifecycle walkthrough
+                            </p>
+                            <span
+                                class="rounded-full bg-sky-50 px-2 py-1 text-[0.65rem] font-semibold text-sky-700 uppercase dark:bg-sky-950/50 dark:text-sky-200"
+                            >
+                                Rollback only
+                            </span>
+                            <span
+                                class="rounded-full bg-slate-100 px-2 py-1 text-[0.65rem] font-semibold text-slate-600 uppercase dark:bg-slate-800 dark:text-slate-300"
+                            >
+                                0 provider calls
+                            </span>
+                        </div>
+                        <h2
+                            class="mt-1.5 text-lg font-semibold text-slate-950 dark:text-white"
+                        >
+                            Appreciate the funding destination lifecycle
+                        </h2>
+                        <p
+                            class="mt-1 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-400"
+                        >
+                            Walk through shared defaults, dedicated NetBank
+                            routing, immutable intent snapshots, token rotation,
+                            and Paynamics ownership controls. Nothing is funded
+                            or retained.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        :disabled="
+                            scenarioRunning ||
+                            account_scenario?.enabled !== true
+                        "
+                        class="h-10 rounded-lg bg-sky-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        data-testid="run-account-scenario"
+                        @click="runAccountScenario"
+                    >
+                        {{
+                            scenarioRunning
+                                ? 'Running safely…'
+                                : account_scenario?.enabled === true
+                                  ? 'Run safe walkthrough'
+                                  : 'Unavailable in this environment'
+                        }}
+                    </button>
+                </div>
+
+                <div
+                    v-if="scenarioError"
+                    class="border-t border-rose-200 bg-rose-50 px-5 py-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/20 dark:text-rose-200"
+                    role="alert"
+                >
+                    {{ scenarioError }}
+                </div>
+
+                <div
+                    v-if="scenarioResult && activeScenarioStep"
+                    class="border-t border-sky-100 bg-slate-50/70 p-4 sm:p-5 dark:border-sky-950 dark:bg-slate-900/50"
+                    data-testid="account-scenario-stepper"
+                >
+                    <div
+                        class="flex flex-wrap items-center justify-between gap-3"
+                    >
+                        <div
+                            class="flex flex-wrap items-center gap-1.5"
+                            aria-label="Scenario steps"
+                        >
+                            <button
+                                v-for="(step, index) in scenarioResult.steps"
+                                :key="step.key"
+                                type="button"
+                                class="flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition"
+                                :class="
+                                    index === activeScenarioStepIndex
+                                        ? 'bg-sky-600 text-white'
+                                        : 'bg-white text-slate-500 ring-1 ring-slate-200 dark:bg-slate-950 dark:ring-slate-700'
+                                "
+                                :aria-label="`Open step ${index + 1}: ${step.label}`"
+                                @click="activeScenarioStepIndex = index"
+                            >
+                                {{ index + 1 }}
+                            </button>
+                        </div>
+                        <p class="text-xs font-medium text-slate-500">
+                            Step {{ activeScenarioStepIndex + 1 }} of
+                            {{ scenarioResult.steps.length }}
+                        </p>
+                    </div>
+
+                    <article
+                        class="mt-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950"
+                    >
+                        <div
+                            class="flex flex-wrap items-start justify-between gap-3"
+                        >
+                            <div>
+                                <h3
+                                    class="text-base font-semibold text-slate-950 dark:text-white"
+                                >
+                                    {{ activeScenarioStep.label }}
+                                </h3>
+                                <p
+                                    class="mt-1 max-w-4xl text-sm leading-6 text-slate-600 dark:text-slate-400"
+                                >
+                                    {{ activeScenarioStep.summary }}
+                                </p>
+                            </div>
+                            <span
+                                class="rounded-full px-2.5 py-1 text-xs font-semibold"
+                                :class="
+                                    activeScenarioStep.outcome === 'blocked'
+                                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200'
+                                        : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+                                "
+                            >
+                                {{ displayLabel(activeScenarioStep.outcome) }}
+                            </span>
+                        </div>
+
+                        <div
+                            class="mt-4 grid gap-3"
+                            :class="
+                                activeScenarioStep.providers.length > 1
+                                    ? 'md:grid-cols-2'
+                                    : ''
+                            "
+                        >
+                            <div
+                                v-for="providerState in activeScenarioStep.providers"
+                                :key="providerState.code"
+                                class="rounded-lg border border-slate-200 p-3 dark:border-slate-800"
+                            >
+                                <div
+                                    class="flex items-center justify-between gap-3"
+                                >
+                                    <p
+                                        class="text-sm font-semibold text-slate-900 dark:text-white"
+                                    >
+                                        {{ providerState.label }}
+                                    </p>
+                                    <span
+                                        class="text-xs font-medium text-slate-500"
+                                    >
+                                        {{ displayLabel(providerState.mode) }}
+                                    </span>
+                                </div>
+                                <p
+                                    class="mt-2 text-xs text-slate-600 dark:text-slate-400"
+                                >
+                                    {{
+                                        providerState.mode === 'dedicated'
+                                            ? providerState.dedicated
+                                                  .display_reference
+                                            : providerState.shared
+                                                  .display_reference
+                                    }}
+                                </p>
+                                <p class="mt-1 text-xs text-slate-500">
+                                    {{
+                                        providerState.mode === 'dedicated'
+                                            ? displayLabel(
+                                                  providerState.dedicated
+                                                      .verification_status,
+                                              )
+                                            : displayLabel(
+                                                  providerState.shared.status,
+                                              )
+                                    }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <dl
+                            class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3"
+                        >
+                            <div
+                                v-for="fact in activeScenarioStep.facts"
+                                :key="fact.label"
+                                class="rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-900"
+                            >
+                                <dt class="text-[0.68rem] text-slate-500">
+                                    {{ fact.label }}
+                                </dt>
+                                <dd
+                                    class="mt-0.5 text-xs font-semibold text-slate-900 dark:text-white"
+                                >
+                                    {{ fact.value }}
+                                </dd>
+                            </div>
+                        </dl>
+                    </article>
+
+                    <div
+                        class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                        <p
+                            class="text-xs font-medium text-emerald-700 dark:text-emerald-300"
+                        >
+                            Rollback confirmed · balance unchanged · nothing
+                            persisted
+                        </p>
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                :disabled="activeScenarioStepIndex === 0"
+                                class="h-9 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 disabled:opacity-40 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                                data-testid="previous-scenario-step"
+                                @click="previousScenarioStep"
+                            >
+                                Previous
+                            </button>
+                            <button
+                                v-if="
+                                    activeScenarioStepIndex <
+                                    scenarioResult.steps.length - 1
+                                "
+                                type="button"
+                                class="h-9 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white dark:bg-sky-500 dark:text-slate-950"
+                                data-testid="next-scenario-step"
+                                @click="nextScenarioStep"
+                            >
+                                Next
+                            </button>
+                            <button
+                                v-else
+                                type="button"
+                                class="h-9 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white dark:bg-sky-500 dark:text-slate-950"
+                                data-testid="restart-account-scenario"
+                                @click="restartScenario"
+                            >
+                                Restart
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <div class="grid items-start gap-5 xl:grid-cols-2">

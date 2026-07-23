@@ -95,6 +95,11 @@ export default defineConfig({
                     __dirname,
                     'tests/frontend/stubs/netbank-token-rotation-route.ts',
                 ),
+            '@/routes/x-change/cockpit/accounts/scenarios/funding-destinations':
+                path.resolve(
+                    __dirname,
+                    'tests/frontend/stubs/account-scenario-route.ts',
+                ),
             '@/routes/x-change/cockpit/accounts': path.resolve(
                 __dirname,
                 'tests/frontend/stubs/accounts-route.ts',

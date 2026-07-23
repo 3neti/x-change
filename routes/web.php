@@ -14,6 +14,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimStartController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSubmitController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSuccessPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountScenarioController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDistributionWorkspacePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingDestinationController;
@@ -46,6 +47,11 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         Route::get('accounts', CockpitAccountPageController::class)
             ->middleware('verified')
             ->name('x-change.cockpit.accounts.index');
+        Route::post(
+            'accounts/scenarios/funding-destinations',
+            CockpitAccountScenarioController::class,
+        )->middleware((array) config('x-change.cockpit.account_scenario.middleware', []))
+            ->name('x-change.cockpit.accounts.scenarios.funding-destinations.store');
         Route::middleware((array) config('x-change.cockpit.account_mutation_middleware', []))->group(function (): void {
             Route::patch(
                 'accounts/providers/{provider}/funding-destination',

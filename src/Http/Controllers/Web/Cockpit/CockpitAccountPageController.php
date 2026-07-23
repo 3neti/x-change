@@ -41,6 +41,12 @@ class CockpitAccountPageController extends Controller
             ...$this->props->toArray(),
             'account_read_model' => $this->accounts->forOwner($owner, $accountReference),
             'funding_account_notice' => $request->session()->pull('funding_account_notice'),
+            'account_scenario' => [
+                'enabled' => (bool) config('x-change.cockpit.account_scenario.enabled', false),
+                'mode' => 'rollback-only',
+                'provider_calls' => false,
+                'balance_changes' => false,
+            ],
         ]);
     }
 

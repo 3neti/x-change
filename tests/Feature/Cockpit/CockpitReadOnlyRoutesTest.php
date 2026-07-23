@@ -1192,6 +1192,7 @@ it('registers only the guarded issuance, funding, and Account Cockpit mutation r
         );
 
     expect($mutatingRoutes->pluck('action.as')->values()->all())->toBe([
+        'x-change.cockpit.accounts.scenarios.funding-destinations.store',
         'x-change.cockpit.accounts.providers.funding-destination.update',
         'x-change.cockpit.accounts.providers.netbank.token-rotation.store',
         'x-change.cockpit.funding.intents.store',

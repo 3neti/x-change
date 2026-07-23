@@ -16,13 +16,20 @@ it('publishes package-owned Accounts routes with verified and PIN-confirmed muta
     $update = Route::getRoutes()->getByName(
         'x-change.cockpit.accounts.providers.funding-destination.update',
     );
+    $scenario = Route::getRoutes()->getByName(
+        'x-change.cockpit.accounts.scenarios.funding-destinations.store',
+    );
 
     expect($page)->not->toBeNull()
         ->and($page->gatherMiddleware())->toContain('verified')
         ->and($update)->not->toBeNull()
         ->and($update->gatherMiddleware())->toContain('verified')
         ->and($update->gatherMiddleware())->toContain('password.confirm:settings.security.confirm')
-        ->and($update->gatherMiddleware())->toContain('throttle:6,1');
+        ->and($update->gatherMiddleware())->toContain('throttle:6,1')
+        ->and($scenario)->not->toBeNull()
+        ->and($scenario->gatherMiddleware())->toContain('verified')
+        ->and($scenario->gatherMiddleware())->toContain('throttle:3,1')
+        ->and($scenario->gatherMiddleware())->not->toContain('password.confirm:settings.security.confirm');
 });
 
 it('renders the masked Accounts read model with encrypted Inertia history', function () {
@@ -38,9 +45,51 @@ it('renders the masked Accounts read model with encrypted Inertia history', func
         ->assertJsonPath('props.account_read_model.providers.0.code', 'netbank')
         ->assertJsonPath('props.account_read_model.providers.0.mode', 'shared')
         ->assertJsonPath('props.account_read_model.providers.0.shared.display_reference', '•••• 0019 · VCA 91500')
+        ->assertJsonPath('props.account_scenario.enabled', true)
+        ->assertJsonPath('props.account_scenario.mode', 'rollback-only')
         ->assertJsonMissing(['113001000019', 'test-vca-alias-token']);
 
     expect($response->getContent())->toContain('"encryptHistory":true');
+});
+
+it('runs the protected Cockpit account-management walkthrough without durable state', function () {
+    config()->set('x-change.cockpit.account_scenario.enabled', true);
+    $owner = actingAsTestUser();
+    $owner->forceFill(['email_verified_at' => now()])->save();
+    config()->set('x-change.lifecycle.defaults.user_model', $owner::class);
+    $balanceBefore = (int) $owner->wallet->balance;
+
+    $response = $this->postJson(route(
+        'x-change.cockpit.accounts.scenarios.funding-destinations.store',
+    ));
+
+    $response->assertOk()
+        ->assertJsonPath('schema', 'x-change.lifecycle.account-management-scenario.v1')
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('rollback_completed', true)
+        ->assertJsonPath('simulation.provider_calls', 0)
+        ->assertJsonPath('simulation.balance_changed', false)
+        ->assertJsonCount(7, 'steps')
+        ->assertJsonPath('steps.4.outcome', 'blocked')
+        ->assertJsonMissing([
+            '991100004242',
+            'SCENARIO-DEMO-WALLET-654321',
+            'scenario-write-only-netbank-token',
+        ]);
+
+    expect(FundingDestinationPreference::query()->count())->toBe(0)
+        ->and(ProviderAccountLink::query()->count())->toBe(0)
+        ->and((int) $owner->wallet->refresh()->balance)->toBe($balanceBefore);
+});
+
+it('refuses the Cockpit walkthrough when its environment gate is disabled', function () {
+    config()->set('x-change.cockpit.account_scenario.enabled', false);
+    $owner = actingAsTestUser();
+    $owner->forceFill(['email_verified_at' => now()])->save();
+
+    $this->postJson(route(
+        'x-change.cockpit.accounts.scenarios.funding-destinations.store',
+    ))->assertForbidden();
 });
 
 it('generates and stores a dedicated NetBank destination without exposing its token', function () {
