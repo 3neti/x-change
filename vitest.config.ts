@@ -72,6 +72,10 @@ export default defineConfig({
                 __dirname,
                 'tests/frontend/stubs/useRiderStagePhase.ts',
             ),
+            '@/routes/x-change/cockpit/funding/intents': path.resolve(
+                __dirname,
+                'tests/frontend/stubs/funding-intent-route.ts',
+            ),
 
             '@': path.resolve(__dirname, 'resources/js'),
         },

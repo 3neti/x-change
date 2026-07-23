@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
+import { nextTick } from 'vue';
 import Funding from '../../../resources/js/cockpit/pages/Funding.vue';
 
 const fundingReadModel = {
@@ -78,6 +79,20 @@ describe('Cockpit Funding foundation', () => {
         const wrapper = mount(Funding, {
             props: {
                 funding_read_model: fundingReadModel,
+                funding_instruction: {
+                    reference: '01J-FUNDING-1',
+                    provider: 'netbank',
+                    amount: '₱250.00',
+                    currency: 'PHP',
+                    status: 'awaiting_funds',
+                    expires_at: '2026-07-23T08:30:00+08:00',
+                    funding_address: '915001234567890123456',
+                    institution: 'NetBank',
+                    account_name: 'X-Change Treasury',
+                    delivery: 'manual-bank-or-wallet-transfer',
+                    balance_changed: false,
+                    sensitive: true,
+                },
             },
         });
 
@@ -93,6 +108,12 @@ describe('Cockpit Funding foundation', () => {
         expect(wrapper.text()).toContain('₱24,950.00');
         expect(wrapper.text()).toContain('Amount Mismatch');
         expect(wrapper.text()).toContain('Treasury Inventory');
+        expect(wrapper.text()).toContain('Create Funding Intent');
+        expect(wrapper.text()).toContain('Transfer exactly ₱250.00');
+        expect(wrapper.text()).toContain('915001234567890123456');
+        expect(wrapper.text()).toContain(
+            'The Account changes only after independent provider verification',
+        );
         expect(wrapper.text()).not.toContain('provider transaction');
         expect(wrapper.findAll('table tbody tr')).toHaveLength(1);
     });
@@ -122,5 +143,26 @@ describe('Cockpit Funding foundation', () => {
         expect(wrapper.text()).toContain(
             'No Treasury Inventory has been recognized',
         );
+        expect(wrapper.text()).toContain(
+            'Funding instructions will appear here once',
+        );
+    });
+
+    it('rejects a malformed amount before submitting the intent', async () => {
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: fundingReadModel,
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="cockpit-funding-amount"]')
+            .setValue('25.999');
+        await wrapper
+            .get('[data-testid="cockpit-funding-submit"]')
+            .trigger('click');
+        await nextTick();
+
+        expect(wrapper.text()).toContain('no more than two decimal places');
     });
 });

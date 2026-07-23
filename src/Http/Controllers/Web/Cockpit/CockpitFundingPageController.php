@@ -33,6 +33,7 @@ class CockpitFundingPageController extends Controller
         return Inertia::render('x-change/cockpit/Funding', [
             ...$this->props->toArray(),
             'funding_read_model' => $this->funding->forOperator($operator)->toArray(),
+            'funding_instruction' => $request->session()->pull('funding_instruction'),
         ]);
     }
 }

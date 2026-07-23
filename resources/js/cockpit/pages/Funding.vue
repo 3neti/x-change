@@ -1,9 +1,27 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { useForm } from '@inertiajs/vue3';
+import { store as storeFundingIntent } from '@/routes/x-change/cockpit/funding/intents';
+import { computed, ref } from 'vue';
+import CockpitManualCopyButton from '../components/CockpitManualCopyButton.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
 import type { CockpitFundingPageProps } from '../types';
 
 const props = defineProps<CockpitFundingPageProps>();
+const amount = ref('');
+const amountError = ref<string | null>(null);
+const form = useForm({
+    provider: props.funding_read_model.providers[0]?.code ?? '',
+    amount_minor: 0,
+    currency: 'PHP',
+    idempotency_key: newIdempotencyKey(),
+});
+const clientAmountError = computed(() => {
+    if (amount.value === '' || amountToMinor(amount.value) !== null) {
+        return null;
+    }
+
+    return 'Enter an amount greater than zero with no more than two decimal places.';
+});
 
 const summaryCards = computed(() => [
     {
@@ -63,6 +81,56 @@ function displayTime(value?: string | null): string {
               dateStyle: 'medium',
               timeStyle: 'short',
           }).format(date);
+}
+
+function newIdempotencyKey(): string {
+    if (
+        typeof crypto !== 'undefined' &&
+        typeof crypto.randomUUID === 'function'
+    ) {
+        return crypto.randomUUID();
+    }
+
+    return `cockpit-funding-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function amountToMinor(value: string): number | null {
+    const normalized = value.trim();
+
+    if (!/^\d{1,10}(\.\d{1,2})?$/.test(normalized)) {
+        return null;
+    }
+
+    const [whole, decimal = ''] = normalized.split('.');
+    const amountMinor = Number(whole) * 100 + Number(decimal.padEnd(2, '0'));
+
+    return Number.isSafeInteger(amountMinor) && amountMinor > 0
+        ? amountMinor
+        : null;
+}
+
+function submitFundingIntent(): void {
+    form.clearErrors();
+    amountError.value = null;
+
+    const amountMinor = amountToMinor(amount.value);
+
+    if (amountMinor === null) {
+        amountError.value =
+            'Enter an amount greater than zero with no more than two decimal places.';
+
+        return;
+    }
+
+    form.amount_minor = amountMinor;
+    form.post(storeFundingIntent(), {
+        preserveScroll: true,
+        onSuccess: () => {
+            amount.value = '';
+            form.amount_minor = 0;
+            form.idempotency_key = newIdempotencyKey();
+        },
+    });
 }
 </script>
 
@@ -127,6 +195,268 @@ function displayTime(value?: string | null): string {
                         </p>
                     </div>
                 </div>
+            </section>
+
+            <section
+                class="grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]"
+            >
+                <form
+                    class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                    data-testid="cockpit-funding-intent-form"
+                    @submit.prevent="submitFundingIntent"
+                >
+                    <p
+                        class="text-xs font-semibold tracking-[0.16em] text-sky-700 uppercase dark:text-sky-300"
+                    >
+                        Controlled intake
+                    </p>
+                    <h2 class="mt-1 text-lg font-semibold">
+                        Create Funding Intent
+                    </h2>
+                    <p
+                        class="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400"
+                    >
+                        This creates exact provider instructions. It does not
+                        change Internal Balance or Usable Balance.
+                    </p>
+
+                    <div
+                        class="mt-5 grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
+                    >
+                        <label class="block">
+                            <span
+                                class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
+                                >Provider</span
+                            >
+                            <select
+                                v-model="form.provider"
+                                class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm transition outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-950"
+                                :disabled="
+                                    form.processing ||
+                                    funding_read_model.providers.length === 0
+                                "
+                                data-testid="cockpit-funding-provider"
+                            >
+                                <option
+                                    v-for="provider in funding_read_model.providers"
+                                    :key="provider.code"
+                                    :value="provider.code"
+                                >
+                                    {{ provider.label }}
+                                </option>
+                            </select>
+                            <span
+                                v-if="form.errors.provider"
+                                class="mt-1 block text-xs text-rose-600"
+                                >{{ form.errors.provider }}</span
+                            >
+                        </label>
+
+                        <label class="block">
+                            <span
+                                class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
+                                >Exact amount</span
+                            >
+                            <div
+                                class="mt-1.5 flex rounded-lg border border-slate-300 bg-white focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-950"
+                            >
+                                <span
+                                    class="flex items-center border-r border-slate-200 px-3 text-sm font-semibold text-slate-500 dark:border-slate-700"
+                                    >PHP</span
+                                >
+                                <input
+                                    v-model="amount"
+                                    inputmode="decimal"
+                                    autocomplete="off"
+                                    placeholder="0.00"
+                                    class="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm outline-none"
+                                    :disabled="form.processing"
+                                    data-testid="cockpit-funding-amount"
+                                />
+                            </div>
+                            <span
+                                v-if="
+                                    amountError ??
+                                    clientAmountError ??
+                                    form.errors.amount_minor
+                                "
+                                class="mt-1 block text-xs text-rose-600"
+                                >{{
+                                    amountError ??
+                                    clientAmountError ??
+                                    form.errors.amount_minor
+                                }}</span
+                            >
+                        </label>
+                    </div>
+
+                    <div class="mt-5 flex flex-wrap items-center gap-3">
+                        <button
+                            type="submit"
+                            class="rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            :disabled="
+                                form.processing ||
+                                funding_read_model.providers.length === 0
+                            "
+                            data-testid="cockpit-funding-submit"
+                        >
+                            {{
+                                form.processing
+                                    ? 'Creating instructions…'
+                                    : 'Create funding instructions'
+                            }}
+                        </button>
+                        <p class="text-xs text-slate-500">
+                            No balance mutation occurs on submit.
+                        </p>
+                    </div>
+                </form>
+
+                <article
+                    class="rounded-xl border p-5 shadow-sm"
+                    :class="
+                        funding_instruction
+                            ? 'border-sky-200 bg-sky-50/70 dark:border-sky-900 dark:bg-sky-950/20'
+                            : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'
+                    "
+                    data-testid="cockpit-funding-instruction"
+                >
+                    <div v-if="funding_instruction">
+                        <div
+                            class="flex flex-wrap items-start justify-between gap-3"
+                        >
+                            <div>
+                                <p
+                                    class="text-xs font-semibold tracking-[0.16em] text-sky-700 uppercase dark:text-sky-300"
+                                >
+                                    One-time instructions
+                                </p>
+                                <h2 class="mt-1 text-lg font-semibold">
+                                    Transfer exactly
+                                    {{ funding_instruction.amount }}
+                                </h2>
+                            </div>
+                            <span
+                                class="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-sky-700 shadow-sm dark:bg-slate-900 dark:text-sky-300"
+                            >
+                                {{ displayLabel(funding_instruction.status) }}
+                            </span>
+                        </div>
+
+                        <dl class="mt-4 grid gap-3 sm:grid-cols-2">
+                            <div>
+                                <dt
+                                    class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
+                                >
+                                    Provider
+                                </dt>
+                                <dd class="mt-1 text-sm font-medium">
+                                    {{
+                                        funding_instruction.institution ??
+                                        displayLabel(
+                                            funding_instruction.provider,
+                                        )
+                                    }}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt
+                                    class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
+                                >
+                                    Expires
+                                </dt>
+                                <dd class="mt-1 text-sm font-medium">
+                                    {{
+                                        displayTime(
+                                            funding_instruction.expires_at,
+                                        )
+                                    }}
+                                </dd>
+                            </div>
+                            <div v-if="funding_instruction.account_name">
+                                <dt
+                                    class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
+                                >
+                                    Account name
+                                </dt>
+                                <dd class="mt-1 text-sm font-medium">
+                                    {{ funding_instruction.account_name }}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt
+                                    class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
+                                >
+                                    Funding Intent
+                                </dt>
+                                <dd class="mt-1 font-mono text-xs">
+                                    {{ funding_instruction.reference }}
+                                </dd>
+                            </div>
+                        </dl>
+
+                        <div
+                            v-if="funding_instruction.funding_address"
+                            class="mt-4 rounded-lg border border-sky-200 bg-white p-3 dark:border-sky-900 dark:bg-slate-950"
+                        >
+                            <p
+                                class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
+                            >
+                                Destination account
+                            </p>
+                            <div
+                                class="mt-1 flex flex-wrap items-center justify-between gap-3"
+                            >
+                                <p
+                                    class="font-mono text-sm font-semibold break-all"
+                                >
+                                    {{ funding_instruction.funding_address }}
+                                </p>
+                                <CockpitManualCopyButton
+                                    :value="funding_instruction.funding_address"
+                                    label="Copy account"
+                                    helper="Browser-local copy only."
+                                />
+                            </div>
+                        </div>
+
+                        <a
+                            v-if="funding_instruction.action_url"
+                            :href="funding_instruction.action_url"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="mt-4 inline-flex rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-700"
+                        >
+                            Open provider payment page
+                        </a>
+
+                        <p
+                            class="mt-4 text-xs leading-5 text-slate-600 dark:text-slate-400"
+                        >
+                            Sensitive settlement access material. Transfer the
+                            exact amount before expiry. The Account changes only
+                            after independent provider verification.
+                        </p>
+                    </div>
+                    <div
+                        v-else
+                        class="flex min-h-52 flex-col items-center justify-center text-center"
+                    >
+                        <p
+                            class="text-sm font-semibold text-slate-700 dark:text-slate-200"
+                        >
+                            Funding instructions will appear here once
+                        </p>
+                        <p
+                            class="mt-1 max-w-md text-xs leading-5 text-slate-500"
+                        >
+                            Create an intent to receive the exact bank
+                            destination or provider payment link. Refreshing
+                            later will show the sanitized activity record, not
+                            the sensitive instruction payload.
+                        </p>
+                    </div>
+                </article>
             </section>
 
             <section

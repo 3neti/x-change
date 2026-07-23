@@ -11,6 +11,7 @@ use LBHurtado\XChange\Data\PayCode\GeneratePayCodeResultData;
 use LBHurtado\XChange\Data\PayCodeLinksData;
 use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Http\Controllers\PayCode\GeneratePayCodeController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingIntentController;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRepository;
 
 it('registers read-only cockpit routes under the x cockpit namespace', function () {
@@ -1174,13 +1175,14 @@ it('requires authentication for cockpit routes', function (string $route, array 
         ->assertUnauthorized();
 })->with([
     'dashboard' => ['x-change.cockpit.dashboard', []],
+    'funding' => ['x-change.cockpit.funding.index', []],
     'quick generate' => ['x-change.cockpit.quick-generate', []],
     'pay code explorer' => ['x-change.cockpit.pay-codes.index', []],
     'voucher detail' => ['x-change.cockpit.pay-codes.show', ['code' => 'PC-READY-001']],
     'distribution workspace' => ['x-change.cockpit.pay-codes.distribution', ['code' => 'PC-READY-001']],
 ]);
 
-it('registers only the quick generate cockpit mutation route', function () {
+it('registers only the guarded issuance and funding intent Cockpit mutation routes', function () {
     $mutatingRoutes = collect(Route::getRoutes())
         ->filter(fn ($route): bool => str_starts_with((string) $route->getName(), 'x-change.cockpit.'))
         ->filter(fn ($route): bool => collect($route->methods())
@@ -1189,8 +1191,10 @@ it('registers only the quick generate cockpit mutation route', function () {
         );
 
     expect($mutatingRoutes->pluck('action.as')->values()->all())->toBe([
+        'x-change.cockpit.funding.intents.store',
         'x-change.cockpit.quick-generate.store',
-    ]);
+    ])->and(Route::getRoutes()->getByName('x-change.cockpit.funding.intents.store')?->getActionName())
+        ->toBe(CockpitFundingIntentController::class);
 });
 
 it('documents the quick generate issuance boundary before mutation wiring', function () {

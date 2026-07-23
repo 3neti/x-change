@@ -398,6 +398,23 @@ export type CockpitFundingReadModel = {
 
 export type CockpitFundingPageProps = CockpitHeaderPageProps & {
     funding_read_model: CockpitFundingReadModel;
+    funding_instruction?: CockpitFundingInstruction | null;
+};
+
+export type CockpitFundingInstruction = {
+    reference: string;
+    provider: string;
+    amount: string;
+    currency: string;
+    status: string;
+    expires_at?: string | null;
+    funding_address?: string | null;
+    action_url?: string | null;
+    institution?: string | null;
+    account_name?: string | null;
+    delivery?: string | null;
+    balance_changed: false;
+    sensitive: true;
 };
 
 export type CockpitRuntimeProfileComponent = {
