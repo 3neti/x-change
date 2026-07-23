@@ -3605,6 +3605,24 @@ Workstream compasses remain the source of detailed slice history. This Compass s
 - Boundary remains unchanged: presentation-only polish; no route behavior, read-model hydration, distribution dispatch, feedback delivery, x-action execution, journal write, voucher mutation, provider call, persistence, wallet behavior, Treasury behavior, public API behavior, or money movement changed.
 - Next recommended checkpoint: manually inspect the five primary Cockpit pages, or continue page-focused polish with Pay Code Explorer.
 
+## 2026-07-19 Update — Cockpit Dashboard Connected Services Productization
+
+- Dashboard connected-service overview productization closed with a scan-first operator section for audit trail, follow-up actions, notifications, campaigns, Treasury posture, and execution evidence.
+- UI/reports: `../ui-cockpit/reports/547-dashboard-connected-services-productization-slice-1.md` and `../ui-cockpit/reports/548-dashboard-connected-services-productization-slice-2-closure.md`.
+- Boundary remained unchanged: read-only presentation only; no journal writes, action execution, feedback sends, campaign mutation, provider calls, wallet behavior changes, Treasury behavior changes, persistence changes, public API changes, or money movement were added.
+
+## 2026-07-19 Update — Cockpit Quick Generate Result Clarity
+
+- Quick Generate result clarity closed with the success card as the primary operator result surface and supporting generated-result details retained in a disclosure.
+- UI/reports: `../ui-cockpit/reports/549-quick-generate-result-clarity-slice-1.md` and `../ui-cockpit/reports/550-quick-generate-result-clarity-slice-2-closure.md`.
+- Boundary remained unchanged: presentation only; no route, request, issuance, validation, provider, wallet, Treasury, journal, action, feedback, campaign, persistence, public API, or money-movement behavior changed.
+
+## 2026-07-19 Update — Cockpit Quick Generate Form Density
+
+- Quick Generate form density closed with the Contract Builder Checklist primary and VoucherInstruction DTO coverage retained in a collapsed disclosure.
+- UI/reports: `../ui-cockpit/reports/551-quick-generate-form-density-slice-1.md` and `../ui-cockpit/reports/552-quick-generate-form-density-slice-2-closure.md`.
+- Boundary remained unchanged: presentation only; no route, request, issuance, validation, provider, wallet, Treasury, journal, action, feedback, campaign, persistence, public API, or money-movement behavior changed.
+
 ## 2026-07-19 Update — Distribution Workspace Secondary Panel Copy Polish — Slice 1
 
 - Started the Distribution Workspace Secondary Panel Copy Polish wave after manual acceptance passed with UI follow-up.
