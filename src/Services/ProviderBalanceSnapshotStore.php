@@ -80,8 +80,10 @@ class ProviderBalanceSnapshotStore
             return null;
         }
 
-        return $value instanceof DateTimeInterface
+        $dateTime = $value instanceof DateTimeInterface
             ? CarbonImmutable::instance($value)->utc()
             : CarbonImmutable::parse((string) $value)->utc();
+
+        return $dateTime->setTimezone((string) config('app.timezone', 'UTC'));
     }
 }

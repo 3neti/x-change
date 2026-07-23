@@ -7,25 +7,35 @@ use LBHurtado\XChange\Models\ProviderBalanceSnapshot;
 use LBHurtado\XChange\Services\ProviderBalanceSnapshotStore;
 
 it('stores a sanitized provider balance projection with separate fetch and provider timestamps', function () {
-    $store = app(ProviderBalanceSnapshotStore::class);
+    $originalTimezone = date_default_timezone_get();
 
-    $snapshot = $store->recordSuccess('netbank', 'netbank_source_account', [
-        'balance_minor' => 150_000,
-        'available_balance_minor' => 124_852,
-        'currency' => 'PHP',
-        'account_number_masked' => '********0001',
-        'as_of' => '2026-02-22T08:00:00+08:00',
-        'fetched_at' => '2026-07-23T17:45:00+08:00',
-    ]);
+    config()->set('app.timezone', 'Asia/Manila');
+    date_default_timezone_set('Asia/Manila');
 
-    expect($snapshot)
-        ->toBeInstanceOf(ProviderBalanceSnapshot::class)
-        ->and($snapshot->balance_minor)->toBe(150_000)
-        ->and($snapshot->available_balance_minor)->toBe(124_852)
-        ->and($snapshot->account_reference_masked)->toBe('********0001')
-        ->and($snapshot->provider_as_of?->equalTo(CarbonImmutable::parse('2026-02-22T08:00:00+08:00')))->toBeTrue()
-        ->and($snapshot->fetched_at?->equalTo(CarbonImmutable::parse('2026-07-23T17:45:00+08:00')))->toBeTrue()
-        ->and($snapshot->refresh_status)->toBe('fresh');
+    try {
+        $store = app(ProviderBalanceSnapshotStore::class);
+
+        $snapshot = $store->recordSuccess('netbank', 'netbank_source_account', [
+            'balance_minor' => 150_000,
+            'available_balance_minor' => 124_852,
+            'currency' => 'PHP',
+            'account_number_masked' => '********0001',
+            'as_of' => '2026-02-22T08:00:00+08:00',
+            'fetched_at' => '2026-07-23T17:45:00+08:00',
+        ]);
+
+        expect($snapshot)
+            ->toBeInstanceOf(ProviderBalanceSnapshot::class)
+            ->and($snapshot->balance_minor)->toBe(150_000)
+            ->and($snapshot->available_balance_minor)->toBe(124_852)
+            ->and($snapshot->account_reference_masked)->toBe('********0001')
+            ->and($snapshot->provider_as_of?->equalTo(CarbonImmutable::parse('2026-02-22T08:00:00+08:00')))->toBeTrue()
+            ->and($snapshot->fetched_at?->equalTo(CarbonImmutable::parse('2026-07-23T17:45:00+08:00')))->toBeTrue()
+            ->and($snapshot->getRawOriginal('fetched_at'))->toBe('2026-07-23 17:45:00')
+            ->and($snapshot->refresh_status)->toBe('fresh');
+    } finally {
+        date_default_timezone_set($originalTimezone);
+    }
 });
 
 it('retains the last known balance when a later provider refresh fails', function () {
