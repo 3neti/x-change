@@ -34,6 +34,7 @@ class CockpitFundingPageController extends Controller
             ...$this->props->toArray(),
             'funding_read_model' => $this->funding->forOperator($operator)->toArray(),
             'funding_instruction' => $request->session()->pull('funding_instruction'),
+            'funding_notice' => $request->session()->pull('funding_notice'),
         ]);
     }
 }

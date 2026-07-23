@@ -1192,6 +1192,8 @@ it('registers only the guarded issuance and funding intent Cockpit mutation rout
 
     expect($mutatingRoutes->pluck('action.as')->values()->all())->toBe([
         'x-change.cockpit.funding.intents.store',
+        'x-change.cockpit.funding.suspense.reconciliation-requests.store',
+        'x-change.cockpit.funding.reconciliations.approve',
         'x-change.cockpit.quick-generate.store',
     ])->and(Route::getRoutes()->getByName('x-change.cockpit.funding.intents.store')?->getActionName())
         ->toBe(CockpitFundingIntentController::class);

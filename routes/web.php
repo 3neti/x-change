@@ -17,6 +17,8 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDashboardPageControlle
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDistributionWorkspacePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingIntentController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingReconciliationApprovalController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingReconciliationRequestController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeExplorerPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateMutationRouteShellController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGeneratePageController;
@@ -40,6 +42,14 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         Route::get('/', CockpitDashboardPageController::class)->name('x-change.cockpit.dashboard');
         Route::get('funding', CockpitFundingPageController::class)->name('x-change.cockpit.funding.index');
         Route::post('funding/intents', CockpitFundingIntentController::class)->name('x-change.cockpit.funding.intents.store');
+        Route::post(
+            'funding/suspense/{case:reference}/reconciliation-requests',
+            CockpitFundingReconciliationRequestController::class,
+        )->name('x-change.cockpit.funding.suspense.reconciliation-requests.store');
+        Route::post(
+            'funding/reconciliations/{reconciliationRequest:reference}/approve',
+            CockpitFundingReconciliationApprovalController::class,
+        )->name('x-change.cockpit.funding.reconciliations.approve');
         Route::get('quick-generate', CockpitQuickGeneratePageController::class)->name('x-change.cockpit.quick-generate');
         Route::post('quick-generate', CockpitQuickGenerateMutationRouteShellController::class)->name('x-change.cockpit.quick-generate.store');
         Route::get('diagnostics/runtime-profile', CockpitRuntimeProfilePageController::class)->name('x-change.cockpit.diagnostics.runtime-profile');
