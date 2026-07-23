@@ -236,9 +236,16 @@ class PublishedAssetDriftDetector
 
     protected function blockHeader(string $relativePath): string
     {
+        $generatedHeaderId = self::GeneratedHeaderId;
+
         return <<<TEXT
         /*
-         * {$this->headerText($relativePath, "\n * ")}
+         * {$generatedHeaderId}
+         *
+         * Source: packages/x-change/resources/js/{$relativePath}
+         *
+         * Do not edit this published host copy directly.
+         * Changes will be overwritten by php artisan x-change:install --force.
          */
 
         TEXT;

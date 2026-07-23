@@ -83,6 +83,17 @@ it('ignores generated install headers while comparing published cockpit assets',
         ->and($result['files'][0]['status'])->toBe('ok');
 });
 
+it('generates TypeScript warning headers without trailing whitespace', function () {
+    $header = (new PublishedAssetDriftDetector)->withGeneratedHeader(
+        'export type Status = "ok";'.PHP_EOL,
+        'types.ts',
+    );
+
+    expect($header)->not->toMatch('/[ \t]+$/m')
+        ->and($header)->toContain(PublishedAssetDriftDetector::GeneratedHeaderId)
+        ->and($header)->toContain('export type Status = "ok";');
+});
+
 it('can apply generated install headers to published cockpit files without changing semantic content', function () {
     $source = cockpitDriftTempPath('source');
     $target = cockpitDriftTempPath('target');
