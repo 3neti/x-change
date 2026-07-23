@@ -134,6 +134,8 @@ use LBHurtado\XChange\Contracts\WithdrawalValidationContract;
 use LBHurtado\XChange\Contracts\XChangeOnboardingGatewayContract;
 use LBHurtado\XChange\Contracts\XChangeProviderTopologyResolverContract;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
+use LBHurtado\XChange\Exceptions\FundingIntentConflict;
+use LBHurtado\XChange\Exceptions\FundingIntentTransitionDenied;
 use LBHurtado\XChange\Exceptions\IdempotencyConflict;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
@@ -1246,6 +1248,19 @@ class XChangeServiceProvider extends ServiceProvider
             return $this->apiResponses()->errorFromThrowable(
                 $e,
                 'IDEMPOTENCY_CONFLICT',
+                [],
+                409,
+            );
+        });
+
+        $exceptions->renderable(function (FundingIntentConflict|FundingIntentTransitionDenied $e, Request $request) {
+            if (! $request->expectsJson()) {
+                return null;
+            }
+
+            return $this->apiResponses()->errorFromThrowable(
+                $e,
+                'FUNDING_INTENT_CONFLICT',
                 [],
                 409,
             );

@@ -6,21 +6,22 @@ namespace LBHurtado\XChange\Lifecycle\Http\Controllers\Wallets;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
-use LBHurtado\XChange\Contracts\WalletAccessContract;
-use LBHurtado\XChange\Lifecycle\Http\Requests\Wallets\CreateWalletTopUpRequest;
-use LBHurtado\XChange\Lifecycle\Http\Resources\Wallets\WalletTopUpResource;
+use LBHurtado\XChange\Services\ApiResponseFactory;
 
 class CreateWalletTopUpController extends Controller
 {
     public function __invoke(
         string $wallet,
-        CreateWalletTopUpRequest $request,
-        WalletAccessContract $wallets,
+        ApiResponseFactory $responses,
     ): JsonResponse {
-        $result = $wallets->topUp($wallet, $request->validated());
-
-        return WalletTopUpResource::make($result)
-            ->response()
-            ->setStatusCode(201);
+        return $responses->error(
+            message: 'Direct wallet top-ups are disabled. Create a Funding Intent and wait for authoritative provider settlement.',
+            code: 'DIRECT_TOP_UP_DISABLED',
+            errors: [
+                'wallet' => $wallet,
+                'replacement' => '/api/x/v1/funding-intents',
+            ],
+            status: 410,
+        );
     }
 }

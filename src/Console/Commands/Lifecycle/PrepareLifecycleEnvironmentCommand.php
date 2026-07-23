@@ -27,6 +27,12 @@ class PrepareLifecycleEnvironmentCommand extends Command
 
     public function handle(): int
     {
+        if (! app()->environment((array) config('x-change.lifecycle.synthetic_funding_environments', ['local', 'testing']))) {
+            $this->error('Synthetic lifecycle funding is disabled in this environment.');
+
+            return self::FAILURE;
+        }
+
         if ($this->option('fresh')) {
             if (! $this->confirmFresh()) {
                 $this->warn('Aborted.');

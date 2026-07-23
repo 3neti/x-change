@@ -357,11 +357,81 @@
                 }
             }
         },
+        "/funding-intents": {
+            "post": {
+                "operationId": "x.v1.funding-intents.store",
+                "summary": "Create a Funding Intent without changing the Account balance",
+                "tags": [
+                    "Funding"
+                ],
+                "parameters": [
+                    {
+                        "name": "Idempotency-Key",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 191
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "provider",
+                                    "amount_minor",
+                                    "currency"
+                                ],
+                                "properties": {
+                                    "provider": {
+                                        "type": "string",
+                                        "enum": [
+                                            "netbank",
+                                            "paynamics_constellation"
+                                        ]
+                                    },
+                                    "amount_minor": {
+                                        "type": "integer",
+                                        "minimum": 1
+                                    },
+                                    "currency": {
+                                        "type": "string",
+                                        "minLength": 3,
+                                        "maxLength": 3,
+                                        "example": "PHP"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Funding Intent created; no Account balance has changed"
+                    },
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "409": {
+                        "description": "Idempotency conflict"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
         "/wallets/{wallet}/top-ups": {
             "post": {
                 "operationId": "x.v1.wallets.topups.store",
+                "summary": "Disabled direct wallet top-up endpoint",
+                "deprecated": true,
                 "tags": [
-                    "CreateWalletTopUp"
+                    "Funding"
                 ],
                 "parameters": [
                     {
@@ -373,29 +443,9 @@
                         }
                     }
                 ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/CreateWalletTopUpRequest"
-                            }
-                        }
-                    }
-                },
                 "responses": {
-                    "201": {
-                        "description": "`WalletTopUpResource`",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/WalletTopUpResource"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "$ref": "#/components/responses/ValidationException"
+                    "410": {
+                        "description": "Direct balance mutation is disabled; create a Funding Intent instead"
                     }
                 }
             }

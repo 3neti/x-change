@@ -380,6 +380,16 @@ return [
 
     'funding' => [
         'provider_balance_max_age_seconds' => (int) env('XCHANGE_PROVIDER_BALANCE_MAX_AGE_SECONDS', 300),
+        'api_middleware' => ['auth'],
+        'intent_ttl_seconds' => (int) env('XCHANGE_FUNDING_INTENT_TTL_SECONDS', 1800),
+        'providers' => [
+            'netbank' => [
+                'enabled' => (bool) env('XCHANGE_FUNDING_NETBANK_ENABLED', false),
+            ],
+            'paynamics_constellation' => [
+                'enabled' => (bool) env('XCHANGE_FUNDING_PAYNAMICS_ENABLED', false),
+            ],
+        ],
     ],
 
     'integrations' => [
@@ -494,6 +504,7 @@ return [
     ],
     'lifecycle' => [
         ...require __DIR__.'/lifecycle-scenarios.php',
+        'synthetic_funding_environments' => ['local', 'testing'],
         'withdrawals' => [
             'service' => WithdrawalLifecycleService::class,
         ],

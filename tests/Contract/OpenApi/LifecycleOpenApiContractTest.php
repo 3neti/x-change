@@ -28,6 +28,7 @@ it('contains the expected lifecycle operations', function () {
         ['method' => 'get', 'path' => '/wallets/{wallet}/balance'],
         ['method' => 'get', 'path' => '/wallets/{wallet}/ledger'],
         ['method' => 'post', 'path' => '/wallets/{wallet}/top-ups'],
+        ['method' => 'post', 'path' => '/funding-intents'],
         ['method' => 'get', 'path' => '/pricelist'],
         ['method' => 'get', 'path' => '/pricelist/items'],
         ['method' => 'post', 'path' => '/vouchers/estimate'],
