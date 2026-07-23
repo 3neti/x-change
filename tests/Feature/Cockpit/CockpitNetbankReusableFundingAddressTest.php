@@ -19,7 +19,9 @@ beforeEach(function () {
         'payment-gateway.netbank.funding.client_id' => 'client-id',
         'payment-gateway.netbank.funding.client_secret' => 'client-secret',
         'payment-gateway.netbank.funding.corporate_account_number' => '113001000019',
+        'payment-gateway.netbank.funding.corporate_account_name' => 'X Change Treasury',
         'payment-gateway.netbank.funding.vca_alias' => '91500',
+        'payment-gateway.netbank.funding.vca_alias_token' => 'alias-token',
         'payment-gateway.netbank.funding.reference_key' => 'reusable-reference-key',
         'payment-gateway.netbank.funding.qr_endpoint' => 'https://api.netbank.test/v1/qrph/generate',
         'payment-gateway.netbank.funding.qr_merchant_name' => 'X Change',
@@ -195,6 +197,28 @@ it('keeps the sensitive QR and address out of initial Inertia props', function (
         ->assertJsonPath('props.standing_funding_address.automatic_credit_enabled', false)
         ->assertJsonMissingPath('props.standing_funding_address.funding_address')
         ->assertJsonMissingPath('props.standing_funding_address.qr_code');
+});
+
+it('fails closed when the configured corporate account name is missing', function () {
+    actingAsTestUser();
+    config()->set('payment-gateway.netbank.funding.corporate_account_name');
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.funding.index'))
+        ->assertOk()
+        ->assertJsonPath('props.standing_funding_address.available', false)
+        ->assertJsonPath('props.standing_funding_address.status', 'not_configured');
+});
+
+it('fails closed when the VCA alias token is missing', function () {
+    actingAsTestUser();
+    config()->set('payment-gateway.netbank.funding.vca_alias_token');
+
+    $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.funding.index'))
+        ->assertOk()
+        ->assertJsonPath('props.standing_funding_address.available', false)
+        ->assertJsonPath('props.standing_funding_address.status', 'not_configured');
 });
 
 function reusableFundingTestPng(): string
