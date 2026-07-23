@@ -19,6 +19,7 @@ use LBHurtado\XChange\Lifecycle\Http\Controllers\Events\ListEventsController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Events\ShowEventController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Events\ShowIdempotencyKeyController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Funding\CreateFundingIntentController;
+use LBHurtado\XChange\Lifecycle\Http\Controllers\Funding\ReceiveFundingWebhookController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Issuers\CreateIssuerController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Issuers\CreateIssuerWalletController;
 use LBHurtado\XChange\Lifecycle\Http\Controllers\Payment\HandleVoucherPaymentWebhookController;
@@ -51,6 +52,11 @@ Route::prefix('api/x/v1')->as('api.x.v1.')->group(function (): void {
     Route::middleware(config('x-change.funding.api_middleware', ['auth']))
         ->post('/funding-intents', CreateFundingIntentController::class)
         ->name('funding-intents.store');
+
+    Route::middleware(config('x-change.funding.webhook_middleware', ['throttle:120,1']))
+        ->post('/funding/webhooks/{provider}', ReceiveFundingWebhookController::class)
+        ->where('provider', '[a-z0-9_-]+')
+        ->name('funding.webhooks.receive');
 
     Route::post('/settlements/{voucher}/start', StartSettlementLifecycleController::class)
         ->name('settlements.start');

@@ -20,9 +20,16 @@ class FakeFundingProviderAdapter implements FundingProviderAdapter
 
     public ?FundingInstructionsData $instructions = null;
 
+    public WebhookAuthenticationData $webhookAuthentication;
+
     public function __construct(
         private readonly string $provider = 'netbank',
-    ) {}
+    ) {
+        $this->webhookAuthentication = new WebhookAuthenticationData(
+            authenticated: true,
+            method: 'fake',
+        );
+    }
 
     public function providerCode(): string
     {
@@ -51,7 +58,7 @@ class FakeFundingProviderAdapter implements FundingProviderAdapter
 
     public function authenticateWebhook(ProviderWebhookRequestData $request): WebhookAuthenticationData
     {
-        return new WebhookAuthenticationData(authenticated: true, method: 'fake');
+        return $this->webhookAuthentication;
     }
 
     public function normalizeWebhook(ProviderWebhookReceiptData $receipt): ProviderEventHintData

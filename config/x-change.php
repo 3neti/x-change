@@ -385,12 +385,16 @@ return [
         'instruction_lock_seconds' => (int) env('XCHANGE_FUNDING_INSTRUCTION_LOCK_SECONDS', 30),
         'instruction_lock_wait_seconds' => (int) env('XCHANGE_FUNDING_INSTRUCTION_LOCK_WAIT_SECONDS', 5),
         'reference_hash_key' => env('XCHANGE_FUNDING_REFERENCE_HASH_KEY', env('APP_KEY')),
+        'webhook_max_body_bytes' => (int) env('XCHANGE_FUNDING_WEBHOOK_MAX_BODY_BYTES', 262_144),
+        'webhook_middleware' => ['throttle:120,1'],
         'providers' => [
             'netbank' => [
                 'enabled' => (bool) env('XCHANGE_FUNDING_NETBANK_ENABLED', false),
+                'signature_header' => null,
             ],
             'paynamics_constellation' => [
                 'enabled' => (bool) env('XCHANGE_FUNDING_PAYNAMICS_ENABLED', false),
+                'signature_header' => env('XCHANGE_FUNDING_PAYNAMICS_SIGNATURE_HEADER', 'Signature'),
             ],
         ],
     ],

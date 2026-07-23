@@ -194,6 +194,9 @@ abstract class TestCase extends Orchestra
         // Onboarding package migrations.
         $this->loadOnboardingPackageMigrations();
 
+        // Provider-neutral funding evidence migrations.
+        $this->loadEmiCoreFundingMigrations();
+
         // Optional Settlement OS read-only integration package migrations.
         $this->loadOptionalCockpitIntegrationMigrations();
 
@@ -218,6 +221,19 @@ abstract class TestCase extends Orchestra
 
         if (is_dir($path) && (glob($path.'/*.php') ?: []) !== []) {
             $this->loadMigrationsFrom($path);
+        }
+    }
+
+    protected function loadEmiCoreFundingMigrations(): void
+    {
+        $path = $this->packageRoot(EmiCoreServiceProvider::class).'/database/migrations';
+
+        foreach ([
+            '2025_01_01_000008_create_webhook_receipts_table.php',
+            '2026_07_23_085518_create_provider_funding_observations_table.php',
+            '2026_07_23_085520_harden_emi_webhook_receipts_for_funding_evidence.php',
+        ] as $migration) {
+            $this->runMigrationFile($path.'/'.$migration);
         }
     }
 

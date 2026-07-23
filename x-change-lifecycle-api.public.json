@@ -428,6 +428,55 @@
                 }
             }
         },
+        "/funding/webhooks/{provider}": {
+            "post": {
+                "operationId": "x.v1.funding.webhooks.receive",
+                "summary": "Authenticate and preserve provider funding evidence without changing an Account balance",
+                "tags": [
+                    "Funding"
+                ],
+                "parameters": [
+                    {
+                        "name": "provider",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "text/plain": {
+                            "schema": {
+                                "type": "string"
+                            }
+                        },
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": true
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "Authenticated evidence preserved; provider verification has not yet credited an Account"
+                    },
+                    "401": {
+                        "description": "Provider webhook authentication failed; rejected evidence was preserved"
+                    },
+                    "413": {
+                        "description": "Webhook body exceeds the configured evidence limit"
+                    },
+                    "503": {
+                        "description": "The requested funding provider adapter is unavailable"
+                    }
+                }
+            }
+        },
         "/wallets/{wallet}/top-ups": {
             "post": {
                 "operationId": "x.v1.wallets.topups.store",
