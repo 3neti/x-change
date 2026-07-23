@@ -24,12 +24,21 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
 
     public function forOperator(mixed $operator = null): CockpitHeaderReadModelData
     {
+        $internalBalance = $this->internalBalance($operator);
+        $outstandingLiability = $this->outstandingLiability($operator);
+        $providerBalance = $this->providerBalance($operator);
+
         return new CockpitHeaderReadModelData(
             balances: [
-                $this->internalBalance($operator),
-                $this->outstandingLiability($operator),
-                $this->usableBalance($operator),
-                $this->providerBalance($operator),
+                $internalBalance['metric'],
+                $outstandingLiability['metric'],
+                $this->issuanceCapacity(
+                    $internalBalance['minor'],
+                    $outstandingLiability['minor'],
+                    $providerBalance['minor'],
+                    $providerBalance['fresh'],
+                ),
+                $providerBalance['metric'],
             ],
             redactions: [
                 'payloads' => 'balance-summary-only',
@@ -44,32 +53,51 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
         );
     }
 
-    private function internalBalance(mixed $operator): CockpitDashboardMetricData
+    /**
+     * @return array{metric: CockpitDashboardMetricData, minor: ?int}
+     */
+    private function internalBalance(mixed $operator): array
     {
         if ($operator === null) {
-            return $this->disconnectedInternalBalance();
+            return [
+                'metric' => $this->disconnectedInternalBalance(),
+                'minor' => null,
+            ];
         }
 
         try {
             $wallet = $this->wallets->resolveForUser($operator);
-            $balance = $this->wallets->getBalance($wallet);
+            $balanceMinor = $this->normalizeWalletBalanceMinor($this->wallets->getBalance($wallet));
 
-            return new CockpitDashboardMetricData(
-                key: 'internal',
-                label: 'Internal Balance',
-                value: $this->formatMoney($balance),
-                helper: 'Read from the authenticated operator wallet.',
-                tone: 'healthy',
-            );
+            return [
+                'metric' => new CockpitDashboardMetricData(
+                    key: 'internal',
+                    label: 'Internal Balance',
+                    value: $this->formatMoney($balanceMinor),
+                    helper: 'Read from the authenticated operator wallet.',
+                    tone: 'healthy',
+                ),
+                'minor' => $balanceMinor,
+            ];
         } catch (Throwable) {
-            return $this->disconnectedInternalBalance();
+            return [
+                'metric' => $this->disconnectedInternalBalance(),
+                'minor' => null,
+            ];
         }
     }
 
-    private function providerBalance(mixed $operator): CockpitDashboardMetricData
+    /**
+     * @return array{metric: CockpitDashboardMetricData, minor: ?int, fresh: bool}
+     */
+    private function providerBalance(mixed $operator): array
     {
         if (! (bool) config('x-change.cockpit.header_provider_balance.enabled', true) || $operator === null) {
-            return $this->disconnectedProviderBalance();
+            return [
+                'metric' => $this->disconnectedProviderBalance(),
+                'minor' => null,
+                'fresh' => false,
+            ];
         }
 
         try {
@@ -78,96 +106,120 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
             $balance = $this->providerBalanceFromOverview($overview);
 
             if ($balance === null) {
-                return $this->disconnectedProviderBalance();
+                return [
+                    'metric' => $this->disconnectedProviderBalance(),
+                    'minor' => null,
+                    'fresh' => false,
+                ];
             }
 
             $value = $this->providerBalanceMinor($balance);
 
             if ($value === null) {
-                return $this->disconnectedProviderBalance(
-                    $this->stringValue($balance['sync_message'] ?? null),
-                    $this->providerBalanceLabel($balance),
-                );
+                return [
+                    'metric' => $this->disconnectedProviderBalance(
+                        $this->stringValue($balance['sync_message'] ?? null),
+                        $this->providerBalanceLabel($balance),
+                    ),
+                    'minor' => null,
+                    'fresh' => false,
+                ];
             }
 
-            return new CockpitDashboardMetricData(
-                key: 'live',
-                label: $this->providerBalanceLabel($balance),
-                value: $this->formatMoney($value),
-                helper: $this->providerBalanceHelper($balance),
-                tone: ((bool) ($balance['is_stale'] ?? false)) ? 'warning' : 'healthy',
-            );
+            $isFresh = ! (bool) ($balance['is_stale'] ?? true);
+
+            return [
+                'metric' => new CockpitDashboardMetricData(
+                    key: 'live',
+                    label: $this->providerBalanceLabel($balance),
+                    value: $this->formatMoney($value),
+                    helper: $this->providerBalanceHelper($balance),
+                    tone: $isFresh ? 'healthy' : 'warning',
+                ),
+                'minor' => $value,
+                'fresh' => $isFresh,
+            ];
         } catch (Throwable) {
-            return $this->disconnectedProviderBalance();
+            return [
+                'metric' => $this->disconnectedProviderBalance(),
+                'minor' => null,
+                'fresh' => false,
+            ];
         }
     }
 
-    private function outstandingLiability(mixed $operator): CockpitDashboardMetricData
+    /**
+     * @return array{metric: CockpitDashboardMetricData, minor: ?int}
+     */
+    private function outstandingLiability(mixed $operator): array
     {
         if ($operator === null) {
-            return new CockpitDashboardMetricData(
-                key: 'outstanding',
-                label: 'Outstanding Pay Codes',
-                value: 'Not connected',
-                helper: 'No operator is available for liability summary.',
-                tone: 'neutral',
-            );
+            return [
+                'metric' => new CockpitDashboardMetricData(
+                    key: 'outstanding',
+                    label: 'Outstanding Pay Codes',
+                    value: 'Not connected',
+                    helper: 'No operator is available for liability summary.',
+                    tone: 'neutral',
+                ),
+                'minor' => null,
+            ];
         }
 
         try {
             $summary = ($this->liabilities ?? app(VoucherLiabilitySummaryContract::class))
                 ->forIssuer($operator);
 
-            return new CockpitDashboardMetricData(
-                key: 'outstanding',
-                label: 'Outstanding Pay Codes',
-                value: $this->formatMoney($summary->outstanding_liability_minor),
-                helper: 'Read-only active Pay Code liability estimate.',
-                tone: $summary->outstanding_liability_minor > 0 ? 'warning' : 'healthy',
-            );
+            if ($summary->status !== 'available') {
+                return $this->disconnectedOutstandingLiability();
+            }
+
+            return [
+                'metric' => new CockpitDashboardMetricData(
+                    key: 'outstanding',
+                    label: 'Outstanding Pay Codes',
+                    value: $this->formatMoney($summary->outstanding_liability_minor),
+                    helper: 'Read-only active Pay Code liability estimate.',
+                    tone: $summary->outstanding_liability_minor > 0 ? 'warning' : 'healthy',
+                ),
+                'minor' => max(0, $summary->outstanding_liability_minor),
+            ];
         } catch (Throwable) {
-            return new CockpitDashboardMetricData(
-                key: 'outstanding',
-                label: 'Outstanding Pay Codes',
-                value: 'Not connected',
-                helper: 'Voucher liability summary is unavailable.',
-                tone: 'neutral',
-            );
+            return $this->disconnectedOutstandingLiability();
         }
     }
 
-    private function usableBalance(mixed $operator): CockpitDashboardMetricData
-    {
-        if ($operator === null) {
+    private function issuanceCapacity(
+        ?int $internalBalanceMinor,
+        ?int $outstandingLiabilityMinor,
+        ?int $providerLiquidityMinor,
+        bool $providerLiquidityIsFresh,
+    ): CockpitDashboardMetricData {
+        if (
+            $internalBalanceMinor === null
+            || $outstandingLiabilityMinor === null
+            || $providerLiquidityMinor === null
+            || ! $providerLiquidityIsFresh
+        ) {
             return new CockpitDashboardMetricData(
-                key: 'usable',
-                label: 'Usable Balance',
-                value: 'Not connected',
-                helper: 'No operator is available for usable balance estimate.',
+                key: 'issuance',
+                label: 'Issuance Capacity',
+                value: 'Not available',
+                helper: 'Requires Internal Balance, Outstanding Pay Codes, and a fresh cached provider liquidity snapshot.',
                 tone: 'neutral',
             );
         }
 
-        try {
-            $summary = ($this->liabilities ?? app(VoucherLiabilitySummaryContract::class))
-                ->forIssuer($operator);
+        $providerHeadroomMinor = max(0, $providerLiquidityMinor - $outstandingLiabilityMinor);
+        $issuanceCapacityMinor = max(0, min($internalBalanceMinor, $providerHeadroomMinor));
 
-            return new CockpitDashboardMetricData(
-                key: 'usable',
-                label: 'Usable Balance',
-                value: $this->formatMoney($summary->usable_balance_estimate_minor),
-                helper: 'Wallet balance minus outstanding active Pay Code liability.',
-                tone: 'healthy',
-            );
-        } catch (Throwable) {
-            return new CockpitDashboardMetricData(
-                key: 'usable',
-                label: 'Usable Balance',
-                value: 'Not connected',
-                helper: 'Usable balance estimate is unavailable.',
-                tone: 'neutral',
-            );
-        }
+        return new CockpitDashboardMetricData(
+            key: 'issuance',
+            label: 'Issuance Capacity',
+            value: $this->formatMoney($issuanceCapacityMinor),
+            helper: 'Internal Balance capped by cached provider liquidity after Outstanding Pay Codes.',
+            tone: $issuanceCapacityMinor > 0 ? 'healthy' : 'warning',
+        );
     }
 
     private function disconnectedProviderBalance(
@@ -192,6 +244,23 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
             helper: 'No operator wallet balance is available for this view.',
             tone: 'neutral',
         );
+    }
+
+    /**
+     * @return array{metric: CockpitDashboardMetricData, minor: null}
+     */
+    private function disconnectedOutstandingLiability(): array
+    {
+        return [
+            'metric' => new CockpitDashboardMetricData(
+                key: 'outstanding',
+                label: 'Outstanding Pay Codes',
+                value: 'Not connected',
+                helper: 'Voucher liability summary is unavailable.',
+                tone: 'neutral',
+            ),
+            'minor' => null,
+        ];
     }
 
     /**
@@ -248,11 +317,13 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
     /**
      * @param  array<string, mixed>  $balance
      */
-    private function providerBalanceMinor(array $balance): mixed
+    private function providerBalanceMinor(array $balance): ?int
     {
-        return $this->stringValue($balance['key'] ?? null) === 'netbank_source_account'
+        $value = $this->stringValue($balance['key'] ?? null) === 'netbank_source_account'
             ? ($balance['available_balance_minor'] ?? $balance['balance_minor'] ?? null)
             : ($balance['balance_minor'] ?? $balance['available_balance_minor'] ?? null);
+
+        return is_numeric($value) ? (int) round((float) $value) : null;
     }
 
     /**
@@ -298,5 +369,18 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
         }
 
         return Number::currency((float) $balance, in: $currency);
+    }
+
+    private function normalizeWalletBalanceMinor(int|float|string $balance): int
+    {
+        if (is_int($balance)) {
+            return $balance;
+        }
+
+        if (is_string($balance) && preg_match('/^-?\d+$/', trim($balance)) === 1) {
+            return (int) trim($balance);
+        }
+
+        return (int) round(((float) $balance) * 100);
     }
 }

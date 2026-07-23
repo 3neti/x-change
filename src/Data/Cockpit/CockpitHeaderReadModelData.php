@@ -13,7 +13,7 @@ class CockpitHeaderReadModelData extends Data
      * @param  array<string, mixed>  $redactions
      */
     public function __construct(
-        public readonly string $schema = 'x-change.cockpit.header-read-model.v1',
+        public readonly string $schema = 'x-change.cockpit.header-read-model.v2',
         public readonly string $status = 'available',
         public readonly bool $authorized = true,
         public readonly bool $read_only = true,
