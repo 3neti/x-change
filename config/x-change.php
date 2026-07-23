@@ -382,6 +382,9 @@ return [
         'provider_balance_max_age_seconds' => (int) env('XCHANGE_PROVIDER_BALANCE_MAX_AGE_SECONDS', 300),
         'api_middleware' => ['auth'],
         'intent_ttl_seconds' => (int) env('XCHANGE_FUNDING_INTENT_TTL_SECONDS', 1800),
+        'instruction_lock_seconds' => (int) env('XCHANGE_FUNDING_INSTRUCTION_LOCK_SECONDS', 30),
+        'instruction_lock_wait_seconds' => (int) env('XCHANGE_FUNDING_INSTRUCTION_LOCK_WAIT_SECONDS', 5),
+        'reference_hash_key' => env('XCHANGE_FUNDING_REFERENCE_HASH_KEY', env('APP_KEY')),
         'providers' => [
             'netbank' => [
                 'enabled' => (bool) env('XCHANGE_FUNDING_NETBANK_ENABLED', false),

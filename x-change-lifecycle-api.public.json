@@ -360,7 +360,7 @@
         "/funding-intents": {
             "post": {
                 "operationId": "x.v1.funding-intents.store",
-                "summary": "Create a Funding Intent without changing the Account balance",
+                "summary": "Create a Funding Intent and provider transfer instructions without changing the Account balance",
                 "tags": [
                     "Funding"
                 ],
@@ -411,13 +411,16 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Funding Intent created; no Account balance has changed"
+                        "description": "Funding Intent and encrypted-at-rest provider instructions created; no Account balance has changed"
                     },
                     "401": {
                         "description": "Authentication required"
                     },
                     "409": {
                         "description": "Idempotency conflict"
+                    },
+                    "503": {
+                        "description": "The requested funding provider adapter is unavailable"
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationException"

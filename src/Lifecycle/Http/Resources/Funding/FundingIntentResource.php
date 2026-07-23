@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Lifecycle\Http\Resources\Funding;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Models\FundingIntent;
 
 class FundingIntentResource extends JsonResource
@@ -27,7 +28,12 @@ class FundingIntentResource extends JsonResource
                     'status' => $intent->status->value,
                     'version' => $intent->version,
                     'expires_at' => $intent->expires_at?->toIso8601String(),
-                    'next_step' => 'create_provider_instructions',
+                    'next_step' => $intent->status === FundingIntentStatus::AwaitingFunds
+                        ? 'transfer_exact_amount_to_provider'
+                        : 'create_provider_instructions',
+                    'funding_instructions' => $intent->status === FundingIntentStatus::AwaitingFunds
+                        ? $intent->instructions_ciphertext
+                        : null,
                 ],
             ],
             'meta' => [

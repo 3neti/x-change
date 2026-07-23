@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use LBHurtado\XChange\Actions\Funding\CreateFundingIntent;
+use LBHurtado\XChange\Actions\Funding\IssueFundingInstructions;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Data\Funding\CreateFundingIntentData;
 use LBHurtado\XChange\Lifecycle\Http\Requests\Funding\CreateFundingIntentRequest;
@@ -19,6 +20,7 @@ class CreateFundingIntentController extends Controller
         CreateFundingIntentRequest $request,
         WalletAccessContract $wallets,
         CreateFundingIntent $createFundingIntent,
+        IssueFundingInstructions $issueFundingInstructions,
     ): JsonResponse {
         $actor = $request->user();
         $wallet = $wallets->resolveForUser($actor);
@@ -38,6 +40,11 @@ class CreateFundingIntentController extends Controller
                 'source' => 'x-change.lifecycle-api',
             ],
         ));
+        $intent = $issueFundingInstructions->handle(
+            intent: $intent,
+            actorType: $actor::class,
+            actorId: (string) $actor->getAuthIdentifier(),
+        );
 
         return FundingIntentResource::make($intent)
             ->response()

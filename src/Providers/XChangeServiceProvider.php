@@ -136,6 +136,7 @@ use LBHurtado\XChange\Contracts\XChangeProviderTopologyResolverContract;
 use LBHurtado\XChange\Events\DisbursementConfirmed;
 use LBHurtado\XChange\Exceptions\FundingIntentConflict;
 use LBHurtado\XChange\Exceptions\FundingIntentTransitionDenied;
+use LBHurtado\XChange\Exceptions\FundingProviderUnavailable;
 use LBHurtado\XChange\Exceptions\IdempotencyConflict;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
@@ -218,6 +219,7 @@ use LBHurtado\XChange\Services\Execution\NullExecutionResultJournalHandoff;
 use LBHurtado\XChange\Services\Execution\XChangeLiveCashExecutionDriver;
 use LBHurtado\XChange\Services\Execution\XChangeSettlementEnvelopeExecutionGateway;
 use LBHurtado\XChange\Services\Execution\XChangeStoredValueExecutionGateway;
+use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\InstructionBackedPricingService;
 use LBHurtado\XChange\Services\NullClaimApprovalNotificationService;
 use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
@@ -260,6 +262,13 @@ class XChangeServiceProvider extends ServiceProvider
         $this->alignWalletDefaults();
         $this->alignVoucherDefaults();
         $this->alignAccountSystemUser();
+
+        $this->app->singleton(
+            FundingProviderAdapterRegistry::class,
+            fn ($app) => new FundingProviderAdapterRegistry(
+                $app->tagged('emi.funding-provider-adapters'),
+            ),
+        );
 
         $this->registerServices();
         $this->registerIntegrations();
@@ -1263,6 +1272,19 @@ class XChangeServiceProvider extends ServiceProvider
                 'FUNDING_INTENT_CONFLICT',
                 [],
                 409,
+            );
+        });
+
+        $exceptions->renderable(function (FundingProviderUnavailable $e, Request $request) {
+            if (! $request->expectsJson()) {
+                return null;
+            }
+
+            return $this->apiResponses()->errorFromThrowable(
+                $e,
+                'FUNDING_PROVIDER_UNAVAILABLE',
+                [],
+                503,
             );
         });
 
