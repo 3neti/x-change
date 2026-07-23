@@ -22,7 +22,7 @@ it('documents voucher detail secondary panel cleanup slice 1', function (): void
         ->and($component)->toContain('<details')
         ->and($hostComponent)->toContain('Audit and follow-up details')
         ->and($foundationTest)->toContain('cockpit-voucher-audit-panel')
-        ->and($foundationTest)->toContain('Follow-Ups')
+        ->and($foundationTest)->toContain('Follow-up guidance')
         ->and($hydrationTest)->toContain('Follow-up actions are disabled from this page.')
         ->and($closure)->toContain('Voucher Detail Secondary Panel Cleanup — Slice 2 / Closure')
         ->and($closure)->toContain('php artisan x-change:doctor --assets --no-interaction')
