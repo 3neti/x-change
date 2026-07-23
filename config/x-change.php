@@ -6,6 +6,7 @@ use App\Models\User;
 use LBHurtado\Instruction\Models\InstructionItem;
 use LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
+use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Contracts\IdempotencyStoreContract;
 use LBHurtado\XChange\Contracts\IssuerOnboardingContract;
 use LBHurtado\XChange\Contracts\IssuerResolverContract;
@@ -74,6 +75,7 @@ use LBHurtado\XChange\Services\Execution\XActionExecutionResultActionHandoff;
 use LBHurtado\XChange\Services\Execution\XFeedbackExecutionResultFeedbackHandoff;
 use LBHurtado\XChange\Services\Execution\XJournalExecutionResultHandoffSummaryJournalWriter;
 use LBHurtado\XChange\Services\Execution\XJournalExecutionResultJournalHandoff;
+use LBHurtado\XChange\Services\Funding\BavixFundingAccountCredit;
 use LBHurtado\XChange\Services\LedgerPooledProviderTopology;
 use LBHurtado\XChange\Services\ManualProviderTopology;
 use LBHurtado\XChange\Services\NullClaimOtpChallengeService;
@@ -310,6 +312,7 @@ return [
         'pricing' => PricingService::class,
         'issuance' => PayCodeIssuanceService::class,
         'wallet_access' => WalletAccessService::class,
+        'funding_account_credit' => BavixFundingAccountCredit::class,
         'idempotency_store' => CacheIdempotencyStore::class,
         'issuer_onboarding' => DefaultIssuerOnboardingService::class,
         'onboarding_gateway' => DefaultXChangeOnboardingGateway::class,
@@ -348,6 +351,7 @@ return [
         PricingServiceContract::class => 'pricing',
         PayCodeIssuanceContract::class => 'issuance',
         WalletAccessContract::class => 'wallet_access',
+        FundingAccountCreditContract::class => 'funding_account_credit',
         IdempotencyStoreContract::class => 'idempotency_store',
         IssuerOnboardingContract::class => 'issuer_onboarding',
         XChangeOnboardingGatewayContract::class => 'onboarding_gateway',
@@ -394,10 +398,20 @@ return [
             'netbank' => [
                 'enabled' => (bool) env('XCHANGE_FUNDING_NETBANK_ENABLED', false),
                 'signature_header' => null,
+                'treasury' => [
+                    'inventory_reference' => 'inventory:netbank:vca-cash',
+                    'settlement_resource_reference' => 'resource:netbank:corporate-vca',
+                    'resource_type' => 'cash_at_bank',
+                ],
             ],
             'paynamics_constellation' => [
                 'enabled' => (bool) env('XCHANGE_FUNDING_PAYNAMICS_ENABLED', false),
                 'signature_header' => env('XCHANGE_FUNDING_PAYNAMICS_SIGNATURE_HEADER', 'Signature'),
+                'treasury' => [
+                    'inventory_reference' => 'inventory:paynamics:wallet-float',
+                    'settlement_resource_reference' => 'resource:paynamics:corporate-wallet',
+                    'resource_type' => 'emi_wallet_float',
+                ],
             ],
         ],
     ],

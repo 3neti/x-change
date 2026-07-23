@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ef3a32214c926d2888aa43a83da8ffdf",
+    "content-hash": "45a411f7c0b0a5e87cb651b8dcffe8ee",
     "packages": [
         {
             "name": "3neti/cash",
@@ -1252,17 +1252,11 @@
         },
         {
             "name": "3neti/wallet",
-            "version": "v1.1.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/3neti/wallet.git",
-                "reference": "f70f594dcb10e1ce2ee7fed8e054c442b0660e46"
-            },
+            "version": "1.1.1",
             "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/3neti/wallet/zipball/f70f594dcb10e1ce2ee7fed8e054c442b0660e46",
-                "reference": "f70f594dcb10e1ce2ee7fed8e054c442b0660e46",
-                "shasum": ""
+                "type": "path",
+                "url": "/Users/rli/PhpstormProjects/packages/wallet",
+                "reference": "11f5d0cdd3c938bdafd7136a4458a8840dc675c1"
             },
             "require": {
                 "bavix/laravel-wallet": "^11.4",
@@ -1288,7 +1282,16 @@
                     "LBHurtado\\Wallet\\Database\\Factories\\": "database/factories/"
                 }
             },
-            "notification-url": "https://packagist.org/downloads/",
+            "autoload-dev": {
+                "psr-4": {
+                    "LBHurtado\\Wallet\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "vendor/bin/pest"
+                ]
+            },
             "license": [
                 "MIT"
             ],
@@ -1299,11 +1302,10 @@
                 }
             ],
             "description": "Custom wallet for X-Change",
-            "support": {
-                "issues": "https://github.com/3neti/wallet/issues",
-                "source": "https://github.com/3neti/wallet/tree/v1.1.0"
-            },
-            "time": "2026-04-10T03:50:58+00:00"
+            "transport-options": {
+                "symlink": true,
+                "relative": false
+            }
         },
         {
             "name": "3neti/x-action",

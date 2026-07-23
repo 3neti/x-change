@@ -169,6 +169,7 @@ abstract class TestCase extends Orchestra
 
         // Lower-level dependencies first.
         $this->runBaseWalletTablesMigrations();
+        $this->loadWalletTreasuryMigrations();
 
         // Base vouchers table from 3neti/laravel-vouchers.
         $this->runBaseVoucherTablesMigration();
@@ -212,6 +213,19 @@ abstract class TestCase extends Orchestra
 
         if (is_dir($path) && (glob($path.'/*.php') ?: []) !== []) {
             $this->loadMigrationsFrom($path);
+        }
+    }
+
+    protected function loadWalletTreasuryMigrations(): void
+    {
+        if (Schema::hasTable('treasury_inventories')) {
+            return;
+        }
+
+        $path = $this->packageRoot(LBHurtadoWalletServiceProvider::class).'/database/migrations';
+
+        foreach (glob($path.'/*_create_treasury_*_table.php') ?: [] as $migration) {
+            $this->runMigrationFile($migration);
         }
     }
 

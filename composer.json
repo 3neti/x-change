@@ -21,6 +21,16 @@
         },
         {
             "type": "path",
+            "url": "/Users/rli/PhpstormProjects/packages/wallet",
+            "options": {
+                "symlink": true,
+                "versions": {
+                    "3neti/wallet": "1.1.1"
+                }
+            }
+        },
+        {
+            "type": "path",
             "url": "/Users/rli/PhpstormProjects/packages/voucher",
             "options": {
                 "symlink": true
@@ -150,6 +160,7 @@
         "3neti/money-issuer": "^1.0",
         "3neti/report-registry": "^1.1",
         "3neti/voucher": "dev-main",
+        "3neti/wallet": "^1.1",
         "3neti/x-action": "dev-main",
         "3neti/x-campaign": "dev-main",
         "3neti/x-feedback": "dev-main",

@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 
@@ -90,5 +91,10 @@ class FundingIntent extends Model
     public function events(): HasMany
     {
         return $this->hasMany(FundingIntentEvent::class)->orderBy('sequence');
+    }
+
+    public function settlement(): HasOne
+    {
+        return $this->hasOne(FundingSettlement::class);
     }
 }
