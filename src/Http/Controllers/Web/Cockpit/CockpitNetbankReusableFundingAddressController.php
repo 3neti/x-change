@@ -1,0 +1,90 @@
+<?php
+
+declare(strict_types=1);
+
+namespace LBHurtado\XChange\Http\Controllers\Web\Cockpit;
+
+use Illuminate\Http\JsonResponse;
+use Illuminate\Routing\Controller;
+use Illuminate\Support\Number;
+use LBHurtado\XChange\Actions\Funding\GenerateNetbankReusableFundingAddress;
+use LBHurtado\XChange\Actions\Funding\InspectNetbankReusableFundingAddressHistory;
+use LBHurtado\XChange\Http\Requests\Web\Cockpit\AccessCockpitNetbankReusableFundingAddressRequest;
+
+final class CockpitNetbankReusableFundingAddressController extends Controller
+{
+    public function store(
+        AccessCockpitNetbankReusableFundingAddressRequest $request,
+        GenerateNetbankReusableFundingAddress $generate,
+    ): JsonResponse {
+        $address = $generate->handle($request->user());
+
+        return response()->json([
+            'schema' => 'x-change.cockpit.netbank-reusable-funding-address.v1',
+            'address' => [
+                'provider' => $address->provider,
+                'funding_address' => $address->fundingAddress,
+                'masked_funding_address' => $address->maskedFundingAddress,
+                'currency' => $address->currency,
+                'institution' => $address->institution,
+                'merchant_name' => $address->merchantName,
+                'qr_code' => $address->qrCode,
+                'qr_mode' => $address->qrMode,
+                'transaction_type' => $address->transactionType,
+                'embedded_amount' => $address->embeddedAmount,
+                'provider_generated' => $address->providerGenerated,
+                'temporary' => $address->temporary,
+                'funding_intent_created' => $address->fundingIntentCreated,
+                'automatic_credit_enabled' => $address->automaticCreditEnabled,
+            ],
+        ])->withHeaders($this->sensitiveHeaders());
+    }
+
+    public function history(
+        AccessCockpitNetbankReusableFundingAddressRequest $request,
+        InspectNetbankReusableFundingAddressHistory $inspect,
+    ): JsonResponse {
+        $observations = array_map(
+            fn ($observation): array => [
+                'reference' => $observation->reference,
+                'gross_amount_minor' => $observation->grossAmountMinor,
+                'fee_amount_minor' => $observation->feeAmountMinor,
+                'net_amount_minor' => $observation->netAmountMinor,
+                'currency' => $observation->currency,
+                'provider_status' => $observation->providerStatus,
+                'occurred_at' => $observation->occurredAt,
+                'settled_at' => $observation->settledAt,
+                'gross_amount' => Number::currency(
+                    $observation->grossAmountMinor / 100,
+                    in: $observation->currency,
+                ),
+                'net_amount' => Number::currency(
+                    $observation->netAmountMinor / 100,
+                    in: $observation->currency,
+                ),
+            ],
+            $inspect->handle($request->user()),
+        );
+
+        return response()->json([
+            'schema' => 'x-change.cockpit.netbank-reusable-funding-history.v1',
+            'observations' => $observations,
+            'checked_at' => now()->toIso8601String(),
+            'balance_changed' => false,
+            'funding_intent_created' => false,
+        ])->withHeaders($this->sensitiveHeaders());
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function sensitiveHeaders(): array
+    {
+        return [
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, private',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+            'X-Content-Type-Options' => 'nosniff',
+        ];
+    }
+}

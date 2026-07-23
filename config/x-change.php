@@ -424,6 +424,13 @@ return [
         'instruction_lock_wait_seconds' => (int) env('XCHANGE_FUNDING_INSTRUCTION_LOCK_WAIT_SECONDS', 5),
         'instruction_access_middleware' => ['throttle:30,1'],
         'manual_check_middleware' => ['throttle:6,1'],
+        'reusable_address' => [
+            'enabled' => (bool) env(
+                'XCHANGE_NETBANK_REUSABLE_FUNDING_ADDRESS_ENABLED',
+                env('APP_ENV') !== 'production',
+            ),
+            'middleware' => ['throttle:3,1'],
+        ],
         'ui_refresh_interval_milliseconds' => (int) env('XCHANGE_FUNDING_UI_REFRESH_INTERVAL_MILLISECONDS', 5000),
         'reference_hash_key' => env('XCHANGE_FUNDING_REFERENCE_HASH_KEY', env('APP_KEY')),
         'payer_identity_hash_key' => env('XCHANGE_FUNDING_PAYER_IDENTITY_HASH_KEY', env('APP_KEY')),
