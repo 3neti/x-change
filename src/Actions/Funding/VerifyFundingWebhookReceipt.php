@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Actions\Funding;
 
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Actions\Funding\RecordProviderFundingObservation;
 use LBHurtado\EmiCore\Data\Funding\FundingVerificationData;
 use LBHurtado\EmiCore\Exceptions\ProviderFundingNotObserved;
@@ -24,6 +25,7 @@ class VerifyFundingWebhookReceipt
         private readonly FundingProviderAdapterRegistry $providers,
         private readonly TransitionFundingIntent $transition,
         private readonly RecordProviderFundingObservation $recordObservation,
+        private readonly OpenFundingSuspenseCase $openSuspenseCase,
     ) {}
 
     public function handle(WebhookReceipt $receipt): int
@@ -58,6 +60,14 @@ class VerifyFundingWebhookReceipt
             $intents = $this->candidateIntents($receipt);
 
             if ($intents->isEmpty()) {
+                $this->openSuspenseCase->handle(
+                    provider: $receipt->provider_code,
+                    reasonCode: 'authenticated_evidence_unmatched',
+                    receipt: $receipt,
+                    details: [
+                        'webhook_receipt_id' => $receipt->getKey(),
+                    ],
+                );
                 $receipt->forceFill([
                     'processing_status' => 'unmatched',
                     'processed_at' => now(),
@@ -154,12 +164,11 @@ class VerifyFundingWebhookReceipt
 
             return;
         } catch (ProviderFundingVerificationIndeterminate) {
-            $this->transition->handle($intent, $this->transitionData(
-                status: FundingIntentStatus::Suspense,
-                eventType: 'provider_verification_indeterminate',
-                receipt: $receipt,
+            $this->moveToSuspense(
                 intent: $intent,
-            ));
+                receipt: $receipt,
+                reasonCode: 'provider_verification_indeterminate',
+            );
 
             return;
         }
@@ -173,6 +182,24 @@ class VerifyFundingWebhookReceipt
             default => throw new \LogicException('Unsupported Funding Intent verification result.'),
         };
 
+        if ($targetStatus === FundingIntentStatus::Suspense) {
+            $this->moveToSuspense(
+                intent: $intent,
+                receipt: $receipt,
+                reasonCode: 'provider_evidence_mismatch',
+                observation: $observation,
+                details: [
+                    'provider_status' => $observation->provider_status,
+                    'gross_amount_minor' => $observation->gross_amount_minor,
+                    'net_amount_minor' => $observation->net_amount_minor,
+                    'currency' => $observation->currency,
+                    'destination_verified' => data_get($observation->metadata, 'destination_verified') === true,
+                ],
+            );
+
+            return;
+        }
+
         $this->transition->handle($intent, $this->transitionData(
             status: $targetStatus,
             eventType: $eventType,
@@ -180,6 +207,39 @@ class VerifyFundingWebhookReceipt
             intent: $intent,
             observation: $observation,
         ));
+    }
+
+    /**
+     * @param  array<string, bool|int|string|null>  $details
+     */
+    private function moveToSuspense(
+        FundingIntent $intent,
+        WebhookReceipt $receipt,
+        string $reasonCode,
+        ?ProviderFundingObservation $observation = null,
+        array $details = [],
+    ): void {
+        DB::transaction(function () use ($intent, $receipt, $reasonCode, $observation, $details): void {
+            $suspended = $this->transition->handle($intent, $this->transitionData(
+                status: FundingIntentStatus::Suspense,
+                eventType: $reasonCode,
+                receipt: $receipt,
+                intent: $intent,
+                observation: $observation,
+            ));
+
+            $this->openSuspenseCase->handle(
+                provider: $receipt->provider_code,
+                reasonCode: $reasonCode,
+                intent: $suspended,
+                receipt: $receipt,
+                observation: $observation,
+                details: [
+                    'webhook_receipt_id' => $receipt->getKey(),
+                    ...$details,
+                ],
+            );
+        }, attempts: 3);
     }
 
     private function targetStatus(

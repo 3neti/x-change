@@ -21,6 +21,7 @@ use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingWebhookReceiptJob;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingSettlement;
+use LBHurtado\XChange\Models\FundingSuspenseCase;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
 
@@ -130,7 +131,9 @@ it('moves indeterminate provider evidence to suspense', function () {
     app(VerifyFundingWebhookReceipt::class)->handle(authenticatedFundingReceipt('indeterminate'));
 
     expect($intent->fresh()->status)->toBe(FundingIntentStatus::Suspense)
-        ->and(ProviderFundingObservation::query()->count())->toBe(0);
+        ->and(ProviderFundingObservation::query()->count())->toBe(0)
+        ->and(FundingSuspenseCase::query()->sole()->reason_code)
+        ->toBe('provider_verification_indeterminate');
 });
 
 it('moves settled amount or currency mismatches to suspense', function () {
@@ -143,7 +146,14 @@ it('moves settled amount or currency mismatches to suspense', function () {
     app(VerifyFundingWebhookReceipt::class)->handle(authenticatedFundingReceipt('mismatch'));
 
     expect($intent->fresh()->status)->toBe(FundingIntentStatus::Suspense)
-        ->and(ProviderFundingObservation::query()->sole()->gross_amount_minor)->toBe(24_000);
+        ->and(ProviderFundingObservation::query()->sole()->gross_amount_minor)->toBe(24_000)
+        ->and(FundingSuspenseCase::query()->sole()->details)->toMatchArray([
+            'provider_status' => 'settled',
+            'gross_amount_minor' => 24_000,
+            'net_amount_minor' => 23_950,
+            'currency' => 'PHP',
+            'destination_verified' => true,
+        ]);
 });
 
 it('returns pending observations to awaiting funds', function () {
@@ -162,8 +172,25 @@ it('marks authenticated evidence unmatched when no active intent exists', functi
     $receipt = authenticatedFundingReceipt('unmatched');
 
     expect(app(VerifyFundingWebhookReceipt::class)->handle($receipt))->toBe(0)
+        ->and(app(VerifyFundingWebhookReceipt::class)->handle($receipt))->toBe(0)
         ->and($receipt->fresh()->processing_status)->toBe('unmatched')
-        ->and(ProviderFundingObservation::query()->count())->toBe(0);
+        ->and(ProviderFundingObservation::query()->count())->toBe(0)
+        ->and(FundingSuspenseCase::query()->count())->toBe(1)
+        ->and(FundingSuspenseCase::query()->sole()->reason_code)
+        ->toBe('authenticated_evidence_unmatched')
+        ->and(FundingSuspenseCase::query()->sole()->details)->toBe([
+            'webhook_receipt_id' => $receipt->getKey(),
+        ]);
+});
+
+it('prevents suspense review evidence from being rewritten or deleted directly', function () {
+    app(VerifyFundingWebhookReceipt::class)->handle(authenticatedFundingReceipt('guarded-suspense'));
+    $case = FundingSuspenseCase::query()->sole();
+
+    expect(fn () => $case->update(['reason_code' => 'tampered']))
+        ->toThrow(LogicException::class, 'guarded review actions')
+        ->and(fn () => $case->delete())
+        ->toThrow(LogicException::class, 'cannot be deleted');
 });
 
 function verifiedFundingIntent(string $accountReference = 'wallet:account-1001'): FundingIntent
