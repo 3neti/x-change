@@ -387,6 +387,9 @@ return [
         'reference_hash_key' => env('XCHANGE_FUNDING_REFERENCE_HASH_KEY', env('APP_KEY')),
         'webhook_max_body_bytes' => (int) env('XCHANGE_FUNDING_WEBHOOK_MAX_BODY_BYTES', 262_144),
         'webhook_middleware' => ['throttle:120,1'],
+        'verification_lock_seconds' => (int) env('XCHANGE_FUNDING_VERIFICATION_LOCK_SECONDS', 120),
+        'verification_lock_wait_seconds' => (int) env('XCHANGE_FUNDING_VERIFICATION_LOCK_WAIT_SECONDS', 5),
+        'verification_candidate_limit' => (int) env('XCHANGE_FUNDING_VERIFICATION_CANDIDATE_LIMIT', 100),
         'providers' => [
             'netbank' => [
                 'enabled' => (bool) env('XCHANGE_FUNDING_NETBANK_ENABLED', false),

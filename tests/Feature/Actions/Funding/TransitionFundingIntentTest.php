@@ -43,7 +43,7 @@ it('moves a Funding Intent through guarded versioned states without crediting an
         [FundingIntentStatus::AwaitingFunds, 'provider_instructions_created'],
         [FundingIntentStatus::EvidenceReceived, 'provider_evidence_received'],
         [FundingIntentStatus::Verifying, 'provider_verification_started'],
-        [FundingIntentStatus::Settled, 'provider_settlement_verified'],
+        [FundingIntentStatus::Verified, 'provider_settlement_verified'],
     ] as [$status, $eventType]) {
         $intent = $transition->handle($intent, new FundingIntentTransitionData(
             status: $status,
@@ -51,18 +51,19 @@ it('moves a Funding Intent through guarded versioned states without crediting an
             actorType: 'system',
             actorId: 'funding-orchestrator',
             expectedVersion: $intent->version,
-            evidenceReference: $status === FundingIntentStatus::Settled ? 'observation:91' : null,
-            providerObservationId: $status === FundingIntentStatus::Settled ? 91 : null,
-            providerTransactionId: $status === FundingIntentStatus::Settled ? 'txn-91' : null,
+            evidenceReference: $status === FundingIntentStatus::Verified ? 'observation:91' : null,
+            providerObservationId: $status === FundingIntentStatus::Verified ? 91 : null,
+            providerTransactionId: $status === FundingIntentStatus::Verified ? 'txn-91' : null,
         ));
     }
 
-    expect($intent->status)->toBe(FundingIntentStatus::Settled)
+    expect($intent->status)->toBe(FundingIntentStatus::Verified)
         ->and($intent->version)->toBe(5)
         ->and($intent->events)->toHaveCount(5)
         ->and($intent->matched_observation_id)->toBe(91)
         ->and($intent->provider_transaction_id)->toBe('txn-91')
-        ->and($intent->settled_at)->not->toBeNull()
+        ->and($intent->verified_at)->not->toBeNull()
+        ->and($intent->settled_at)->toBeNull()
         ->and((int) $wallet->fresh()->balance)->toBe($balanceBefore)
         ->and($wallet->transactions()->count())->toBe($transactionCountBefore);
 });
@@ -88,7 +89,7 @@ it('rejects invalid and stale Funding Intent transitions', function () {
     )))->toThrow(FundingIntentConflict::class, 'version conflict');
 });
 
-it('cannot mark a Funding Intent settled without authoritative provider evidence', function () {
+it('cannot mark a Funding Intent verified without authoritative provider evidence', function () {
     $intent = app(CreateFundingIntent::class)->handle(transitionFundingIntentData());
     $transition = app(TransitionFundingIntent::class);
 
@@ -107,7 +108,7 @@ it('cannot mark a Funding Intent settled without authoritative provider evidence
     }
 
     expect(fn () => $transition->handle($intent, new FundingIntentTransitionData(
-        status: FundingIntentStatus::Settled,
+        status: FundingIntentStatus::Verified,
         eventType: 'provider_settlement_verified',
         actorType: 'system',
         actorId: 'funding-orchestrator',

@@ -3,14 +3,17 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Testing\TestResponse;
 use LBHurtado\EmiCore\Data\Funding\WebhookAuthenticationData;
 use LBHurtado\EmiCore\Models\WebhookReceipt;
+use LBHurtado\XChange\Jobs\Funding\VerifyFundingWebhookReceiptJob;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
 
 beforeEach(function () {
     config()->set('x-change.funding.webhook_middleware', []);
+    Queue::fake();
     $this->fundingAdapter = new FakeFundingProviderAdapter;
     $this->app->instance(FakeFundingProviderAdapter::class, $this->fundingAdapter);
     $this->app->tag(FakeFundingProviderAdapter::class, 'emi.funding-provider-adapters');
@@ -27,7 +30,12 @@ it('stores authenticated raw evidence without changing a balance', function () {
         ->assertJsonPath('data.acknowledgement', 'accepted')
         ->assertJsonPath('data.provider', 'netbank')
         ->assertJsonPath('meta.balance_changed', false)
-        ->assertJsonPath('meta.verification_queued', false);
+        ->assertJsonPath('meta.verification_queued', true);
+
+    Queue::assertPushed(
+        VerifyFundingWebhookReceiptJob::class,
+        fn (VerifyFundingWebhookReceiptJob $job): bool => $job->webhookReceiptId === WebhookReceipt::query()->sole()->getKey(),
+    );
 
     $receipt = WebhookReceipt::query()->sole();
     $raw = DB::table('webhook_receipts')->find($receipt->getKey());

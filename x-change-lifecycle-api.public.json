@@ -463,7 +463,7 @@
                 },
                 "responses": {
                     "202": {
-                        "description": "Authenticated evidence preserved; provider verification has not yet credited an Account"
+                        "description": "Authenticated evidence preserved and authoritative provider verification queued; no Account has been credited"
                     },
                     "401": {
                         "description": "Provider webhook authentication failed; rejected evidence was preserved"

@@ -129,7 +129,7 @@
             "dist": {
                 "type": "path",
                 "url": "/Users/rli/PhpstormProjects/packages/emi-core",
-                "reference": "153e578b1263a6346d8e36b9d8780962c993d03e"
+                "reference": "f4d95a83dc245166d2fe283dff03e28dce2b3cc4"
             },
             "require": {
                 "illuminate/support": "^12.0 || ^13.0",

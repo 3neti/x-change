@@ -22,6 +22,8 @@ class FakeFundingProviderAdapter implements FundingProviderAdapter
 
     public WebhookAuthenticationData $webhookAuthentication;
 
+    public ?ProviderFundingObservationData $fundingObservation = null;
+
     public function __construct(
         private readonly string $provider = 'netbank',
     ) {
@@ -68,6 +70,23 @@ class FakeFundingProviderAdapter implements FundingProviderAdapter
 
     public function verifyFunding(FundingVerificationData $verification): ProviderFundingObservationData
     {
-        throw new \LogicException('Funding verification is not configured for this fake.');
+        return $this->fundingObservation ?? new ProviderFundingObservationData(
+            provider: $verification->provider,
+            providerTransactionId: 'provider-transaction-123',
+            grossAmountMinor: $verification->expectedAmountMinor,
+            feeAmountMinor: 50,
+            netAmountMinor: $verification->expectedAmountMinor - 50,
+            currency: $verification->currency,
+            providerStatus: 'settled',
+            verificationSource: 'fake-authoritative-api',
+            payloadHash: hash('sha256', 'fake-provider-observation'),
+            fundingAddress: 'sha256:'.hash('sha256', (string) $verification->fundingAddress),
+            occurredAt: new \DateTimeImmutable('2026-07-23T01:05:00+00:00'),
+            settledAt: new \DateTimeImmutable('2026-07-23T01:06:00+00:00'),
+            webhookReceiptId: $verification->webhookReceiptId,
+            metadata: [
+                'destination_verified' => true,
+            ],
+        );
     }
 }

@@ -10,6 +10,7 @@ enum FundingIntentStatus: string
     case AwaitingFunds = 'awaiting_funds';
     case EvidenceReceived = 'evidence_received';
     case Verifying = 'verifying';
+    case Verified = 'verified';
     case Settled = 'settled';
     case Suspense = 'suspense';
     case Expired = 'expired';
@@ -25,7 +26,8 @@ enum FundingIntentStatus: string
             self::PendingInstructions => [self::AwaitingFunds, self::Suspense, self::Expired, self::Cancelled],
             self::AwaitingFunds => [self::EvidenceReceived, self::Suspense, self::Expired, self::Cancelled],
             self::EvidenceReceived => [self::Verifying, self::Suspense, self::Expired],
-            self::Verifying => [self::AwaitingFunds, self::Settled, self::Suspense, self::Expired],
+            self::Verifying => [self::AwaitingFunds, self::Verified, self::Suspense, self::Expired],
+            self::Verified => [self::Settled, self::Suspense],
             self::Settled => [self::Reversed],
             self::Suspense => [self::AwaitingFunds, self::EvidenceReceived, self::Verifying, self::Expired, self::Cancelled],
             self::Expired, self::Cancelled => [self::Suspense],

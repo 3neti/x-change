@@ -12,6 +12,7 @@ use LBHurtado\EmiCore\Actions\Funding\StoreProviderWebhookReceipt;
 use LBHurtado\EmiCore\Data\Funding\ProviderWebhookReceiptData;
 use LBHurtado\EmiCore\Data\Funding\ProviderWebhookRequestData;
 use LBHurtado\XChange\Exceptions\FundingProviderUnavailable;
+use LBHurtado\XChange\Jobs\Funding\VerifyFundingWebhookReceiptJob;
 use LBHurtado\XChange\Services\ApiResponseFactory;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 
@@ -74,12 +75,14 @@ class ReceiveFundingWebhookController extends Controller
             );
         }
 
+        VerifyFundingWebhookReceiptJob::dispatch($receipt->getKey())->afterCommit();
+
         return $responses->success([
             'acknowledgement' => 'accepted',
             'provider' => $provider,
         ], [
             'balance_changed' => false,
-            'verification_queued' => false,
+            'verification_queued' => true,
         ], 202);
     }
 

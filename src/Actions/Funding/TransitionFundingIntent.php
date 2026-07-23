@@ -37,13 +37,17 @@ class TransitionFundingIntent
                 throw FundingIntentTransitionDenied::from($currentStatus, $transition->status);
             }
 
-            if (in_array($transition->status, [FundingIntentStatus::Settled, FundingIntentStatus::Reversed], true)
+            if (in_array($transition->status, [
+                FundingIntentStatus::Verified,
+                FundingIntentStatus::Settled,
+                FundingIntentStatus::Reversed,
+            ], true)
                 && ($transition->providerObservationId === null
                     || $transition->providerObservationId <= 0
                     || trim((string) $transition->providerTransactionId) === ''
                     || trim((string) $transition->evidenceReference) === '')) {
                 throw new InvalidArgumentException(
-                    'Settled and reversed Funding Intent transitions require authoritative provider evidence.',
+                    'Verified, settled, and reversed Funding Intent transitions require authoritative provider evidence.',
                 );
             }
 
@@ -52,7 +56,8 @@ class TransitionFundingIntent
             $timestamps = match ($transition->status) {
                 FundingIntentStatus::AwaitingFunds => ['instructions_created_at' => $locked->instructions_created_at ?? $now],
                 FundingIntentStatus::EvidenceReceived => ['evidence_received_at' => $now],
-                FundingIntentStatus::Settled => ['settled_at' => $now, 'verified_at' => $now],
+                FundingIntentStatus::Verified => ['verified_at' => $now],
+                FundingIntentStatus::Settled => ['settled_at' => $now],
                 FundingIntentStatus::Cancelled => ['cancelled_at' => $now],
                 FundingIntentStatus::Expired => ['expired_at' => $now],
                 FundingIntentStatus::Reversed => ['reversed_at' => $now],
