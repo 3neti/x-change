@@ -306,6 +306,17 @@ return [
             'api_executable' => false,
         ],
 
+        'qrph_funding_unknown_mobile_onboarding_demo' => [
+            'label' => 'QR Ph Funding Unknown Mobile Onboarding',
+            'description' => 'Stops an unknown payer before payment, completes verified mobile onboarding, then exercises the signed funding pipeline with full rollback.',
+            'category' => 'demo',
+            'tags' => ['demo', 'funding', 'qrph', 'mobile', 'onboarding', 'rollback-only'],
+            'mode' => 'qrph_unknown_mobile_onboarding',
+            'mobile' => env('XCHANGE_LIFECYCLE_QRPH_UNKNOWN_MOBILE', '09175550123'),
+            'amount_minor' => 2_500,
+            'api_executable' => false,
+        ],
+
         /*
         |--------------------------------------------------------------------------
         | Live provider verification scenarios

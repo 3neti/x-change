@@ -21,6 +21,7 @@ final class ScenarioRunnerRegistry
             'live_provider_verification',
             'account_management',
             'qrph_funding_simulation',
+            'qrph_unknown_mobile_onboarding',
         ], true);
     }
 
@@ -36,6 +37,7 @@ final class ScenarioRunnerRegistry
             'live_provider_verification' => app(LiveProviderVerificationScenarioRunner::class),
             'account_management' => app(AccountManagementScenarioRunner::class),
             'qrph_funding_simulation' => app(QrPhFundingSimulationScenarioRunner::class),
+            'qrph_unknown_mobile_onboarding' => app(QrPhUnknownMobileOnboardingScenarioRunner::class),
             default => throw new RuntimeException("No lifecycle scenario runner registered for mode [{$mode}]."),
         };
     }

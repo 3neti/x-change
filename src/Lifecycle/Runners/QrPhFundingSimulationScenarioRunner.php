@@ -78,6 +78,13 @@ final class QrPhFundingSimulationScenarioRunner implements ScenarioRunnerContrac
             );
         }
 
+        if (
+            data_get($context->scenario, '_runtime.rollback_managed_by_parent') === true
+            && $this->databases->connection()->transactionLevel() > 0
+        ) {
+            return $this->runWithinParentRollback($context);
+        }
+
         $connection = $this->databases->connection();
         $startingLevel = $connection->transactionLevel();
         $startingState = $this->stateDigest($context->issuer);
@@ -276,6 +283,34 @@ final class QrPhFundingSimulationScenarioRunner implements ScenarioRunnerContrac
             $this->verifyReceipt,
             $this->settleIntent,
             $this->finalizeMonitoring,
+        );
+    }
+
+    private function runWithinParentRollback(ScenarioRunContext $context): ScenarioRunResult
+    {
+        $originalConfig = $this->applyScenarioConfig();
+        $exitCode = Command::SUCCESS;
+
+        try {
+            $result = $this->execute($context);
+        } catch (Throwable) {
+            $exitCode = Command::FAILURE;
+            $result = [
+                'success' => false,
+                'message' => 'The QR Ph funding lifecycle simulation could not complete safely.',
+                'steps' => [],
+            ];
+        } finally {
+            $this->restoreConfig($originalConfig);
+        }
+
+        return new ScenarioRunResult(
+            exitCode: $exitCode,
+            payload: $this->payload($context, [
+                ...$result,
+                'rollback_completed' => false,
+                'rollback_deferred_to_parent' => true,
+            ]),
         );
     }
 

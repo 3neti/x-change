@@ -644,6 +644,7 @@ return [
                 'scenarios' => [
                     'money_semantics_voucher_liability_demo',
                     'qrph_funding_existing_mobile_demo',
+                    'qrph_funding_unknown_mobile_onboarding_demo',
                 ],
             ],
 

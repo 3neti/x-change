@@ -168,6 +168,7 @@ final class LifecycleScenarioEngine
             'live_provider_verification',
             'account_management',
             'qrph_funding_simulation',
+            'qrph_unknown_mobile_onboarding',
         ], true)) {
             return $this->runWithoutVoucherBootstrap(
                 scenarioKey: $scenarioKey,
