@@ -8,9 +8,11 @@ use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\XChange\Actions\Funding\ReverseSettledFundingIntent;
 use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
+use LBHurtado\XChange\Models\FundingDestinationPreference;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingReconciliationRequest;
 use LBHurtado\XChange\Models\FundingSuspenseCase;
+use LBHurtado\XChange\Models\ProviderAccountLink;
 use LBHurtado\XChange\Services\Cockpit\FundingCockpitReadModelProvider;
 use LBHurtado\XChange\Tests\Fakes\User;
 
@@ -123,6 +125,46 @@ it('presents operator scoped funding controls without exposing provider evidence
         ->not->toContain((string) $settledIntent->provider_request_id)
         ->not->toContain((string) $settledIntent->account_reference)
         ->not->toContain('001234567890');
+});
+
+it('blocks an unverified dedicated destination in the Funding read model', function () {
+    config([
+        'x-change.funding.providers.netbank.enabled' => true,
+        'x-change.funding.providers.paynamics_constellation.enabled' => true,
+    ]);
+
+    $operator = actingAsTestUser(0);
+    $link = ProviderAccountLink::query()->create([
+        'owner_type' => $operator::class,
+        'owner_id' => $operator->getKey(),
+        'provider' => 'paynamics_constellation',
+        'topology' => 'dedicated',
+        'purpose' => 'funding',
+        'mode' => 'wallet_link',
+        'status' => 'ready',
+        'verification_status' => 'reachable',
+        'display_reference' => '•••• LLET01',
+    ]);
+    FundingDestinationPreference::query()->create([
+        'owner_type' => $operator::class,
+        'owner_id' => $operator->getKey(),
+        'provider_code' => 'paynamics_constellation',
+        'mode' => 'dedicated',
+        'provider_account_link_id' => $link->getKey(),
+    ]);
+
+    $provider = collect(
+        app(FundingCockpitReadModelProvider::class)
+            ->forOperator($operator)
+            ->toArray()['providers'],
+    )->firstWhere('code', 'paynamics_constellation');
+
+    expect($provider)->toMatchArray([
+        'status' => 'blocked',
+        'destination_mode' => 'dedicated',
+        'destination_status' => 'reachable',
+        'destination_reference' => '•••• LLET01',
+    ]);
 });
 
 function fundingCockpitIntent(

@@ -20,12 +20,18 @@ const fundingReadModel = {
             label: 'NetBank',
             status: 'available',
             authoritative_verification: true,
+            destination_mode: 'shared',
+            destination_status: 'platform_managed',
+            destination_reference: 'Platform-managed',
         },
         {
             code: 'paynamics_constellation',
             label: 'Paynamics',
             status: 'available',
             authoritative_verification: true,
+            destination_mode: 'shared',
+            destination_status: 'platform_managed',
+            destination_reference: 'Platform-managed',
         },
     ],
     intents: [
@@ -121,6 +127,7 @@ describe('Cockpit Funding foundation', () => {
         );
         expect(wrapper.text()).toContain('Webhook evidence ≠ Account credit');
         expect(wrapper.text()).toContain('NetBank');
+        expect(wrapper.text()).toContain('Shared · Platform-managed');
         expect(wrapper.text()).toContain('Paynamics');
         expect(wrapper.text()).toContain('₱24,950.00');
         expect(wrapper.text()).toContain('Amount Mismatch');

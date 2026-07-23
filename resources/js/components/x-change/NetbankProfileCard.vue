@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { Link } from '@inertiajs/vue3';
+import { index as accountsIndex } from '@/routes/x-change/cockpit/accounts';
+
 type SourceAccountReadiness = {
     enabled?: boolean;
     ready?: boolean;
@@ -37,16 +40,26 @@ const formatMinorMoney = (value?: number | null, currency = 'PHP') => {
     <section
         class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950"
     >
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div
+            class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"
+        >
             <div>
-                <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
+                <p
+                    class="text-xs font-semibold tracking-[0.22em] text-slate-500 uppercase"
+                >
                     Provider ledger
                 </p>
-                <h2 class="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
+                <h2
+                    class="mt-1 text-lg font-semibold text-slate-950 dark:text-white"
+                >
                     NetBank source account
                 </h2>
-                <p class="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-                    NetBank uses the local x-change ledger for user spendability, then checks the configured source account when readiness checks are enabled.
+                <p
+                    class="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400"
+                >
+                    NetBank uses the local x-change ledger for user
+                    spendability, then checks the configured source account when
+                    readiness checks are enabled.
                 </p>
             </div>
 
@@ -62,30 +75,49 @@ const formatMinorMoney = (value?: number | null, currency = 'PHP') => {
             </span>
         </div>
 
-        <div class="mt-5 grid gap-3 rounded-2xl bg-slate-50 p-4 dark:bg-slate-900 sm:grid-cols-3">
+        <div
+            class="mt-5 grid gap-3 rounded-2xl bg-slate-50 p-4 sm:grid-cols-3 dark:bg-slate-900"
+        >
             <div>
-                <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
+                <p
+                    class="text-xs font-medium tracking-wide text-slate-500 uppercase"
+                >
                     Client alias
                 </p>
-                <p class="mt-1 font-mono text-sm text-slate-950 dark:text-white">
+                <p
+                    class="mt-1 font-mono text-sm text-slate-950 dark:text-white"
+                >
                     {{ profile.client_alias || 'Not configured' }}
                 </p>
             </div>
 
             <div>
-                <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
+                <p
+                    class="text-xs font-medium tracking-wide text-slate-500 uppercase"
+                >
                     Source account
                 </p>
-                <p class="mt-1 font-mono text-sm text-slate-950 dark:text-white">
-                    {{ profile.source_account_readiness?.account_number_masked || profile.source_account_number || 'Not configured' }}
+                <p
+                    class="mt-1 font-mono text-sm text-slate-950 dark:text-white"
+                >
+                    {{
+                        profile.source_account_readiness
+                            ?.account_number_masked ||
+                        profile.source_account_number ||
+                        'Not configured'
+                    }}
                 </p>
             </div>
 
             <div>
-                <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
+                <p
+                    class="text-xs font-medium tracking-wide text-slate-500 uppercase"
+                >
                     Sender customer
                 </p>
-                <p class="mt-1 font-mono text-sm text-slate-950 dark:text-white">
+                <p
+                    class="mt-1 font-mono text-sm text-slate-950 dark:text-white"
+                >
                     {{ profile.sender_customer_id || 'Not configured' }}
                 </p>
             </div>
@@ -112,17 +144,34 @@ const formatMinorMoney = (value?: number | null, currency = 'PHP') => {
                 }}
             </p>
             <p class="mt-1">
-                {{ profile.source_account_readiness?.message || 'No source-account readiness message.' }}
+                {{
+                    profile.source_account_readiness?.message ||
+                    'No source-account readiness message.'
+                }}
             </p>
             <p v-if="profile.source_account_readiness?.checked" class="mt-1">
                 Available:
                 {{
                     formatMinorMoney(
-                        profile.source_account_readiness?.available_balance_minor,
+                        profile.source_account_readiness
+                            ?.available_balance_minor,
                         profile.source_account_readiness?.currency || 'PHP',
                     )
                 }}
             </p>
+        </div>
+
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+                Funding destination changes are PIN-protected and managed in
+                Cockpit Accounts.
+            </p>
+            <Link
+                :href="accountsIndex()"
+                class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900"
+            >
+                Manage Accounts
+            </Link>
         </div>
     </section>
 </template>

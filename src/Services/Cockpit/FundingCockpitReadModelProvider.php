@@ -11,6 +11,7 @@ use Illuminate\Support\Number;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\XChange\Data\Cockpit\CockpitFundingReadModelData;
 use LBHurtado\XChange\Models\FundingAccountHold;
+use LBHurtado\XChange\Models\FundingDestinationPreference;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingReconciliationRequest;
 use LBHurtado\XChange\Models\FundingRecovery;
@@ -45,7 +46,7 @@ class FundingCockpitReadModelProvider
 
         return new CockpitFundingReadModelData(
             summary: $this->summary($intentsQuery, $settlements, $openSuspenseCases, $activeRecoveries),
-            providers: $this->providers(),
+            providers: $this->providers($actorType, $actorId),
             intents: $this->intents($intentsQuery),
             suspense_cases: $this->suspenseCases($openSuspenseCases),
             approval_queue: $this->approvalQueue($actorType, $actorId),
@@ -100,20 +101,44 @@ class FundingCockpitReadModelProvider
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function providers(): array
+    private function providers(string $actorType, string $actorId): array
     {
         return collect((array) config('x-change.funding.providers', []))
             ->filter(fn (mixed $provider): bool => is_array($provider) && ($provider['enabled'] ?? false) === true)
-            ->map(fn (array $provider, string $code): array => [
-                'code' => $code,
-                'label' => match ($code) {
-                    'netbank' => 'NetBank',
-                    'paynamics', 'paynamics_constellation' => 'Paynamics',
-                    default => str($code)->headline()->toString(),
-                },
-                'status' => 'available',
-                'authoritative_verification' => true,
-            ])
+            ->map(function (array $provider, string $code) use ($actorType, $actorId): array {
+                $preference = FundingDestinationPreference::query()
+                    ->with('providerAccountLink')
+                    ->where('owner_type', $actorType)
+                    ->where('owner_id', $actorId)
+                    ->where('provider_code', $code)
+                    ->first();
+                $mode = $preference?->mode ?? 'shared';
+                $link = $preference?->providerAccountLink;
+                $dedicatedReady = $mode !== 'dedicated' || (
+                    $link?->isReady() === true
+                    && ($code === 'netbank'
+                        ? in_array($link->verification_status, ['verified', 'credential_supplied'], true)
+                        : $link->verification_status === 'ownership_verified')
+                );
+
+                return [
+                    'code' => $code,
+                    'label' => match ($code) {
+                        'netbank' => 'NetBank',
+                        'paynamics', 'paynamics_constellation' => 'Paynamics',
+                        default => str($code)->headline()->toString(),
+                    },
+                    'status' => $dedicatedReady ? 'available' : 'blocked',
+                    'authoritative_verification' => true,
+                    'destination_mode' => $mode,
+                    'destination_status' => $mode === 'shared'
+                        ? 'platform_managed'
+                        : ($link?->verification_status ?? 'not_configured'),
+                    'destination_reference' => $mode === 'dedicated'
+                        ? $link?->display_reference
+                        : 'Platform-managed',
+                ];
+            })
             ->values()
             ->all();
     }

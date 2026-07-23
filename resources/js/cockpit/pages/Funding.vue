@@ -13,8 +13,13 @@ const amount = ref('');
 const amountError = ref<string | null>(null);
 const activeReconciliationCase = ref<string | null>(null);
 const activeApproval = ref<string | null>(null);
+const availableFundingProviders = computed(() =>
+    props.funding_read_model.providers.filter(
+        (provider) => provider.status !== 'blocked',
+    ),
+);
 const form = useForm({
-    provider: props.funding_read_model.providers[0]?.code ?? '',
+    provider: availableFundingProviders.value[0]?.code ?? '',
     amount_minor: 0,
     currency: 'PHP',
     idempotency_key: newIdempotencyKey(),
@@ -279,7 +284,7 @@ function reconciliationActionLabel(action: string): string {
                                 class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm transition outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-950"
                                 :disabled="
                                     form.processing ||
-                                    funding_read_model.providers.length === 0
+                                    availableFundingProviders.length === 0
                                 "
                                 data-testid="cockpit-funding-provider"
                             >
@@ -287,8 +292,20 @@ function reconciliationActionLabel(action: string): string {
                                     v-for="provider in funding_read_model.providers"
                                     :key="provider.code"
                                     :value="provider.code"
+                                    :disabled="provider.status === 'blocked'"
                                 >
-                                    {{ provider.label }}
+                                    {{ provider.label }} ·
+                                    {{
+                                        displayLabel(
+                                            provider.destination_mode ??
+                                                'shared',
+                                        )
+                                    }}
+                                    {{
+                                        provider.status === 'blocked'
+                                            ? ' (blocked)'
+                                            : ''
+                                    }}
                                 </option>
                             </select>
                             <span
@@ -342,7 +359,7 @@ function reconciliationActionLabel(action: string): string {
                             class="rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
                             :disabled="
                                 form.processing ||
-                                funding_read_model.providers.length === 0
+                                availableFundingProviders.length === 0
                             "
                             data-testid="cockpit-funding-submit"
                         >
@@ -576,16 +593,38 @@ function reconciliationActionLabel(action: string): string {
                                     {{ provider.label }}
                                 </p>
                                 <span
-                                    class="rounded-full bg-emerald-50 px-2 py-1 text-[0.65rem] font-semibold tracking-wide text-emerald-700 uppercase dark:bg-emerald-950/60 dark:text-emerald-300"
+                                    class="rounded-full px-2 py-1 text-[0.65rem] font-semibold tracking-wide uppercase"
+                                    :class="
+                                        provider.status === 'blocked'
+                                            ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
+                                            : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                    "
                                 >
                                     {{ provider.status }}
                                 </span>
                             </div>
                             <p
+                                class="mt-2 text-xs font-medium text-slate-700 dark:text-slate-300"
+                            >
+                                {{
+                                    displayLabel(
+                                        provider.destination_mode ?? 'shared',
+                                    )
+                                }}
+                                ·
+                                {{
+                                    provider.destination_reference ??
+                                    'Not configured'
+                                }}
+                            </p>
+                            <p
                                 class="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400"
                             >
-                                Signed intake plus independent authoritative
-                                status verification.
+                                {{
+                                    provider.status === 'blocked'
+                                        ? 'Dedicated funding is unavailable until authoritative destination verification succeeds.'
+                                        : 'Signed intake plus independent authoritative status verification.'
+                                }}
                             </p>
                         </div>
                     </div>

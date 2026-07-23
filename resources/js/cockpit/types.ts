@@ -409,6 +409,9 @@ export type CockpitFundingProvider = {
     label: string;
     status: string;
     authoritative_verification: boolean;
+    destination_mode?: 'shared' | 'dedicated';
+    destination_status?: string;
+    destination_reference?: string | null;
 };
 
 export type CockpitFundingIntent = {
