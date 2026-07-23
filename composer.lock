@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "b8da107072214a7f1b50072d8a215154",
+    "content-hash": "ef3a32214c926d2888aa43a83da8ffdf",
     "packages": [
         {
             "name": "3neti/cash",
@@ -12,7 +12,7 @@
             "dist": {
                 "type": "path",
                 "url": "/Users/rli/PhpstormProjects/packages/cash",
-                "reference": "c903538a3034736374e1bded1ced63d475095674"
+                "reference": "198ff608b7848d5746e3ff374468e5e9bfc7dbb8"
             },
             "require": {
                 "3neti/wallet": "^v1.0",
@@ -125,17 +125,11 @@
         },
         {
             "name": "3neti/emi-core",
-            "version": "v1.0.4",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/3neti/emi-core.git",
-                "reference": "fb6dba61f00d3a7c68ca73763caca3ef8e6c7eef"
-            },
+            "version": "1.0.5",
             "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/3neti/emi-core/zipball/fb6dba61f00d3a7c68ca73763caca3ef8e6c7eef",
-                "reference": "fb6dba61f00d3a7c68ca73763caca3ef8e6c7eef",
-                "shasum": ""
+                "type": "path",
+                "url": "/Users/rli/PhpstormProjects/packages/emi-core",
+                "reference": "153e578b1263a6346d8e36b9d8780962c993d03e"
             },
             "require": {
                 "illuminate/support": "^12.0 || ^13.0",
@@ -161,7 +155,16 @@
                     "LBHurtado\\EmiCore\\Database\\Factories\\": "database/factories/"
                 }
             },
-            "notification-url": "https://packagist.org/downloads/",
+            "autoload-dev": {
+                "psr-4": {
+                    "LBHurtado\\EmiCore\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "vendor/bin/pest"
+                ]
+            },
             "license": [
                 "proprietary"
             ],
@@ -172,11 +175,10 @@
                 }
             ],
             "description": "Provider-agnostic EMI domain: contracts, enums, models, DTOs, events",
-            "support": {
-                "issues": "https://github.com/3neti/emi-core/issues",
-                "source": "https://github.com/3neti/emi-core/tree/v1.0.4"
-            },
-            "time": "2026-04-01T15:03:47+00:00"
+            "transport-options": {
+                "symlink": true,
+                "relative": false
+            }
         },
         {
             "name": "3neti/emi-paynamics",
@@ -1164,7 +1166,7 @@
             "dist": {
                 "type": "path",
                 "url": "/Users/rli/PhpstormProjects/packages/voucher",
-                "reference": "d36c524c4c5a9ba977e61950ae09d6b97a24298a"
+                "reference": "ec8fc40d930270e83a106b0eeb1a539c411f255e"
             },
             "require": {
                 "3neti/cash": "dev-main",

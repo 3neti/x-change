@@ -11,6 +11,16 @@
     "repositories": [
         {
             "type": "path",
+            "url": "/Users/rli/PhpstormProjects/packages/emi-core",
+            "options": {
+                "symlink": true,
+                "versions": {
+                    "3neti/emi-core": "1.0.5"
+                }
+            }
+        },
+        {
+            "type": "path",
             "url": "/Users/rli/PhpstormProjects/packages/voucher",
             "options": {
                 "symlink": true
@@ -126,6 +136,7 @@
         "php": "^8.2",
         "3neti/cash": "dev-main",
         "3neti/contact": "^1.1",
+        "3neti/emi-core": "^1.0",
         "3neti/emi-paynamics": "dev-main",
         "3neti/onboarding": "dev-main",
         "3neti/form-flow": "dev-main",
