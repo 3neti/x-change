@@ -34,12 +34,12 @@ describe('Cockpit navigation baseline', () => {
         expect(enabledItems.map((item) => item.key)).toEqual([
             'dashboard',
             'quick-generate',
+            'funding',
             'pay-codes',
             'runtime-profile',
         ]);
 
         expect(disabledItems.map((item) => item.key)).toEqual([
-            'funding',
             'templates',
             'contacts',
             'operations',
