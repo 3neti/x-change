@@ -259,6 +259,51 @@ The scenario performs no provider calls, Funding instructions, webhooks, ledger 
 
 ---
 
+### `qrph_funding_existing_mobile_demo`
+
+| Field | Value |
+|---|---|
+| Category | demo |
+| Mode | qrph_funding_simulation |
+| Risk | low |
+| Generic lifecycle API | blocked |
+
+Runs a signed QR Ph funding simulation for an existing verified mobile.
+
+Capabilities exercised:
+
+- full verified-mobile Account resolution
+- Funding Intent before evidence
+- authenticated webhook preservation
+- independent simulated-provider verification
+- atomic Treasury Inventory and Account posting
+- identical callback replay protection
+- complete rollback verification
+
+---
+
+### `qrph_funding_unknown_mobile_onboarding_demo`
+
+| Field | Value |
+|---|---|
+| Category | demo |
+| Mode | qrph_unknown_mobile_onboarding |
+| Risk | low |
+| Generic lifecycle API | blocked |
+
+Stops an unknown mobile before payment, explicitly onboards and OTP-verifies a simulated user, then resumes the signed QR Ph funding pipeline.
+
+Capabilities exercised:
+
+- no webhook-driven user creation
+- no payment before identity resolution
+- no Funding Intent for an unknown mobile
+- OTP-gated mobile verification
+- Account opening after identity verification
+- signed funding, replay protection, and parent-managed rollback
+
+---
+
 ## Sequential Claim Scenarios
 
 ### `divisible_open_three_slices`

@@ -29,6 +29,25 @@ Inbound funding stops at two explicitly separate operations:
 
 Funding is not an Allocation or Draw. An **Account** is the user-facing accounting balance. A provider bank account or EMI wallet is a **Funding Destination**, not the Account itself. Provider-reported balance remains an external fact and is not adopted as Account truth.
 
+## QR Ph Payer Identity
+
+For QR Ph funding, the payer mobile is an identity claim, not settlement authority. x-change normalizes the full Philippine mobile number and resolves it only against an existing, OTP-verified `users.mobile` identity. Prefixes, first characters, Pipedream transforms, and inferred daughter-account routing are prohibited.
+
+The order is deliberate:
+
+```text
+submit full mobile
+    → resolve verified user
+    → resolve Account
+    → create Funding Intent
+    → issue provider instructions
+    → receive authenticated evidence
+    → independently verify provider settlement and payer identity
+    → recognize Inventory and credit Account atomically
+```
+
+An unknown or unverified mobile stops before Funding Intent creation and before provider payment. A webhook cannot create a user, verify a mobile, or choose an Account.
+
 ## Trust and Money Flow
 
 ```text
@@ -166,6 +185,11 @@ Raw secrets and routing credentials do not appear in Cockpit read models, logs, 
 - Dedicated failures block; they do not fall back.
 - Provider verification is independent from webhook intake.
 - Exact amount, currency, destination, and provider identity must match.
+- QR Ph payer identity must match the Account owner's full verified mobile.
+- Unknown mobiles stop before Funding Intent creation or provider payment.
+- Registration does not self-verify a mobile.
+- Mobile verification challenges store a keyed hash, never the full mobile or OTP.
+- The local `000000` verification driver is restricted to explicitly allowed environments.
 - Paynamics reachability is not ownership.
 - Tokens are encrypted and write-only.
 - Destination mutations require a verified identity, recent PIN confirmation, and throttling.
@@ -188,6 +212,10 @@ It provides:
 
 The Funding page consumes the same preference read model. A blocked dedicated destination is visible but cannot be selected for a new Funding Intent. Profile provider cards are summaries and link to Accounts; they no longer mutate provider destinations.
 
+`/x/cockpit/funding` also exposes a non-production QR Ph lifecycle lab. Its QR carries no monetary value. The operator can simulate a ₱25 payment and inspect mobile resolution, signed evidence, authoritative re-verification, atomic posting, and replay protection. The runner performs no network call and rolls every database and balance change back.
+
+New mobile-first registrations redirect to `/x/onboarding/mobile/verify`. The Account is not eligible for QR Ph funding until the configured OTP provider confirms the challenge. The null OTP driver and its displayed `000000` code are local/testing aids only.
+
 ## Rollback Lifecycle Scenario
 
 The package registers `account_management_funding_destinations_demo` with the lifecycle runtime. It demonstrates the Account-management state machine without contacting NetBank or Paynamics and without retaining database or balance changes.
@@ -206,16 +234,38 @@ Execution occurs inside a nested transaction. The runner always rolls back to th
 
 The scenario is available through the lifecycle CLI and the protected Cockpit Accounts walkthrough. It is blocked from the generic lifecycle HTTP API. Cockpit availability defaults to non-production environments and requires `XCHANGE_COCKPIT_ACCOUNT_SCENARIO_ENABLED=true` in production.
 
+The QR Ph wave adds two rollback-only lifecycle scenarios:
+
+- `qrph_funding_existing_mobile_demo` runs the signed funding pipeline for an existing verified mobile and proves an identical callback is a no-op.
+- `qrph_funding_unknown_mobile_onboarding_demo` proves that an unknown mobile creates no Funding Intent, then explicitly onboards and OTP-verifies a simulated user before resuming the same funding pipeline.
+
+Both scenarios are blocked from the generic lifecycle HTTP API. The simulator refuses production execution even if its lower-level flag is accidentally enabled.
+
 ## Configuration and Rollout
 
 1. Configure and test shared provider credentials first.
 2. Publish package migrations and assets.
 3. Run migrations.
-4. Confirm signature verification and provider verification endpoints in a non-production environment.
-5. Keep dedicated mode optional until authoritative provider proof is available.
-6. Enable provider webhook ingress only after replay and duplicate-delivery tests pass.
-7. Monitor suspense, verification latency, reversal recovery, and destination failures.
-8. Never migrate a legacy inferred destination into dedicated mode without explicit ownership evidence.
+4. Configure a non-null OTP provider before enabling mobile verification in production.
+5. Set independent HMAC keys for payer identity and mobile verification.
+6. Confirm signature verification and provider verification endpoints in a non-production environment.
+7. Keep dedicated mode optional until authoritative provider proof is available.
+8. Enable provider webhook ingress only after replay and duplicate-delivery tests pass.
+9. Monitor suspense, verification latency, reversal recovery, and destination failures.
+10. Never migrate a legacy inferred destination into dedicated mode without explicit ownership evidence.
+
+Relevant environment switches:
+
+```text
+XCHANGE_COCKPIT_QRPH_FUNDING_SIMULATION_ENABLED
+XCHANGE_LIFECYCLE_QRPH_SIMULATION_ENABLED
+XCHANGE_MOBILE_VERIFICATION_ENABLED
+XCHANGE_MOBILE_VERIFICATION_TTL_MINUTES
+XCHANGE_MOBILE_VERIFICATION_MAX_ATTEMPTS
+XCHANGE_MOBILE_VERIFICATION_HASH_KEY
+XCHANGE_FUNDING_PAYER_IDENTITY_HASH_KEY
+XCHANGE_WITHDRAWAL_OTP_DRIVER
+```
 
 ## Acceptance Criteria
 

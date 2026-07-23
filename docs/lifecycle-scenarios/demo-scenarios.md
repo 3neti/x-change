@@ -157,6 +157,50 @@ Use the guided Accounts-page stepper for operator training and presentations. Us
 
 ---
 
+## `qrph_funding_existing_mobile_demo`
+
+### Classification
+
+| Field | Value |
+|---|---|
+| Category | demo |
+| Demo Suitability | excellent |
+| Risk | low |
+| Persistence | rollback only |
+
+### Purpose
+
+Demonstrates the provider-evidence funding boundary for an existing verified mobile: intent first, signed evidence second, independent provider verification, one atomic credit, and no second credit on replay.
+
+Use the Funding-page lifecycle lab for the visual walkthrough or run:
+
+```bash
+php artisan xchange:lifecycle:run qrph_funding_existing_mobile_demo --issuer=1 --json
+```
+
+---
+
+## `qrph_funding_unknown_mobile_onboarding_demo`
+
+### Classification
+
+| Field | Value |
+|---|---|
+| Category | demo |
+| Demo Suitability | excellent |
+| Risk | low |
+| Persistence | rollback only |
+
+### Purpose
+
+Demonstrates that an unknown QR Ph payer mobile cannot create an intent or receive credit. The simulation then performs explicit local onboarding, OTP verification, Account opening, and the same signed funding pipeline under one parent rollback boundary.
+
+```bash
+php artisan xchange:lifecycle:run qrph_funding_unknown_mobile_onboarding_demo --issuer=1 --json
+```
+
+---
+
 ## `basic_cash`
 
 ### Classification
