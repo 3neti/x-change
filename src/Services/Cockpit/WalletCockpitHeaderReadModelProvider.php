@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Cockpit;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Number;
 use LBHurtado\XChange\Contracts\CockpitHeaderReadModelProviderContract;
 use LBHurtado\XChange\Contracts\VoucherLiabilitySummaryContract;
@@ -67,7 +68,7 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
 
     private function providerBalance(mixed $operator): CockpitDashboardMetricData
     {
-        if (! (bool) config('x-change.cockpit.header_provider_balance.enabled', false) || $operator === null) {
+        if (! (bool) config('x-change.cockpit.header_provider_balance.enabled', true) || $operator === null) {
             return $this->disconnectedProviderBalance();
         }
 
@@ -80,18 +81,20 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
                 return $this->disconnectedProviderBalance();
             }
 
-            $value = $balance['balance_minor'] ?? $balance['available_balance_minor'] ?? null;
+            $value = $this->providerBalanceMinor($balance);
 
             if ($value === null) {
-                return $this->disconnectedProviderBalance($this->stringValue($balance['sync_message'] ?? null));
+                return $this->disconnectedProviderBalance(
+                    $this->stringValue($balance['sync_message'] ?? null),
+                    $this->providerBalanceLabel($balance),
+                );
             }
 
             return new CockpitDashboardMetricData(
                 key: 'live',
-                label: 'Live Balance',
+                label: $this->providerBalanceLabel($balance),
                 value: $this->formatMoney($value),
-                helper: $this->stringValue($balance['description'] ?? null)
-                    ?? 'Read-only provider balance summary.',
+                helper: $this->providerBalanceHelper($balance),
                 tone: ((bool) ($balance['is_stale'] ?? false)) ? 'warning' : 'healthy',
             );
         } catch (Throwable) {
@@ -167,13 +170,15 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
         }
     }
 
-    private function disconnectedProviderBalance(?string $helper = null): CockpitDashboardMetricData
-    {
+    private function disconnectedProviderBalance(
+        ?string $helper = null,
+        string $label = 'Provider Liquidity',
+    ): CockpitDashboardMetricData {
         return new CockpitDashboardMetricData(
             key: 'live',
-            label: 'Live Balance',
-            value: 'Provider balance not connected',
-            helper: $helper ?? 'Provider balance adapters are not wired to Cockpit yet.',
+            label: $label,
+            value: 'Not available',
+            helper: $helper ?? 'No cached provider liquidity snapshot is available.',
             tone: 'neutral',
         );
     }
@@ -226,6 +231,54 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
         $normalized = trim((string) $value);
 
         return $normalized !== '' ? $normalized : null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $balance
+     */
+    private function providerBalanceLabel(array $balance): string
+    {
+        return match ($this->stringValue($balance['key'] ?? null)) {
+            'netbank_source_account' => 'NetBank Liquidity',
+            'provider_wallet' => 'Provider Wallet',
+            default => 'Provider Liquidity',
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>  $balance
+     */
+    private function providerBalanceMinor(array $balance): mixed
+    {
+        return $this->stringValue($balance['key'] ?? null) === 'netbank_source_account'
+            ? ($balance['available_balance_minor'] ?? $balance['balance_minor'] ?? null)
+            : ($balance['balance_minor'] ?? $balance['available_balance_minor'] ?? null);
+    }
+
+    /**
+     * @param  array<string, mixed>  $balance
+     */
+    private function providerBalanceHelper(array $balance): string
+    {
+        $description = $this->stringValue($balance['description'] ?? null)
+            ?? 'Read-only cached provider balance summary.';
+        $checkedAt = $this->stringValue($balance['checked_at'] ?? null);
+
+        if ($checkedAt === null) {
+            return $description;
+        }
+
+        try {
+            $relativeTime = CarbonImmutable::parse($checkedAt)->diffForHumans();
+        } catch (Throwable) {
+            return $description;
+        }
+
+        $freshness = ((bool) ($balance['is_stale'] ?? false))
+            ? "Cached snapshot is stale; last refreshed {$relativeTime}."
+            : "Cached snapshot refreshed {$relativeTime}; this page did not call the provider.";
+
+        return "{$description} {$freshness}";
     }
 
     private function formatMoney(int|float|string|null $balance): string

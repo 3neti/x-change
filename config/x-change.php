@@ -155,7 +155,7 @@ return [
         ],
 
         'header_provider_balance' => [
-            'enabled' => (bool) env('XCHANGE_COCKPIT_HEADER_PROVIDER_BALANCE_ENABLED', false),
+            'enabled' => (bool) env('XCHANGE_COCKPIT_HEADER_PROVIDER_BALANCE_ENABLED', true),
         ],
 
         'operator_issuance_activity' => [

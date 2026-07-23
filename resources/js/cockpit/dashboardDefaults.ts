@@ -15,9 +15,9 @@ export const cockpitDashboardMetrics: CockpitDashboardMetric[] = [
     },
     {
         key: 'live-balance',
-        label: 'Live Balance',
-        value: 'Provider not connected',
-        helper: 'No provider call from dashboard',
+        label: 'Provider Liquidity',
+        value: 'Not available',
+        helper: 'Read from a cached provider snapshot; no provider call from dashboard',
         tone: 'neutral',
     },
     {

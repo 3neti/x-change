@@ -47,7 +47,7 @@ it('renders cockpit pages as read-only inertia endpoints', function (string $rou
         ->assertJsonPath('props.cockpit_header_read_model.balances.1.key', 'outstanding')
         ->assertJsonPath('props.cockpit_header_read_model.balances.2.key', 'usable')
         ->assertJsonPath('props.cockpit_header_read_model.balances.3.key', 'live')
-        ->assertJsonPath('props.cockpit_header_read_model.balances.3.value', 'Provider balance not connected')
+        ->assertJsonPath('props.cockpit_header_read_model.balances.3.value', 'Not available')
         ->assertJsonPath('props.cockpit_header_read_model.redactions.calls_providers', false);
 })->with([
     'dashboard' => ['x-change.cockpit.dashboard', [], 'x-change/cockpit/Dashboard'],

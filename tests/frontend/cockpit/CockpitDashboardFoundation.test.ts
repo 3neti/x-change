@@ -29,7 +29,7 @@ describe('Cockpit dashboard foundation widgets', () => {
         expect(wrapper.text()).toContain('Estimate');
         expect(wrapper.text()).toContain('External');
         expect(wrapper.text()).toContain('Internal Balance');
-        expect(wrapper.text()).toContain('Live Balance');
+        expect(wrapper.text()).toContain('Provider Liquidity');
         expect(wrapper.text()).toContain('Outstanding Pay Codes');
         expect(wrapper.text()).toContain('Usable Balance');
         expect(wrapper.text()).toContain('Bridge estimate; no fund release');

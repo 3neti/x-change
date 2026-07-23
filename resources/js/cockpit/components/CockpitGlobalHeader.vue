@@ -32,8 +32,8 @@ withDefaults(defineProps<{
         },
         {
             key: 'live',
-            label: 'Live Balance',
-            value: 'Provider balance not connected',
+            label: 'Provider Liquidity',
+            value: 'Not available',
             tone: 'neutral',
         },
     ],

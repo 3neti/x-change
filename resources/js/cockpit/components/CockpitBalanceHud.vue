@@ -28,6 +28,10 @@ const toneClass = (tone: CockpitBalanceMetric['tone'] = 'neutral'): string => {
                 'rounded-lg border px-3 py-2 shadow-sm',
                 toneClass(balance.tone),
             ]"
+            :title="balance.helper"
+            :aria-label="balance.helper
+                ? `${balance.label}: ${balance.value}. ${balance.helper}`
+                : `${balance.label}: ${balance.value}`"
             data-testid="cockpit-balance-metric"
         >
             <p

@@ -16,6 +16,7 @@ export type CockpitBalanceMetric = {
     key: string;
     label: string;
     value: string;
+    helper?: string;
     tone?: 'neutral' | 'healthy' | 'warning' | 'critical';
 };
 

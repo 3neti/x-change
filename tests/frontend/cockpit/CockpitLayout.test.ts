@@ -22,7 +22,7 @@ describe('Cockpit shell layout baseline', () => {
                     },
                     {
                         key: 'live',
-                        label: 'Live Balance',
+                        label: 'NetBank Liquidity',
                         value: '₱123,500,000',
                         tone: 'warning',
                     },
@@ -96,8 +96,8 @@ describe('Cockpit shell layout baseline', () => {
                         },
                         {
                             key: 'live',
-                            label: 'Live Balance',
-                            value: 'Provider balance not connected',
+                            label: 'Provider Liquidity',
+                            value: 'Not available',
                             tone: 'neutral',
                         },
                     ],
@@ -110,7 +110,7 @@ describe('Cockpit shell layout baseline', () => {
         expect(header.text()).toContain('₱9,876.50');
         expect(header.text()).toContain('₱25.00');
         expect(header.text()).toContain('₱9,851.50');
-        expect(header.text()).toContain('Provider balance not connected');
+        expect(header.text()).toContain('Not available');
         expect(header.text()).not.toContain('Internal balance not connected');
     });
 
@@ -122,8 +122,8 @@ describe('Cockpit shell layout baseline', () => {
         expect(wrapper.find('[data-testid="cockpit-balance-hud"]').exists()).toBe(true);
         expect(wrapper.text()).toContain('Internal Balance');
         expect(wrapper.text()).toContain('Internal balance not connected');
-        expect(wrapper.text()).toContain('Live Balance');
-        expect(wrapper.text()).toContain('Provider balance not connected');
+        expect(wrapper.text()).toContain('Provider Liquidity');
+        expect(wrapper.text()).toContain('Not available');
         expect(wrapper.text()).not.toContain('Summary not connected');
         expect(wrapper.text()).not.toContain('Provider not connected');
         expect(wrapper.text()).toContain('Operating as: Treasury Operations');

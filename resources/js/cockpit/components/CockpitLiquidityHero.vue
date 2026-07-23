@@ -24,8 +24,8 @@ const fundingSemantics = [
     },
     {
         label: 'External',
-        value: 'Live Balance',
-        helper: 'Provider summary only when explicitly connected.',
+        value: 'Provider Liquidity',
+        helper: 'Cached provider summary; dashboard page loads do not call the provider.',
     },
 ];
 

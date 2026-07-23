@@ -47,7 +47,8 @@ it('binds a read-only cockpit header balance read model with safe provider fallb
         ->and($readModel['balances'][2]['key'])->toBe('usable')
         ->and($readModel['balances'][2]['value'])->toContain('0.00')
         ->and($readModel['balances'][3]['key'])->toBe('live')
-        ->and($readModel['balances'][3]['value'])->toBe('Provider balance not connected')
+        ->and($readModel['balances'][3]['label'])->toBe('Provider Liquidity')
+        ->and($readModel['balances'][3]['value'])->toBe('Not available')
         ->and($readModel['redactions']['mutates_wallets'])->toBeFalse()
         ->and($readModel['redactions']['releases_funds'])->toBeFalse()
         ->and($readModel['redactions']['calls_providers'])->toBeFalse();
@@ -99,6 +100,7 @@ it('can expose a read-only provider balance summary when explicitly enabled', fu
                         'authority' => 'provider_source_account',
                         'description' => 'NetBank source account liquidity summary.',
                         'balance_minor' => 2500000,
+                        'available_balance_minor' => 2400000,
                         'currency' => 'PHP',
                         'is_stale' => false,
                     ],
@@ -112,7 +114,8 @@ it('can expose a read-only provider balance summary when explicitly enabled', fu
         ->toArray();
 
     expect($readModel['balances'][3]['key'])->toBe('live')
-        ->and($readModel['balances'][3]['value'])->toContain('25,000')
+        ->and($readModel['balances'][3]['label'])->toBe('NetBank Liquidity')
+        ->and($readModel['balances'][3]['value'])->toContain('24,000')
         ->and($readModel['balances'][3]['helper'])->toBe('NetBank source account liquidity summary.')
         ->and($readModel['balances'][3]['tone'])->toBe('healthy')
         ->and($readModel['redactions']['calls_providers'])->toBeFalse()
@@ -152,7 +155,8 @@ it('hydrates the cockpit dashboard with header balance read-model props', functi
         ->assertJsonPath('props.cockpit_header_read_model.balances.0.key', 'internal')
         ->assertJsonPath('props.cockpit_header_read_model.balances.1.key', 'outstanding')
         ->assertJsonPath('props.cockpit_header_read_model.balances.2.key', 'usable')
-        ->assertJsonPath('props.cockpit_header_read_model.balances.3.value', 'Provider balance not connected')
+        ->assertJsonPath('props.cockpit_header_read_model.balances.3.label', 'Provider Liquidity')
+        ->assertJsonPath('props.cockpit_header_read_model.balances.3.value', 'Not available')
         ->assertJsonPath('props.cockpit_header_read_model.redactions.mutates_wallets', false)
         ->assertJsonPath('props.cockpit_header_read_model.redactions.releases_funds', false)
         ->assertJsonPath('props.cockpit_header_read_model.redactions.calls_providers', false)

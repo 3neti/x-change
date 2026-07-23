@@ -58,7 +58,7 @@ class FundingCockpitReadModelProvider
                 'webhook_direct_credit_enabled' => false,
                 'authoritative_provider_verification_required' => true,
                 'dual_control_reconciliation_required' => true,
-                'live_provider_balance_connected' => (bool) config('x-change.cockpit.header_provider_balance.enabled', false),
+                'live_provider_balance_connected' => (bool) config('x-change.cockpit.header_provider_balance.enabled', true),
             ],
             redactions: [
                 'payloads' => 'funding-operations-summary-only',

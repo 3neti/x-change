@@ -63,8 +63,8 @@ const cockpitHeaderReadModel = {
         },
         {
             key: 'live',
-            label: 'Live Balance',
-            value: 'Provider balance not connected',
+            label: 'Provider Liquidity',
+            value: 'Not available',
             tone: 'neutral',
         },
     ],
@@ -437,7 +437,7 @@ describe('Cockpit dashboard read model hydration', () => {
 
         expect(wrapper.find('[data-testid="cockpit-global-header"]').text()).toContain('Internal Balance');
         expect(wrapper.find('[data-testid="cockpit-global-header"]').text()).toContain('₱9,876.50');
-        expect(wrapper.find('[data-testid="cockpit-global-header"]').text()).toContain('Provider balance not connected');
+        expect(wrapper.find('[data-testid="cockpit-global-header"]').text()).toContain('Not available');
         expect(wrapper.find('[data-testid="cockpit-global-header"]').text()).not.toContain('Internal balance not connected');
     });
 
@@ -665,7 +665,7 @@ describe('Cockpit dashboard read model hydration', () => {
         });
 
         expect(wrapper.text()).toContain('Summary not connected');
-        expect(wrapper.text()).toContain('No provider call from dashboard');
+        expect(wrapper.text()).toContain('no provider call from dashboard');
         expect(wrapper.text()).toContain('Audit facts require authorization and redaction before display.');
     });
 
