@@ -95,6 +95,7 @@ use LBHurtado\XChange\Contracts\ExecutionResultFeedbackHandoffContract;
 use LBHurtado\XChange\Contracts\ExecutionResultHandoffPipelineContract;
 use LBHurtado\XChange\Contracts\ExecutionResultHandoffSummaryJournalWriterContract;
 use LBHurtado\XChange\Contracts\ExecutionResultJournalHandoffContract;
+use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
 use LBHurtado\XChange\Contracts\MinimumWithdrawalPolicyResolverContract;
 use LBHurtado\XChange\Contracts\MoneyMovementAccountingDecisionContract;
 use LBHurtado\XChange\Contracts\MoneyMovementLifecycleTriggerMatrixContract;
@@ -219,6 +220,7 @@ use LBHurtado\XChange\Services\Execution\NullExecutionResultJournalHandoff;
 use LBHurtado\XChange\Services\Execution\XChangeLiveCashExecutionDriver;
 use LBHurtado\XChange\Services\Execution\XChangeSettlementEnvelopeExecutionGateway;
 use LBHurtado\XChange\Services\Execution\XChangeStoredValueExecutionGateway;
+use LBHurtado\XChange\Services\Funding\DefaultFundingDestinationResolver;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\InstructionBackedPricingService;
 use LBHurtado\XChange\Services\NullClaimApprovalNotificationService;
@@ -273,6 +275,7 @@ class XChangeServiceProvider extends ServiceProvider
         $this->registerServices();
         $this->registerIntegrations();
         $this->registerServiceContracts();
+        $this->registerFundingDestinationResolver();
         $this->registerMinimumWithdrawalPolicyResolver();
         $this->registerIntegrationContracts();
         $this->registerReportDriverSource();
@@ -943,6 +946,21 @@ class XChangeServiceProvider extends ServiceProvider
         if (! $this->app->bound(MinimumWithdrawalPolicyResolverContract::class)) {
             $this->app->singleton(MinimumWithdrawalPolicyResolverContract::class, function ($app) {
                 return $app->make('x-change.services.minimum_withdrawal_policy');
+            });
+        }
+    }
+
+    protected function registerFundingDestinationResolver(): void
+    {
+        if (! $this->app->bound('x-change.services.funding_destination_resolver')) {
+            $this->app->singleton('x-change.services.funding_destination_resolver', function ($app) {
+                return $app->make(DefaultFundingDestinationResolver::class);
+            });
+        }
+
+        if (! $this->app->bound(FundingDestinationResolverContract::class)) {
+            $this->app->singleton(FundingDestinationResolverContract::class, function ($app) {
+                return $app->make('x-change.services.funding_destination_resolver');
             });
         }
     }
