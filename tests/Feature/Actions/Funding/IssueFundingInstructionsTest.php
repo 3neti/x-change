@@ -46,6 +46,7 @@ it('encrypts provider instructions and advances the intent without crediting an 
         ->and($issued->instructions_ciphertext['funding_address'])->toBe('915001234567890123456')
         ->and($issued->provider_reference)->toStartWith('sha256:')
         ->and($issued->provider_reference)->not->toContain('915001234567890123456')
+        ->and($issued->provider_request_id)->toBe('915001234567890123456')
         ->and($issued->funding_address_hash)->toBe(hash_hmac(
             'sha256',
             '915001234567890123456',

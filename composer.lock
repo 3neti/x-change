@@ -186,7 +186,7 @@
             "dist": {
                 "type": "path",
                 "url": "/Users/rli/PhpstormProjects/packages/emi-paynamics",
-                "reference": "3dd83a1c737f737773742b70351133b4fafb3149"
+                "reference": "3f6a847a721c536ebe8385c9aab0ce59c3fe7705"
             },
             "require": {
                 "3neti/emi-core": "^v1.0.1",

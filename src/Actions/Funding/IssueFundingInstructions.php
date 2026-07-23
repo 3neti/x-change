@@ -91,6 +91,7 @@ class IssueFundingInstructions
                 'status' => FundingIntentStatus::AwaitingFunds,
                 'version' => $nextVersion,
                 'provider_reference' => 'sha256:'.$providerReferenceHash,
+                'provider_request_id' => $instructions->providerReference,
                 'funding_address_ciphertext' => $fundingAddress,
                 'funding_address_hash' => $fundingAddressHash,
                 'instructions_ciphertext' => $this->instructionPayload($instructions),
