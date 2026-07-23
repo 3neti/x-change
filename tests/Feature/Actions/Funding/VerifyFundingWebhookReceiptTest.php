@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Queue;
 use LBHurtado\EmiCore\Actions\Funding\StoreProviderWebhookReceipt;
 use LBHurtado\EmiCore\Data\Funding\FundingVerificationData;
 use LBHurtado\EmiCore\Data\Funding\ProviderEventHintData;
@@ -13,11 +14,14 @@ use LBHurtado\EmiCore\Exceptions\ProviderFundingVerificationIndeterminate;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\EmiCore\Models\WebhookReceipt;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
+use LBHurtado\XChange\Actions\Funding\ApproveFundingReconciliation;
 use LBHurtado\XChange\Actions\Funding\CreateFundingIntent;
 use LBHurtado\XChange\Actions\Funding\IssueFundingInstructions;
+use LBHurtado\XChange\Actions\Funding\RequestFundingReconciliation;
 use LBHurtado\XChange\Actions\Funding\VerifyFundingWebhookReceipt;
 use LBHurtado\XChange\Data\Funding\CreateFundingIntentData;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
+use LBHurtado\XChange\Enums\FundingReconciliationAction;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingWebhookReceiptJob;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingRecovery;
@@ -223,6 +227,45 @@ it('prevents suspense review evidence from being rewritten or deleted directly',
         ->toThrow(LogicException::class, 'guarded review actions')
         ->and(fn () => $case->delete())
         ->toThrow(LogicException::class, 'cannot be deleted');
+});
+
+it('requires dual control before queueing a preserved-evidence verification retry', function () {
+    $this->fundingAdapter = new class extends FakeFundingProviderAdapter
+    {
+        public function verifyFunding(FundingVerificationData $verification): ProviderFundingObservationData
+        {
+            throw new ProviderFundingVerificationIndeterminate('Ambiguous provider evidence.');
+        }
+    };
+    replaceFundingAdapter($this->fundingAdapter);
+    $intent = verifiedFundingIntent();
+    $receipt = authenticatedFundingReceipt('dual-control-retry');
+    app(VerifyFundingWebhookReceipt::class)->handle($receipt);
+    $case = FundingSuspenseCase::query()->sole();
+    $request = app(RequestFundingReconciliation::class)->handle(
+        case: $case,
+        action: FundingReconciliationAction::RetryVerification,
+        actorType: 'operator',
+        actorId: 'maker-1',
+    );
+    Queue::fake();
+
+    $approved = app(ApproveFundingReconciliation::class)->handle(
+        $request,
+        'operator',
+        'checker-2',
+    );
+
+    expect($approved->status)->toBe('executed')
+        ->and($approved->result['outcome'])->toBe('verification_retry_queued')
+        ->and($intent->refresh()->status)->toBe(FundingIntentStatus::Verifying)
+        ->and($receipt->refresh()->processing_status)->toBe('received')
+        ->and($case->refresh()->status)->toBe('monitoring');
+
+    Queue::assertPushed(
+        VerifyFundingWebhookReceiptJob::class,
+        fn (VerifyFundingWebhookReceiptJob $job): bool => $job->webhookReceiptId === $receipt->getKey(),
+    );
 });
 
 function verifiedFundingIntent(string $accountReference = 'wallet:account-1001'): FundingIntent

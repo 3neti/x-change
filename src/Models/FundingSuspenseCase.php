@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\EmiCore\Models\WebhookReceipt;
@@ -70,5 +71,10 @@ class FundingSuspenseCase extends Model
     public function webhookReceipt(): BelongsTo
     {
         return $this->belongsTo(WebhookReceipt::class);
+    }
+
+    public function reconciliationRequests(): HasMany
+    {
+        return $this->hasMany(FundingReconciliationRequest::class);
     }
 }

@@ -9,18 +9,26 @@ use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\Wallet\Treasury\Models\TreasurySettlementResource;
+use LBHurtado\XChange\Actions\Funding\ApproveFundingReconciliation;
+use LBHurtado\XChange\Actions\Funding\OpenFundingSuspenseCase;
+use LBHurtado\XChange\Actions\Funding\RequestFundingReconciliation;
 use LBHurtado\XChange\Actions\Funding\ReverseSettledFundingIntent;
 use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
+use LBHurtado\XChange\Actions\Funding\TransitionFundingIntent;
 use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
+use LBHurtado\XChange\Data\Funding\FundingIntentTransitionData;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
+use LBHurtado\XChange\Enums\FundingReconciliationAction;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 use LBHurtado\XChange\Models\FundingAccountHold;
 use LBHurtado\XChange\Models\FundingIntent;
+use LBHurtado\XChange\Models\FundingReconciliationRequest;
 use LBHurtado\XChange\Models\FundingRecovery;
 use LBHurtado\XChange\Models\FundingRecoveryPayment;
 use LBHurtado\XChange\Models\FundingSettlement;
+use LBHurtado\XChange\Models\FundingSuspenseCase;
 
 it('atomically recognizes verified net inventory and credits the Account once', function () {
     $user = actingAsTestUser(0);
@@ -210,6 +218,92 @@ it('applies later verified funding to an outstanding recovery and releases the h
         ->and((int) $wallet->refresh()->balanceInt)->toBe(4_950)
         ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(24_950)
         ->and(FundingAccountHold::query()->where('status', 'active')->count())->toBe(0);
+});
+
+it('requires a second operator before matching exact provider evidence and settling', function () {
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $observation = providerFundingObservationForSettlement();
+    $intent = verifiedFundingIntentForSettlement($wallet, $observation);
+    $intent = app(TransitionFundingIntent::class)->handle($intent, new FundingIntentTransitionData(
+        status: FundingIntentStatus::Suspense,
+        eventType: 'provider_evidence_requires_review',
+        actorType: 'verification_runtime',
+        actorId: 'netbank',
+        expectedVersion: $intent->version,
+        evidenceReference: 'provider-observation:'.$observation->getKey(),
+    ));
+    $case = app(OpenFundingSuspenseCase::class)->handle(
+        provider: 'netbank',
+        reasonCode: 'provider_evidence_requires_review',
+        intent: $intent,
+        observation: $observation,
+    );
+    $request = app(RequestFundingReconciliation::class)->handle(
+        case: $case,
+        action: FundingReconciliationAction::MatchVerifiedObservation,
+        actorType: 'operator',
+        actorId: 'maker-1',
+    );
+
+    expect(fn () => app(ApproveFundingReconciliation::class)->handle(
+        $request,
+        'operator',
+        'maker-1',
+    ))->toThrow(InvalidArgumentException::class, 'cannot approve their own request')
+        ->and($request->refresh()->status)->toBe('pending_approval')
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0);
+
+    $approved = app(ApproveFundingReconciliation::class)->handle(
+        $request,
+        'operator',
+        'checker-2',
+    );
+
+    expect($approved->status)->toBe('executed')
+        ->and($approved->requested_by_id)->toBe('maker-1')
+        ->and($approved->approved_by_id)->toBe('checker-2')
+        ->and($approved->result)->toMatchArray([
+            'outcome' => 'observation_matched_and_settled',
+        ])
+        ->and($intent->refresh()->status)->toBe(FundingIntentStatus::Settled)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and(FundingSettlement::query()->count())->toBe(1)
+        ->and(FundingSuspenseCase::query()->sole()->status)->toBe('resolved')
+        ->and(FundingSuspenseCase::query()->sole()->resolved_by_id)->toBe('checker-2')
+        ->and(fn () => FundingReconciliationRequest::query()->sole()->delete())
+        ->toThrow(LogicException::class, 'cannot be deleted');
+});
+
+it('dual-controls compensation by retrying only an already verified posting', function () {
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $observation = providerFundingObservationForSettlement();
+    $intent = verifiedFundingIntentForSettlement($wallet, $observation);
+    $case = app(OpenFundingSuspenseCase::class)->handle(
+        provider: 'netbank',
+        reasonCode: 'verified_posting_failed',
+        intent: $intent,
+        observation: $observation,
+    );
+    $request = app(RequestFundingReconciliation::class)->handle(
+        case: $case,
+        action: FundingReconciliationAction::CompensateVerifiedPosting,
+        actorType: 'operator',
+        actorId: 'maker-1',
+    );
+
+    $approved = app(ApproveFundingReconciliation::class)->handle(
+        $request,
+        'operator',
+        'checker-2',
+    );
+
+    expect($approved->result['outcome'])->toBe('verified_posting_compensated')
+        ->and($intent->refresh()->status)->toBe(FundingIntentStatus::Settled)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and(FundingSettlement::query()->count())->toBe(1)
+        ->and($case->refresh()->status)->toBe('resolved');
 });
 
 /**

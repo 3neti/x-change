@@ -46,6 +46,7 @@ class OpenFundingSuspenseCase
 
             if ($lockedIntent !== null && ! in_array($lockedIntent->status, [
                 FundingIntentStatus::Suspense,
+                FundingIntentStatus::Verified,
                 FundingIntentStatus::Settled,
                 FundingIntentStatus::Reversed,
             ], true)) {
