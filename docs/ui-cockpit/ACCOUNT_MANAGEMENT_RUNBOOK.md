@@ -59,6 +59,28 @@ Before creating a Funding Intent:
 
 An intent submission produces instructions only. Balance changes after authoritative provider settlement verification.
 
+## Account Funding Address
+
+Use the Account Funding Address when the payer must choose the amount on a stable QR.
+
+1. Open `/x/cockpit/funding`.
+2. Confirm the card says **Account Funding Address**, purpose-bound, and NetBank.
+3. Choose **Create Account Funding QR** or **Open Account Funding QR**.
+4. Confirm the displayed VCA is the expected masked/full address for this controlled session.
+5. Let the human payer scan, enter the amount, and authorize payment outside x-change.
+6. Choose **Check NetBank** if webhook or scheduled confirmation has not appeared.
+7. Review the sanitized Account Funding Receipt.
+
+Recognition modes:
+
+- **Observe only** records verified evidence and never changes balance.
+- **Supervised** shows **Approve verified credit** only after NetBank settlement and all limits pass.
+- **Automatic** recognizes Inventory and credits the Account without a second click after the same checks pass.
+
+The operator never enters an amount, transaction ID, payer mobile, or destination when checking or approving. The exact VCA binding determines the Account. Unknown destinations and limit breaches enter suspense.
+
+Default limits are PHP 1 minimum, PHP 50,000 maximum per transfer, and PHP 100,000 daily gross. Treat the configured values shown by the deployment as authoritative.
+
 ## Connection History
 
 Connection history is retained for investigation and audit. A prior connection does not become active merely because it appears in history. Use the current mode and provider status at the top of each card as the operational state.
@@ -104,6 +126,10 @@ The Cockpit control is enabled by default outside production. Production require
 |---|---|
 | Dedicated provider is blocked | Stop creating intents on that rail; verify credential or ownership state |
 | Webhook arrived but balance did not change | Check Funding Intent and verification state; webhook receipt alone is not a credit |
+| Account Funding Address receipt remains Observed | Confirm recognition mode; `observe_only` deliberately makes no balance change |
+| Account Funding Address receipt awaits approval | Confirm NetBank evidence and limits, then use **Approve verified credit** as the address owner |
+| Unknown Standing Funding Address | Leave in suspense; never infer an Account from mobile, amount, or timing |
+| Standing Address status changes after settlement | Treat as a reversal incident; do not edit or manually debit historical records |
 | Amount or destination mismatch | Leave the case in suspense and use maker-checker reconciliation |
 | Duplicate provider notification | Do not create a manual credit; idempotent processing should absorb it |
 | NetBank token suspected exposed | Rotate through the warned operation and follow credential incident policy |
@@ -124,5 +150,10 @@ Check desktop and narrow mobile widths:
 - Walkthrough controls stack without overflow on narrow screens.
 - Walkthrough completion shows rollback, unchanged balance, and no persistence.
 - Blocked provider options are disabled on Funding.
+- Account Funding Address card names its purpose and recognition mode.
+- Full QR/VCA appears only after the explicit private open action.
+- Check NetBank renders sanitized receipts without payer or provider transaction data.
+- Supervised approval is present only for `awaiting_approval` receipts.
+- The receipts table scrolls inside its own container at narrow widths.
 - Profile provider cards contain no mutation forms and link to Accounts.
 - No unmasked account number, wallet ID, or token appears in page text or browser history.

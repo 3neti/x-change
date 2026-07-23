@@ -8,7 +8,9 @@ The governing rule is:
 
 > A provider message is evidence, not authority to credit an Account.
 
-An Account is credited only after x-change has an open Funding Intent, validates inbound evidence, independently verifies settlement with the provider, matches the exact destination and amount, recognizes the resulting Treasury Inventory, and books the Account credit atomically.
+An Account is credited only after x-change has either an exact Funding Intent or an immutable Account Funding Address binding, independently verifies provider settlement, matches the exact destination and applicable amount policy, recognizes Treasury Inventory, and books the Account credit atomically.
+
+The long-lived destination design is specified in [Standing Funding Address Protocol](STANDING_FUNDING_ADDRESS_PROTOCOL.md).
 
 ## Canonical Grammar
 
@@ -29,13 +31,25 @@ Inbound funding stops at two explicitly separate operations:
 
 Funding is not an Allocation or Draw. An **Account** is the user-facing accounting balance. A provider bank account or EMI wallet is a **Funding Destination**, not the Account itself. Provider-reported balance remains an external fact and is not adopted as Account truth.
 
-## QR Ph Self-Top-Up and Payer Identity
+## QR Ph Payer Identity and Self-Top-Up
 
-“Self top-up” means the authenticated operator creates a Funding Intent for their own Account. That owner binding—not the payer mobile, webhook body, or QR scanner—determines which Account may receive the eventual credit.
+“Self top-up” is a user story, not a settlement classifier. An exact flow binds the authenticated operator’s Funding Intent to their Account. A standing flow binds the exact Account Funding Address to that Account. In both cases, that pre-existing binding—not the payer mobile, webhook body, or QR scanner—determines which Account may receive the eventual credit.
 
 The exact-amount QR carries a deterministic, intent-bound VCA. NetBank transaction history must prove that this VCA received the expected settled PHP amount. A mobile number reported by a provider is an optional identity assertion: when NetBank or another provider marks it as provider-verified, x-change compares the full normalized number with the owner’s verified mobile and sends a mismatch to suspense. When the provider does not supply payer identity, the VCA, exact amount, currency, and settlement status remain the authoritative matching facts.
 
 Prefixes, first characters, Pipedream transforms, and inferred daughter-account routing are prohibited. A webhook cannot create a user, verify a mobile, choose an Account, or authorize credit.
+
+## Two Funding Entry Models
+
+### Exact Funding Intent
+
+Use an expiring, one-time, exact-amount instruction when amount correlation and expiry are required.
+
+### Account Funding Address
+
+Use a stable, open-amount QR only when the exact provider destination is immutably registered with purpose `account_funding` and one Account. Provider history remains the authority. Recognition defaults to `observe_only`, with explicit `supervised` and `automatic` policies available.
+
+The same address cannot serve `account_funding`, `funding_intent`, and `payment`. Payer mobile, amount, timing, and merchant text never choose the purpose.
 
 ## Trust and Money Flow
 
@@ -203,6 +217,8 @@ The principal records are:
 - `FundingSuspenseCase`: mismatched or ambiguous evidence;
 - `FundingReconciliationRequest`: maker-checker repair request;
 - `FundingRecovery`: reversal or impairment still outstanding.
+- `StandingFundingAddress`: encrypted provider destination, immutable purpose/Account binding, mode, status, and limits;
+- `AccountFundingReceipt`: one classified provider transaction and its recognition state.
 
 Raw secrets and routing credentials do not appear in Cockpit read models, logs, audit metadata, or validation responses.
 
@@ -211,7 +227,7 @@ Raw secrets and routing credentials do not appear in Cockpit read models, logs, 
 - There is no manual credit amount control.
 - Webhooks never credit an Account directly.
 - Manual and scheduled checks never accept operator-supplied transaction facts.
-- A Funding Intent must precede recognition.
+- An exact Funding Intent or immutable Account Funding Address must precede recognition.
 - Destination selection is explicit and snapshotted.
 - Dedicated failures block; they do not fall back.
 - Provider verification is independent from webhook intake.
@@ -287,6 +303,7 @@ The package registers:
 
 ```text
 xchange:funding:verify-open --provider=netbank --limit=100
+xchange:funding:sync-standing --provider=netbank --limit=100
 ```
 
 It also registers a non-overlapping every-minute schedule when scheduled verification is enabled. The host must run Laravel’s scheduler and queue worker, but it contains no funding command, schedule, or business rule.
@@ -320,6 +337,14 @@ XCHANGE_FUNDING_SCHEDULED_VERIFICATION_BATCH_SIZE
 XCHANGE_FUNDING_SETTLEMENT_GRACE_SECONDS
 XCHANGE_FUNDING_VERIFICATION_PROVIDER_RATE_LIMIT_PER_MINUTE
 XCHANGE_FUNDING_UI_REFRESH_INTERVAL_MILLISECONDS
+XCHANGE_STANDING_FUNDING_ADDRESSES_ENABLED
+XCHANGE_STANDING_FUNDING_RECOGNITION_MODE
+XCHANGE_STANDING_FUNDING_SCHEDULED_SYNC_ENABLED
+XCHANGE_STANDING_FUNDING_SCHEDULED_BATCH_SIZE
+XCHANGE_STANDING_FUNDING_WEBHOOK_BATCH_SIZE
+XCHANGE_STANDING_FUNDING_MINIMUM_AMOUNT_MINOR
+XCHANGE_STANDING_FUNDING_MAXIMUM_AMOUNT_MINOR
+XCHANGE_STANDING_FUNDING_DAILY_LIMIT_MINOR
 XCHANGE_COCKPIT_QRPH_FUNDING_SIMULATION_ENABLED
 XCHANGE_LIFECYCLE_QRPH_SIMULATION_ENABLED
 XCHANGE_MOBILE_VERIFICATION_ENABLED
