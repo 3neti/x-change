@@ -20,6 +20,7 @@ final class ScenarioRunnerRegistry
             'execution_engine_contract_demo',
             'live_provider_verification',
             'account_management',
+            'qrph_funding_simulation',
         ], true);
     }
 
@@ -34,6 +35,7 @@ final class ScenarioRunnerRegistry
             'execution_engine_contract_demo' => app(ExecutionEngineContractScenarioRunner::class),
             'live_provider_verification' => app(LiveProviderVerificationScenarioRunner::class),
             'account_management' => app(AccountManagementScenarioRunner::class),
+            'qrph_funding_simulation' => app(QrPhFundingSimulationScenarioRunner::class),
             default => throw new RuntimeException("No lifecycle scenario runner registered for mode [{$mode}]."),
         };
     }

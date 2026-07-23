@@ -295,6 +295,17 @@ return [
             'api_executable' => false,
         ],
 
+        'qrph_funding_existing_mobile_demo' => [
+            'label' => 'QR Ph Funding Existing Mobile',
+            'description' => 'Exercises a signed QR Ph funding simulation for an existing verified mobile and rolls every change back.',
+            'category' => 'demo',
+            'tags' => ['demo', 'funding', 'qrph', 'mobile', 'rollback-only'],
+            'mode' => 'qrph_funding_simulation',
+            'mobile' => env('XCHANGE_LIFECYCLE_QRPH_MOBILE', env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987')),
+            'amount_minor' => 2_500,
+            'api_executable' => false,
+        ],
+
         /*
         |--------------------------------------------------------------------------
         | Live provider verification scenarios

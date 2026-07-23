@@ -19,6 +19,7 @@ use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
+use LBHurtado\XChange\Services\Funding\MatchFundingPayerIdentity;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 use Throwable;
 
@@ -28,6 +29,7 @@ class VerifyFundingWebhookReceipt
         private readonly FundingProviderAdapterRegistry $providers,
         private readonly TransitionFundingIntent $transition,
         private readonly RecordProviderFundingObservation $recordObservation,
+        private readonly MatchFundingPayerIdentity $matchPayerIdentity,
         private readonly OpenFundingSuspenseCase $openSuspenseCase,
         private readonly ReverseSettledFundingIntent $reverseSettlement,
     ) {}
@@ -185,7 +187,9 @@ class VerifyFundingWebhookReceipt
             return;
         }
 
-        $observation = $this->recordObservation->handle($observationData);
+        $observation = $this->recordObservation->handle(
+            $this->matchPayerIdentity->handle($intent, $observationData),
+        );
         $targetStatus = $this->targetStatus($intent, $observation);
         $eventType = match ($targetStatus) {
             FundingIntentStatus::Verified => 'provider_settlement_verified',
@@ -252,7 +256,9 @@ class VerifyFundingWebhookReceipt
             return;
         }
 
-        $observation = $this->recordObservation->handle($observationData);
+        $observation = $this->recordObservation->handle(
+            $this->matchPayerIdentity->handle($intent, $observationData),
+        );
 
         if ($observation->provider_status === 'settled') {
             return;
@@ -340,7 +346,11 @@ class VerifyFundingWebhookReceipt
         $matches = $observation->gross_amount_minor === $intent->expected_amount_minor
             && $observation->currency === $intent->currency
             && $observation->settled_at !== null
-            && data_get($observation->metadata, 'destination_verified') === true;
+            && data_get($observation->metadata, 'destination_verified') === true
+            && (
+                data_get($observation->metadata, 'payer_identity_required') !== true
+                || data_get($observation->metadata, 'payer_identity_matched') === true
+            );
 
         return $matches
             ? FundingIntentStatus::Verified

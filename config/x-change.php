@@ -412,6 +412,7 @@ return [
         'instruction_lock_seconds' => (int) env('XCHANGE_FUNDING_INSTRUCTION_LOCK_SECONDS', 30),
         'instruction_lock_wait_seconds' => (int) env('XCHANGE_FUNDING_INSTRUCTION_LOCK_WAIT_SECONDS', 5),
         'reference_hash_key' => env('XCHANGE_FUNDING_REFERENCE_HASH_KEY', env('APP_KEY')),
+        'payer_identity_hash_key' => env('XCHANGE_FUNDING_PAYER_IDENTITY_HASH_KEY', env('APP_KEY')),
         'webhook_max_body_bytes' => (int) env('XCHANGE_FUNDING_WEBHOOK_MAX_BODY_BYTES', 262_144),
         'webhook_middleware' => ['throttle:120,1'],
         'verification_lock_seconds' => (int) env('XCHANGE_FUNDING_VERIFICATION_LOCK_SECONDS', 120),
@@ -567,6 +568,9 @@ return [
     'lifecycle' => [
         ...require __DIR__.'/lifecycle-scenarios.php',
         'synthetic_funding_environments' => ['local', 'testing'],
+        'qrph_funding_simulation' => [
+            'enabled' => (bool) env('XCHANGE_QRPH_SIMULATOR_ENABLED', false),
+        ],
         'withdrawals' => [
             'service' => WithdrawalLifecycleService::class,
         ],
@@ -614,6 +618,7 @@ return [
                 'tags' => ['demo'],
                 'scenarios' => [
                     'money_semantics_voucher_liability_demo',
+                    'qrph_funding_existing_mobile_demo',
                 ],
             ],
 
