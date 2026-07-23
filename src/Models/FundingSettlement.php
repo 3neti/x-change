@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 
 class FundingSettlement extends Model
@@ -59,5 +60,10 @@ class FundingSettlement extends Model
     public function providerFundingObservation(): BelongsTo
     {
         return $this->belongsTo(ProviderFundingObservation::class);
+    }
+
+    public function recoveryPayments(): HasMany
+    {
+        return $this->hasMany(FundingRecoveryPayment::class);
     }
 }

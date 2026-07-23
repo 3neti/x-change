@@ -19,6 +19,7 @@ use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 use LBHurtado\XChange\Models\FundingAccountHold;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingRecovery;
+use LBHurtado\XChange\Models\FundingRecoveryPayment;
 use LBHurtado\XChange\Models\FundingSettlement;
 
 it('atomically recognizes verified net inventory and credits the Account once', function () {
@@ -176,6 +177,39 @@ it('rejects mismatched reversal evidence without changing Inventory or Account b
         ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(24_950)
         ->and(TreasuryInventoryOperation::query()->count())->toBe(1)
         ->and(FundingRecovery::query()->count())->toBe(0);
+});
+
+it('applies later verified funding to an outstanding recovery and releases the hold', function () {
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $firstObservation = providerFundingObservationForSettlement();
+    $firstIntent = verifiedFundingIntentForSettlement($wallet, $firstObservation);
+    app(SettleVerifiedFundingIntent::class)->handle($firstIntent);
+    $wallet->withdraw(20_000, ['source' => 'simulated_spend']);
+    app(ReverseSettledFundingIntent::class)->handle(
+        $firstIntent->refresh(),
+        providerFundingReversalObservation($firstObservation),
+    );
+
+    $secondObservation = providerFundingObservationForSettlement();
+    $secondIntent = verifiedFundingIntentForSettlement($wallet, $secondObservation);
+    app(SettleVerifiedFundingIntent::class)->handle($secondIntent);
+
+    $recovery = FundingRecovery::query()->sole();
+    $hold = FundingAccountHold::query()->sole();
+    $payment = FundingRecoveryPayment::query()->sole();
+
+    expect($recovery->recovered_amount_minor)->toBe(24_950)
+        ->and($recovery->outstanding_amount_minor)->toBe(0)
+        ->and($recovery->status)->toBe('recovered')
+        ->and($hold->outstanding_amount_minor)->toBe(0)
+        ->and($hold->status)->toBe('released')
+        ->and($hold->released_by_type)->toBe('funding_recovery_runtime')
+        ->and($payment->amount_minor)->toBe(20_000)
+        ->and($payment->funding_settlement_id)->toBe($secondIntent->settlement()->sole()->getKey())
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(4_950)
+        ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(24_950)
+        ->and(FundingAccountHold::query()->where('status', 'active')->count())->toBe(0);
 });
 
 /**

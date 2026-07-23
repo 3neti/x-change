@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
@@ -78,5 +79,10 @@ class FundingRecovery extends Model
     public function accountHold(): HasOne
     {
         return $this->hasOne(FundingAccountHold::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(FundingRecoveryPayment::class);
     }
 }

@@ -23,6 +23,7 @@ class SettleVerifiedFundingIntent
         private readonly TreasuryInventoryOperationContract $treasury,
         private readonly FundingAccountCreditContract $accounts,
         private readonly TransitionFundingIntent $transition,
+        private readonly ApplyFundingRecoveryToAccount $applyRecovery,
     ) {}
 
     public function handle(FundingIntent $intent): FundingSettlement
@@ -112,6 +113,11 @@ class SettleVerifiedFundingIntent
                     'provider_verification_source' => $observation->verification_source,
                 ],
             ]);
+            $recoveryAppliedAmountMinor = $this->applyRecovery->handle(
+                accountReference: $locked->account_reference,
+                account: $account,
+                settlement: $settlement,
+            );
 
             $this->transition->handle($locked, new FundingIntentTransitionData(
                 status: FundingIntentStatus::Settled,
@@ -124,6 +130,7 @@ class SettleVerifiedFundingIntent
                 providerTransactionId: $observation->provider_transaction_id,
                 metadata: [
                     'net_amount_minor' => $observation->net_amount_minor,
+                    'recovery_applied_amount_minor' => $recoveryAppliedAmountMinor,
                     'treasury_operation_reference' => $recognition->operationReference,
                     'wallet_transaction_uuid' => $transaction->uuid,
                 ],
