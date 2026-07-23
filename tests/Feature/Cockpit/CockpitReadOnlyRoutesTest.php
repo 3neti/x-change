@@ -12,6 +12,7 @@ use LBHurtado\XChange\Data\PayCodeLinksData;
 use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Http\Controllers\PayCode\GeneratePayCodeController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingIntentController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQrPhFundingSimulationController;
 use LBHurtado\XChange\Services\Cockpit\DatabaseCockpitOperatorIssuanceActivityRepository;
 
 it('registers read-only cockpit routes under the x cockpit namespace', function () {
@@ -1196,11 +1197,14 @@ it('registers only the guarded issuance, funding, and Account Cockpit mutation r
         'x-change.cockpit.accounts.providers.funding-destination.update',
         'x-change.cockpit.accounts.providers.netbank.token-rotation.store',
         'x-change.cockpit.funding.intents.store',
+        'x-change.cockpit.funding.scenarios.qrph.store',
         'x-change.cockpit.funding.suspense.reconciliation-requests.store',
         'x-change.cockpit.funding.reconciliations.approve',
         'x-change.cockpit.quick-generate.store',
     ])->and(Route::getRoutes()->getByName('x-change.cockpit.funding.intents.store')?->getActionName())
-        ->toBe(CockpitFundingIntentController::class);
+        ->toBe(CockpitFundingIntentController::class)
+        ->and(Route::getRoutes()->getByName('x-change.cockpit.funding.scenarios.qrph.store')?->getActionName())
+        ->toBe(CockpitQrPhFundingSimulationController::class);
 });
 
 it('documents the quick generate issuance boundary before mutation wiring', function () {

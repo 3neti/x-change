@@ -20,9 +20,11 @@ function prepareQrPhFundingLifecycleIssuer(): FakeLifecycleUser
         'name' => 'QR Ph Scenario User',
         'email' => 'qrph-scenario@example.test',
         'password' => bcrypt('password'),
+    ]);
+    $issuer->forceFill([
         'mobile' => '639173011987',
         'mobile_verified_at' => now(),
-    ]);
+    ])->save();
     fundTestUserWallet($issuer);
 
     return $issuer;

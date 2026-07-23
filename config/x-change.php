@@ -154,6 +154,17 @@ return [
             ],
         ],
 
+        'qrph_funding_simulation' => [
+            'enabled' => (bool) env(
+                'XCHANGE_COCKPIT_QRPH_FUNDING_SIMULATION_ENABLED',
+                env('APP_ENV') !== 'production',
+            ),
+            'middleware' => [
+                'verified',
+                'throttle:3,1',
+            ],
+        ],
+
         'header_provider_balance' => [
             'enabled' => (bool) env('XCHANGE_COCKPIT_HEADER_PROVIDER_BALANCE_ENABLED', true),
         ],
@@ -569,7 +580,10 @@ return [
         ...require __DIR__.'/lifecycle-scenarios.php',
         'synthetic_funding_environments' => ['local', 'testing'],
         'qrph_funding_simulation' => [
-            'enabled' => (bool) env('XCHANGE_QRPH_SIMULATOR_ENABLED', false),
+            'enabled' => (bool) env(
+                'XCHANGE_LIFECYCLE_QRPH_SIMULATION_ENABLED',
+                env('APP_ENV') !== 'production',
+            ),
         ],
         'withdrawals' => [
             'service' => WithdrawalLifecycleService::class,

@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
 import Funding from '../../../resources/js/cockpit/pages/Funding.vue';
 
@@ -97,7 +97,64 @@ const fundingReadModel = {
     },
 };
 
+const fundingSimulation = {
+    enabled: true,
+    mode: 'rollback-only' as const,
+    provider_calls: false as const,
+    balance_changes: false as const,
+    amount: '₱25.00',
+    mobile_ready: true,
+    qr_code: 'data:image/png;base64,AA==',
+};
+
+const fundingSimulationResult = {
+    schema: 'x-change.lifecycle.qrph-funding-simulation.v1',
+    scenario: 'qrph_funding_existing_mobile_demo',
+    label: 'QR Ph Funding Existing Mobile',
+    mode: 'qrph_funding_simulation',
+    success: true,
+    message: 'Rollback-only QR Ph funding lifecycle completed.',
+    rollback_completed: true,
+    simulation: {
+        rollback_only: true,
+        provider_calls: 0,
+        simulated_provider_ledger: true,
+        signed_webhook: true,
+        authoritative_verification: true,
+        persisted: false,
+    },
+    balance: {
+        before_minor: 1_000_000,
+        after_minor: 1_002_500,
+        credited_minor: 2_500,
+        after_replay_minor: 1_002_500,
+    },
+    steps: [
+        {
+            key: 'verified_mobile_resolved',
+            label: 'Verified mobile resolves the intended Account',
+            outcome: 'ready',
+            facts: [
+                {
+                    label: 'Settlement authority',
+                    value: 'Provider evidence only',
+                },
+            ],
+        },
+        {
+            key: 'identical_replay_noop',
+            label: 'Identical callback replay is a no-op',
+            outcome: 'protected',
+            facts: [{ label: 'Second credit', value: 'No' }],
+        },
+    ],
+};
+
 describe('Cockpit Funding foundation', () => {
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
     it('renders provider-verified funding posture and operational facts', () => {
         const wrapper = mount(Funding, {
             props: {
@@ -198,5 +255,42 @@ describe('Cockpit Funding foundation', () => {
         await nextTick();
 
         expect(wrapper.text()).toContain('no more than two decimal places');
+    });
+
+    it('runs and steps through the rollback-only QR Ph funding simulation', async () => {
+        const fetch = vi.fn().mockResolvedValue({
+            ok: true,
+            json: async () => fundingSimulationResult,
+        });
+        vi.stubGlobal('fetch', fetch);
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: fundingReadModel,
+                funding_simulation: fundingSimulation,
+            },
+        });
+
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-qrph-funding-simulation"]')
+                .text(),
+        ).toContain('No monetary value');
+        expect(wrapper.text()).toContain('Simulate a ₱25.00 QR Ph');
+
+        await wrapper
+            .get('[data-testid="run-qrph-funding-simulation"]')
+            .trigger('click');
+        await nextTick();
+        await nextTick();
+
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(
+            wrapper
+                .get('[data-testid="qrph-funding-simulation-stepper"]')
+                .text(),
+        ).toContain('Verified mobile resolves the intended Account');
+        expect(wrapper.text()).toContain(
+            'Rollback confirmed · one simulated credit',
+        );
     });
 });

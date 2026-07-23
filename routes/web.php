@@ -24,6 +24,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingReconciliationA
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingReconciliationRequestController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitNetbankTokenRotationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeExplorerPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQrPhFundingSimulationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateMutationRouteShellController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGeneratePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitRuntimeProfilePageController;
@@ -65,6 +66,11 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         });
         Route::get('funding', CockpitFundingPageController::class)->name('x-change.cockpit.funding.index');
         Route::post('funding/intents', CockpitFundingIntentController::class)->name('x-change.cockpit.funding.intents.store');
+        Route::post(
+            'funding/scenarios/qrph',
+            CockpitQrPhFundingSimulationController::class,
+        )->middleware((array) config('x-change.cockpit.qrph_funding_simulation.middleware', []))
+            ->name('x-change.cockpit.funding.scenarios.qrph.store');
         Route::post(
             'funding/suspense/{case:reference}/reconciliation-requests',
             CockpitFundingReconciliationRequestController::class,

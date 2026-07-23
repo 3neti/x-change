@@ -2,17 +2,29 @@
 import { useForm } from '@inertiajs/vue3';
 import { approve as approveReconciliation } from '@/routes/x-change/cockpit/funding/reconciliations';
 import { store as storeFundingIntent } from '@/routes/x-change/cockpit/funding/intents';
+import { store as runQrPhFundingSimulationRoute } from '@/routes/x-change/cockpit/funding/scenarios/qrph';
 import { store as storeReconciliationRequest } from '@/routes/x-change/cockpit/funding/suspense/reconciliation-requests';
 import { computed, ref } from 'vue';
 import CockpitManualCopyButton from '../components/CockpitManualCopyButton.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
-import type { CockpitFundingPageProps } from '../types';
+import type {
+    CockpitFundingPageProps,
+    CockpitQrPhFundingSimulationResult,
+} from '../types';
 
 const props = defineProps<CockpitFundingPageProps>();
 const amount = ref('');
 const amountError = ref<string | null>(null);
 const activeReconciliationCase = ref<string | null>(null);
 const activeApproval = ref<string | null>(null);
+const simulationRunning = ref(false);
+const simulationError = ref<string | null>(null);
+const simulationResult = ref<CockpitQrPhFundingSimulationResult | null>(null);
+const activeSimulationStepIndex = ref(0);
+const activeSimulationStep = computed(
+    () =>
+        simulationResult.value?.steps[activeSimulationStepIndex.value] ?? null,
+);
 const availableFundingProviders = computed(() =>
     props.funding_read_model.providers.filter(
         (provider) => provider.status !== 'blocked',
@@ -176,6 +188,84 @@ function reconciliationActionLabel(action: string): string {
         }[action] ?? displayLabel(action)
     );
 }
+
+async function runQrPhFundingSimulation(): Promise<void> {
+    if (
+        simulationRunning.value ||
+        props.funding_simulation?.enabled !== true ||
+        props.funding_simulation.mobile_ready !== true
+    ) {
+        return;
+    }
+
+    simulationRunning.value = true;
+    simulationError.value = null;
+    const route = runQrPhFundingSimulationRoute();
+
+    try {
+        const response = await fetch(route.url, {
+            method: route.method.toUpperCase(),
+            credentials: 'same-origin',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                ...csrfHeader(),
+            },
+        });
+        const body = await safeJson(response);
+
+        if (!response.ok) {
+            simulationError.value =
+                typeof body.message === 'string'
+                    ? body.message
+                    : 'The QR Ph simulation could not complete safely.';
+
+            return;
+        }
+
+        if (
+            body.schema !== 'x-change.lifecycle.qrph-funding-simulation.v1' ||
+            !Array.isArray(body.steps)
+        ) {
+            simulationError.value =
+                'The QR Ph simulation returned an unexpected response.';
+
+            return;
+        }
+
+        simulationResult.value = body as CockpitQrPhFundingSimulationResult;
+        activeSimulationStepIndex.value = 0;
+    } catch {
+        simulationError.value =
+            'The QR Ph simulation could not reach the Cockpit service.';
+    } finally {
+        simulationRunning.value = false;
+    }
+}
+
+function csrfHeader(): Record<string, string> {
+    if (typeof document === 'undefined') {
+        return {};
+    }
+
+    const token = document.querySelector<HTMLMetaElement>(
+        'meta[name="csrf-token"]',
+    )?.content;
+
+    return token ? { 'X-CSRF-TOKEN': token } : {};
+}
+
+async function safeJson(response: Response): Promise<Record<string, unknown>> {
+    try {
+        const body = await response.json();
+
+        return typeof body === 'object' && body !== null
+            ? (body as Record<string, unknown>)
+            : {};
+    } catch {
+        return {};
+    }
+}
 </script>
 
 <template>
@@ -244,6 +334,204 @@ function reconciliationActionLabel(action: string): string {
                             Inventory recognition and Account posting occur
                             atomically.
                         </p>
+                    </div>
+                </div>
+            </section>
+
+            <section
+                v-if="funding_simulation"
+                class="overflow-hidden rounded-2xl border border-violet-200 bg-white shadow-sm dark:border-violet-950 dark:bg-slate-900"
+                data-testid="cockpit-qrph-funding-simulation"
+            >
+                <div
+                    class="grid gap-5 p-5 md:grid-cols-[10rem_minmax(0,1fr)_auto] md:items-center"
+                >
+                    <div
+                        class="mx-auto rounded-xl border border-slate-200 bg-white p-2 shadow-sm md:mx-0"
+                    >
+                        <img
+                            :src="funding_simulation.qr_code"
+                            alt="Illustrative QR Ph funding simulation code"
+                            class="size-36"
+                        />
+                    </div>
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <p
+                                class="text-xs font-semibold tracking-[0.16em] text-violet-700 uppercase dark:text-violet-300"
+                            >
+                                QR Ph lifecycle lab
+                            </p>
+                            <span
+                                class="rounded-full bg-violet-50 px-2 py-1 text-[0.65rem] font-semibold text-violet-700 uppercase dark:bg-violet-950 dark:text-violet-200"
+                            >
+                                Rollback only
+                            </span>
+                            <span
+                                class="rounded-full bg-slate-100 px-2 py-1 text-[0.65rem] font-semibold text-slate-600 uppercase dark:bg-slate-800 dark:text-slate-300"
+                            >
+                                No monetary value
+                            </span>
+                        </div>
+                        <h2 class="mt-1.5 text-lg font-semibold">
+                            Simulate a {{ funding_simulation.amount }} QR Ph
+                            funding payment
+                        </h2>
+                        <p
+                            class="mt-1 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-400"
+                        >
+                            Appreciate how a verified payer mobile resolves the
+                            Account, how signed evidence is independently
+                            checked, and why an identical callback cannot credit
+                            twice. Every database and balance change is rolled
+                            back.
+                        </p>
+                    </div>
+                    <div class="md:text-right">
+                        <button
+                            type="button"
+                            :disabled="
+                                simulationRunning ||
+                                funding_simulation.enabled !== true ||
+                                funding_simulation.mobile_ready !== true
+                            "
+                            class="h-10 rounded-lg bg-violet-600 px-4 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            data-testid="run-qrph-funding-simulation"
+                            @click="runQrPhFundingSimulation"
+                        >
+                            {{
+                                simulationRunning
+                                    ? 'Simulating safely…'
+                                    : funding_simulation.enabled !== true
+                                      ? 'Unavailable here'
+                                      : funding_simulation.mobile_ready !== true
+                                        ? 'Verified mobile required'
+                                        : 'Simulate scan and payment'
+                            }}
+                        </button>
+                        <p class="mt-2 text-xs text-slate-500">
+                            0 provider calls · 0 retained changes
+                        </p>
+                    </div>
+                </div>
+
+                <div
+                    v-if="simulationError"
+                    class="border-t border-rose-200 bg-rose-50 px-5 py-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/20 dark:text-rose-200"
+                    role="alert"
+                >
+                    {{ simulationError }}
+                </div>
+
+                <div
+                    v-if="simulationResult && activeSimulationStep"
+                    class="border-t border-violet-100 bg-slate-50/70 p-4 sm:p-5 dark:border-violet-950 dark:bg-slate-950/40"
+                    data-testid="qrph-funding-simulation-stepper"
+                >
+                    <div
+                        class="flex flex-wrap items-center justify-between gap-3"
+                    >
+                        <div
+                            class="flex flex-wrap items-center gap-1.5"
+                            aria-label="QR Ph simulation steps"
+                        >
+                            <button
+                                v-for="(step, index) in simulationResult.steps"
+                                :key="step.key"
+                                type="button"
+                                class="flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition"
+                                :class="
+                                    index === activeSimulationStepIndex
+                                        ? 'bg-violet-600 text-white'
+                                        : 'bg-white text-slate-500 ring-1 ring-slate-200 dark:bg-slate-950 dark:ring-slate-700'
+                                "
+                                :aria-label="`Open step ${index + 1}: ${step.label}`"
+                                @click="activeSimulationStepIndex = index"
+                            >
+                                {{ index + 1 }}
+                            </button>
+                        </div>
+                        <p class="text-xs font-medium text-slate-500">
+                            Step {{ activeSimulationStepIndex + 1 }} of
+                            {{ simulationResult.steps.length }}
+                        </p>
+                    </div>
+
+                    <article
+                        class="mt-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950"
+                    >
+                        <div
+                            class="flex flex-wrap items-start justify-between gap-3"
+                        >
+                            <h3 class="text-base font-semibold">
+                                {{ activeSimulationStep.label }}
+                            </h3>
+                            <span
+                                class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+                            >
+                                {{ displayLabel(activeSimulationStep.outcome) }}
+                            </span>
+                        </div>
+                        <dl
+                            class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3"
+                        >
+                            <div
+                                v-for="fact in activeSimulationStep.facts"
+                                :key="fact.label"
+                                class="rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-900"
+                            >
+                                <dt class="text-[0.68rem] text-slate-500">
+                                    {{ fact.label }}
+                                </dt>
+                                <dd class="mt-0.5 text-xs font-semibold">
+                                    {{ fact.value }}
+                                </dd>
+                            </div>
+                        </dl>
+                    </article>
+
+                    <div
+                        class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                        <p
+                            class="text-xs font-medium text-emerald-700 dark:text-emerald-300"
+                        >
+                            Rollback confirmed · one simulated credit · replay
+                            no-op · nothing persisted
+                        </p>
+                        <div class="flex gap-2">
+                            <button
+                                type="button"
+                                :disabled="activeSimulationStepIndex === 0"
+                                class="h-9 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold disabled:opacity-40 dark:border-slate-700 dark:bg-slate-950"
+                                @click="
+                                    activeSimulationStepIndex = Math.max(
+                                        0,
+                                        activeSimulationStepIndex - 1,
+                                    )
+                                "
+                            >
+                                Previous
+                            </button>
+                            <button
+                                type="button"
+                                class="h-9 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white dark:bg-violet-400 dark:text-slate-950"
+                                @click="
+                                    activeSimulationStepIndex =
+                                        activeSimulationStepIndex <
+                                        simulationResult.steps.length - 1
+                                            ? activeSimulationStepIndex + 1
+                                            : 0
+                                "
+                            >
+                                {{
+                                    activeSimulationStepIndex <
+                                    simulationResult.steps.length - 1
+                                        ? 'Next'
+                                        : 'Restart'
+                                }}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </section>

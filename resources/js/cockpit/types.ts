@@ -546,6 +546,52 @@ export type CockpitFundingPageProps = CockpitHeaderPageProps & {
     funding_read_model: CockpitFundingReadModel;
     funding_instruction?: CockpitFundingInstruction | null;
     funding_notice?: string | null;
+    funding_simulation?: CockpitQrPhFundingSimulation;
+};
+
+export type CockpitQrPhFundingSimulation = {
+    enabled: boolean;
+    mode: 'rollback-only';
+    provider_calls: false;
+    balance_changes: false;
+    amount: string;
+    mobile_ready: boolean;
+    qr_code: string;
+};
+
+export type CockpitQrPhFundingSimulationStep = {
+    key: string;
+    label: string;
+    outcome: string;
+    facts: Array<{
+        label: string;
+        value: string;
+    }>;
+};
+
+export type CockpitQrPhFundingSimulationResult = {
+    schema: 'x-change.lifecycle.qrph-funding-simulation.v1';
+    scenario: string;
+    label: string;
+    mode: 'qrph_funding_simulation';
+    success: boolean;
+    message: string;
+    rollback_completed: boolean;
+    simulation: {
+        rollback_only: true;
+        provider_calls: 0;
+        simulated_provider_ledger: true;
+        signed_webhook: true;
+        authoritative_verification: true;
+        persisted: false;
+    };
+    balance: {
+        before_minor: number;
+        after_minor: number;
+        credited_minor: number;
+        after_replay_minor: number;
+    };
+    steps: CockpitQrPhFundingSimulationStep[];
 };
 
 export type CockpitFundingInstruction = {

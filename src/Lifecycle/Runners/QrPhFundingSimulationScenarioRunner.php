@@ -66,6 +66,18 @@ final class QrPhFundingSimulationScenarioRunner implements ScenarioRunnerContrac
             );
         }
 
+        if (! $this->hasVerifiedScenarioMobile($context)) {
+            return new ScenarioRunResult(
+                exitCode: Command::FAILURE,
+                payload: $this->payload($context, [
+                    'success' => false,
+                    'message' => 'A verified mobile is required before the QR Ph funding simulation can run.',
+                    'steps' => [],
+                    'rollback_completed' => true,
+                ]),
+            );
+        }
+
         $connection = $this->databases->connection();
         $startingLevel = $connection->transactionLevel();
         $startingState = $this->stateDigest($context->issuer);
@@ -125,10 +137,6 @@ final class QrPhFundingSimulationScenarioRunner implements ScenarioRunnerContrac
             throw new \InvalidArgumentException('The scenario requires a valid mobile number.');
         }
 
-        $owner->forceFill([
-            'mobile' => $mobile,
-            'mobile_verified_at' => now(),
-        ])->save();
         $wallet = $this->wallets->resolveForUser($owner);
         $accountReference = 'wallet:'.$wallet->uuid;
         $balanceBefore = (int) $this->wallets->getBalance($wallet);
@@ -355,5 +363,20 @@ final class QrPhFundingSimulationScenarioRunner implements ScenarioRunnerContrac
     private function maskedMobile(string $mobile): string
     {
         return substr($mobile, 0, 2).'••••••'.substr($mobile, -4);
+    }
+
+    private function hasVerifiedScenarioMobile(ScenarioRunContext $context): bool
+    {
+        $scenarioMobile = MobileNumber::normalize($context->baseClaimMobile);
+        $ownerMobile = MobileNumber::normalize(
+            is_string($context->issuer->getRawOriginal('mobile'))
+                ? $context->issuer->getRawOriginal('mobile')
+                : null,
+        );
+
+        return $scenarioMobile !== null
+            && $ownerMobile !== null
+            && hash_equals($ownerMobile, $scenarioMobile)
+            && $context->issuer->getAttribute('mobile_verified_at') !== null;
     }
 }

@@ -76,6 +76,10 @@ export default defineConfig({
                 __dirname,
                 'tests/frontend/stubs/funding-intent-route.ts',
             ),
+            '@/routes/x-change/cockpit/funding/scenarios/qrph': path.resolve(
+                __dirname,
+                'tests/frontend/stubs/qrph-funding-simulation-route.ts',
+            ),
             '@/routes/x-change/cockpit/funding/reconciliations': path.resolve(
                 __dirname,
                 'tests/frontend/stubs/funding-reconciliation-routes.ts',
