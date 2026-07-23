@@ -38,6 +38,13 @@ return [
         'instruction_items' => env('XCHANGE_LIFECYCLE_SEEDER_INSTRUCTION_ITEMS'),
     ],
 
+    'qrph_funding_simulation' => [
+        'enabled' => (bool) env(
+            'XCHANGE_LIFECYCLE_QRPH_SIMULATION_ENABLED',
+            env('APP_ENV') !== 'production',
+        ),
+    ],
+
     'scenarios' => [
 
         /*

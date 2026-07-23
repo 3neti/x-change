@@ -1453,17 +1453,28 @@ class XChangeServiceProvider extends ServiceProvider
     protected function mergeLifecycleScenarioDefaults(): void
     {
         $packageLifecycle = require $this->packagePath('config/lifecycle-scenarios.php');
-        $packageScenarios = $packageLifecycle['scenarios'] ?? null;
-        $configuredScenarios = $this->app['config']->get('x-change.lifecycle.scenarios');
+        $configuredLifecycle = $this->app['config']->get('x-change.lifecycle', []);
 
-        if (! is_array($packageScenarios) || ! is_array($configuredScenarios)) {
+        if (! is_array($packageLifecycle) || ! is_array($configuredLifecycle)) {
             return;
         }
 
-        $this->app['config']->set(
-            'x-change.lifecycle.scenarios',
-            array_replace($packageScenarios, $configuredScenarios),
-        );
+        foreach ($packageLifecycle as $key => $value) {
+            if ($key === 'scenarios' && is_array($value)) {
+                $configuredScenarios = $configuredLifecycle['scenarios'] ?? [];
+
+                $this->app['config']->set(
+                    'x-change.lifecycle.scenarios',
+                    array_replace($value, is_array($configuredScenarios) ? $configuredScenarios : []),
+                );
+
+                continue;
+            }
+
+            if (! array_key_exists($key, $configuredLifecycle)) {
+                $this->app['config']->set("x-change.lifecycle.{$key}", $value);
+            }
+        }
     }
 
     protected function alignWalletDefaults(): void

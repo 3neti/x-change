@@ -10,6 +10,7 @@ use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioRunOptions;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\SimulatedFundingTransaction;
+use LBHurtado\XChange\Providers\XChangeServiceProvider;
 use LBHurtado\XChange\Tests\Fakes\User as FakeLifecycleUser;
 
 function prepareQrPhFundingLifecycleIssuer(): FakeLifecycleUser
@@ -103,6 +104,25 @@ it('refuses the QR Ph funding lifecycle when its scenario gate is disabled', fun
     expect($result->exitCode)->toBe(Command::FAILURE)
         ->and(data_get($result->payload, 'success'))->toBeFalse()
         ->and(data_get($result->payload, 'message'))->toContain('disabled');
+});
+
+it('merges the QR Ph lifecycle gate into stale published host configuration', function () {
+    config()->set('x-change.lifecycle', [
+        'scenarios' => [
+            'host_defined_scenario' => [
+                'label' => 'Host-defined scenario',
+                'mode' => 'default',
+            ],
+        ],
+    ]);
+
+    (new XChangeServiceProvider(app()))->register();
+
+    expect(config('x-change.lifecycle.qrph_funding_simulation.enabled'))->toBeTrue()
+        ->and(config('x-change.lifecycle.scenarios.host_defined_scenario.label'))
+        ->toBe('Host-defined scenario')
+        ->and(config('x-change.lifecycle.scenarios.qrph_funding_existing_mobile_demo.mode'))
+        ->toBe('qrph_funding_simulation');
 });
 
 it('runs the QR Ph funding lifecycle through the package command', function () {
