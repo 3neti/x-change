@@ -54,12 +54,20 @@ it('persists an immutable purpose-bound address without storing plaintext', func
         ->and($second->address->purpose)->toBe(FundingAddressPurpose::AccountFunding)
         ->and($second->address->recognition_mode)->toBe(FundingRecognitionMode::ObserveOnly)
         ->and(StandingFundingAddress::query()->count())->toBe(1)
-        ->and($second->providerAddress->fundingAddress)->toBe($provider->fundingAddress);
+        ->and($second->providerAddress->fundingAddress)->toBe($provider->fundingAddress)
+        ->and($provider->requests)->toHaveCount(2)
+        ->and($provider->requests[1]->existingFundingAddress)->toBe(
+            $first->providerAddress->fundingAddress,
+        );
 
     $stored = DB::table('x_change_standing_funding_addresses')->sole();
 
     expect($stored->funding_address_ciphertext)->not->toContain($provider->fundingAddress)
-        ->and($stored->funding_address_hash)->toBe(hash('sha256', $provider->fundingAddress));
+        ->and($stored->funding_address_hash)->toBe(hash('sha256', $provider->fundingAddress))
+        ->and($stored->derivation_scheme)->toBe('netbank-account-hmac-v2')
+        ->and($stored->derivation_key_id)->toBe('test-key-v2')
+        ->and($stored->derivation_counter)->toBe(0)
+        ->and($stored->reference_length)->toBe(11);
 });
 
 it('recognizes settled provider evidence and credits an Account exactly once', function () {
@@ -261,10 +269,13 @@ function standingFundingObservation(
 
 final class StandingFundingAddressProviderFake implements StandingFundingAddressProvider
 {
-    public string $fundingAddress = '915001234567890123456';
+    public string $fundingAddress = '9150012345678901';
 
     /** @var list<ProviderFundingObservationData> */
     public array $observations = [];
+
+    /** @var list<StandingFundingAddressRequestData> */
+    public array $requests = [];
 
     public function providerCode(): string
     {
@@ -274,10 +285,17 @@ final class StandingFundingAddressProviderFake implements StandingFundingAddress
     public function createStandingFundingAddress(
         StandingFundingAddressRequestData $request,
     ): StandingFundingAddressData {
-        $this->fundingAddress = '91500'.substr(hash(
-            'sha256',
-            $request->ownerReference.'|'.$request->purpose->value,
-        ), 0, 16);
+        $this->requests[] = $request;
+        $this->fundingAddress = $request->existingFundingAddress
+            ?? '91500'.str_pad(
+                (string) (hexdec(substr(hash(
+                    'sha256',
+                    $request->ownerReference.'|'.$request->purpose->value.'|'.$request->derivationCounter,
+                ), 0, 8)) % 100_000_000_000),
+                11,
+                '0',
+                STR_PAD_LEFT,
+            );
 
         return new StandingFundingAddressData(
             provider: 'netbank',
@@ -294,6 +312,18 @@ final class StandingFundingAddressProviderFake implements StandingFundingAddress
                 embeddedAmount: false,
                 providerGenerated: true,
             ),
+            displayData: [
+                'derivation_scheme' => $request->existingFundingAddress === null
+                    ? 'netbank-account-hmac-v2'
+                    : null,
+                'derivation_key_id' => $request->existingFundingAddress === null
+                    ? 'test-key-v2'
+                    : null,
+                'derivation_counter' => $request->existingFundingAddress === null
+                    ? $request->derivationCounter
+                    : null,
+                'reference_length' => 11,
+            ],
         );
     }
 
