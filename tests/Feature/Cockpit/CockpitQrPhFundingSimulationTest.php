@@ -95,11 +95,6 @@ it('requires an already verified mobile for the Cockpit QR Ph simulation', funct
 
     $this->postJson(route(
         'x-change.cockpit.funding.scenarios.qrph.store',
-    ))->assertUnprocessable()
-        ->assertJsonPath('success', false)
-        ->assertJsonPath('rollback_completed', true)
-        ->assertJsonPath(
-            'message',
-            'A verified mobile is required before the QR Ph funding simulation can run.',
-        );
+    ))->assertForbidden()
+        ->assertJsonPath('message', 'Verify your mobile number before continuing.');
 });

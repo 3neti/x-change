@@ -108,6 +108,10 @@ export default defineConfig({
                 __dirname,
                 'tests/frontend/stubs/accounts-route.ts',
             ),
+            '@/routes/x-change/onboarding/mobile-verification': path.resolve(
+                __dirname,
+                'tests/frontend/stubs/mobile-verification-routes.ts',
+            ),
 
             '@': path.resolve(__dirname, 'resources/js'),
         },

@@ -45,7 +45,7 @@ class CreateNewMobileFirstUser implements CreatesNewUsers
         $user->forceFill([
             'name' => $input['name'] ?: $mobile,
             'mobile' => $mobile,
-            'mobile_verified_at' => now(),
+            'mobile_verified_at' => null,
             'email' => $input['email'] ?: null,
             'password' => Hash::make((string) $input['password']),
         ]);

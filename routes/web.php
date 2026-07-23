@@ -31,9 +31,13 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitRuntimeProfilePageCont
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitVoucherDetailPageController;
 use LBHurtado\XChange\Http\Controllers\Web\DashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\LinkPaynamicsWalletController;
+use LBHurtado\XChange\Http\Controllers\Web\Onboarding\MobileVerificationChallengeController;
+use LBHurtado\XChange\Http\Controllers\Web\Onboarding\MobileVerificationPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Onboarding\MobileVerificationSubmissionController;
 use LBHurtado\XChange\Http\Controllers\Web\PayCodeCreatePageController;
 use LBHurtado\XChange\Http\Controllers\Web\PayCodeIndexPageController;
 use LBHurtado\XChange\Http\Controllers\Web\PayCodeShowPageController;
+use LBHurtado\XChange\Http\Middleware\RequireVerifiedMobile;
 use LBHurtado\XChange\Http\Middleware\ShareCockpitHeaderReadModel;
 use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
 
@@ -41,6 +45,15 @@ $middleware = config('x-change.routes.web_middleware', ['web', 'auth']);
 
 // Authenticated operator routes
 Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->group(function (): void {
+    Route::get('onboarding/mobile/verify', MobileVerificationPageController::class)
+        ->name('x-change.onboarding.mobile-verification.show');
+    Route::post('onboarding/mobile/challenge', MobileVerificationChallengeController::class)
+        ->middleware('throttle:3,1')
+        ->name('x-change.onboarding.mobile-verification.challenge');
+    Route::post('onboarding/mobile/verify', MobileVerificationSubmissionController::class)
+        ->middleware('throttle:6,1')
+        ->name('x-change.onboarding.mobile-verification.verify');
+
     Route::get('dashboard', DashboardPageController::class)->name('x-change.dashboard');
 
     Route::prefix('cockpit')->middleware(ShareCockpitHeaderReadModel::class)->group(function (): void {
@@ -69,7 +82,10 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         Route::post(
             'funding/scenarios/qrph',
             CockpitQrPhFundingSimulationController::class,
-        )->middleware((array) config('x-change.cockpit.qrph_funding_simulation.middleware', []))
+        )->middleware([
+            ...(array) config('x-change.cockpit.qrph_funding_simulation.middleware', []),
+            RequireVerifiedMobile::class,
+        ])
             ->name('x-change.cockpit.funding.scenarios.qrph.store');
         Route::post(
             'funding/suspense/{case:reference}/reconciliation-requests',

@@ -505,6 +505,17 @@ return [
         'mobile_first_auth' => env('XCHANGE_MOBILE_FIRST_AUTH', true),
         'email_required' => env('XCHANGE_AUTH_EMAIL_REQUIRED', false),
         'auth_enforcement' => env('XCHANGE_ONBOARDING_AUTH_ENFORCEMENT', 'scaffold'),
+        'mobile_verification' => [
+            'enabled' => (bool) env('XCHANGE_MOBILE_VERIFICATION_ENABLED', true),
+            'ttl_minutes' => (int) env('XCHANGE_MOBILE_VERIFICATION_TTL_MINUTES', 10),
+            'max_attempts' => (int) env('XCHANGE_MOBILE_VERIFICATION_MAX_ATTEMPTS', 5),
+            'hash_key' => env('XCHANGE_MOBILE_VERIFICATION_HASH_KEY', env('APP_KEY')),
+            'allow_null_driver_environments' => ['local', 'testing'],
+            'show_local_code' => (bool) env(
+                'XCHANGE_MOBILE_VERIFICATION_SHOW_LOCAL_CODE',
+                env('APP_ENV') !== 'production',
+            ),
+        ],
     ],
 
     'provider_topologies' => [

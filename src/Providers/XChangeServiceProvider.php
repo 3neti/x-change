@@ -18,6 +18,7 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use InvalidArgumentException;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
+use Laravel\Fortify\Contracts\RegisterResponse;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
 use LBHurtado\Cash\Contracts\WithdrawalIntervalEnforcerContract;
@@ -150,6 +151,7 @@ use LBHurtado\XChange\Exceptions\VoucherCollectionConflict;
 use LBHurtado\XChange\Exceptions\VoucherFlowCapabilityException;
 use LBHurtado\XChange\Exceptions\VoucherNotFound;
 use LBHurtado\XChange\Exceptions\VoucherRequiresSettlementEnvelope;
+use LBHurtado\XChange\Http\Responses\MobileFirstRegisterResponse;
 use LBHurtado\XChange\Listeners\HandleConfirmedDisbursement;
 use LBHurtado\XChange\Listeners\RecordFailedVoucherDisbursement;
 use LBHurtado\XChange\Listeners\RecordSuccessfulVoucherDisbursement;
@@ -1103,6 +1105,7 @@ class XChangeServiceProvider extends ServiceProvider
             Fortify::createUsersUsing(CreateNewMobileFirstUser::class);
 
             $this->app->singleton(CreatesNewUsers::class, CreateNewMobileFirstUser::class);
+            $this->app->singleton(RegisterResponse::class, MobileFirstRegisterResponse::class);
 
             Fortify::confirmPasswordsUsing(function ($user, string $password): bool {
                 return Hash::check($password, (string) $user->getAuthPassword());
