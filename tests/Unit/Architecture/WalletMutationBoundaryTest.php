@@ -28,6 +28,7 @@ it('keeps direct Bavix wallet withdrawals inside approved wallet boundaries', fu
         'src/Actions/Redemption/WithdrawPayCode.php',
         'src/Services/WithdrawalLifecycleService.php',
         'src/Services/WalletAccessService.php',
+        'src/Services/Funding/BavixFundingAccountCredit.php',
     ];
 
     $packageRoot = dirname(__DIR__, 3);

@@ -13,6 +13,7 @@ use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Data\FundingDecisionData;
 use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
+use LBHurtado\XChange\Models\FundingAccountHold;
 use Throwable;
 
 class ProviderAwareFundingPolicy implements ProviderFundingPolicyContract
@@ -31,6 +32,8 @@ class ProviderAwareFundingPolicy implements ProviderFundingPolicyContract
      */
     public function assertCanIssue(mixed $owner, mixed $localWallet, float|int|string $amount, array $context = []): FundingDecisionData
     {
+        $this->assertAccountIsNotOnFundingHold($localWallet);
+
         $provider = $this->effectiveProviderForOwner($owner, data_get($context, 'provider'));
         $topology = $this->settings->topology($provider);
         $requiredMinor = $this->normalizeAmountForWallet($amount);
@@ -308,5 +311,40 @@ class ProviderAwareFundingPolicy implements ProviderFundingPolicyContract
         }
 
         return (int) round($balance * 100);
+    }
+
+    protected function assertAccountIsNotOnFundingHold(mixed $wallet): void
+    {
+        if (! is_object($wallet)) {
+            return;
+        }
+
+        $references = [];
+        $uuid = data_get($wallet, 'uuid');
+
+        if (is_string($uuid) && trim($uuid) !== '') {
+            $references[] = 'wallet:'.trim($uuid);
+        }
+
+        if (method_exists($wallet, 'getKey') && $wallet->getKey() !== null) {
+            $references[] = 'wallet:'.$wallet->getKey();
+        }
+
+        if ($references === []) {
+            return;
+        }
+
+        $hold = FundingAccountHold::query()
+            ->whereIn('account_reference', array_unique($references))
+            ->where('status', 'active')
+            ->first();
+
+        if ($hold !== null) {
+            throw new InsufficientWalletBalance(sprintf(
+                'Account issuance is frozen while a funding recovery of %d %s minor units remains outstanding.',
+                $hold->outstanding_amount_minor,
+                $hold->currency,
+            ));
+        }
     }
 }

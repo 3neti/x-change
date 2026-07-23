@@ -9,11 +9,16 @@ use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\Wallet\Treasury\Models\TreasurySettlementResource;
+use LBHurtado\XChange\Actions\Funding\ReverseSettledFundingIntent;
 use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
 use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
+use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
+use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
+use LBHurtado\XChange\Models\FundingAccountHold;
 use LBHurtado\XChange\Models\FundingIntent;
+use LBHurtado\XChange\Models\FundingRecovery;
 use LBHurtado\XChange\Models\FundingSettlement;
 
 it('atomically recognizes verified net inventory and credits the Account once', function () {
@@ -99,6 +104,80 @@ it('rejects a verified intent when its authoritative evidence no longer matches'
         ->and(TreasuryInventoryOperation::query()->count())->toBe(0);
 });
 
+it('reverses Treasury Inventory and fully recovers an unspent Account credit once', function () {
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $settledObservation = providerFundingObservationForSettlement();
+    $intent = verifiedFundingIntentForSettlement($wallet, $settledObservation);
+    app(SettleVerifiedFundingIntent::class)->handle($intent);
+    $reversalObservation = providerFundingReversalObservation($settledObservation);
+
+    $first = app(ReverseSettledFundingIntent::class)->handle($intent->refresh(), $reversalObservation);
+    $second = app(ReverseSettledFundingIntent::class)->handle($intent->refresh(), $reversalObservation);
+
+    expect($second->is($first))->toBeTrue()
+        ->and($intent->refresh()->status)->toBe(FundingIntentStatus::Reversed)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and($first->reversal_amount_minor)->toBe(24_950)
+        ->and($first->recovered_amount_minor)->toBe(24_950)
+        ->and($first->outstanding_amount_minor)->toBe(0)
+        ->and($first->status)->toBe('recovered')
+        ->and(FundingRecovery::query()->count())->toBe(1)
+        ->and(FundingAccountHold::query()->count())->toBe(0)
+        ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(0)
+        ->and(TreasuryInventoryOperation::query()->count())->toBe(2);
+});
+
+it('recovers available funds and freezes issuance for a reversal deficit', function () {
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $settledObservation = providerFundingObservationForSettlement();
+    $intent = verifiedFundingIntentForSettlement($wallet, $settledObservation);
+    app(SettleVerifiedFundingIntent::class)->handle($intent);
+    $wallet->withdraw(20_000, ['source' => 'simulated_spend']);
+
+    $recovery = app(ReverseSettledFundingIntent::class)->handle(
+        $intent->refresh(),
+        providerFundingReversalObservation($settledObservation),
+    );
+    $hold = FundingAccountHold::query()->sole();
+
+    expect($recovery->recovered_amount_minor)->toBe(4_950)
+        ->and($recovery->outstanding_amount_minor)->toBe(20_000)
+        ->and($recovery->status)->toBe('open')
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and($hold->account_reference)->toBe('wallet:'.$wallet->uuid)
+        ->and($hold->outstanding_amount_minor)->toBe(20_000)
+        ->and($hold->status)->toBe('active')
+        ->and(fn () => app(ProviderFundingPolicyContract::class)->assertCanIssue(
+            $user,
+            $wallet,
+            1,
+        ))->toThrow(InsufficientWalletBalance::class, 'Account issuance is frozen');
+});
+
+it('rejects mismatched reversal evidence without changing Inventory or Account balance', function () {
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $settledObservation = providerFundingObservationForSettlement();
+    $intent = verifiedFundingIntentForSettlement($wallet, $settledObservation);
+    app(SettleVerifiedFundingIntent::class)->handle($intent);
+    $reversalObservation = providerFundingReversalObservation($settledObservation, [
+        'net_amount_minor' => 20_000,
+    ]);
+
+    expect(fn () => app(ReverseSettledFundingIntent::class)->handle(
+        $intent->refresh(),
+        $reversalObservation,
+    ))->toThrow(FundingSettlementDenied::class, 'reversal evidence does not match');
+
+    expect($intent->refresh()->status)->toBe(FundingIntentStatus::Settled)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(24_950)
+        ->and(TreasuryInventoryOperation::query()->count())->toBe(1)
+        ->and(FundingRecovery::query()->count())->toBe(0);
+});
+
 /**
  * @param  array<string, mixed>  $overrides
  */
@@ -156,4 +235,32 @@ function verifiedFundingIntentForSettlement(
         'expires_at' => now()->addMinutes(30),
         'metadata' => ['source' => 'test'],
     ]);
+}
+
+/**
+ * @param  array<string, mixed>  $overrides
+ */
+function providerFundingReversalObservation(
+    ProviderFundingObservation $settledObservation,
+    array $overrides = [],
+): ProviderFundingObservation {
+    return ProviderFundingObservation::query()->create(array_replace([
+        'observation_key' => hash('sha256', 'reversal-'.$settledObservation->provider_transaction_id),
+        'provider_code' => $settledObservation->provider_code,
+        'provider_transaction_id' => $settledObservation->provider_transaction_id,
+        'provider_operation_id' => 'REV-'.$settledObservation->provider_transaction_id,
+        'request_id' => $settledObservation->request_id,
+        'funding_address' => $settledObservation->funding_address,
+        'provider_account_reference' => $settledObservation->provider_account_reference,
+        'gross_amount_minor' => $settledObservation->gross_amount_minor,
+        'fee_amount_minor' => $settledObservation->fee_amount_minor,
+        'net_amount_minor' => $settledObservation->net_amount_minor,
+        'currency' => $settledObservation->currency,
+        'provider_status' => 'reversed',
+        'occurred_at' => now(),
+        'settled_at' => null,
+        'verification_source' => 'transaction_history',
+        'payload_hash' => hash('sha256', 'reversal-payload-'.$settledObservation->provider_transaction_id),
+        'metadata' => ['destination_verified' => true],
+    ], $overrides));
 }

@@ -7,6 +7,7 @@ use LBHurtado\Instruction\Models\InstructionItem;
 use LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
+use LBHurtado\XChange\Contracts\FundingAccountRecoveryContract;
 use LBHurtado\XChange\Contracts\IdempotencyStoreContract;
 use LBHurtado\XChange\Contracts\IssuerOnboardingContract;
 use LBHurtado\XChange\Contracts\IssuerResolverContract;
@@ -352,6 +353,7 @@ return [
         PayCodeIssuanceContract::class => 'issuance',
         WalletAccessContract::class => 'wallet_access',
         FundingAccountCreditContract::class => 'funding_account_credit',
+        FundingAccountRecoveryContract::class => 'funding_account_credit',
         IdempotencyStoreContract::class => 'idempotency_store',
         IssuerOnboardingContract::class => 'issuer_onboarding',
         XChangeOnboardingGatewayContract::class => 'onboarding_gateway',

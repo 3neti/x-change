@@ -20,6 +20,7 @@ use LBHurtado\XChange\Data\Funding\CreateFundingIntentData;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Jobs\Funding\VerifyFundingWebhookReceiptJob;
 use LBHurtado\XChange\Models\FundingIntent;
+use LBHurtado\XChange\Models\FundingRecovery;
 use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\FundingSuspenseCase;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
@@ -98,6 +99,37 @@ it('recovers settlement after verification completed on an earlier attempt', fun
     expect($intent->refresh()->status)->toBe(FundingIntentStatus::Settled)
         ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
         ->and(FundingSettlement::query()->count())->toBe(1);
+});
+
+it('re-queries settled funding and recovers an authoritative provider reversal', function () {
+    $user = actingAsTestUser();
+    $wallet = $user->wallet;
+    $balanceBefore = (int) $wallet->balanceInt;
+    $intent = verifiedFundingIntent('wallet:'.$wallet->getKey());
+
+    app()->call([
+        new VerifyFundingWebhookReceiptJob(authenticatedFundingReceipt('initial-settlement')->getKey()),
+        'handle',
+    ]);
+
+    expect($intent->refresh()->status)->toBe(FundingIntentStatus::Settled)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe($balanceBefore + 24_950);
+
+    $this->fundingAdapter->fundingObservation = fundingObservation([
+        'providerStatus' => 'reversed',
+        'occurredAt' => new DateTimeImmutable,
+        'settledAt' => null,
+        'payloadHash' => hash('sha256', 'provider-reversal-observation'),
+    ]);
+    $reversalReceipt = authenticatedFundingReceipt('provider-reversal');
+
+    app()->call([new VerifyFundingWebhookReceiptJob($reversalReceipt->getKey()), 'handle']);
+
+    expect($intent->refresh()->status)->toBe(FundingIntentStatus::Reversed)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe($balanceBefore)
+        ->and(FundingRecovery::query()->sole()->status)->toBe('recovered')
+        ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(0)
+        ->and($reversalReceipt->refresh()->processing_status)->toBe('processed');
 });
 
 it('returns an intent to awaiting funds when the provider has not observed a transfer', function () {

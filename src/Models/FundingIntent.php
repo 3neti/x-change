@@ -102,4 +102,9 @@ class FundingIntent extends Model
     {
         return $this->hasMany(FundingSuspenseCase::class);
     }
+
+    public function recovery(): HasOne
+    {
+        return $this->hasOne(FundingRecovery::class);
+    }
 }

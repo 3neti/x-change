@@ -15,6 +15,7 @@ use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\EmiCore\Models\WebhookReceipt;
 use LBHurtado\XChange\Data\Funding\FundingIntentTransitionData;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
+use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use Throwable;
@@ -26,6 +27,7 @@ class VerifyFundingWebhookReceipt
         private readonly TransitionFundingIntent $transition,
         private readonly RecordProviderFundingObservation $recordObservation,
         private readonly OpenFundingSuspenseCase $openSuspenseCase,
+        private readonly ReverseSettledFundingIntent $reverseSettlement,
     ) {}
 
     public function handle(WebhookReceipt $receipt): int
@@ -112,6 +114,7 @@ class VerifyFundingWebhookReceipt
                 FundingIntentStatus::AwaitingFunds,
                 FundingIntentStatus::EvidenceReceived,
                 FundingIntentStatus::Verifying,
+                FundingIntentStatus::Settled,
             ])
             ->when(
                 $receipt->request_id !== null,
@@ -124,6 +127,12 @@ class VerifyFundingWebhookReceipt
 
     private function verifyIntent(FundingIntent $intent, WebhookReceipt $receipt): void
     {
+        if ($intent->status === FundingIntentStatus::Settled) {
+            $this->verifySettledIntent($intent, $receipt);
+
+            return;
+        }
+
         if ($intent->status === FundingIntentStatus::AwaitingFunds) {
             $intent = $this->transition->handle($intent, $this->transitionData(
                 status: FundingIntentStatus::EvidenceReceived,
@@ -207,6 +216,78 @@ class VerifyFundingWebhookReceipt
             intent: $intent,
             observation: $observation,
         ));
+    }
+
+    private function verifySettledIntent(FundingIntent $intent, WebhookReceipt $receipt): void
+    {
+        try {
+            $observationData = $this->providers
+                ->for($intent->provider_code)
+                ->verifyFunding(new FundingVerificationData(
+                    provider: $intent->provider_code,
+                    fundingIntentReference: $intent->reference,
+                    expectedAmountMinor: $intent->expected_amount_minor,
+                    currency: $intent->currency,
+                    providerRequestId: $intent->provider_request_id,
+                    fundingAddress: $intent->funding_address_ciphertext,
+                    webhookReceiptId: $receipt->getKey(),
+                ));
+        } catch (ProviderFundingNotObserved) {
+            return;
+        } catch (ProviderFundingVerificationIndeterminate) {
+            $this->openSuspenseCase->handle(
+                provider: $receipt->provider_code,
+                reasonCode: 'post_settlement_verification_indeterminate',
+                intent: $intent,
+                receipt: $receipt,
+                details: [
+                    'webhook_receipt_id' => $receipt->getKey(),
+                ],
+            );
+
+            return;
+        }
+
+        $observation = $this->recordObservation->handle($observationData);
+
+        if ($observation->provider_status === 'settled') {
+            return;
+        }
+
+        if (in_array($observation->provider_status, ['reversed', 'refunded', 'charged_back'], true)) {
+            try {
+                $this->reverseSettlement->handle($intent, $observation);
+            } catch (FundingSettlementDenied) {
+                $this->openSuspenseCase->handle(
+                    provider: $receipt->provider_code,
+                    reasonCode: 'provider_reversal_mismatch',
+                    intent: $intent,
+                    receipt: $receipt,
+                    observation: $observation,
+                    details: [
+                        'webhook_receipt_id' => $receipt->getKey(),
+                        'provider_status' => $observation->provider_status,
+                        'gross_amount_minor' => $observation->gross_amount_minor,
+                        'net_amount_minor' => $observation->net_amount_minor,
+                        'currency' => $observation->currency,
+                    ],
+                );
+            }
+
+            return;
+        }
+
+        $this->openSuspenseCase->handle(
+            provider: $receipt->provider_code,
+            reasonCode: 'post_settlement_status_changed',
+            intent: $intent,
+            receipt: $receipt,
+            observation: $observation,
+            details: [
+                'webhook_receipt_id' => $receipt->getKey(),
+                'provider_status' => $observation->provider_status,
+            ],
+        );
     }
 
     /**

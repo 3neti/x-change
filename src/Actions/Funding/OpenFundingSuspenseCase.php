@@ -44,8 +44,14 @@ class OpenFundingSuspenseCase
                 ? null
                 : FundingIntent::query()->lockForUpdate()->findOrFail($intent->getKey());
 
-            if ($lockedIntent !== null && $lockedIntent->status !== FundingIntentStatus::Suspense) {
-                throw new InvalidArgumentException('A Funding Intent must be in suspense before opening its review case.');
+            if ($lockedIntent !== null && ! in_array($lockedIntent->status, [
+                FundingIntentStatus::Suspense,
+                FundingIntentStatus::Settled,
+                FundingIntentStatus::Reversed,
+            ], true)) {
+                throw new InvalidArgumentException(
+                    'A Funding Intent must be suspended or post-settlement before opening its review case.',
+                );
             }
 
             $caseKey = hash('sha256', implode('|', [
