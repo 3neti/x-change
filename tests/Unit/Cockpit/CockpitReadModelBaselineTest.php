@@ -158,11 +158,11 @@ it('hydrates dashboard-level integration summaries without requiring a pay code'
         ->and($bundle->journal->redactions['source'])->toBe('x-journal')
         ->and($bundle->journal->redactions['writes_journal_entries'])->toBeFalse()
         ->and($bundle->actions->status)->toBe('available')
-        ->and($bundle->actions->actions[0]['raw_payload'])->toBe('[redacted]')
+        ->and($bundle->actions->actions[0])->not->toHaveKey('raw_payload')
         ->and($bundle->actions->redactions['source'])->toBe('x-action')
         ->and($bundle->actions->redactions['executes_action'])->toBeFalse()
         ->and($bundle->feedback->status)->toBe('available')
-        ->and($bundle->feedback->deliveries[0]['provider_payload'])->toBe('[redacted]')
+        ->and($bundle->feedback->deliveries[0])->not->toHaveKey('provider_payload')
         ->and($bundle->feedback->redactions['source'])->toBe('x-feedback')
         ->and($bundle->feedback->redactions['sends_feedback'])->toBeFalse();
 });
@@ -993,7 +993,7 @@ it('hydrates optional journal action and feedback read models when integration s
         ->and($bundle->journal->redactions['evidence_only'])->toBeTrue()
         ->and($bundle->journal->redactions['writes_journal_entries'])->toBeFalse()
         ->and($bundle->actions->status)->toBe('available')
-        ->and($bundle->actions->actions[0]['run']['secret'])->toBe('[redacted]')
+        ->and($bundle->actions->actions[0])->not->toHaveKey('run')
         ->and($bundle->actions->diagnostics)->toBe([[
             'action_key' => 'voucher.inspect',
             'status' => 'included',
@@ -1003,7 +1003,7 @@ it('hydrates optional journal action and feedback read models when integration s
         ->and($bundle->actions->redactions['executes_action'])->toBeFalse()
         ->and($bundle->actions->redactions['raw_diagnostics_exposed'])->toBeFalse()
         ->and($bundle->feedback->status)->toBe('available')
-        ->and($bundle->feedback->deliveries[0]['provider_response'])->toBe('[redacted]')
+        ->and($bundle->feedback->deliveries[0])->not->toHaveKey('provider_response')
         ->and($bundle->feedback->redactions['source'])->toBe('x-feedback')
         ->and($bundle->feedback->redactions['sends_feedback'])->toBeFalse()
         ->and($bundle->feedback->redactions['calls_providers'])->toBeFalse();
