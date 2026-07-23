@@ -14,8 +14,10 @@ use LBHurtado\EmiCore\Models\WebhookReceipt;
 use LBHurtado\XChange\Actions\Funding\FinalizeFundingSuspenseMonitoring;
 use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
 use LBHurtado\XChange\Actions\Funding\VerifyFundingWebhookReceipt;
+use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Models\FundingIntent;
+use LBHurtado\XChange\Models\StandingFundingAddress;
 
 class VerifyFundingWebhookReceiptJob implements ShouldQueue
 {
@@ -52,6 +54,21 @@ class VerifyFundingWebhookReceiptJob implements ShouldQueue
                 ->whereIn('matched_observation_id', $observationIds)
                 ->eachById(fn (FundingIntent $intent) => $settle->handle($intent));
         }
+
+        StandingFundingAddress::query()
+            ->where('provider_code', $receipt->provider_code)
+            ->where('status', FundingAddressStatus::Active)
+            ->oldest('last_checked_at')
+            ->limit(max(
+                1,
+                (int) config('x-change.funding.standing_addresses.webhook_batch_size', 100),
+            ))
+            ->eachById(fn (StandingFundingAddress $address) => SyncStandingFundingAddressJob::dispatch(
+                standingFundingAddressId: (int) $address->getKey(),
+                providerCode: $receipt->provider_code,
+                trigger: 'webhook',
+                webhookReceiptId: (int) $receipt->getKey(),
+            )->afterCommit());
 
         $finalizeMonitoring->handle($receipt->getKey());
     }

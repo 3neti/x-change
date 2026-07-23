@@ -12,6 +12,8 @@ beforeEach(function () {
     Http::preventStrayRequests();
     config([
         'x-change.funding.reusable_address.enabled' => true,
+        'x-change.funding.standing_addresses.enabled' => true,
+        'x-change.funding.standing_addresses.default_recognition_mode' => 'observe_only',
         'x-change.funding.reusable_address.middleware' => [],
         'payment-gateway.netbank.funding.api_url' => 'https://api.netbank.test',
         'payment-gateway.netbank.funding.token_url' => 'https://auth.netbank.test/oauth2/token',
@@ -30,7 +32,7 @@ beforeEach(function () {
     ]);
 });
 
-it('generates an owner-stable temporary static QR without creating or crediting a Funding Intent', function () {
+it('generates an owner-stable Account Funding Address without creating or crediting a Funding Intent', function () {
     $operator = actingAsTestUser();
     $wallet = $operator->wallet;
     $balanceBefore = (int) $wallet->balance;
@@ -57,9 +59,12 @@ it('generates an owner-stable temporary static QR without creating or crediting 
         ->assertHeader('X-Content-Type-Options', 'nosniff')
         ->assertJsonPath('schema', 'x-change.cockpit.netbank-reusable-funding-address.v1')
         ->assertJsonPath('address.provider', 'netbank')
+        ->assertJsonPath('address.purpose', 'account_funding')
+        ->assertJsonPath('address.recognition_mode', 'observe_only')
+        ->assertJsonPath('address.status', 'active')
         ->assertJsonPath('address.qr_mode', 'static')
         ->assertJsonPath('address.embedded_amount', false)
-        ->assertJsonPath('address.temporary', true)
+        ->assertJsonPath('address.temporary', false)
         ->assertJsonPath('address.funding_intent_created', false)
         ->assertJsonPath('address.automatic_credit_enabled', false)
         ->assertJsonPath(
@@ -77,7 +82,7 @@ it('generates an owner-stable temporary static QR without creating or crediting 
     $serializedAudit = json_encode($this->fakeAuditLogger()->last(), JSON_THROW_ON_ERROR);
 
     expect($serializedAudit)
-        ->toContain('funding.reusable_address.generated')
+        ->toContain('funding.standing_address.qr_issued')
         ->not->toContain((string) $response->json('address.funding_address'))
         ->not->toContain(reusableFundingTestPng());
 
@@ -94,13 +99,26 @@ it('checks authoritative VCA history without exposing raw provider or payer fact
 
     Http::fake([
         'https://auth.netbank.test/oauth2/token' => Http::response(['access_token' => 'access-token']),
+        'https://api.netbank.test/v1/qrph/generate' => Http::response([
+            'qr_code' => reusableFundingTestPng(),
+        ]),
+    ]);
+
+    $addressResponse = $this->postJson(
+        route('x-change.cockpit.funding.reusable-addresses.netbank.store'),
+        ['confirm_temporary_reusable_address' => true],
+    )->assertOk();
+    $fundingAddress = (string) $addressResponse->json('address.funding_address');
+
+    Http::fake([
+        'https://auth.netbank.test/oauth2/token' => Http::response(['access_token' => 'access-token']),
         'https://api.netbank.test/v1/vca/*/transactions*' => Http::response([
             'transactions' => [[
                 'amount' => ['cur' => 'PHP', 'num' => '2500'],
                 'date' => '2026-07-23T01:05:00.000Z',
                 'description' => 'EXTERNAL_TRANSFER_INCOMING',
                 'destination_account' => [
-                    'account_alias' => reusableFundingAddressFor($operator),
+                    'account_alias' => $fundingAddress,
                     'account_number' => 'sensitive-destination-account',
                 ],
                 'sender' => [
@@ -129,7 +147,8 @@ it('checks authoritative VCA history without exposing raw provider or payer fact
         ->assertJsonPath('schema', 'x-change.cockpit.netbank-reusable-funding-history.v1')
         ->assertJsonPath('observations.0.gross_amount_minor', 2500)
         ->assertJsonPath('observations.0.gross_amount', '₱25.00')
-        ->assertJsonPath('observations.0.provider_status', 'settled')
+        ->assertJsonPath('observations.0.provider_status', 'observed')
+        ->assertJsonPath('sync.observed', 1)
         ->assertJsonPath('balance_changed', false)
         ->assertJsonPath('funding_intent_created', false);
 
@@ -140,7 +159,7 @@ it('checks authoritative VCA history without exposing raw provider or payer fact
         ->not->toContain('Sensitive Payer')
         ->not->toContain('sensitive-payer-account')
         ->not->toContain('sensitive-destination-account')
-        ->not->toContain(reusableFundingAddressFor($operator));
+        ->not->toContain($fundingAddress);
     expect(FundingIntent::query()->count())->toBe(0)
         ->and((int) $wallet->fresh()->balance)->toBe($balanceBefore);
 });
@@ -153,13 +172,13 @@ it('requires explicit acknowledgement and fails closed while disabled', function
     )->assertUnprocessable()
         ->assertJsonValidationErrors('confirm_temporary_reusable_address');
 
-    config()->set('x-change.funding.reusable_address.enabled', false);
+    config()->set('x-change.funding.standing_addresses.enabled', false);
 
     $this->postJson(
         route('x-change.cockpit.funding.reusable-addresses.netbank.store'),
         ['confirm_temporary_reusable_address' => true],
     )->assertUnprocessable()
-        ->assertJsonValidationErrors('reusable_address');
+        ->assertJsonValidationErrors('standing_funding_address');
 
     Http::assertNothingSent();
 });
@@ -176,23 +195,6 @@ it('keeps the sensitive QR and address out of initial Inertia props', function (
         ->assertJsonMissingPath('props.reusable_funding_address.funding_address')
         ->assertJsonMissingPath('props.reusable_funding_address.qr_code');
 });
-
-function reusableFundingAddressFor(object $owner): string
-{
-    $digest = hash_hmac(
-        'sha256',
-        'reusable-funding-address|'.$owner::class.':'.$owner->getKey(),
-        'reusable-reference-key',
-        true,
-    );
-    $numeric = '';
-
-    for ($index = 0; $index < 16; $index++) {
-        $numeric .= (string) (ord($digest[$index]) % 10);
-    }
-
-    return '91500'.$numeric;
-}
 
 function reusableFundingTestPng(): string
 {

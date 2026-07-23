@@ -45,6 +45,7 @@ use LBHurtado\XChange\Console\Commands\Cockpit\SeedCockpitDiagnosticActivityComm
 use LBHurtado\XChange\Console\Commands\Cockpit\ShowCockpitOperatorActivityRuntimeProfileCommand;
 use LBHurtado\XChange\Console\Commands\Disbursement\CheckDisbursementStatusCommand;
 use LBHurtado\XChange\Console\Commands\DoctorXChangeCommand;
+use LBHurtado\XChange\Console\Commands\Funding\SyncStandingFundingAddressesCommand;
 use LBHurtado\XChange\Console\Commands\Funding\VerifyOpenFundingIntentsCommand;
 use LBHurtado\XChange\Console\Commands\InstallXChangeCommand;
 use LBHurtado\XChange\Console\Commands\Lifecycle\PrepareLifecycleEnvironmentCommand;
@@ -854,6 +855,7 @@ class XChangeServiceProvider extends ServiceProvider
                 SubmitPayCodeClaimCommand::class,
                 CheckDisbursementStatusCommand::class,
                 VerifyOpenFundingIntentsCommand::class,
+                SyncStandingFundingAddressesCommand::class,
                 ReconcilePendingDisbursementsCommand::class,
 
                 PrepareLifecycleEnvironmentCommand::class,
@@ -898,22 +900,36 @@ class XChangeServiceProvider extends ServiceProvider
 
     protected function bootFundingVerificationSchedule(): void
     {
-        if (! (bool) config('x-change.funding.scheduled_verification_enabled', true)) {
-            return;
+        if ((bool) config('x-change.funding.scheduled_verification_enabled', true)) {
+            $batchSize = max(
+                1,
+                (int) config('x-change.funding.scheduled_verification_batch_size', 100),
+            );
+
+            $this->callAfterResolving(Schedule::class, function (Schedule $schedule) use ($batchSize): void {
+                $schedule
+                    ->command("xchange:funding:verify-open --provider=netbank --limit={$batchSize}")
+                    ->name('xchange:funding:verify-open:netbank')
+                    ->everyMinute()
+                    ->withoutOverlapping(5);
+            });
         }
 
-        $batchSize = max(
-            1,
-            (int) config('x-change.funding.scheduled_verification_batch_size', 100),
-        );
+        if ((bool) config('x-change.funding.standing_addresses.enabled', false)
+            && (bool) config('x-change.funding.standing_addresses.scheduled_sync_enabled', true)) {
+            $batchSize = max(
+                1,
+                (int) config('x-change.funding.standing_addresses.scheduled_batch_size', 100),
+            );
 
-        $this->callAfterResolving(Schedule::class, function (Schedule $schedule) use ($batchSize): void {
-            $schedule
-                ->command("xchange:funding:verify-open --provider=netbank --limit={$batchSize}")
-                ->name('xchange:funding:verify-open:netbank')
-                ->everyMinute()
-                ->withoutOverlapping(5);
-        });
+            $this->callAfterResolving(Schedule::class, function (Schedule $schedule) use ($batchSize): void {
+                $schedule
+                    ->command("xchange:funding:sync-standing --provider=netbank --limit={$batchSize}")
+                    ->name('xchange:funding:sync-standing:netbank')
+                    ->everyMinute()
+                    ->withoutOverlapping(5);
+            });
+        }
     }
 
     protected function decorateOnboardingCompletionHook(): void

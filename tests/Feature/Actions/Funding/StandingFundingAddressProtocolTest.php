@@ -12,6 +12,7 @@ use LBHurtado\EmiCore\Data\Funding\StandingFundingObservationRequestData;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
+use LBHurtado\XChange\Actions\Funding\ApproveAccountFundingReceipt;
 use LBHurtado\XChange\Actions\Funding\ProvisionStandingFundingAddress;
 use LBHurtado\XChange\Actions\Funding\SyncStandingFundingAddress;
 use LBHurtado\XChange\Enums\AccountFundingReceiptStatus;
@@ -116,6 +117,35 @@ it('keeps observe-only receipts out of Account and Treasury balances', function 
         ->and($receipt->verified_at)->not->toBeNull()
         ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
         ->and(TreasuryInventoryOperation::query()->count())->toBe(0);
+});
+
+it('requires owner approval before supervised recognition can credit the Account', function () {
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $provider = new StandingFundingAddressProviderFake;
+    bindStandingFundingProvider($provider);
+    $address = provisionStandingAddress(
+        $user,
+        'wallet:'.$wallet->uuid,
+        FundingAddressPurpose::AccountFunding,
+        FundingRecognitionMode::Supervised,
+    );
+    $provider->observations = [
+        standingFundingObservation($provider->fundingAddress),
+    ];
+
+    $result = app(SyncStandingFundingAddress::class)->handle($address);
+    $receipt = AccountFundingReceipt::query()->sole();
+
+    expect($result->awaitingApproval)->toBe(1)
+        ->and($receipt->status)->toBe(AccountFundingReceiptStatus::AwaitingApproval)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0);
+
+    $settled = app(ApproveAccountFundingReceipt::class)->handle($receipt, $user);
+
+    expect($settled->status)->toBe(AccountFundingReceiptStatus::Settled)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and(TreasuryInventoryOperation::query()->count())->toBe(1);
 });
 
 it('routes unknown destinations and amount-limit failures to suspense', function () {

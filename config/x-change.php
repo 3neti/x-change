@@ -442,6 +442,18 @@ return [
             ),
             'lock_seconds' => (int) env('XCHANGE_STANDING_FUNDING_LOCK_SECONDS', 120),
             'lock_wait_seconds' => (int) env('XCHANGE_STANDING_FUNDING_LOCK_WAIT_SECONDS', 5),
+            'scheduled_sync_enabled' => (bool) env(
+                'XCHANGE_STANDING_FUNDING_SCHEDULED_SYNC_ENABLED',
+                true,
+            ),
+            'scheduled_batch_size' => (int) env(
+                'XCHANGE_STANDING_FUNDING_SCHEDULED_BATCH_SIZE',
+                100,
+            ),
+            'webhook_batch_size' => (int) env(
+                'XCHANGE_STANDING_FUNDING_WEBHOOK_BATCH_SIZE',
+                100,
+            ),
             'limits' => [
                 'minimum_amount_minor' => (int) env(
                     'XCHANGE_STANDING_FUNDING_MINIMUM_AMOUNT_MINOR',

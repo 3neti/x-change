@@ -7,59 +7,100 @@ namespace LBHurtado\XChange\Actions\Funding;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use LBHurtado\PaymentGateway\Funding\NetbankReusableFundingAddressProvider;
+use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
+use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
+use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Data\Funding\NetbankReusableFundingAddressData;
+use LBHurtado\XChange\Enums\FundingRecognitionMode;
+use RuntimeException;
 
 final class GenerateNetbankReusableFundingAddress
 {
     public function __construct(
-        private readonly NetbankReusableFundingAddressProvider $netbank,
+        private readonly WalletAccessContract $wallets,
+        private readonly FundingDestinationResolverContract $destinations,
+        private readonly ProvisionStandingFundingAddress $provision,
         private readonly AuditLoggerContract $audit,
     ) {}
 
     public function handle(Model $owner): NetbankReusableFundingAddressData
     {
         $this->assertEnabled();
-        $address = $this->netbank->create($this->ownerReference($owner));
+        $wallet = $this->wallets->resolveForUser($owner);
+        $accountReference = $this->accountReference($wallet);
+        $mode = FundingRecognitionMode::tryFrom((string) config(
+            'x-change.funding.standing_addresses.default_recognition_mode',
+            FundingRecognitionMode::ObserveOnly->value,
+        )) ?? FundingRecognitionMode::ObserveOnly;
+        $provisioned = $this->provision->handle(
+            owner: $owner,
+            accountReference: $accountReference,
+            provider: 'netbank',
+            purpose: FundingAddressPurpose::AccountFunding,
+            recognitionMode: $mode,
+            currency: 'PHP',
+            destination: $this->destinations->resolve($owner, 'netbank', $accountReference),
+        );
+        $address = $provisioned->address;
+        $providerAddress = $provisioned->providerAddress;
 
-        $this->audit->log('funding.reusable_address.generated', [
+        $this->audit->log('funding.standing_address.qr_issued', [
             'actor_type' => $owner::class,
             'actor_id' => (string) $owner->getKey(),
+            'standing_funding_address_reference' => $address->reference,
             'provider' => 'netbank',
-            'mode' => 'temporary-reusable-static-qr',
+            'purpose' => $address->purpose->value,
+            'recognition_mode' => $address->recognition_mode->value,
             'funding_intent_created' => false,
-            'automatic_credit_enabled' => false,
+            'automatic_credit_enabled' => $address->recognition_mode === FundingRecognitionMode::Automatic,
         ]);
 
         return new NetbankReusableFundingAddressData(
-            provider: $address->provider,
-            fundingAddress: $address->fundingAddress,
-            maskedFundingAddress: '•••• '.Str::substr($address->fundingAddress, -6),
-            currency: $address->currency,
-            institution: $address->institution,
-            merchantName: $address->merchantName,
-            qrCode: 'data:'.$address->qrCode->mimeType.';base64,'.$address->qrCode->base64Payload,
-            qrMode: $address->qrCode->qrMode,
-            transactionType: $address->qrCode->transactionType,
-            embeddedAmount: $address->qrCode->embeddedAmount,
-            providerGenerated: $address->qrCode->providerGenerated,
-            temporary: true,
+            reference: $address->reference,
+            provider: $providerAddress->provider,
+            fundingAddress: $providerAddress->fundingAddress,
+            maskedFundingAddress: '•••• '.Str::substr($providerAddress->fundingAddress, -6),
+            purpose: $address->purpose->value,
+            recognitionMode: $address->recognition_mode->value,
+            status: $address->status->value,
+            currency: $providerAddress->currency,
+            institution: (string) data_get($providerAddress->displayData, 'institution', 'NetBank'),
+            merchantName: (string) data_get($providerAddress->displayData, 'merchant_name', ''),
+            qrCode: 'data:'.$providerAddress->qrCode->mimeType.';base64,'.$providerAddress->qrCode->base64Payload,
+            qrMode: $providerAddress->qrCode->qrMode,
+            transactionType: $providerAddress->qrCode->transactionType,
+            embeddedAmount: $providerAddress->qrCode->embeddedAmount,
+            providerGenerated: $providerAddress->qrCode->providerGenerated,
+            temporary: false,
             fundingIntentCreated: false,
-            automaticCreditEnabled: false,
+            automaticCreditEnabled: $address->recognition_mode === FundingRecognitionMode::Automatic,
+            minimumAmountMinor: $address->minimum_amount_minor,
+            maximumAmountMinor: $address->maximum_amount_minor,
+            dailyLimitMinor: $address->daily_limit_minor,
         );
     }
 
-    private function ownerReference(Model $owner): string
+    private function accountReference(mixed $wallet): string
     {
-        return $owner::class.':'.$owner->getKey();
+        $uuid = data_get($wallet, 'uuid');
+
+        if (is_string($uuid) && trim($uuid) !== '') {
+            return 'wallet:'.trim($uuid);
+        }
+
+        if (is_object($wallet) && method_exists($wallet, 'getKey')) {
+            return 'wallet:'.$wallet->getKey();
+        }
+
+        throw new RuntimeException('Funding Account reference could not be resolved.');
     }
 
     private function assertEnabled(): void
     {
-        if (! (bool) config('x-change.funding.reusable_address.enabled', false)) {
+        if (! (bool) config('x-change.funding.standing_addresses.enabled', false)) {
             throw ValidationException::withMessages([
-                'reusable_address' => 'The temporary reusable funding address is disabled.',
+                'standing_funding_address' => 'Standing Funding Addresses are disabled.',
             ]);
         }
     }

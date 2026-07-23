@@ -22,9 +22,13 @@ final class CockpitNetbankReusableFundingAddressController extends Controller
         return response()->json([
             'schema' => 'x-change.cockpit.netbank-reusable-funding-address.v1',
             'address' => [
+                'reference' => $address->reference,
                 'provider' => $address->provider,
                 'funding_address' => $address->fundingAddress,
                 'masked_funding_address' => $address->maskedFundingAddress,
+                'purpose' => $address->purpose,
+                'recognition_mode' => $address->recognitionMode,
+                'status' => $address->status,
                 'currency' => $address->currency,
                 'institution' => $address->institution,
                 'merchant_name' => $address->merchantName,
@@ -36,6 +40,9 @@ final class CockpitNetbankReusableFundingAddressController extends Controller
                 'temporary' => $address->temporary,
                 'funding_intent_created' => $address->fundingIntentCreated,
                 'automatic_credit_enabled' => $address->automaticCreditEnabled,
+                'minimum_amount_minor' => $address->minimumAmountMinor,
+                'maximum_amount_minor' => $address->maximumAmountMinor,
+                'daily_limit_minor' => $address->dailyLimitMinor,
             ],
         ])->withHeaders($this->sensitiveHeaders());
     }
@@ -44,6 +51,7 @@ final class CockpitNetbankReusableFundingAddressController extends Controller
         AccessCockpitNetbankReusableFundingAddressRequest $request,
         InspectNetbankReusableFundingAddressHistory $inspect,
     ): JsonResponse {
+        $history = $inspect->handle($request->user());
         $observations = array_map(
             fn ($observation): array => [
                 'reference' => $observation->reference,
@@ -63,15 +71,21 @@ final class CockpitNetbankReusableFundingAddressController extends Controller
                     in: $observation->currency,
                 ),
             ],
-            $inspect->handle($request->user()),
+            $history->observations,
         );
 
         return response()->json([
             'schema' => 'x-change.cockpit.netbank-reusable-funding-history.v1',
             'observations' => $observations,
             'checked_at' => now()->toIso8601String(),
-            'balance_changed' => false,
+            'balance_changed' => $history->sync->settled > 0,
             'funding_intent_created' => false,
+            'sync' => [
+                'observed' => $history->sync->observed,
+                'settled' => $history->sync->settled,
+                'awaiting_approval' => $history->sync->awaitingApproval,
+                'suspense' => $history->sync->suspense,
+            ],
         ])->withHeaders($this->sensitiveHeaders());
     }
 

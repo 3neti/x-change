@@ -6,60 +6,59 @@ namespace LBHurtado\XChange\Actions\Funding;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
-use LBHurtado\PaymentGateway\Funding\NetbankReusableFundingAddressProvider;
-use LBHurtado\XChange\Contracts\AuditLoggerContract;
+use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
+use LBHurtado\XChange\Data\Funding\NetbankReusableFundingHistoryData;
 use LBHurtado\XChange\Data\Funding\NetbankReusableFundingObservationData;
+use LBHurtado\XChange\Models\StandingFundingAddress;
 
 final class InspectNetbankReusableFundingAddressHistory
 {
     public function __construct(
-        private readonly NetbankReusableFundingAddressProvider $netbank,
-        private readonly AuditLoggerContract $audit,
+        private readonly SyncStandingFundingAddress $sync,
     ) {}
 
-    /**
-     * @return list<NetbankReusableFundingObservationData>
-     */
-    public function handle(Model $owner): array
+    public function handle(Model $owner): NetbankReusableFundingHistoryData
     {
         $this->assertEnabled();
-        $observations = array_map(
-            static fn ($observation): NetbankReusableFundingObservationData => new NetbankReusableFundingObservationData(
-                reference: 'NB-'.strtoupper(substr($observation->transactionHash, 0, 12)),
-                grossAmountMinor: $observation->grossAmountMinor,
-                feeAmountMinor: $observation->feeAmountMinor,
-                netAmountMinor: $observation->netAmountMinor,
-                currency: $observation->currency,
-                providerStatus: $observation->providerStatus,
-                occurredAt: $observation->occurredAt?->format(DATE_ATOM),
-                settledAt: $observation->settledAt?->format(DATE_ATOM),
-            ),
-            $this->netbank->observationsForOwner($this->ownerReference($owner)),
-        );
+        $address = StandingFundingAddress::query()
+            ->where('owner_type', $owner::class)
+            ->where('owner_id', $owner->getKey())
+            ->where('provider_code', 'netbank')
+            ->where('purpose', FundingAddressPurpose::AccountFunding)
+            ->first();
 
-        $this->audit->log('funding.reusable_address.history_inspected', [
-            'actor_type' => $owner::class,
-            'actor_id' => (string) $owner->getKey(),
-            'provider' => 'netbank',
-            'mode' => 'authoritative-vca-history-observation',
-            'observation_count' => count($observations),
-            'funding_intent_created' => false,
-            'automatic_credit_enabled' => false,
-        ]);
+        if (! $address instanceof StandingFundingAddress) {
+            throw ValidationException::withMessages([
+                'standing_funding_address' => 'Create the Account Funding Address before checking NetBank.',
+            ]);
+        }
 
-        return $observations;
-    }
+        $sync = $this->sync->handle($address, 'operator');
 
-    private function ownerReference(Model $owner): string
-    {
-        return $owner::class.':'.$owner->getKey();
+        $observations = $address->receipts()
+            ->latest('observed_at')
+            ->limit(50)
+            ->get()
+            ->map(static fn ($receipt): NetbankReusableFundingObservationData => new NetbankReusableFundingObservationData(
+                reference: 'AF-'.strtoupper(substr($receipt->reference, -12)),
+                grossAmountMinor: $receipt->gross_amount_minor,
+                feeAmountMinor: $receipt->fee_amount_minor,
+                netAmountMinor: $receipt->net_amount_minor,
+                currency: $receipt->currency,
+                providerStatus: $receipt->status->value,
+                occurredAt: $receipt->observed_at?->format(DATE_ATOM),
+                settledAt: $receipt->settled_at?->format(DATE_ATOM),
+            ))
+            ->all();
+
+        return new NetbankReusableFundingHistoryData($observations, $sync);
     }
 
     private function assertEnabled(): void
     {
-        if (! (bool) config('x-change.funding.reusable_address.enabled', false)) {
+        if (! (bool) config('x-change.funding.standing_addresses.enabled', false)) {
             throw ValidationException::withMessages([
-                'reusable_address' => 'The temporary reusable funding address is disabled.',
+                'standing_funding_address' => 'Standing Funding Addresses are disabled.',
             ]);
         }
     }
