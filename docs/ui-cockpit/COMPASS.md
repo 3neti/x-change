@@ -4,12 +4,24 @@
 
 Establish the x-change Cockpit workstream as the operator shell for the Settlement Operating System without disturbing the existing Claim UI, execution runtime, journal, action, or feedback package boundaries.
 
-Current slice: Pay Code Explorer Voucher List Rationalization
-Status: Closed / pending human inspection and Dusk rerun
-Last updated: 2026-07-20
+Current slice: Secure Account Management and Funding Destination Readiness
+Status: Implemented / final regression and browser acceptance in progress
+Last updated: 2026-07-23
 
 ## Completed
 
+- Implemented the package-owned `/x/cockpit/accounts` workspace:
+  - shared destinations remain the default;
+  - dedicated failures block instead of silently falling back;
+  - NetBank supports write-only token generation/import and explicit rotation;
+  - Paynamics requires authoritative ownership verification;
+  - connection history and all displayed identifiers are masked;
+  - mutations require a verified identity, recent PIN confirmation, and throttling.
+- Hydrated destination mode/readiness into Funding and disabled blocked dedicated rails.
+- Removed Paynamics destination mutation from Profile; both provider cards now link to Accounts.
+- Preserved the security boundary that webhook evidence does not directly credit an Account.
+- Architecture: `../architecture/FUNDING_ACCOUNT_MANAGEMENT.md`.
+- Runbook: `ACCOUNT_MANAGEMENT_RUNBOOK.md`.
 - Completed Pay Code Explorer Voucher List Rationalization Slice 2 / Closure:
   - Published package Cockpit assets to the host app.
   - Confirmed the host Explorer prioritizes voucher lifecycle cards, search/filter controls, and result rows.

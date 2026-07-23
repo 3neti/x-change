@@ -32,9 +32,9 @@ This Compass is the program-level memory. Future workstream compasses should be 
 
 ## Current Position
 
-Current wave: Cockpit Distribution Workspace Manual Acceptance
-Current status: Passed with UI follow-up
-Last updated: 2026-07-19
+Current wave: Secure Provider Funding and Account Management
+Current status: Implemented; final regression and browser acceptance in progress
+Last updated: 2026-07-23
 
 | Wave | Workstream | Role | Status | Compass |
 |---|---|---|---|---|
@@ -42,7 +42,7 @@ Last updated: 2026-07-19
 | 2A | x-journal | System log / audit trail | Complete through Phase 15 | `/Users/rli/PhpstormProjects/packages/x-journal/docs/architecture/x-journal/X_JOURNAL_COMPASS.md` |
 | 2B | x-action | Workflow continuation / CTA layer | Phase 7 complete | `/Users/rli/PhpstormProjects/packages/x-action/docs/x-action-compass.md` |
 | 3 | x-feedback | Notification / communication layer | Phase 23 complete | `/Users/rli/PhpstormProjects/packages/x-feedback/docs/architecture/x-feedback/X_FEEDBACK_COMPASS.md` |
-| 4 | x-change Cockpit | Operator shell | Distribution Workspace manual acceptance passed with UI follow-up | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
+| 4 | x-change Cockpit | Operator shell | Secure Accounts and provider-verified Funding implemented | [../ui-cockpit/COMPASS.md](../ui-cockpit/COMPASS.md) |
 | 5 | x-campaign | Program / bulk distribution layer | Complete through Phase 15 host adoption / parity report | `/Users/rli/PhpstormProjects/packages/x-campaign/docs/X_CAMPAIGN_COMPASS.md` |
 
 ## Package Map
@@ -59,6 +59,20 @@ Last updated: 2026-07-19
 | wallet / cash / contact / form-flow / emi-core | `/Users/rli/PhpstormProjects/packages/*` | Domain capabilities consumed through explicit seams |
 
 ## Completed Work
+
+### Secure Provider Funding and Account Management
+
+- Added a provider-neutral Funding Destination contract across `emi-core`, NetBank, and Paynamics adapters.
+- Added immutable destination snapshots to Funding Intents.
+- Added package-owned shared/dedicated Account preferences, encrypted connection records, masked read models, and audit events.
+- Added the PIN-protected `/x/cockpit/accounts` workspace.
+- NetBank supports explicit alias-token generation, import, and separate rotation.
+- Paynamics dedicated funding remains blocked until authoritative ownership verification; reachability is not ownership.
+- Funding exposes selected destination readiness and cannot select a blocked dedicated rail.
+- Profile provider cards are read-only summaries that link to Accounts.
+- Webhook evidence remains non-authoritative until independent provider verification and exact settlement matching.
+- Architecture: [FUNDING_ACCOUNT_MANAGEMENT.md](FUNDING_ACCOUNT_MANAGEMENT.md).
+- Operator runbook: [../ui-cockpit/ACCOUNT_MANAGEMENT_RUNBOOK.md](../ui-cockpit/ACCOUNT_MANAGEMENT_RUNBOOK.md).
 
 ### Current Cockpit Host Integration
 
