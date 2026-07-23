@@ -29,6 +29,7 @@ use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\EmiPaynamicsConstellation\Contracts\PendingOtpStore;
 use LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider;
 use LBHurtado\PaymentGateway\Contracts\WalletProxy;
+use LBHurtado\PaymentGateway\Funding\NetbankReusableFundingAddressProvider;
 use LBHurtado\ReportRegistry\Contracts\ReportResolverInterface;
 use LBHurtado\Voucher\Contracts\SettlementEnvelopeExecutionGateway;
 use LBHurtado\Voucher\Contracts\StoredValueExecutionGateway;
@@ -232,6 +233,7 @@ use LBHurtado\XChange\Services\Funding\BavixFundingAccountCredit;
 use LBHurtado\XChange\Services\Funding\DefaultFundingDestinationResolver;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Funding\QrPhSimulatorFundingProviderAdapter;
+use LBHurtado\XChange\Services\Funding\StandingFundingAddressProviderRegistry;
 use LBHurtado\XChange\Services\InstructionBackedPricingService;
 use LBHurtado\XChange\Services\NullClaimApprovalNotificationService;
 use LBHurtado\XChange\Services\NullRedemptionCompletionStore;
@@ -286,6 +288,17 @@ class XChangeServiceProvider extends ServiceProvider
             FundingProviderAdapterRegistry::class,
             fn ($app) => new FundingProviderAdapterRegistry(
                 $app->tagged('emi.funding-provider-adapters'),
+            ),
+        );
+        $this->app->singleton(NetbankReusableFundingAddressProvider::class);
+        $this->app->tag(
+            NetbankReusableFundingAddressProvider::class,
+            'emi.standing-funding-address-providers',
+        );
+        $this->app->singleton(
+            StandingFundingAddressProviderRegistry::class,
+            fn ($app) => new StandingFundingAddressProviderRegistry(
+                $app->tagged('emi.standing-funding-address-providers'),
             ),
         );
 

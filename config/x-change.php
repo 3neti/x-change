@@ -431,6 +431,32 @@ return [
             ),
             'middleware' => ['throttle:3,1'],
         ],
+        'standing_addresses' => [
+            'enabled' => (bool) env(
+                'XCHANGE_STANDING_FUNDING_ADDRESSES_ENABLED',
+                env('APP_ENV') !== 'production',
+            ),
+            'default_recognition_mode' => env(
+                'XCHANGE_STANDING_FUNDING_RECOGNITION_MODE',
+                'observe_only',
+            ),
+            'lock_seconds' => (int) env('XCHANGE_STANDING_FUNDING_LOCK_SECONDS', 120),
+            'lock_wait_seconds' => (int) env('XCHANGE_STANDING_FUNDING_LOCK_WAIT_SECONDS', 5),
+            'limits' => [
+                'minimum_amount_minor' => (int) env(
+                    'XCHANGE_STANDING_FUNDING_MINIMUM_AMOUNT_MINOR',
+                    100,
+                ),
+                'maximum_amount_minor' => (int) env(
+                    'XCHANGE_STANDING_FUNDING_MAXIMUM_AMOUNT_MINOR',
+                    5_000_000,
+                ),
+                'daily_limit_minor' => (int) env(
+                    'XCHANGE_STANDING_FUNDING_DAILY_LIMIT_MINOR',
+                    10_000_000,
+                ),
+            ],
+        ],
         'ui_refresh_interval_milliseconds' => (int) env('XCHANGE_FUNDING_UI_REFRESH_INTERVAL_MILLISECONDS', 5000),
         'reference_hash_key' => env('XCHANGE_FUNDING_REFERENCE_HASH_KEY', env('APP_KEY')),
         'payer_identity_hash_key' => env('XCHANGE_FUNDING_PAYER_IDENTITY_HASH_KEY', env('APP_KEY')),

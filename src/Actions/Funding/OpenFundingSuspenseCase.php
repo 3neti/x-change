@@ -28,7 +28,9 @@ class OpenFundingSuspenseCase
         $provider = strtolower(trim($provider));
         $reasonCode = strtolower(trim($reasonCode));
 
-        if ($provider === '' || $reasonCode === '' || ($intent === null && $receipt === null)) {
+        if ($provider === ''
+            || $reasonCode === ''
+            || ($intent === null && $receipt === null && $observation === null)) {
             throw new InvalidArgumentException('Funding suspense requires a provider, reason, and evidence reference.');
         }
 
