@@ -363,12 +363,18 @@ NETBANK_FUNDING_CORPORATE_ACCOUNT_NAME
 NETBANK_FUNDING_VCA_ALIAS
 NETBANK_FUNDING_VCA_ALIAS_TOKEN
 NETBANK_FUNDING_REFERENCE_KEY
+NETBANK_FUNDING_STANDING_ADDRESS_SCHEME
+NETBANK_FUNDING_VCA_REFERENCE_LENGTH
+NETBANK_FUNDING_STANDING_HMAC_KEY_ID
+NETBANK_FUNDING_STANDING_HMAC_KEY
 NETBANK_FUNDING_QR_ENDPOINT
 NETBANK_FUNDING_QR_MERCHANT_NAME
 NETBANK_FUNDING_QR_MERCHANT_CITY
 NETBANK_FUNDING_QR_PURPOSE
 NETBANK_FUNDING_WEBHOOK_ALLOWED_IPS
 ```
+
+`NETBANK_FUNDING_VCA_ALIAS_TOKEN` remains mandatory for registered one-time Funding Intents. A shared reusable Account Funding Address does not use that token. Its default scheme is `netbank-mobile-v1` outside production and `netbank-account-hmac-v2` in production; production rejects the mobile scheme. The HMAC key is dedicated, must be at least 32 bytes, and must never fall back to `APP_KEY`.
 
 Before production, run adapter contract tests with HTTP fakes, verify the queue and scheduler in a non-production environment, and exercise browser acceptance without sending money. Live UAT is a separate explicit gate: a human scans a configured small exact-amount QR and authorizes the real payment. The acceptance result must contain exactly one Inventory recognition and one Account credit whether confirmation arrives through webhook or **Check NetBank**. Automated tests and Codex must never initiate the real-money payment.
 

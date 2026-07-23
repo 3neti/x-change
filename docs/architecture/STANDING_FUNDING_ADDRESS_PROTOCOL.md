@@ -97,7 +97,7 @@ The contract can create a provider address and observe it. It cannot settle mone
 
 `3neti/emi-netbank` implements the contract with:
 
-- a purpose-separated deterministic VCA;
+- a configurable, purpose-separated 16-digit VCA;
 - a provider-generated static/open-amount P2M QR;
 - incoming VCA transaction-history queries;
 - normalized observations with stable provider transaction identity;
@@ -131,6 +131,33 @@ owner type/id
 Reopening the same binding returns the same address. A provider returning a different address for an existing binding fails closed; rotation must be an explicit future operation.
 
 Separate purposes produce separate deterministic provider destinations. One destination cannot serve as both `account_funding` and `payment`.
+
+### NetBank 16-digit address profile
+
+NetBank’s profile is:
+
+```text
+five-digit alias + eleven-digit reference = sixteen-digit VCA
+91500            + 09173011987            = 9150009173011987
+```
+
+The reference is selected by one configured scheme:
+
+| Scheme | Default | Derivation | Posture |
+|---|---|---|---|
+| `netbank-mobile-v1` | local, development, testing | verified Philippine mobile in `09XXXXXXXXX` form | easier to understand and reproduce, but correlatable and subject to mobile-recycling/multi-Account constraints |
+| `netbank-account-hmac-v2` | production | decimal rejection-sampled HMAC over immutable Account reference, purpose, key ID, and collision counter | opaque, purpose-separated, and required in production |
+
+Production rejects `netbank-mobile-v1`, even when it is selected explicitly. HMAC v2 requires a dedicated key and key ID; it never falls back to `APP_KEY`.
+
+The exact address, derivation scheme, key ID, collision counter, and reference length are persisted when the binding is first created. The encrypted persisted address is authoritative thereafter:
+
+- reopening does not recompute from the current mobile, scheme, or key;
+- changing or rotating the key affects new bindings only;
+- a changed mobile cannot redirect an existing QR;
+- an HMAC collision retries with the next counter and persists the successful counter;
+- a mobile-derived collision fails closed because silently changing the mobile suffix would violate the scheme;
+- legacy non-16-digit addresses are not silently replaced and must be retired through an explicit migration/rotation operation.
 
 Persisted sensitive fields:
 
@@ -258,12 +285,13 @@ The host must run its queue worker and Laravel scheduler.
 1. Open `/x/cockpit/funding`.
 2. Choose **Create Account Funding QR**.
 3. x-change resolves the operator’s current NetBank Funding Destination.
-4. NetBank generates the static QR for the purpose-bound VCA.
-5. A human scans it and enters the amount.
-6. The payer authorizes the real QR Ph payment outside x-change.
-7. Webhook, operator check, or schedule triggers NetBank history.
-8. x-change records immutable observations and classifies the exact VCA.
-9. The configured recognition mode observes, waits for approval, or settles.
+4. x-change derives a new 16-digit address under the configured scheme, or reopens the exact persisted address.
+5. NetBank generates the static QR for the purpose-bound VCA.
+6. A human scans it and enters the amount.
+7. The payer authorizes the real QR Ph payment outside x-change.
+8. Webhook, operator check, or schedule triggers NetBank history.
+9. x-change records immutable observations and classifies the exact VCA.
+10. The configured recognition mode observes, waits for approval, or settles.
 
 The QR and full VCA are returned only from the private `no-store` endpoint. They are absent from the general Inertia read model.
 
@@ -310,10 +338,24 @@ NetBank also requires its funding API/token endpoints, OAuth credentials, corpor
 NETBANK_FUNDING_CORPORATE_ACCOUNT_NUMBER
 NETBANK_FUNDING_CORPORATE_ACCOUNT_NAME
 NETBANK_FUNDING_VCA_ALIAS
-NETBANK_FUNDING_VCA_ALIAS_TOKEN
+NETBANK_FUNDING_STANDING_ADDRESS_SCHEME
+NETBANK_FUNDING_VCA_REFERENCE_LENGTH
+NETBANK_FUNDING_STANDING_HMAC_KEY_ID
+NETBANK_FUNDING_STANDING_HMAC_KEY
 ```
 
-The alias token is a provider-issued credential. It must never be guessed, copied from an unrelated integration, exposed in the UI, or recorded in documentation.
+Recommended production configuration:
+
+```dotenv
+NETBANK_FUNDING_STANDING_ADDRESS_SCHEME=netbank-account-hmac-v2
+NETBANK_FUNDING_VCA_REFERENCE_LENGTH=11
+NETBANK_FUNDING_STANDING_HMAC_KEY_ID=v2-2026-01
+NETBANK_FUNDING_STANDING_HMAC_KEY=base64:<dedicated-secret-of-at-least-32-bytes>
+```
+
+Keep the HMAC key stable and in managed secret storage. Back it up under the same recovery policy as provider credentials. Rotating it is safe for persisted addresses, but restoring a database without its matching address records and key history can orphan old QR destinations.
+
+The provider-issued VCA alias token is deliberately **not** required for the shared reusable QR because this flow does not register or mutate a VCA. It remains mandatory for one-time Funding Intents and for dedicated destinations that use registered VCA operations. It must never be guessed, exposed in the UI, or recorded in documentation.
 
 ## Browser Acceptance
 
@@ -321,6 +363,8 @@ The package UI is accepted at desktop and mobile widths in two explicit states:
 
 - **Ready:** the create/reopen control may call NetBank and return the private, `no-store` QR response.
 - **Not configured:** the control is disabled before any provider call when a required credential or corporate-account fact is absent.
+- **Mobile not verified:** a new `netbank-mobile-v1` address is blocked until the operator mobile is verified.
+- **Legacy address requires retirement:** a persisted non-16-digit address remains untouched and cannot be reopened through the new profile.
 
 Acceptance verifies no page-level horizontal overflow, contained activity tables, responsive controls, and no browser console errors. A real scan and payment remains a separately authorized live UAT gate.
 

@@ -65,11 +65,16 @@ Use the Account Funding Address when the payer must choose the amount on a stabl
 
 1. Open `/x/cockpit/funding`.
 2. Confirm the card says **Account Funding Address**, purpose-bound, and NetBank.
-3. Choose **Create Account Funding QR** or **Open Account Funding QR**.
-4. Confirm the displayed VCA is the expected masked/full address for this controlled session.
-5. Let the human payer scan, enter the amount, and authorize payment outside x-change.
-6. Choose **Check NetBank** if webhook or scheduled confirmation has not appeared.
-7. Review the sanitized Account Funding Receipt.
+3. Check the scheme badge:
+   - **Verified mobile suffix** is the readable development scheme and requires a verified `09XXXXXXXXX` mobile;
+   - **Opaque Account reference** is the production-safe HMAC scheme.
+4. Choose **Create Account Funding QR** or **Open Account Funding QR**.
+5. Confirm the displayed VCA contains exactly 16 digits: the five-digit alias plus an eleven-digit reference.
+6. Let the human payer scan, enter the amount, and authorize payment outside x-change.
+7. Choose **Check NetBank** if webhook or scheduled confirmation has not appeared.
+8. Review the sanitized Account Funding Receipt.
+
+Once created, the saved address is permanent for that Account/purpose binding. Changing the operator mobile, environment scheme, or HMAC key does not change an existing QR. If Cockpit reports **Legacy address requires retirement**, stop and use an approved explicit retirement/migration procedure; never delete or overwrite the binding manually.
 
 Recognition modes:
 
@@ -129,6 +134,8 @@ The Cockpit control is enabled by default outside production. Production require
 | Account Funding Address receipt remains Observed | Confirm recognition mode; `observe_only` deliberately makes no balance change |
 | Account Funding Address receipt awaits approval | Confirm NetBank evidence and limits, then use **Approve verified credit** as the address owner |
 | Unknown Standing Funding Address | Leave in suspense; never infer an Account from mobile, amount, or timing |
+| Mobile-derived address unavailable | Verify the operator mobile; do not substitute another user’s mobile |
+| Legacy address requires retirement | Stop; preserve the existing record and use an explicit migration/rotation procedure |
 | Standing Address status changes after settlement | Treat as a reversal incident; do not edit or manually debit historical records |
 | Amount or destination mismatch | Leave the case in suspense and use maker-checker reconciliation |
 | Duplicate provider notification | Do not create a manual credit; idempotent processing should absorb it |
