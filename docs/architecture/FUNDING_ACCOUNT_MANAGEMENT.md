@@ -29,24 +29,13 @@ Inbound funding stops at two explicitly separate operations:
 
 Funding is not an Allocation or Draw. An **Account** is the user-facing accounting balance. A provider bank account or EMI wallet is a **Funding Destination**, not the Account itself. Provider-reported balance remains an external fact and is not adopted as Account truth.
 
-## QR Ph Payer Identity
+## QR Ph Self-Top-Up and Payer Identity
 
-For QR Ph funding, the payer mobile is an identity claim, not settlement authority. x-change normalizes the full Philippine mobile number and resolves it only against an existing, OTP-verified `users.mobile` identity. Prefixes, first characters, Pipedream transforms, and inferred daughter-account routing are prohibited.
+“Self top-up” means the authenticated operator creates a Funding Intent for their own Account. That owner binding—not the payer mobile, webhook body, or QR scanner—determines which Account may receive the eventual credit.
 
-The order is deliberate:
+The exact-amount QR carries a deterministic, intent-bound VCA. NetBank transaction history must prove that this VCA received the expected settled PHP amount. A mobile number reported by a provider is an optional identity assertion: when NetBank or another provider marks it as provider-verified, x-change compares the full normalized number with the owner’s verified mobile and sends a mismatch to suspense. When the provider does not supply payer identity, the VCA, exact amount, currency, and settlement status remain the authoritative matching facts.
 
-```text
-submit full mobile
-    → resolve verified user
-    → resolve Account
-    → create Funding Intent
-    → issue provider instructions
-    → receive authenticated evidence
-    → independently verify provider settlement and payer identity
-    → recognize Inventory and credit Account atomically
-```
-
-An unknown or unverified mobile stops before Funding Intent creation and before provider payment. A webhook cannot create a user, verify a mobile, or choose an Account.
+Prefixes, first characters, Pipedream transforms, and inferred daughter-account routing are prohibited. A webhook cannot create a user, verify a mobile, choose an Account, or authorize credit.
 
 ## Trust and Money Flow
 
@@ -57,16 +46,19 @@ Operator creates Funding Intent
 x-change resolves the selected Funding Destination
         │
         ▼
-Provider adapter issues exact transfer instructions
+NetBank registers the deterministic VCA and exact one-time limit
         │
         ▼
-Bank / EMI receives real money
+NetBank returns a dynamic P2M QR with the exact PHP amount
         │
         ▼
-Signed webhook stores immutable evidence
+Payer scans and submits real money through QR Ph
         │
         ▼
-x-change independently queries the provider
+Webhook, operator check, or schedule queues verification
+        │
+        ▼
+x-change queries NetBank VCA transaction history
         │
         ▼
 Exact intent + destination + amount + currency match?
@@ -83,6 +75,24 @@ Suspense    Verified settlement
 ```
 
 Webhook receipt never deposits to a wallet and never increments a balance directly. Duplicate delivery is absorbed by provider event identity, payload hash, Funding Intent state, and idempotent settlement references.
+
+## Hybrid Confirmation Model
+
+The three triggers converge on one unique, non-overlapping verification job:
+
+```text
+NetBank webhook ───────┐
+Check NetBank button ──┼─→ Verify Funding Intent → settle / await / suspense
+Scheduled polling ─────┘
+```
+
+- `webhook` authenticates and stores immutable intake evidence, then queues verification;
+- `operator` only asks the provider to check history and accepts no amount, destination, VCA, or transaction input;
+- `schedule` polls eligible open NetBank intents every minute in bounded batches.
+
+Webhook authentication permits intake; it does not establish settlement. All three paths query the snapshotted corporate account and VCA through the same provider adapter. A settled exact match recognizes Treasury Inventory and credits the Account in the existing atomic settlement operation. No observation or a pending provider status returns the intent to `awaiting_funds`. Amount, currency, destination, identity, or ambiguity failures enter suspense. A provider outage records only a sanitized failure type and returns the intent to `awaiting_funds`.
+
+The queued job is unique per Funding Intent, shares a non-overlapping lock across triggers, and uses a provider-scoped rate limiter. Replayed webhooks and simultaneous manual/scheduled checks therefore cannot produce a second settlement.
 
 ## Package Boundaries
 
@@ -136,6 +146,26 @@ Token rotation is a separate warned operation. Ordinary destination replacement 
 
 NetBank payloads are consumed in their documented native form. No Pipedream transform, mobile-number prefix routing, or daughter-account inference is part of the architecture.
 
+### Exact-amount QR issuance
+
+For each NetBank Funding Intent, the adapter:
+
+1. derives the same numeric VCA reference from the Funding Intent on every retry;
+2. registers that reference through NetBank pre-transaction validation;
+3. applies a one-time minimum and maximum equal to the exact intent amount;
+4. asks NetBank to generate a dynamic P2M QR for the VCA, PHP amount, and intent reference;
+5. accepts only a valid base64-encoded PNG response.
+
+The QR contract is provider-neutral and records its MIME type, base64 payload, dynamic/static mode, transaction type, embedded-amount flag, and whether the provider generated it. Existing provider adapters remain compatible because the QR artifact is optional.
+
+If QR generation fails, the Funding Intent remains `pending_instructions`. A retry reuses the deterministic VCA; it does not create another Account credit opportunity. QR image data, credentials, account numbers, and raw provider response bodies are excluded from logs.
+
+NetBank stays unavailable until OAuth credentials, corporate account details, the five-digit VCA alias and token, QR endpoint, merchant name, merchant city, and purpose are configured.
+
+### NetBank settlement authority
+
+The adapter retrieves the intent VCA’s transaction history under the snapshotted corporate account. It accepts exactly one incoming credit candidate, normalizes amounts to minor units, and returns a hash-addressed observation. Multiple exact candidates are ambiguous. A single non-exact candidate is evidence of a mismatch. x-change—not the adapter—decides whether that observation settles, awaits, or enters suspense.
+
 ## Paynamics
 
 ### Shared destination
@@ -180,13 +210,14 @@ Raw secrets and routing credentials do not appear in Cockpit read models, logs, 
 
 - There is no manual credit amount control.
 - Webhooks never credit an Account directly.
+- Manual and scheduled checks never accept operator-supplied transaction facts.
 - A Funding Intent must precede recognition.
 - Destination selection is explicit and snapshotted.
 - Dedicated failures block; they do not fall back.
 - Provider verification is independent from webhook intake.
 - Exact amount, currency, destination, and provider identity must match.
-- QR Ph payer identity must match the Account owner's full verified mobile.
-- Unknown mobiles stop before Funding Intent creation or provider payment.
+- The authenticated Funding Intent owner determines the Account to credit.
+- Payer mobile is never a routing key; provider-verified identity is an additional check when supplied.
 - Registration does not self-verify a mobile.
 - Mobile verification challenges store a keyed hash, never the full mobile or OTP.
 - The local `000000` verification driver is restricted to explicitly allowed environments.
@@ -211,6 +242,15 @@ It provides:
 - clear warning that provider settlement, not the form submission, changes balance.
 
 The Funding page consumes the same preference read model. A blocked dedicated destination is visible but cannot be selected for a new Funding Intent. Profile provider cards are summaries and link to Accounts; they no longer mutate provider destinations.
+
+An eligible NetBank intent exposes:
+
+- a one-time instruction card with the provider-generated QR, exact amount, expiry, and destination guidance;
+- an owner-only **Reopen QR** control backed by a private `no-store` endpoint;
+- a throttled **Check NetBank** control that only queues the shared verification job;
+- status, last-check time, and a compact result notice.
+
+The general Funding read model never contains a VCA, QR payload, provider transaction ID, or raw evidence. The secure instruction endpoint reopens only an unexpired owner-bound instruction. While open intents exist, the page refreshes only the Funding props using non-overlapping Inertia polling and preserves the sensitive instruction already present in browser state.
 
 `/x/cockpit/funding` also exposes a non-production QR Ph lifecycle lab. Its QR carries no monetary value. The operator can simulate a ₱25 payment and inspect mobile resolution, signed evidence, authoritative re-verification, atomic posting, and replay protection. The runner performs no network call and rolls every database and balance change back.
 
@@ -241,6 +281,20 @@ The QR Ph wave adds two rollback-only lifecycle scenarios:
 
 Both scenarios are blocked from the generic lifecycle HTTP API. The simulator refuses production execution even if its lower-level flag is accidentally enabled.
 
+## Scheduled Verification and Expiry
+
+The package registers:
+
+```text
+xchange:funding:verify-open --provider=netbank --limit=100
+```
+
+It also registers a non-overlapping every-minute schedule when scheduled verification is enabled. The host must run Laravel’s scheduler and queue worker, but it contains no funding command, schedule, or business rule.
+
+Open NetBank intents are checked until their instruction expiry plus the configured settlement grace period, which defaults to five minutes. Once that boundary passes, x-change performs a final authoritative provider-history query. It expires the intent only after NetBank conclusively reports no matching transfer beyond the grace boundary. Provider outages continue to await verification; they are never interpreted as proof that no payment occurred. Verified intents remain eligible so a failed Account-credit attempt can recover through the idempotent settlement action.
+
+Funding Intent events retain the verification trigger, attempt transition, outcome, expiry, and sanitized provider-failure type. Cockpit projects only safe statuses and timestamps.
+
 ## Configuration and Rollout
 
 1. Configure and test shared provider credentials first.
@@ -251,12 +305,21 @@ Both scenarios are blocked from the generic lifecycle HTTP API. The simulator re
 6. Confirm signature verification and provider verification endpoints in a non-production environment.
 7. Keep dedicated mode optional until authoritative provider proof is available.
 8. Enable provider webhook ingress only after replay and duplicate-delivery tests pass.
-9. Monitor suspense, verification latency, reversal recovery, and destination failures.
-10. Never migrate a legacy inferred destination into dedicated mode without explicit ownership evidence.
+9. Run a queue worker and Laravel scheduler; confirm the named NetBank task appears once.
+10. Confirm owner-only QR access returns private `no-store` responses.
+11. Monitor suspense, verification latency, expiry, reversal recovery, and destination failures.
+12. Never migrate a legacy inferred destination into dedicated mode without explicit ownership evidence.
 
 Relevant environment switches:
 
 ```text
+XCHANGE_FUNDING_NETBANK_ENABLED
+XCHANGE_FUNDING_INTENT_TTL_SECONDS
+XCHANGE_FUNDING_SCHEDULED_VERIFICATION_ENABLED
+XCHANGE_FUNDING_SCHEDULED_VERIFICATION_BATCH_SIZE
+XCHANGE_FUNDING_SETTLEMENT_GRACE_SECONDS
+XCHANGE_FUNDING_VERIFICATION_PROVIDER_RATE_LIMIT_PER_MINUTE
+XCHANGE_FUNDING_UI_REFRESH_INTERVAL_MILLISECONDS
 XCHANGE_COCKPIT_QRPH_FUNDING_SIMULATION_ENABLED
 XCHANGE_LIFECYCLE_QRPH_SIMULATION_ENABLED
 XCHANGE_MOBILE_VERIFICATION_ENABLED
@@ -265,7 +328,24 @@ XCHANGE_MOBILE_VERIFICATION_MAX_ATTEMPTS
 XCHANGE_MOBILE_VERIFICATION_HASH_KEY
 XCHANGE_FUNDING_PAYER_IDENTITY_HASH_KEY
 XCHANGE_WITHDRAWAL_OTP_DRIVER
+
+NETBANK_FUNDING_API_URL
+NETBANK_FUNDING_TOKEN_URL
+NETBANK_FUNDING_CLIENT_ID
+NETBANK_FUNDING_CLIENT_SECRET
+NETBANK_FUNDING_CORPORATE_ACCOUNT_NUMBER
+NETBANK_FUNDING_CORPORATE_ACCOUNT_NAME
+NETBANK_FUNDING_VCA_ALIAS
+NETBANK_FUNDING_VCA_ALIAS_TOKEN
+NETBANK_FUNDING_REFERENCE_KEY
+NETBANK_FUNDING_QR_ENDPOINT
+NETBANK_FUNDING_QR_MERCHANT_NAME
+NETBANK_FUNDING_QR_MERCHANT_CITY
+NETBANK_FUNDING_QR_PURPOSE
+NETBANK_FUNDING_WEBHOOK_ALLOWED_IPS
 ```
+
+Before production, run adapter contract tests with HTTP fakes, verify the queue and scheduler in a non-production environment, and exercise browser acceptance without sending money. Live UAT is a separate explicit gate: a human scans a configured small exact-amount QR and authorizes the real payment. The acceptance result must contain exactly one Inventory recognition and one Account credit whether confirmation arrives through webhook or **Check NetBank**. Automated tests and Codex must never initiate the real-money payment.
 
 ## Acceptance Criteria
 
@@ -278,4 +358,24 @@ A release is acceptable only when:
 - production assets build;
 - package migration and asset diagnostics pass;
 - responsive browser acceptance covers Accounts and Funding;
-- the host worktree contains no committed implementation or documentation for this feature.
+- live money movement is either explicitly gated and human-authorized or recorded as pending;
+- authored implementation and documentation remain inside the package repositories; the host may contain only published package assets and generated route bindings.
+
+## Hybrid NetBank Wave Acceptance Record
+
+Acceptance completed on 2026-07-23:
+
+- `emi-core`: QR contract, serialization, legacy-adapter compatibility, observations, and webhook evidence passed;
+- `emi-netbank`: deterministic VCA, exact one-time limit, dynamic P2M QR, PNG validation, readiness, retry, transaction-history, ambiguity, and failure-path tests passed;
+- `x-change`: Funding Intent lifecycle, instruction persistence, owner authorization, secure QR access, webhook/operator/schedule convergence, unique job controls, settlement, suspense, recovery, expiry, Accounts, Funding read models, and lifecycle scenarios passed;
+- Cockpit Funding and Accounts component tests passed;
+- published Cockpit assets matched package source;
+- production assets built successfully;
+- desktop acceptance at 1440×1000 and mobile acceptance at 390×844 showed no document-level horizontal overflow;
+- a local Funding Intent rendered exact one-time instructions; an owner-bound temporary NetBank fixture reopened a dynamic P2M QR through the secure endpoint;
+- the mobile QR remained 160×160, the instruction card fit the viewport, and the wide activity table remained reachable through its own horizontal scroller;
+- invalid exact-amount input rendered its inline error without overflowing;
+- the seven-step rollback-only QR Ph scenario completed, proved a single simulated credit plus replay no-op, and retained no lifecycle or balance changes;
+- temporary browser-acceptance records were removed afterward.
+
+NetBank was intentionally disabled in the sandbox, so its provider option and **Check NetBank** control remained disabled. Authorization, queueing, pending/suspense outcomes, `no-store` headers, and QR persistence are covered by backend and component tests. Live QR generation, human scan/payment, webhook arrival, and real VCA history confirmation remain behind the explicit live-provider UAT gate; no automated real-money payment was performed.
