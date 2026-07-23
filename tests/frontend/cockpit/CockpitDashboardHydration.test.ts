@@ -50,7 +50,7 @@ const dashboardReadModel = {
 };
 
 const cockpitHeaderReadModel = {
-    schema: 'x-change.cockpit.header-read-model.v1',
+    schema: 'x-change.cockpit.header-read-model.v2',
     status: 'available',
     authorized: true,
     read_only: true,

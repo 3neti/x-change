@@ -72,7 +72,7 @@ describe('Cockpit shell layout baseline', () => {
         const wrapper = mount(CockpitLayout, {
             props: {
                 cockpitHeaderReadModel: {
-                    schema: 'x-change.cockpit.header-read-model.v1',
+                    schema: 'x-change.cockpit.header-read-model.v2',
                     authorized: true,
                     read_only: true,
                     balances: [
@@ -89,8 +89,8 @@ describe('Cockpit shell layout baseline', () => {
                             tone: 'warning',
                         },
                         {
-                            key: 'usable',
-                            label: 'Usable Balance',
+                            key: 'issuance',
+                            label: 'Issuance Capacity',
                             value: '₱9,851.50',
                             tone: 'healthy',
                         },
@@ -110,6 +110,7 @@ describe('Cockpit shell layout baseline', () => {
         expect(header.text()).toContain('₱9,876.50');
         expect(header.text()).toContain('₱25.00');
         expect(header.text()).toContain('₱9,851.50');
+        expect(header.text()).toContain('Issuance Capacity');
         expect(header.text()).toContain('Not available');
         expect(header.text()).not.toContain('Internal balance not connected');
     });
@@ -122,6 +123,7 @@ describe('Cockpit shell layout baseline', () => {
         expect(wrapper.find('[data-testid="cockpit-balance-hud"]').exists()).toBe(true);
         expect(wrapper.text()).toContain('Internal Balance');
         expect(wrapper.text()).toContain('Internal balance not connected');
+        expect(wrapper.text()).toContain('Issuance Capacity');
         expect(wrapper.text()).toContain('Provider Liquidity');
         expect(wrapper.text()).toContain('Not available');
         expect(wrapper.text()).not.toContain('Summary not connected');
@@ -172,7 +174,7 @@ describe('Cockpit shell layout baseline', () => {
 
         expect(labelRows).toHaveLength(2);
         expect(valueRows).toHaveLength(2);
-        expect(hud.classes()).toContain('xl:grid-cols-[4fr_6fr_4fr_8fr]');
+        expect(hud.classes()).toContain('xl:grid-cols-[4fr_6fr_6fr_8fr]');
 
         for (const labelRow of labelRows) {
             expect(labelRow.classes()).toContain('text-center');

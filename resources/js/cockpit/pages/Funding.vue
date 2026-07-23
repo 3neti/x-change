@@ -62,7 +62,7 @@ const summaryCards = computed(() => [
         key: 'recovery',
         label: 'Recovery Outstanding',
         value: props.funding_read_model.summary.recovery_outstanding,
-        helper: 'Reversed funding still held against future usable balance.',
+        helper: 'Reversed funding still held against future Issuance Capacity.',
         tone: 'text-rose-700 dark:text-rose-300',
     },
 ]);
@@ -268,7 +268,7 @@ function reconciliationActionLabel(action: string): string {
                         class="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400"
                     >
                         This creates exact provider instructions. It does not
-                        change Internal Balance or Usable Balance.
+                        change Internal Balance or Issuance Capacity.
                     </p>
 
                     <div

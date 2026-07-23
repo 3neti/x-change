@@ -29,9 +29,9 @@ export const cockpitDashboardMetrics: CockpitDashboardMetric[] = [
     },
     {
         key: 'available-to-issue',
-        label: 'Usable Balance',
-        value: 'Usable balance not connected',
-        helper: 'Bridge estimate; Internal Balance minus Outstanding Pay Codes',
+        label: 'Issuance Capacity',
+        value: 'Issuance capacity not available',
+        helper: 'Internal Balance capped by provider liquidity after Outstanding Pay Codes',
         tone: 'healthy',
     },
 ];

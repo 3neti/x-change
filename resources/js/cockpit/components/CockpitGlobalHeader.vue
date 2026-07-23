@@ -25,9 +25,9 @@ withDefaults(defineProps<{
             tone: 'neutral',
         },
         {
-            key: 'usable',
-            label: 'Usable Balance',
-            value: 'Usable balance not connected',
+            key: 'issuance',
+            label: 'Issuance Capacity',
+            value: 'Not available',
             tone: 'neutral',
         },
         {

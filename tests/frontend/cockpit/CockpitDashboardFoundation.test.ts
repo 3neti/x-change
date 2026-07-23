@@ -20,7 +20,7 @@ describe('Cockpit dashboard foundation widgets', () => {
         });
 
         expect(wrapper.text()).toContain('Funding readiness');
-        expect(wrapper.text()).toContain('Outstanding Pay Codes and Usable Balance are bridge estimates');
+        expect(wrapper.text()).toContain('Issuance Capacity is capped by provider liquidity');
         expect(wrapper.text()).toContain('Cockpit does not reserve, release, capture, refund, or move money here.');
         expect(wrapper.text()).toContain('Bridge estimates');
         expect(wrapper.text()).toContain('Treasury facts deferred');
@@ -31,9 +31,9 @@ describe('Cockpit dashboard foundation widgets', () => {
         expect(wrapper.text()).toContain('Internal Balance');
         expect(wrapper.text()).toContain('Provider Liquidity');
         expect(wrapper.text()).toContain('Outstanding Pay Codes');
-        expect(wrapper.text()).toContain('Usable Balance');
+        expect(wrapper.text()).toContain('Issuance Capacity');
         expect(wrapper.text()).toContain('Bridge estimate; no fund release');
-        expect(wrapper.text()).toContain('Bridge estimate; Internal Balance minus Outstanding Pay Codes');
+        expect(wrapper.text()).toContain('Internal Balance capped by provider liquidity after Outstanding Pay Codes');
         expect(wrapper.text()).not.toContain('Balance summary not connected');
         expect(wrapper.text()).not.toContain('Read model pending');
         expect(wrapper.find('[data-testid="cockpit-funding-density-summary"]').text()).toContain('Funding Facts');
