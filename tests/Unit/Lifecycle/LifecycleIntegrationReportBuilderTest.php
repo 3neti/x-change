@@ -97,7 +97,7 @@ it('enriches lifecycle payloads with read-only integration reports', function ()
         ->and($payload['integrations']['campaigns']['mutation']['enabled'])->toBeFalse();
 });
 
-it('reports missing campaign context without failing lifecycle payload enrichment', function () {
+it('reports an available campaign package without selecting a campaign', function () {
     $payload = app(LifecycleIntegrationReportBuilder::class)->enrich([
         'scenario' => 'unknown_scenario_key',
         'success' => false,
@@ -107,6 +107,11 @@ it('reports missing campaign context without failing lifecycle payload enrichmen
     expect($payload['success'])->toBeFalse()
         ->and($payload['integrations']['summary']['read_only'])->toBeTrue()
         ->and($payload['integrations']['summary']['mutates_state'])->toBeFalse()
-        ->and($payload['integrations']['campaigns']['status'])->toBe('unavailable')
-        ->and($payload['integrations']['campaigns']['redactions']['reason'])->toBe('missing-campaign-context');
+        ->and($payload['integrations']['campaigns']['status'])->toBe('available')
+        ->and($payload['integrations']['campaigns']['authorized'])->toBeTrue()
+        ->and($payload['integrations']['campaigns']['facts']['context_status'])->toBe('no-campaign-selected')
+        ->and($payload['integrations']['campaigns']['facts']['selected'])->toBeFalse()
+        ->and($payload['integrations']['campaigns']['facts']['actions'])->toBe([])
+        ->and($payload['integrations']['campaigns']['mutation']['enabled'])->toBeFalse()
+        ->and($payload['integrations']['campaigns']['redactions']['reason'])->toBe('no-campaign-selected');
 });
