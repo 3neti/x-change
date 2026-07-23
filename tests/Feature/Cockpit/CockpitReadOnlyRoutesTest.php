@@ -1175,6 +1175,7 @@ it('requires authentication for cockpit routes', function (string $route, array 
         ->assertUnauthorized();
 })->with([
     'dashboard' => ['x-change.cockpit.dashboard', []],
+    'accounts' => ['x-change.cockpit.accounts.index', []],
     'funding' => ['x-change.cockpit.funding.index', []],
     'quick generate' => ['x-change.cockpit.quick-generate', []],
     'pay code explorer' => ['x-change.cockpit.pay-codes.index', []],
@@ -1182,7 +1183,7 @@ it('requires authentication for cockpit routes', function (string $route, array 
     'distribution workspace' => ['x-change.cockpit.pay-codes.distribution', ['code' => 'PC-READY-001']],
 ]);
 
-it('registers only the guarded issuance and funding intent Cockpit mutation routes', function () {
+it('registers only the guarded issuance, funding, and Account Cockpit mutation routes', function () {
     $mutatingRoutes = collect(Route::getRoutes())
         ->filter(fn ($route): bool => str_starts_with((string) $route->getName(), 'x-change.cockpit.'))
         ->filter(fn ($route): bool => collect($route->methods())
@@ -1191,6 +1192,8 @@ it('registers only the guarded issuance and funding intent Cockpit mutation rout
         );
 
     expect($mutatingRoutes->pluck('action.as')->values()->all())->toBe([
+        'x-change.cockpit.accounts.providers.funding-destination.update',
+        'x-change.cockpit.accounts.providers.netbank.token-rotation.store',
         'x-change.cockpit.funding.intents.store',
         'x-change.cockpit.funding.suspense.reconciliation-requests.store',
         'x-change.cockpit.funding.reconciliations.approve',
