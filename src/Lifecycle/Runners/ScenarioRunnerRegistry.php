@@ -19,6 +19,7 @@ final class ScenarioRunnerRegistry
             'settlement_three_party_flow',
             'execution_engine_contract_demo',
             'live_provider_verification',
+            'account_management',
         ], true);
     }
 
@@ -32,6 +33,7 @@ final class ScenarioRunnerRegistry
             'settlement_three_party_flow' => app(SettlementThreePartyScenarioRunner::class),
             'execution_engine_contract_demo' => app(ExecutionEngineContractScenarioRunner::class),
             'live_provider_verification' => app(LiveProviderVerificationScenarioRunner::class),
+            'account_management' => app(AccountManagementScenarioRunner::class),
             default => throw new RuntimeException("No lifecycle scenario runner registered for mode [{$mode}]."),
         };
     }

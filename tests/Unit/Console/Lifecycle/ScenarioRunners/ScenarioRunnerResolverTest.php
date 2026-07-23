@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use LBHurtado\XChange\Lifecycle\Runners\AccountManagementScenarioRunner;
 use LBHurtado\XChange\Lifecycle\Runners\DefaultClaimScenarioRunner;
 use LBHurtado\XChange\Lifecycle\Runners\ExecutionEngineContractScenarioRunner;
 use LBHurtado\XChange\Lifecycle\Runners\ScenarioRunnerResolver;
@@ -58,6 +59,15 @@ it('resolves execution engine contract demo mode', function () {
 
     expect($resolution->mode)->toBe('execution_engine_contract_demo')
         ->and($resolution->runner)->toBeInstanceOf(ExecutionEngineContractScenarioRunner::class);
+});
+
+it('resolves account management mode', function () {
+    $resolution = app(ScenarioRunnerResolver::class)->resolve([
+        'mode' => 'account_management',
+    ]);
+
+    expect($resolution->mode)->toBe('account_management')
+        ->and($resolution->runner)->toBeInstanceOf(AccountManagementScenarioRunner::class);
 });
 
 it('throws when no runner is registered for mode', function () {

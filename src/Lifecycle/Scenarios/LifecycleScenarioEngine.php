@@ -163,7 +163,7 @@ final class LifecycleScenarioEngine
             );
         }
 
-        if (in_array($mode, ['turnkey_onboarding', 'live_provider_verification'], true)) {
+        if (in_array($mode, ['turnkey_onboarding', 'live_provider_verification', 'account_management'], true)) {
             return $this->runWithoutVoucherBootstrap(
                 scenarioKey: $scenarioKey,
                 scenario: $scenario,

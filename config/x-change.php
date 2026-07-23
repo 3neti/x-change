@@ -143,6 +143,17 @@ return [
             'throttle:6,1',
         ],
 
+        'account_scenario' => [
+            'enabled' => (bool) env(
+                'XCHANGE_COCKPIT_ACCOUNT_SCENARIO_ENABLED',
+                env('APP_ENV') !== 'production',
+            ),
+            'middleware' => [
+                'verified',
+                'throttle:3,1',
+            ],
+        ],
+
         'header_provider_balance' => [
             'enabled' => (bool) env('XCHANGE_COCKPIT_HEADER_PROVIDER_BALANCE_ENABLED', false),
         ],

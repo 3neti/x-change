@@ -286,6 +286,15 @@ return [
             ],
         ],
 
+        'account_management_funding_destinations_demo' => [
+            'label' => 'Account Management Funding Destinations',
+            'description' => 'Demonstrates shared and dedicated funding destination controls in a rollback-only simulation.',
+            'category' => 'demo',
+            'tags' => ['demo', 'account-management', 'funding', 'rollback-only'],
+            'mode' => 'account_management',
+            'api_executable' => false,
+        ],
+
         /*
         |--------------------------------------------------------------------------
         | Live provider verification scenarios

@@ -107,3 +107,13 @@ it('passes runtime options to the engine', function () {
 
     expect(Arr::get($response->json('attempt_summary'), 'total'))->toBeGreaterThanOrEqual(1);
 });
+
+it('refuses cockpit-only account-management scenarios through the generic lifecycle API', function () {
+    $response = $this->postJson(xchangeApi('lifecycle/scenarios/run'), [
+        'scenario' => 'account_management_funding_destinations_demo',
+    ]);
+
+    $response->assertForbidden()
+        ->assertJsonPath('success', false)
+        ->assertJsonPath('scenario', 'account_management_funding_destinations_demo');
+});
