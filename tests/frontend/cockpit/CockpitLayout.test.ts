@@ -50,10 +50,17 @@ describe('Cockpit shell layout baseline', () => {
         const disabledItems = wrapper.findAll('[data-testid="cockpit-nav-item-disabled"]');
         const disabledText = disabledItems.map((item) => item.text()).join(' ');
 
-        expect(disabledItems).toHaveLength(7);
-        expect(disabledText).toContain('Funding');
+        expect(disabledItems).toHaveLength(6);
+        expect(disabledText).not.toContain('Funding');
         expect(disabledText).toContain('Operations');
         expect(disabledText).toContain('Coming soon');
+
+        expect(
+            wrapper
+                .findAll('[data-testid="cockpit-nav-item"]')
+                .map((item) => item.text())
+                .join(' '),
+        ).toContain('Funding');
 
         for (const item of disabledItems) {
             expect(item.attributes('aria-disabled')).toBe('true');
