@@ -36,7 +36,7 @@ describe('Cockpit dashboard shell baseline', () => {
         expect(wrapper.findAll('[data-testid="cockpit-risk-signal"]')).toHaveLength(3);
         expect(wrapper.findAll('[data-testid="cockpit-activity-item"]')).toHaveLength(3);
         expect(wrapper.text()).toContain('Summary not connected');
-        expect(wrapper.text()).toContain('No provider call from dashboard');
+        expect(wrapper.text()).toContain('no provider call from dashboard');
         expect(wrapper.text()).toContain('Audit facts require authorization and redaction before display.');
     });
 });
