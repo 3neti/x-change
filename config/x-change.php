@@ -137,6 +137,12 @@ return [
     ],
 
     'cockpit' => [
+        'account_mutation_middleware' => [
+            'verified',
+            'password.confirm:settings.security.confirm',
+            'throttle:6,1',
+        ],
+
         'header_provider_balance' => [
             'enabled' => (bool) env('XCHANGE_COCKPIT_HEADER_PROVIDER_BALANCE_ENABLED', false),
         ],

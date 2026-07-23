@@ -13,12 +13,15 @@ use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimRedirectController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimStartController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSubmitController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSuccessPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDistributionWorkspacePageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingDestinationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingIntentController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingReconciliationApprovalController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingReconciliationRequestController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitNetbankTokenRotationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeExplorerPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateMutationRouteShellController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGeneratePageController;
@@ -40,6 +43,20 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
 
     Route::prefix('cockpit')->middleware(ShareCockpitHeaderReadModel::class)->group(function (): void {
         Route::get('/', CockpitDashboardPageController::class)->name('x-change.cockpit.dashboard');
+        Route::get('accounts', CockpitAccountPageController::class)
+            ->middleware('verified')
+            ->name('x-change.cockpit.accounts.index');
+        Route::middleware((array) config('x-change.cockpit.account_mutation_middleware', []))->group(function (): void {
+            Route::patch(
+                'accounts/providers/{provider}/funding-destination',
+                CockpitFundingDestinationController::class,
+            )->whereIn('provider', ['netbank', 'paynamics'])
+                ->name('x-change.cockpit.accounts.providers.funding-destination.update');
+            Route::post(
+                'accounts/providers/netbank/token-rotation',
+                CockpitNetbankTokenRotationController::class,
+            )->name('x-change.cockpit.accounts.providers.netbank.token-rotation.store');
+        });
         Route::get('funding', CockpitFundingPageController::class)->name('x-change.cockpit.funding.index');
         Route::post('funding/intents', CockpitFundingIntentController::class)->name('x-change.cockpit.funding.intents.store');
         Route::post(

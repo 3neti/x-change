@@ -11,6 +11,7 @@ use LBHurtado\XChange\Data\Funding\CreateFundingIntentData;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Exceptions\FundingIntentConflict;
 use LBHurtado\XChange\Models\FundingIntent;
+use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 
 class CreateFundingIntent
 {
@@ -67,7 +68,9 @@ class CreateFundingIntent
                     'created_by_id' => $actorId,
                     'expires_at' => $data->expiresAt,
                     'metadata' => $data->metadata,
-                    'destination_snapshot_ciphertext' => $data->destination?->toArray(),
+                    'destination_snapshot_ciphertext' => $data->destination === null
+                        ? null
+                        : FundingDestinationSnapshot::fromData($data->destination),
                     'destination_fingerprint' => $data->destination?->fingerprint,
                 ]);
 

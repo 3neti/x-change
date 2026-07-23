@@ -19,6 +19,7 @@ use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
+use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 use Throwable;
 
 class VerifyFundingWebhookReceipt
@@ -375,6 +376,8 @@ class VerifyFundingWebhookReceipt
     {
         $snapshot = $intent->destination_snapshot_ciphertext;
 
-        return is_array($snapshot) ? FundingDestinationData::from($snapshot) : null;
+        return is_array($snapshot)
+            ? FundingDestinationSnapshot::toData($snapshot)
+            : null;
     }
 }

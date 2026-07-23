@@ -16,6 +16,7 @@ use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Exceptions\FundingIntentTransitionDenied;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
+use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 use LogicException;
 
 class IssueFundingInstructions
@@ -170,7 +171,7 @@ class IssueFundingInstructions
         $snapshot = $intent->destination_snapshot_ciphertext;
 
         return is_array($snapshot)
-            ? FundingDestinationData::from($snapshot)
+            ? FundingDestinationSnapshot::toData($snapshot)
             : $this->destinations->shared($intent->provider_code, $intent->account_reference);
     }
 }
