@@ -104,9 +104,10 @@ class FundingCockpitReadModelProvider
     private function providers(string $actorType, string $actorId): array
     {
         return collect((array) config('x-change.funding.providers', []))
-            ->filter(fn (mixed $provider, string $code): bool => is_array($provider) && $code !== 'qrph_simulator')
+            ->filter(fn (mixed $provider): bool => is_array($provider))
             ->map(function (array $provider, string $code) use ($actorType, $actorId): array {
                 $enabled = ($provider['enabled'] ?? false) === true;
+                $simulationOnly = $code === 'qrph_simulator';
                 $preference = FundingDestinationPreference::query()
                     ->with('providerAccountLink')
                     ->where('owner_type', $actorType)
@@ -127,6 +128,7 @@ class FundingCockpitReadModelProvider
                     'label' => match ($code) {
                         'netbank' => 'NetBank',
                         'paynamics', 'paynamics_constellation' => 'Paynamics',
+                        'qrph_simulator' => 'QR Ph Simulator',
                         default => str($code)->headline()->toString(),
                     },
                     'status' => ! $enabled
@@ -134,12 +136,17 @@ class FundingCockpitReadModelProvider
                         : ($dedicatedReady ? 'available' : 'blocked'),
                     'authoritative_verification' => true,
                     'destination_mode' => $mode,
-                    'destination_status' => $mode === 'shared'
-                        ? 'platform_managed'
-                        : ($link?->verification_status ?? 'not_configured'),
-                    'destination_reference' => $mode === 'dedicated'
-                        ? $link?->display_reference
-                        : 'Platform-managed',
+                    'destination_status' => $simulationOnly
+                        ? 'simulation_only'
+                        : ($mode === 'shared'
+                            ? 'platform_managed'
+                            : ($link?->verification_status ?? 'not_configured')),
+                    'destination_reference' => $simulationOnly
+                        ? 'Local simulated clearing'
+                        : ($mode === 'dedicated'
+                            ? $link?->display_reference
+                            : 'Platform-managed'),
+                    'simulation_only' => $simulationOnly,
                 ];
             })
             ->values()

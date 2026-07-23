@@ -85,6 +85,7 @@ class CockpitFundingIntentController extends Controller
         $display = is_array($instructions['display_data'] ?? null)
             ? $instructions['display_data']
             : [];
+        $simulationOnly = $intent->provider_code === 'qrph_simulator';
 
         return [
             'reference' => $intent->reference,
@@ -99,7 +100,8 @@ class CockpitFundingIntentController extends Controller
             'account_name' => $this->optionalString($display['account_name'] ?? null),
             'delivery' => $this->optionalString($display['delivery'] ?? null),
             'balance_changed' => false,
-            'sensitive' => true,
+            'simulation_only' => $simulationOnly,
+            'sensitive' => ! $simulationOnly,
         ];
     }
 

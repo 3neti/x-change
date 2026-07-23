@@ -36,6 +36,14 @@ const form = useForm({
     currency: 'PHP',
     idempotency_key: newIdempotencyKey(),
 });
+const selectedFundingProvider = computed(() =>
+    props.funding_read_model.providers.find(
+        (provider) => provider.code === form.provider,
+    ),
+);
+const simulationIntentSelected = computed(
+    () => selectedFundingProvider.value?.simulation_only === true,
+);
 const reconciliationForm = useForm({
     action: '',
 });
@@ -555,8 +563,13 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     <p
                         class="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400"
                     >
-                        This creates exact provider instructions. It does not
-                        change Internal Balance or Issuance Capacity.
+                        {{
+                            simulationIntentSelected
+                                ? 'This creates exact local simulation instructions with zero provider calls.'
+                                : 'This creates exact provider instructions.'
+                        }}
+                        It does not change Internal Balance or Issuance
+                        Capacity.
                     </p>
 
                     <div
@@ -570,10 +583,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             <select
                                 v-model="form.provider"
                                 class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm transition outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-950"
-                                :disabled="
-                                    form.processing ||
-                                    availableFundingProviders.length === 0
-                                "
+                                :disabled="form.processing"
                                 data-testid="cockpit-funding-provider"
                             >
                                 <option
@@ -610,6 +620,13 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 class="mt-1 block text-xs text-rose-600"
                                 >{{ form.errors.provider }}</span
                             >
+                            <span
+                                v-else-if="simulationIntentSelected"
+                                class="mt-1 block text-xs leading-5 text-emerald-700 dark:text-emerald-300"
+                            >
+                                Local happy path: creates a real Funding Intent
+                                in x-change without contacting a bank or EMI.
+                            </span>
                             <span
                                 v-else-if="
                                     availableFundingProviders.length === 0
@@ -673,7 +690,9 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             {{
                                 form.processing
                                     ? 'Creating instructions…'
-                                    : 'Create funding instructions'
+                                    : simulationIntentSelected
+                                      ? 'Create simulated funding instructions'
+                                      : 'Create funding instructions'
                             }}
                         </button>
                         <p class="text-xs text-slate-500">
@@ -801,6 +820,15 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         </a>
 
                         <p
+                            v-if="funding_instruction.simulation_only"
+                            class="mt-4 text-xs leading-5 text-emerald-700 dark:text-emerald-300"
+                        >
+                            Local simulation only. Do not transfer money to this
+                            address. No bank or EMI was contacted, and no
+                            balance changed.
+                        </p>
+                        <p
+                            v-else
                             class="mt-4 text-xs leading-5 text-slate-600 dark:text-slate-400"
                         >
                             Sensitive settlement access material. Transfer the
@@ -936,7 +964,9 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                         ? 'Dedicated funding is unavailable until authoritative destination verification succeeds.'
                                         : provider.status === 'disabled'
                                           ? 'Adapter installed; Funding Intake remains locked until this provider is explicitly enabled.'
-                                          : 'Signed intake plus independent authoritative status verification.'
+                                          : provider.simulation_only
+                                            ? 'Local-only Funding Intent happy path with zero bank or EMI calls.'
+                                            : 'Signed intake plus independent authoritative status verification.'
                                 }}
                             </p>
                         </div>

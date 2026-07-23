@@ -430,7 +430,10 @@ return [
         'verification_lock_wait_seconds' => (int) env('XCHANGE_FUNDING_VERIFICATION_LOCK_WAIT_SECONDS', 5),
         'verification_candidate_limit' => (int) env('XCHANGE_FUNDING_VERIFICATION_CANDIDATE_LIMIT', 100),
         'simulator' => [
-            'enabled' => (bool) env('XCHANGE_QRPH_SIMULATOR_ENABLED', false),
+            'enabled' => (bool) env(
+                'XCHANGE_QRPH_SIMULATOR_ENABLED',
+                env('APP_ENV') !== 'production',
+            ),
             'allowed_environments' => ['local', 'testing'],
             'signing_key' => env('XCHANGE_QRPH_SIMULATOR_SIGNING_KEY', env('APP_KEY')),
             'mobile_hash_key' => env('XCHANGE_QRPH_SIMULATOR_MOBILE_HASH_KEY', env('APP_KEY')),
@@ -455,7 +458,10 @@ return [
                 ],
             ],
             'qrph_simulator' => [
-                'enabled' => (bool) env('XCHANGE_QRPH_SIMULATOR_ENABLED', false),
+                'enabled' => (bool) env(
+                    'XCHANGE_QRPH_SIMULATOR_ENABLED',
+                    env('APP_ENV') !== 'production',
+                ),
                 'signature_header' => 'X-XChange-Simulator-Signature',
                 'treasury' => [
                     'inventory_reference' => 'inventory:qrph-simulator:local-clearing',

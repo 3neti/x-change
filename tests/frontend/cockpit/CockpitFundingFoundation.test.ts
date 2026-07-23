@@ -280,11 +280,51 @@ describe('Cockpit Funding foundation', () => {
         expect(providerText).toContain('Paynamics · Shared (disabled)');
         expect(wrapper.text()).toContain('2 installed');
         expect(wrapper.text()).toContain('Funding Intake stays locked');
+        expect(provider.attributes('disabled')).toBeUndefined();
         expect(
             wrapper
                 .get('[data-testid="cockpit-funding-submit"]')
                 .attributes('disabled'),
         ).toBeDefined();
+    });
+
+    it('offers a local Funding Intent happy path without enabling live providers', () => {
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: {
+                    ...fundingReadModel,
+                    providers: [
+                        ...fundingReadModel.providers.map((provider) => ({
+                            ...provider,
+                            status: 'disabled',
+                        })),
+                        {
+                            code: 'qrph_simulator',
+                            label: 'QR Ph Simulator',
+                            status: 'available',
+                            authoritative_verification: true,
+                            destination_mode: 'shared',
+                            destination_status: 'simulation_only',
+                            destination_reference: 'Local simulated clearing',
+                            simulation_only: true,
+                        },
+                    ],
+                },
+            },
+        });
+
+        expect(
+            wrapper.get('[data-testid="cockpit-funding-provider"]').element,
+        ).toHaveProperty('value', 'qrph_simulator');
+        expect(wrapper.text()).toContain('Local happy path');
+        expect(wrapper.text()).toContain(
+            'Create simulated funding instructions',
+        );
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-funding-submit"]')
+                .attributes('disabled'),
+        ).toBeUndefined();
     });
 
     it('runs and steps through the rollback-only QR Ph funding simulation', async () => {

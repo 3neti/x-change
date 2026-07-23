@@ -76,6 +76,41 @@ it('creates exact one-time instructions without changing the Account balance', f
         ->assertJsonPath('props.funding_instruction', null);
 });
 
+it('creates local simulator instructions without contacting a bank or changing the Account balance', function () {
+    config([
+        'x-change.funding.simulator.enabled' => true,
+        'x-change.funding.providers.qrph_simulator.enabled' => true,
+    ]);
+    $operator = actingAsTestUser();
+    $wallet = $operator->wallet;
+    $balanceBefore = (int) $wallet->balance;
+    $transactionCountBefore = $wallet->transactions()->count();
+
+    $this->post(route('x-change.cockpit.funding.intents.store'), [
+        'provider' => 'qrph_simulator',
+        'amount_minor' => 2_500,
+        'currency' => 'PHP',
+        'idempotency_key' => 'cockpit-funding-simulator-1001',
+    ])->assertRedirect(route('x-change.cockpit.funding.index'))
+        ->assertSessionHas('funding_instruction.provider', 'qrph_simulator')
+        ->assertSessionHas('funding_instruction.amount', '₱25.00')
+        ->assertSessionHas('funding_instruction.status', 'awaiting_funds')
+        ->assertSessionHas('funding_instruction.institution', 'QR Ph Simulator')
+        ->assertSessionHas('funding_instruction.delivery', 'local-simulation-only')
+        ->assertSessionHas('funding_instruction.balance_changed', false)
+        ->assertSessionHas('funding_instruction.simulation_only', true)
+        ->assertSessionHas('funding_instruction.sensitive', false);
+
+    $intent = FundingIntent::query()->sole();
+
+    expect($intent->provider_code)->toBe('qrph_simulator')
+        ->and($intent->funding_address_ciphertext)->toStartWith('qrph-simulator:QRSIM-')
+        ->and($intent->status->value)->toBe('awaiting_funds')
+        ->and((int) $wallet->fresh()->balance)->toBe($balanceBefore)
+        ->and($wallet->transactions()->count())->toBe($transactionCountBefore)
+        ->and($this->fundingAdapter->instructionCalls)->toBe(0);
+});
+
 it('keeps browser retries idempotent and does not issue duplicate instructions', function () {
     actingAsTestUser();
     $payload = [

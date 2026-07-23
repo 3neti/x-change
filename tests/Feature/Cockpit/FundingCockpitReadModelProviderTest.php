@@ -20,6 +20,7 @@ it('presents operator scoped funding controls without exposing provider evidence
     config([
         'x-change.funding.providers.netbank.enabled' => true,
         'x-change.funding.providers.paynamics_constellation.enabled' => true,
+        'x-change.funding.providers.qrph_simulator.enabled' => false,
     ]);
 
     $operator = actingAsTestUser(0);
@@ -115,7 +116,8 @@ it('presents operator scoped funding controls without exposing provider evidence
             'recognized' => '₱0.00',
             'has_treasury_facts' => true,
         ])
-        ->and(collect($readModel['providers'])->pluck('code')->all())->toBe(['netbank', 'paynamics_constellation']);
+        ->and(collect($readModel['providers'])->pluck('code')->all())
+        ->toBe(['netbank', 'paynamics_constellation', 'qrph_simulator']);
 
     $serialized = json_encode($readModel, JSON_THROW_ON_ERROR);
 
@@ -131,6 +133,7 @@ it('blocks an unverified dedicated destination in the Funding read model', funct
     config([
         'x-change.funding.providers.netbank.enabled' => true,
         'x-change.funding.providers.paynamics_constellation.enabled' => true,
+        'x-change.funding.providers.qrph_simulator.enabled' => false,
     ]);
 
     $operator = actingAsTestUser(0);
@@ -167,7 +170,7 @@ it('blocks an unverified dedicated destination in the Funding read model', funct
     ]);
 });
 
-it('keeps installed funding providers visible when live intake is disabled', function () {
+it('offers the local simulator while live funding providers remain disabled', function () {
     config([
         'x-change.funding.providers.netbank.enabled' => false,
         'x-change.funding.providers.paynamics_constellation.enabled' => false,
@@ -180,9 +183,15 @@ it('keeps installed funding providers visible when live intake is disabled', fun
         ->toArray()['providers'];
 
     expect(collect($providers)->pluck('code')->all())
-        ->toBe(['netbank', 'paynamics_constellation'])
+        ->toBe(['netbank', 'paynamics_constellation', 'qrph_simulator'])
         ->and(collect($providers)->pluck('status')->all())
-        ->toBe(['disabled', 'disabled']);
+        ->toBe(['disabled', 'disabled', 'available'])
+        ->and($providers[2])->toMatchArray([
+            'label' => 'QR Ph Simulator',
+            'destination_status' => 'simulation_only',
+            'destination_reference' => 'Local simulated clearing',
+            'simulation_only' => true,
+        ]);
 });
 
 function fundingCockpitIntent(

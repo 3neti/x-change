@@ -471,6 +471,7 @@ export type CockpitFundingProvider = {
     destination_mode?: 'shared' | 'dedicated';
     destination_status?: string;
     destination_reference?: string | null;
+    simulation_only?: boolean;
 };
 
 export type CockpitFundingIntent = {
@@ -607,7 +608,8 @@ export type CockpitFundingInstruction = {
     account_name?: string | null;
     delivery?: string | null;
     balance_changed: false;
-    sensitive: true;
+    simulation_only?: boolean;
+    sensitive: boolean;
 };
 
 export type CockpitRuntimeProfileComponent = {
