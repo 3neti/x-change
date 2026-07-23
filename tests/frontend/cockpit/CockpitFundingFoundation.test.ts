@@ -170,15 +170,22 @@ const fundingSimulationResult = {
     ],
 };
 
-const reusableFundingAvailability = {
+const standingFundingAvailability = {
     enabled: true,
     available: true,
     status: 'available',
     provider: 'netbank' as const,
-    temporary: true as const,
+    exists: false,
+    purpose: 'account_funding' as const,
+    recognition_mode: 'supervised' as const,
+    address_status: null,
+    temporary: false as const,
     provider_calls: true as const,
     funding_intent_created: false as const,
     automatic_credit_enabled: false as const,
+    minimum_amount_minor: 100,
+    maximum_amount_minor: 5_000_000,
+    daily_limit_minor: 10_000_000,
 };
 
 describe('Cockpit Funding foundation', () => {
@@ -210,7 +217,7 @@ describe('Cockpit Funding foundation', () => {
                     balance_changed: false,
                     sensitive: true,
                 },
-                reusable_funding_address: reusableFundingAvailability,
+                standing_funding_address: standingFundingAvailability,
             },
         });
 
@@ -243,10 +250,10 @@ describe('Cockpit Funding foundation', () => {
         ).toBe('data:image/png;base64,AA==');
         expect(wrapper.text()).toContain('915001234567890123456');
         expect(wrapper.text()).toContain('Check NetBank');
-        expect(wrapper.text()).toContain('Reusable Funding Address');
-        expect(wrapper.text()).toContain('Generate reusable QR');
+        expect(wrapper.text()).toContain('Account Funding Address');
+        expect(wrapper.text()).toContain('Create Account Funding QR');
         expect(wrapper.text()).toContain(
-            'it does not create a Funding Intent or credit the Account',
+            'payer mobile, amount, timing, and merchant text never decide',
         );
         expect(wrapper.text()).toContain('Reopen QR');
         expect(wrapper.text()).toContain(
@@ -267,18 +274,22 @@ describe('Cockpit Funding foundation', () => {
         );
     });
 
-    it('generates a temporary reusable QR and checks sanitized NetBank history', async () => {
+    it('opens a standing QR, checks sanitized receipts, and approves supervised credit', async () => {
         const fetch = vi
             .fn()
             .mockResolvedValueOnce({
                 ok: true,
                 status: 200,
                 json: async () => ({
-                    schema: 'x-change.cockpit.netbank-reusable-funding-address.v1',
+                    schema: 'x-change.cockpit.standing-funding-address.v1',
                     address: {
+                        reference: '01J-STANDING-1',
                         provider: 'netbank',
                         funding_address: '915001234567890123456',
                         masked_funding_address: '•••• 123456',
+                        purpose: 'account_funding',
+                        recognition_mode: 'supervised',
+                        status: 'active',
                         currency: 'PHP',
                         institution: 'NetBank',
                         merchant_name: 'X Change',
@@ -287,9 +298,12 @@ describe('Cockpit Funding foundation', () => {
                         transaction_type: 'p2m',
                         embedded_amount: false,
                         provider_generated: true,
-                        temporary: true,
+                        temporary: false,
                         funding_intent_created: false,
                         automatic_credit_enabled: false,
+                        minimum_amount_minor: 100,
+                        maximum_amount_minor: 5_000_000,
+                        daily_limit_minor: 10_000_000,
                     },
                 }),
             })
@@ -297,17 +311,18 @@ describe('Cockpit Funding foundation', () => {
                 ok: true,
                 status: 200,
                 json: async () => ({
-                    schema: 'x-change.cockpit.netbank-reusable-funding-history.v1',
+                    schema: 'x-change.cockpit.standing-funding-history.v1',
                     observations: [
                         {
-                            reference: 'NB-ABC123',
+                            reference: 'AF-ABC123',
                             gross_amount_minor: 2500,
                             fee_amount_minor: 0,
                             net_amount_minor: 2500,
                             gross_amount: '₱25.00',
                             net_amount: '₱25.00',
                             currency: 'PHP',
-                            provider_status: 'settled',
+                            provider_status: 'awaiting_approval',
+                            can_approve: true,
                             occurred_at: '2026-07-23T01:05:00+00:00',
                             settled_at: '2026-07-23T01:06:00+00:00',
                         },
@@ -316,70 +331,103 @@ describe('Cockpit Funding foundation', () => {
                     balance_changed: false,
                     funding_intent_created: false,
                 }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: async () => ({
+                    schema: 'x-change.cockpit.account-funding-receipt-approval.v1',
+                    receipt: {
+                        reference: 'AF-ABC123',
+                        status: 'settled',
+                        settled_at: '2026-07-23T01:08:00+00:00',
+                    },
+                    message:
+                        'Verified funding was recognized in Treasury Inventory and credited to the Account.',
+                }),
             });
         vi.stubGlobal('fetch', fetch);
         const wrapper = mount(Funding, {
             props: {
                 funding_read_model: fundingReadModel,
-                reusable_funding_address: reusableFundingAvailability,
+                standing_funding_address: standingFundingAvailability,
             },
         });
 
         await wrapper
-            .get('[data-testid="generate-reusable-funding-address"]')
+            .get('[data-testid="open-standing-funding-address"]')
             .trigger('click');
         await nextTick();
         await nextTick();
 
         expect(fetch).toHaveBeenNthCalledWith(
             1,
-            '/x/cockpit/funding/reusable-addresses/netbank',
+            '/x/cockpit/funding/standing-addresses/netbank',
             expect.objectContaining({
                 method: 'POST',
                 credentials: 'same-origin',
                 body: JSON.stringify({
-                    confirm_temporary_reusable_address: true,
+                    confirm_account_funding_address: true,
                 }),
             }),
         );
         expect(
             wrapper
-                .get('[data-testid="reusable-funding-address-qr"]')
+                .get('[data-testid="standing-funding-address-qr"]')
                 .attributes('src'),
         ).toBe('data:image/png;base64,REUSABLE');
         expect(
             wrapper
-                .get('[data-testid="reusable-funding-address-value"]')
+                .get('[data-testid="standing-funding-address-value"]')
                 .text(),
         ).toContain('915001234567890123456');
-        expect(wrapper.text()).toContain('Automatic credit');
-        expect(wrapper.text()).toContain('Disabled');
+        expect(wrapper.text()).toContain('Recognition');
+        expect(wrapper.text()).toContain('Supervised');
 
         await wrapper
-            .get('[data-testid="check-reusable-funding-history"]')
+            .get('[data-testid="check-standing-funding-history"]')
             .trigger('click');
         await nextTick();
         await nextTick();
 
         expect(fetch).toHaveBeenNthCalledWith(
             2,
-            '/x/cockpit/funding/reusable-addresses/netbank/history-checks',
+            '/x/cockpit/funding/standing-addresses/netbank/history-checks',
             expect.objectContaining({
                 method: 'POST',
                 credentials: 'same-origin',
             }),
         );
-        expect(wrapper.text()).toContain('NB-ABC123');
+        expect(wrapper.text()).toContain('AF-ABC123');
         expect(wrapper.text()).toContain('₱25.00');
+        expect(wrapper.text()).toContain('Awaiting Approval');
+
+        await wrapper
+            .get('[data-testid="approve-standing-funding-receipt"]')
+            .trigger('click');
+        await nextTick();
+        await nextTick();
+
+        expect(fetch).toHaveBeenNthCalledWith(
+            3,
+            '/x/cockpit/funding/standing-addresses/netbank/receipts/AF-ABC123/approve',
+            expect.objectContaining({
+                method: 'POST',
+                credentials: 'same-origin',
+            }),
+        );
+        expect(wrapper.text()).toContain(
+            'Verified funding was recognized in Treasury Inventory',
+        );
         expect(wrapper.text()).toContain('Settled');
 
         await wrapper
-            .get('[data-testid="hide-reusable-funding-address"]')
+            .get('[data-testid="hide-standing-funding-address"]')
             .trigger('click');
 
         expect(
             wrapper
-                .find('[data-testid="reusable-funding-address-qr"]')
+                .find('[data-testid="standing-funding-address-qr"]')
                 .exists(),
         ).toBe(false);
     });

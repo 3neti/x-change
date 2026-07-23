@@ -12,7 +12,6 @@ use LBHurtado\EmiCore\Data\Funding\StandingFundingObservationRequestData;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
-use LBHurtado\XChange\Actions\Funding\ApproveAccountFundingReceipt;
 use LBHurtado\XChange\Actions\Funding\ProvisionStandingFundingAddress;
 use LBHurtado\XChange\Actions\Funding\SyncStandingFundingAddress;
 use LBHurtado\XChange\Enums\AccountFundingReceiptStatus;
@@ -141,7 +140,16 @@ it('requires owner approval before supervised recognition can credit the Account
         ->and($receipt->status)->toBe(AccountFundingReceiptStatus::AwaitingApproval)
         ->and((int) $wallet->refresh()->balanceInt)->toBe(0);
 
-    $settled = app(ApproveAccountFundingReceipt::class)->handle($receipt, $user);
+    $response = $this->postJson(route(
+        'x-change.cockpit.funding.standing-addresses.netbank.receipts.approve',
+        $receipt,
+    ));
+    $settled = $receipt->refresh();
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('schema', 'x-change.cockpit.account-funding-receipt-approval.v1')
+        ->assertJsonPath('receipt.status', 'settled');
 
     expect($settled->status)->toBe(AccountFundingReceiptStatus::Settled)
         ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)

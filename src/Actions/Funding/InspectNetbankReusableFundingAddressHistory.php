@@ -48,6 +48,7 @@ final class InspectNetbankReusableFundingAddressHistory
                 providerStatus: $receipt->status->value,
                 occurredAt: $receipt->observed_at?->format(DATE_ATOM),
                 settledAt: $receipt->settled_at?->format(DATE_ATOM),
+                canApprove: $receipt->status->value === 'awaiting_approval',
             ))
             ->all();
 

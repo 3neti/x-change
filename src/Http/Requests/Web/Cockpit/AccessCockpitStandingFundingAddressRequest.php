@@ -7,7 +7,7 @@ namespace LBHurtado\XChange\Http\Requests\Web\Cockpit;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
-final class AccessCockpitNetbankReusableFundingAddressRequest extends FormRequest
+final class AccessCockpitStandingFundingAddressRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -20,7 +20,7 @@ final class AccessCockpitNetbankReusableFundingAddressRequest extends FormReques
     public function rules(): array
     {
         return [
-            'confirm_temporary_reusable_address' => ['accepted'],
+            'confirm_account_funding_address' => ['accepted'],
         ];
     }
 }

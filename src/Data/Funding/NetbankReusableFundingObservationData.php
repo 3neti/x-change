@@ -17,5 +17,6 @@ final class NetbankReusableFundingObservationData extends Data
         public string $providerStatus,
         public ?string $occurredAt,
         public ?string $settledAt,
+        public bool $canApprove,
     ) {}
 }

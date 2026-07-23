@@ -86,15 +86,20 @@ export default defineConfig({
                 __dirname,
                 'tests/frontend/stubs/funding-intent-route.ts',
             ),
-            '@/routes/x-change/cockpit/funding/reusable-addresses/netbank/history-checks':
+            '@/routes/x-change/cockpit/funding/standing-addresses/netbank/history-checks':
                 path.resolve(
                     __dirname,
-                    'tests/frontend/stubs/netbank-reusable-funding-history-route.ts',
+                    'tests/frontend/stubs/netbank-standing-funding-history-route.ts',
                 ),
-            '@/routes/x-change/cockpit/funding/reusable-addresses/netbank':
+            '@/routes/x-change/cockpit/funding/standing-addresses/netbank/receipts':
                 path.resolve(
                     __dirname,
-                    'tests/frontend/stubs/netbank-reusable-funding-address-route.ts',
+                    'tests/frontend/stubs/netbank-standing-funding-receipt-routes.ts',
+                ),
+            '@/routes/x-change/cockpit/funding/standing-addresses/netbank':
+                path.resolve(
+                    __dirname,
+                    'tests/frontend/stubs/netbank-standing-funding-address-route.ts',
                 ),
             '@/routes/x-change/cockpit/funding/scenarios/qrph': path.resolve(
                 __dirname,

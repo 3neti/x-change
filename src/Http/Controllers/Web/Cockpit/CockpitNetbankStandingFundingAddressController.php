@@ -9,18 +9,18 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Number;
 use LBHurtado\XChange\Actions\Funding\GenerateNetbankReusableFundingAddress;
 use LBHurtado\XChange\Actions\Funding\InspectNetbankReusableFundingAddressHistory;
-use LBHurtado\XChange\Http\Requests\Web\Cockpit\AccessCockpitNetbankReusableFundingAddressRequest;
+use LBHurtado\XChange\Http\Requests\Web\Cockpit\AccessCockpitStandingFundingAddressRequest;
 
-final class CockpitNetbankReusableFundingAddressController extends Controller
+final class CockpitNetbankStandingFundingAddressController extends Controller
 {
     public function store(
-        AccessCockpitNetbankReusableFundingAddressRequest $request,
+        AccessCockpitStandingFundingAddressRequest $request,
         GenerateNetbankReusableFundingAddress $generate,
     ): JsonResponse {
         $address = $generate->handle($request->user());
 
         return response()->json([
-            'schema' => 'x-change.cockpit.netbank-reusable-funding-address.v1',
+            'schema' => 'x-change.cockpit.standing-funding-address.v1',
             'address' => [
                 'reference' => $address->reference,
                 'provider' => $address->provider,
@@ -48,7 +48,7 @@ final class CockpitNetbankReusableFundingAddressController extends Controller
     }
 
     public function history(
-        AccessCockpitNetbankReusableFundingAddressRequest $request,
+        AccessCockpitStandingFundingAddressRequest $request,
         InspectNetbankReusableFundingAddressHistory $inspect,
     ): JsonResponse {
         $history = $inspect->handle($request->user());
@@ -62,6 +62,7 @@ final class CockpitNetbankReusableFundingAddressController extends Controller
                 'provider_status' => $observation->providerStatus,
                 'occurred_at' => $observation->occurredAt,
                 'settled_at' => $observation->settledAt,
+                'can_approve' => $observation->canApprove,
                 'gross_amount' => Number::currency(
                     $observation->grossAmountMinor / 100,
                     in: $observation->currency,
@@ -75,7 +76,7 @@ final class CockpitNetbankReusableFundingAddressController extends Controller
         );
 
         return response()->json([
-            'schema' => 'x-change.cockpit.netbank-reusable-funding-history.v1',
+            'schema' => 'x-change.cockpit.standing-funding-history.v1',
             'observations' => $observations,
             'checked_at' => now()->toIso8601String(),
             'balance_changed' => $history->sync->settled > 0,

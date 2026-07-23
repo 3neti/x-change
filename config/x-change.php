@@ -424,13 +424,6 @@ return [
         'instruction_lock_wait_seconds' => (int) env('XCHANGE_FUNDING_INSTRUCTION_LOCK_WAIT_SECONDS', 5),
         'instruction_access_middleware' => ['throttle:30,1'],
         'manual_check_middleware' => ['throttle:6,1'],
-        'reusable_address' => [
-            'enabled' => (bool) env(
-                'XCHANGE_NETBANK_REUSABLE_FUNDING_ADDRESS_ENABLED',
-                env('APP_ENV') !== 'production',
-            ),
-            'middleware' => ['throttle:3,1'],
-        ],
         'standing_addresses' => [
             'enabled' => (bool) env(
                 'XCHANGE_STANDING_FUNDING_ADDRESSES_ENABLED',
@@ -440,6 +433,7 @@ return [
                 'XCHANGE_STANDING_FUNDING_RECOGNITION_MODE',
                 'observe_only',
             ),
+            'middleware' => ['throttle:3,1'],
             'lock_seconds' => (int) env('XCHANGE_STANDING_FUNDING_LOCK_SECONDS', 120),
             'lock_wait_seconds' => (int) env('XCHANGE_STANDING_FUNDING_LOCK_WAIT_SECONDS', 5),
             'scheduled_sync_enabled' => (bool) env(

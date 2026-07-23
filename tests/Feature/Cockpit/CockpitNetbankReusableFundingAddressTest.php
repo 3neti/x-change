@@ -11,10 +11,9 @@ beforeEach(function () {
     Cache::clear();
     Http::preventStrayRequests();
     config([
-        'x-change.funding.reusable_address.enabled' => true,
         'x-change.funding.standing_addresses.enabled' => true,
         'x-change.funding.standing_addresses.default_recognition_mode' => 'observe_only',
-        'x-change.funding.reusable_address.middleware' => [],
+        'x-change.funding.standing_addresses.middleware' => [],
         'payment-gateway.netbank.funding.api_url' => 'https://api.netbank.test',
         'payment-gateway.netbank.funding.token_url' => 'https://auth.netbank.test/oauth2/token',
         'payment-gateway.netbank.funding.client_id' => 'client-id',
@@ -49,15 +48,15 @@ it('generates an owner-stable Account Funding Address without creating or credit
     ]);
 
     $response = $this->postJson(
-        route('x-change.cockpit.funding.reusable-addresses.netbank.store'),
-        ['confirm_temporary_reusable_address' => true],
+        route('x-change.cockpit.funding.standing-addresses.netbank.store'),
+        ['confirm_account_funding_address' => true],
     );
 
     $response
         ->assertOk()
         ->assertHeader('Pragma', 'no-cache')
         ->assertHeader('X-Content-Type-Options', 'nosniff')
-        ->assertJsonPath('schema', 'x-change.cockpit.netbank-reusable-funding-address.v1')
+        ->assertJsonPath('schema', 'x-change.cockpit.standing-funding-address.v1')
         ->assertJsonPath('address.provider', 'netbank')
         ->assertJsonPath('address.purpose', 'account_funding')
         ->assertJsonPath('address.recognition_mode', 'observe_only')
@@ -105,8 +104,8 @@ it('checks authoritative VCA history without exposing raw provider or payer fact
     ]);
 
     $addressResponse = $this->postJson(
-        route('x-change.cockpit.funding.reusable-addresses.netbank.store'),
-        ['confirm_temporary_reusable_address' => true],
+        route('x-change.cockpit.funding.standing-addresses.netbank.store'),
+        ['confirm_account_funding_address' => true],
     )->assertOk();
     $fundingAddress = (string) $addressResponse->json('address.funding_address');
 
@@ -138,13 +137,13 @@ it('checks authoritative VCA history without exposing raw provider or payer fact
     ]);
 
     $response = $this->postJson(
-        route('x-change.cockpit.funding.reusable-addresses.netbank.history-checks.store'),
-        ['confirm_temporary_reusable_address' => true],
+        route('x-change.cockpit.funding.standing-addresses.netbank.history-checks.store'),
+        ['confirm_account_funding_address' => true],
     );
 
     $response
         ->assertOk()
-        ->assertJsonPath('schema', 'x-change.cockpit.netbank-reusable-funding-history.v1')
+        ->assertJsonPath('schema', 'x-change.cockpit.standing-funding-history.v1')
         ->assertJsonPath('observations.0.gross_amount_minor', 2500)
         ->assertJsonPath('observations.0.gross_amount', '₱25.00')
         ->assertJsonPath('observations.0.provider_status', 'observed')
@@ -168,15 +167,15 @@ it('requires explicit acknowledgement and fails closed while disabled', function
     actingAsTestUser();
 
     $this->postJson(
-        route('x-change.cockpit.funding.reusable-addresses.netbank.store'),
+        route('x-change.cockpit.funding.standing-addresses.netbank.store'),
     )->assertUnprocessable()
-        ->assertJsonValidationErrors('confirm_temporary_reusable_address');
+        ->assertJsonValidationErrors('confirm_account_funding_address');
 
     config()->set('x-change.funding.standing_addresses.enabled', false);
 
     $this->postJson(
-        route('x-change.cockpit.funding.reusable-addresses.netbank.store'),
-        ['confirm_temporary_reusable_address' => true],
+        route('x-change.cockpit.funding.standing-addresses.netbank.store'),
+        ['confirm_account_funding_address' => true],
     )->assertUnprocessable()
         ->assertJsonValidationErrors('standing_funding_address');
 
@@ -189,11 +188,13 @@ it('keeps the sensitive QR and address out of initial Inertia props', function (
     $this->withHeader('X-Inertia', 'true')
         ->get(route('x-change.cockpit.funding.index'))
         ->assertOk()
-        ->assertJsonPath('props.reusable_funding_address.available', true)
-        ->assertJsonPath('props.reusable_funding_address.temporary', true)
-        ->assertJsonPath('props.reusable_funding_address.automatic_credit_enabled', false)
-        ->assertJsonMissingPath('props.reusable_funding_address.funding_address')
-        ->assertJsonMissingPath('props.reusable_funding_address.qr_code');
+        ->assertJsonPath('props.standing_funding_address.available', true)
+        ->assertJsonPath('props.standing_funding_address.temporary', false)
+        ->assertJsonPath('props.standing_funding_address.purpose', 'account_funding')
+        ->assertJsonPath('props.standing_funding_address.recognition_mode', 'observe_only')
+        ->assertJsonPath('props.standing_funding_address.automatic_credit_enabled', false)
+        ->assertJsonMissingPath('props.standing_funding_address.funding_address')
+        ->assertJsonMissingPath('props.standing_funding_address.qr_code');
 });
 
 function reusableFundingTestPng(): string

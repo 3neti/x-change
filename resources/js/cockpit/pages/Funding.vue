@@ -4,8 +4,9 @@ import { approve as approveReconciliation } from '@/routes/x-change/cockpit/fund
 import { show as showFundingInstructions } from '@/routes/x-change/cockpit/funding/intents/instructions';
 import { store as storeFundingIntent } from '@/routes/x-change/cockpit/funding/intents';
 import { store as storeVerificationCheck } from '@/routes/x-change/cockpit/funding/intents/verification-checks';
-import { store as generateReusableFundingAddressRoute } from '@/routes/x-change/cockpit/funding/reusable-addresses/netbank';
-import { store as checkReusableFundingHistoryRoute } from '@/routes/x-change/cockpit/funding/reusable-addresses/netbank/history-checks';
+import { store as openStandingFundingAddressRoute } from '@/routes/x-change/cockpit/funding/standing-addresses/netbank';
+import { store as checkStandingFundingHistoryRoute } from '@/routes/x-change/cockpit/funding/standing-addresses/netbank/history-checks';
+import { approve as approveStandingFundingReceiptRoute } from '@/routes/x-change/cockpit/funding/standing-addresses/netbank/receipts';
 import { store as runQrPhFundingSimulationRoute } from '@/routes/x-change/cockpit/funding/scenarios/qrph';
 import { store as storeReconciliationRequest } from '@/routes/x-change/cockpit/funding/suspense/reconciliation-requests';
 import { computed, ref, watch } from 'vue';
@@ -15,8 +16,8 @@ import type {
     CockpitFundingPageProps,
     CockpitFundingInstruction,
     CockpitQrPhFundingSimulationResult,
-    CockpitReusableFundingAddress,
-    CockpitReusableFundingObservation,
+    CockpitStandingFundingAddress,
+    CockpitStandingFundingReceipt,
 } from '../types';
 
 const props = defineProps<CockpitFundingPageProps>();
@@ -33,12 +34,14 @@ const instructionError = ref<string | null>(null);
 const simulationRunning = ref(false);
 const simulationError = ref<string | null>(null);
 const simulationResult = ref<CockpitQrPhFundingSimulationResult | null>(null);
-const reusableAddress = ref<CockpitReusableFundingAddress | null>(null);
-const reusableObservations = ref<CockpitReusableFundingObservation[]>([]);
-const reusableAddressLoading = ref(false);
-const reusableHistoryLoading = ref(false);
-const reusableAddressError = ref<string | null>(null);
-const reusableHistoryCheckedAt = ref<string | null>(null);
+const standingAddress = ref<CockpitStandingFundingAddress | null>(null);
+const standingReceipts = ref<CockpitStandingFundingReceipt[]>([]);
+const standingAddressLoading = ref(false);
+const standingHistoryLoading = ref(false);
+const standingAddressError = ref<string | null>(null);
+const standingHistoryCheckedAt = ref<string | null>(null);
+const activeStandingReceiptApproval = ref<string | null>(null);
+const standingActionNotice = ref<string | null>(null);
 const activeSimulationStepIndex = ref(0);
 const activeSimulationStep = computed(
     () =>
@@ -144,7 +147,7 @@ const summaryCards = computed(() => [
 ]);
 
 const safeguards = [
-    'A Funding Intent must exist before money can be recognized.',
+    'Every credit is bound to an exact Funding Intent or an immutable Account Funding Address.',
     'A webhook stores evidence and wakes verification; it never credits an Account.',
     'Settlement is re-queried from the provider before exact net funding is posted.',
     'Mismatches enter suspense; operators cannot type an arbitrary credit amount.',
@@ -365,17 +368,17 @@ async function runQrPhFundingSimulation(): Promise<void> {
     }
 }
 
-async function generateReusableFundingAddress(): Promise<void> {
+async function openStandingFundingAddress(): Promise<void> {
     if (
-        reusableAddressLoading.value ||
-        props.reusable_funding_address?.available !== true
+        standingAddressLoading.value ||
+        props.standing_funding_address?.available !== true
     ) {
         return;
     }
 
-    reusableAddressLoading.value = true;
-    reusableAddressError.value = null;
-    const route = generateReusableFundingAddressRoute();
+    standingAddressLoading.value = true;
+    standingAddressError.value = null;
+    const route = openStandingFundingAddressRoute();
 
     try {
         const response = await fetch(route.url, {
@@ -388,45 +391,44 @@ async function generateReusableFundingAddress(): Promise<void> {
                 ...csrfHeader(),
             },
             body: JSON.stringify({
-                confirm_temporary_reusable_address: true,
+                confirm_account_funding_address: true,
             }),
         });
         const body = await safeJson(response);
 
         if (
             !response.ok ||
-            body.schema !==
-                'x-change.cockpit.netbank-reusable-funding-address.v1' ||
+            body.schema !== 'x-change.cockpit.standing-funding-address.v1' ||
             typeof body.address !== 'object' ||
             body.address === null
         ) {
-            reusableAddressError.value =
+            standingAddressError.value =
                 typeof body.message === 'string'
                     ? body.message
-                    : 'NetBank could not generate the temporary reusable address.';
+                    : 'NetBank could not open the Account Funding Address.';
 
             return;
         }
 
-        reusableAddress.value = body.address as CockpitReusableFundingAddress;
-        reusableObservations.value = [];
-        reusableHistoryCheckedAt.value = null;
+        standingAddress.value = body.address as CockpitStandingFundingAddress;
+        standingReceipts.value = [];
+        standingHistoryCheckedAt.value = null;
     } catch {
-        reusableAddressError.value =
-            'The temporary reusable address could not reach NetBank.';
+        standingAddressError.value =
+            'The Account Funding Address could not reach NetBank.';
     } finally {
-        reusableAddressLoading.value = false;
+        standingAddressLoading.value = false;
     }
 }
 
-async function checkReusableFundingHistory(): Promise<void> {
-    if (reusableHistoryLoading.value || reusableAddress.value === null) {
+async function checkStandingFundingHistory(): Promise<void> {
+    if (standingHistoryLoading.value || standingAddress.value === null) {
         return;
     }
 
-    reusableHistoryLoading.value = true;
-    reusableAddressError.value = null;
-    const route = checkReusableFundingHistoryRoute();
+    standingHistoryLoading.value = true;
+    standingAddressError.value = null;
+    const route = checkStandingFundingHistoryRoute();
 
     try {
         const response = await fetch(route.url, {
@@ -439,18 +441,17 @@ async function checkReusableFundingHistory(): Promise<void> {
                 ...csrfHeader(),
             },
             body: JSON.stringify({
-                confirm_temporary_reusable_address: true,
+                confirm_account_funding_address: true,
             }),
         });
         const body = await safeJson(response);
 
         if (
             !response.ok ||
-            body.schema !==
-                'x-change.cockpit.netbank-reusable-funding-history.v1' ||
+            body.schema !== 'x-change.cockpit.standing-funding-history.v1' ||
             !Array.isArray(body.observations)
         ) {
-            reusableAddressError.value =
+            standingAddressError.value =
                 typeof body.message === 'string'
                     ? body.message
                     : 'NetBank history could not be checked.';
@@ -458,23 +459,99 @@ async function checkReusableFundingHistory(): Promise<void> {
             return;
         }
 
-        reusableObservations.value =
-            body.observations as CockpitReusableFundingObservation[];
-        reusableHistoryCheckedAt.value =
+        standingReceipts.value =
+            body.observations as CockpitStandingFundingReceipt[];
+        standingHistoryCheckedAt.value =
             typeof body.checked_at === 'string' ? body.checked_at : null;
     } catch {
-        reusableAddressError.value =
+        standingAddressError.value =
             'The NetBank history check could not reach the provider.';
     } finally {
-        reusableHistoryLoading.value = false;
+        standingHistoryLoading.value = false;
     }
 }
 
-function hideReusableFundingAddress(): void {
-    reusableAddress.value = null;
-    reusableObservations.value = [];
-    reusableHistoryCheckedAt.value = null;
-    reusableAddressError.value = null;
+async function approveStandingFundingReceipt(reference: string): Promise<void> {
+    if (activeStandingReceiptApproval.value !== null) {
+        return;
+    }
+
+    activeStandingReceiptApproval.value = reference;
+    standingAddressError.value = null;
+    standingActionNotice.value = null;
+    const route = approveStandingFundingReceiptRoute(reference);
+
+    try {
+        const response = await fetch(route.url, {
+            method: route.method.toUpperCase(),
+            credentials: 'same-origin',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                ...csrfHeader(),
+            },
+        });
+        const body = await safeJson(response);
+
+        if (
+            !response.ok ||
+            body.schema !==
+                'x-change.cockpit.account-funding-receipt-approval.v1'
+        ) {
+            standingAddressError.value =
+                typeof body.message === 'string'
+                    ? body.message
+                    : 'The verified funding receipt could not be approved.';
+
+            return;
+        }
+
+        standingReceipts.value = standingReceipts.value.map((receipt) =>
+            receipt.reference === reference
+                ? {
+                      ...receipt,
+                      provider_status: 'settled',
+                      can_approve: false,
+                      settled_at:
+                          typeof body.receipt === 'object' &&
+                          body.receipt !== null &&
+                          typeof (body.receipt as Record<string, unknown>)
+                              .settled_at === 'string'
+                              ? (body.receipt as Record<string, string>)
+                                    .settled_at
+                              : receipt.settled_at,
+                  }
+                : receipt,
+        );
+        standingActionNotice.value =
+            typeof body.message === 'string'
+                ? body.message
+                : 'Verified funding was credited to the Account.';
+    } catch {
+        standingAddressError.value =
+            'The funding approval could not reach the Cockpit service.';
+    } finally {
+        activeStandingReceiptApproval.value = null;
+    }
+}
+
+function hideStandingFundingAddress(): void {
+    standingAddress.value = null;
+    standingReceipts.value = [];
+    standingHistoryCheckedAt.value = null;
+    standingAddressError.value = null;
+    standingActionNotice.value = null;
+}
+
+function formatMinor(value?: number | null, currency = 'PHP'): string {
+    if (value === null || value === undefined) {
+        return 'No limit';
+    }
+
+    return new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency,
+    }).format(value / 100);
 }
 
 function csrfHeader(): Record<string, string> {
@@ -573,9 +650,9 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
             </section>
 
             <section
-                v-if="reusable_funding_address"
-                class="overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-sm dark:border-amber-950 dark:bg-slate-900"
-                data-testid="cockpit-reusable-funding-address"
+                v-if="standing_funding_address"
+                class="overflow-hidden rounded-2xl border border-sky-200 bg-white shadow-sm dark:border-sky-950 dark:bg-slate-900"
+                data-testid="cockpit-standing-funding-address"
             >
                 <div
                     class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start"
@@ -583,73 +660,80 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     <div>
                         <div class="flex flex-wrap items-center gap-2">
                             <p
-                                class="text-xs font-semibold tracking-[0.16em] text-amber-700 uppercase dark:text-amber-300"
+                                class="text-xs font-semibold tracking-[0.16em] text-sky-700 uppercase dark:text-sky-300"
                             >
-                                Reusable Funding Address
+                                Account Funding Address
                             </p>
                             <span
-                                class="rounded-full bg-amber-100 px-2 py-1 text-[0.65rem] font-semibold text-amber-800 uppercase dark:bg-amber-950 dark:text-amber-200"
+                                class="rounded-full bg-sky-100 px-2 py-1 text-[0.65rem] font-semibold text-sky-800 uppercase dark:bg-sky-950 dark:text-sky-200"
                             >
-                                Temporary
+                                {{
+                                    standing_funding_address.recognition_mode.replaceAll(
+                                        '_',
+                                        ' ',
+                                    )
+                                }}
                             </span>
                             <span
                                 class="rounded-full bg-slate-100 px-2 py-1 text-[0.65rem] font-semibold text-slate-600 uppercase dark:bg-slate-800 dark:text-slate-300"
                             >
-                                Real NetBank call
+                                Purpose bound
                             </span>
                         </div>
                         <h2 class="mt-1.5 text-lg font-semibold">
-                            Open-amount QR Ph receiving address
+                            Stable NetBank QR Ph address
                         </h2>
                         <p
                             class="mt-1 max-w-4xl text-sm leading-6 text-slate-600 dark:text-slate-400"
                         >
-                            Generate one stable, provider-issued QR for this
-                            Cockpit operator. A payer chooses the amount.
-                            Checking history reads this exact VCA from NetBank;
-                            it does not create a Funding Intent or credit the
-                            Account.
+                            This exact VCA is permanently classified as
+                            <strong>account funding</strong> for this Account. A
+                            payer chooses the amount; payer mobile, amount,
+                            timing, and merchant text never decide where the
+                            credit goes.
                         </p>
                     </div>
                     <div class="flex flex-wrap gap-2 lg:justify-end">
                         <button
-                            v-if="reusableAddress === null"
+                            v-if="standingAddress === null"
                             type="button"
-                            class="h-10 rounded-lg bg-amber-600 px-4 text-sm font-semibold text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            class="h-10 rounded-lg bg-sky-700 px-4 text-sm font-semibold text-white transition hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50"
                             :disabled="
-                                reusableAddressLoading ||
-                                reusable_funding_address.available !== true
+                                standingAddressLoading ||
+                                standing_funding_address.available !== true
                             "
-                            data-testid="generate-reusable-funding-address"
-                            @click="generateReusableFundingAddress"
+                            data-testid="open-standing-funding-address"
+                            @click="openStandingFundingAddress"
                         >
                             {{
-                                reusableAddressLoading
+                                standingAddressLoading
                                     ? 'Contacting NetBank…'
-                                    : reusable_funding_address.available
-                                      ? 'Generate reusable QR'
-                                      : 'Reusable address unavailable'
+                                    : standing_funding_address.available
+                                      ? standing_funding_address.exists
+                                          ? 'Open Account Funding QR'
+                                          : 'Create Account Funding QR'
+                                      : 'Account Funding Address unavailable'
                             }}
                         </button>
                         <template v-else>
                             <button
                                 type="button"
-                                class="h-10 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-amber-400 dark:text-slate-950 dark:hover:bg-amber-300"
-                                :disabled="reusableHistoryLoading"
-                                data-testid="check-reusable-funding-history"
-                                @click="checkReusableFundingHistory"
+                                class="h-10 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-sky-400 dark:text-slate-950 dark:hover:bg-sky-300"
+                                :disabled="standingHistoryLoading"
+                                data-testid="check-standing-funding-history"
+                                @click="checkStandingFundingHistory"
                             >
                                 {{
-                                    reusableHistoryLoading
+                                    standingHistoryLoading
                                         ? 'Checking NetBank…'
-                                        : 'Check NetBank history'
+                                        : 'Check NetBank'
                                 }}
                             </button>
                             <button
                                 type="button"
                                 class="h-10 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
-                                data-testid="hide-reusable-funding-address"
-                                @click="hideReusableFundingAddress"
+                                data-testid="hide-standing-funding-address"
+                                @click="hideStandingFundingAddress"
                             >
                                 Hide sensitive QR
                             </button>
@@ -658,20 +742,20 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 </div>
 
                 <div
-                    v-if="reusableAddress"
-                    class="border-t border-amber-100 bg-amber-50/50 p-5 dark:border-amber-950 dark:bg-amber-950/10"
+                    v-if="standingAddress"
+                    class="border-t border-sky-100 bg-sky-50/50 p-5 dark:border-sky-950 dark:bg-sky-950/10"
                 >
                     <div
                         class="grid gap-5 md:grid-cols-[12rem_minmax(0,1fr)] md:items-start"
                     >
                         <div
-                            class="mx-auto rounded-xl border border-amber-200 bg-white p-2 shadow-sm md:mx-0 dark:border-amber-900"
+                            class="mx-auto rounded-xl border border-sky-200 bg-white p-2 shadow-sm md:mx-0 dark:border-sky-900"
                         >
                             <img
-                                :src="reusableAddress.qr_code"
-                                alt="Temporary reusable NetBank QR Ph receiving address"
+                                :src="standingAddress.qr_code"
+                                alt="Account Funding Address QR Ph code"
                                 class="size-44 object-contain"
-                                data-testid="reusable-funding-address-qr"
+                                data-testid="standing-funding-address-qr"
                             />
                         </div>
                         <div class="min-w-0">
@@ -682,13 +766,13 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             </p>
                             <p
                                 class="mt-1 font-mono text-base font-semibold break-all"
-                                data-testid="reusable-funding-address-value"
+                                data-testid="standing-funding-address-value"
                             >
-                                {{ reusableAddress.funding_address }}
+                                {{ standingAddress.funding_address }}
                             </p>
                             <div class="mt-3">
                                 <CockpitManualCopyButton
-                                    :value="reusableAddress.funding_address"
+                                    :value="standingAddress.funding_address"
                                     label="Copy receiving address"
                                     helper="Browser-local copy only."
                                 />
@@ -697,41 +781,65 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 <div
                                     class="rounded-lg bg-white px-3 py-2 dark:bg-slate-950"
                                 >
-                                    <dt class="text-slate-500">QR mode</dt>
+                                    <dt class="text-slate-500">Amount</dt>
                                     <dd class="mt-0.5 font-semibold">
-                                        Static · reusable
+                                        Payer enters amount
+                                    </dd>
+                                </div>
+                                <div
+                                    class="rounded-lg bg-white px-3 py-2 dark:bg-slate-950"
+                                >
+                                    <dt class="text-slate-500">Recognition</dt>
+                                    <dd class="mt-0.5 font-semibold">
+                                        {{
+                                            displayLabel(
+                                                standingAddress.recognition_mode,
+                                            )
+                                        }}
                                     </dd>
                                 </div>
                                 <div
                                     class="rounded-lg bg-white px-3 py-2 dark:bg-slate-950"
                                 >
                                     <dt class="text-slate-500">
-                                        Embedded amount
-                                    </dt>
-                                    <dd class="mt-0.5 font-semibold">None</dd>
-                                </div>
-                                <div
-                                    class="rounded-lg bg-white px-3 py-2 dark:bg-slate-950"
-                                >
-                                    <dt class="text-slate-500">
-                                        Automatic credit
+                                        Per-transfer range
                                     </dt>
                                     <dd class="mt-0.5 font-semibold">
-                                        Disabled
+                                        {{
+                                            formatMinor(
+                                                standingAddress.minimum_amount_minor,
+                                                standingAddress.currency,
+                                            )
+                                        }}
+                                        –
+                                        {{
+                                            formatMinor(
+                                                standingAddress.maximum_amount_minor,
+                                                standingAddress.currency,
+                                            )
+                                        }}
                                     </dd>
                                 </div>
                             </dl>
                             <p
-                                class="mt-4 text-xs leading-5 text-amber-800 dark:text-amber-200"
+                                class="mt-4 text-xs leading-5 text-sky-800 dark:text-sky-200"
                             >
-                                Temporary inspection path: payment may reach
-                                NetBank, but it remains outside the exact-amount
-                                Funding Intent settlement flow. Provider history
-                                is authoritative; observing a transfer here does
-                                not change Internal Balance or Issuance
-                                Capacity.
+                                Scanning the QR does not itself change the
+                                Account. NetBank transaction history is the
+                                authority. Observe-only records a receipt;
+                                supervised mode waits for approval; automatic
+                                mode credits only after every destination,
+                                currency, status, and limit check passes.
                             </p>
                         </div>
+                    </div>
+
+                    <div
+                        v-if="standingActionNotice"
+                        class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200"
+                        role="status"
+                    >
+                        {{ standingActionNotice }}
                     </div>
 
                     <div
@@ -742,25 +850,26 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         >
                             <div>
                                 <h3 class="text-sm font-semibold">
-                                    Observed NetBank transactions
+                                    Account Funding Receipts
                                 </h3>
                                 <p class="mt-0.5 text-xs text-slate-500">
-                                    Sanitized VCA history only. No payer account
-                                    or raw provider payload is shown.
+                                    Sanitized classification and recognition
+                                    status. Payer identity and raw provider data
+                                    stay hidden.
                                 </p>
                             </div>
                             <span class="text-xs text-slate-500">
                                 {{
-                                    reusableHistoryCheckedAt
+                                    standingHistoryCheckedAt
                                         ? `Checked ${displayTime(
-                                              reusableHistoryCheckedAt,
+                                              standingHistoryCheckedAt,
                                           )}`
                                         : 'Not checked yet'
                                 }}
                             </span>
                         </div>
                         <div
-                            v-if="reusableObservations.length"
+                            v-if="standingReceipts.length"
                             class="overflow-x-auto"
                         >
                             <table
@@ -774,36 +883,69 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                         <th class="px-4 py-2.5">Amount</th>
                                         <th class="px-4 py-2.5">Status</th>
                                         <th class="px-4 py-2.5">Observed</th>
+                                        <th class="px-4 py-2.5 text-right">
+                                            Control
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr
-                                        v-for="observation in reusableObservations"
-                                        :key="observation.reference"
+                                        v-for="receipt in standingReceipts"
+                                        :key="receipt.reference"
                                         class="border-t border-slate-100 dark:border-slate-800"
                                     >
                                         <td
                                             class="px-4 py-3 font-mono text-xs font-semibold"
                                         >
-                                            {{ observation.reference }}
+                                            {{ receipt.reference }}
                                         </td>
                                         <td class="px-4 py-3 font-semibold">
-                                            {{ observation.gross_amount }}
+                                            {{ receipt.gross_amount }}
                                         </td>
                                         <td class="px-4 py-3">
                                             {{
                                                 displayLabel(
-                                                    observation.provider_status,
+                                                    receipt.provider_status,
                                                 )
                                             }}
                                         </td>
                                         <td class="px-4 py-3 text-slate-500">
                                             {{
                                                 displayTime(
-                                                    observation.settled_at ??
-                                                        observation.occurred_at,
+                                                    receipt.settled_at ??
+                                                        receipt.occurred_at,
                                                 )
                                             }}
+                                        </td>
+                                        <td class="px-4 py-3 text-right">
+                                            <button
+                                                v-if="receipt.can_approve"
+                                                type="button"
+                                                class="h-8 rounded-lg bg-emerald-700 px-3 text-xs font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                                :disabled="
+                                                    activeStandingReceiptApproval !==
+                                                    null
+                                                "
+                                                data-testid="approve-standing-funding-receipt"
+                                                @click="
+                                                    approveStandingFundingReceipt(
+                                                        receipt.reference,
+                                                    )
+                                                "
+                                            >
+                                                {{
+                                                    activeStandingReceiptApproval ===
+                                                    receipt.reference
+                                                        ? 'Posting…'
+                                                        : 'Approve verified credit'
+                                                }}
+                                            </button>
+                                            <span
+                                                v-else
+                                                class="text-xs text-slate-400"
+                                            >
+                                                —
+                                            </span>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -812,10 +954,10 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         <p
                             v-else
                             class="px-4 py-5 text-sm text-slate-500"
-                            data-testid="reusable-funding-history-empty"
+                            data-testid="standing-funding-history-empty"
                         >
                             {{
-                                reusableHistoryCheckedAt
+                                standingHistoryCheckedAt
                                     ? 'NetBank returned no incoming transactions for this address in the configured lookback window.'
                                     : 'Check NetBank after a human scans and pays the QR.'
                             }}
@@ -824,11 +966,11 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                 </div>
 
                 <div
-                    v-if="reusableAddressError"
+                    v-if="standingAddressError"
                     class="border-t border-rose-200 bg-rose-50 px-5 py-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/20 dark:text-rose-200"
                     role="alert"
                 >
-                    {{ reusableAddressError }}
+                    {{ standingAddressError }}
                 </div>
             </section>
 

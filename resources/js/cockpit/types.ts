@@ -553,24 +553,35 @@ export type CockpitFundingPageProps = CockpitHeaderPageProps & {
     funding_notice?: string | null;
     funding_poll_interval?: number;
     funding_simulation?: CockpitQrPhFundingSimulation;
-    reusable_funding_address?: CockpitReusableFundingAddressAvailability;
+    standing_funding_address?: CockpitStandingFundingAddressAvailability;
 };
 
-export type CockpitReusableFundingAddressAvailability = {
+export type CockpitStandingFundingAddressAvailability = {
     enabled: boolean;
     available: boolean;
     status: string;
     provider: 'netbank';
-    temporary: true;
+    exists: boolean;
+    purpose: 'account_funding';
+    recognition_mode: 'observe_only' | 'supervised' | 'automatic';
+    address_status?: 'active' | 'suspended' | 'retired' | null;
+    temporary: false;
     provider_calls: true;
     funding_intent_created: false;
-    automatic_credit_enabled: false;
+    automatic_credit_enabled: boolean;
+    minimum_amount_minor: number;
+    maximum_amount_minor: number;
+    daily_limit_minor: number;
 };
 
-export type CockpitReusableFundingAddress = {
+export type CockpitStandingFundingAddress = {
+    reference: string;
     provider: 'netbank';
     funding_address: string;
     masked_funding_address: string;
+    purpose: 'account_funding';
+    recognition_mode: 'observe_only' | 'supervised' | 'automatic';
+    status: 'active' | 'suspended' | 'retired';
     currency: string;
     institution: string;
     merchant_name: string;
@@ -579,12 +590,15 @@ export type CockpitReusableFundingAddress = {
     transaction_type: 'p2m';
     embedded_amount: false;
     provider_generated: true;
-    temporary: true;
+    temporary: false;
     funding_intent_created: false;
-    automatic_credit_enabled: false;
+    automatic_credit_enabled: boolean;
+    minimum_amount_minor: number | null;
+    maximum_amount_minor: number | null;
+    daily_limit_minor: number | null;
 };
 
-export type CockpitReusableFundingObservation = {
+export type CockpitStandingFundingReceipt = {
     reference: string;
     gross_amount_minor: number;
     fee_amount_minor: number;
@@ -593,6 +607,7 @@ export type CockpitReusableFundingObservation = {
     net_amount: string;
     currency: string;
     provider_status: string;
+    can_approve: boolean;
     occurred_at?: string | null;
     settled_at?: string | null;
 };

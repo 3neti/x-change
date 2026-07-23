@@ -24,13 +24,14 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingReconciliationApprovalController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingReconciliationRequestController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingVerificationCheckController;
-use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitNetbankReusableFundingAddressController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitNetbankStandingFundingAddressController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitNetbankTokenRotationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeExplorerPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQrPhFundingSimulationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateMutationRouteShellController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGeneratePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitRuntimeProfilePageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitStandingFundingReceiptApprovalController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitVoucherDetailPageController;
 use LBHurtado\XChange\Http\Controllers\Web\DashboardPageController;
 use LBHurtado\XChange\Http\Controllers\Web\LinkPaynamicsWalletController;
@@ -92,15 +93,20 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
             CockpitFundingVerificationCheckController::class,
         )->middleware((array) config('x-change.funding.manual_check_middleware', []))
             ->name('x-change.cockpit.funding.intents.verification-checks.store');
-        Route::controller(CockpitNetbankReusableFundingAddressController::class)
-            ->prefix('funding/reusable-addresses/netbank')
-            ->middleware((array) config('x-change.funding.reusable_address.middleware', []))
+        Route::controller(CockpitNetbankStandingFundingAddressController::class)
+            ->prefix('funding/standing-addresses/netbank')
+            ->middleware((array) config('x-change.funding.standing_addresses.middleware', []))
             ->group(function (): void {
                 Route::post('/', 'store')
-                    ->name('x-change.cockpit.funding.reusable-addresses.netbank.store');
+                    ->name('x-change.cockpit.funding.standing-addresses.netbank.store');
                 Route::post('history-checks', 'history')
-                    ->name('x-change.cockpit.funding.reusable-addresses.netbank.history-checks.store');
+                    ->name('x-change.cockpit.funding.standing-addresses.netbank.history-checks.store');
             });
+        Route::post(
+            'funding/standing-addresses/netbank/receipts/{receipt:reference}/approve',
+            CockpitStandingFundingReceiptApprovalController::class,
+        )->middleware((array) config('x-change.funding.standing_addresses.middleware', []))
+            ->name('x-change.cockpit.funding.standing-addresses.netbank.receipts.approve');
         Route::post(
             'funding/scenarios/qrph',
             CockpitQrPhFundingSimulationController::class,
