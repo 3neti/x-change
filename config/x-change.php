@@ -1304,6 +1304,15 @@ return [
     'payment' => [
         'default_provider' => env('X_CHANGE_PAYMENT_PROVIDER', 'manual'),
 
+        'attempts' => [
+            'enabled' => env('X_CHANGE_PAYMENT_ATTEMPTS_ENABLED', true),
+            'provider' => env('X_CHANGE_PAYMENT_ATTEMPT_PROVIDER', 'netbank'),
+            'expires_after_minutes' => (int) env('X_CHANGE_PAYMENT_ATTEMPT_EXPIRES_AFTER_MINUTES', 15),
+            'hash_key' => env('X_CHANGE_PAYMENT_ATTEMPT_HASH_KEY'),
+            'instruction_lock_seconds' => 30,
+            'instruction_lock_wait_seconds' => 5,
+        ],
+
         'providers' => [
             // ...
         ],
