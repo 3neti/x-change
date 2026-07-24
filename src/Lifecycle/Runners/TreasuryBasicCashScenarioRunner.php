@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Lifecycle\Runners;
 use Illuminate\Console\Command;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryPositionReadModelContract;
 use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
@@ -25,6 +26,20 @@ use Throwable;
 
 final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
 {
+    /**
+     * @var list<string>
+     */
+    private const REQUIRED_TABLES = [
+        'provider_funding_observations',
+        'x_change_funding_intents',
+        'x_change_funding_settlements',
+        'treasury_inventories',
+        'treasury_inventory_operations',
+        'treasury_positions',
+        'treasury_position_operations',
+        'vouchers',
+    ];
+
     public function __construct(
         private readonly DatabaseManager $databases,
         private readonly WalletAccessContract $wallets,
@@ -49,6 +64,17 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
             );
         }
 
+        $missingTables = $this->missingRequiredTables();
+
+        if ($missingTables !== []) {
+            return $this->failure(
+                $context,
+                'The Treasury basic_cash lifecycle schema is not ready. Run [php artisan migrate --no-interaction] and try again.',
+                true,
+                ['missing_tables' => $missingTables],
+            );
+        }
+
         $connection = $this->databases->connection();
         $startingLevel = $connection->transactionLevel();
         $startingState = $this->stateDigest($context->issuer);
@@ -56,8 +82,21 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
         $originalSourceReadiness = config(
             'x-change.provider_runtime.providers.netbank.source_account_readiness.enabled',
         );
+        $originalLegalEntityReference = config(
+            'x-change.treasury.legal_entity_reference',
+        );
         $payload = [];
         $exitCode = Command::SUCCESS;
+
+        if (trim((string) $originalLegalEntityReference) === '') {
+            config()->set(
+                'x-change.treasury.legal_entity_reference',
+                $this->requiredScenarioString(
+                    $context,
+                    'treasury.legal_entity_reference',
+                ),
+            );
+        }
 
         $connection->beginTransaction();
 
@@ -92,6 +131,10 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
             config()->set(
                 'x-change.provider_runtime.providers.netbank.source_account_readiness.enabled',
                 $originalSourceReadiness,
+            );
+            config()->set(
+                'x-change.treasury.legal_entity_reference',
+                $originalLegalEntityReference,
             );
         }
 
@@ -308,7 +351,10 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
                     'recognized',
                     [
                         'Inventory' => 'Registered',
-                        'Recognized value' => $this->money($inventory->balanceMinor),
+                        'Recognized scenario value' => $this->money($amountMinor),
+                        'Inventory balance during run' => $this->money(
+                            $inventory->balanceMinor,
+                        ),
                         'Currency' => $inventory->currency,
                     ],
                 ),
@@ -593,10 +639,29 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
         );
     }
 
+    /**
+     * @return list<string>
+     */
+    private function missingRequiredTables(): array
+    {
+        return collect((array) config(
+            'x-change.lifecycle.treasury_basic_cash.required_tables',
+            self::REQUIRED_TABLES,
+        ))
+            ->filter(fn (mixed $table): bool => is_string($table))
+            ->reject(fn (string $table): bool => Schema::hasTable($table))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $details
+     */
     private function failure(
         ScenarioRunContext $context,
         string $message,
         bool $rollbackCompleted,
+        array $details = [],
     ): ScenarioRunResult {
         return new ScenarioRunResult(
             exitCode: Command::FAILURE,
@@ -605,6 +670,7 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
                 'message' => $message,
                 'steps' => [],
                 'rollback_completed' => $rollbackCompleted,
+                ...$details,
             ]),
         );
     }

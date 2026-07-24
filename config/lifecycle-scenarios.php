@@ -51,6 +51,16 @@ return [
             env('APP_ENV') !== 'production',
         ),
         'allowed_environments' => ['local', 'testing'],
+        'required_tables' => [
+            'provider_funding_observations',
+            'x_change_funding_intents',
+            'x_change_funding_settlements',
+            'treasury_inventories',
+            'treasury_inventory_operations',
+            'treasury_positions',
+            'treasury_position_operations',
+            'vouchers',
+        ],
     ],
 
     'scenarios' => [
@@ -429,6 +439,7 @@ return [
                 'provider' => 'netbank',
                 'connection' => 'netbank-primary',
                 'funding_amount_minor' => 10_000,
+                'legal_entity_reference' => 'legal-entity:x-change:lifecycle',
             ],
         ],
 

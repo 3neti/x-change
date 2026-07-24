@@ -29,6 +29,7 @@ function prepareTreasuryBasicCashIssuer(): FakeLifecycleUser
         ['testing'],
     );
     enableNetbankTreasuryForTests();
+    config()->set('x-change.treasury.legal_entity_reference', null);
 
     $issuer = FakeLifecycleUser::query()->create([
         'name' => 'Treasury Basic Cash Operator',
@@ -92,6 +93,7 @@ it('funds Treasury, issues basic_cash, proves replay safety, and rolls back', fu
         ->and(data_get($result->payload, 'simulation.provider_calls'))->toBe(0)
         ->and(data_get($result->payload, 'simulation.manual_balance_input'))
         ->toBeFalse()
+        ->and(config('x-change.treasury.legal_entity_reference'))->toBeNull()
         ->and(data_get($result->payload, 'base_scenario'))->toBe('basic_cash')
         ->and(data_get($result->payload, 'funding.amount_minor'))->toBe(10_000)
         ->and(data_get($result->payload, 'funding.internal_balance_minor'))
@@ -184,6 +186,24 @@ it('refuses the Treasury basic_cash lifecycle outside allowed environments', fun
         ->and(data_get($result->payload, 'success'))->toBeFalse()
         ->and(data_get($result->payload, 'rollback_completed'))->toBeTrue()
         ->and(data_get($result->payload, 'message'))->toContain('disabled');
+});
+
+it('reports an actionable failure when the Treasury schema is incomplete', function () {
+    $issuer = prepareTreasuryBasicCashIssuer();
+    config()->set(
+        'x-change.lifecycle.treasury_basic_cash.required_tables',
+        ['treasury_positions', 'missing_treasury_table'],
+    );
+
+    $result = runTreasuryBasicCashLifecycle($issuer);
+
+    expect($result->exitCode)->toBe(Command::FAILURE)
+        ->and(data_get($result->payload, 'success'))->toBeFalse()
+        ->and(data_get($result->payload, 'rollback_completed'))->toBeTrue()
+        ->and(data_get($result->payload, 'missing_tables'))
+        ->toBe(['missing_treasury_table'])
+        ->and(data_get($result->payload, 'message'))
+        ->toContain('php artisan migrate --no-interaction');
 });
 
 it('runs the Treasury basic_cash lifecycle through the package command', function () {
