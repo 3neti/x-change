@@ -7,12 +7,11 @@ namespace LBHurtado\XChange\Events;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
-use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use LBHurtado\XChange\Services\Funding\FundingProjectionChannel;
 
-final class FundingProjectionChanged implements ShouldBroadcastNow, ShouldDispatchAfterCommit
+final class FundingProjectionChanged implements ShouldBroadcastNow
 {
     use Dispatchable;
     use InteractsWithSockets;

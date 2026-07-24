@@ -124,6 +124,43 @@ it('recognizes settled provider evidence and credits an Account exactly once', f
     );
 });
 
+it('keeps a realtime broadcast outage outside the committed Account credit', function () {
+    config()->set('x-change.funding.broadcast_enabled', true);
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $provider = new StandingFundingAddressProviderFake;
+    bindStandingFundingProvider($provider);
+    $address = provisionStandingAddress(
+        $user,
+        'wallet:'.$wallet->uuid,
+        FundingAddressPurpose::AccountFunding,
+        FundingRecognitionMode::Automatic,
+    );
+    $provider->observations = [
+        standingFundingObservation($provider->fundingAddress),
+    ];
+    $audit = fakeAuditLogger();
+    Event::listen(
+        FundingProjectionChanged::class,
+        fn () => throw new RuntimeException(
+            'wss://signed-secret@unavailable-reverb.test',
+        ),
+    );
+
+    $result = app(SyncStandingFundingAddress::class)->handle($address);
+    $receipt = AccountFundingReceipt::query()->sole();
+    $serializedAudit = json_encode($audit->last(), JSON_THROW_ON_ERROR);
+
+    expect($result->applied)->toBe(1)
+        ->and($receipt->status)->toBe(AccountFundingReceiptStatus::Settled)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and(TreasuryInventoryOperation::query()->count())->toBe(1)
+        ->and(Transaction::query()->where('type', Transaction::TYPE_DEPOSIT)->count())->toBe(1)
+        ->and($audit->hasEvent('funding.projection.broadcast_failed'))->toBeTrue()
+        ->and($serializedAudit)->not->toContain('signed-secret')
+        ->and($serializedAudit)->not->toContain('unavailable-reverb.test');
+});
+
 it('can recognize a pending NetBank observation exactly once when explicitly configured', function () {
     config()->set(
         'x-change.funding.standing_addresses.creditable_provider_statuses',

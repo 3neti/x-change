@@ -20,6 +20,7 @@ use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Services\Funding\StandingFundingRecognitionPolicy;
+use Throwable;
 
 final class SettleAccountFundingReceipt
 {
@@ -145,13 +146,32 @@ final class SettleAccountFundingReceipt
             $address = StandingFundingAddress::query()->findOrFail(
                 $settled->standing_funding_address_id,
             );
-            FundingProjectionChanged::dispatch(
-                ownerType: $address->owner_type,
-                ownerId: (string) $address->owner_id,
-                receiptReference: $settled->reference,
-                occurredAt: $settled->settled_at?->toRfc3339String()
-                    ?? now()->toRfc3339String(),
-            );
+            $ownerType = $address->owner_type;
+            $ownerId = (string) $address->owner_id;
+            $receiptReference = $settled->reference;
+            $occurredAt = $settled->settled_at?->toRfc3339String()
+                ?? now()->toRfc3339String();
+
+            DB::afterCommit(function () use (
+                $ownerType,
+                $ownerId,
+                $receiptReference,
+                $occurredAt,
+            ): void {
+                try {
+                    FundingProjectionChanged::dispatch(
+                        ownerType: $ownerType,
+                        ownerId: $ownerId,
+                        receiptReference: $receiptReference,
+                        occurredAt: $occurredAt,
+                    );
+                } catch (Throwable $exception) {
+                    $this->audit->log('funding.projection.broadcast_failed', [
+                        'account_funding_receipt_reference' => $receiptReference,
+                        'failure_type' => $exception::class,
+                    ]);
+                }
+            });
         }
 
         return $settled;
