@@ -268,6 +268,22 @@ describe('Cockpit Funding foundation', () => {
         expect(
             wrapper.get('[data-testid="cockpit-funding-page"]').text(),
         ).toContain('Account Funding');
+        expect(
+            wrapper.get('[data-testid="cockpit-funding-header"]').classes(),
+        ).toContain('py-3');
+        expect(
+            wrapper.get('[data-testid="cockpit-funding-header"]').classes(),
+        ).not.toContain('bg-slate-950');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-funding-summary-strip"]')
+                .findAll('article'),
+        ).toHaveLength(4);
+        expect(
+            wrapper.html().indexOf('cockpit-funding-summary-strip'),
+        ).toBeLessThan(
+            wrapper.html().indexOf('cockpit-standing-funding-address'),
+        );
         expect(wrapper.text()).toContain(
             'There is no manual “add funds” control',
         );
