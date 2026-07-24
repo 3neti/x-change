@@ -36,6 +36,8 @@ final class InspectNetbankReusableFundingAddressHistory
         $sync = $this->sync->handle($address, 'operator');
 
         $observations = $address->receipts()
+            ->where('observed_at', '>=', $address->activated_at)
+            ->where('status', '!=', 'ignored')
             ->latest('observed_at')
             ->limit(50)
             ->get()

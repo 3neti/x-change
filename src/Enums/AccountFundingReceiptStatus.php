@@ -11,5 +11,6 @@ enum AccountFundingReceiptStatus: string
     case Ready = 'ready';
     case Settled = 'settled';
     case Suspense = 'suspense';
+    case Ignored = 'ignored';
     case Reversed = 'reversed';
 }

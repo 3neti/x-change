@@ -27,6 +27,8 @@ final class SyncStandingFundingAddress
         private readonly StandingFundingAddressProviderRegistry $providers,
         private readonly RecordProviderFundingObservation $recordObservation,
         private readonly ClassifyStandingFundingObservation $classify,
+        private readonly CorrectNetbankStandingFundingReceiptNormalization $correctNormalization,
+        private readonly IgnorePreActivationFundingReceipts $ignorePreActivationReceipts,
         private readonly SettleAccountFundingReceipt $settle,
         private readonly OpenFundingSuspenseCase $openSuspense,
         private readonly AuditLoggerContract $audit,
@@ -57,6 +59,7 @@ final class SyncStandingFundingAddress
             return new StandingFundingAddressSyncData(0, 0, 0, 0);
         }
 
+        $quarantinedCount = $this->ignorePreActivationReceipts->handle($address);
         $destination = is_array($address->destination_snapshot_ciphertext)
             ? FundingDestinationSnapshot::toData($address->destination_snapshot_ciphertext)
             : null;
@@ -76,9 +79,18 @@ final class SyncStandingFundingAddress
             'settled' => 0,
             'awaiting_approval' => 0,
             'suspense' => 0,
+            'pre_activation_ignored' => 0,
         ];
 
         foreach ($observations as $data) {
+            if ($data->occurredAt !== null
+                && $address->activated_at !== null
+                && $data->occurredAt < $address->activated_at) {
+                $counts['pre_activation_ignored']++;
+
+                continue;
+            }
+
             $observation = $this->recordObservation->handle($data);
             $classified = $this->classify->handle($observation);
 
@@ -107,7 +119,8 @@ final class SyncStandingFundingAddress
                 continue;
             }
 
-            $receipt = $this->recordReceipt($classified, $observation);
+            $receipt = $this->correctNormalization->handle($classified, $observation)
+                ?? $this->recordReceipt($classified, $observation);
 
             if ($receipt->status === AccountFundingReceiptStatus::Ready) {
                 try {
@@ -134,6 +147,8 @@ final class SyncStandingFundingAddress
             'purpose' => $address->purpose->value,
             'trigger' => strtolower(trim($trigger)),
             'observed_count' => count($observations),
+            'pre_activation_ignored_count' => $counts['pre_activation_ignored'],
+            'pre_activation_quarantined_count' => $quarantinedCount,
             'settled_count' => $counts['settled'],
             'suspense_count' => $counts['suspense'],
         ]);
@@ -171,6 +186,15 @@ final class SyncStandingFundingAddress
                     );
                 }
 
+                return $receipt;
+            }
+
+            if ($receipt instanceof AccountFundingReceipt
+                && in_array($receipt->status, [
+                    AccountFundingReceiptStatus::AwaitingApproval,
+                    AccountFundingReceiptStatus::Ready,
+                ], true)
+                && ! $this->evidenceChanged($receipt, $observation)) {
                 return $receipt;
             }
 

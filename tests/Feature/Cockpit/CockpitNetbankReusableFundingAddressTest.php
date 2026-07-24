@@ -115,13 +115,14 @@ it('checks authoritative VCA history without exposing raw provider or payer fact
         ['confirm_account_funding_address' => true],
     )->assertOk();
     $fundingAddress = (string) $addressResponse->json('address.funding_address');
+    $occurredAt = StandingFundingAddress::query()->sole()->activated_at->addMinute();
 
     Http::fake([
         'https://auth.netbank.test/oauth2/token' => Http::response(['access_token' => 'access-token']),
         'https://api.netbank.test/v1/vca/*/transactions*' => Http::response([
             'transactions' => [[
                 'amount' => ['cur' => 'PHP', 'num' => '2500'],
-                'date' => '2026-07-23T01:05:00.000Z',
+                'date' => $occurredAt->toISOString(),
                 'description' => 'EXTERNAL_TRANSFER_INCOMING',
                 'destination_account' => [
                     'account_alias' => $fundingAddress,
@@ -134,11 +135,11 @@ it('checks authoritative VCA history without exposing raw provider or payer fact
                 'status' => 'Settled',
                 'status_details' => [[
                     'status' => 'Settled',
-                    'updated' => '2026-07-23T01:06:00.000Z',
+                    'updated' => $occurredAt->addMinute()->toISOString(),
                 ]],
                 'transaction_id' => 'provider-transaction-secret',
                 'type' => 'Credit',
-                'updated' => '2026-07-23T01:06:00.000Z',
+                'updated' => $occurredAt->addMinute()->toISOString(),
             ]],
         ]),
     ]);

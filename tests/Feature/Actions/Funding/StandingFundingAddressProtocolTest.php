@@ -10,6 +10,7 @@ use LBHurtado\EmiCore\Data\Funding\StandingFundingAddressData;
 use LBHurtado\EmiCore\Data\Funding\StandingFundingAddressRequestData;
 use LBHurtado\EmiCore\Data\Funding\StandingFundingObservationRequestData;
 use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
+use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\XChange\Actions\Funding\ProvisionStandingFundingAddress;
@@ -164,6 +165,168 @@ it('requires owner approval before supervised recognition can credit the Account
         ->and(TreasuryInventoryOperation::query()->count())->toBe(1);
 });
 
+it('preserves legacy evidence while correcting a post-activation NetBank credit once', function () {
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $provider = new StandingFundingAddressProviderFake;
+    bindStandingFundingProvider($provider);
+    $address = provisionStandingAddress(
+        $user,
+        'wallet:'.$wallet->uuid,
+        FundingAddressPurpose::AccountFunding,
+        FundingRecognitionMode::ObserveOnly,
+    );
+    $occurredAt = $address->activated_at->addMinute()->toDateTimeImmutable();
+    $provider->observations = [
+        standingFundingObservation(
+            $provider->fundingAddress,
+            'netbank-corrected-transaction',
+            2_500,
+            feeAmountMinor: 2_500,
+            netAmountMinor: 0,
+            occurredAt: $occurredAt,
+        ),
+    ];
+
+    $legacy = app(SyncStandingFundingAddress::class)->handle($address);
+    $receipt = AccountFundingReceipt::query()->sole();
+    $originalObservation = $receipt->providerFundingObservation()->sole();
+
+    expect($legacy->suspense)->toBe(1)
+        ->and($receipt->status)->toBe(AccountFundingReceiptStatus::Suspense)
+        ->and($receipt->suspense_reason)->toBe('non_positive_net_amount')
+        ->and($originalObservation->fee_amount_minor)->toBe(2_500)
+        ->and($originalObservation->net_amount_minor)->toBe(0);
+
+    $provider->observations = [
+        standingFundingObservation(
+            $provider->fundingAddress,
+            'netbank-corrected-transaction',
+            2_500,
+            feeAmountMinor: 0,
+            netAmountMinor: 2_500,
+            occurredAt: $occurredAt,
+            metadata: [
+                'destination_verified' => true,
+                'address_purpose' => FundingAddressPurpose::AccountFunding->value,
+                'normalization_version' => 'netbank-standing-credit-v2',
+                'incoming_credit_amount_is_net_received' => true,
+            ],
+        ),
+    ];
+
+    $corrected = app(SyncStandingFundingAddress::class)->handle($address->refresh());
+    $receipt->refresh();
+    $correctedObservation = $receipt->providerFundingObservation()->sole();
+    $case = FundingSuspenseCase::query()->sole();
+
+    expect($corrected->awaitingApproval)->toBe(1)
+        ->and($receipt->status)->toBe(AccountFundingReceiptStatus::AwaitingApproval)
+        ->and($receipt->gross_amount_minor)->toBe(2_500)
+        ->and($receipt->fee_amount_minor)->toBe(0)
+        ->and($receipt->net_amount_minor)->toBe(2_500)
+        ->and($receipt->suspense_reason)->toBeNull()
+        ->and($receipt->metadata['normalization_correction']['original_observation_id'])
+        ->toBe($originalObservation->getKey())
+        ->and($correctedObservation->getKey())->not->toBe($originalObservation->getKey())
+        ->and($correctedObservation->metadata['normalization_version'])
+        ->toBe('netbank-standing-credit-v2')
+        ->and($originalObservation->fresh()->fee_amount_minor)->toBe(2_500)
+        ->and($originalObservation->fresh()->net_amount_minor)->toBe(0)
+        ->and($case->status)->toBe('resolved')
+        ->and($case->resolution_code)->toBe('normalization_corrected')
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and(ProviderFundingObservation::query()->count())->toBe(2);
+
+    $response = $this->postJson(route(
+        'x-change.cockpit.funding.standing-addresses.netbank.receipts.approve',
+        $receipt,
+    ));
+    $replayed = app(SyncStandingFundingAddress::class)->handle($address->refresh());
+
+    $response->assertOk()->assertJsonPath('receipt.status', 'settled');
+    expect($replayed->settled)->toBe(1)
+        ->and($receipt->refresh()->status)->toBe(AccountFundingReceiptStatus::Settled)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(2_500)
+        ->and(TreasuryInventoryOperation::query()->count())->toBe(1)
+        ->and(Transaction::query()->where('type', Transaction::TYPE_DEPOSIT)->count())->toBe(1)
+        ->and(AccountFundingReceipt::query()->count())->toBe(1)
+        ->and(ProviderFundingObservation::query()->count())->toBe(2);
+});
+
+it('does not record or recognize provider transactions from before address activation', function () {
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $provider = new StandingFundingAddressProviderFake;
+    bindStandingFundingProvider($provider);
+    $address = provisionStandingAddress(
+        $user,
+        'wallet:'.$wallet->uuid,
+        FundingAddressPurpose::AccountFunding,
+        FundingRecognitionMode::Automatic,
+    );
+    $provider->observations = [
+        standingFundingObservation(
+            $provider->fundingAddress,
+            'pre-activation-transaction',
+            occurredAt: $address->activated_at->subSecond()->toDateTimeImmutable(),
+        ),
+    ];
+
+    $result = app(SyncStandingFundingAddress::class)->handle($address);
+
+    expect($result->observed)->toBe(0)
+        ->and($result->settled)->toBe(0)
+        ->and($result->awaitingApproval)->toBe(0)
+        ->and($result->suspense)->toBe(0)
+        ->and(AccountFundingReceipt::query()->count())->toBe(0)
+        ->and(ProviderFundingObservation::query()->count())->toBe(0)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and(TreasuryInventoryOperation::query()->count())->toBe(0);
+});
+
+it('quarantines previously imported pre-activation receipts without changing balances', function () {
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $provider = new StandingFundingAddressProviderFake;
+    bindStandingFundingProvider($provider);
+    $address = provisionStandingAddress(
+        $user,
+        'wallet:'.$wallet->uuid,
+        FundingAddressPurpose::AccountFunding,
+        FundingRecognitionMode::Automatic,
+    );
+    $address->forceFill(['activated_at' => now()->subMinutes(10)])->saveQuietly();
+    $provider->observations = [
+        standingFundingObservation(
+            $provider->fundingAddress,
+            'imported-before-boundary',
+            2_500,
+            feeAmountMinor: 2_500,
+            netAmountMinor: 0,
+            occurredAt: now()->subMinutes(5)->toDateTimeImmutable(),
+        ),
+    ];
+
+    app(SyncStandingFundingAddress::class)->handle($address->refresh());
+    $receipt = AccountFundingReceipt::query()->sole();
+
+    expect($receipt->status)->toBe(AccountFundingReceiptStatus::Suspense)
+        ->and(FundingSuspenseCase::query()->sole()->status)->toBe('open');
+
+    $address->forceFill(['activated_at' => now()])->saveQuietly();
+    $result = app(SyncStandingFundingAddress::class)->handle($address->refresh());
+
+    expect($result->settled)->toBe(0)
+        ->and($receipt->refresh()->status)->toBe(AccountFundingReceiptStatus::Ignored)
+        ->and($receipt->suspense_reason)->toBe('pre_activation_transaction')
+        ->and(FundingSuspenseCase::query()->sole()->status)->toBe('resolved')
+        ->and(FundingSuspenseCase::query()->sole()->resolution_code)
+        ->toBe('pre_activation_ignored')
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and(TreasuryInventoryOperation::query()->count())->toBe(0);
+});
+
 it('routes unknown destinations and amount-limit failures to suspense', function () {
     $user = actingAsTestUser(0);
     $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
@@ -302,22 +465,28 @@ function standingFundingObservation(
     string $fundingAddress,
     string $providerTransactionId = 'provider-transaction-1',
     int $grossAmountMinor = 25_000,
+    int $feeAmountMinor = 50,
+    ?int $netAmountMinor = null,
+    ?DateTimeImmutable $occurredAt = null,
+    ?array $metadata = null,
 ): ProviderFundingObservationData {
+    $effectiveOccurredAt = $occurredAt ?? now()->addMinute()->toDateTimeImmutable();
+
     return new ProviderFundingObservationData(
         provider: 'netbank',
         providerTransactionId: $providerTransactionId,
         grossAmountMinor: $grossAmountMinor,
-        feeAmountMinor: 50,
-        netAmountMinor: $grossAmountMinor - 50,
+        feeAmountMinor: $feeAmountMinor,
+        netAmountMinor: $netAmountMinor ?? $grossAmountMinor - $feeAmountMinor,
         currency: 'PHP',
         providerStatus: 'settled',
         verificationSource: 'netbank-vca-transaction-history',
         payloadHash: hash('sha256', $providerTransactionId.':settled'),
         fundingAddress: 'sha256:'.hash('sha256', $fundingAddress),
         providerAccountReference: 'sha256:'.hash('sha256', 'corporate-account'),
-        occurredAt: new DateTimeImmutable('2026-07-24T00:00:00+08:00'),
-        settledAt: new DateTimeImmutable('2026-07-24T00:01:00+08:00'),
-        metadata: [
+        occurredAt: $effectiveOccurredAt,
+        settledAt: $effectiveOccurredAt->modify('+1 minute'),
+        metadata: $metadata ?? [
             'destination_verified' => true,
             'address_purpose' => FundingAddressPurpose::AccountFunding->value,
         ],

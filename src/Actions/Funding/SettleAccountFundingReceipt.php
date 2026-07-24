@@ -137,6 +137,9 @@ final class SettleAccountFundingReceipt
             && $observation->net_amount_minor === $receipt->net_amount_minor
             && $observation->net_amount_minor > 0
             && $observation->settled_at !== null
+            && $observation->occurred_at !== null
+            && $address->activated_at !== null
+            && $observation->occurred_at->greaterThanOrEqualTo($address->activated_at)
             && $observation->funding_address === 'sha256:'.$address->funding_address_hash
             && data_get($observation->metadata, 'destination_verified') === true;
 
