@@ -58,8 +58,8 @@ it('fails closed with a concise scenario-specific response before provider acces
         ->and(LifecycleMoneyRun::query()->count())->toBe(0);
 });
 
-it('reports the full accounted live lifecycle and never repeats its transfer', function () {
-    $reader = configureLiveNetbankAccounting([1_000_000_00, 999_977_50]);
+it('posts provider principal separately from the sender system charge and never repeats its transfer', function () {
+    $reader = configureLiveNetbankAccounting([1_000_000_00, 999_987_50]);
     $provider = fakePayoutProvider()->willReturnSuccessfulResult(
         transactionId: 'TXN-TREASURY-LIVE-1',
         uuid: 'uuid-treasury-live-1',
@@ -132,15 +132,15 @@ it('reports the full accounted live lifecycle and never repeats its transfer', f
         ->and(data_get(
             $first,
             'accounting.after_issuance.connections.0.account_positions.by_purpose.client_funds',
-        ))->toBe(7_750)
+        ))->toBe(8_750)
         ->and(data_get(
             $first,
             'accounting.after_issuance.connections.0.account_positions.by_purpose.pay_code_reserve',
-        ))->toBe(2_250)
+        ))->toBe(1_250)
         ->and(data_get(
             $first,
             'accounting.after_claim.connections.0.account_positions.by_purpose.client_funds',
-        ))->toBe(7_750)
+        ))->toBe(8_750)
         ->and(data_get(
             $first,
             'accounting.after_claim.connections.0.account_positions.by_purpose.pay_code_reserve',
@@ -148,23 +148,35 @@ it('reports the full accounted live lifecycle and never repeats its transfer', f
         ->and(data_get(
             $first,
             'accounting.after_claim.connections.0.inventory.balance_minor',
-        ))->toBe(999_977_50)
+        ))->toBe(999_987_50)
         ->and(data_get(
             $first,
             'treasury_settlement.beneficiary_amount_minor',
         ))->toBe(1_250)
         ->and(data_get(
             $first,
-            'treasury_settlement.provider_fee_amount_minor',
+            'treasury_settlement.provider_inventory_outflow_minor',
+        ))->toBe(1_250)
+        ->and(data_get(
+            $first,
+            'treasury_settlement.configured_rail_fee_minor',
         ))->toBe(1_000)
         ->and(data_get(
             $first,
-            'treasury_settlement.provider_outflow_minor',
-        ))->toBe(2_250)
+            'treasury_settlement.sender_system_charge_minor',
+        ))->toBe(1_500)
+        ->and(data_get(
+            $first,
+            'treasury_settlement.sender_system_charge_status',
+        ))->toBe('legacy_compatibility_ledger')
         ->and(data_get(
             $first,
             'accounting_boundary.outbound_treasury_posting',
-        ))->toBe('treasury_position_and_inventory_posted')
+        ))->toBe('provider_principal_only')
+        ->and(data_get(
+            $first,
+            'accounting_boundary.sender_system_charge',
+        ))->toBe('legacy_compatibility_ledger')
         ->and($encoded)->not->toContain('09173011987')
         ->and($encoded)->not->toContain('raw_request')
         ->and($encoded)->not->toContain('raw_response')
@@ -181,8 +193,8 @@ it('reports the full accounted live lifecycle and never repeats its transfer', f
 it('rechecks a lagging provider balance without repeating its transfer', function () {
     $reader = configureLiveNetbankAccounting([
         1_000_000_00,
+        1_000_000_00,
         999_987_50,
-        999_977_50,
     ]);
     $provider = fakePayoutProvider()->willReturnSuccessfulResult(
         transactionId: 'TXN-TREASURY-LIVE-REVIEW',
@@ -212,7 +224,7 @@ it('rechecks a lagging provider balance without repeating its transfer', functio
         ->and(data_get(
             $first,
             'accounting.after_claim.connections.0.provider_observation.balance_minor',
-        ))->toBe(999_987_50)
+        ))->toBe(1_000_000_00)
         ->and(data_get(
             $first,
             'accounting.after_claim.connections.0.provider_observation.reason',

@@ -38,7 +38,7 @@ final readonly class TreasuryPayCodeAccountingService
         Model $accountOwner,
         Voucher $voucher,
         string $connectionReference,
-        int $providerOutflowMinor,
+        int $providerPrincipalMinor,
         string $currency,
     ): TreasuryPositionReservationData {
         $connection = $this->connection($connectionReference, $currency);
@@ -54,14 +54,14 @@ final readonly class TreasuryPayCodeAccountingService
             $portfolio->positions,
             TreasuryPositionPurpose::PayCodeReserve,
         );
-        $scope = $this->scope($connection, $voucher, $providerOutflowMinor);
+        $scope = $this->scope($connection, $voucher, $providerPrincipalMinor);
 
         return $this->positionOperations->reserve(
             new TreasuryPositionReservationData(
                 operationReference: 'pay-code-position-reservation:'.$scope,
                 sourcePositionReference: $source->positionReference,
                 destinationPositionReference: $destination->positionReference,
-                amountMinor: $providerOutflowMinor,
+                amountMinor: $providerPrincipalMinor,
                 currency: $connection->currency,
                 idempotencyKey: 'pay-code-position-reservation-key:'.$scope,
                 externalReference: 'pay-code:'.$voucher->getKey(),
@@ -80,7 +80,7 @@ final readonly class TreasuryPayCodeAccountingService
         Model $accountOwner,
         Voucher $voucher,
         string $connectionReference,
-        int $providerOutflowMinor,
+        int $providerPrincipalMinor,
         string $currency,
         string $reasonReference,
     ): TreasuryPositionReleaseData {
@@ -95,7 +95,7 @@ final readonly class TreasuryPayCodeAccountingService
             TreasuryPositionPurpose::ClientFunds,
         );
         $scope = hash('sha256', implode('|', [
-            $this->scope($connection, $voucher, $providerOutflowMinor),
+            $this->scope($connection, $voucher, $providerPrincipalMinor),
             trim($reasonReference),
         ]));
 
@@ -104,7 +104,7 @@ final readonly class TreasuryPayCodeAccountingService
                 operationReference: 'pay-code-position-release:'.$scope,
                 sourcePositionReference: $source->positionReference,
                 destinationPositionReference: $destination->positionReference,
-                amountMinor: $providerOutflowMinor,
+                amountMinor: $providerPrincipalMinor,
                 currency: $connection->currency,
                 idempotencyKey: 'pay-code-position-release-key:'.$scope,
                 externalReference: $reasonReference,
@@ -127,8 +127,9 @@ final readonly class TreasuryPayCodeAccountingService
     ): TreasuryPayCodeSettlementData {
         $currency = mb_strtoupper((string) $reconciliation->currency);
         $connection = $this->connection($connectionReference, $currency);
-        [$beneficiaryAmountMinor, $feeAmountMinor, $providerOutflowMinor] =
-            $this->providerOutflow($voucher, $reconciliation, $connection);
+        [$beneficiaryAmountMinor, $configuredRailFeeMinor] =
+            $this->settlementAmounts($voucher, $reconciliation, $connection);
+        $providerPrincipalMinor = $beneficiaryAmountMinor;
         $reserve = $this->position(
             $this->accountPositions($accountOwner, $connection),
             TreasuryPositionPurpose::PayCodeReserve,
@@ -136,7 +137,7 @@ final readonly class TreasuryPayCodeAccountingService
         $reservationScope = $this->scope(
             $connection,
             $voucher,
-            $providerOutflowMinor,
+            $providerPrincipalMinor,
         );
         $settlementScope = hash('sha256', implode('|', [
             $connection->provider,
@@ -144,14 +145,14 @@ final readonly class TreasuryPayCodeAccountingService
             (string) $voucher->getKey(),
             (string) $reconciliation->getKey(),
             (string) $reconciliation->provider_transaction_id,
-            (string) $providerOutflowMinor,
+            (string) $providerPrincipalMinor,
         ]));
 
         [$derecognition, $inventoryAdjustment] = DB::transaction(
             function () use (
                 $connection,
-                $feeAmountMinor,
-                $providerOutflowMinor,
+                $configuredRailFeeMinor,
+                $providerPrincipalMinor,
                 $reconciliation,
                 $reserve,
                 $settlementScope,
@@ -161,7 +162,7 @@ final readonly class TreasuryPayCodeAccountingService
                     new TreasuryPositionDerecognitionData(
                         operationReference: 'pay-code-position-derecognition:'.$settlementScope,
                         sourcePositionReference: $reserve->positionReference,
-                        amountMinor: $providerOutflowMinor,
+                        amountMinor: $providerPrincipalMinor,
                         currency: $connection->currency,
                         idempotencyKey: 'pay-code-position-derecognition-key:'.$settlementScope,
                         externalReference: $connection->provider.':'.$reconciliation->provider_transaction_id,
@@ -172,7 +173,8 @@ final readonly class TreasuryPayCodeAccountingService
                             'disbursement_reconciliation_id' => (int) $reconciliation->getKey(),
                             'provider' => $connection->provider,
                             'connection_reference' => $connection->reference,
-                            'provider_fee_amount_minor' => $feeAmountMinor,
+                            'configured_rail_fee_minor' => $configuredRailFeeMinor,
+                            'provider_inventory_outflow_minor' => $providerPrincipalMinor,
                         ],
                     ),
                 );
@@ -180,7 +182,7 @@ final readonly class TreasuryPayCodeAccountingService
                     new TreasuryInventoryAdjustmentData(
                         operationReference: 'pay-code-inventory-outflow:'.$settlementScope,
                         inventoryReference: $connection->inventoryReference,
-                        deltaAmountMinor: -$providerOutflowMinor,
+                        deltaAmountMinor: -$providerPrincipalMinor,
                         currency: $connection->currency,
                         status: 'requested',
                         idempotencyKey: 'pay-code-inventory-outflow-key:'.$settlementScope,
@@ -194,7 +196,8 @@ final readonly class TreasuryPayCodeAccountingService
                             'disbursement_reconciliation_id' => (int) $reconciliation->getKey(),
                             'provider' => $connection->provider,
                             'connection_reference' => $connection->reference,
-                            'provider_fee_amount_minor' => $feeAmountMinor,
+                            'configured_rail_fee_minor' => $configuredRailFeeMinor,
+                            'provider_inventory_outflow_minor' => $providerPrincipalMinor,
                         ],
                     ),
                 );
@@ -209,16 +212,16 @@ final readonly class TreasuryPayCodeAccountingService
             derecognitionOperationReference: $derecognition->operationReference,
             inventoryAdjustmentOperationReference: $inventoryAdjustment->operationReference,
             beneficiaryAmountMinor: $beneficiaryAmountMinor,
-            feeAmountMinor: $feeAmountMinor,
-            providerOutflowMinor: $providerOutflowMinor,
+            providerInventoryOutflowMinor: $providerPrincipalMinor,
+            configuredRailFeeMinor: $configuredRailFeeMinor,
             currency: $connection->currency,
         );
     }
 
     /**
-     * @return array{int, int, int}
+     * @return array{int, int}
      */
-    private function providerOutflow(
+    private function settlementAmounts(
         Voucher $voucher,
         DisbursementReconciliation $reconciliation,
         TreasuryProviderConnectionData $connection,
@@ -226,14 +229,16 @@ final readonly class TreasuryPayCodeAccountingService
         $beneficiaryAmountMinor = (int) round(
             ((float) $reconciliation->amount) * 100,
         );
-        $feeAmountMinor = (int) data_get(
+        $voucherAmountMinor = (int) round(
+            ((float) data_get(
+                $voucher->metadata,
+                'disbursement.amount',
+                -1,
+            )) * 100,
+        );
+        $configuredRailFeeMinor = (int) data_get(
             $voucher->metadata,
             'disbursement.fee_amount',
-            -1,
-        );
-        $providerOutflowMinor = (int) data_get(
-            $voucher->metadata,
-            'disbursement.total_cost',
             -1,
         );
         $valid = (int) $reconciliation->voucher_id === (int) $voucher->getKey()
@@ -241,8 +246,8 @@ final readonly class TreasuryPayCodeAccountingService
             && $reconciliation->status === 'succeeded'
             && filled($reconciliation->provider_transaction_id)
             && $beneficiaryAmountMinor > 0
-            && $feeAmountMinor >= 0
-            && $providerOutflowMinor === $beneficiaryAmountMinor + $feeAmountMinor;
+            && $voucherAmountMinor === $beneficiaryAmountMinor
+            && $configuredRailFeeMinor >= 0;
 
         if (! $valid) {
             throw new TreasuryConfigurationException(
@@ -252,8 +257,7 @@ final readonly class TreasuryPayCodeAccountingService
 
         return [
             $beneficiaryAmountMinor,
-            $feeAmountMinor,
-            $providerOutflowMinor,
+            $configuredRailFeeMinor,
         ];
     }
 
@@ -314,9 +318,9 @@ final readonly class TreasuryPayCodeAccountingService
     private function scope(
         TreasuryProviderConnectionData $connection,
         Voucher $voucher,
-        int $providerOutflowMinor,
+        int $providerPrincipalMinor,
     ): string {
-        if ($providerOutflowMinor <= 0 || ! $voucher->exists) {
+        if ($providerPrincipalMinor <= 0 || ! $voucher->exists) {
             throw new TreasuryConfigurationException(
                 'Treasury Pay Code accounting requires a persisted Pay Code and positive provider outflow.',
             );
@@ -326,7 +330,7 @@ final readonly class TreasuryPayCodeAccountingService
             $connection->provider,
             $connection->reference,
             (string) $voucher->getKey(),
-            (string) $providerOutflowMinor,
+            (string) $providerPrincipalMinor,
             $connection->currency,
         ]));
     }

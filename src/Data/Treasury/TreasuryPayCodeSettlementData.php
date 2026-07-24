@@ -11,8 +11,8 @@ final readonly class TreasuryPayCodeSettlementData
         public string $derecognitionOperationReference,
         public string $inventoryAdjustmentOperationReference,
         public int $beneficiaryAmountMinor,
-        public int $feeAmountMinor,
-        public int $providerOutflowMinor,
+        public int $providerInventoryOutflowMinor,
+        public int $configuredRailFeeMinor,
         public string $currency,
     ) {}
 }

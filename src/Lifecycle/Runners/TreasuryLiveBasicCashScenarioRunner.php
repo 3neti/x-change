@@ -8,8 +8,6 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use LBHurtado\EmiCore\Contracts\PayoutProvider;
-use LBHurtado\EmiCore\Enums\SettlementRail;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Data\Treasury\TreasuryOpeningBalanceConnectionData;
@@ -33,7 +31,6 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
         private TreasuryAccountPortfolioProvisioningContract $portfolios,
         private TreasuryLifecycleAccountingSnapshot $accounting,
         private TreasuryPayCodeAccountingService $payCodeAccounting,
-        private PayoutProvider $payoutProvider,
     ) {}
 
     public function run(ScenarioRunContext $context): ScenarioRunResult
@@ -185,10 +182,7 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
             $context->issuer,
             $opening->connections,
         );
-        $providerOutflowMinor = $this->providerOutflowMinor(
-            $context,
-            $amountMinor,
-        );
+        $providerPrincipalMinor = $amountMinor;
 
         try {
             [$bootstrap, $reservation, $run] = DB::transaction(
@@ -196,7 +190,7 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
                     $connectionReference,
                     $context,
                     $currency,
-                    $providerOutflowMinor,
+                    $providerPrincipalMinor,
                     $run,
                 ): array {
                     $bootstrap = $this->bootstrapper->bootstrap(
@@ -208,7 +202,7 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
                         accountOwner: $context->issuer,
                         voucher: $bootstrap->voucher,
                         connectionReference: $connectionReference,
-                        providerOutflowMinor: $providerOutflowMinor,
+                        providerPrincipalMinor: $providerPrincipalMinor,
                         currency: $currency,
                     );
                     $run = $this->runs->attachVoucher(
@@ -283,8 +277,16 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
                         'derecognition_operation_reference' => $settlement->derecognitionOperationReference,
                         'inventory_adjustment_operation_reference' => $settlement->inventoryAdjustmentOperationReference,
                         'beneficiary_amount_minor' => $settlement->beneficiaryAmountMinor,
-                        'provider_fee_amount_minor' => $settlement->feeAmountMinor,
-                        'provider_outflow_minor' => $settlement->providerOutflowMinor,
+                        'provider_inventory_outflow_minor' => $settlement->providerInventoryOutflowMinor,
+                        'configured_rail_fee_minor' => $settlement->configuredRailFeeMinor,
+                        'sender_system_charge_minor' => (int) round(
+                            ((float) data_get(
+                                $bootstrap->estimate,
+                                'total',
+                                0,
+                            )) * 100,
+                        ),
+                        'sender_system_charge_status' => 'legacy_compatibility_ledger',
                         'currency' => $settlement->currency,
                     ],
                 'accounting' => [
@@ -295,8 +297,9 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
                 'idempotency' => $this->idempotency($run, false),
                 'accounting_boundary' => [
                     'funding_and_opening_balance' => 'treasury_position_based',
-                    'pay_code_escrow_and_fees' => 'treasury_position_reserved_with_legacy_compatibility_mirror',
-                    'outbound_treasury_posting' => 'treasury_position_and_inventory_posted',
+                    'pay_code_escrow_and_fees' => 'provider_principal_reserved_with_legacy_compatibility_mirror',
+                    'outbound_treasury_posting' => 'provider_principal_only',
+                    'sender_system_charge' => 'legacy_compatibility_ledger',
                     'post_transfer_provider_sync' => $accountingStatus,
                 ],
             ]);
@@ -409,30 +412,6 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
                 ],
             );
         }
-    }
-
-    private function providerOutflowMinor(
-        ScenarioRunContext $context,
-        int $beneficiaryAmountMinor,
-    ): int {
-        $strategy = mb_strtolower((string) data_get(
-            $context->scenario,
-            'cash.fee_strategy',
-            'absorb',
-        ));
-
-        if ($strategy !== 'absorb') {
-            throw new \InvalidArgumentException(
-                'The Treasury live basic_cash scenario currently requires the absorb fee strategy.',
-            );
-        }
-
-        $rail = SettlementRail::from(mb_strtoupper($this->requiredScenarioString(
-            $context,
-            'cash.settlement_rail',
-        )));
-
-        return $beneficiaryAmountMinor + $this->payoutProvider->getRailFee($rail);
     }
 
     private function successfulReconciliation(
