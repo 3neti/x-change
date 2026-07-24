@@ -8,9 +8,9 @@ import type {
 export const cockpitDashboardMetrics: CockpitDashboardMetric[] = [
     {
         key: 'internal-balance',
-        label: 'Internal Balance',
+        label: 'Client Funds',
         value: 'Summary not connected',
-        helper: 'Waiting for balance source',
+        helper: 'Waiting for a Treasury position source',
         tone: 'neutral',
     },
     {
@@ -31,7 +31,7 @@ export const cockpitDashboardMetrics: CockpitDashboardMetric[] = [
         key: 'available-to-issue',
         label: 'Issuance Capacity',
         value: 'Issuance capacity not available',
-        helper: 'Internal Balance capped by provider liquidity after Outstanding Pay Codes',
+        helper: 'Client Funds capped by provider liquidity after Outstanding Pay Codes',
         tone: 'healthy',
     },
 ];

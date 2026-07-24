@@ -13,7 +13,7 @@ it('provides package-owned Treasury vocabulary when x-legal is unavailable', fun
 
     expect($terms)
         ->toHaveKeys(['internal_balance', 'issuance_capacity', 'provider_account'])
-        ->and($terms['internal_balance']['label'])->toBe('Internal Balance')
+        ->and($terms['internal_balance']['label'])->toBe('Client Funds')
         ->and($terms['internal_balance']['source'])->toBe('x-change')
         ->and($terms['internal_balance']['approved_for_public_display'])->toBeFalse()
         ->and($terms['issuance_capacity']['description'])->not->toBeEmpty();

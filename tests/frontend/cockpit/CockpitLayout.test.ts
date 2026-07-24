@@ -16,7 +16,7 @@ describe('Cockpit shell layout baseline', () => {
                 balances: [
                     {
                         key: 'internal',
-                        label: 'Internal Balance',
+                        label: 'Client Funds',
                         value: '₱125,000,000',
                         tone: 'healthy',
                     },
@@ -78,7 +78,7 @@ describe('Cockpit shell layout baseline', () => {
                     balances: [
                         {
                             key: 'internal',
-                            label: 'Internal Balance',
+                            label: 'Client Funds',
                             value: '₱9,876.50',
                             tone: 'healthy',
                         },
@@ -112,7 +112,7 @@ describe('Cockpit shell layout baseline', () => {
         expect(header.text()).toContain('₱9,851.50');
         expect(header.text()).toContain('Issuance Capacity');
         expect(header.text()).toContain('Not available');
-        expect(header.text()).not.toContain('Internal balance not connected');
+        expect(header.text()).not.toContain('Client Funds not connected');
     });
 
     it('renders balance metrics as header HUD presentation only', () => {
@@ -121,8 +121,8 @@ describe('Cockpit shell layout baseline', () => {
         });
 
         expect(wrapper.find('[data-testid="cockpit-balance-hud"]').exists()).toBe(true);
-        expect(wrapper.text()).toContain('Internal Balance');
-        expect(wrapper.text()).toContain('Internal balance not connected');
+        expect(wrapper.text()).toContain('Client Funds');
+        expect(wrapper.text()).toContain('Client Funds not connected');
         expect(wrapper.text()).toContain('Issuance Capacity');
         expect(wrapper.text()).toContain('Provider Liquidity');
         expect(wrapper.text()).toContain('Not available');
@@ -156,7 +156,7 @@ describe('Cockpit shell layout baseline', () => {
                 balances: [
                     {
                         key: 'internal',
-                        label: 'Internal Balance',
+                        label: 'Client Funds',
                         value: '₱8,241.70',
                     },
                     {

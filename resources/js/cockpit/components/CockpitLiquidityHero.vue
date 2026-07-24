@@ -22,8 +22,8 @@ function term(
 const fundingSemantics = computed(() => [
     {
         label: 'Accounting',
-        value: term('internal_balance', 'Internal Balance', 'Recognized client funds.').label,
-        helper: term('internal_balance', 'Internal Balance', 'Recognized client funds.')
+        value: term('internal_balance', 'Client Funds', 'Recognized client funds.').label,
+        helper: term('internal_balance', 'Client Funds', 'Recognized client funds.')
             .description,
     },
     {

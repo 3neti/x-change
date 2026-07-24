@@ -603,7 +603,7 @@ async function checkStandingFundingHistory(): Promise<void> {
             typeof body.checked_at === 'string' ? body.checked_at : null;
         standingActionNotice.value =
             body.balance_changed === true
-                ? 'New NetBank funding was applied to Internal Balance exactly once.'
+                ? 'New NetBank funding was applied to Client Funds exactly once.'
                 : body.observations.length > 0
                   ? 'NetBank history refreshed. Previously applied receipts were not applied again.'
                   : null;
@@ -884,7 +884,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         <p>
                             There is no manual “add funds” control. Only
                             verified bank or EMI evidence can increase the
-                            Account balance.
+                            Client Funds.
                         </p>
                         <p>
                             Webhook evidence ≠ Account credit. The provider is
@@ -1208,7 +1208,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 class="rounded-full bg-emerald-100 px-2 py-1 text-[0.65rem] font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
                                 data-testid="funding-realtime-status"
                             >
-                                Live balance updates
+                                Live funding updates
                             </span>
                             <span
                                 class="rounded-full bg-slate-100 px-2 py-1 text-[0.65rem] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
@@ -1618,8 +1618,8 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             Appreciate how a verified payer mobile resolves the
                             Account, how signed evidence is independently
                             checked, and why an identical callback cannot credit
-                            twice. Every database and balance change is rolled
-                            back.
+                            twice. Every database and Treasury-position change
+                            is rolled back.
                         </p>
                     </div>
                     <div class="md:text-right">
@@ -1799,7 +1799,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 ? 'This creates exact local simulation instructions with zero provider calls.'
                                 : 'This creates exact provider instructions.'
                         }}
-                        It does not change Internal Balance or Issuance
+                        It does not change Client Funds or Issuance
                         Capacity.
                     </p>
 
@@ -1927,7 +1927,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             }}
                         </button>
                         <p class="text-xs text-slate-500">
-                            No balance mutation occurs on submit.
+                            No Treasury position changes on submit.
                         </p>
                     </div>
                 </form>
@@ -2082,7 +2082,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         >
                             Local simulation only. Do not transfer money to this
                             address. No bank or EMI was contacted, and no
-                            balance changed.
+                            Client Funds position changed.
                         </p>
                         <p
                             v-else

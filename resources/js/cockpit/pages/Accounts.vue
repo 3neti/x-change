@@ -633,7 +633,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         <p
                             class="text-xs font-medium text-emerald-700 dark:text-emerald-300"
                         >
-                            Rollback confirmed · balance unchanged · nothing
+                            Rollback confirmed · funding position unchanged · nothing
                             persisted
                         </p>
                         <div class="flex flex-wrap gap-2">

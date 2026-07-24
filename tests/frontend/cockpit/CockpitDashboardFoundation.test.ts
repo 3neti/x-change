@@ -28,12 +28,12 @@ describe('Cockpit dashboard foundation widgets', () => {
         expect(wrapper.text()).toContain('Liability');
         expect(wrapper.text()).toContain('Estimate');
         expect(wrapper.text()).toContain('External');
-        expect(wrapper.text()).toContain('Internal Balance');
+        expect(wrapper.text()).toContain('Client Funds');
         expect(wrapper.text()).toContain('Provider Liquidity');
         expect(wrapper.text()).toContain('Outstanding Pay Codes');
         expect(wrapper.text()).toContain('Issuance Capacity');
         expect(wrapper.text()).toContain('Bridge estimate; no fund release');
-        expect(wrapper.text()).toContain('Internal Balance capped by provider liquidity after Outstanding Pay Codes');
+        expect(wrapper.text()).toContain('Client Funds capped by provider liquidity after Outstanding Pay Codes');
         expect(wrapper.text()).not.toContain('Balance summary not connected');
         expect(wrapper.text()).not.toContain('Read model pending');
         expect(wrapper.find('[data-testid="cockpit-funding-density-summary"]').text()).toContain('Funding Facts');

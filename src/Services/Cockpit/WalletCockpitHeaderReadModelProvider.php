@@ -100,7 +100,7 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
                     key: 'internal',
                     label: $this->termLabel('internal_balance'),
                     value: $this->formatMoney($balanceMinor),
-                    helper: 'Read from the authenticated account balance compatibility bridge.',
+                    helper: 'Read from the authenticated account compatibility ledger.',
                     tone: 'healthy',
                 ),
                 'minor' => $balanceMinor,
@@ -231,7 +231,7 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
                 key: 'issuance',
                 label: $this->termLabel('issuance_capacity'),
                 value: 'Not available',
-                helper: 'Requires Internal Balance, Outstanding Pay Codes, and a fresh cached provider liquidity snapshot.',
+                helper: 'Requires Client Funds, Outstanding Pay Codes, and a fresh cached provider liquidity snapshot.',
                 tone: 'neutral',
             );
         }
@@ -268,7 +268,7 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
         return new CockpitDashboardMetricData(
             key: 'internal',
             label: $this->termLabel('internal_balance'),
-            value: 'Internal balance not connected',
+            value: 'Client Funds not connected',
             helper: 'No recognized client-funds position is available for this view.',
             tone: 'neutral',
         );
@@ -360,7 +360,7 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
     private function providerBalanceHelper(array $balance): string
     {
         $description = $this->stringValue($balance['description'] ?? null)
-            ?? 'Read-only cached provider balance summary.';
+            ?? 'Read-only cached provider liquidity summary.';
         $checkedAt = $this->stringValue($balance['checked_at'] ?? null);
 
         if ($checkedAt === null) {
@@ -385,7 +385,7 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
         $currency = (string) config('x-change.pricing.currency', config('x-change.product.default_currency', 'PHP'));
 
         if ($balance === null) {
-            return 'Internal balance not connected';
+            return 'Client Funds not connected';
         }
 
         if (is_int($balance)) {

@@ -270,7 +270,7 @@ describe('Cockpit Accounts foundation', () => {
             wrapper.get('[data-testid="account-scenario-stepper"]').text(),
         ).toContain('Shared destinations are the safe default');
         expect(wrapper.text()).toContain(
-            'Rollback confirmed · balance unchanged · nothing persisted',
+            'Rollback confirmed · funding position unchanged · nothing persisted',
         );
 
         await wrapper

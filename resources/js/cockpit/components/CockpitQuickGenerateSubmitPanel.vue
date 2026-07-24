@@ -6763,7 +6763,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                         </div>
                         <div class="flex justify-between gap-3">
                             <dt class="text-slate-500 dark:text-slate-400">
-                                Balance
+                                Available Funds
                             </dt>
                             <dd
                                 class="font-medium text-slate-700 dark:text-slate-200"

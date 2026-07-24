@@ -133,11 +133,11 @@ const connectedServiceCards = computed<CockpitConnectedServiceCard[]>(() => [
     },
     {
         key: 'balances',
-        label: 'Balances',
+        label: 'Funding position',
         source: 'Treasury posture',
         status: headerBalances.value ? 'Available' : 'Not connected',
-        count: headerBalances.value ? `${headerBalances.value.length} balances` : '0 balances',
-        boundary: 'Read-only balance posture',
+        count: headerBalances.value ? `${headerBalances.value.length} positions` : '0 positions',
+        boundary: 'Read-only Treasury posture',
         available: headerBalances.value !== undefined,
     },
     {
@@ -571,7 +571,7 @@ function areIntegrationDetailsExpanded(key: string): boolean {
                             Connected Services
                         </p>
                         <h3 class="mt-2 text-xl font-semibold text-slate-950 dark:text-slate-50">
-                            Audit, follow-up, notification, campaign, balance, and execution readiness
+                            Audit, follow-up, notification, campaign, funding-position, and execution readiness
                         </h3>
                         <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-700 dark:text-slate-300">
                             This overview shows which surrounding packages are available for read-only inspection.

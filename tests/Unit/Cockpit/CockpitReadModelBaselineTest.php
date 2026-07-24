@@ -1877,9 +1877,9 @@ it('adapts safe quick generate catalog facts without invoking voucher lifecycle 
                     ],
                     [
                         'key' => 'wallet-balance-available',
-                        'label' => 'Internal Balance Available',
+                        'label' => 'Client Funds Available',
                         'status' => 'runtime-diagnostic',
-                        'reason' => 'The operator sees only the safe balance/funding preflight summary returned by the issuance runtime.',
+                        'reason' => 'The operator sees only the safe funding preflight summary returned by the issuance runtime.',
                     ],
                     [
                         'key' => 'sufficient-funds',

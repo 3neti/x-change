@@ -518,9 +518,9 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                     ),
                     new CockpitQuickGenerateFundingGateCheckData(
                         key: 'wallet-balance-available',
-                        label: 'Internal Balance Available',
+                        label: 'Client Funds Available',
                         status: 'runtime-diagnostic',
-                        reason: 'The operator sees only the safe balance/funding preflight summary returned by the issuance runtime.',
+                        reason: 'The operator sees only the safe funding preflight summary returned by the issuance runtime.',
                     ),
                     new CockpitQuickGenerateFundingGateCheckData(
                         key: 'sufficient-funds',

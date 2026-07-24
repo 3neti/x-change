@@ -449,7 +449,7 @@ describe('Cockpit Funding foundation', () => {
         expect(wrapper.text()).toContain('Verified mobile suffix');
         expect(wrapper.text()).toContain('production rejects this scheme');
         expect(wrapper.text()).toContain('Create Account Funding QR');
-        expect(wrapper.text()).toContain('Live balance updates');
+        expect(wrapper.text()).toContain('Live funding updates');
         expect(wrapper.text()).toContain(
             'payer mobile, amount, timing, and merchant text never decide',
         );
@@ -874,7 +874,7 @@ describe('Cockpit Funding foundation', () => {
         expect(wrapper.text()).toContain('Yes · ₱30.00');
         expect(wrapper.text()).toContain('Provisional provider status');
         expect(wrapper.text()).toContain(
-            'New NetBank funding was applied to Internal Balance exactly once.',
+            'New NetBank funding was applied to Client Funds exactly once.',
         );
         expect(routerReloadMock).toHaveBeenCalledOnce();
         expect(routerReloadMock).toHaveBeenCalledWith({

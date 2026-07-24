@@ -421,10 +421,10 @@ return [
         'principal_reference' => env('XCHANGE_TREASURY_SYSTEM_PRINCIPAL_REFERENCE', 'principal:system'),
         'system_mandate_reference' => env('XCHANGE_TREASURY_SYSTEM_MANDATE_REFERENCE', 'mandate:system:treasury'),
         'legal_profile' => env('XCHANGE_TREASURY_LEGAL_PROFILE', 'treasury-settlement-ph-v1'),
-        'legal_profile_version' => env('XCHANGE_TREASURY_LEGAL_PROFILE_VERSION', '2026-07-24.1'),
+        'legal_profile_version' => env('XCHANGE_TREASURY_LEGAL_PROFILE_VERSION', '2026-07-25.1'),
         'vocabulary' => [
             'internal_balance' => [
-                'label' => 'Internal Balance',
+                'label' => 'Client Funds',
                 'description' => 'Recognized client funds attributed to this account across its provider positions.',
             ],
             'outstanding_pay_codes' => [

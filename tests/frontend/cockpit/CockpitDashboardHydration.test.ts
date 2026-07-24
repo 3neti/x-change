@@ -57,7 +57,7 @@ const cockpitHeaderReadModel = {
     balances: [
         {
             key: 'internal',
-            label: 'Internal Balance',
+            label: 'Client Funds',
             value: '₱9,876.50',
             tone: 'healthy',
         },
@@ -435,10 +435,10 @@ describe('Cockpit dashboard read model hydration', () => {
             },
         });
 
-        expect(wrapper.find('[data-testid="cockpit-global-header"]').text()).toContain('Internal Balance');
+        expect(wrapper.find('[data-testid="cockpit-global-header"]').text()).toContain('Client Funds');
         expect(wrapper.find('[data-testid="cockpit-global-header"]').text()).toContain('₱9,876.50');
         expect(wrapper.find('[data-testid="cockpit-global-header"]').text()).toContain('Not available');
-        expect(wrapper.find('[data-testid="cockpit-global-header"]').text()).not.toContain('Internal balance not connected');
+        expect(wrapper.find('[data-testid="cockpit-global-header"]').text()).not.toContain('Client Funds not connected');
     });
 
     it('renders a primary operating summary with safe dashboard navigation', () => {
@@ -988,7 +988,7 @@ describe('Cockpit dashboard read model hydration', () => {
         });
 
         expect(wrapper.text()).toContain('Connected Services');
-        expect(wrapper.text()).toContain('Audit, follow-up, notification, campaign, balance, and execution readiness');
+        expect(wrapper.text()).toContain('Audit, follow-up, notification, campaign, funding-position, and execution readiness');
         expect(wrapper.text()).toContain('Core summaries connected');
         expect(wrapper.text()).toContain('This overview shows which surrounding packages are available for read-only inspection.');
         expect(wrapper.find('[data-testid="cockpit-connected-services-overview"]').exists()).toBe(true);
@@ -1010,9 +1010,9 @@ describe('Cockpit dashboard read model hydration', () => {
         expect(wrapper.text()).toContain('Campaigns');
         expect(wrapper.text()).toContain('Campaign package');
         expect(wrapper.text()).toContain('2 surfaces');
-        expect(wrapper.text()).toContain('Balances');
+        expect(wrapper.text()).toContain('Funding position');
         expect(wrapper.text()).toContain('Treasury posture');
-        expect(wrapper.text()).toContain('2 balances');
+        expect(wrapper.text()).toContain('2 positions');
         expect(wrapper.text()).toContain('Execution Evidence');
         expect(wrapper.text()).toContain('Execution read model');
         expect(wrapper.text()).toContain('1 records');

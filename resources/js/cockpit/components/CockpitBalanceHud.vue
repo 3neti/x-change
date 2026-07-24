@@ -17,7 +17,7 @@ const toneClass = (tone: CockpitBalanceMetric['tone'] = 'neutral'): string => {
 
 <template>
     <section
-        aria-label="Cockpit balance HUD"
+        aria-label="Cockpit funding position"
         class="grid gap-2 sm:grid-cols-2 xl:grid-cols-[4fr_6fr_6fr_8fr]"
         data-testid="cockpit-balance-hud"
     >
