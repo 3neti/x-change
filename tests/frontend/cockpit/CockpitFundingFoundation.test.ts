@@ -310,6 +310,19 @@ describe('Cockpit Funding foundation', () => {
             'amount and evidence inputs are disabled',
         );
         expect(wrapper.text()).toContain('Treasury Inventory');
+        expect(
+            wrapper
+                .get('[data-testid="funding-provider-controls"]')
+                .attributes('open'),
+        ).toBeUndefined();
+        expect(
+            wrapper
+                .get('[data-testid="funding-exception-controls"]')
+                .attributes('open'),
+        ).toBe('');
+        expect(
+            wrapper.get('[data-testid="cockpit-funding-activity"]').text(),
+        ).toContain('Funding Activity');
         expect(wrapper.text()).toContain('Create Funding Intent');
         expect(wrapper.text()).toContain('Transfer exactly ₱250.00');
         expect(wrapper.text()).toContain('Scan to pay exactly ₱250.00');
@@ -1003,6 +1016,15 @@ describe('Cockpit Funding foundation', () => {
                             simulation_only: true,
                         },
                     ],
+                    intents: [
+                        {
+                            ...fundingReadModel.intents[0],
+                            reference: '01J-SIMULATED-FUNDING',
+                            provider: 'qrph_simulator',
+                            can_check_provider: false,
+                            can_reopen_instructions: false,
+                        },
+                    ],
                 },
             },
         });
@@ -1019,6 +1041,15 @@ describe('Cockpit Funding foundation', () => {
                 .get('[data-testid="cockpit-funding-submit"]')
                 .attributes('disabled'),
         ).toBeUndefined();
+        expect(
+            wrapper.get('[data-testid="cockpit-funding-activity"]').text(),
+        ).toContain('Simulation only');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-funding-activity"]')
+                .find('[data-testid="check-netbank-01J-SIMULATED-FUNDING"]')
+                .exists(),
+        ).toBe(false);
     });
 
     it('runs and steps through the rollback-only QR Ph funding simulation', async () => {
