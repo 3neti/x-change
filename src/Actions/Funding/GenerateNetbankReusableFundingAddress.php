@@ -15,6 +15,7 @@ use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Data\Funding\NetbankReusableFundingAddressData;
 use LBHurtado\XChange\Enums\FundingRecognitionMode;
 use LBHurtado\XChange\Models\StandingFundingAddress;
+use LBHurtado\XChange\Services\Funding\FundingQrMerchantProfileResolver;
 use LBHurtado\XChange\Services\Funding\StandingFundingDestinationResolver;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
 use RuntimeException;
@@ -26,6 +27,7 @@ final class GenerateNetbankReusableFundingAddress
         private readonly StandingFundingDestinationResolver $destinations,
         private readonly NetbankStandingAddressProfile $profile,
         private readonly ProvisionStandingFundingAddress $provision,
+        private readonly FundingQrMerchantProfileResolver $merchantProfiles,
         private readonly AuditLoggerContract $audit,
     ) {}
 
@@ -47,6 +49,7 @@ final class GenerateNetbankReusableFundingAddress
             currency: 'PHP',
             destination: $this->destinations->resolve($owner, $accountReference),
             routingReference: $this->routingReference($owner, $accountReference),
+            qrMerchant: $this->merchantProfiles->resolve($owner),
         );
         $address = $provisioned->address;
         $providerAddress = $provisioned->providerAddress;

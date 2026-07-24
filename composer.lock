@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1b9c779490559a6a251c26cc1a5de3fa",
+    "content-hash": "4babf346a332cea10136334d38517e6f",
     "packages": [
         {
             "name": "3neti/cash",
@@ -129,7 +129,7 @@
             "dist": {
                 "type": "path",
                 "url": "/Users/rli/PhpstormProjects/packages/emi-core",
-                "reference": "452d87ebc4a00d7b62c6772bca638287c9e3e93f"
+                "reference": "0f2163e10538093f8db27c76ca7f5a0700e421ff"
             },
             "require": {
                 "illuminate/support": "^12.0 || ^13.0",
@@ -186,7 +186,7 @@
             "dist": {
                 "type": "path",
                 "url": "/Users/rli/PhpstormProjects/packages/emi-netbank",
-                "reference": "f3cb2eb25cc32d6394f12c15ca3f49d041d7338d"
+                "reference": "550fe17c8361e93b8ce3d677b429f934af4f74f0"
             },
             "require": {
                 "3neti/emi-core": "^v1.0",
@@ -995,17 +995,11 @@
         },
         {
             "name": "3neti/merchant",
-            "version": "v1.1.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/3neti/merchant.git",
-                "reference": "6e96e1778edca06602b6ede581f4748d960b3fda"
-            },
+            "version": "1.1.1",
             "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/3neti/merchant/zipball/6e96e1778edca06602b6ede581f4748d960b3fda",
-                "reference": "6e96e1778edca06602b6ede581f4748d960b3fda",
-                "shasum": ""
+                "type": "path",
+                "url": "/Users/rli/PhpstormProjects/packages/merchant",
+                "reference": "35f5b96d8a29fb51afed5d2b879f1bc65b73b0de"
             },
             "require": {
                 "illuminate/contracts": "^11.0|^12.0|^13.0",
@@ -1034,7 +1028,16 @@
                     "LBHurtado\\Merchant\\Database\\Factories\\": "database/factories/"
                 }
             },
-            "notification-url": "https://packagist.org/downloads/",
+            "autoload-dev": {
+                "psr-4": {
+                    "LBHurtado\\Merchant\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "vendor/bin/pest"
+                ]
+            },
             "license": [
                 "proprietary"
             ],
@@ -1045,11 +1048,10 @@
                 }
             ],
             "description": "Merchant and vendor-alias helper utilities for x-change",
-            "support": {
-                "issues": "https://github.com/3neti/merchant/issues",
-                "source": "https://github.com/3neti/merchant/tree/v1.1.0"
-            },
-            "time": "2026-04-12T16:23:35+00:00"
+            "transport-options": {
+                "symlink": true,
+                "relative": false
+            }
         },
         {
             "name": "3neti/money-issuer",

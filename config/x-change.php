@@ -447,6 +447,18 @@ return [
             'middleware' => ['throttle:3,1'],
             'lock_seconds' => (int) env('XCHANGE_STANDING_FUNDING_LOCK_SECONDS', 120),
             'lock_wait_seconds' => (int) env('XCHANGE_STANDING_FUNDING_LOCK_WAIT_SECONDS', 5),
+            'qr_artifact_version' => env(
+                'XCHANGE_STANDING_FUNDING_QR_ARTIFACT_VERSION',
+                'standing-funding-qr-v1',
+            ),
+            'qr_generation_lock_seconds' => (int) env(
+                'XCHANGE_STANDING_FUNDING_QR_LOCK_SECONDS',
+                30,
+            ),
+            'qr_generation_wait_seconds' => (int) env(
+                'XCHANGE_STANDING_FUNDING_QR_LOCK_WAIT_SECONDS',
+                5,
+            ),
             'scheduled_sync_enabled' => (bool) env(
                 'XCHANGE_STANDING_FUNDING_SCHEDULED_SYNC_ENABLED',
                 true,

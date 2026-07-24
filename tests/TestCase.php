@@ -16,6 +16,7 @@ use LBHurtado\EmiCore\Contracts\PayoutProvider;
 use LBHurtado\EmiCore\EmiCoreServiceProvider;
 use LBHurtado\Instruction\Database\Seeders\InstructionItemSeeder;
 use LBHurtado\Instruction\InstructionServiceProvider;
+use LBHurtado\Merchant\MerchantServiceProvider;
 use LBHurtado\ModelChannel\ModelChannelServiceProvider;
 use LBHurtado\Onboarding\OnboardingServiceProvider;
 use LBHurtado\Voucher\Models\Voucher;
@@ -79,6 +80,7 @@ abstract class TestCase extends Orchestra
             VoucherServiceProvider::class,
             InstructionServiceProvider::class,
             EmiCoreServiceProvider::class,
+            MerchantServiceProvider::class,
             $this->optionalProvider('LBHurtado\\XJournal\\XJournalServiceProvider'),
             $this->optionalProvider('LBHurtado\\XAction\\XActionServiceProvider'),
             $this->optionalProvider('LBHurtado\\XFeedback\\XFeedbackServiceProvider'),
@@ -201,6 +203,9 @@ abstract class TestCase extends Orchestra
         // Onboarding package migrations.
         $this->loadOnboardingPackageMigrations();
 
+        // Merchant QR profile migrations.
+        $this->loadMerchantPackageMigrations();
+
         // Provider-neutral funding evidence migrations.
         $this->loadEmiCoreFundingMigrations();
 
@@ -238,6 +243,15 @@ abstract class TestCase extends Orchestra
     protected function loadOnboardingPackageMigrations(): void
     {
         $path = $this->packageRoot(OnboardingServiceProvider::class).'/database/migrations';
+
+        if (is_dir($path) && (glob($path.'/*.php') ?: []) !== []) {
+            $this->loadMigrationsFrom($path);
+        }
+    }
+
+    protected function loadMerchantPackageMigrations(): void
+    {
+        $path = $this->packageRoot(MerchantServiceProvider::class).'/database/migrations';
 
         if (is_dir($path) && (glob($path.'/*.php') ?: []) !== []) {
             $this->loadMigrationsFrom($path);

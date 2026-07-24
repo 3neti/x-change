@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use LBHurtado\Merchant\Contracts\MerchantProfileRepositoryContract;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\StandingFundingAddress;
+use LBHurtado\XChange\Models\StandingFundingQrArtifact;
 
 beforeEach(function () {
     Cache::clear();
@@ -86,6 +89,21 @@ it('generates an owner-stable Account Funding Address without creating or credit
         ->and((int) $wallet->fresh()->balance)->toBe($balanceBefore)
         ->and($wallet->transactions()->count())->toBe($transactionsBefore);
 
+    $this->postJson(
+        route('x-change.cockpit.funding.standing-addresses.netbank.store'),
+        ['confirm_account_funding_address' => true],
+    )->assertOk()
+        ->assertJsonPath('address.qr_code', $response->json('address.qr_code'));
+
+    $rawArtifact = DB::table('x_change_standing_funding_qr_artifacts')->sole();
+
+    expect(StandingFundingQrArtifact::query()->count())->toBe(1)
+        ->and((string) $rawArtifact->payload_ciphertext)
+        ->not->toContain(reusableFundingTestPng())
+        ->and((string) $rawArtifact->display_snapshot_ciphertext)
+        ->not->toContain((string) $response->json('address.funding_address'))
+        ->not->toContain((string) $response->json('address.merchant_name'));
+
     $serializedAudit = json_encode($this->fakeAuditLogger()->last(), JSON_THROW_ON_ERROR);
 
     expect($serializedAudit)
@@ -96,7 +114,46 @@ it('generates an owner-stable Account Funding Address without creating or credit
     Http::assertSent(fn (Request $request): bool => $request->url() === 'https://api.netbank.test/v1/qrph/generate'
         && $request['qr_type'] === 'Static'
         && $request['amount'] === ['cur' => 'PHP', 'num' => '']);
+    expect(collect(Http::recorded())
+        ->filter(fn (array $pair): bool => $pair[0]->url() === 'https://api.netbank.test/v1/qrph/generate')
+        ->count())->toBe(1);
     Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/pre-transaction/'));
+});
+
+it('regenerates the encrypted QR fixture when its merchant presentation changes', function () {
+    $operator = actingAsVerifiedFundingOperator();
+    Http::fake([
+        'https://auth.netbank.test/oauth2/token' => Http::response([
+            'access_token' => 'access-token',
+            'expires_in' => 3600,
+        ]),
+        'https://api.netbank.test/v1/qrph/generate' => Http::response([
+            'qr_code' => reusableFundingTestPng(),
+        ]),
+    ]);
+
+    $this->postJson(
+        route('x-change.cockpit.funding.standing-addresses.netbank.store'),
+        ['confirm_account_funding_address' => true],
+    )->assertOk();
+
+    app(MerchantProfileRepositoryContract::class)->updateForUser($operator, [
+        'name' => 'Updated Merchant',
+        'city' => 'Makati',
+        'merchant_name_template' => '{name}',
+    ]);
+
+    $this->postJson(
+        route('x-change.cockpit.funding.standing-addresses.netbank.store'),
+        ['confirm_account_funding_address' => true],
+    )->assertOk()
+        ->assertJsonPath('address.merchant_name', 'Updated Merchant');
+
+    expect(StandingFundingQrArtifact::query()->where('status', 'active')->count())->toBe(1)
+        ->and(StandingFundingQrArtifact::query()->where('status', 'stale')->count())->toBe(1)
+        ->and(collect(Http::recorded())
+            ->filter(fn (array $pair): bool => $pair[0]->url() === 'https://api.netbank.test/v1/qrph/generate')
+            ->count())->toBe(2);
 });
 
 it('checks authoritative VCA history without exposing raw provider or payer facts', function () {

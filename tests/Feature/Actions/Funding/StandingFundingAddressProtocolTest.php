@@ -66,19 +66,19 @@ it('persists an immutable purpose-bound address without storing plaintext', func
         ->and($second->address->recognition_mode)->toBe(FundingRecognitionMode::ObserveOnly)
         ->and(StandingFundingAddress::query()->count())->toBe(1)
         ->and($second->providerAddress->fundingAddress)->toBe($provider->fundingAddress)
-        ->and($provider->requests)->toHaveCount(2)
-        ->and($provider->requests[1]->existingFundingAddress)->toBe(
-            $first->providerAddress->fundingAddress,
-        );
+        ->and($provider->requests)->toHaveCount(1);
 
     $stored = DB::table('x_change_standing_funding_addresses')->sole();
+    $storedQr = DB::table('x_change_standing_funding_qr_artifacts')->sole();
 
     expect($stored->funding_address_ciphertext)->not->toContain($provider->fundingAddress)
         ->and($stored->funding_address_hash)->toBe(hash('sha256', $provider->fundingAddress))
         ->and($stored->derivation_scheme)->toBe('netbank-account-hmac-v2')
         ->and($stored->derivation_key_id)->toBe('test-key-v2')
         ->and($stored->derivation_counter)->toBe(0)
-        ->and($stored->reference_length)->toBe(11);
+        ->and($stored->reference_length)->toBe(11)
+        ->and($storedQr->payload_ciphertext)
+        ->not->toContain($first->providerAddress->qrCode->base64Payload);
 });
 
 it('recognizes settled provider evidence and credits an Account exactly once', function () {

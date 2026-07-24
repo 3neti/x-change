@@ -103,4 +103,9 @@ class StandingFundingAddress extends Model
     {
         return $this->hasMany(AccountFundingReceipt::class);
     }
+
+    public function qrArtifacts(): HasMany
+    {
+        return $this->hasMany(StandingFundingQrArtifact::class);
+    }
 }
