@@ -18,6 +18,7 @@ use LBHurtado\XChange\Enums\FundingAddressStatus;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\StandingFundingAddress;
+use LBHurtado\XChange\Services\Funding\StandingFundingRecognitionPolicy;
 
 final class SettleAccountFundingReceipt
 {
@@ -25,6 +26,7 @@ final class SettleAccountFundingReceipt
         private readonly TreasuryInventoryOperationContract $treasury,
         private readonly FundingAccountCreditContract $accounts,
         private readonly AuditLoggerContract $audit,
+        private readonly StandingFundingRecognitionPolicy $recognitionPolicy,
     ) {}
 
     public function handle(AccountFundingReceipt $receipt): AccountFundingReceipt
@@ -74,7 +76,10 @@ final class SettleAccountFundingReceipt
                 currency: $locked->currency,
                 status: 'requested',
                 idempotencyKey: 'standing-funding-recognition-key:'.hash('sha256', $locked->reference),
-                effectiveAt: $observation->settledAtInstant()?->toRfc3339String(),
+                effectiveAt: (
+                    $observation->settledAtInstant()
+                    ?? $observation->occurredAtInstant()
+                )?->toRfc3339String(),
                 externalReference: $locked->provider_code.':'.$observation->provider_transaction_id,
                 metadata: [
                     'account_funding_receipt_reference' => $locked->reference,
@@ -89,6 +94,8 @@ final class SettleAccountFundingReceipt
             $transaction = $this->accounts->credit($account, $locked->net_amount_minor, [
                 'source' => 'verified_provider_funding',
                 'funding_mode' => 'standing_address',
+                'provider_status_at_recognition' => $observation->provider_status,
+                'provisional_recognition' => $this->recognitionPolicy->isProvisional($observation),
                 'account_funding_receipt_reference' => $locked->reference,
                 'standing_funding_address_reference' => $address->reference,
                 'provider' => $locked->provider_code,
@@ -106,6 +113,10 @@ final class SettleAccountFundingReceipt
             $locked->wallet_transaction_id = $transaction->getKey();
             $locked->wallet_transaction_uuid = $transaction->uuid;
             $locked->settled_at = now();
+            $locked->metadata = array_merge($locked->metadata ?? [], [
+                'provider_status_at_recognition' => $observation->provider_status,
+                'provisional_recognition' => $this->recognitionPolicy->isProvisional($observation),
+            ]);
             $locked->saveQuietly();
 
             return $locked->refresh();
@@ -117,6 +128,15 @@ final class SettleAccountFundingReceipt
             'provider' => $settled->provider_code,
             'net_amount_minor' => $settled->net_amount_minor,
             'currency' => $settled->currency,
+            'provider_status_at_recognition' => data_get(
+                $settled->metadata,
+                'provider_status_at_recognition',
+            ),
+            'provisional_recognition' => data_get(
+                $settled->metadata,
+                'provisional_recognition',
+                false,
+            ),
         ]);
 
         return $settled;
@@ -130,13 +150,17 @@ final class SettleAccountFundingReceipt
         $matches = $address->status === FundingAddressStatus::Active
             && $address->purpose === FundingAddressPurpose::AccountFunding
             && $receipt->purpose === FundingAddressPurpose::AccountFunding
+            && $receipt->standing_funding_address_id === $address->getKey()
+            && $receipt->provider_code === $address->provider_code
+            && $receipt->account_reference === $address->account_reference
             && $observation instanceof ProviderFundingObservation
             && $observation->provider_code === $address->provider_code
-            && $observation->provider_status === 'settled'
+            && $this->recognitionPolicy->accepts($observation)
             && $observation->currency === $address->currency
+            && $observation->gross_amount_minor === $receipt->gross_amount_minor
+            && $observation->fee_amount_minor === $receipt->fee_amount_minor
             && $observation->net_amount_minor === $receipt->net_amount_minor
             && $observation->net_amount_minor > 0
-            && $observation->settledAtInstant() !== null
             && $observation->occurredAtInstant() !== null
             && $address->activated_at !== null
             && $observation->occurredAtInstant()->greaterThanOrEqualTo($address->activated_at)

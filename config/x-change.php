@@ -433,6 +433,17 @@ return [
                 'XCHANGE_STANDING_FUNDING_RECOGNITION_MODE',
                 'observe_only',
             ),
+            'enforce_configured_recognition_mode' => (bool) env(
+                'XCHANGE_STANDING_FUNDING_ENFORCE_RECOGNITION_MODE',
+                false,
+            ),
+            'creditable_provider_statuses' => array_values(array_filter(array_map(
+                static fn (string $status): string => strtolower(trim($status)),
+                explode(',', (string) env(
+                    'XCHANGE_STANDING_FUNDING_CREDITABLE_STATUSES',
+                    'settled',
+                )),
+            ))),
             'middleware' => ['throttle:3,1'],
             'lock_seconds' => (int) env('XCHANGE_STANDING_FUNDING_LOCK_SECONDS', 120),
             'lock_wait_seconds' => (int) env('XCHANGE_STANDING_FUNDING_LOCK_WAIT_SECONDS', 5),

@@ -19,6 +19,7 @@ use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Services\Funding\StandingFundingAddressProviderRegistry;
+use LBHurtado\XChange\Services\Funding\StandingFundingRecognitionPolicy;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 
 final class SyncStandingFundingAddress
@@ -29,6 +30,8 @@ final class SyncStandingFundingAddress
         private readonly ClassifyStandingFundingObservation $classify,
         private readonly CorrectNetbankStandingFundingReceiptNormalization $correctNormalization,
         private readonly IgnorePreActivationFundingReceipts $ignorePreActivationReceipts,
+        private readonly SynchronizeStandingFundingRecognitionMode $synchronizeRecognitionMode,
+        private readonly StandingFundingRecognitionPolicy $recognitionPolicy,
         private readonly SettleAccountFundingReceipt $settle,
         private readonly OpenFundingSuspenseCase $openSuspense,
         private readonly AuditLoggerContract $audit,
@@ -59,6 +62,7 @@ final class SyncStandingFundingAddress
             return new StandingFundingAddressSyncData(0, 0, 0, 0);
         }
 
+        $address = $this->synchronizeRecognitionMode->handle($address);
         $quarantinedCount = $this->ignorePreActivationReceipts->handle($address);
         $destination = is_array($address->destination_snapshot_ciphertext)
             ? FundingDestinationSnapshot::toData($address->destination_snapshot_ciphertext)
@@ -79,6 +83,7 @@ final class SyncStandingFundingAddress
             'settled' => 0,
             'awaiting_approval' => 0,
             'suspense' => 0,
+            'applied' => 0,
             'pre_activation_ignored' => 0,
         ];
 
@@ -121,6 +126,7 @@ final class SyncStandingFundingAddress
 
             $receipt = $this->correctNormalization->handle($classified, $observation)
                 ?? $this->recordReceipt($classified, $observation);
+            $wasSettled = $receipt->status === AccountFundingReceiptStatus::Settled;
 
             if ($receipt->status === AccountFundingReceiptStatus::Ready) {
                 try {
@@ -128,6 +134,10 @@ final class SyncStandingFundingAddress
                 } catch (FundingSettlementDenied $exception) {
                     $receipt = $this->suspendReceipt($receipt, 'settlement_guard_denied', $observation);
                 }
+            }
+
+            if (! $wasSettled && $receipt->status === AccountFundingReceiptStatus::Settled) {
+                $counts['applied']++;
             }
 
             match ($receipt->status) {
@@ -150,6 +160,7 @@ final class SyncStandingFundingAddress
             'pre_activation_ignored_count' => $counts['pre_activation_ignored'],
             'pre_activation_quarantined_count' => $quarantinedCount,
             'settled_count' => $counts['settled'],
+            'applied_count' => $counts['applied'],
             'suspense_count' => $counts['suspense'],
         ]);
 
@@ -158,6 +169,7 @@ final class SyncStandingFundingAddress
             settled: $counts['settled'],
             awaitingApproval: $counts['awaiting_approval'],
             suspense: $counts['suspense'],
+            applied: $counts['applied'],
         );
     }
 
@@ -177,16 +189,27 @@ final class SyncStandingFundingAddress
 
             if ($receipt instanceof AccountFundingReceipt
                 && $receipt->status === AccountFundingReceiptStatus::Settled) {
-                if ($observation->provider_status !== 'settled') {
+                if ($this->evidenceChanged($receipt, $observation)
+                    || ! $this->postRecognitionStatusIsCompatible($receipt, $observation)) {
                     $this->openSuspense->handle(
                         provider: $observation->provider_code,
                         reasonCode: 'post_settlement_status_changed',
                         observation: $observation,
                         details: ['account_funding_receipt_reference' => $receipt->reference],
                     );
+
+                    return $receipt;
                 }
 
-                return $receipt;
+                if ($receipt->provider_funding_observation_id !== $observation->getKey()) {
+                    $receipt->provider_funding_observation_id = $observation->getKey();
+                    $receipt->metadata = array_merge($receipt->metadata ?? [], [
+                        'latest_provider_status' => $observation->provider_status,
+                    ]);
+                    $receipt->saveQuietly();
+                }
+
+                return $receipt->refresh();
             }
 
             if ($receipt instanceof AccountFundingReceipt
@@ -221,7 +244,7 @@ final class SyncStandingFundingAddress
 
             $receipt->provider_funding_observation_id = $observation->getKey();
 
-            if ($observation->provider_status !== 'settled') {
+            if (! $this->recognitionPolicy->accepts($observation)) {
                 $receipt->status = AccountFundingReceiptStatus::Observed;
                 $receipt->saveQuietly();
 
@@ -235,6 +258,10 @@ final class SyncStandingFundingAddress
             }
 
             $receipt->verified_at = now();
+            $receipt->metadata = array_merge($receipt->metadata ?? [], [
+                'provider_status_at_recognition' => $observation->provider_status,
+                'provisional_recognition' => $this->recognitionPolicy->isProvisional($observation),
+            ]);
             $receipt->status = match ($address->recognition_mode) {
                 FundingRecognitionMode::ObserveOnly => AccountFundingReceiptStatus::Observed,
                 FundingRecognitionMode::Supervised => AccountFundingReceiptStatus::AwaitingApproval,
@@ -244,6 +271,21 @@ final class SyncStandingFundingAddress
 
             return $receipt->refresh();
         }, attempts: 3);
+    }
+
+    private function postRecognitionStatusIsCompatible(
+        AccountFundingReceipt $receipt,
+        ProviderFundingObservation $observation,
+    ): bool {
+        if ($observation->provider_status === 'settled') {
+            return true;
+        }
+
+        $recognizedStatus = data_get($receipt->metadata, 'provider_status_at_recognition');
+
+        return is_string($recognizedStatus)
+            && $recognizedStatus === $observation->provider_status
+            && data_get($receipt->metadata, 'provisional_recognition') === true;
     }
 
     private function evidenceChanged(

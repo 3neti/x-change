@@ -30,6 +30,14 @@ beforeEach(function () {
         'maximum_amount_minor' => 5_000_000,
         'daily_limit_minor' => 10_000_000,
     ]);
+    config()->set(
+        'x-change.funding.standing_addresses.creditable_provider_statuses',
+        ['settled'],
+    );
+    config()->set(
+        'x-change.funding.standing_addresses.enforce_configured_recognition_mode',
+        false,
+    );
 });
 
 it('persists an immutable purpose-bound address without storing plaintext', function () {
@@ -93,7 +101,9 @@ it('recognizes settled provider evidence and credits an Account exactly once', f
     $receipt = AccountFundingReceipt::query()->sole();
 
     expect($first->settled)->toBe(1)
+        ->and($first->applied)->toBe(1)
         ->and($second->settled)->toBe(1)
+        ->and($second->applied)->toBe(0)
         ->and($receipt->status)->toBe(AccountFundingReceiptStatus::Settled)
         ->and($receipt->gross_amount_minor)->toBe(25_000)
         ->and($receipt->net_amount_minor)->toBe(24_950)
@@ -102,6 +112,162 @@ it('recognizes settled provider evidence and credits an Account exactly once', f
         ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(24_950)
         ->and(TreasuryInventoryOperation::query()->count())->toBe(1)
         ->and(Transaction::query()->where('type', Transaction::TYPE_DEPOSIT)->count())->toBe(1);
+});
+
+it('can recognize a pending NetBank observation exactly once when explicitly configured', function () {
+    config()->set(
+        'x-change.funding.standing_addresses.creditable_provider_statuses',
+        ['settled', 'pending'],
+    );
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $provider = new StandingFundingAddressProviderFake;
+    bindStandingFundingProvider($provider);
+    $address = provisionStandingAddress(
+        $user,
+        'wallet:'.$wallet->uuid,
+        FundingAddressPurpose::AccountFunding,
+        FundingRecognitionMode::Automatic,
+    );
+    $provider->observations = [
+        standingFundingObservation(
+            $provider->fundingAddress,
+            providerStatus: 'pending',
+        ),
+    ];
+
+    $first = app(SyncStandingFundingAddress::class)->handle($address);
+    $second = app(SyncStandingFundingAddress::class)->handle($address->refresh());
+    $receipt = AccountFundingReceipt::query()->sole();
+
+    expect($first->applied)->toBe(1)
+        ->and($second->applied)->toBe(0)
+        ->and($receipt->status)->toBe(AccountFundingReceiptStatus::Settled)
+        ->and($receipt->metadata['provider_status_at_recognition'])->toBe('pending')
+        ->and($receipt->metadata['provisional_recognition'])->toBeTrue()
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and(AccountFundingReceipt::query()->count())->toBe(1)
+        ->and(TreasuryInventoryOperation::query()->count())->toBe(1)
+        ->and(Transaction::query()->where('type', Transaction::TYPE_DEPOSIT)->count())->toBe(1);
+});
+
+it('converges pending evidence to settled without applying the Account credit again', function () {
+    config()->set(
+        'x-change.funding.standing_addresses.creditable_provider_statuses',
+        ['settled', 'pending'],
+    );
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $provider = new StandingFundingAddressProviderFake;
+    bindStandingFundingProvider($provider);
+    $address = provisionStandingAddress(
+        $user,
+        'wallet:'.$wallet->uuid,
+        FundingAddressPurpose::AccountFunding,
+        FundingRecognitionMode::Automatic,
+    );
+    $provider->observations = [
+        standingFundingObservation(
+            $provider->fundingAddress,
+            providerStatus: 'pending',
+        ),
+    ];
+
+    $pending = app(SyncStandingFundingAddress::class)->handle($address);
+    $provider->observations = [
+        standingFundingObservation(
+            $provider->fundingAddress,
+            providerStatus: 'settled',
+        ),
+    ];
+    $settled = app(SyncStandingFundingAddress::class)->handle($address->refresh());
+    $receipt = AccountFundingReceipt::query()->sole();
+
+    expect($pending->applied)->toBe(1)
+        ->and($settled->applied)->toBe(0)
+        ->and($receipt->status)->toBe(AccountFundingReceiptStatus::Settled)
+        ->and($receipt->providerFundingObservation->provider_status)->toBe('settled')
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and(AccountFundingReceipt::query()->count())->toBe(1)
+        ->and(ProviderFundingObservation::query()->count())->toBe(2)
+        ->and(TreasuryInventoryOperation::query()->count())->toBe(1)
+        ->and(Transaction::query()->where('type', Transaction::TYPE_DEPOSIT)->count())->toBe(1);
+});
+
+it('can enforce the configured automatic mode for an existing observe-only address', function () {
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $provider = new StandingFundingAddressProviderFake;
+    bindStandingFundingProvider($provider);
+    $address = provisionStandingAddress(
+        $user,
+        'wallet:'.$wallet->uuid,
+        FundingAddressPurpose::AccountFunding,
+        FundingRecognitionMode::ObserveOnly,
+    );
+    $provider->observations = [
+        standingFundingObservation($provider->fundingAddress),
+    ];
+
+    $observed = app(SyncStandingFundingAddress::class)->handle($address);
+    config()->set(
+        'x-change.funding.standing_addresses.default_recognition_mode',
+        FundingRecognitionMode::Automatic->value,
+    );
+    config()->set(
+        'x-change.funding.standing_addresses.enforce_configured_recognition_mode',
+        true,
+    );
+    $applied = app(SyncStandingFundingAddress::class)->handle($address->refresh());
+
+    expect($observed->applied)->toBe(0)
+        ->and($applied->applied)->toBe(1)
+        ->and($address->refresh()->recognition_mode)->toBe(FundingRecognitionMode::Automatic)
+        ->and($address->version)->toBe(2)
+        ->and(AccountFundingReceipt::query()->sole()->status)
+        ->toBe(AccountFundingReceiptStatus::Settled)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and(TreasuryInventoryOperation::query()->count())->toBe(1)
+        ->and(Transaction::query()->where('type', Transaction::TYPE_DEPOSIT)->count())->toBe(1);
+});
+
+it('refuses recognition when a receipt no longer points to its bound Account', function () {
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $provider = new StandingFundingAddressProviderFake;
+    bindStandingFundingProvider($provider);
+    $address = provisionStandingAddress(
+        $user,
+        'wallet:'.$wallet->uuid,
+        FundingAddressPurpose::AccountFunding,
+        FundingRecognitionMode::ObserveOnly,
+    );
+    $provider->observations = [
+        standingFundingObservation($provider->fundingAddress),
+    ];
+
+    app(SyncStandingFundingAddress::class)->handle($address);
+    AccountFundingReceipt::query()->sole()
+        ->forceFill(['account_reference' => 'wallet:wrong-account'])
+        ->saveQuietly();
+    config()->set(
+        'x-change.funding.standing_addresses.default_recognition_mode',
+        FundingRecognitionMode::Automatic->value,
+    );
+    config()->set(
+        'x-change.funding.standing_addresses.enforce_configured_recognition_mode',
+        true,
+    );
+
+    $result = app(SyncStandingFundingAddress::class)->handle($address->refresh());
+
+    expect($result->applied)->toBe(0)
+        ->and($result->suspense)->toBe(1)
+        ->and(AccountFundingReceipt::query()->sole()->status)
+        ->toBe(AccountFundingReceiptStatus::Suspense)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and(TreasuryInventoryOperation::query()->count())->toBe(0)
+        ->and(Transaction::query()->where('type', Transaction::TYPE_DEPOSIT)->count())->toBe(0);
 });
 
 it('keeps observe-only receipts out of Account and Treasury balances', function () {
@@ -541,6 +707,7 @@ function standingFundingObservation(
     ?DateTimeImmutable $occurredAt = null,
     ?array $metadata = null,
     ?string $payloadHash = null,
+    string $providerStatus = 'settled',
 ): ProviderFundingObservationData {
     $effectiveOccurredAt = $occurredAt ?? now()->addMinute()->toDateTimeImmutable();
 
@@ -551,13 +718,15 @@ function standingFundingObservation(
         feeAmountMinor: $feeAmountMinor,
         netAmountMinor: $netAmountMinor ?? $grossAmountMinor - $feeAmountMinor,
         currency: 'PHP',
-        providerStatus: 'settled',
+        providerStatus: $providerStatus,
         verificationSource: 'netbank-vca-transaction-history',
-        payloadHash: $payloadHash ?? hash('sha256', $providerTransactionId.':settled'),
+        payloadHash: $payloadHash ?? hash('sha256', $providerTransactionId.':'.$providerStatus),
         fundingAddress: 'sha256:'.hash('sha256', $fundingAddress),
         providerAccountReference: 'sha256:'.hash('sha256', 'corporate-account'),
         occurredAt: $effectiveOccurredAt,
-        settledAt: $effectiveOccurredAt->modify('+1 minute'),
+        settledAt: $providerStatus === 'settled'
+            ? $effectiveOccurredAt->modify('+1 minute')
+            : null,
         metadata: $metadata ?? [
             'destination_verified' => true,
             'address_purpose' => FundingAddressPurpose::AccountFunding->value,
