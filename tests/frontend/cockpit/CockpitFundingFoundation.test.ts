@@ -3,7 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
 import Funding from '../../../resources/js/cockpit/pages/Funding.vue';
 
-const { usePollMock } = vi.hoisted(() => ({
+const { routerReloadMock, usePollMock } = vi.hoisted(() => ({
+    routerReloadMock: vi.fn(),
     usePollMock: vi.fn(() => ({
         start: vi.fn(),
         stop: vi.fn(),
@@ -15,6 +16,10 @@ vi.mock('@inertiajs/vue3', async (importOriginal) => {
 
     return {
         ...actual,
+        router: {
+            ...actual.router,
+            reload: routerReloadMock,
+        },
         usePoll: usePollMock,
     };
 });
@@ -196,6 +201,7 @@ const standingFundingAvailability = {
 describe('Cockpit Funding foundation', () => {
     afterEach(() => {
         vi.unstubAllGlobals();
+        routerReloadMock.mockClear();
         usePollMock.mockClear();
     });
 
@@ -435,6 +441,12 @@ describe('Cockpit Funding foundation', () => {
             'Verified funding was recognized in Treasury Inventory',
         );
         expect(wrapper.text()).toContain('Yes · ₱25.00');
+        expect(routerReloadMock).toHaveBeenCalledOnce();
+        expect(routerReloadMock).toHaveBeenCalledWith({
+            only: ['cockpit_header_read_model', 'funding_read_model'],
+            preserveScroll: true,
+            preserveState: true,
+        });
 
         await wrapper
             .get('[data-testid="hide-standing-funding-address"]')
@@ -567,6 +579,12 @@ describe('Cockpit Funding foundation', () => {
         expect(wrapper.text()).toContain(
             'New NetBank funding was applied to Internal Balance exactly once.',
         );
+        expect(routerReloadMock).toHaveBeenCalledOnce();
+        expect(routerReloadMock).toHaveBeenCalledWith({
+            only: ['cockpit_header_read_model', 'funding_read_model'],
+            preserveScroll: true,
+            preserveState: true,
+        });
 
         await wrapper
             .get('[data-testid="check-standing-funding-history"]')
@@ -578,6 +596,7 @@ describe('Cockpit Funding foundation', () => {
             'Previously applied receipts were not applied again.',
         );
         expect(fetch).toHaveBeenCalledTimes(3);
+        expect(routerReloadMock).toHaveBeenCalledOnce();
     });
 
     it('reopens an owner-scoped QR without placing it in the general read model', async () => {

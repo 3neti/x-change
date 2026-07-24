@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useForm, usePoll } from '@inertiajs/vue3';
+import { router, useForm, usePoll } from '@inertiajs/vue3';
 import { approve as approveReconciliation } from '@/routes/x-change/cockpit/funding/reconciliations';
 import { show as showFundingInstructions } from '@/routes/x-change/cockpit/funding/intents/instructions';
 import { store as storeFundingIntent } from '@/routes/x-change/cockpit/funding/intents';
@@ -469,6 +469,10 @@ async function checkStandingFundingHistory(): Promise<void> {
                 : body.observations.length > 0
                   ? 'NetBank history refreshed. Previously applied receipts were not applied again.'
                   : null;
+
+        if (body.balance_changed === true) {
+            refreshFundingProjections();
+        }
     } catch {
         standingAddressError.value =
             'The NetBank history check could not reach the provider.';
@@ -547,12 +551,21 @@ async function approveStandingFundingReceipt(
             typeof body.message === 'string'
                 ? body.message
                 : 'Verified funding was credited to the Account.';
+        refreshFundingProjections();
     } catch {
         standingAddressError.value =
             'The funding approval could not reach the Cockpit service.';
     } finally {
         activeStandingReceiptApproval.value = null;
     }
+}
+
+function refreshFundingProjections(): void {
+    router.reload({
+        only: ['cockpit_header_read_model', 'funding_read_model'],
+        preserveScroll: true,
+        preserveState: true,
+    });
 }
 
 function hideStandingFundingAddress(): void {
