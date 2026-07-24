@@ -332,6 +332,9 @@ All claim pages render standalone (no sidebar) — `app.ts` layout resolver retu
 | Route | Method | Controller | Vue Page |
 |-------|--------|-----------|----------|
 | `GET /x/claim` | `__invoke` | `ClaimStartController` | Entry.vue (no code) or redirect (with code) |
+| `GET /x/claim/{code}` | `__invoke` | `ClaimPageController` | `claim/Entry.vue` or `claim/Error.vue` |
+| `POST /x/claim/{code}/flows` | `__invoke` | `ClaimStartController` | — (redirect to form-flow) |
+| `GET /x/claim/{code}/experience` | `__invoke` | `ClaimExperienceController` | — (machine JSON) |
 | `POST /x/claim/{code}/complete` | `__invoke` | `ClaimCompleteController` | — (JSON callback) |
 | `POST /x/claim/{code}/submit` | `__invoke` | `ClaimSubmitController` | — (redirect) |
 | `GET /x/claim/{code}/success` | `__invoke` | `ClaimSuccessPageController` | `claim/Success.vue` |
@@ -389,8 +392,11 @@ All claim pages render standalone (no sidebar) — `app.ts` layout resolver retu
 - `packages/x-change/resources/js/composables/useVoucherPreview.ts` — live voucher preview API
 - `packages/x-change/resources/js/types/voucher.d.ts` — typed `InspectResponse` interface
 
-### Host App Config
-- `config/form-flow-drivers/voucher-redemption.yaml` — YAML driver with x-change callbacks
+### Published Host Integration
+- `config/form-flow-drivers/voucher-redemption.yaml` — package-published YAML
+  driver with x-change callbacks
+- `resources/js/pages/x-change/claim/*` — package-published public pages;
+  business logic and source documentation remain in `3neti/x-change`
 
 ### Claim Payload + Evidence Support
 
@@ -425,10 +431,9 @@ This matches the UX of redeem-x's `/disburse` flow — centered, mobile-friendly
 
 ---
 
-## What This Flow Does NOT Handle (Yet)
+## Adjacent Flows
 
 - Divisible voucher withdrawal (partial slices)
-- Pay flow (inward collection)
 - Settlement flow (bilateral)
 - Settlement envelope finalization
 - `/disburse` compatibility alias
@@ -436,4 +441,6 @@ This matches the UX of redeem-x's `/disburse` flow — centered, mobile-friendly
 - Driver capability discovery
 - Asynchronous evidence persistence
 
-These can be added behind the same `/x/claim` surface by extending `ClaimExecutionFactory`.
+Inward collection is implemented separately at `/x/pay/{code}`. See
+`PAY_CODE_PAYMENT_FLOW.md`; collectible Pay Codes are intentionally rejected
+by the outward `/x/claim/{code}` execution boundary.

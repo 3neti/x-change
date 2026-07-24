@@ -41,6 +41,30 @@ The QR is returned only on a `no-store` page to the browser session that
 created the Payment Attempt. Knowing the attempt reference is insufficient to
 open it from another browser session.
 
+The Vue component is published as `x-change/claim/Payment`. That component
+name deliberately uses the package's existing public-claim namespace so the
+host's established Inertia layout resolver renders `/x/pay/{code}` without
+authenticated dashboard chrome. The URL and payment domain remain separate
+from `/x/claim`; this is an integration namespace, not a money-flow alias.
+
+The package asset doctor guards both the public claim/payment components and
+Cockpit components. A missing host publication therefore fails
+`x-change:doctor --assets` instead of becoming a blank Inertia page.
+
+## Instruction Failure and Retry
+
+Provider instruction creation is not payment evidence. If NetBank rejects or
+cannot complete token, VCA, or QR creation:
+
+- the Payment Attempt stays `pending_instructions`;
+- a sanitized `provider_instruction_failed` event is appended;
+- the public response contains no provider body, credentials, account number,
+  token, or exception details;
+- the payer sees that no payment was recorded and may retry; and
+- the browser session reuses the same idempotent Payment Attempt.
+
+Only a successfully validated QR moves the attempt to `awaiting_payment`.
+
 ## Authoritative Verification
 
 The browser never submits an amount, provider transaction, payment status, or
@@ -131,3 +155,21 @@ document or in logs.
 - fees are not silently deducted from a Pay Code payment—non-zero net/gross
   differences enter suspense;
 - suspense resolution remains an operator-controlled future extension.
+
+## Acceptance Record — 2026-07-24
+
+Browser acceptance used fresh package lifecycle fixtures and did not submit a
+real payment or claim:
+
+- `/x/claim/TEST-BV65` rendered the claim entry at 1280×900 and 390×844 with
+  no horizontal overflow; configured Rider disclosures remained dismissible;
+- `/x/claim/PAY-A3F2` correctly rejected a collectible Pay Code as an outward
+  claim;
+- `/x/pay/PAY-A3F2` rendered as a standalone public page at both widths;
+- the NetBank sandbox rejected live token generation with HTTP 400;
+- the corrected public boundary converted that rejection into the sanitized
+  retry notice, kept the attempt pending, and recorded no payment; and
+- no new browser console error was produced after the corrected retry.
+
+Live settlement UAT remains separate: a human must scan and pay a deliberately
+small exact amount after NetBank confirms the production token/VCA setup.

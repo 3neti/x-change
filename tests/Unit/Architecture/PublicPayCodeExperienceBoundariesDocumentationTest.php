@@ -29,5 +29,20 @@ it('documents authoritative Payment Attempts and keeps them separate from Accoun
         ->toContain('provider status is `settled`')
         ->toContain('xchange:payments:verify-open')
         ->toContain('does not overwrite or invalidate an existing')
-        ->toContain('long-lived Account Funding QR does not consume a new token');
+        ->toContain('long-lived Account Funding QR does not consume a new token')
+        ->toContain('provider_instruction_failed')
+        ->toContain('x-change/claim/Payment')
+        ->toContain('1280×900 and 390×844');
+});
+
+it('documents the canonical claim start mutation and separate inward payment route', function () {
+    $documentation = file_get_contents(
+        dirname(__DIR__, 3).'/docs/CLAIM_FLOW_MAP.md',
+    );
+
+    expect($documentation)
+        ->toContain('GET /x/claim/{code}')
+        ->toContain('POST /x/claim/{code}/flows')
+        ->toContain('GET /x/claim/{code}/experience')
+        ->toContain('Inward collection is implemented separately at `/x/pay/{code}`');
 });
