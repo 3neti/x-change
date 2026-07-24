@@ -142,7 +142,7 @@ final class SettleAccountFundingReceipt
         ]);
 
         if ($newlySettled
-            && (bool) config('x-change.funding.broadcast_enabled', true)) {
+            && (bool) config('x-change.funding.broadcast_enabled', false)) {
             $address = StandingFundingAddress::query()->findOrFail(
                 $settled->standing_funding_address_id,
             );

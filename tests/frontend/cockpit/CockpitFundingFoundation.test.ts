@@ -1,4 +1,5 @@
 import { mount } from '@vue/test-utils';
+import { useEcho } from '@laravel/echo-vue';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
 import Funding from '../../../resources/js/cockpit/pages/Funding.vue';
@@ -232,6 +233,8 @@ describe('Cockpit Funding foundation', () => {
         vi.unstubAllGlobals();
         routerReloadMock.mockClear();
         usePollMock.mockClear();
+        vi.mocked(useEcho).mockClear();
+        echoCallback.current = null;
     });
 
     it('renders provider-verified funding posture and operational facts', () => {
@@ -349,6 +352,24 @@ describe('Cockpit Funding foundation', () => {
             preserveState: true,
         });
         vi.useRealTimers();
+    });
+
+    it('does not open a realtime connection unless broadcasting is explicitly enabled', () => {
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: fundingReadModel,
+                standing_funding_address: standingFundingAvailability,
+                funding_realtime: {
+                    ...fundingRealtime,
+                    enabled: false,
+                },
+            },
+        });
+
+        expect(useEcho).not.toHaveBeenCalled();
+        expect(
+            wrapper.find('[data-testid="funding-realtime-status"]').exists(),
+        ).toBe(false);
     });
 
     it('opens a standing QR, checks sanitized receipts, and approves supervised credit', async () => {
@@ -659,6 +680,84 @@ describe('Cockpit Funding foundation', () => {
         );
         expect(fetch).toHaveBeenCalledTimes(3);
         expect(routerReloadMock).toHaveBeenCalledOnce();
+    });
+
+    it('honors the server cooldown after a rate-limited NetBank check', async () => {
+        const automaticAddress = {
+            ...standingFundingAvailability,
+            exists: true,
+            recognition_mode: 'automatic' as const,
+            automatic_credit_enabled: true as const,
+        };
+        const fetch = vi
+            .fn()
+            .mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: async () => ({
+                    schema: 'x-change.cockpit.standing-funding-address.v1',
+                    address: {
+                        reference: '01J-STANDING-COOLDOWN',
+                        provider: 'netbank',
+                        funding_address: '9150012345678901',
+                        masked_funding_address: '•••• 678901',
+                        purpose: 'account_funding',
+                        recognition_mode: 'automatic',
+                        status: 'active',
+                        currency: 'PHP',
+                        institution: 'NetBank',
+                        merchant_name: 'X Change',
+                        qr_code: 'data:image/png;base64,REUSABLE',
+                        qr_mode: 'static',
+                        transaction_type: 'p2m',
+                        embedded_amount: false,
+                        provider_generated: true,
+                        temporary: false,
+                        funding_intent_created: false,
+                        automatic_credit_enabled: true,
+                        minimum_amount_minor: 100,
+                        maximum_amount_minor: 5_000_000,
+                        daily_limit_minor: 10_000_000,
+                    },
+                }),
+            })
+            .mockResolvedValueOnce({
+                ok: false,
+                status: 429,
+                headers: new Headers({ 'Retry-After': '45' }),
+                json: async () => ({
+                    message: 'Too Many Attempts.',
+                }),
+            });
+        vi.stubGlobal('fetch', fetch);
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: fundingReadModel,
+                standing_funding_address: automaticAddress,
+            },
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await nextTick();
+        await wrapper
+            .get('[data-testid="check-standing-funding-history"]')
+            .trigger('click');
+        await nextTick();
+
+        const checkButton = wrapper.get(
+            '[data-testid="check-standing-funding-history"]',
+        );
+
+        expect(checkButton.attributes('disabled')).toBeDefined();
+        expect(checkButton.text()).toBe('Try again in 45s');
+        expect(wrapper.text()).toContain(
+            'NetBank was checked recently. Wait for the cooldown',
+        );
+
+        await checkButton.trigger('click');
+
+        expect(fetch).toHaveBeenCalledTimes(2);
+        wrapper.unmount();
     });
 
     it('reopens an owner-scoped QR without placing it in the general read model', async () => {

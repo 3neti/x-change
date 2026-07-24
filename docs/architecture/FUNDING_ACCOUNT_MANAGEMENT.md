@@ -389,7 +389,7 @@ MERCHANT_QR_UPPERCASE
 
 `NETBANK_FUNDING_VCA_ALIAS_TOKEN` remains mandatory for registered one-time Funding Intents. A shared reusable Account Funding Address does not use that token. Its default scheme is `netbank-mobile-v1` outside production and `netbank-account-hmac-v2` in production; production rejects the mobile scheme. The HMAC key is dedicated, must be at least 32 bytes, and must never fall back to `APP_KEY`.
 
-The reusable Account Funding QR is persisted as an encrypted fixture and reopened through an owner-only `no-store` endpoint. A changed merchant profile invalidates that fixture on the next open but never changes the persisted funding address. Configure Reverb or another private-channel broadcaster when immediate Cockpit invalidation is required; direct post-action reload and polling remain supported fallbacks.
+The reusable Account Funding QR is persisted as an encrypted fixture and reopened through an owner-only `no-store` endpoint. A changed merchant profile invalidates that fixture on the next open but never changes the persisted funding address. `XCHANGE_FUNDING_BROADCAST_ENABLED` defaults to `false`; enable it only when Reverb or another private-channel broadcaster is continuously managed. Realtime delivery is not settlement authority: the Account credit commits first, a broadcast failure is sanitized and audited, and direct post-action reload and polling remain supported fallbacks. **Check NetBank** honors the server `Retry-After` response and does not issue overlapping retries during its cooldown.
 
 Merchant name, city, category, and display template are presentation inputs. They must never participate in Account routing, observation classification, or settlement authorization.
 

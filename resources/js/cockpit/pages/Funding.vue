@@ -39,12 +39,14 @@ const standingAddress = ref<CockpitStandingFundingAddress | null>(null);
 const standingReceipts = ref<CockpitStandingFundingReceipt[]>([]);
 const standingAddressLoading = ref(false);
 const standingHistoryLoading = ref(false);
+const standingHistoryCooldownSeconds = ref(0);
 const standingAddressError = ref<string | null>(null);
 const standingHistoryCheckedAt = ref<string | null>(null);
 const activeStandingReceiptApproval = ref<string | null>(null);
 const standingActionNotice = ref<string | null>(null);
 const processedFundingEvents = new Set<string>();
 let realtimeRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+let standingHistoryCooldownTimer: ReturnType<typeof setInterval> | null = null;
 let lastProjectionRefreshAt = 0;
 const activeSimulationStepIndex = ref(0);
 const activeSimulationStep = computed(
@@ -99,35 +101,40 @@ type FundingProjectionChangedPayload = {
     occurred_at: string;
 };
 
-useEcho<FundingProjectionChangedPayload>(
-    props.funding_realtime?.channel ?? 'x-change.funding.unavailable',
-    props.funding_realtime?.event ?? '.FundingProjectionChanged',
-    (event) => {
-        if (
-            props.funding_realtime?.enabled !== true ||
-            event.schema !== 'x-change.funding-projection-changed.v1' ||
-            event.reason !== 'account_funding_settled' ||
-            processedFundingEvents.has(event.event_id)
-        ) {
-            return;
-        }
+if (props.funding_realtime?.enabled === true) {
+    useEcho<FundingProjectionChangedPayload>(
+        props.funding_realtime.channel,
+        props.funding_realtime.event,
+        (event) => {
+            if (
+                event.schema !== 'x-change.funding-projection-changed.v1' ||
+                event.reason !== 'account_funding_settled' ||
+                processedFundingEvents.has(event.event_id)
+            ) {
+                return;
+            }
 
-        processedFundingEvents.add(event.event_id);
+            processedFundingEvents.add(event.event_id);
 
-        if (realtimeRefreshTimer !== null) {
-            clearTimeout(realtimeRefreshTimer);
-        }
+            if (realtimeRefreshTimer !== null) {
+                clearTimeout(realtimeRefreshTimer);
+            }
 
-        realtimeRefreshTimer = setTimeout(() => {
-            refreshFundingProjections();
-            realtimeRefreshTimer = null;
-        }, 150);
-    },
-);
+            realtimeRefreshTimer = setTimeout(() => {
+                refreshFundingProjections();
+                realtimeRefreshTimer = null;
+            }, 150);
+        },
+    );
+}
 
 onUnmounted(() => {
     if (realtimeRefreshTimer !== null) {
         clearTimeout(realtimeRefreshTimer);
+    }
+
+    if (standingHistoryCooldownTimer !== null) {
+        clearInterval(standingHistoryCooldownTimer);
     }
 });
 
@@ -473,7 +480,11 @@ async function openStandingFundingAddress(): Promise<void> {
 }
 
 async function checkStandingFundingHistory(): Promise<void> {
-    if (standingHistoryLoading.value || standingAddress.value === null) {
+    if (
+        standingHistoryLoading.value ||
+        standingHistoryCooldownSeconds.value > 0 ||
+        standingAddress.value === null
+    ) {
         return;
     }
 
@@ -496,6 +507,20 @@ async function checkStandingFundingHistory(): Promise<void> {
             }),
         });
         const body = await safeJson(response);
+
+        if (response.status === 429) {
+            const retryAfter = Number.parseInt(
+                response.headers.get('Retry-After') ?? '',
+                10,
+            );
+            startStandingHistoryCooldown(
+                Number.isFinite(retryAfter) ? retryAfter : 60,
+            );
+            standingAddressError.value =
+                'NetBank was checked recently. Wait for the cooldown before checking again.';
+
+            return;
+        }
 
         if (
             !response.ok ||
@@ -530,6 +555,29 @@ async function checkStandingFundingHistory(): Promise<void> {
     } finally {
         standingHistoryLoading.value = false;
     }
+}
+
+function startStandingHistoryCooldown(seconds: number): void {
+    standingHistoryCooldownSeconds.value = Math.min(60, Math.max(1, seconds));
+
+    if (standingHistoryCooldownTimer !== null) {
+        clearInterval(standingHistoryCooldownTimer);
+    }
+
+    standingHistoryCooldownTimer = setInterval(() => {
+        standingHistoryCooldownSeconds.value = Math.max(
+            0,
+            standingHistoryCooldownSeconds.value - 1,
+        );
+
+        if (
+            standingHistoryCooldownSeconds.value === 0 &&
+            standingHistoryCooldownTimer !== null
+        ) {
+            clearInterval(standingHistoryCooldownTimer);
+            standingHistoryCooldownTimer = null;
+        }
+    }, 1000);
 }
 
 async function approveStandingFundingReceipt(
@@ -830,14 +878,19 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             <button
                                 type="button"
                                 class="h-10 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-sky-400 dark:text-slate-950 dark:hover:bg-sky-300"
-                                :disabled="standingHistoryLoading"
+                                :disabled="
+                                    standingHistoryLoading ||
+                                    standingHistoryCooldownSeconds > 0
+                                "
                                 data-testid="check-standing-funding-history"
                                 @click="checkStandingFundingHistory"
                             >
                                 {{
                                     standingHistoryLoading
                                         ? 'Checking NetBank…'
-                                        : 'Check NetBank'
+                                        : standingHistoryCooldownSeconds > 0
+                                          ? `Try again in ${standingHistoryCooldownSeconds}s`
+                                          : 'Check NetBank'
                                 }}
                             </button>
                             <button

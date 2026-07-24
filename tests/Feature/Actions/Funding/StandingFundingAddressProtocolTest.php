@@ -84,6 +84,7 @@ it('persists an immutable purpose-bound address without storing plaintext', func
 });
 
 it('recognizes settled provider evidence and credits an Account exactly once', function () {
+    config()->set('x-change.funding.broadcast_enabled', true);
     Event::fake([FundingProjectionChanged::class]);
     $user = actingAsTestUser(0);
     $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();

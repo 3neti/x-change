@@ -53,7 +53,7 @@ class CockpitFundingPageController extends Controller
                 (int) config('x-change.funding.ui_refresh_interval_milliseconds', 5000),
             ),
             'funding_realtime' => [
-                'enabled' => (bool) config('x-change.funding.broadcast_enabled', true),
+                'enabled' => (bool) config('x-change.funding.broadcast_enabled', false),
                 'channel' => $this->fundingChannels->nameForOwner($operator),
                 'event' => '.FundingProjectionChanged',
             ],

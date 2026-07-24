@@ -297,7 +297,7 @@ it('keeps the sensitive QR and address out of initial Inertia props', function (
         ->assertJsonPath('props.standing_funding_address.purpose', 'account_funding')
         ->assertJsonPath('props.standing_funding_address.recognition_mode', 'observe_only')
         ->assertJsonPath('props.standing_funding_address.automatic_credit_enabled', false)
-        ->assertJsonPath('props.funding_realtime.enabled', true)
+        ->assertJsonPath('props.funding_realtime.enabled', false)
         ->assertJsonPath('props.funding_realtime.event', '.FundingProjectionChanged')
         ->assertJsonMissingPath('props.standing_funding_address.funding_address')
         ->assertJsonMissingPath('props.standing_funding_address.qr_code');

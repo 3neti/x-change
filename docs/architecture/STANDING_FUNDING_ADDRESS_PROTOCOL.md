@@ -460,6 +460,7 @@ The provider-issued VCA alias token is deliberately **not** required for the sha
 For reactive Cockpit refresh, configure Laravel broadcasting and a private-channel-capable driver such as Reverb:
 
 ```text
+XCHANGE_FUNDING_BROADCAST_ENABLED=true
 BROADCAST_CONNECTION=reverb
 REVERB_APP_ID
 REVERB_APP_KEY
@@ -473,7 +474,18 @@ VITE_REVERB_PORT
 VITE_REVERB_SCHEME
 ```
 
-The host runs the Reverb process as infrastructure. All channel naming, authorization, payload sanitization, idempotency, and projection-refresh rules remain package-owned.
+Realtime funding refresh is opt-in and defaults to disabled. Set
+`XCHANGE_FUNDING_BROADCAST_ENABLED=true` only when the host runs Reverb
+continuously through its development process or production process manager.
+Configuration values alone do not start the Reverb server.
+
+All channel naming, authorization, payload sanitization, idempotency, and
+projection-refresh rules remain package-owned. A broadcast is a best-effort
+notification after the Account credit commits: a Reverb outage is recorded as a
+sanitized audit event and cannot roll back the credit or turn a successful
+NetBank synchronization into an HTTP failure. With broadcasting disabled, the
+explicit **Check NetBank** response and the existing projection polling remain
+the safe refresh path.
 
 ## Browser Acceptance
 
