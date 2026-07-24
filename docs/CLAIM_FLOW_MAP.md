@@ -70,7 +70,8 @@ This document maps the complete claim flow for x-change Pay Codes — from claim
 ┌─────────────────────── PHASE 3: x-change PACKAGE ────────────────────┐
 │                                │                                      │
 │  ClaimCompleteController ◀─────┘                                      │
-│       │ logs completion, returns JSON acknowledgment                  │
+│       │ logs sanitized receipt, returns JSON acknowledgment           │
+│       │ callback cannot authorize payout or collection                │
 │                                                                       │
 │  Complete.vue "Confirm Redemption" button                             │
 │       │ POST /x/claim/{code}/submit                                   │
@@ -196,7 +197,12 @@ The YAML driver at `config/form-flow-drivers/voucher-redemption.yaml` controls w
 **Route**: `POST /x/claim/{code}/complete` (CSRF-exempt)
 **Controller**: `ClaimCompleteController`
 
-Server-to-server callback from form-flow. Logs the completion event and returns JSON acknowledgment. The actual collected data remains in the form-flow session.
+Completion callback from form-flow. It records only the Pay Code and whether a
+flow identifier was present, then returns a JSON acknowledgment. It neither
+logs nor trusts callback-collected beneficiary data. This endpoint is
+acknowledgement-only: it cannot authorize payout, collection, Account funding,
+or any other money movement. The actual collected data remains in the
+server-side form-flow session.
 
 The ClaimSubmitController intentionally remains agnostic of specific form-flow drivers and handlers.
 
@@ -212,24 +218,26 @@ This keeps x-change decoupled from form-flow implementation details while preser
 **Controller**: `ClaimSubmitController`
 
 1. Retrieves collected data from form-flow session (via `reference_id` or `flow_id`)
-2. Passes collected data to `FormFlowClaimPayloadNormalizer`
-3. Normalizer builds canonical claim payload:
+2. Confirms the state belongs to the Pay Code in the route
+3. Serializes duplicate submission attempts under a server-side lock
+4. Passes collected data to `FormFlowClaimPayloadNormalizer`
+5. Normalizer builds canonical claim payload:
     - mobile
     - country
     - bank_code
     - account_number
     - inputs
-4. Normalizer also:
+6. Normalizer also:
     - preserves compatibility fields
     - normalizes KYC statuses (`auto_approved` → `approved`)
     - nests KYC payload into `inputs.kyc`
     - preserves selfie/signature/location evidence fields
-5. `ClaimEvidenceSynchronizer` synchronizes approved KYC evidence into Contact records
-6. Calls `SubmitPayCodeClaim::handle($voucher, $payload)`
-7. `ClaimExecutionFactory` selects the appropriate executor (redeem for disburseable vouchers)
-8. `RedeemPayCode` marks the voucher as redeemed, triggering the post-redemption pipeline
-9. Clears form-flow session
-10. Redirects to success page
+7. `ClaimEvidenceSynchronizer` synchronizes approved KYC evidence into Contact records
+8. Calls `SubmitPayCodeClaim::handle($voucher, $payload)`
+9. `ClaimExecutionFactory` selects the appropriate executor (redeem for disburseable vouchers)
+10. `RedeemPayCode` marks the voucher as redeemed, triggering the post-redemption pipeline
+11. Clears form-flow session
+12. Redirects to success page
 
 ### Post-Redemption Pipeline
 

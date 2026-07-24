@@ -216,6 +216,33 @@ it('redirects to claim start when form-flow state is missing', function (): void
         ->assertSessionHasErrors(['error']);
 });
 
+it('rejects a form-flow state that belongs to another Pay Code', function (): void {
+    $voucher = claimSubmitTestVoucher();
+
+    $this->formFlowService
+        ->shouldReceive('getFlowState')
+        ->once()
+        ->with('flow-for-another-voucher')
+        ->andReturn([
+            'flow_id' => 'flow-for-another-voucher',
+            'instructions' => [
+                'metadata' => [
+                    'voucher_code' => 'OTHER-1234',
+                ],
+            ],
+            'collected_data' => [],
+        ]);
+
+    $this->payloadNormalizer->shouldNotReceive('normalize');
+    $this->submitAction->shouldNotReceive('handle');
+
+    $this->post(route('x-change.claim.submit', ['code' => $voucher->code]), [
+        'flow_id' => 'flow-for-another-voucher',
+    ])->assertSessionHasErrors([
+        'error' => 'This claim session does not belong to this Pay Code. Please restart the claim.',
+    ]);
+});
+
 it('redirects to claim start when mobile is missing from normalized payload', function (): void {
     $voucher = claimSubmitTestVoucher();
 
@@ -376,7 +403,8 @@ it('redirects back to claim start when claim submission fails', function (): voi
     Log::shouldHaveReceived('error')
         ->withArgs(fn (string $message, array $context): bool => $message === '[ClaimSubmitController] Claim failed'
             && ($context['voucher_code'] ?? null) === $voucher->code
-            && ($context['error'] ?? null) === 'Claim failed for test'
+            && ($context['exception'] ?? null) === RuntimeException::class
+            && ! array_key_exists('error', $context)
         );
 });
 

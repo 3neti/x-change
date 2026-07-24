@@ -14,15 +14,11 @@ class ClaimCompleteController extends Controller
     public function __invoke(Request $request, string $code): JsonResponse
     {
         $code = strtoupper(trim($code));
-        $collectedData = $request->input('collected_data', []);
-        $flowId = $request->input('flow_id', '');
-        $completedAt = $request->input('completed_at', now()->toIso8601String());
+        $flowId = trim((string) $request->input('flow_id', ''));
 
         Log::info('[ClaimCompleteController] Form flow callback received', [
             'voucher_code' => $code,
-            'flow_id' => $flowId,
-            'collected_data_keys' => array_keys($collectedData),
-            'completed_at' => $completedAt,
+            'has_flow_id' => $flowId !== '',
         ]);
 
         return response()->json([

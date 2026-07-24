@@ -168,8 +168,11 @@ Route::prefix('x')->middleware(['web', ShareXChangeBranding::class])->group(func
         ->name('x-change.claim.flows.store');
     Route::post('claim/{code}/complete', ClaimCompleteController::class)
         ->withoutMiddleware([VerifyCsrfToken::class])
+        ->middleware((array) config('x-change.claim.public_callback_middleware', []))
         ->name('x-change.claim.complete');
-    Route::post('claim/{code}/submit', ClaimSubmitController::class)->name('x-change.claim.submit');
+    Route::post('claim/{code}/submit', ClaimSubmitController::class)
+        ->middleware((array) config('x-change.claim.public_submit_middleware', []))
+        ->name('x-change.claim.submit');
     Route::get('claim/{code}/success', ClaimSuccessPageController::class)->name('x-change.claim.success');
     Route::get('claim/{code}/redirect', ClaimRedirectController::class)->name('x-change.claim.redirect');
     Route::get('claim/{code}/approval', ClaimApprovalPageController::class)

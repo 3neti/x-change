@@ -24,6 +24,9 @@ until their durable execution lifecycles are enabled.
   and render an appropriate next step, but it does not start a provider
   operation or move money.
 - Outward claim execution never accepts a collectible Pay Code.
+- Form-flow completion callbacks are acknowledgement-only. Claim submission
+  reloads server-side state, checks that it belongs to the routed Pay Code, and
+  serializes duplicate submissions before any outward execution.
 - A payment observation records a voucher collection. It never creates an
   Account Funding Receipt or credits the long-lived top-up Account.
 - The reusable Account Funding QR remains a standing, open-amount destination.

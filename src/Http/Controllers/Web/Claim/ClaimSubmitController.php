@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Http\Controllers\Web\Claim;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use LBHurtado\FormFlowManager\Services\FormFlowService;
 use LBHurtado\Voucher\Models\Voucher;
@@ -16,6 +17,7 @@ use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Services\BuildProvisioningRequirementViewData;
 use LBHurtado\XChange\Support\Claim\ClaimApprovalResumePayloadSession;
 use LBHurtado\XChange\Support\Claim\ClaimEvidenceSynchronizer;
+use LBHurtado\XChange\Support\Claim\ClaimFlowStateGuard;
 use LBHurtado\XChange\Support\Claim\CompiledClaimResultSession;
 use LBHurtado\XChange\Support\Claim\CompiledClaimSessionKeys;
 use LBHurtado\XChange\Support\Claim\FormFlowClaimPayloadNormalizer;
@@ -27,6 +29,7 @@ class ClaimSubmitController extends Controller
         protected SubmitWebPayCodeClaim $submitAction,
         protected FormFlowClaimPayloadNormalizer $payloadNormalizer,
         protected ClaimEvidenceSynchronizer $evidenceSynchronizer,
+        protected ClaimFlowStateGuard $flowStateGuard,
         protected CompiledClaimResultSession $compiledClaimResultSession,
         protected ClaimApprovalResumePayloadSession $resumePayloadSession,
         protected ClaimApprovalWorkflowStoreContract $approvalWorkflows,
@@ -55,6 +58,28 @@ class ClaimSubmitController extends Controller
                 ->withErrors(['error' => 'Session expired. Please try again.']);
         }
 
+        $this->flowStateGuard->assertBelongsToVoucher($state, $code, $referenceId);
+
+        $lockKey = hash('sha256', implode('|', [
+            'x-change-claim-submit',
+            $code,
+            (string) ($state['flow_id'] ?? $flowId ?? $referenceId),
+        ]));
+
+        return Cache::lock(
+            $lockKey,
+            (int) config('x-change.claim.submission_lock_seconds', 30),
+        )->block(
+            (int) config('x-change.claim.submission_lock_wait_seconds', 3),
+            fn (): RedirectResponse => $this->submit($state, $voucher, $code, $flowId),
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $state
+     */
+    protected function submit(array $state, Voucher $voucher, string $code, mixed $flowId): RedirectResponse
+    {
         $payload = $this->payloadNormalizer->normalize($state['collected_data'] ?? []);
         $onboardingReference = data_get($state, 'instructions.metadata.onboarding_reference');
 
@@ -75,9 +100,6 @@ class ClaimSubmitController extends Controller
 
         Log::info('[ClaimSubmitController] Submitting claim', [
             'voucher_code' => $code,
-            'mobile' => $payload['mobile'],
-            'bank_code' => $payload['bank_code'] ?? null,
-            'input_keys' => array_keys($payload['inputs'] ?? []),
             'has_kyc' => isset($payload['inputs']['kyc']),
             'kyc_status' => data_get($payload, 'inputs.kyc.status'),
             'has_otp' => isset($payload['inputs']['otp']),
@@ -127,7 +149,7 @@ class ClaimSubmitController extends Controller
         } catch (\Throwable $e) {
             Log::error('[ClaimSubmitController] Claim failed', [
                 'voucher_code' => $code,
-                'error' => $e->getMessage(),
+                'exception' => $e::class,
             ]);
 
             return redirect()

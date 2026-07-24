@@ -1278,6 +1278,14 @@ return [
         'public_start_middleware' => [
             'throttle:12,1',
         ],
+        'public_callback_middleware' => [
+            'throttle:30,1',
+        ],
+        'public_submit_middleware' => [
+            'throttle:12,1',
+        ],
+        'submission_lock_seconds' => 30,
+        'submission_lock_wait_seconds' => 3,
     ],
 
     'payment_qr' => [
