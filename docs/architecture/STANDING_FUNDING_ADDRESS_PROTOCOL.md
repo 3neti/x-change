@@ -189,6 +189,31 @@ Outcomes:
 
 Currency, amount, provider status, payer identity, webhook fields, and transaction time never repair a missing destination match.
 
+### Activation boundary
+
+The persisted `activated_at` timestamp is a hard lower bound for Account funding. A provider transaction whose occurrence time predates that timestamp is not recorded as new evidence by the sync pipeline and can never become an Account Funding Receipt.
+
+This matters when a readable VCA was used before it became an x-change Account Funding Address. Historical transactions at the same destination do not become top-ups merely because the address is registered later.
+
+Receipts imported before this guard was introduced are retained for audit but quarantined as `ignored`. Their open suspense cases are resolved with `pre_activation_ignored`; no Treasury Inventory or Account balance changes. Cockpit history excludes these quarantined rows.
+
+### NetBank incoming-credit normalization
+
+For NetBank `Credit` transactions whose description is `EXTERNAL_TRANSFER_INCOMING`, `amount.num` is the amount credited at the destination. The accompanying provider `fees` collection is not subtracted again when normalizing Standing Funding Address evidence.
+
+The normalized invariant is:
+
+```text
+gross amount = provider credited amount
+fee amount   = 0
+net amount   = provider credited amount
+version      = netbank-standing-credit-v2
+```
+
+The adapter records the normalization version on immutable evidence. If x-change previously stored the same raw transaction as `fee = gross` and `net = 0`, the corrected normalization creates a second immutable Provider Funding Observation rather than rewriting the original.
+
+A correction is accepted only when the provider, transaction ID, occurrence instant, provider account reference, gross amount, settled status, exact destination, and currency still match; the transaction must also be at or after address activation. NetBank may legitimately update settlement-detail timestamps, so a later raw payload hash is retained as new evidence but is not itself transaction identity. The existing receipt moves from `non_positive_net_amount` suspense to `awaiting_approval`. This exceptional correction is always owner-supervised, even when the address itself is `observe_only`. It cannot credit automatically.
+
 ## Recognition Modes
 
 ### `observe_only`
@@ -221,6 +246,7 @@ provider observation
                                           settled
 
 any mismatch / ambiguity / denied guard ───→ suspense
+transaction before address activation ────→ ignored (no credit)
 post-settlement status change ─────────────→ suspense review
 ```
 
@@ -234,6 +260,7 @@ The ready receipt is locked together with its Standing Funding Address and lates
 - address and receipt purpose are `account_funding`;
 - provider is identical;
 - provider status is `settled`;
+- provider occurrence time is at or after the address activation time;
 - exact hashed destination matches;
 - provider marked destination verification true;
 - currency matches;
@@ -383,6 +410,25 @@ Acceptance verifies no page-level horizontal overflow, contained activity tables
 - no browser console warning/error was recorded.
 
 No scan or real-money payment was performed. The sensitive QR was hidden after acceptance. Production HMAC behavior, key rotation, collision retry, mobile collision rejection, and the one-time alias-token boundary are covered by automated tests.
+
+### Live incoming-credit normalization acceptance — 2026-07-24
+
+- a human sent PHP 25.00 through the provider-generated Standing Funding Address QR;
+- NetBank VCA history independently returned one post-activation settled incoming credit;
+- the corrected immutable observation recorded gross PHP 25.00, fee PHP 0.00, and net PHP 25.00 under `netbank-standing-credit-v2`;
+- the original `fee = gross`, `net = 0` observation remained unchanged for audit;
+- 100 older receipts at the same reused VCA were quarantined as pre-activation and received no Account or Treasury posting;
+- the one current receipt moved to owner-supervised approval, then settled with one Treasury Inventory recognition and one wallet deposit;
+- Internal Balance moved from PHP 8,241.70 to PHP 8,266.70;
+- focused `emi-core` observation tests passed with 25 assertions;
+- focused `emi-netbank` standing-address adapter tests passed with 68 assertions;
+- focused x-change Standing Address, Cockpit, command, and approval tests passed with 191 assertions;
+- the focused Cockpit funding component passed 8 frontend tests;
+- the full x-change funding regression passed 118 tests with 904 assertions;
+- the complete package frontend suite passed 81 files and 581 tests;
+- package asset diagnostics and the production build passed.
+
+The acceptance workflow never accepted an operator-supplied amount, destination, provider transaction ID, or raw evidence. The provider observation supplied every monetary fact.
 
 ## Rollout Gates
 
