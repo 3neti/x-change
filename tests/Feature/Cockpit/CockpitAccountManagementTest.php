@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Validation\ValidationException;
 use LBHurtado\Merchant\Contracts\MerchantProfileRepositoryContract;
-use LBHurtado\PaymentGateway\Funding\NetbankFundingApiClient;
-use LBHurtado\XChange\Actions\Funding\RotateNetbankFundingToken;
 use LBHurtado\XChange\Actions\Funding\UpdateFundingDestination;
 use LBHurtado\XChange\Models\FundingDestinationPreference;
 use LBHurtado\XChange\Models\ProviderAccountLink;
@@ -109,6 +106,7 @@ it('runs the protected Cockpit account-management walkthrough without durable st
         ->assertJsonPath('simulation.provider_calls', 0)
         ->assertJsonPath('simulation.balance_changed', false)
         ->assertJsonCount(7, 'steps')
+        ->assertJsonPath('steps.3.key', 'netbank_registration_token_boundary')
         ->assertJsonPath('steps.4.outcome', 'blocked')
         ->assertJsonMissing([
             '991100004242',
@@ -131,18 +129,11 @@ it('refuses the Cockpit walkthrough when its environment gate is disabled', func
     ))->assertForbidden();
 });
 
-it('generates and stores a dedicated NetBank destination without exposing its token', function () {
+it('stores dedicated NetBank routing without generating or persisting a token', function () {
     $owner = actingAsTestUser();
-    $netbank = Mockery::mock(NetbankFundingApiClient::class);
-    $netbank->shouldReceive('generateAliasToken')
-        ->once()
-        ->with('991100001234', '54321')
-        ->andReturn('generated-write-only-token');
-    $this->app->instance(NetbankFundingApiClient::class, $netbank);
 
     $preference = app(UpdateFundingDestination::class)->handle($owner, 'netbank', [
         'mode' => 'dedicated',
-        'enrollment' => 'generate',
         'account_number' => '991100001234',
         'account_name' => 'Dedicated Treasury',
         'vca_alias' => '54321',
@@ -151,76 +142,37 @@ it('generates and stores a dedicated NetBank destination without exposing its to
     $raw = DB::table('xchange_provider_account_links')->find($link->getKey());
 
     expect($preference->mode)->toBe('dedicated')
-        ->and($link->verification_status)->toBe('verified')
+        ->and($link->verification_status)->toBe('routing_configured')
         ->and($link->display_reference)->toBe('•••• 1234 · VCA 54321')
-        ->and($link->routing_profile_ciphertext['vca_alias_token'])->toBe('generated-write-only-token')
+        ->and($link->routing_profile_ciphertext)->not->toHaveKey('vca_alias_token')
         ->and($raw->routing_profile_ciphertext)->not->toContain('991100001234')
-        ->and($raw->routing_profile_ciphertext)->not->toContain('generated-write-only-token')
+        ->and($raw->routing_profile_ciphertext)->not->toContain('vca_alias_token')
         ->and($this->fakeAuditLogger->hasEvent('funding.destination.selected'))->toBeTrue();
 });
 
-it('does not regenerate an enrolled NetBank alias during an ordinary replacement', function () {
+it('records a new routing configuration without treating token generation as enrollment', function () {
     $owner = actingAsTestUser();
-    $netbank = Mockery::mock(NetbankFundingApiClient::class);
-    $netbank->shouldReceive('generateAliasToken')->once()->andReturn('first-token');
-    $this->app->instance(NetbankFundingApiClient::class, $netbank);
     $update = app(UpdateFundingDestination::class);
     $data = [
         'mode' => 'dedicated',
-        'enrollment' => 'generate',
         'account_number' => '991100001234',
         'account_name' => 'Dedicated Treasury',
         'vca_alias' => '54321',
     ];
 
-    $update->handle($owner, 'netbank', $data);
+    $first = $update->handle($owner, 'netbank', $data);
+    $second = $update->handle($owner, 'netbank', $data);
 
-    expect(fn () => $update->handle($owner, 'netbank', $data))
-        ->toThrow(
-            ValidationException::class,
-            'Use token rotation instead',
-        );
-});
-
-it('rotates the token only through the explicit warned operation', function () {
-    $owner = actingAsTestUser();
-    $link = ProviderAccountLink::query()->create([
-        'owner_type' => $owner::class,
-        'owner_id' => $owner->getKey(),
-        'provider' => 'netbank',
-        'topology' => 'dedicated',
-        'purpose' => 'funding',
-        'mode' => 'bank_account_link',
-        'status' => 'ready',
-        'verification_status' => 'credential_supplied',
-        'routing_profile_ciphertext' => [
-            'bank_account_number' => '991100001234',
-            'bank_account_name' => 'Dedicated Treasury',
-            'vca_alias' => '54321',
-            'vca_alias_token' => 'old-token',
-        ],
-        'display_reference' => '•••• 1234 · VCA 54321',
-        'ready_at' => now(),
-    ]);
-    FundingDestinationPreference::query()->create([
-        'owner_type' => $owner::class,
-        'owner_id' => $owner->getKey(),
-        'provider_code' => 'netbank',
-        'mode' => 'dedicated',
-        'provider_account_link_id' => $link->getKey(),
-    ]);
-    $netbank = Mockery::mock(NetbankFundingApiClient::class);
-    $netbank->shouldReceive('generateAliasToken')
-        ->once()
-        ->with('991100001234', '54321')
-        ->andReturn('rotated-token');
-    $this->app->instance(NetbankFundingApiClient::class, $netbank);
-
-    $rotated = app(RotateNetbankFundingToken::class)->handle($owner);
-
-    expect($rotated->routing_profile_ciphertext['vca_alias_token'])->toBe('rotated-token')
-        ->and($rotated->verification_status)->toBe('verified')
-        ->and($this->fakeAuditLogger->hasEvent('funding.destination.token_rotated'))->toBeTrue();
+    expect($first->providerAccountLink)->not->toBeNull()
+        ->and($second->providerAccountLink)->not->toBeNull()
+        ->and($second->providerAccountLink?->is($first->providerAccountLink))->toBeTrue()
+        ->and(ProviderAccountLink::query()->count())->toBe(1)
+        ->and(ProviderAccountLink::query()->get()->every(
+            fn (ProviderAccountLink $link): bool => ! array_key_exists(
+                'vca_alias_token',
+                (array) $link->routing_profile_ciphertext,
+            ),
+        ))->toBeTrue();
 });
 
 it('returns a destination to shared mode without deleting its connection history', function () {

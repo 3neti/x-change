@@ -427,14 +427,16 @@ NetBank also requires its funding API/token endpoints, OAuth credentials, corpor
 NETBANK_FUNDING_CORPORATE_ACCOUNT_NUMBER
 NETBANK_FUNDING_CORPORATE_ACCOUNT_NAME
 NETBANK_FUNDING_VCA_ALIAS
-NETBANK_FUNDING_VCA_ALIAS_TOKEN
 NETBANK_FUNDING_STANDING_ADDRESS_SCHEME
 NETBANK_FUNDING_VCA_REFERENCE_LENGTH
 NETBANK_FUNDING_STANDING_HMAC_KEY_ID
 NETBANK_FUNDING_STANDING_HMAC_KEY
 ```
 
-The alias token is a provider-issued credential used for VCA operations that require authenticated alias control. A shared reusable address may be readable without it, but x-change must not manufacture, infer, or expose the token.
+Pre-transaction validation tokens are generated ephemerally by the NetBank
+adapter for each new VCA registration. They are not standing-address or Account
+configuration, and x-change must not persist, infer, expose, or describe their
+generation as revocation.
 
 Recommended production configuration:
 
@@ -455,7 +457,11 @@ NETBANK_FUNDING_STANDING_HMAC_KEY=base64:<dedicated-secret-of-at-least-32-bytes>
 
 Keep the HMAC key stable and in managed secret storage. Back it up under the same recovery policy as provider credentials. Rotating it is safe for persisted addresses, but restoring a database without its matching address records and key history can orphan old QR destinations.
 
-The provider-issued VCA alias token is deliberately **not** required for the shared reusable QR because this flow does not register or mutate a VCA. It remains mandatory for one-time Funding Intents and for dedicated destinations that use registered VCA operations. It must never be guessed, exposed in the UI, or recorded in documentation.
+The shared reusable QR does not register or mutate a VCA, so it does not
+generate or consume a pre-transaction validation token. One-time Funding
+Intents generate a fresh token immediately before registration and retain none
+afterward. NetBank confirmed that generating a new token does not overwrite or
+invalidate existing tokens.
 
 For reactive Cockpit refresh, configure Laravel broadcasting and a private-channel-capable driver such as Reverb:
 

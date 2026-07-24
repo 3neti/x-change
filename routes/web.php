@@ -26,7 +26,6 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingReconciliationA
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingReconciliationRequestController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingVerificationCheckController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitNetbankStandingFundingAddressController;
-use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitNetbankTokenRotationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeExplorerPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQrPhFundingSimulationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateMutationRouteShellController;
@@ -77,10 +76,6 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
                 CockpitFundingDestinationController::class,
             )->whereIn('provider', ['netbank', 'paynamics'])
                 ->name('x-change.cockpit.accounts.providers.funding-destination.update');
-            Route::post(
-                'accounts/providers/netbank/token-rotation',
-                CockpitNetbankTokenRotationController::class,
-            )->name('x-change.cockpit.accounts.providers.netbank.token-rotation.store');
             Route::patch(
                 'accounts/funding-qr-merchant-profile',
                 CockpitFundingQrMerchantProfileController::class,

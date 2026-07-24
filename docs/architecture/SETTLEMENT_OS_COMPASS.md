@@ -66,7 +66,7 @@ Last updated: 2026-07-23
 - Added immutable destination snapshots to Funding Intents.
 - Added package-owned shared/dedicated Account preferences, encrypted connection records, masked read models, and audit events.
 - Added the PIN-protected `/x/cockpit/accounts` workspace.
-- NetBank supports explicit alias-token generation, import, and separate rotation.
+- NetBank stores account routing only; each new VCA registration receives an ephemeral pre-transaction validation token.
 - Paynamics dedicated funding remains blocked until authoritative ownership verification; reachability is not ownership.
 - Funding exposes selected destination readiness and cannot select a blocked dedicated rail.
 - Profile provider cards are read-only summaries that link to Accounts.

@@ -13,7 +13,7 @@ Last updated: 2026-07-23
 - Implemented the package-owned `/x/cockpit/accounts` workspace:
   - shared destinations remain the default;
   - dedicated failures block instead of silently falling back;
-  - NetBank supports write-only token generation/import and explicit rotation;
+  - NetBank stores only account routing; pre-transaction validation tokens are generated ephemerally for each new VCA registration;
   - Paynamics requires authoritative ownership verification;
   - connection history and all displayed identifiers are masked;
   - mutations require a verified identity, recent PIN confirmation, and throttling.

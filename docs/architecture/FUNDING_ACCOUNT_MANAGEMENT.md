@@ -113,7 +113,7 @@ The queued job is unique per Funding Intent, shares a non-overlapping lock acros
 | Package | Owns | Must not own |
 |---|---|---|
 | `3neti/emi-core` | Provider-neutral funding request, destination, instruction, observation, and verification contracts | Provider payloads, Account credit policy, Treasury mutation |
-| `3neti/emi-netbank` | NetBank authentication, pristine payload normalization, VCA instruction generation, transaction verification, alias-token generation | Pipedream transforms, user selection policy, Account credit |
+| `3neti/emi-netbank` | NetBank authentication, pristine payload normalization, VCA instruction generation, transaction verification, ephemeral registration-token generation | Pipedream transforms, user selection policy, Account credit |
 | `3neti/emi-paynamics` | Paynamics authentication, pristine payload normalization, wallet instruction generation, transaction verification | Treating reachability as ownership, Account credit |
 | `3neti/x-change` | Funding Intent lifecycle, destination selection, evidence matching, suspense, settlement finality, Account UI, authorization, audit | Provider-specific transport internals |
 | `3neti/wallet` | Treasury Inventory and Account accounting primitives | Provider payload interpretation, funding-intent policy |
@@ -140,7 +140,7 @@ Every Funding Intent snapshots its resolved destination. A later Account-setting
 
 ### Shared destination
 
-Shared NetBank configuration uses the platform corporate account, account name, five-digit VCA alias, and alias token.
+Shared NetBank configuration uses the platform corporate account, account name, and five-digit VCA alias.
 
 ### Dedicated destination
 
@@ -148,15 +148,15 @@ A dedicated NetBank destination contains:
 
 - corporate account number;
 - corporate account name;
-- five-digit VCA alias;
-- VCA alias token.
+- five-digit VCA alias.
 
-The token is write-only. An operator may:
-
-- ask x-change to generate it through NetBank's authoritative alias-token API; or
-- import an existing token.
-
-Token rotation is a separate warned operation. Ordinary destination replacement cannot regenerate a token. The route requires authentication, verified email, recent PIN confirmation, throttling, validation, and audit logging.
+Pre-transaction validation tokens are not Account credentials. NetBank confirmed
+on 2026-07-24 that generating a new token does not overwrite or invalidate an
+existing token and that each generated token is intended for a new VCA
+registration. The adapter therefore generates a fresh token immediately before
+each registration, uses it only in memory, and never stores it in platform
+configuration, `ProviderAccountLink`, or a Funding Intent snapshot. Cockpit does
+not expose token generation, import, or rotation controls.
 
 NetBank payloads are consumed in their documented native form. No Pipedream transform, mobile-number prefix routing, or daughter-account inference is part of the architecture.
 
@@ -165,16 +165,17 @@ NetBank payloads are consumed in their documented native form. No Pipedream tran
 For each NetBank Funding Intent, the adapter:
 
 1. derives the same numeric VCA reference from the Funding Intent on every retry;
-2. registers that reference through NetBank pre-transaction validation;
-3. applies a one-time minimum and maximum equal to the exact intent amount;
-4. asks NetBank to generate a dynamic P2M QR for the VCA, PHP amount, and intent reference;
-5. accepts only a valid base64-encoded PNG response.
+2. generates a fresh pre-transaction validation token for the snapshotted corporate account and five-digit alias;
+3. registers that reference with the newly generated token;
+4. applies a one-time minimum and maximum equal to the exact intent amount;
+5. asks NetBank to generate a dynamic P2M QR for the VCA, PHP amount, and intent reference;
+6. accepts only a valid base64-encoded PNG response.
 
 The QR contract is provider-neutral and records its MIME type, base64 payload, dynamic/static mode, transaction type, embedded-amount flag, and whether the provider generated it. Existing provider adapters remain compatible because the QR artifact is optional.
 
 If QR generation fails, the Funding Intent remains `pending_instructions`. A retry reuses the deterministic VCA; it does not create another Account credit opportunity. QR image data, credentials, account numbers, and raw provider response bodies are excluded from logs.
 
-NetBank stays unavailable until OAuth credentials, corporate account details, the five-digit VCA alias and token, QR endpoint, merchant name, merchant city, and purpose are configured.
+NetBank stays unavailable until OAuth credentials, corporate account details, the five-digit VCA alias, QR endpoint, merchant name, merchant city, and purpose are configured.
 
 ### NetBank settlement authority
 
@@ -240,7 +241,7 @@ Raw secrets and routing credentials do not appear in Cockpit read models, logs, 
 - Paynamics reachability is not ownership.
 - Tokens are encrypted and write-only.
 - Destination mutations require a verified identity, recent PIN confirmation, and throttling.
-- Connection changes and token rotation are audited without secrets.
+- Connection changes are audited without secrets; ephemeral registration tokens are never audit inputs.
 - Reconciliation uses separate maker and checker identities.
 - Reversal creates explicit recovery/impairment state; history is not rewritten.
 
@@ -252,7 +253,7 @@ It provides:
 
 - masked Account and provider references;
 - shared versus dedicated selection;
-- NetBank enrollment and explicit token rotation;
+- NetBank account/alias routing without stored registration tokens;
 - Paynamics ownership-verification status;
 - retained connection history;
 - clear warning that provider settlement, not the form submission, changes balance.
@@ -281,7 +282,7 @@ The runner:
 1. selects shared destinations;
 2. activates a synthetic dedicated NetBank destination;
 3. creates an encrypted Funding Intent destination snapshot;
-4. demonstrates separate write-only token rotation;
+4. demonstrates that registration tokens are absent from Account state and Funding Intent snapshots;
 5. proves a reachable Paynamics wallet remains blocked;
 6. applies synthetic ownership evidence and proves eligibility;
 7. returns to shared mode while showing retained connection history.
@@ -368,7 +369,6 @@ NETBANK_FUNDING_CLIENT_SECRET
 NETBANK_FUNDING_CORPORATE_ACCOUNT_NUMBER
 NETBANK_FUNDING_CORPORATE_ACCOUNT_NAME
 NETBANK_FUNDING_VCA_ALIAS
-NETBANK_FUNDING_VCA_ALIAS_TOKEN
 NETBANK_FUNDING_REFERENCE_KEY
 NETBANK_FUNDING_STANDING_ADDRESS_SCHEME
 NETBANK_FUNDING_VCA_REFERENCE_LENGTH
@@ -387,7 +387,14 @@ MERCHANT_QR_FALLBACK_NAME
 MERCHANT_QR_UPPERCASE
 ```
 
-`NETBANK_FUNDING_VCA_ALIAS_TOKEN` remains mandatory for registered one-time Funding Intents. A shared reusable Account Funding Address does not use that token. Its default scheme is `netbank-mobile-v1` outside production and `netbank-account-hmac-v2` in production; production rejects the mobile scheme. The HMAC key is dedicated, must be at least 32 bytes, and must never fall back to `APP_KEY`.
+One-time Funding Intents generate their pre-transaction validation token through
+NetBank immediately before VCA registration. No
+`NETBANK_FUNDING_VCA_ALIAS_TOKEN` is configured. A shared reusable Account
+Funding Address does not register a VCA and therefore does not generate or
+consume this token. Its default scheme is `netbank-mobile-v1` outside production
+and `netbank-account-hmac-v2` in production; production rejects the mobile
+scheme. The HMAC key is dedicated, must be at least 32 bytes, and must never
+fall back to `APP_KEY`.
 
 The reusable Account Funding QR is persisted as an encrypted fixture and reopened through an owner-only `no-store` endpoint. A changed merchant profile invalidates that fixture on the next open but never changes the persisted funding address. `XCHANGE_FUNDING_BROADCAST_ENABLED` defaults to `false`; enable it only when Reverb or another private-channel broadcaster is continuously managed. Realtime delivery is not settlement authority: the Account credit commits first, a broadcast failure is sanitized and audited, and direct post-action reload and polling remain supported fallbacks. **Check NetBank** honors the server `Retry-After` response and does not issue overlapping retries during its cooldown.
 

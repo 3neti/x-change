@@ -1,6 +1,5 @@
 import { mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { nextTick } from 'vue';
 import Accounts from '../../../resources/js/cockpit/pages/Accounts.vue';
 
 const accountReadModel = {
@@ -120,7 +119,7 @@ const scenarioResult = {
             key: 'netbank_dedicated_ready',
             label: 'NetBank dedicated routing becomes eligible',
             outcome: 'ready',
-            summary: 'A write-only credential activates dedicated routing.',
+            summary: 'Account routing is configured without a stored token.',
             providers: [
                 {
                     code: 'netbank',
@@ -134,14 +133,14 @@ const scenarioResult = {
                         configured: true,
                         display_reference: '•••• 4242 · VCA 54321',
                         status: 'ready',
-                        verification_status: 'credential_supplied',
+                        verification_status: 'routing_configured',
                         can_activate: true,
-                        can_rotate_token: true,
+                        can_rotate_token: false,
                         ownership_verification_required: false,
                     },
                 },
             ],
-            facts: [{ label: 'Verification', value: 'Credential supplied' }],
+            facts: [{ label: 'Routing', value: 'Configured' }],
         },
     ],
 };
@@ -178,9 +177,8 @@ describe('Cockpit Accounts foundation', () => {
         expect(wrapper.text()).toContain('Presentation only');
         expect(
             (
-                wrapper.get(
-                    '[data-testid="funding-qr-merchant-name"]',
-                ).element as HTMLInputElement
+                wrapper.get('[data-testid="funding-qr-merchant-name"]')
+                    .element as HTMLInputElement
             ).value,
         ).toBe('Treasury Operator');
         expect(wrapper.text()).not.toContain('test-vca-alias-token');
@@ -189,7 +187,7 @@ describe('Cockpit Accounts foundation', () => {
         ).toBe(false);
     });
 
-    it('reveals write-only dedicated fields without weakening ownership policy', async () => {
+    it('shows token-free dedicated fields without weakening ownership policy', async () => {
         const wrapper = mount(Accounts, {
             props: {
                 account_read_model: {
@@ -207,14 +205,14 @@ describe('Cockpit Accounts foundation', () => {
             wrapper.find('[data-testid="netbank-dedicated-fields"]').exists(),
         ).toBe(true);
 
-        await wrapper.find('#netbank-enrollment').setValue('import');
-        await nextTick();
-
         expect(
             wrapper.find('[data-testid="netbank-token-field"]').exists(),
-        ).toBe(true);
+        ).toBe(false);
         expect(wrapper.text()).toContain(
-            'Write-only; it will not be shown again.',
+            'registration tokens are generated automatically',
+        );
+        expect(wrapper.text()).toContain(
+            'generating one does not revoke an earlier token',
         );
 
         expect(

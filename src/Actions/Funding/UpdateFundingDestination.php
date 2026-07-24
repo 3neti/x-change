@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use LBHurtado\PaymentGateway\Funding\NetbankFundingApiClient;
 use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Models\FundingDestinationPreference;
 use LBHurtado\XChange\Models\ProviderAccountLink;
@@ -17,7 +16,6 @@ use LBHurtado\XChange\Services\LinkExistingPaynamicsWallet;
 class UpdateFundingDestination
 {
     public function __construct(
-        private readonly NetbankFundingApiClient $netbank,
         private readonly LinkExistingPaynamicsWallet $paynamics,
         private readonly AuditLoggerContract $audit,
     ) {}
@@ -98,26 +96,16 @@ class UpdateFundingDestination
         $accountNumber = (string) data_get($data, 'account_number');
         $accountName = (string) data_get($data, 'account_name');
         $alias = (string) data_get($data, 'vca_alias');
-        $enrollment = (string) data_get($data, 'enrollment');
         $fingerprint = hash('sha256', "netbank|{$accountNumber}|{$alias}");
 
-        if ($enrollment === 'generate' && ProviderAccountLink::query()
+        $link = ProviderAccountLink::query()
             ->whereMorphedTo('owner', $owner)
             ->where('provider', 'netbank')
             ->where('routing_fingerprint', $fingerprint)
             ->whereNull('disabled_at')
-            ->exists()) {
-            throw ValidationException::withMessages([
-                'enrollment' => 'This account and VCA alias already has an enrolled token. Use token rotation instead.',
-            ]);
-        }
+            ->firstOrNew();
 
-        $token = $enrollment === 'generate'
-            ? $this->netbank->generateAliasToken($accountNumber, $alias)
-            : (string) data_get($data, 'vca_alias_token');
-        $verificationStatus = $enrollment === 'generate' ? 'verified' : 'credential_supplied';
-
-        return ProviderAccountLink::query()->create([
+        $link->forceFill([
             'owner_type' => $owner::class,
             'owner_id' => $owner->getKey(),
             'provider' => 'netbank',
@@ -125,26 +113,26 @@ class UpdateFundingDestination
             'purpose' => 'funding',
             'mode' => 'bank_account_link',
             'status' => 'ready',
-            'verification_status' => $verificationStatus,
+            'verification_status' => 'routing_configured',
             'identity_level' => 'corporate_account_vca',
             'capabilities' => ['funding', 'vca'],
             'metadata' => [
-                'enrollment' => $enrollment,
-                'token_rotation_required_for_replacement' => true,
+                'registration_token_lifecycle' => 'ephemeral_per_vca',
             ],
             'routing_profile_ciphertext' => [
                 'bank_account_number' => $accountNumber,
                 'bank_account_name' => $accountName,
                 'vca_alias' => $alias,
-                'vca_alias_token' => $token,
             ],
             'routing_fingerprint' => $fingerprint,
             'display_reference' => '•••• '.Str::substr($accountNumber, -4)." · VCA {$alias}",
             'ready_at' => now(),
-            'verified_at' => $enrollment === 'generate' ? now() : null,
+            'verified_at' => null,
             'activated_at' => now(),
             'last_synced_at' => now(),
-        ]);
+        ])->save();
+
+        return $link->refresh();
     }
 
     /**

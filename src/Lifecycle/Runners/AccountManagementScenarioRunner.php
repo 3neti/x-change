@@ -26,7 +26,6 @@ final class AccountManagementScenarioRunner implements ScenarioRunnerContract
         'payment-gateway.netbank.funding.corporate_account_number' => '700000001111',
         'payment-gateway.netbank.funding.corporate_account_name' => 'Scenario Shared Treasury',
         'payment-gateway.netbank.funding.vca_alias' => '91001',
-        'payment-gateway.netbank.funding.vca_alias_token' => 'scenario-shared-token',
         'constellation.funding.wallet_id' => 'SCENARIO-SHARED-WALLET-001111',
         'x-change.funding.providers.netbank.enabled' => true,
         'x-change.funding.providers.paynamics_constellation.enabled' => true,
@@ -131,11 +130,11 @@ final class AccountManagementScenarioRunner implements ScenarioRunnerContract
             key: 'netbank_dedicated_ready',
             label: 'NetBank dedicated routing becomes eligible',
             outcome: 'ready',
-            summary: 'An imported write-only VCA credential activates a dedicated destination without exposing the account number or token.',
+            summary: 'A corporate account and five-digit alias activate dedicated routing without storing a VCA registration token.',
             providers: [$this->providerState($netbankReadModel, 'netbank')],
             facts: [
                 $this->fact('Destination', $netbankDestination->displayReference),
-                $this->fact('Verification', 'Credential supplied'),
+                $this->fact('Routing', 'Configured'),
             ],
         );
 
@@ -153,49 +152,30 @@ final class AccountManagementScenarioRunner implements ScenarioRunnerContract
             ],
             destination: $netbankDestination,
         ));
-        $snapshotBeforeRotation = (array) $intent->destination_snapshot_ciphertext;
+        $intentSnapshot = (array) $intent->destination_snapshot_ciphertext;
         $steps[] = $this->step(
             key: 'netbank_intent_snapshot',
             label: 'Funding Intent locks the selected destination',
             outcome: 'protected',
-            summary: 'The intent stores an encrypted destination snapshot so later account changes cannot redirect an existing transfer.',
+            summary: 'The intent stores an encrypted routing snapshot without a reusable registration token.',
             providers: [$this->providerState($netbankReadModel, 'netbank')],
             facts: [
                 $this->fact('Intent amount', '₱25.00'),
-                $this->fact('Snapshot destination', (string) data_get($snapshotBeforeRotation, 'displayReference')),
+                $this->fact('Snapshot destination', (string) data_get($intentSnapshot, 'displayReference')),
                 $this->fact('Instructions issued', 'No'),
             ],
         );
 
-        $routingBeforeRotation = (array) $netbankLink->routing_profile_ciphertext;
-        $netbankLink->forceFill([
-            'routing_profile_ciphertext' => [
-                ...$routingBeforeRotation,
-                'vca_alias_token' => 'scenario-rotated-write-only-token',
-            ],
-            'verification_status' => 'verified',
-            'verified_at' => now(),
-            'last_synced_at' => now(),
-        ])->save();
-        $netbankLink->refresh();
-        $intent->refresh();
-        $snapshotAfterRotation = (array) $intent->destination_snapshot_ciphertext;
         $steps[] = $this->step(
-            key: 'netbank_token_rotation',
-            label: 'Token rotation is a separate warned operation',
+            key: 'netbank_registration_token_boundary',
+            label: 'Registration tokens stay ephemeral',
             outcome: 'protected',
-            summary: 'Rotation replaces only the write-only credential. The destination identity and existing Funding Intent snapshot remain unchanged.',
-            providers: [$this->providerState(
-                $this->accounts->forOwner($owner, $accountReference),
-                'netbank',
-            )],
+            summary: 'NetBank generates a fresh token only when a new VCA is registered; Account settings and Funding Intent snapshots retain none.',
+            providers: [$this->providerState($netbankReadModel, 'netbank')],
             facts: [
-                $this->fact('Credential changed', 'Yes'),
-                $this->fact('Destination identity changed', 'No'),
-                $this->fact(
-                    'Existing intent changed',
-                    $snapshotBeforeRotation === $snapshotAfterRotation ? 'No' : 'Unexpectedly',
-                ),
+                $this->fact('Persisted token', 'No'),
+                $this->fact('Snapshot token', 'No'),
+                $this->fact('Generation revokes old token', 'No'),
             ],
         );
 
@@ -267,7 +247,7 @@ final class AccountManagementScenarioRunner implements ScenarioRunnerContract
 
         return [
             'success' => $paynamicsBlocked
-                && $snapshotBeforeRotation === $snapshotAfterRotation,
+                && data_get($intentSnapshot, 'routingCredential') === null,
             'message' => 'Rollback-only account-management lifecycle completed.',
             'steps' => $steps,
         ];
@@ -283,18 +263,17 @@ final class AccountManagementScenarioRunner implements ScenarioRunnerContract
             'purpose' => 'funding',
             'mode' => 'bank_account_link',
             'status' => 'ready',
-            'verification_status' => 'credential_supplied',
+            'verification_status' => 'routing_configured',
             'identity_level' => 'corporate_account_vca',
             'capabilities' => ['funding', 'vca'],
             'metadata' => [
                 'scenario' => true,
-                'enrollment' => 'import',
+                'registration_token_lifecycle' => 'ephemeral_per_vca',
             ],
             'routing_profile_ciphertext' => [
                 'bank_account_number' => '991100004242',
                 'bank_account_name' => 'Scenario Dedicated Treasury',
                 'vca_alias' => '54321',
-                'vca_alias_token' => 'scenario-write-only-netbank-token',
             ],
             'routing_fingerprint' => hash('sha256', 'netbank|991100004242|54321'),
             'display_reference' => '•••• 4242 · VCA 54321',

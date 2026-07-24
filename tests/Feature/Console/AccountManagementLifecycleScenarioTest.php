@@ -71,7 +71,7 @@ it('runs the rollback-only account-management lifecycle without provider calls o
         ->and(data_get($result->payload, 'simulation.persisted'))->toBeFalse()
         ->and(data_get($result->payload, 'steps'))->toHaveCount(7)
         ->and(data_get($result->payload, 'steps.0.key'))->toBe('shared_defaults')
-        ->and(data_get($result->payload, 'steps.3.key'))->toBe('netbank_token_rotation')
+        ->and(data_get($result->payload, 'steps.3.key'))->toBe('netbank_registration_token_boundary')
         ->and(data_get($result->payload, 'steps.4.outcome'))->toBe('blocked')
         ->and(data_get($result->payload, 'steps.6.key'))->toBe('shared_restored_history_retained')
         ->and([
@@ -85,9 +85,7 @@ it('runs the rollback-only account-management lifecycle without provider calls o
 
     expect($json)->not->toContain('991100004242')
         ->not->toContain('SCENARIO-DEMO-WALLET-654321')
-        ->not->toContain('scenario-write-only-netbank-token')
-        ->not->toContain('scenario-rotated-write-only-token')
-        ->not->toContain('scenario-shared-token');
+        ->not->toContain('vca_alias_token');
 });
 
 it('restores existing owner state after the account-management lifecycle', function () {

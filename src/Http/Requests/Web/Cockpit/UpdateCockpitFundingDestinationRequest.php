@@ -19,11 +19,9 @@ class UpdateCockpitFundingDestinationRequest extends FormRequest
     {
         $this->merge([
             'mode' => strtolower(trim((string) $this->input('mode'))),
-            'enrollment' => strtolower(trim((string) $this->input('enrollment'))),
             'account_number' => preg_replace('/\D+/', '', (string) $this->input('account_number')),
             'account_name' => trim((string) $this->input('account_name')),
             'vca_alias' => preg_replace('/\D+/', '', (string) $this->input('vca_alias')),
-            'vca_alias_token' => trim((string) $this->input('vca_alias_token')),
             'wallet_id' => strtoupper(trim((string) $this->input('wallet_id'))),
         ]);
     }
@@ -38,12 +36,6 @@ class UpdateCockpitFundingDestinationRequest extends FormRequest
 
         return [
             'mode' => ['required', 'string', Rule::in(['shared', 'dedicated'])],
-            'enrollment' => [
-                Rule::requiredIf($provider === 'netbank' && $dedicated),
-                'nullable',
-                'string',
-                Rule::in(['generate', 'import']),
-            ],
             'account_number' => [
                 Rule::requiredIf($provider === 'netbank' && $dedicated),
                 'nullable',
@@ -59,16 +51,6 @@ class UpdateCockpitFundingDestinationRequest extends FormRequest
                 Rule::requiredIf($provider === 'netbank' && $dedicated),
                 'nullable',
                 'regex:/^\d{5}$/',
-            ],
-            'vca_alias_token' => [
-                Rule::requiredIf(
-                    $provider === 'netbank'
-                    && $dedicated
-                    && $this->input('enrollment') === 'import',
-                ),
-                'nullable',
-                'string',
-                'max:4096',
             ],
             'wallet_id' => [
                 Rule::requiredIf($provider === 'paynamics_constellation' && $dedicated),

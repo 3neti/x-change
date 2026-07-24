@@ -3,7 +3,6 @@ import { useForm } from '@inertiajs/vue3';
 import { update as updateFundingQrMerchantProfile } from '@/routes/x-change/cockpit/accounts/funding-qr-merchant-profile';
 import { store as runFundingDestinationScenario } from '@/routes/x-change/cockpit/accounts/scenarios/funding-destinations';
 import { update as updateFundingDestination } from '@/routes/x-change/cockpit/accounts/providers/funding-destination';
-import { store as storeNetbankTokenRotation } from '@/routes/x-change/cockpit/accounts/providers/netbank/token-rotation';
 import { computed, ref } from 'vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
 import type {
@@ -17,7 +16,6 @@ const props = defineProps<CockpitAccountsPageProps>();
 const netbank = computed(() => provider('netbank'));
 const paynamics = computed(() => provider('paynamics_constellation'));
 const netbankMode = ref(netbank.value.mode);
-const netbankEnrollment = ref('generate');
 const paynamicsMode = ref(paynamics.value.mode);
 const scenarioRunning = ref(false);
 const scenarioError = ref<string | null>(null);
@@ -29,18 +27,13 @@ const activeScenarioStep = computed(
 
 const netbankForm = useForm({
     mode: netbank.value.mode,
-    enrollment: 'generate',
     account_number: '',
     account_name: '',
     vca_alias: '',
-    vca_alias_token: '',
 });
 const paynamicsForm = useForm({
     mode: paynamics.value.mode,
     wallet_id: '',
-});
-const rotationForm = useForm({
-    confirm_rotation: false,
 });
 const merchantProfileForm = useForm({
     name: props.funding_qr_merchant_profile.name,
@@ -80,16 +73,10 @@ function provider(
 
 function saveNetbank(): void {
     netbankForm.mode = netbankMode.value;
-    netbankForm.enrollment = netbankEnrollment.value;
     netbankForm.patch(updateFundingDestination('netbank'), {
         preserveScroll: true,
         onSuccess: () =>
-            netbankForm.reset(
-                'account_number',
-                'account_name',
-                'vca_alias',
-                'vca_alias_token',
-            ),
+            netbankForm.reset('account_number', 'account_name', 'vca_alias'),
     });
 }
 
@@ -98,13 +85,6 @@ function savePaynamics(): void {
     paynamicsForm.patch(updateFundingDestination('paynamics'), {
         preserveScroll: true,
         onSuccess: () => paynamicsForm.reset('wallet_id'),
-    });
-}
-
-function rotateNetbankToken(): void {
-    rotationForm.post(storeNetbankTokenRotation(), {
-        preserveScroll: true,
-        onSuccess: () => rotationForm.reset(),
     });
 }
 
@@ -334,8 +314,8 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             class="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-600 dark:bg-slate-900 dark:text-slate-300"
                         >
                             Saving a change retires only the previous encrypted
-                            QR fixture. Opening Funding generates the replacement
-                            once and then keeps it ready for reuse.
+                            QR fixture. Opening Funding generates the
+                            replacement once and then keeps it ready for reuse.
                         </div>
                     </div>
 
@@ -477,9 +457,9 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             class="mt-1 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-400"
                         >
                             Walk through shared defaults, dedicated NetBank
-                            routing, immutable intent snapshots, token rotation,
-                            and Paynamics ownership controls. Nothing is funded
-                            or retained.
+                            routing, immutable token-free intent snapshots, and
+                            Paynamics ownership controls. Nothing is funded or
+                            retained.
                         </p>
                     </div>
                     <button
@@ -796,31 +776,16 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             class="space-y-4 rounded-xl bg-slate-50 p-4 dark:bg-slate-900"
                             data-testid="netbank-dedicated-fields"
                         >
-                            <div>
-                                <label
-                                    class="text-xs font-semibold text-slate-700 dark:text-slate-300"
-                                    for="netbank-enrollment"
-                                    >Token enrollment</label
-                                >
-                                <select
-                                    id="netbank-enrollment"
-                                    v-model="netbankEnrollment"
-                                    class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
-                                >
-                                    <option value="generate">
-                                        Generate with NetBank
-                                    </option>
-                                    <option value="import">
-                                        Import existing token
-                                    </option>
-                                </select>
-                                <p
-                                    v-if="netbankForm.errors.enrollment"
-                                    class="mt-1 text-xs text-rose-600"
-                                >
-                                    {{ netbankForm.errors.enrollment }}
-                                </p>
-                            </div>
+                            <p
+                                class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs leading-5 text-sky-800 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-200"
+                                data-testid="netbank-registration-token-policy"
+                            >
+                                NetBank registration tokens are generated
+                                automatically for each new VCA registration.
+                                They are never stored as Account credentials,
+                                and generating one does not revoke an earlier
+                                token.
+                            </p>
                             <div class="grid gap-4 sm:grid-cols-2">
                                 <label
                                     class="text-xs font-semibold text-slate-700 dark:text-slate-300"
@@ -862,24 +827,6 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                         class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
                                     />
                                 </label>
-                                <label
-                                    v-if="netbankEnrollment === 'import'"
-                                    class="text-xs font-semibold text-slate-700 dark:text-slate-300"
-                                    data-testid="netbank-token-field"
-                                >
-                                    VCA alias token
-                                    <input
-                                        v-model="netbankForm.vca_alias_token"
-                                        type="password"
-                                        autocomplete="new-password"
-                                        class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
-                                    />
-                                    <span
-                                        class="mt-1 block font-normal text-slate-500"
-                                        >Write-only; it will not be shown
-                                        again.</span
-                                    >
-                                </label>
                             </div>
                         </div>
 
@@ -903,46 +850,6 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             </button>
                         </div>
                     </form>
-
-                    <details
-                        v-if="netbank.dedicated.can_rotate_token"
-                        class="border-t border-amber-200 bg-amber-50 px-5 py-4 dark:border-amber-900 dark:bg-amber-950/20"
-                    >
-                        <summary
-                            class="cursor-pointer text-sm font-semibold text-amber-900 dark:text-amber-200"
-                        >
-                            Rotate dedicated VCA token
-                        </summary>
-                        <form
-                            class="mt-3 space-y-3"
-                            @submit.prevent="rotateNetbankToken"
-                        >
-                            <p
-                                class="text-xs leading-5 text-amber-800 dark:text-amber-300"
-                            >
-                                Rotation invalidates the stored token and
-                                requests a replacement from NetBank.
-                            </p>
-                            <label
-                                class="flex items-start gap-2 text-xs text-amber-950 dark:text-amber-100"
-                            >
-                                <input
-                                    v-model="rotationForm.confirm_rotation"
-                                    type="checkbox"
-                                    class="mt-0.5"
-                                />
-                                I understand this changes the active funding
-                                credential.
-                            </label>
-                            <button
-                                type="submit"
-                                :disabled="rotationForm.processing"
-                                class="rounded-lg border border-amber-500 px-3 py-2 text-xs font-semibold text-amber-950 disabled:opacity-50 dark:text-amber-100"
-                            >
-                                Rotate token
-                            </button>
-                        </form>
-                    </details>
                 </section>
 
                 <section

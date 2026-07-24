@@ -9,7 +9,7 @@ Use `/x/cockpit/accounts` to select the provider destination that will appear on
 - Confirm the Account reference shown in the header.
 - Confirm whether the Account should use the platform-managed shared destination or its own dedicated destination.
 - Obtain the destination details through an approved channel.
-- Never paste a token into chat, a ticket, logs, or screenshots.
+- Never request, paste, persist, or screenshot a VCA registration token.
 - Expect a recent security PIN confirmation before a mutation is accepted.
 
 ## NetBank
@@ -21,16 +21,19 @@ Select **Shared treasury** and save. Future Funding Intents use the platform-con
 ### Enroll a dedicated account
 
 1. Select **Dedicated account**.
-2. Choose **Generate with NetBank** when NetBank should issue the alias token.
-3. Enter the corporate account number, exact account name, and five-digit VCA alias.
-4. Save and complete recent-PIN confirmation if requested.
-5. Confirm the returned state is ready and the displayed reference is masked.
+2. Enter the corporate account number, exact account name, and five-digit VCA alias.
+3. Save and complete recent-PIN confirmation if requested.
+4. Confirm the returned state is ready and the displayed reference is masked.
 
-Use **Import existing token** only when an approved token already exists. The token is write-only and is cleared from the form after success.
+Do not generate or import a pre-transaction validation token in Accounts.
+NetBank generates a fresh token just in time for each new VCA registration.
+That token is used in memory for the registration and is not stored in the
+Account connection or Funding Intent snapshot.
 
-### Rotate a token
-
-Open **Rotate dedicated VCA token**, read the warning, confirm the operation, and submit. Rotation is separate because it changes the active funding credential. If rotation fails, treat the dedicated rail as unavailable until its state is confirmed; do not switch silently.
+Generating a new token does **not** invalidate an earlier token. Do not describe
+token generation as rotation or revocation. If a token may be exposed, stop VCA
+registration and follow NetBank's provider-supported revocation process after
+confirming it with support.
 
 ## Paynamics
 
@@ -124,7 +127,7 @@ The walkthrough runs all seven scenario states in one rollback-only request and 
 - shared provider defaults;
 - dedicated NetBank eligibility;
 - immutable Funding Intent destination snapshots;
-- separate NetBank token rotation;
+- ephemeral NetBank registration-token boundaries;
 - Paynamics reachability blocked without ownership proof;
 - ownership-verified Paynamics eligibility;
 - return to shared mode with connection history.
@@ -166,7 +169,7 @@ The Cockpit control is enabled by default outside production. Production require
 | Standing Address status changes after settlement | Treat as a reversal incident; do not edit or manually debit historical records |
 | Amount or destination mismatch | Leave the case in suspense and use maker-checker reconciliation |
 | Duplicate provider notification | Do not create a manual credit; idempotent processing should absorb it |
-| NetBank token suspected exposed | Rotate through the warned operation and follow credential incident policy |
+| NetBank token suspected exposed | Stop registrations and contact NetBank for its supported revocation process; generating another token is not revocation |
 | Paynamics wallet is reachable but unverified | Keep dedicated funding blocked |
 | Provider reversal | Review recovery/impairment state; do not edit historical settlement |
 
@@ -178,7 +181,7 @@ Check desktop and narrow mobile widths:
 - Header and provider cards do not overflow.
 - NetBank and Paynamics cards stack cleanly on narrow screens.
 - Dedicated fields appear only when dedicated mode is selected.
-- Imported NetBank token uses a password input and is never prefilled.
+- Accounts contains no NetBank registration-token field or rotation control.
 - Paynamics warning remains visible in dedicated mode.
 - Lifecycle walkthrough advances through all seven masked steps.
 - Walkthrough controls stack without overflow on narrow screens.

@@ -88,7 +88,6 @@ class DefaultFundingDestinationResolver implements FundingDestinationResolverCon
         $accountNumber = $this->requiredConfig('payment-gateway.netbank.funding.corporate_account_number');
         $accountName = $this->requiredConfig('payment-gateway.netbank.funding.corporate_account_name');
         $alias = $this->requiredConfig('payment-gateway.netbank.funding.vca_alias');
-        $aliasToken = $this->requiredConfig('payment-gateway.netbank.funding.vca_alias_token');
 
         return new FundingDestinationData(
             provider: 'netbank',
@@ -101,7 +100,6 @@ class DefaultFundingDestinationResolver implements FundingDestinationResolverCon
             bankAccountNumber: $accountNumber,
             bankAccountName: $accountName,
             routingAlias: $alias,
-            routingCredential: $aliasToken,
         );
     }
 
@@ -125,7 +123,11 @@ class DefaultFundingDestinationResolver implements FundingDestinationResolverCon
         ProviderAccountLink $link,
         string $accountReference,
     ): FundingDestinationData {
-        if (! in_array($link->verification_status, ['verified', 'credential_supplied'], true)) {
+        if (! in_array($link->verification_status, [
+            'verified',
+            'credential_supplied',
+            'routing_configured',
+        ], true)) {
             throw new FundingDestinationUnavailable(
                 'The dedicated NetBank destination has not completed provider verification.',
             );
@@ -135,7 +137,6 @@ class DefaultFundingDestinationResolver implements FundingDestinationResolverCon
         $accountNumber = $this->requiredRouting($routing, 'bank_account_number');
         $accountName = $this->requiredRouting($routing, 'bank_account_name');
         $alias = $this->requiredRouting($routing, 'vca_alias');
-        $aliasToken = $this->requiredRouting($routing, 'vca_alias_token');
 
         return new FundingDestinationData(
             provider: 'netbank',
@@ -151,7 +152,6 @@ class DefaultFundingDestinationResolver implements FundingDestinationResolverCon
             bankAccountNumber: $accountNumber,
             bankAccountName: $accountName,
             routingAlias: $alias,
-            routingCredential: $aliasToken,
         );
     }
 

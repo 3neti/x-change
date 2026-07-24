@@ -1195,9 +1195,12 @@ it('registers only the guarded issuance, funding, and Account Cockpit mutation r
     expect($mutatingRoutes->pluck('action.as')->values()->all())->toBe([
         'x-change.cockpit.accounts.scenarios.funding-destinations.store',
         'x-change.cockpit.accounts.providers.funding-destination.update',
-        'x-change.cockpit.accounts.providers.netbank.token-rotation.store',
+        'x-change.cockpit.accounts.funding-qr-merchant-profile.update',
         'x-change.cockpit.funding.intents.store',
         'x-change.cockpit.funding.intents.verification-checks.store',
+        'x-change.cockpit.funding.standing-addresses.netbank.store',
+        'x-change.cockpit.funding.standing-addresses.netbank.history-checks.store',
+        'x-change.cockpit.funding.standing-addresses.netbank.receipts.approve',
         'x-change.cockpit.funding.scenarios.qrph.store',
         'x-change.cockpit.funding.suspense.reconciliation-requests.store',
         'x-change.cockpit.funding.reconciliations.approve',

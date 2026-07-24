@@ -124,11 +124,6 @@ export default defineConfig({
                     __dirname,
                     'tests/frontend/stubs/funding-qr-merchant-profile-route.ts',
                 ),
-            '@/routes/x-change/cockpit/accounts/providers/netbank/token-rotation':
-                path.resolve(
-                    __dirname,
-                    'tests/frontend/stubs/netbank-token-rotation-route.ts',
-                ),
             '@/routes/x-change/cockpit/accounts/scenarios/funding-destinations':
                 path.resolve(
                     __dirname,

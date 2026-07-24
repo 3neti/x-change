@@ -45,7 +45,7 @@ class CockpitAccountReadModelProvider
             'redactions' => [
                 'account_numbers' => 'masked',
                 'wallet_ids' => 'masked',
-                'routing_tokens' => 'write-only',
+                'routing_tokens' => 'ephemeral-per-vca',
                 'credentials_exposed' => false,
             ],
         ];
@@ -90,9 +90,13 @@ class CockpitAccountReadModelProvider
                 'last_synced_at' => $link?->last_synced_at?->toIso8601String(),
                 'can_activate' => $link?->isReady() === true
                     && ($provider === 'netbank'
-                        ? in_array($link->verification_status, ['verified', 'credential_supplied'], true)
+                        ? in_array($link->verification_status, [
+                            'verified',
+                            'credential_supplied',
+                            'routing_configured',
+                        ], true)
                         : $link->verification_status === 'ownership_verified'),
-                'can_rotate_token' => $provider === 'netbank' && $link?->isReady() === true,
+                'can_rotate_token' => false,
                 'ownership_verification_required' => $provider === 'paynamics_constellation'
                     && $link?->verification_status !== 'ownership_verified',
             ],
