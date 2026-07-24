@@ -27,6 +27,10 @@ return new class extends Migration
             $table->longText('funding_address_ciphertext')->nullable();
             $table->char('funding_address_hash', 64)->nullable()->index();
             $table->longText('instructions_ciphertext')->nullable();
+            $table->longText('destination_snapshot_ciphertext')->nullable();
+            $table->char('destination_fingerprint', 64)->nullable()->index();
+            $table->unsignedBigInteger('matched_observation_id')->nullable()->index();
+            $table->unsignedBigInteger('voucher_collection_id')->nullable()->unique();
             $table->string('provider_transaction_id', 191)->nullable()->unique();
             $table->timestampTz('instructions_created_at')->nullable();
             $table->timestampTz('last_checked_at')->nullable();

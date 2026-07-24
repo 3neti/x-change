@@ -50,6 +50,7 @@ class PaymentPageController extends Controller
                     && ! $collection->is_fully_collected,
                 'attempt' => $attempt === null ? null : $this->presentAttempt($attempt),
             ],
+            'notice' => $request->session()->get('payment_notice'),
         ])->toResponse($request);
 
         $response->headers->set('Cache-Control', 'no-store, private');

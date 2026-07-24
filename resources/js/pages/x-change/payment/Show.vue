@@ -2,6 +2,7 @@
 import { Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import { store as createPaymentAttempt } from '@/routes/x-change/pay/attempts';
+import { store as checkPaymentAttempt } from '@/routes/x-change/pay/attempts/checks';
 
 defineOptions({ layout: null });
 
@@ -38,9 +39,11 @@ type PaymentReadModel = {
 
 const props = defineProps<{
     payment: PaymentReadModel;
+    notice?: string | null;
 }>();
 
 const creating = ref(false);
+const checking = ref(false);
 
 function money(amountMinor: number, currency: string): string {
     return new Intl.NumberFormat('en-PH', {
@@ -102,6 +105,30 @@ function startPayment(): void {
         },
     );
 }
+
+function checkNetBank(): void {
+    const attempt = props.payment.attempt;
+
+    if (!attempt?.can_check || checking.value) {
+        return;
+    }
+
+    checking.value = true;
+    router.post(
+        checkPaymentAttempt.url({
+            code: props.payment.pay_code,
+            attempt: attempt.reference,
+        }),
+        {},
+        {
+            preserveScroll: true,
+            replace: true,
+            onFinish: () => {
+                checking.value = false;
+            },
+        },
+    );
+}
 </script>
 
 <template>
@@ -124,6 +151,14 @@ function startPayment(): void {
                     Exact QR Ph payment. This does not top up an Account.
                 </p>
             </header>
+
+            <div
+                v-if="notice"
+                class="rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-3 text-center text-sm text-emerald-100"
+                role="status"
+            >
+                {{ notice }}
+            </div>
 
             <section
                 class="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.06] shadow-2xl shadow-black/30 backdrop-blur"
@@ -199,6 +234,15 @@ function startPayment(): void {
                             Expires {{ expiresAt }}
                         </p>
                     </div>
+
+                    <button
+                        type="button"
+                        class="min-h-12 w-full rounded-2xl border border-emerald-300/30 bg-emerald-300/10 px-5 py-3 text-sm font-semibold text-emerald-200 transition hover:bg-emerald-300/20 disabled:cursor-not-allowed disabled:opacity-50"
+                        :disabled="!payment.attempt.can_check || checking"
+                        @click="checkNetBank"
+                    >
+                        {{ checking ? 'Checking NetBank…' : 'Check NetBank' }}
+                    </button>
                 </div>
 
                 <div v-else class="space-y-4 px-5 py-6 sm:px-6">

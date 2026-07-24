@@ -2,14 +2,17 @@
 
 declare(strict_types=1);
 
+use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Payment\CreatePaymentAttempt;
 use LBHurtado\XChange\Actions\Payment\IssuePaymentInstructions;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
 use LBHurtado\XChange\Models\PaymentAttempt;
+use LBHurtado\XChange\Models\VoucherCollection;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
+use LBHurtado\XChange\Tests\Fakes\User;
 
 beforeEach(function (): void {
     $this->withoutMiddleware(ShareXChangeBranding::class);
@@ -87,6 +90,40 @@ it('conceals a Payment Attempt owned by another browser session', function (): v
     ]))->assertNotFound();
 });
 
+it('checks NetBank history and applies an exact settled payment once', function (): void {
+    $user = actingAsTestUser();
+    $voucher = publicPaymentVoucherForUser($user);
+    $balanceBefore = (float) $user->wallet->balanceFloat;
+
+    $this->post(route('x-change.pay.attempts.store', [
+        'code' => $voucher->code,
+    ]))->assertRedirect();
+
+    $attempt = PaymentAttempt::query()->sole();
+    $this->paymentAdapter->fundingObservation = publicExactPaymentObservation($attempt);
+
+    $response = $this->post(route('x-change.pay.attempts.checks.store', [
+        'code' => $voucher->code,
+        'attempt' => $attempt->reference,
+    ]));
+
+    $response
+        ->assertRedirect(route('x-change.pay.show', [
+            'code' => $voucher->code,
+            'attempt' => $attempt->reference,
+        ]))
+        ->assertSessionHas('payment_notice', 'Payment confirmed from NetBank history.');
+
+    $this->post(route('x-change.pay.attempts.checks.store', [
+        'code' => $voucher->code,
+        'attempt' => $attempt->reference,
+    ]))->assertRedirect();
+
+    expect($attempt->fresh()->status)->toBe(PaymentAttemptStatus::Settled)
+        ->and(VoucherCollection::query()->count())->toBe(1)
+        ->and((float) $user->wallet->fresh()->balanceFloat)->toBe($balanceBefore + 100.00);
+});
+
 it('does not expose collectible payment on the outward claim route', function (): void {
     $voucher = publicPaymentVoucher();
 
@@ -99,8 +136,11 @@ it('does not expose collectible payment on the outward claim route', function ()
 
 function publicPaymentVoucher(): Voucher
 {
-    actingAsTestUser();
+    return publicPaymentVoucherForUser(actingAsTestUser());
+}
 
+function publicPaymentVoucherForUser(User $user): Voucher
+{
     return issueVoucher(validVoucherInstructions(
         amount: 0.00,
         settlementRail: 'INSTAPAY',
@@ -108,8 +148,30 @@ function publicPaymentVoucher(): Voucher
             'target_amount' => 100.00,
             'metadata' => [
                 'flow_type' => 'collectible',
-                'issuer_id' => (string) auth()->id(),
+                'issuer_id' => (string) $user->id,
+                'collection_wallet_id' => $user->wallet->id,
             ],
         ],
     ));
+}
+
+function publicExactPaymentObservation(PaymentAttempt $attempt): ProviderFundingObservationData
+{
+    return new ProviderFundingObservationData(
+        provider: $attempt->provider_code,
+        providerTransactionId: 'public-payment-transaction-'.str()->uuid(),
+        grossAmountMinor: $attempt->expected_amount_minor,
+        feeAmountMinor: 0,
+        netAmountMinor: $attempt->expected_amount_minor,
+        currency: $attempt->currency,
+        providerStatus: 'settled',
+        verificationSource: 'fake-authoritative-vca-history',
+        payloadHash: hash('sha256', 'public-payment-observation-'.str()->uuid()),
+        fundingAddress: 'sha256:'.hash('sha256', (string) $attempt->funding_address_ciphertext),
+        occurredAt: new DateTimeImmutable('2026-07-24T04:59:00+00:00'),
+        settledAt: new DateTimeImmutable('2026-07-24T05:00:00+00:00'),
+        metadata: [
+            'destination_verified' => true,
+        ],
+    );
 }

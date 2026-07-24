@@ -87,6 +87,42 @@ describe('PaymentPage', () => {
         );
         expect(wrapper.text()).toContain('Pay exactly ₱75.00');
         expect(wrapper.text()).toContain('cannot fund your x-change Account');
+        expect(wrapper.text()).toContain('Check NetBank');
+    });
+
+    it('checks authoritative NetBank history for the current attempt', async () => {
+        const wrapper = mount(PaymentPage, {
+            props: {
+                payment: {
+                    ...pendingPayment,
+                    attempt: {
+                        reference: '01JTEST',
+                        status: 'awaiting_payment',
+                        provider: 'netbank',
+                        amount_minor: 7500,
+                        currency: 'PHP',
+                        expires_at: '2026-07-24T10:15:00+08:00',
+                        last_checked_at: null,
+                        can_check: true,
+                        qr_code: null,
+                    },
+                },
+            },
+        });
+
+        await wrapper
+            .findAll('button')
+            .find((button) => button.text().includes('Check NetBank'))
+            ?.trigger('click');
+
+        expect(routerPost).toHaveBeenCalledWith(
+            '/x/pay/PAY-1234/attempts/01JTEST/checks',
+            {},
+            expect.objectContaining({
+                preserveScroll: true,
+                replace: true,
+            }),
+        );
     });
 
     it('does not expose payment creation when the provider is unavailable', () => {

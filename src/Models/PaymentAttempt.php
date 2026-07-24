@@ -31,6 +31,10 @@ class PaymentAttempt extends Model
         'funding_address_ciphertext',
         'funding_address_hash',
         'instructions_ciphertext',
+        'destination_snapshot_ciphertext',
+        'destination_fingerprint',
+        'matched_observation_id',
+        'voucher_collection_id',
         'provider_transaction_id',
         'instructions_created_at',
         'last_checked_at',
@@ -50,6 +54,8 @@ class PaymentAttempt extends Model
         'funding_address_ciphertext',
         'funding_address_hash',
         'instructions_ciphertext',
+        'destination_snapshot_ciphertext',
+        'destination_fingerprint',
     ];
 
     protected static function booted(): void
@@ -76,6 +82,9 @@ class PaymentAttempt extends Model
             'provider_request_id_ciphertext' => 'encrypted',
             'funding_address_ciphertext' => 'encrypted',
             'instructions_ciphertext' => 'encrypted:array',
+            'destination_snapshot_ciphertext' => 'encrypted:array',
+            'matched_observation_id' => 'integer',
+            'voucher_collection_id' => 'integer',
             'instructions_created_at' => 'immutable_datetime',
             'last_checked_at' => 'immutable_datetime',
             'verified_at' => 'immutable_datetime',

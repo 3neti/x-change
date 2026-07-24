@@ -14,6 +14,7 @@ use LBHurtado\XChange\Contracts\FundingDestinationResolverContract;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
+use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 use LogicException;
 
 class IssuePaymentInstructions
@@ -46,6 +47,11 @@ class IssuePaymentInstructions
             throw new LogicException('Payment instructions cannot be issued from the current state.');
         }
 
+        $destination = $this->destinations->shared(
+            $current->provider_code,
+            'voucher:'.$current->voucher_id,
+        );
+
         $instructions = $this->providers
             ->for($current->provider_code)
             ->createFundingInstructions(new FundingInstructionRequestData(
@@ -62,15 +68,12 @@ class IssuePaymentInstructions
                     'payment_attempt_reference' => $current->reference,
                     'voucher_code' => (string) $current->voucher->code,
                 ],
-                destination: $this->destinations->shared(
-                    $current->provider_code,
-                    'voucher:'.$current->voucher_id,
-                ),
+                destination: $destination,
             ));
 
         $this->assertInstructionsMatch($current, $instructions);
 
-        return DB::transaction(function () use ($current, $instructions): PaymentAttempt {
+        return DB::transaction(function () use ($current, $instructions, $destination): PaymentAttempt {
             $locked = PaymentAttempt::query()->lockForUpdate()->findOrFail($current->getKey());
 
             if ($locked->status === PaymentAttemptStatus::AwaitingPayment) {
@@ -91,6 +94,8 @@ class IssuePaymentInstructions
                 'funding_address_ciphertext' => $instructions->fundingAddress,
                 'funding_address_hash' => $this->secureHash((string) $instructions->fundingAddress),
                 'instructions_ciphertext' => $this->instructionPayload($instructions),
+                'destination_snapshot_ciphertext' => FundingDestinationSnapshot::fromData($destination),
+                'destination_fingerprint' => $destination->fingerprint,
                 'instructions_created_at' => now(),
                 'expires_at' => $instructions->expiresAt ?? $locked->expires_at,
             ])->saveQuietly();
