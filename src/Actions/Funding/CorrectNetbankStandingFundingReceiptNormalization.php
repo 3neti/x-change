@@ -53,6 +53,15 @@ final class CorrectNetbankStandingFundingReceiptNormalization
                     AccountFundingReceiptStatus::Ready,
                     AccountFundingReceiptStatus::Settled,
                 ], true)) {
+                $this->resolveSuspenseCases(
+                    $receipt,
+                    $correctedObservation,
+                    data_get(
+                        $receipt->metadata,
+                        'normalization_correction.original_observation_id',
+                    ),
+                );
+
                 return $receipt;
             }
 
@@ -103,29 +112,11 @@ final class CorrectNetbankStandingFundingReceiptNormalization
                 'metadata' => $metadata,
             ])->saveQuietly();
 
-            FundingSuspenseCase::query()
-                ->where('provider_funding_observation_id', $originalObservation->getKey())
-                ->where('reason_code', 'non_positive_net_amount')
-                ->where('status', 'open')
-                ->lockForUpdate()
-                ->get()
-                ->each(function (FundingSuspenseCase $case) use (
-                    $receipt,
-                    $correctedObservation,
-                ): void {
-                    $case->forceFill([
-                        'status' => 'resolved',
-                        'resolved_at' => now(),
-                        'resolved_by_type' => 'system',
-                        'resolved_by_id' => self::NormalizationVersion,
-                        'resolution_code' => 'normalization_corrected',
-                        'resolution' => [
-                            'account_funding_receipt_reference' => $receipt->reference,
-                            'corrected_observation_id' => $correctedObservation->getKey(),
-                            'next_step' => 'owner_approval',
-                        ],
-                    ])->saveQuietly();
-                });
+            $this->resolveSuspenseCases(
+                $receipt,
+                $correctedObservation,
+                $originalObservation->getKey(),
+            );
 
             $wasCorrected = true;
 
@@ -198,5 +189,45 @@ final class CorrectNetbankStandingFundingReceiptNormalization
             ->where('net_amount_minor', 0)
             ->lockForUpdate()
             ->first();
+    }
+
+    private function resolveSuspenseCases(
+        AccountFundingReceipt $receipt,
+        ProviderFundingObservation $corrected,
+        mixed $originalObservationId,
+    ): void {
+        $observationIds = array_values(array_filter([
+            is_int($originalObservationId) ? $originalObservationId : null,
+            $corrected->getKey(),
+        ]));
+
+        FundingSuspenseCase::query()
+            ->whereIn('provider_funding_observation_id', $observationIds)
+            ->whereIn('reason_code', [
+                'non_positive_net_amount',
+                'provider_evidence_changed',
+            ])
+            ->where('status', 'open')
+            ->lockForUpdate()
+            ->get()
+            ->each(function (FundingSuspenseCase $case) use (
+                $receipt,
+                $corrected,
+            ): void {
+                $case->forceFill([
+                    'status' => 'resolved',
+                    'resolved_at' => now(),
+                    'resolved_by_type' => 'system',
+                    'resolved_by_id' => self::NormalizationVersion,
+                    'resolution_code' => 'normalization_corrected',
+                    'resolution' => [
+                        'account_funding_receipt_reference' => $receipt->reference,
+                        'corrected_observation_id' => $corrected->getKey(),
+                        'next_step' => $receipt->status === AccountFundingReceiptStatus::Settled
+                            ? 'complete'
+                            : 'owner_approval',
+                    ],
+                ])->saveQuietly();
+            });
     }
 }

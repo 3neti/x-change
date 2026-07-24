@@ -14,6 +14,7 @@ use LBHurtado\EmiCore\Enums\FundingAddressPurpose;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
+use LBHurtado\XChange\Actions\Funding\OpenFundingSuspenseCase;
 use LBHurtado\XChange\Actions\Funding\ProvisionStandingFundingAddress;
 use LBHurtado\XChange\Actions\Funding\SyncStandingFundingAddress;
 use LBHurtado\XChange\Enums\AccountFundingReceiptStatus;
@@ -334,6 +335,12 @@ it('recovers a corrected observation previously classified as changed evidence',
         'status' => AccountFundingReceiptStatus::Suspense,
         'suspense_reason' => 'provider_evidence_changed',
     ])->saveQuietly();
+    app(OpenFundingSuspenseCase::class)->handle(
+        provider: 'netbank',
+        reasonCode: 'provider_evidence_changed',
+        observation: $correctedObservation,
+        details: ['account_funding_receipt_reference' => $receipt->reference],
+    );
     $provider->observations = [$correctedData];
 
     $result = app(SyncStandingFundingAddress::class)->handle($address->refresh());
@@ -344,6 +351,8 @@ it('recovers a corrected observation previously classified as changed evidence',
         ->and($receipt->metadata['normalization_correction']['original_observation_id'])
         ->toBe($originalObservationId)
         ->and($receipt->net_amount_minor)->toBe(2_500)
+        ->and(FundingSuspenseCase::query()->where('status', 'open')->count())->toBe(0)
+        ->and(FundingSuspenseCase::query()->where('status', 'resolved')->count())->toBe(2)
         ->and((int) $wallet->refresh()->balanceInt)->toBe(0);
 });
 
