@@ -19,7 +19,8 @@ class InstallXChangeCommand extends Command
         {--no-handlers : Skip form-flow and handler asset publishing}
         {--no-rider : Skip x-rider asset publishing}
         {--no-x-ray : Skip x-ray asset publishing}
-        {--no-migrate : Skip database migrations}';
+        {--no-migrate : Skip database migrations}
+        {--no-treasury : Skip Treasury provider preflight and zero-balance provisioning}';
 
     protected $description = 'Install the X-Change package UI, assets, and run migrations';
 
@@ -174,6 +175,18 @@ class InstallXChangeCommand extends Command
                     '--force' => true,
                 ]);
             });
+        }
+
+        if (! $this->option('no-treasury')) {
+            $exitCode = $this->call('x-change:treasury:provision', [
+                '--no-interaction' => true,
+            ]);
+
+            if ($exitCode !== self::SUCCESS) {
+                $this->components->error('Treasury provisioning failed; X-Change installation is incomplete.');
+
+                return self::FAILURE;
+            }
         }
 
         $this->newLine();

@@ -416,6 +416,44 @@ return [
         'rails' => [],
     ],
 
+    'treasury' => [
+        'legal_entity_reference' => env('XCHANGE_TREASURY_LEGAL_ENTITY_REFERENCE'),
+        'principal_reference' => env('XCHANGE_TREASURY_SYSTEM_PRINCIPAL_REFERENCE', 'principal:system'),
+        'system_mandate_reference' => env('XCHANGE_TREASURY_SYSTEM_MANDATE_REFERENCE', 'mandate:system:treasury'),
+        'legal_profile' => env('XCHANGE_TREASURY_LEGAL_PROFILE', 'treasury-settlement-ph-v1'),
+        'legal_profile_version' => env('XCHANGE_TREASURY_LEGAL_PROFILE_VERSION', '2026-07-24.1'),
+        'connections' => [
+            'netbank-primary' => [
+                'provider' => 'netbank',
+                'mode' => env('XCHANGE_TREASURY_NETBANK_MODE', 'disabled'),
+                'currency' => 'PHP',
+                'decimal_places' => 2,
+                'settlement_resource_reference' => 'resource:netbank:primary:php',
+                'settlement_resource_type' => 'cash_at_bank',
+                'custody_mode' => 'provider_projection',
+                'required_capabilities' => [
+                    'readiness_probe',
+                    'funding_evidence_read',
+                    'funding_instruction_issue',
+                ],
+            ],
+            'paynamics-primary' => [
+                'provider' => 'paynamics_constellation',
+                'mode' => env('XCHANGE_TREASURY_PAYNAMICS_MODE', 'disabled'),
+                'currency' => 'PHP',
+                'decimal_places' => 2,
+                'settlement_resource_reference' => 'resource:paynamics:primary:php',
+                'settlement_resource_type' => 'emi_wallet_float',
+                'custody_mode' => 'provider_projection',
+                'required_capabilities' => [
+                    'readiness_probe',
+                    'funding_evidence_read',
+                    'funding_instruction_issue',
+                ],
+            ],
+        ],
+    ],
+
     'funding' => [
         'provider_balance_max_age_seconds' => (int) env('XCHANGE_PROVIDER_BALANCE_MAX_AGE_SECONDS', 300),
         'api_middleware' => ['auth'],

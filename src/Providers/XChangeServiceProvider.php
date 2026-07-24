@@ -28,6 +28,7 @@ use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
 use LBHurtado\Cash\Contracts\WithdrawalIntervalEnforcerContract;
 use LBHurtado\EmiCore\Contracts\PayoutProvider;
+use LBHurtado\EmiCore\Contracts\SettlementProviderRegistryContract;
 use LBHurtado\EmiPaynamicsConstellation\Contracts\PendingOtpStore;
 use LBHurtado\PaymentGateway\Adapters\NetbankPayoutProvider;
 use LBHurtado\PaymentGateway\Contracts\WalletProxy;
@@ -62,6 +63,8 @@ use LBHurtado\XChange\Console\Commands\ReconcilePendingDisbursementsCommand;
 use LBHurtado\XChange\Console\Commands\Revenue\CollectRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Revenue\ShowPendingRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Settlement\EvaluateSettlementEnvelopeCommand;
+use LBHurtado\XChange\Console\Commands\Treasury\PreflightTreasuryCommand;
+use LBHurtado\XChange\Console\Commands\Treasury\ProvisionTreasuryCommand;
 use LBHurtado\XChange\Console\Commands\Wallet\GetWalletBalanceCommand;
 use LBHurtado\XChange\Contracts\ApprovalWorkflowContract;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
@@ -255,6 +258,9 @@ use LBHurtado\XChange\Services\SettlementCollectionGate;
 use LBHurtado\XChange\Services\SettlementEnvelopeReadinessService;
 use LBHurtado\XChange\Services\StartProviderProvisioningFromOnboardingCompletion;
 use LBHurtado\XChange\Services\SystemWalletProxy;
+use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
+use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
+use LBHurtado\XChange\Services\Treasury\TreasuryProvisioningService;
 use LBHurtado\XChange\Services\TxtcmdrWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\UserLifecycleService;
 use LBHurtado\XChange\Services\VoucherAccessService;
@@ -306,6 +312,21 @@ class XChangeServiceProvider extends ServiceProvider
                 $app->tagged('emi.standing-funding-address-providers'),
             ),
         );
+        $this->app->singleton(
+            TreasuryProviderConnectionCatalog::class,
+            fn (): TreasuryProviderConnectionCatalog => new TreasuryProviderConnectionCatalog(
+                (array) config('x-change.treasury.connections', []),
+            ),
+        );
+        $this->app->singleton(
+            TreasuryPreflightService::class,
+            fn ($app): TreasuryPreflightService => new TreasuryPreflightService(
+                $app->make(TreasuryProviderConnectionCatalog::class),
+                $app->make(SettlementProviderRegistryContract::class),
+                $app->tagged('emi.provider-readiness-probes'),
+            ),
+        );
+        $this->app->singleton(TreasuryProvisioningService::class);
 
         $this->registerServices();
         $this->registerFundingAccountServices();
@@ -872,6 +893,8 @@ class XChangeServiceProvider extends ServiceProvider
 
                 EvaluateSettlementEnvelopeCommand::class,
                 RunLifecycleScenarioGroupCommand::class,
+                PreflightTreasuryCommand::class,
+                ProvisionTreasuryCommand::class,
                 InstallXChangeCommand::class,
                 DoctorXChangeCommand::class,
                 SeedCockpitDiagnosticActivityCommand::class,
