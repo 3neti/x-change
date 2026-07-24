@@ -67,6 +67,7 @@ use LBHurtado\XChange\Console\Commands\ReconcilePendingDisbursementsCommand;
 use LBHurtado\XChange\Console\Commands\Revenue\CollectRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Revenue\ShowPendingRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Settlement\EvaluateSettlementEnvelopeCommand;
+use LBHurtado\XChange\Console\Commands\Treasury\MigrateLegacyAccountBalanceCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\PreflightTreasuryCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\ProvisionTreasuryCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\ReconcileOpeningTreasuryBalanceCommand;
@@ -270,6 +271,7 @@ use LBHurtado\XChange\Services\StartProviderProvisioningFromOnboardingCompletion
 use LBHurtado\XChange\Services\SystemWalletProxy;
 use LBHurtado\XChange\Services\Treasury\BavixTreasuryPositionLedgerResolver;
 use LBHurtado\XChange\Services\Treasury\DefaultTreasuryPrincipalReferenceResolver;
+use LBHurtado\XChange\Services\Treasury\LegacyAccountBalanceMigrationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryAccountBalanceReadModel;
 use LBHurtado\XChange\Services\Treasury\TreasuryAccountPortfolioProvisioningService;
 use LBHurtado\XChange\Services\Treasury\TreasuryOpeningBalanceReconciliationService;
@@ -343,6 +345,7 @@ class XChangeServiceProvider extends ServiceProvider
             ),
         );
         $this->app->singleton(TreasuryProvisioningService::class);
+        $this->app->singleton(LegacyAccountBalanceMigrationService::class);
         $this->app->singleton(
             TreasuryOpeningBalanceReconciliationService::class,
             fn ($app): TreasuryOpeningBalanceReconciliationService => new TreasuryOpeningBalanceReconciliationService(
@@ -941,6 +944,7 @@ class XChangeServiceProvider extends ServiceProvider
 
                 EvaluateSettlementEnvelopeCommand::class,
                 RunLifecycleScenarioGroupCommand::class,
+                MigrateLegacyAccountBalanceCommand::class,
                 PreflightTreasuryCommand::class,
                 ProvisionTreasuryCommand::class,
                 ReconcileOpeningTreasuryBalanceCommand::class,

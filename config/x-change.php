@@ -430,6 +430,14 @@ return [
             'XCHANGE_TREASURY_RECONCILIATION_LOCK_WAIT_SECONDS',
             5,
         ),
+        'migration_lock_seconds' => (int) env(
+            'XCHANGE_TREASURY_MIGRATION_LOCK_SECONDS',
+            60,
+        ),
+        'migration_lock_wait_seconds' => (int) env(
+            'XCHANGE_TREASURY_MIGRATION_LOCK_WAIT_SECONDS',
+            5,
+        ),
         'connections' => [
             'netbank-primary' => [
                 'provider' => 'netbank',
