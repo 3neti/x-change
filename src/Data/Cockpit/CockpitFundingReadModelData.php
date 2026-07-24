@@ -31,6 +31,7 @@ class CockpitFundingReadModelData extends Data
         public readonly array $approval_queue = [],
         public readonly array $recovery_holds = [],
         public readonly array $treasury_positions = [],
+        public readonly array $treasury_portfolio = [],
         public readonly array $controls = [],
         public readonly array $redactions = [],
     ) {}

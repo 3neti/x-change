@@ -8,7 +8,6 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Number;
-use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\XChange\Data\Cockpit\CockpitFundingReadModelData;
 use LBHurtado\XChange\Models\FundingAccountHold;
 use LBHurtado\XChange\Models\FundingDestinationPreference;
@@ -20,6 +19,10 @@ use LBHurtado\XChange\Models\FundingSuspenseCase;
 
 class FundingCockpitReadModelProvider
 {
+    public function __construct(
+        private readonly FundingTreasuryPortfolioReadModel $treasury,
+    ) {}
+
     public function forOperator(Authenticatable $operator): CockpitFundingReadModelData
     {
         $actorType = $operator::class;
@@ -43,6 +46,7 @@ class FundingCockpitReadModelProvider
             ->where('outstanding_amount_minor', '>', 0)
             ->latest('opened_at')
             ->get();
+        $treasuryPortfolio = $this->treasury->forOperator($operator);
 
         return new CockpitFundingReadModelData(
             summary: $this->summary($intentsQuery, $settlements, $openSuspenseCases, $activeRecoveries),
@@ -51,7 +55,8 @@ class FundingCockpitReadModelProvider
             suspense_cases: $this->suspenseCases($openSuspenseCases),
             approval_queue: $this->approvalQueue($actorType, $actorId),
             recovery_holds: $this->recoveryHolds($activeRecoveries),
-            treasury_positions: $this->treasuryPositions($settlements),
+            treasury_positions: $this->treasuryPositions($treasuryPortfolio),
+            treasury_portfolio: $treasuryPortfolio,
             controls: [
                 'funding_intent_required' => true,
                 'manual_balance_adjustment_enabled' => false,
@@ -314,40 +319,25 @@ class FundingCockpitReadModelProvider
     }
 
     /**
-     * @param  Collection<int, FundingSettlement>  $settlements
+     * @param  array<string, mixed>  $portfolio
      * @return array<int, array<string, mixed>>
      */
-    private function treasuryPositions(Collection $settlements): array
+    private function treasuryPositions(array $portfolio): array
     {
-        $references = $settlements
-            ->pluck('treasury_inventory_reference')
-            ->filter(fn (mixed $reference): bool => is_string($reference) && $reference !== '')
-            ->unique()
-            ->values();
-
-        if ($references->isEmpty()) {
-            return [];
-        }
-
-        return TreasuryInventory::query()
-            ->whereIn('inventory_reference', $references)
-            ->orderBy('inventory_reference')
-            ->get()
-            ->map(fn (TreasuryInventory $inventory): array => [
-                'provider' => $this->providerFromInventoryReference($inventory->inventory_reference),
-                'currency' => $inventory->currency,
-                'status' => $inventory->status,
-                'recognized' => $this->formatMoney($inventory->balance_minor, $inventory->currency),
-                'has_treasury_facts' => $inventory->version > 0,
+        return collect((array) ($portfolio['connections'] ?? []))
+            ->filter(
+                static fn (mixed $connection): bool => is_array($connection)
+                    && ($connection['provider_inventory_minor'] ?? null) !== null,
+            )
+            ->map(static fn (array $connection): array => [
+                'provider' => $connection['provider'],
+                'currency' => $connection['currency'],
+                'status' => $connection['control_status'],
+                'recognized' => $connection['provider_inventory'],
+                'has_treasury_facts' => true,
             ])
+            ->values()
             ->all();
-    }
-
-    private function providerFromInventoryReference(string $reference): string
-    {
-        $segments = explode(':', $reference);
-
-        return $segments[1] ?? 'provider';
     }
 
     private function currency(?string $currency): string

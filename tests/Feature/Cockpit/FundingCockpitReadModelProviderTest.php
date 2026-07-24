@@ -123,6 +123,26 @@ it('presents operator scoped funding controls without exposing provider evidence
             'recognized' => '₱0.00',
             'has_treasury_facts' => true,
         ])
+        ->and($readModel['treasury_portfolio'])->toMatchArray([
+            'schema' => 'x-change.cockpit.funding-treasury-portfolio.v1',
+            'read_only' => true,
+            'provider_calls' => false,
+            'accounting_boundary' => [
+                'provider_outflow' => 'provider_principal_only',
+                'sender_system_charge' => 'deferred_accounting_wave',
+                'provider_liquidity_source' => 'cached_projection_only',
+            ],
+        ])
+        ->and($readModel['treasury_portfolio']['connections'][0])
+        ->toHaveKeys([
+            'client_funds',
+            'pay_code_reserve',
+            'account_position',
+            'provider_inventory',
+            'provider_liquidity',
+            'issuance_capacity',
+            'control_status',
+        ])
         ->and(collect($readModel['providers'])->pluck('code')->all())
         ->toBe(['netbank', 'paynamics_constellation', 'qrph_simulator']);
 

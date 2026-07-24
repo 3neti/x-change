@@ -77,6 +77,12 @@ it('hydrates funding operations with secure read-only controls', function () {
         ->assertJsonPath('props.funding_read_model.controls.webhook_direct_credit_enabled', false)
         ->assertJsonPath('props.funding_read_model.controls.authoritative_provider_verification_required', true)
         ->assertJsonPath('props.funding_read_model.controls.dual_control_reconciliation_required', true)
+        ->assertJsonPath(
+            'props.funding_read_model.treasury_portfolio.schema',
+            'x-change.cockpit.funding-treasury-portfolio.v1',
+        )
+        ->assertJsonPath('props.funding_read_model.treasury_portfolio.read_only', true)
+        ->assertJsonPath('props.funding_read_model.treasury_portfolio.provider_calls', false)
         ->assertJsonPath('props.funding_read_model.redactions.payloads', 'funding-operations-summary-only')
         ->assertJsonPath('props.funding_read_model.redactions.webhook_payloads_exposed', false)
         ->assertJsonPath('props.funding_read_model.redactions.raw_evidence_exposed', false)
