@@ -6,15 +6,21 @@ namespace LBHurtado\XChange\Lifecycle\Runners;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use LBHurtado\EmiCore\Contracts\PayoutProvider;
+use LBHurtado\EmiCore\Enums\SettlementRail;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
+use LBHurtado\XChange\Data\Treasury\TreasuryOpeningBalanceConnectionData;
+use LBHurtado\XChange\Enums\TreasuryOpeningBalanceStatus;
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleMoneyRunStore;
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioBootstrapper;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
 use LBHurtado\XChange\Models\LifecycleMoneyRun;
 use LBHurtado\XChange\Services\Treasury\TreasuryLifecycleAccountingSnapshot;
 use LBHurtado\XChange\Services\Treasury\TreasuryOpeningBalanceReconciliationService;
+use LBHurtado\XChange\Services\Treasury\TreasuryPayCodeAccountingService;
 use Throwable;
 
 final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunnerContract
@@ -26,6 +32,8 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
         private TreasuryOpeningBalanceReconciliationService $openingBalances,
         private TreasuryAccountPortfolioProvisioningContract $portfolios,
         private TreasuryLifecycleAccountingSnapshot $accounting,
+        private TreasuryPayCodeAccountingService $payCodeAccounting,
+        private PayoutProvider $payoutProvider,
     ) {}
 
     public function run(ScenarioRunContext $context): ScenarioRunResult
@@ -101,6 +109,17 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
         );
 
         if ($run->completed_at !== null && is_array($run->result_summary)) {
+            if (
+                $run->status === 'provider_sync_pending'
+                && data_get($run->result_summary, 'provider_transfer_succeeded') === true
+            ) {
+                return $this->refreshProviderSync(
+                    $context,
+                    $run,
+                    $this->requiredScenarioString($context, 'treasury.connection'),
+                );
+            }
+
             return new ScenarioRunResult(
                 exitCode: data_get($run->result_summary, 'success') === true
                     ? Command::SUCCESS
@@ -166,16 +185,40 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
             $context->issuer,
             $opening->connections,
         );
+        $providerOutflowMinor = $this->providerOutflowMinor(
+            $context,
+            $amountMinor,
+        );
 
         try {
-            $bootstrap = $this->bootstrapper->bootstrap(
-                scenario: $context->scenario,
-                issuerOption: (string) $context->issuer->getKey(),
-                walletOption: (string) $context->issuer->getKey(),
-            );
-            $run = $this->runs->attachVoucher(
-                $run,
-                (int) $bootstrap->voucher->getKey(),
+            [$bootstrap, $reservation, $run] = DB::transaction(
+                function () use (
+                    $connectionReference,
+                    $context,
+                    $currency,
+                    $providerOutflowMinor,
+                    $run,
+                ): array {
+                    $bootstrap = $this->bootstrapper->bootstrap(
+                        scenario: $context->scenario,
+                        issuerOption: (string) $context->issuer->getKey(),
+                        walletOption: (string) $context->issuer->getKey(),
+                    );
+                    $reservation = $this->payCodeAccounting->reserve(
+                        accountOwner: $context->issuer,
+                        voucher: $bootstrap->voucher,
+                        connectionReference: $connectionReference,
+                        providerOutflowMinor: $providerOutflowMinor,
+                        currency: $currency,
+                    );
+                    $run = $this->runs->attachVoucher(
+                        $run,
+                        (int) $bootstrap->voucher->getKey(),
+                    );
+
+                    return [$bootstrap, $reservation, $run];
+                },
+                attempts: 5,
             );
             $afterIssuance = $this->accounting->capture($context->issuer);
             $execution = $this->execution->run(new ScenarioRunContext(
@@ -191,24 +234,37 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
                 idempotencyKey: $bootstrap->idempotencyKey,
                 readiness: $context->readiness,
             ));
-            $postTransfer = $this->openingBalances->reconcile([
-                $connectionReference,
-            ]);
+            $transferSucceeded = data_get($execution->payload, 'success') === true;
+            $reconciliation = $this->successfulReconciliation(
+                (int) $bootstrap->voucher->getKey(),
+            );
+            $settlement = $transferSucceeded && $reconciliation !== null
+                ? $this->payCodeAccounting->settle(
+                    accountOwner: $context->issuer,
+                    voucher: $bootstrap->voucher->refresh(),
+                    reconciliation: $reconciliation,
+                    connectionReference: $connectionReference,
+                )
+                : null;
+            $postTransfer = $this->openingBalances->observe([$connectionReference]);
             $afterClaim = $this->accounting->capture(
                 $context->issuer,
                 $postTransfer->connections,
             );
-            $transferSucceeded = data_get($execution->payload, 'success') === true;
-            $accountingStatus = $postTransfer->passes()
-                ? 'reconciled'
-                : 'review_required';
-            $success = $transferSucceeded && $postTransfer->passes();
+            $accountingStatus = $this->accountingStatus(
+                $postTransfer->connections,
+            );
+            $success = $transferSucceeded
+                && $settlement !== null
+                && $accountingStatus === 'reconciled';
             $result = $this->payload($context, [
                 'success' => $success,
                 'message' => $success
                     ? 'The live Pay Code transfer completed and the provider balance was reconciled.'
                     : ($transferSucceeded
-                        ? 'The transfer completed, but provider liquidity now requires accounting review.'
+                        ? ($accountingStatus === 'provider_sync_pending'
+                            ? 'The transfer and Treasury posting completed; the provider balance update is still pending.'
+                            : 'The transfer completed, but provider liquidity now requires accounting review.')
                         : 'The Pay Code claim did not complete successfully. The run is closed to prevent a duplicate transfer.'),
                 'provider_transfer_succeeded' => $transferSucceeded,
                 'accounting_status' => $accountingStatus,
@@ -220,6 +276,17 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
                     'claimed' => $bootstrap->voucher->refresh()->isRedeemed(),
                 ],
                 'execution' => $this->safeExecution($execution->payload),
+                'treasury_settlement' => $settlement === null
+                    ? null
+                    : [
+                        'reservation_operation_reference' => $reservation->operationReference,
+                        'derecognition_operation_reference' => $settlement->derecognitionOperationReference,
+                        'inventory_adjustment_operation_reference' => $settlement->inventoryAdjustmentOperationReference,
+                        'beneficiary_amount_minor' => $settlement->beneficiaryAmountMinor,
+                        'provider_fee_amount_minor' => $settlement->feeAmountMinor,
+                        'provider_outflow_minor' => $settlement->providerOutflowMinor,
+                        'currency' => $settlement->currency,
+                    ],
                 'accounting' => [
                     'before_issuance' => $beforeIssuance,
                     'after_issuance' => $afterIssuance,
@@ -228,19 +295,20 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
                 'idempotency' => $this->idempotency($run, false),
                 'accounting_boundary' => [
                     'funding_and_opening_balance' => 'treasury_position_based',
-                    'pay_code_escrow_and_fees' => 'legacy_compatibility_ledger',
-                    'outbound_treasury_posting' => 'not_yet_implemented',
+                    'pay_code_escrow_and_fees' => 'treasury_position_reserved_with_legacy_compatibility_mirror',
+                    'outbound_treasury_posting' => 'treasury_position_and_inventory_posted',
                     'post_transfer_provider_sync' => $accountingStatus,
                 ],
             ]);
             $completed = $this->runs->complete(
                 $run,
                 $result,
-                $success ? 'completed' : (
-                    $transferSucceeded
-                        ? 'accounting_review_required'
-                        : 'transfer_failed'
-                ),
+                match (true) {
+                    $success => 'completed',
+                    $accountingStatus === 'provider_sync_pending' => 'provider_sync_pending',
+                    $transferSucceeded => 'accounting_review_required',
+                    default => 'transfer_failed',
+                },
             );
 
             $result['idempotency']['run_record'] = $completed->reference;
@@ -270,6 +338,133 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
                 ],
             );
         }
+    }
+
+    private function refreshProviderSync(
+        ScenarioRunContext $context,
+        LifecycleMoneyRun $run,
+        string $connectionReference,
+    ): ScenarioRunResult {
+        try {
+            $observation = $this->openingBalances->observe([$connectionReference]);
+            $accountingStatus = $this->accountingStatus($observation->connections);
+            $success = $accountingStatus === 'reconciled';
+            $result = [
+                ...$run->result_summary,
+                'success' => $success,
+                'message' => $success
+                    ? 'The live Pay Code transfer completed and the provider balance was reconciled.'
+                    : ($accountingStatus === 'provider_sync_pending'
+                        ? 'The transfer and Treasury posting completed; the provider balance update is still pending.'
+                        : 'The transfer completed, but provider liquidity now requires accounting review.'),
+                'accounting_status' => $accountingStatus,
+                'accounting' => [
+                    ...((array) data_get($run->result_summary, 'accounting', [])),
+                    'after_claim' => $this->accounting->capture(
+                        $context->issuer,
+                        $observation->connections,
+                    ),
+                ],
+                'accounting_boundary' => [
+                    ...((array) data_get(
+                        $run->result_summary,
+                        'accounting_boundary',
+                        [],
+                    )),
+                    'post_transfer_provider_sync' => $accountingStatus,
+                ],
+                'idempotency' => [
+                    ...$this->idempotency($run, false),
+                    'replayed' => true,
+                ],
+            ];
+            $completed = $this->runs->complete(
+                $run,
+                $result,
+                match ($accountingStatus) {
+                    'reconciled' => 'completed',
+                    'provider_sync_pending' => 'provider_sync_pending',
+                    default => 'accounting_review_required',
+                },
+            );
+            $result['idempotency']['run_record'] = $completed->reference;
+
+            return new ScenarioRunResult(
+                exitCode: $success ? Command::SUCCESS : Command::FAILURE,
+                payload: $result,
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return $this->failure(
+                $context,
+                'The transfer was not repeated, but the provider balance could not be observed.',
+                [
+                    'provider_transfer_succeeded' => true,
+                    'accounting_status' => 'provider_sync_pending',
+                    'idempotency' => [
+                        ...$this->idempotency($run, false),
+                        'replayed' => true,
+                    ],
+                ],
+            );
+        }
+    }
+
+    private function providerOutflowMinor(
+        ScenarioRunContext $context,
+        int $beneficiaryAmountMinor,
+    ): int {
+        $strategy = mb_strtolower((string) data_get(
+            $context->scenario,
+            'cash.fee_strategy',
+            'absorb',
+        ));
+
+        if ($strategy !== 'absorb') {
+            throw new \InvalidArgumentException(
+                'The Treasury live basic_cash scenario currently requires the absorb fee strategy.',
+            );
+        }
+
+        $rail = SettlementRail::from(mb_strtoupper($this->requiredScenarioString(
+            $context,
+            'cash.settlement_rail',
+        )));
+
+        return $beneficiaryAmountMinor + $this->payoutProvider->getRailFee($rail);
+    }
+
+    private function successfulReconciliation(
+        int $voucherId,
+    ): ?DisbursementReconciliation {
+        return DisbursementReconciliation::query()
+            ->where('voucher_id', $voucherId)
+            ->where('status', 'succeeded')
+            ->latest('id')
+            ->first();
+    }
+
+    /**
+     * @param  list<TreasuryOpeningBalanceConnectionData>  $connections
+     */
+    private function accountingStatus(array $connections): string
+    {
+        if (collect($connections)->contains(
+            static fn (TreasuryOpeningBalanceConnectionData $connection): bool => $connection->status
+                === TreasuryOpeningBalanceStatus::ReviewRequired,
+        )) {
+            return 'review_required';
+        }
+
+        if (collect($connections)->contains(
+            static fn (TreasuryOpeningBalanceConnectionData $connection): bool => $connection->status
+                === TreasuryOpeningBalanceStatus::ProviderSyncPending,
+        )) {
+            return 'provider_sync_pending';
+        }
+
+        return 'reconciled';
     }
 
     private function incompleteRun(

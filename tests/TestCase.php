@@ -237,6 +237,10 @@ abstract class TestCase extends Orchestra
         foreach (glob($path.'/*_create_treasury_*_table.php') ?: [] as $migration) {
             $this->runMigrationFile($migration);
         }
+
+        foreach (glob($path.'/*_allow_source_only_treasury_position_operations.php') ?: [] as $migration) {
+            $this->runMigrationFile($migration);
+        }
     }
 
     protected function loadOnboardingPackageMigrations(): void

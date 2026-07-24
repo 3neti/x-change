@@ -93,6 +93,33 @@ final class TreasuryOpeningBalanceReconciliationService
         return new TreasuryOpeningBalanceReconciliationData($results);
     }
 
+    /**
+     * Read provider balances without recognizing a positive difference.
+     *
+     * @param  list<string>  $connectionReferences
+     */
+    public function observe(
+        array $connectionReferences = [],
+    ): TreasuryOpeningBalanceReconciliationData {
+        $preflight = $this->preflight->run($connectionReferences);
+
+        if (! $preflight->passes()) {
+            throw new TreasuryPreflightFailed(
+                'Required Treasury provider connections did not pass observation preflight.',
+            );
+        }
+
+        $results = [];
+
+        foreach ($preflight->connections as $result) {
+            if ($result->ready) {
+                $results[] = $this->observeConnection($result->connection);
+            }
+        }
+
+        return new TreasuryOpeningBalanceReconciliationData($results);
+    }
+
     public function simulateDeposit(
         string $connectionReference,
         int $amountMinor,
@@ -188,6 +215,79 @@ final class TreasuryOpeningBalanceReconciliationService
     private function reconcileConnection(
         TreasuryProviderConnectionData $connection,
     ): TreasuryOpeningBalanceConnectionData {
+        return $this->reconcileObservation(
+            $connection,
+            $this->readObservation($connection),
+        );
+    }
+
+    private function observeConnection(
+        TreasuryProviderConnectionData $connection,
+    ): TreasuryOpeningBalanceConnectionData {
+        $observation = $this->readObservation($connection);
+        $this->assertObservationMatches($connection, $observation);
+        $inventory = $this->inventories->find($connection->inventoryReference);
+        $positions = array_values(array_filter(
+            $this->positions->forConnection(
+                $connection->provider,
+                $connection->reference,
+                $connection->currency,
+            ),
+            static fn (TreasuryPositionData $position): bool => $position->status === 'active'
+                && $position->settlementResourceReference === $connection->settlementResourceReference,
+        ));
+        $positionBalanceMinor = array_sum(array_map(
+            static fn (TreasuryPositionData $position): int => $position->balanceMinor,
+            $positions,
+        ));
+        $inventoryBalanceMinor = $inventory?->balanceMinor ?? 0;
+
+        if ($inventory === null || $inventoryBalanceMinor !== $positionBalanceMinor) {
+            return $this->reviewRequired(
+                $connection,
+                $observation,
+                $inventoryBalanceMinor,
+                $positionBalanceMinor,
+                $inventory === null
+                    ? 'internal-inventory-not-registered'
+                    : 'internal-inventory-position-mismatch',
+            );
+        }
+
+        $differenceMinor = $observation->amountMinor - $positionBalanceMinor;
+
+        if ($differenceMinor < 0) {
+            return $this->reviewRequired(
+                $connection,
+                $observation,
+                $inventoryBalanceMinor,
+                $positionBalanceMinor,
+                'provider-balance-below-internal-attribution',
+            );
+        }
+
+        return new TreasuryOpeningBalanceConnectionData(
+            connectionReference: $connection->reference,
+            provider: $connection->provider,
+            currency: $connection->currency,
+            status: $differenceMinor === 0
+                ? TreasuryOpeningBalanceStatus::Reconciled
+                : TreasuryOpeningBalanceStatus::ProviderSyncPending,
+            providerBalanceMinor: $observation->amountMinor,
+            inventoryBalanceMinor: $inventoryBalanceMinor,
+            positionBalanceMinor: $positionBalanceMinor,
+            differenceMinor: $differenceMinor,
+            evidenceReference: $observation->evidenceReference,
+            observedAt: $observation->observedAt->format(DATE_ATOM),
+            reason: $differenceMinor === 0
+                ? null
+                : 'provider-balance-update-pending',
+        );
+    }
+
+    private function readObservation(
+        TreasuryProviderConnectionData $connection,
+    ): ProviderBalanceObservationData {
         $reader = $this->readers[$connection->provider] ?? null;
 
         if (! $reader instanceof ProviderBalanceReader) {
@@ -196,14 +296,12 @@ final class TreasuryOpeningBalanceReconciliationService
             );
         }
 
-        $observation = $reader->readBalance(new ProviderBalanceRequestData(
+        return $reader->readBalance(new ProviderBalanceRequestData(
             provider: $connection->provider,
             connectionReference: $connection->reference,
             settlementResourceReference: $connection->settlementResourceReference,
             currency: $connection->currency,
         ));
-
-        return $this->reconcileObservation($connection, $observation);
     }
 
     private function reconcileObservation(

@@ -49,40 +49,45 @@ final readonly class TreasuryAccountPortfolioProvisioningService implements Trea
                 continue;
             }
 
-            $scope = implode('|', [
-                $principalReference,
-                $connection->provider,
-                $connection->reference,
-                $connection->currency,
-                TreasuryPositionPurpose::ClientFunds->value,
-            ]);
-            $scopeReference = substr(hash('sha256', $scope), 0, 40);
-            $positionReference = "position:client:{$scopeReference}";
+            foreach ([
+                [TreasuryPositionPurpose::ClientFunds, 'client'],
+                [TreasuryPositionPurpose::PayCodeReserve, 'pay-code-reserve'],
+            ] as [$purpose, $referencePrefix]) {
+                $scope = implode('|', [
+                    $principalReference,
+                    $connection->provider,
+                    $connection->reference,
+                    $connection->currency,
+                    $purpose->value,
+                ]);
+                $scopeReference = substr(hash('sha256', $scope), 0, 40);
+                $positionReference = "position:{$referencePrefix}:{$scopeReference}";
 
-            $provisioned[] = $this->positions->provision(
-                $accountOwner,
-                new TreasuryPositionDefinitionData(
-                    positionReference: $positionReference,
-                    principalReference: $principalReference,
-                    mandateReference: "mandate:client-funds:{$scopeReference}",
-                    settlementResourceReference: $connection->settlementResourceReference,
-                    settlementResourceType: $connection->settlementResourceType,
-                    provider: $connection->provider,
-                    connectionReference: $connection->reference,
-                    currency: $connection->currency,
-                    decimalPlaces: $connection->decimalPlaces,
-                    purpose: TreasuryPositionPurpose::ClientFunds,
-                    custodyMode: $connection->custodyMode,
-                    legalProfile: $legalProfile,
-                    legalProfileVersion: $legalProfileVersion,
-                    idempotencyKey: "position-registration:{$positionReference}",
-                    reconciliationReference: "reconciliation:{$connection->provider}:{$connection->reference}",
-                    metadata: [
-                        'provisioned_by' => 'x-change:onboarding:account-portfolio',
-                        'opening_balance_minor' => 0,
-                    ],
-                ),
-            );
+                $provisioned[] = $this->positions->provision(
+                    $accountOwner,
+                    new TreasuryPositionDefinitionData(
+                        positionReference: $positionReference,
+                        principalReference: $principalReference,
+                        mandateReference: "mandate:{$referencePrefix}:{$scopeReference}",
+                        settlementResourceReference: $connection->settlementResourceReference,
+                        settlementResourceType: $connection->settlementResourceType,
+                        provider: $connection->provider,
+                        connectionReference: $connection->reference,
+                        currency: $connection->currency,
+                        decimalPlaces: $connection->decimalPlaces,
+                        purpose: $purpose,
+                        custodyMode: $connection->custodyMode,
+                        legalProfile: $legalProfile,
+                        legalProfileVersion: $legalProfileVersion,
+                        idempotencyKey: "position-registration:{$positionReference}",
+                        reconciliationReference: "reconciliation:{$connection->provider}:{$connection->reference}",
+                        metadata: [
+                            'provisioned_by' => 'x-change:onboarding:account-portfolio',
+                            'opening_balance_minor' => 0,
+                        ],
+                    ),
+                );
+            }
         }
 
         return new TreasuryAccountPortfolioData(

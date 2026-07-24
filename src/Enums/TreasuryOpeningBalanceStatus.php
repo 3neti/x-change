@@ -8,5 +8,6 @@ enum TreasuryOpeningBalanceStatus: string
 {
     case Reconciled = 'reconciled';
     case Recognized = 'recognized';
+    case ProviderSyncPending = 'provider_sync_pending';
     case ReviewRequired = 'review_required';
 }

@@ -1,0 +1,333 @@
+<?php
+
+declare(strict_types=1);
+
+namespace LBHurtado\XChange\Services\Treasury;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
+use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
+use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
+use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
+use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryAdjustmentData;
+use LBHurtado\Wallet\Treasury\Data\TreasuryPositionData;
+use LBHurtado\Wallet\Treasury\Data\TreasuryPositionDerecognitionData;
+use LBHurtado\Wallet\Treasury\Data\TreasuryPositionReleaseData;
+use LBHurtado\Wallet\Treasury\Data\TreasuryPositionReservationData;
+use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
+use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
+use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
+use LBHurtado\XChange\Data\Treasury\TreasuryPayCodeSettlementData;
+use LBHurtado\XChange\Data\Treasury\TreasuryProviderConnectionData;
+use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
+use LBHurtado\XChange\Models\DisbursementReconciliation;
+
+final readonly class TreasuryPayCodeAccountingService
+{
+    public function __construct(
+        private TreasuryProviderConnectionCatalog $connections,
+        private TreasuryAccountPortfolioProvisioningContract $portfolios,
+        private TreasuryPrincipalReferenceResolverContract $principalReferences,
+        private TreasuryPositionReadModelContract $positions,
+        private TreasuryPositionOperationContract $positionOperations,
+        private TreasuryInventoryOperationContract $inventoryOperations,
+    ) {}
+
+    public function reserve(
+        Model $accountOwner,
+        Voucher $voucher,
+        string $connectionReference,
+        int $providerOutflowMinor,
+        string $currency,
+    ): TreasuryPositionReservationData {
+        $connection = $this->connection($connectionReference, $currency);
+        $portfolio = $this->portfolios->provision(
+            $accountOwner,
+            [$connection->reference],
+        );
+        $source = $this->position(
+            $portfolio->positions,
+            TreasuryPositionPurpose::ClientFunds,
+        );
+        $destination = $this->position(
+            $portfolio->positions,
+            TreasuryPositionPurpose::PayCodeReserve,
+        );
+        $scope = $this->scope($connection, $voucher, $providerOutflowMinor);
+
+        return $this->positionOperations->reserve(
+            new TreasuryPositionReservationData(
+                operationReference: 'pay-code-position-reservation:'.$scope,
+                sourcePositionReference: $source->positionReference,
+                destinationPositionReference: $destination->positionReference,
+                amountMinor: $providerOutflowMinor,
+                currency: $connection->currency,
+                idempotencyKey: 'pay-code-position-reservation-key:'.$scope,
+                externalReference: 'pay-code:'.$voucher->getKey(),
+                metadata: [
+                    'source' => 'x_change_pay_code_issuance',
+                    'pay_code_id' => (int) $voucher->getKey(),
+                    'pay_code' => (string) $voucher->code,
+                    'provider' => $connection->provider,
+                    'connection_reference' => $connection->reference,
+                ],
+            ),
+        );
+    }
+
+    public function release(
+        Model $accountOwner,
+        Voucher $voucher,
+        string $connectionReference,
+        int $providerOutflowMinor,
+        string $currency,
+        string $reasonReference,
+    ): TreasuryPositionReleaseData {
+        $connection = $this->connection($connectionReference, $currency);
+        $positions = $this->accountPositions($accountOwner, $connection);
+        $source = $this->position(
+            $positions,
+            TreasuryPositionPurpose::PayCodeReserve,
+        );
+        $destination = $this->position(
+            $positions,
+            TreasuryPositionPurpose::ClientFunds,
+        );
+        $scope = hash('sha256', implode('|', [
+            $this->scope($connection, $voucher, $providerOutflowMinor),
+            trim($reasonReference),
+        ]));
+
+        return $this->positionOperations->release(
+            new TreasuryPositionReleaseData(
+                operationReference: 'pay-code-position-release:'.$scope,
+                sourcePositionReference: $source->positionReference,
+                destinationPositionReference: $destination->positionReference,
+                amountMinor: $providerOutflowMinor,
+                currency: $connection->currency,
+                idempotencyKey: 'pay-code-position-release-key:'.$scope,
+                externalReference: $reasonReference,
+                metadata: [
+                    'source' => 'x_change_pay_code_release',
+                    'pay_code_id' => (int) $voucher->getKey(),
+                    'pay_code' => (string) $voucher->code,
+                    'provider' => $connection->provider,
+                    'connection_reference' => $connection->reference,
+                ],
+            ),
+        );
+    }
+
+    public function settle(
+        Model $accountOwner,
+        Voucher $voucher,
+        DisbursementReconciliation $reconciliation,
+        string $connectionReference,
+    ): TreasuryPayCodeSettlementData {
+        $currency = mb_strtoupper((string) $reconciliation->currency);
+        $connection = $this->connection($connectionReference, $currency);
+        [$beneficiaryAmountMinor, $feeAmountMinor, $providerOutflowMinor] =
+            $this->providerOutflow($voucher, $reconciliation, $connection);
+        $reserve = $this->position(
+            $this->accountPositions($accountOwner, $connection),
+            TreasuryPositionPurpose::PayCodeReserve,
+        );
+        $reservationScope = $this->scope(
+            $connection,
+            $voucher,
+            $providerOutflowMinor,
+        );
+        $settlementScope = hash('sha256', implode('|', [
+            $connection->provider,
+            $connection->reference,
+            (string) $voucher->getKey(),
+            (string) $reconciliation->getKey(),
+            (string) $reconciliation->provider_transaction_id,
+            (string) $providerOutflowMinor,
+        ]));
+
+        [$derecognition, $inventoryAdjustment] = DB::transaction(
+            function () use (
+                $connection,
+                $feeAmountMinor,
+                $providerOutflowMinor,
+                $reconciliation,
+                $reserve,
+                $settlementScope,
+                $voucher,
+            ): array {
+                $derecognition = $this->positionOperations->derecognize(
+                    new TreasuryPositionDerecognitionData(
+                        operationReference: 'pay-code-position-derecognition:'.$settlementScope,
+                        sourcePositionReference: $reserve->positionReference,
+                        amountMinor: $providerOutflowMinor,
+                        currency: $connection->currency,
+                        idempotencyKey: 'pay-code-position-derecognition-key:'.$settlementScope,
+                        externalReference: $connection->provider.':'.$reconciliation->provider_transaction_id,
+                        metadata: [
+                            'source' => 'x_change_provider_disbursement',
+                            'pay_code_id' => (int) $voucher->getKey(),
+                            'pay_code' => (string) $voucher->code,
+                            'disbursement_reconciliation_id' => (int) $reconciliation->getKey(),
+                            'provider' => $connection->provider,
+                            'connection_reference' => $connection->reference,
+                            'provider_fee_amount_minor' => $feeAmountMinor,
+                        ],
+                    ),
+                );
+                $inventoryAdjustment = $this->inventoryOperations->adjust(
+                    new TreasuryInventoryAdjustmentData(
+                        operationReference: 'pay-code-inventory-outflow:'.$settlementScope,
+                        inventoryReference: $connection->inventoryReference,
+                        deltaAmountMinor: -$providerOutflowMinor,
+                        currency: $connection->currency,
+                        status: 'requested',
+                        idempotencyKey: 'pay-code-inventory-outflow-key:'.$settlementScope,
+                        effectiveAt: $reconciliation->completed_at?->toRfc3339String()
+                            ?? now()->toRfc3339String(),
+                        externalReference: $connection->provider.':'.$reconciliation->provider_transaction_id,
+                        metadata: [
+                            'source' => 'x_change_provider_disbursement',
+                            'pay_code_id' => (int) $voucher->getKey(),
+                            'pay_code' => (string) $voucher->code,
+                            'disbursement_reconciliation_id' => (int) $reconciliation->getKey(),
+                            'provider' => $connection->provider,
+                            'connection_reference' => $connection->reference,
+                            'provider_fee_amount_minor' => $feeAmountMinor,
+                        ],
+                    ),
+                );
+
+                return [$derecognition, $inventoryAdjustment];
+            },
+            attempts: 5,
+        );
+
+        return new TreasuryPayCodeSettlementData(
+            reservationOperationReference: 'pay-code-position-reservation:'.$reservationScope,
+            derecognitionOperationReference: $derecognition->operationReference,
+            inventoryAdjustmentOperationReference: $inventoryAdjustment->operationReference,
+            beneficiaryAmountMinor: $beneficiaryAmountMinor,
+            feeAmountMinor: $feeAmountMinor,
+            providerOutflowMinor: $providerOutflowMinor,
+            currency: $connection->currency,
+        );
+    }
+
+    /**
+     * @return array{int, int, int}
+     */
+    private function providerOutflow(
+        Voucher $voucher,
+        DisbursementReconciliation $reconciliation,
+        TreasuryProviderConnectionData $connection,
+    ): array {
+        $beneficiaryAmountMinor = (int) round(
+            ((float) $reconciliation->amount) * 100,
+        );
+        $feeAmountMinor = (int) data_get(
+            $voucher->metadata,
+            'disbursement.fee_amount',
+            -1,
+        );
+        $providerOutflowMinor = (int) data_get(
+            $voucher->metadata,
+            'disbursement.total_cost',
+            -1,
+        );
+        $valid = (int) $reconciliation->voucher_id === (int) $voucher->getKey()
+            && $reconciliation->provider === $connection->provider
+            && $reconciliation->status === 'succeeded'
+            && filled($reconciliation->provider_transaction_id)
+            && $beneficiaryAmountMinor > 0
+            && $feeAmountMinor >= 0
+            && $providerOutflowMinor === $beneficiaryAmountMinor + $feeAmountMinor;
+
+        if (! $valid) {
+            throw new TreasuryConfigurationException(
+                'The provider disbursement evidence does not support Treasury Pay Code settlement.',
+            );
+        }
+
+        return [
+            $beneficiaryAmountMinor,
+            $feeAmountMinor,
+            $providerOutflowMinor,
+        ];
+    }
+
+    /**
+     * @return list<TreasuryPositionData>
+     */
+    private function accountPositions(
+        Model $accountOwner,
+        TreasuryProviderConnectionData $connection,
+    ): array {
+        $principalReference = $this->principalReferences->resolve($accountOwner);
+
+        return array_values(array_filter(
+            $this->positions->forPrincipal($principalReference),
+            static fn (TreasuryPositionData $position): bool => $position->status === 'active'
+                && $position->provider === $connection->provider
+                && $position->connectionReference === $connection->reference
+                && $position->currency === $connection->currency,
+        ));
+    }
+
+    /**
+     * @param  list<TreasuryPositionData>  $positions
+     */
+    private function position(
+        array $positions,
+        TreasuryPositionPurpose $purpose,
+    ): TreasuryPositionData {
+        $matches = array_values(array_filter(
+            $positions,
+            static fn (TreasuryPositionData $position): bool => $position->purpose === $purpose,
+        ));
+
+        if (count($matches) !== 1) {
+            throw new TreasuryConfigurationException(
+                "Treasury Pay Code accounting requires one {$purpose->value} Position.",
+            );
+        }
+
+        return $matches[0];
+    }
+
+    private function connection(
+        string $connectionReference,
+        string $currency,
+    ): TreasuryProviderConnectionData {
+        $matches = $this->connections->active([trim($connectionReference)]);
+
+        if (count($matches) !== 1 || $matches[0]->currency !== mb_strtoupper($currency)) {
+            throw new TreasuryConfigurationException(
+                'Treasury Pay Code accounting requires one matching active connection.',
+            );
+        }
+
+        return $matches[0];
+    }
+
+    private function scope(
+        TreasuryProviderConnectionData $connection,
+        Voucher $voucher,
+        int $providerOutflowMinor,
+    ): string {
+        if ($providerOutflowMinor <= 0 || ! $voucher->exists) {
+            throw new TreasuryConfigurationException(
+                'Treasury Pay Code accounting requires a persisted Pay Code and positive provider outflow.',
+            );
+        }
+
+        return hash('sha256', implode('|', [
+            $connection->provider,
+            $connection->reference,
+            (string) $voucher->getKey(),
+            (string) $providerOutflowMinor,
+            $connection->currency,
+        ]));
+    }
+}
