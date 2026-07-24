@@ -322,7 +322,7 @@ final readonly class TreasuryPayCodeAccountingService
     ): string {
         if ($providerPrincipalMinor <= 0 || ! $voucher->exists) {
             throw new TreasuryConfigurationException(
-                'Treasury Pay Code accounting requires a persisted Pay Code and positive provider outflow.',
+                'Treasury Pay Code accounting requires a persisted Pay Code and positive provider principal.',
             );
         }
 

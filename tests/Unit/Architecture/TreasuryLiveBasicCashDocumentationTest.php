@@ -13,12 +13,16 @@ it('documents the position-backed live payout and replay boundary', function () 
 
     expect($architecture)
         ->toContain('Pay Code Reserve Position')
-        ->toContain('beneficiary amount plus the provider rail fee')
+        ->toContain('reserves the beneficiary principal')
+        ->toContain("sender's system charge is a separate economic leg")
         ->toContain('provider_sync_pending')
         ->toContain('x-change:treasury:backfill-standing-funding-positions')
+        ->toContain('x-change:treasury:correct-pay-code-fee-posting')
+        ->toContain('already_corrected')
         ->toContain('never repeats the payout')
         ->and($catalog)
         ->toContain('treasury_settlement')
+        ->toContain('reserves only the beneficiary principal')
         ->toContain('rerunning the same command checks the provider balance again')
         ->toContain('It is not permission to submit a new run reference');
 });

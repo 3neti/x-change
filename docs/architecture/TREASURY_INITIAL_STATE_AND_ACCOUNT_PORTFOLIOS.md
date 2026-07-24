@@ -249,9 +249,11 @@ The simulator is disabled in production, requires an allowed environment, requir
 
 This wave makes Treasury Positions authoritative for funding recognition, Account balance reads, provider-specific funding policy, and Cockpit capacity. Existing technical API names and legacy lifecycle diagnostics may still say `wallet` for backward compatibility.
 
-The live Treasury lifecycle now pilots provider-aware Pay Code accounting. Each enabled Account portfolio has a Client Funds Position and a Pay Code Reserve Position per provider connection. Before the scenario issues a Pay Code, it atomically reserves the expected provider outflow—beneficiary amount plus the provider rail fee—from Client Funds. A successful payout derecognizes that reserve and reduces the matching Provider Inventory by the same total.
+The live Treasury lifecycle now pilots provider-aware Pay Code accounting. Each enabled Account portfolio has a Client Funds Position and a Pay Code Reserve Position per provider connection. Before the scenario issues a Pay Code, it atomically reserves the beneficiary principal from Client Funds. A successful payout derecognizes that principal-only reserve and reduces the matching Provider Inventory by the same principal amount.
 
-The canonical Pay Code liability and existing execution ledger remain as a compatibility mirror during this pilot. Non-zero instruction-fee collection still uses its existing revenue-allocation ledger path. Before enabling non-zero production fees against migrated Accounts, that charge path must be moved to an explicit Client Funds Position debit operation. Reservation, release, and settlement must also be wired into every production Pay Code issue, cancel, expire, and claim path before the pilot becomes the system-wide accounting boundary.
+The configured provider rail fee is informational unless authoritative provider evidence shows that the provider deducted it from the controlled account. NetBank's observed payout flow moves only the beneficiary principal. The sender's system charge is a separate economic leg and must never be posted as NetBank cash movement.
+
+The canonical Pay Code liability and existing execution ledger remain as a compatibility mirror during this pilot. Non-zero sender system-charge collection still uses its existing revenue-allocation ledger path. Before enabling non-zero production charges against migrated Accounts, that charge path must be moved to an explicit, separately classified Client Funds Position debit and system-revenue allocation. Reservation, release, and settlement must also be wired into every production Pay Code issue, cancel, expire, and claim path before the pilot becomes the system-wide accounting boundary.
 
 Post-transfer balance checks are deliberately observational. They never recognize a positive difference because the provider may briefly return a stale pre-payout balance. A positive difference is `provider_sync_pending`; rerunning the same lifecycle reference checks again without repeating the transfer. A provider balance below internal attribution, or any Inventory/Position mismatch, remains `review_required`.
 
@@ -263,9 +265,9 @@ Post-transfer balance checks are deliberately observational. They never recogniz
 2. reconciles the authoritative bank amount into Provider Inventory and system Positions;
 3. provisions the issuer's NetBank Client Funds and Pay Code Reserve Positions;
 4. captures provider, Inventory, system, Account, legacy compatibility, and Pay Code liability balances;
-5. reserves the exact expected provider outflow before issuing one canonical `basic_cash` Pay Code;
+5. reserves the exact beneficiary principal before issuing one canonical `basic_cash` Pay Code;
 6. claims it through `x_change_live_cash` and the configured payout provider;
-7. posts the successful beneficiary amount and provider fee as one Position and Inventory outflow;
+7. posts the successful beneficiary principal as the Position and Inventory outflow;
 8. observes the provider balance without recognizing stale positive differences; and
 9. stores the sanitized result under a hashed, caller-supplied run reference.
 
@@ -308,16 +310,35 @@ The command reports:
 - `inventory.balance_minor` — x-change's control total for the provider resource;
 - `system_positions` — Clearing and Legacy Unattributed attribution owned by the system principal;
 - `account_positions` — the issuer's provider-specific Client Funds balance, including `not_provisioned` for absent positions;
-- `account_positions.by_purpose.pay_code_reserve` — the amount held for the in-flight provider outflow;
+- `account_positions.by_purpose.pay_code_reserve` — the beneficiary principal held for the in-flight provider transfer;
 - `legacy_compatibility_balance_minor` — the existing Pay Code escrow and fee ledger balance;
 - `liability` — outstanding, redeemed, expired, and cancelled Pay Code amounts;
-- `treasury_settlement` — reservation, Position derecognition, Inventory adjustment, beneficiary amount, provider fee, and total provider outflow references;
+- `treasury_settlement` — reservation, Position derecognition, Inventory adjustment, beneficiary principal, configured rail-fee context, and separately classified sender system-charge facts;
 - Pay Code issuance and claim state; and
 - a sanitized payout reconciliation with no credentials, raw provider payload, full account number, or claimant mobile.
 
 `provider_transfer_succeeded=true` with `accounting_status=provider_sync_pending` means the payout and internal Treasury posting completed but NetBank has not yet returned the reduced balance. Rerun the exact same command with the exact same run reference. The scenario observes NetBank again and never repeats the payout.
 
 `provider_transfer_succeeded=true` with `accounting_status=review_required` means an internal invariant failed or the provider balance is below internal attribution. This is an accounting escalation, not permission to submit another run reference. The durable run is closed specifically to prevent duplicate payment.
+
+### Legacy fee-boundary repair
+
+Runs created before the principal-only boundary may have derecognized the beneficiary principal plus the configured rail fee even though NetBank deducted only the principal. Inspect and repair a known durable run by its stored run-record reference:
+
+```bash
+php artisan x-change:treasury:correct-pay-code-fee-posting \
+    <durable-run-record-reference> \
+    --json \
+    --no-interaction
+
+php artisan x-change:treasury:correct-pay-code-fee-posting \
+    <durable-run-record-reference> \
+    --commit \
+    --json \
+    --no-interaction
+```
+
+The first command is a dry run. The committed command is fail-closed and append-only: it accepts only a successful legacy live run whose old Position and Inventory operations equal principal plus fee and whose provider observation differs by that exact fee. It restores Inventory, recognizes the correction through Treasury Clearing, allocates it back to the issuer's Client Funds Position, and records deterministic operation references. Repeating the command returns `already_corrected` without changing any balance.
 
 Configuration:
 
