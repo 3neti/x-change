@@ -18,6 +18,7 @@ use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionProvisioningContract;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPositionOperation;
+use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Services\Treasury\DefaultTreasuryPrincipalReferenceResolver;
 use LBHurtado\XChange\Services\Treasury\TreasuryAccountPortfolioProvisioningService;
@@ -157,6 +158,13 @@ it('recognizes and allocates verified funding exactly once through treasury posi
         ->and($account->fresh()->getBalanceIntAttribute())->toBe(0)
         ->and($clearingLedger->getBalanceIntAttribute())->toBe(0)
         ->and($clientLedger->getBalanceIntAttribute())->toBe(2_000_000_00)
+        ->and(app(AccountBalanceReadModelContract::class)->balanceMinor($owner, 'PHP'))
+        ->toBe(2_000_000_00)
+        ->and(app(AccountBalanceReadModelContract::class)->providerBalanceMinor(
+            $owner,
+            'future_bank',
+            'PHP',
+        ))->toBe(2_000_000_00)
         ->and(TreasuryPositionOperation::query()->count())->toBe(2)
         ->and(Transfer::query()->count())->toBe(1);
 });

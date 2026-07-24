@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Services;
 
 use LBHurtado\EmiCore\Models\Wallet as EmiWallet;
+use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\ProviderAccountLinkRepositoryContract;
 use LBHurtado\XChange\Contracts\ProviderProvisioningGatewayContract;
 use LBHurtado\XChange\Contracts\ProviderRuntimeSettingsResolverContract;
@@ -22,6 +23,7 @@ class BuildBalanceOverview
         protected ?SyncPaynamicsWalletBalance $paynamicsBalances = null,
         protected ?CheckNetbankSourceAccountReadiness $netbankSourceAccount = null,
         protected ?ProviderBalanceSnapshotStore $providerBalanceSnapshots = null,
+        protected ?AccountBalanceReadModelContract $accountBalances = null,
     ) {}
 
     /**
@@ -69,6 +71,31 @@ class BuildBalanceOverview
     protected function localBalance(mixed $owner, bool $authoritative): ?array
     {
         try {
+            $balanceMinor = ($this->accountBalances
+                ?? app(AccountBalanceReadModelContract::class))
+                ->balanceMinor(
+                    $owner,
+                    (string) config('x-change.pricing.currency', 'PHP'),
+                );
+
+            if ($balanceMinor !== null) {
+                return [
+                    'key' => 'local_ledger',
+                    'label' => $authoritative
+                        ? 'Internal Account Balance'
+                        : 'Internal Account Projection',
+                    'description' => 'Aggregated from active provider-specific Client Funds Positions.',
+                    'authority' => 'local_ledger',
+                    'source' => 'treasury_positions',
+                    'is_authoritative' => $authoritative,
+                    'is_stale' => false,
+                    'balance_minor' => $balanceMinor,
+                    'balance' => $balanceMinor / 100,
+                    'currency' => (string) config('x-change.pricing.currency', 'PHP'),
+                    'checked_at' => now()->toIso8601String(),
+                ];
+            }
+
             $wallet = $this->wallets->resolveForUser($owner);
             $balanceMinor = $this->normalizeBalanceForComparison($this->wallets->getBalance($wallet));
 

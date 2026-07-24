@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Services;
 
 use Carbon\CarbonInterface;
 use LBHurtado\EmiCore\Models\Wallet as EmiWallet;
+use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\ProviderAccountLinkRepositoryContract;
 use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
 use LBHurtado\XChange\Contracts\ProviderProvisioningGatewayContract;
@@ -25,6 +26,7 @@ class ProviderAwareFundingPolicy implements ProviderFundingPolicyContract
         protected WalletAccessContract $wallets,
         protected ?SyncPaynamicsWalletBalance $paynamicsBalances = null,
         protected ?CheckNetbankSourceAccountReadiness $netbankSourceAccount = null,
+        protected ?AccountBalanceReadModelContract $accountBalances = null,
     ) {}
 
     /**
@@ -49,7 +51,11 @@ class ProviderAwareFundingPolicy implements ProviderFundingPolicyContract
             return $decision;
         }
 
-        $availableMinor = $this->normalizeBalanceForComparison($this->wallets->getBalance($localWallet));
+        $positionBalanceMinor = ($this->accountBalances
+            ?? app(AccountBalanceReadModelContract::class))
+            ->providerBalanceMinor($owner, $provider, $currency);
+        $availableMinor = $positionBalanceMinor
+            ?? $this->normalizeBalanceForComparison($this->wallets->getBalance($localWallet));
 
         if ($availableMinor < $requiredMinor) {
             throw new InsufficientWalletBalance(sprintf(

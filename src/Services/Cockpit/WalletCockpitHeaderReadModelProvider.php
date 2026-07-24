@@ -6,6 +6,7 @@ namespace LBHurtado\XChange\Services\Cockpit;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Number;
+use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\CockpitHeaderReadModelProviderContract;
 use LBHurtado\XChange\Contracts\VoucherLiabilitySummaryContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
@@ -20,6 +21,7 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
         private readonly WalletAccessContract $wallets,
         private readonly ?BuildBalanceOverview $fundingOverview = null,
         private readonly ?VoucherLiabilitySummaryContract $liabilities = null,
+        private readonly ?AccountBalanceReadModelContract $accountBalances = null,
     ) {}
 
     public function forOperator(mixed $operator = null): CockpitHeaderReadModelData
@@ -66,6 +68,23 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
         }
 
         try {
+            $positionBalanceMinor = ($this->accountBalances
+                ?? app(AccountBalanceReadModelContract::class))
+                ->balanceMinor($operator, $this->currency());
+
+            if ($positionBalanceMinor !== null) {
+                return [
+                    'metric' => new CockpitDashboardMetricData(
+                        key: 'internal',
+                        label: 'Internal Balance',
+                        value: $this->formatMoney($positionBalanceMinor),
+                        helper: 'Read from active provider-specific Client Funds Positions.',
+                        tone: 'healthy',
+                    ),
+                    'minor' => $positionBalanceMinor,
+                ];
+            }
+
             $wallet = $this->wallets->resolveForUser($operator);
             $balanceMinor = $this->normalizeWalletBalanceMinor($this->wallets->getBalance($wallet));
 
@@ -210,8 +229,10 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
             );
         }
 
-        $providerHeadroomMinor = max(0, $providerLiquidityMinor - $outstandingLiabilityMinor);
-        $issuanceCapacityMinor = max(0, min($internalBalanceMinor, $providerHeadroomMinor));
+        $issuanceCapacityMinor = max(
+            0,
+            min($internalBalanceMinor, $providerLiquidityMinor) - $outstandingLiabilityMinor,
+        );
 
         return new CockpitDashboardMetricData(
             key: 'issuance',
@@ -382,5 +403,13 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
         }
 
         return (int) round(((float) $balance) * 100);
+    }
+
+    private function currency(): string
+    {
+        return (string) config(
+            'x-change.pricing.currency',
+            config('x-change.product.default_currency', 'PHP'),
+        );
     }
 }

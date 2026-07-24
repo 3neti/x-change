@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use LBHurtado\Voucher\Enums\VoucherState;
 use LBHurtado\Voucher\Models\Voucher;
+use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\VoucherLiabilitySummaryContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Data\Money\VoucherLiabilitySummaryData;
@@ -17,6 +18,7 @@ class VoucherLiabilitySummaryService implements VoucherLiabilitySummaryContract
 {
     public function __construct(
         private readonly WalletAccessContract $wallets,
+        private readonly ?AccountBalanceReadModelContract $accountBalances = null,
     ) {}
 
     public function forIssuer(mixed $issuer): VoucherLiabilitySummaryData
@@ -170,6 +172,14 @@ class VoucherLiabilitySummaryService implements VoucherLiabilitySummaryContract
     private function walletBalanceMinor(Model $issuer): int
     {
         try {
+            $positionBalance = ($this->accountBalances
+                ?? app(AccountBalanceReadModelContract::class))
+                ->balanceMinor($issuer, $this->currency());
+
+            if ($positionBalance !== null) {
+                return $positionBalance;
+            }
+
             $wallet = $this->wallets->resolveForUser($issuer);
 
             return $this->normalizeMinor($this->wallets->getBalance($wallet));

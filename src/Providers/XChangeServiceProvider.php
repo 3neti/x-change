@@ -66,6 +66,7 @@ use LBHurtado\XChange\Console\Commands\Settlement\EvaluateSettlementEnvelopeComm
 use LBHurtado\XChange\Console\Commands\Treasury\PreflightTreasuryCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\ProvisionTreasuryCommand;
 use LBHurtado\XChange\Console\Commands\Wallet\GetWalletBalanceCommand;
+use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\ApprovalWorkflowContract;
 use LBHurtado\XChange\Contracts\Claim\ClaimApprovalStatusResolver;
 use LBHurtado\XChange\Contracts\ClaimApprovalExecutionContract;
@@ -264,6 +265,7 @@ use LBHurtado\XChange\Services\StartProviderProvisioningFromOnboardingCompletion
 use LBHurtado\XChange\Services\SystemWalletProxy;
 use LBHurtado\XChange\Services\Treasury\BavixTreasuryPositionLedgerResolver;
 use LBHurtado\XChange\Services\Treasury\DefaultTreasuryPrincipalReferenceResolver;
+use LBHurtado\XChange\Services\Treasury\TreasuryAccountBalanceReadModel;
 use LBHurtado\XChange\Services\Treasury\TreasuryAccountPortfolioProvisioningService;
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
@@ -350,6 +352,10 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->singleton(
             TreasuryPositionLedgerResolverContract::class,
             BavixTreasuryPositionLedgerResolver::class,
+        );
+        $this->app->singleton(
+            AccountBalanceReadModelContract::class,
+            TreasuryAccountBalanceReadModel::class,
         );
 
         $this->registerServices();
