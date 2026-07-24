@@ -14,9 +14,10 @@ Public Pay Code URLs are separated by money direction and purpose:
 `/x/claim/{code}/experience` remains a machine-readable claim-experience
 contract. It is not a beneficiary-facing distribution URL.
 
-The first canonical route activated by this decision is
-`x-change.claim.show`. Payment and settlement routes must not be advertised
-until their durable execution lifecycles are enabled.
+The canonical claim route is `x-change.claim.show`. The collectible route
+`x-change.pay.show` is also active and is backed by durable, session-bound
+Payment Attempts. Settlement routes must not be advertised until their durable
+execution lifecycle is enabled.
 
 ## Safety Boundary
 
@@ -36,6 +37,9 @@ until their durable execution lifecycles are enabled.
   before registration.
 - Retrying the same payment attempt reopens its existing encrypted
   instructions. It does not register another VCA.
+- Payer and scheduled checks query the same authoritative provider-history
+  verification action. Pending evidence cannot collect the Pay Code; exact
+  settled evidence creates one Voucher Collection atomically.
 
 ## Ownership
 
@@ -51,3 +55,6 @@ until their durable execution lifecycles are enabled.
 The legacy `/x/claim?code={code}` entry remains available while distributed
 links migrate to `/x/claim/{code}`. Existing API consumers may continue using
 `/x/claim/{code}/experience` for sanitized compiled claim metadata.
+
+See `PAY_CODE_PAYMENT_FLOW.md` for the Payment Attempt state, QR, verification,
+scheduler, configuration, and NetBank token rules.

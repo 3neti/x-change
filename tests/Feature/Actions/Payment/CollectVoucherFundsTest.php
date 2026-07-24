@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Payment\CollectVoucherFunds;
 use LBHurtado\XChange\Contracts\VoucherPaymentConfirmationContract;
 use LBHurtado\XChange\Exceptions\VoucherCannotCollect;
@@ -173,7 +174,7 @@ it('blocks settlement voucher collection until envelope is ready', function () {
         ],
     ));
 
-    $voucher = persistUnreadySettlementEnvelopeEvidence($voucher);
+    $voucher = persistUnreadySettlementEnvelopeForCollectionTest($voucher);
 
     app(CollectVoucherFunds::class)->handle($voucher, [
         'provider' => 'manual',
@@ -183,6 +184,30 @@ it('blocks settlement voucher collection until envelope is ready', function () {
         'status' => 'succeeded',
     ]);
 })->throws(VoucherRequiresSettlementEnvelope::class);
+
+function persistUnreadySettlementEnvelopeForCollectionTest(Voucher $voucher): Voucher
+{
+    $metadata = is_array($voucher->metadata ?? null)
+        ? $voucher->metadata
+        : [];
+
+    $voucher->forceFill([
+        'metadata' => [
+            ...$metadata,
+            'flow_type' => 'settlement',
+            'settlement_driver' => 'philhealth-bst',
+            'settlement_payload' => [
+                'patient_name' => 'Juan Dela Cruz',
+                'patient_mobile' => '09171234567',
+            ],
+            'settlement_checklist' => [
+                'amount_verified' => false,
+            ],
+        ],
+    ])->save();
+
+    return $voucher->refresh();
+}
 
 it('allows settlement voucher collection when envelope is ready', function () {
     $user = actingAsTestUser();

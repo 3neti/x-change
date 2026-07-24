@@ -39,8 +39,6 @@ class CollectVoucherFunds
             context: $this->settlementCollectionGate->contextFromVoucher($voucher),
         );
 
-        $wallet = $this->wallets->resolve($voucher);
-
         $result = $this->confirmation->confirm($voucher, $payload);
 
         if (! $result->succeeded()) {
@@ -52,6 +50,37 @@ class CollectVoucherFunds
 
             return $result;
         }
+
+        return $this->collectConfirmed($voucher, $result, $payload);
+    }
+
+    /**
+     * Accepts only a server-built result from an authoritative provider
+     * verification pipeline. Browser payloads must use handle().
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public function collectConfirmed(
+        Voucher $voucher,
+        VoucherPaymentResultData $result,
+        array $payload,
+    ): VoucherPaymentResultData {
+        $this->guard->ensureCanCollect($voucher);
+
+        if ($replay = $this->idempotency->findReplay($voucher, $payload)) {
+            return $replay;
+        }
+
+        $this->settlementCollectionGate->ensureCollectibleSettlementIsReady(
+            voucher: $voucher,
+            context: $this->settlementCollectionGate->contextFromVoucher($voucher),
+        );
+
+        if (! $result->succeeded()) {
+            throw new \InvalidArgumentException('Authoritative collection result must be succeeded.');
+        }
+
+        $wallet = $this->wallets->resolve($voucher);
 
         return DB::transaction(function () use ($voucher, $wallet, $payload, $result): VoucherPaymentResultData {
             $transaction = $wallet->depositFloat($result->amount, [

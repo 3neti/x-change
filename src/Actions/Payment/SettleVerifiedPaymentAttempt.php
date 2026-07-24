@@ -7,21 +7,17 @@ namespace LBHurtado\XChange\Actions\Payment;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\Voucher\Models\Voucher;
-use LBHurtado\XChange\Contracts\VoucherCollectionWalletResolverContract;
 use LBHurtado\XChange\Data\Payment\VoucherPaymentResultData;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Enums\PaymentVerificationTrigger;
 use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Models\VoucherCollection;
-use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use LogicException;
 
 class SettleVerifiedPaymentAttempt
 {
     public function __construct(
-        private readonly VoucherCollectionWalletResolverContract $wallets,
-        private readonly RecordVoucherCollection $collections,
-        private readonly VoucherCollectionProgressService $progress,
+        private readonly CollectVoucherFunds $collect,
     ) {}
 
     public function handle(
@@ -50,28 +46,15 @@ class SettleVerifiedPaymentAttempt
                 throw new LogicException('The provider transaction has already been applied.');
             }
 
-            $wallet = $this->wallets->resolve($voucher);
             $amount = $locked->expected_amount_minor / 100;
-            $transaction = $wallet->depositFloat($amount, [
-                'reason' => 'voucher_collection',
-                'payment_attempt_reference' => $locked->reference,
-                'voucher_code' => (string) $voucher->code,
-                'provider' => $locked->provider_code,
-                'provider_transaction_id' => $observation->provider_transaction_id,
-                'provider_observation_id' => $observation->getKey(),
-            ]);
-
             $result = new VoucherPaymentResultData(
                 voucher_code: (string) $voucher->code,
-                status: 'collected',
+                status: 'succeeded',
                 amount: $amount,
                 currency: $locked->currency,
                 provider: $locked->provider_code,
                 provider_reference: $locked->reference,
                 provider_transaction_id: $observation->provider_transaction_id,
-                wallet: [
-                    'transaction_id' => $transaction->getKey(),
-                ],
                 meta: [
                     'payment_attempt_reference' => $locked->reference,
                     'provider_observation_id' => $observation->getKey(),
@@ -80,20 +63,22 @@ class SettleVerifiedPaymentAttempt
                 messages: ['Pay Code payment collected successfully.'],
             );
 
-            $collection = $this->collections->handle(
-                voucher: $voucher,
-                result: $result,
-                payload: [
-                    'amount' => $amount,
-                    'currency' => $locked->currency,
-                    'status' => 'succeeded',
-                    'provider' => $locked->provider_code,
-                    'provider_reference' => $locked->reference,
-                    'provider_transaction_id' => $observation->provider_transaction_id,
-                    'idempotency_key' => 'payment-attempt:'.$locked->reference,
-                ],
-                walletTransaction: $transaction,
-            );
+            $payload = [
+                'amount' => $amount,
+                'currency' => $locked->currency,
+                'status' => 'succeeded',
+                'provider' => $locked->provider_code,
+                'provider_reference' => $locked->reference,
+                'provider_transaction_id' => $observation->provider_transaction_id,
+                'idempotency_key' => 'payment-attempt:'.$locked->reference,
+            ];
+
+            $this->collect->collectConfirmed($voucher, $result, $payload);
+
+            $collection = VoucherCollection::query()
+                ->where('voucher_id', $voucher->getKey())
+                ->where('idempotency_key', $payload['idempotency_key'])
+                ->sole();
 
             $nextVersion = $locked->version + 1;
 
@@ -117,8 +102,6 @@ class SettleVerifiedPaymentAttempt
                 ],
                 'occurred_at' => now(),
             ]);
-
-            $this->progress->persistSummary($voucher);
 
             return $locked->refresh()->load(['events', 'voucher']);
         }, 5);

@@ -6,6 +6,10 @@
 
 This document maps the complete claim flow for x-change Pay Codes — from claim initiation to success page, including form-flow integration, the post-redemption pipeline, disbursement, and rollback behavior.
 
+This map covers outward/disbursable claims only. Collectible Pay Codes use
+`/x/pay/{code}` and the separate `PAY_CODE_PAYMENT_FLOW.md`; they are rejected
+from this claim execution path.
+
 ---
 
 ## Flow Diagram
