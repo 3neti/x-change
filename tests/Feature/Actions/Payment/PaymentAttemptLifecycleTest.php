@@ -31,7 +31,7 @@ it('creates an exact Payment Attempt for the collectible balance', function (): 
     $attempt = app(CreatePaymentAttempt::class)->handle(
         voucher: $voucher,
         provider: 'netbank',
-        sessionId: 'payer-session-1',
+        browserKey: 'payer-session-1',
         idempotencyKey: 'request-1',
     );
 

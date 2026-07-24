@@ -118,6 +118,10 @@ export default defineConfig({
                 __dirname,
                 'tests/frontend/stubs/claim-flow-route.ts',
             ),
+            '@/routes/x-change/pay/attempts': path.resolve(
+                __dirname,
+                'tests/frontend/stubs/payment-attempt-route.ts',
+            ),
             '@/routes/x-change/cockpit/accounts/providers/funding-destination':
                 path.resolve(
                     __dirname,

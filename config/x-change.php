@@ -1311,6 +1311,12 @@ return [
             'hash_key' => env('X_CHANGE_PAYMENT_ATTEMPT_HASH_KEY'),
             'instruction_lock_seconds' => 30,
             'instruction_lock_wait_seconds' => 5,
+            'public_read_middleware' => [
+                'throttle:60,1',
+            ],
+            'public_start_middleware' => [
+                'throttle:12,1',
+            ],
         ],
 
         'providers' => [

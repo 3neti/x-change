@@ -10,6 +10,7 @@ use InvalidArgumentException;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Enums\PaymentAttemptStatus;
 use LBHurtado\XChange\Models\PaymentAttempt;
+use LBHurtado\XChange\Services\Payment\PaymentAttemptSessionGuard;
 use LBHurtado\XChange\Services\VoucherCapabilityGuard;
 use LBHurtado\XChange\Services\VoucherCollectionProgressService;
 use LogicException;
@@ -19,18 +20,19 @@ class CreatePaymentAttempt
     public function __construct(
         private readonly VoucherCapabilityGuard $capabilities,
         private readonly VoucherCollectionProgressService $progress,
+        private readonly PaymentAttemptSessionGuard $sessions,
     ) {}
 
     public function handle(
         Voucher $voucher,
         string $provider,
-        string $sessionId,
+        string $browserKey,
         string $idempotencyKey,
     ): PaymentAttempt {
         $this->capabilities->ensureCanCollect($voucher);
 
         $provider = strtolower($this->required($provider, 'Provider'));
-        $sessionId = $this->required($sessionId, 'Session');
+        $browserKey = $this->required($browserKey, 'Browser session');
         $idempotencyKey = $this->required($idempotencyKey, 'Idempotency key');
         $progress = $this->progress->compute($voucher);
 
@@ -42,8 +44,8 @@ class CreatePaymentAttempt
             throw new InvalidArgumentException("Payment provider [{$provider}] is not enabled.");
         }
 
-        $sessionKeyHash = $this->secureHash($sessionId);
-        $idempotencyKeyHash = $this->secureHash($sessionId."\0".$idempotencyKey);
+        $sessionKeyHash = $this->sessions->hash($browserKey);
+        $idempotencyKeyHash = $this->sessions->hash($browserKey."\0".$idempotencyKey);
         $fingerprint = hash('sha256', json_encode([
             'voucher_id' => $voucher->getKey(),
             'provider' => $provider,
@@ -116,16 +118,5 @@ class CreatePaymentAttempt
         }
 
         return $normalized;
-    }
-
-    private function secureHash(string $value): string
-    {
-        $key = config('x-change.payment.attempts.hash_key') ?: config('app.key');
-
-        if (! is_string($key) || trim($key) === '') {
-            throw new LogicException('A Payment Attempt hash key must be configured.');
-        }
-
-        return hash_hmac('sha256', $value, $key);
     }
 }

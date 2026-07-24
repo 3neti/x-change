@@ -42,6 +42,8 @@ use LBHurtado\XChange\Http\Controllers\Web\Onboarding\MobileVerificationSubmissi
 use LBHurtado\XChange\Http\Controllers\Web\PayCodeCreatePageController;
 use LBHurtado\XChange\Http\Controllers\Web\PayCodeIndexPageController;
 use LBHurtado\XChange\Http\Controllers\Web\PayCodeShowPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentAttemptController;
+use LBHurtado\XChange\Http\Controllers\Web\Payment\PaymentPageController;
 use LBHurtado\XChange\Http\Middleware\RequireVerifiedMobile;
 use LBHurtado\XChange\Http\Middleware\ShareCockpitHeaderReadModel;
 use LBHurtado\XChange\Http\Middleware\ShareXChangeBranding;
@@ -155,6 +157,12 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
 
 // Public claim routes (no auth required)
 Route::prefix('x')->middleware(['web', ShareXChangeBranding::class])->group(function (): void {
+    Route::get('pay/{code}', PaymentPageController::class)
+        ->middleware((array) config('x-change.payment.attempts.public_read_middleware', []))
+        ->name('x-change.pay.show');
+    Route::post('pay/{code}/attempts', PaymentAttemptController::class)
+        ->middleware((array) config('x-change.payment.attempts.public_start_middleware', []))
+        ->name('x-change.pay.attempts.store');
     Route::get('claim', ClaimStartController::class)->name('x-change.claim.start');
     Route::post('claim', ClaimStartController::class)->name('x-change.claim.start.submit');
     Route::get('claim/{code}', ClaimPageController::class)
