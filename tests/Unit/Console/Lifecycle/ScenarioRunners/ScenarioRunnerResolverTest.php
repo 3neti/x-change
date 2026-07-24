@@ -9,6 +9,7 @@ use LBHurtado\XChange\Lifecycle\Runners\ScenarioRunnerResolver;
 use LBHurtado\XChange\Lifecycle\Runners\SequentialClaimsScenarioRunner;
 use LBHurtado\XChange\Lifecycle\Runners\SettlementEnvelopeEvaluationScenarioRunner;
 use LBHurtado\XChange\Lifecycle\Runners\SettlementThreePartyScenarioRunner;
+use LBHurtado\XChange\Lifecycle\Runners\TreasuryBasicCashScenarioRunner;
 
 it('resolves default scenarios to default claim runner', function () {
     $resolution = app(ScenarioRunnerResolver::class)->resolve([
@@ -68,6 +69,16 @@ it('resolves account management mode', function () {
 
     expect($resolution->mode)->toBe('account_management')
         ->and($resolution->runner)->toBeInstanceOf(AccountManagementScenarioRunner::class);
+});
+
+it('resolves Treasury basic cash mode', function () {
+    $resolution = app(ScenarioRunnerResolver::class)->resolve([
+        'mode' => 'treasury_basic_cash',
+    ]);
+
+    expect($resolution->mode)->toBe('treasury_basic_cash')
+        ->and($resolution->runner)
+        ->toBeInstanceOf(TreasuryBasicCashScenarioRunner::class);
 });
 
 it('throws when no runner is registered for mode', function () {

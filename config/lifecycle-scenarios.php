@@ -45,6 +45,14 @@ return [
         ),
     ],
 
+    'treasury_basic_cash' => [
+        'enabled' => (bool) env(
+            'XCHANGE_LIFECYCLE_TREASURY_BASIC_CASH_ENABLED',
+            env('APP_ENV') !== 'production',
+        ),
+        'allowed_environments' => ['local', 'testing'],
+    ],
+
     'scenarios' => [
 
         /*
@@ -407,6 +415,20 @@ return [
             'claim' => [],
             'expect' => [
                 'tariffs' => ['cash'],
+            ],
+        ],
+
+        'treasury_basic_cash' => [
+            'label' => 'Treasury Basic Cash',
+            'description' => 'Funds an Account from verified provider evidence, issues the canonical basic_cash Pay Code, and demonstrates the resulting liability and issuance capacity under one rollback boundary.',
+            'category' => 'smoke',
+            'tags' => ['treasury', 'funding', 'basic_cash', 'rollback-only'],
+            'mode' => 'treasury_basic_cash',
+            'treasury' => [
+                'base_scenario' => 'basic_cash',
+                'provider' => 'netbank',
+                'connection' => 'netbank-primary',
+                'funding_amount_minor' => 10_000,
             ],
         ],
 

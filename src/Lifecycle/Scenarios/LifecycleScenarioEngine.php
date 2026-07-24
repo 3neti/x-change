@@ -169,6 +169,7 @@ final class LifecycleScenarioEngine
             'account_management',
             'qrph_funding_simulation',
             'qrph_unknown_mobile_onboarding',
+            'treasury_basic_cash',
         ], true)) {
             return $this->runWithoutVoucherBootstrap(
                 scenarioKey: $scenarioKey,

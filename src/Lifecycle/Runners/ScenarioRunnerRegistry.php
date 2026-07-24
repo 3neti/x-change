@@ -22,6 +22,7 @@ final class ScenarioRunnerRegistry
             'account_management',
             'qrph_funding_simulation',
             'qrph_unknown_mobile_onboarding',
+            'treasury_basic_cash',
         ], true);
     }
 
@@ -38,6 +39,7 @@ final class ScenarioRunnerRegistry
             'account_management' => app(AccountManagementScenarioRunner::class),
             'qrph_funding_simulation' => app(QrPhFundingSimulationScenarioRunner::class),
             'qrph_unknown_mobile_onboarding' => app(QrPhUnknownMobileOnboardingScenarioRunner::class),
+            'treasury_basic_cash' => app(TreasuryBasicCashScenarioRunner::class),
             default => throw new RuntimeException("No lifecycle scenario runner registered for mode [{$mode}]."),
         };
     }
