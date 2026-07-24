@@ -16,6 +16,8 @@ use LBHurtado\XChange\Models\PaymentAttempt;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Support\Funding\FundingDestinationSnapshot;
 use LogicException;
+use RuntimeException;
+use Throwable;
 
 class IssuePaymentInstructions
 {
@@ -47,31 +49,40 @@ class IssuePaymentInstructions
             throw new LogicException('Payment instructions cannot be issued from the current state.');
         }
 
-        $destination = $this->destinations->shared(
-            $current->provider_code,
-            'voucher:'.$current->voucher_id,
-        );
+        try {
+            $destination = $this->destinations->shared(
+                $current->provider_code,
+                'voucher:'.$current->voucher_id,
+            );
 
-        $instructions = $this->providers
-            ->for($current->provider_code)
-            ->createFundingInstructions(new FundingInstructionRequestData(
-                provider: $current->provider_code,
-                fundingReference: $current->reference,
-                amountMinor: $current->expected_amount_minor,
-                currency: $current->currency,
-                accountReference: 'voucher:'.$current->voucher_id,
-                expiresAt: $current->expires_at === null
-                    ? null
-                    : DateTimeImmutable::createFromInterface($current->expires_at),
-                metadata: [
-                    'purpose' => 'voucher_payment',
-                    'payment_attempt_reference' => $current->reference,
-                    'voucher_code' => (string) $current->voucher->code,
-                ],
-                destination: $destination,
-            ));
+            $instructions = $this->providers
+                ->for($current->provider_code)
+                ->createFundingInstructions(new FundingInstructionRequestData(
+                    provider: $current->provider_code,
+                    fundingReference: $current->reference,
+                    amountMinor: $current->expected_amount_minor,
+                    currency: $current->currency,
+                    accountReference: 'voucher:'.$current->voucher_id,
+                    expiresAt: $current->expires_at === null
+                        ? null
+                        : DateTimeImmutable::createFromInterface($current->expires_at),
+                    metadata: [
+                        'purpose' => 'voucher_payment',
+                        'payment_attempt_reference' => $current->reference,
+                        'voucher_code' => (string) $current->voucher->code,
+                    ],
+                    destination: $destination,
+                ));
 
-        $this->assertInstructionsMatch($current, $instructions);
+            $this->assertInstructionsMatch($current, $instructions);
+        } catch (Throwable $exception) {
+            $this->recordInstructionFailure($current);
+
+            throw new RuntimeException(
+                'Payment instructions are temporarily unavailable.',
+                previous: $exception,
+            );
+        }
 
         return DB::transaction(function () use ($current, $instructions, $destination): PaymentAttempt {
             $locked = PaymentAttempt::query()->lockForUpdate()->findOrFail($current->getKey());
@@ -165,5 +176,35 @@ class IssuePaymentInstructions
         }
 
         return hash_hmac('sha256', $value, $key);
+    }
+
+    private function recordInstructionFailure(PaymentAttempt $attempt): void
+    {
+        DB::transaction(function () use ($attempt): void {
+            $locked = PaymentAttempt::query()->lockForUpdate()->findOrFail($attempt->getKey());
+
+            if ($locked->status !== PaymentAttemptStatus::PendingInstructions) {
+                return;
+            }
+
+            $nextVersion = $locked->version + 1;
+
+            $locked->forceFill([
+                'version' => $nextVersion,
+            ])->saveQuietly();
+
+            $locked->events()->create([
+                'sequence' => $nextVersion,
+                'event_type' => 'provider_instruction_failed',
+                'from_status' => PaymentAttemptStatus::PendingInstructions,
+                'to_status' => PaymentAttemptStatus::PendingInstructions,
+                'trigger' => 'system',
+                'metadata' => [
+                    'provider' => $locked->provider_code,
+                    'retryable' => true,
+                ],
+                'occurred_at' => now(),
+            ]);
+        }, 3);
     }
 }

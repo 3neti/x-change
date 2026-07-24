@@ -14,12 +14,15 @@ use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
 use LBHurtado\EmiCore\Data\Funding\ProviderWebhookReceiptData;
 use LBHurtado\EmiCore\Data\Funding\ProviderWebhookRequestData;
 use LBHurtado\EmiCore\Data\Funding\WebhookAuthenticationData;
+use Throwable;
 
 class FakeFundingProviderAdapter implements FundingProviderAdapter
 {
     public int $instructionCalls = 0;
 
     public ?FundingInstructionsData $instructions = null;
+
+    public ?Throwable $instructionException = null;
 
     public WebhookAuthenticationData $webhookAuthentication;
 
@@ -44,6 +47,10 @@ class FakeFundingProviderAdapter implements FundingProviderAdapter
     public function createFundingInstructions(FundingInstructionRequestData $request): FundingInstructionsData
     {
         $this->instructionCalls++;
+
+        if ($this->instructionException instanceof Throwable) {
+            throw $this->instructionException;
+        }
 
         return $this->instructions ?? new FundingInstructionsData(
             provider: $request->provider,

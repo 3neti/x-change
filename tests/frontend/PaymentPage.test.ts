@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import PaymentPage from '../../resources/js/pages/x-change/payment/Show.vue';
+import PaymentPage from '../../resources/js/pages/x-change/claim/Payment.vue';
 
 const { routerPost } = vi.hoisted(() => ({
     routerPost: vi.fn(),

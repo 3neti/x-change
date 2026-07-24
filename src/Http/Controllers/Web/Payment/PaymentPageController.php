@@ -35,7 +35,7 @@ class PaymentPageController extends Controller
         $provider = strtolower((string) config('x-change.payment.attempts.provider', 'netbank'));
         $providerEnabled = (bool) config("x-change.funding.providers.{$provider}.enabled", false);
 
-        $response = Inertia::render('x-change/payment/Show', [
+        $response = Inertia::render('x-change/claim/Payment', [
             'payment' => [
                 'pay_code' => (string) $voucher->code,
                 'currency' => $collection->currency,

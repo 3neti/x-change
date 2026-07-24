@@ -11,6 +11,7 @@ use Illuminate\Support\Str;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Payment\CreatePaymentAttempt;
 use LBHurtado\XChange\Actions\Payment\IssuePaymentInstructions;
+use Throwable;
 
 class PaymentAttemptController extends Controller
 {
@@ -42,14 +43,23 @@ class PaymentAttemptController extends Controller
             $request->session()->put($sessionKey, $idempotencyKey);
         }
 
-        $attempt = $create->handle(
-            voucher: $voucher,
-            provider: (string) config('x-change.payment.attempts.provider', 'netbank'),
-            browserKey: $browserKey,
-            idempotencyKey: $idempotencyKey,
-        );
+        try {
+            $attempt = $create->handle(
+                voucher: $voucher,
+                provider: (string) config('x-change.payment.attempts.provider', 'netbank'),
+                browserKey: $browserKey,
+                idempotencyKey: $idempotencyKey,
+            );
 
-        $attempt = $issue->handle($attempt);
+            $attempt = $issue->handle($attempt);
+        } catch (Throwable) {
+            return redirect()
+                ->route('x-change.pay.show', ['code' => $voucher->code])
+                ->with(
+                    'payment_notice',
+                    'NetBank could not create payment instructions. No payment was recorded. Please try again.',
+                );
+        }
 
         return redirect()->route('x-change.pay.show', [
             'code' => $voucher->code,

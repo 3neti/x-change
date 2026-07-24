@@ -11,6 +11,17 @@ function cockpitDriftTempPath(string $suffix): string
     return sys_get_temp_dir().'/x-change-cockpit-drift-'.bin2hex(random_bytes(6)).'/'.$suffix;
 }
 
+it('guards the public claim and payment page publication alongside cockpit assets', function () {
+    $packageRoot = dirname(__DIR__, 3);
+    $mappings = (new PublishedAssetDriftDetector)->cockpitMappings();
+
+    expect($mappings)
+        ->toHaveKey(
+            $packageRoot.'/resources/js/pages/x-change/claim',
+            resource_path('js/pages/x-change/claim'),
+        );
+});
+
 it('reports published cockpit assets as synchronized when source and target match', function () {
     $source = cockpitDriftTempPath('source');
     $target = cockpitDriftTempPath('target');

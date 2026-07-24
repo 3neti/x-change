@@ -33,7 +33,7 @@ it('renders a read-only collectible payment page without sensitive instructions'
         ->get(route('x-change.pay.show', ['code' => strtolower((string) $voucher->code)]))
         ->assertOk()
         ->assertHeader('Cache-Control', 'no-store, private')
-        ->assertJsonPath('component', 'x-change/payment/Show')
+        ->assertJsonPath('component', 'x-change/claim/Payment')
         ->assertJsonPath('props.payment.pay_code', (string) $voucher->code)
         ->assertJsonPath('props.payment.amount_due_minor', 10000)
         ->assertJsonPath('props.payment.provider', 'netbank')
@@ -72,6 +72,41 @@ it('creates and reopens exact provider QR instructions in the payer session', fu
         ->assertJsonPath('props.payment.attempt.qr_code.mime_type', 'image/png')
         ->assertJsonPath('props.payment.attempt.qr_code.embedded_amount', true)
         ->assertJsonStructure(['props' => ['payment' => ['attempt' => ['qr_code' => ['base64_payload']]]]]);
+});
+
+it('sanitizes provider instruction failures and safely retries the same attempt', function (): void {
+    $voucher = publicPaymentVoucher();
+    $this->paymentAdapter->instructionException = new RuntimeException(
+        'secret provider response and credentials',
+    );
+
+    $this->post(route('x-change.pay.attempts.store', [
+        'code' => $voucher->code,
+    ]))
+        ->assertRedirect(route('x-change.pay.show', ['code' => $voucher->code]))
+        ->assertSessionHas(
+            'payment_notice',
+            'NetBank could not create payment instructions. No payment was recorded. Please try again.',
+        );
+
+    $attempt = PaymentAttempt::query()->sole();
+    $failure = $attempt->events()->where('event_type', 'provider_instruction_failed')->sole();
+
+    expect($attempt->status)->toBe(PaymentAttemptStatus::PendingInstructions)
+        ->and($failure->metadata)->toBe([
+            'provider' => 'netbank',
+            'retryable' => true,
+        ])
+        ->and(json_encode($failure->metadata))->not->toContain('secret provider response');
+
+    $this->paymentAdapter->instructionException = null;
+
+    $this->post(route('x-change.pay.attempts.store', [
+        'code' => $voucher->code,
+    ]))->assertRedirect();
+
+    expect(PaymentAttempt::query()->count())->toBe(1)
+        ->and($attempt->fresh()->status)->toBe(PaymentAttemptStatus::AwaitingPayment);
 });
 
 it('conceals a Payment Attempt owned by another browser session', function (): void {

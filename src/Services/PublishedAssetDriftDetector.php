@@ -20,6 +20,7 @@ class PublishedAssetDriftDetector
         return [
             $this->packagePath('resources/js/cockpit') => resource_path('js/cockpit'),
             $this->packagePath('resources/js/pages/x-change/cockpit') => resource_path('js/pages/x-change/cockpit'),
+            $this->packagePath('resources/js/pages/x-change/claim') => resource_path('js/pages/x-change/claim'),
         ];
     }
 
