@@ -39,6 +39,21 @@ beforeEach(function () {
     ]);
 });
 
+it('fails closed with a concise scenario-specific response before provider access', function () {
+    $exitCode = Artisan::call('xchange:lifecycle:run', [
+        'scenario' => 'treasury_live_basic_cash',
+        '--json' => true,
+    ]);
+    $payload = json_decode(Artisan::output(), true);
+
+    expect($exitCode)->toBe(Command::FAILURE)
+        ->and($payload['scenario'])->toBe('treasury_live_basic_cash')
+        ->and($payload['mode'])->toBe('treasury_live_basic_cash')
+        ->and($payload['message'])->toContain('--live-provider')
+        ->and($payload)->not->toHaveKey('integrations')
+        ->and(LifecycleMoneyRun::query()->count())->toBe(0);
+});
+
 it('reports the full accounted live lifecycle and never repeats its transfer', function () {
     $reader = configureLiveNetbankAccounting([1_000_000_00, 1_000_000_00]);
     $provider = fakePayoutProvider()->willReturnSuccessfulResult(

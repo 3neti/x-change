@@ -115,3 +115,15 @@ it('reports an available campaign package without selecting a campaign', functio
         ->and($payload['integrations']['campaigns']['mutation']['enabled'])->toBeFalse()
         ->and($payload['integrations']['campaigns']['redactions']['reason'])->toBe('no-campaign-selected');
 });
+it('honors an explicit integration-report opt out and removes the control marker', function () {
+    $payload = app(LifecycleIntegrationReportBuilder::class)->enrich([
+        'scenario' => 'treasury_live_basic_cash',
+        '_include_integrations' => false,
+        'accounting' => ['status' => 'reconciled'],
+    ]);
+
+    expect($payload)->toBe([
+        'scenario' => 'treasury_live_basic_cash',
+        'accounting' => ['status' => 'reconciled'],
+    ]);
+});

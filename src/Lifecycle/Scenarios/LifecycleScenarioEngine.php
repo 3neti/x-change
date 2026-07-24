@@ -117,6 +117,8 @@ final class LifecycleScenarioEngine
             return $this->liveProviderRefusal(
                 scenarioKey: $scenarioKey,
                 message: 'This lifecycle scenario requires the --live-provider option.',
+                mode: $mode,
+                includeIntegrations: $mode !== 'treasury_live_basic_cash',
             );
         }
 
@@ -124,6 +126,8 @@ final class LifecycleScenarioEngine
             return $this->liveProviderRefusal(
                 scenarioKey: $scenarioKey,
                 message: 'Live provider lifecycle scenarios are disabled by runtime settings.',
+                mode: $mode,
+                includeIntegrations: $mode !== 'treasury_live_basic_cash',
             );
         }
 
@@ -131,6 +135,8 @@ final class LifecycleScenarioEngine
             return $this->liveProviderRefusal(
                 scenarioKey: $scenarioKey,
                 message: 'This lifecycle scenario can move real money. Pass --confirm-live-transfer to continue.',
+                mode: $mode,
+                includeIntegrations: $mode !== 'treasury_live_basic_cash',
             );
         }
 
@@ -138,6 +144,8 @@ final class LifecycleScenarioEngine
             return $this->liveProviderRefusal(
                 scenarioKey: $scenarioKey,
                 message: 'Live transfer lifecycle scenarios require a stable --run-reference.',
+                mode: $mode,
+                includeIntegrations: $mode !== 'treasury_live_basic_cash',
             );
         }
 
@@ -440,15 +448,20 @@ final class LifecycleScenarioEngine
         return $this->container->make(ConstellationOtpResolver::class) instanceof InteractiveOtpResolver;
     }
 
-    private function liveProviderRefusal(string $scenarioKey, string $message): LifecycleScenarioEngineResult
-    {
+    private function liveProviderRefusal(
+        string $scenarioKey,
+        string $message,
+        string $mode = 'live_provider_verification',
+        bool $includeIntegrations = true,
+    ): LifecycleScenarioEngineResult {
         return $this->result(
             exitCode: Command::FAILURE,
             payload: [
                 'success' => false,
                 'scenario' => $scenarioKey,
-                'mode' => 'live_provider_verification',
+                'mode' => $mode,
                 'message' => $message,
+                '_include_integrations' => $includeIntegrations,
             ],
         );
     }

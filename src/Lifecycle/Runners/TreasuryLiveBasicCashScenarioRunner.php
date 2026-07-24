@@ -413,6 +413,7 @@ final readonly class TreasuryLiveBasicCashScenarioRunner implements ScenarioRunn
             'scenario' => $context->scenarioKey,
             'label' => $context->label(),
             'mode' => 'treasury_live_basic_cash',
+            '_include_integrations' => false,
             'live' => [
                 'provider_calls' => true,
                 'can_move_real_money' => true,

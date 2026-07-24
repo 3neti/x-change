@@ -251,6 +251,58 @@ This wave makes Treasury Positions authoritative for funding recognition, Accoun
 
 Pay Code face-value reservation and settlement remain represented by the existing Pay Code liability and execution subsystems. Non-zero instruction-fee collection still uses its existing revenue-allocation ledger path. Before enabling non-zero production fees against migrated Accounts, that charge path must be moved to an explicit Client Funds Position debit operation. This is a launch gate, not an invitation to mirror or manually synchronize two balances.
 
+Outbound provider payouts do not yet post a matching Treasury Inventory reduction and Position derecognition. Opening reconciliation therefore fails closed with `provider-balance-below-internal-attribution` when an authoritative provider balance falls after a payout while internal attribution remains unchanged. The payout result remains durable, but Treasury reports `review_required`; an operator must not hide the difference by typing an adjustment or rerunning the payment.
+
+## Accounted live basic_cash lifecycle
+
+`treasury_live_basic_cash` is the live, durable counterpart of the rollback-only `treasury_basic_cash` scenario. It:
+
+1. queries the configured NetBank connection through `ProviderBalanceReader`;
+2. reconciles the authoritative bank amount into Provider Inventory and system Positions;
+3. provisions the issuer's NetBank Client Funds Position;
+4. captures provider, Inventory, system, Account, legacy compatibility, and Pay Code liability balances;
+5. issues one canonical `basic_cash` Pay Code;
+6. claims it through `x_change_live_cash` and the configured payout provider;
+7. reads the provider balance again; and
+8. stores the sanitized result under a hashed, caller-supplied run reference.
+
+The scenario can move real money. It is disabled outside its configured environments and requires all three operator controls:
+
+```bash
+php artisan xchange:lifecycle:run \
+    treasury_live_basic_cash \
+    --issuer=<account-owner-id> \
+    --live-provider \
+    --confirm-live-transfer \
+    --run-reference=<stable-change-or-uat-reference> \
+    --json
+```
+
+The run reference is never stored in plaintext. It is HMAC-hashed and bound to the scenario, issuer, provider, amount, and currency. Reusing the same reference returns the durable result and makes no second provider transfer. Reusing it with different money-movement parameters is rejected.
+
+The command reports:
+
+- `provider_observation.balance_minor` — the amount returned by the authoritative provider balance reader;
+- `inventory.balance_minor` — x-change's control total for the provider resource;
+- `system_positions` — Clearing and Legacy Unattributed attribution owned by the system principal;
+- `account_positions` — the issuer's provider-specific Client Funds balance, including `not_provisioned` for absent positions;
+- `legacy_compatibility_balance_minor` — the existing Pay Code escrow and fee ledger balance;
+- `liability` — outstanding, redeemed, expired, and cancelled Pay Code amounts;
+- Pay Code issuance and claim state; and
+- a sanitized payout reconciliation with no credentials, raw provider payload, full account number, or claimant mobile.
+
+`provider_transfer_succeeded=true` with `accounting_status=review_required` means the provider transfer completed but the provider balance is below internal attribution. This is an accounting escalation, not permission to submit another run reference. The durable run is closed specifically to prevent duplicate payment.
+
+Configuration:
+
+```dotenv
+XCHANGE_LIFECYCLE_TREASURY_LIVE_BASIC_CASH_ENABLED=true
+XCHANGE_LIFECYCLE_TREASURY_LIVE_BASIC_CASH_ENVIRONMENTS=local,staging
+XCHANGE_LIFECYCLE_ALLOW_LIVE_PROVIDER_SCENARIOS=true
+```
+
+Provider credentials and destination configuration remain provider-package concerns and must not be placed in the run reference.
+
 ## Deployment checklist
 
 1. Create one immutable system-principal record.

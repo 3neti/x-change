@@ -19,6 +19,13 @@ final readonly class LifecycleIntegrationReportBuilder
      */
     public function enrich(array $payload): array
     {
+        $includeIntegrations = (bool) ($payload['_include_integrations'] ?? true);
+        unset($payload['_include_integrations']);
+
+        if (! $includeIntegrations) {
+            return $payload;
+        }
+
         $query = new CockpitReadModelQueryData(
             code: $this->extractCode($payload),
             operatorId: $this->extractOperatorId($payload),
