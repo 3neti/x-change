@@ -521,6 +521,26 @@ No scan or real-money payment was performed. The sensitive QR was hidden after a
 
 The acceptance workflow never accepted an operator-supplied amount, destination, provider transaction ID, or raw evidence. The provider observation supplied every monetary fact.
 
+### Reusable QR fixture and reactive projection acceptance — 2026-07-24
+
+- the new package migration created encrypted reusable QR artifact storage in the sandbox;
+- the existing Account Funding Address reopened automatically from its encrypted fixture without another provider generation;
+- the private response rendered a 176×176 QR while the general Inertia read model remained free of QR payload and full-address fields;
+- Accounts rendered merchant name, city, category, and approved label-template controls with an explicit presentation-only boundary;
+- desktop at 1440×1000 and mobile at 390×844 had no document-level horizontal overflow;
+- automatic QR reopening used its independent 12-per-minute allowance while NetBank history checks and receipt approvals retained the stricter three-per-minute throttle;
+- Reverb established the signed-in owner’s opaque private-channel subscription over secure WebSockets;
+- one synthetic, sanitized `FundingProjectionChanged` invalidation was delivered end to end without changing an Account, balance, receipt, Inventory position, or provider state;
+- the browser console contained no warnings or errors after the final Accounts and Funding passes;
+- focused Account and reusable-address backend coverage passed 19 tests with 168 assertions;
+- focused Accounts, Funding, and route-adapter frontend coverage passed 20 tests;
+- focused projection broadcast coverage passed 26 backend tests with 246 assertions and 10 frontend tests;
+- the final standing-address throttle regression passed 11 tests with 109 assertions;
+- merchant-profile repository coverage passed 3 tests with 13 assertions;
+- package asset diagnostics, Composer validation, Pint, production build, and `git diff --check` passed.
+
+No real-money payment was initiated. The broadcast acceptance event carried no amount or balance; it only invalidated the browser’s cached projection.
+
 ## Rollout Gates
 
 1. Start with `observe_only`, or explicitly accept the provisional-credit exposure before enabling `pending`.

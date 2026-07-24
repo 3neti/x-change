@@ -109,6 +109,8 @@ The preferred path is a private Reverb/Echo invalidation event. **Check NetBank*
 
 Never use the broadcast payload as financial evidence. It contains no authoritative amount or balance and exists only to request a fresh server read.
 
+In the turnkey sandbox, `composer run dev` starts the application, queue listener, logs, Vite, and Reverb together. A managed deployment must run Reverb through its normal process manager and expose the configured secure WebSocket host.
+
 ## Connection History
 
 Connection history is retained for investigation and audit. A prior connection does not become active merely because it appears in history. Use the current mode and provider status at the top of each card as the operational state.
