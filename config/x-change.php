@@ -425,10 +425,15 @@ return [
         'connections' => [
             'netbank-primary' => [
                 'provider' => 'netbank',
-                'mode' => env('XCHANGE_TREASURY_NETBANK_MODE', 'disabled'),
+                'mode' => env(
+                    'XCHANGE_TREASURY_NETBANK_MODE',
+                    (bool) env('XCHANGE_FUNDING_NETBANK_ENABLED', false)
+                        ? 'required'
+                        : 'disabled',
+                ),
                 'currency' => 'PHP',
                 'decimal_places' => 2,
-                'settlement_resource_reference' => 'resource:netbank:primary:php',
+                'settlement_resource_reference' => 'resource:netbank:corporate-vca',
                 'settlement_resource_type' => 'cash_at_bank',
                 'custody_mode' => 'provider_projection',
                 'required_capabilities' => [
@@ -439,10 +444,15 @@ return [
             ],
             'paynamics-primary' => [
                 'provider' => 'paynamics_constellation',
-                'mode' => env('XCHANGE_TREASURY_PAYNAMICS_MODE', 'disabled'),
+                'mode' => env(
+                    'XCHANGE_TREASURY_PAYNAMICS_MODE',
+                    (bool) env('XCHANGE_FUNDING_PAYNAMICS_ENABLED', false)
+                        ? 'required'
+                        : 'disabled',
+                ),
                 'currency' => 'PHP',
                 'decimal_places' => 2,
-                'settlement_resource_reference' => 'resource:paynamics:primary:php',
+                'settlement_resource_reference' => 'resource:paynamics:corporate-wallet',
                 'settlement_resource_type' => 'emi_wallet_float',
                 'custody_mode' => 'provider_projection',
                 'required_capabilities' => [

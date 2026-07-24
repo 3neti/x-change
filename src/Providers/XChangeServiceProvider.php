@@ -135,6 +135,7 @@ use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Contracts\UserLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\VendorRegistryContract;
+use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
 use LBHurtado\XChange\Contracts\VoucherCollectionWalletResolverContract;
 use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
@@ -265,6 +266,7 @@ use LBHurtado\XChange\Services\Treasury\TreasuryAccountPortfolioProvisioningServ
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XChange\Services\Treasury\TreasuryProvisioningService;
+use LBHurtado\XChange\Services\Treasury\VerifiedTreasuryFundingAllocationService;
 use LBHurtado\XChange\Services\TxtcmdrWithdrawalOtpApprovalService;
 use LBHurtado\XChange\Services\UserLifecycleService;
 use LBHurtado\XChange\Services\VoucherAccessService;
@@ -338,6 +340,10 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->singleton(
             TreasuryAccountPortfolioProvisioningContract::class,
             TreasuryAccountPortfolioProvisioningService::class,
+        );
+        $this->app->singleton(
+            VerifiedTreasuryFundingAllocationContract::class,
+            VerifiedTreasuryFundingAllocationService::class,
         );
 
         $this->registerServices();
