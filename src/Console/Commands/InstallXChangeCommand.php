@@ -187,6 +187,16 @@ class InstallXChangeCommand extends Command
 
                 return self::FAILURE;
             }
+
+            $exitCode = $this->call('x-change:treasury:reconcile-opening', [
+                '--no-interaction' => true,
+            ]);
+
+            if ($exitCode !== self::SUCCESS) {
+                $this->components->error('Treasury opening reconciliation failed; X-Change installation is incomplete.');
+
+                return self::FAILURE;
+            }
         }
 
         $this->newLine();

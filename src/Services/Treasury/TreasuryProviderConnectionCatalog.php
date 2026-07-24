@@ -116,6 +116,10 @@ final readonly class TreasuryProviderConnectionCatalog
             ),
             currency: $currency,
             decimalPlaces: $decimalPlaces,
+            inventoryReference: $this->requiredReference(
+                (string) ($configuration['inventory_reference'] ?? ''),
+                "connection [{$reference}] Inventory",
+            ),
             settlementResourceReference: $this->requiredReference(
                 (string) ($configuration['settlement_resource_reference'] ?? ''),
                 "connection [{$reference}] Settlement Resource",

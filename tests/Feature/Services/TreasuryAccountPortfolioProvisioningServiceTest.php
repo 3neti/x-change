@@ -77,6 +77,7 @@ it('provisions one zero-balance client funds position for each ready provider co
         'mode' => 'required',
         'currency' => 'PHP',
         'decimal_places' => 2,
+        'inventory_reference' => "inventory:{$provider}:primary:php",
         'settlement_resource_reference' => "resource:{$provider}:primary:php",
         'settlement_resource_type' => 'regulated_client_funds',
         'custody_mode' => 'provider_projection',

@@ -19,6 +19,7 @@ final readonly class TreasuryProviderConnectionData
         public TreasuryConnectionMode $mode,
         public string $currency,
         public int $decimalPlaces,
+        public string $inventoryReference,
         public string $settlementResourceReference,
         public string $settlementResourceType,
         public TreasuryCustodyMode $custodyMode,

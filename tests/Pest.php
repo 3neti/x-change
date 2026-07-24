@@ -188,6 +188,7 @@ function enableNetbankTreasuryForTests(): User
                 label: 'NetBank Test Provider',
                 capabilities: [
                     ProviderCapability::ReadinessProbe,
+                    ProviderCapability::BalanceRead,
                     ProviderCapability::FundingEvidenceRead,
                     ProviderCapability::FundingInstructionIssue,
                 ],
@@ -232,11 +233,13 @@ function enableNetbankTreasuryForTests(): User
             'mode' => 'required',
             'currency' => 'PHP',
             'decimal_places' => 2,
+            'inventory_reference' => 'inventory:netbank:vca-cash',
             'settlement_resource_reference' => 'resource:netbank:corporate-vca',
             'settlement_resource_type' => 'cash_at_bank',
             'custody_mode' => 'provider_projection',
             'required_capabilities' => [
                 'readiness_probe',
+                'balance_read',
                 'funding_evidence_read',
                 'funding_instruction_issue',
             ],

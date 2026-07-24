@@ -422,6 +422,14 @@ return [
         'system_mandate_reference' => env('XCHANGE_TREASURY_SYSTEM_MANDATE_REFERENCE', 'mandate:system:treasury'),
         'legal_profile' => env('XCHANGE_TREASURY_LEGAL_PROFILE', 'treasury-settlement-ph-v1'),
         'legal_profile_version' => env('XCHANGE_TREASURY_LEGAL_PROFILE_VERSION', '2026-07-24.1'),
+        'reconciliation_lock_seconds' => (int) env(
+            'XCHANGE_TREASURY_RECONCILIATION_LOCK_SECONDS',
+            60,
+        ),
+        'reconciliation_lock_wait_seconds' => (int) env(
+            'XCHANGE_TREASURY_RECONCILIATION_LOCK_WAIT_SECONDS',
+            5,
+        ),
         'connections' => [
             'netbank-primary' => [
                 'provider' => 'netbank',
@@ -433,11 +441,13 @@ return [
                 ),
                 'currency' => 'PHP',
                 'decimal_places' => 2,
+                'inventory_reference' => 'inventory:netbank:vca-cash',
                 'settlement_resource_reference' => 'resource:netbank:corporate-vca',
                 'settlement_resource_type' => 'cash_at_bank',
                 'custody_mode' => 'provider_projection',
                 'required_capabilities' => [
                     'readiness_probe',
+                    'balance_read',
                     'funding_evidence_read',
                     'funding_instruction_issue',
                 ],
@@ -452,11 +462,13 @@ return [
                 ),
                 'currency' => 'PHP',
                 'decimal_places' => 2,
+                'inventory_reference' => 'inventory:paynamics:wallet-float',
                 'settlement_resource_reference' => 'resource:paynamics:corporate-wallet',
                 'settlement_resource_type' => 'emi_wallet_float',
                 'custody_mode' => 'provider_projection',
                 'required_capabilities' => [
                     'readiness_probe',
+                    'balance_read',
                     'funding_evidence_read',
                     'funding_instruction_issue',
                 ],

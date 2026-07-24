@@ -43,6 +43,7 @@ it('provisions an idempotent zero-balance system treasury position', function ()
                 label: 'Future EMI',
                 capabilities: [
                     ProviderCapability::ReadinessProbe,
+                    ProviderCapability::BalanceRead,
                     ProviderCapability::FundingEvidenceRead,
                 ],
             );
@@ -63,6 +64,7 @@ it('provisions an idempotent zero-balance system treasury position', function ()
                 connectionReference: $request->connectionReference,
                 checks: [
                     ProviderCapability::ReadinessProbe->value => true,
+                    ProviderCapability::BalanceRead->value => true,
                     ProviderCapability::FundingEvidenceRead->value => true,
                 ],
                 issues: [],
@@ -87,11 +89,13 @@ it('provisions an idempotent zero-balance system treasury position', function ()
                 'mode' => 'required',
                 'currency' => 'PHP',
                 'decimal_places' => 2,
+                'inventory_reference' => 'inventory:future_emi:primary:php',
                 'settlement_resource_reference' => 'resource:future_emi:primary:php',
                 'settlement_resource_type' => 'regulated_stored_value',
                 'custody_mode' => 'provider_projection',
                 'required_capabilities' => [
                     'readiness_probe',
+                    'balance_read',
                     'funding_evidence_read',
                 ],
             ],
@@ -109,13 +113,16 @@ it('provisions an idempotent zero-balance system treasury position', function ()
     $first = $service->provision();
     $second = $service->provision();
 
-    expect($first->positions)->toHaveCount(1)
-        ->and($second->positions)->toHaveCount(1)
-        ->and($first->positions[0]->positionReference)
-        ->toBe('position:system:future_emi:future-primary:php:clearing')
-        ->and($first->positions[0]->balanceMinor)->toBe(0)
-        ->and($second->positions[0]->balanceMinor)->toBe(0)
-        ->and(TreasuryPosition::query()->count())->toBe(1)
+    expect($first->positions)->toHaveCount(2)
+        ->and($second->positions)->toHaveCount(2)
+        ->and(collect($first->positions)->pluck('positionReference')->all())
+        ->toBe([
+            'position:system:future_emi:future-primary:php:clearing',
+            'position:system:future_emi:future-primary:php:unattributed',
+        ])
+        ->and(collect($first->positions)->pluck('balanceMinor')->unique()->all())->toBe([0])
+        ->and(collect($second->positions)->pluck('balanceMinor')->unique()->all())->toBe([0])
+        ->and(TreasuryPosition::query()->count())->toBe(2)
         ->and(Transaction::query()->count())->toBe($transactionsBefore);
 });
 

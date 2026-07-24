@@ -22,6 +22,7 @@ function treasuryConnectionConfiguration(
         'mode' => $mode,
         'currency' => 'PHP',
         'decimal_places' => 2,
+        'inventory_reference' => "inventory:{$provider}:primary:php",
         'settlement_resource_reference' => "resource:{$provider}:primary:php",
         'settlement_resource_type' => 'regulated_stored_value',
         'custody_mode' => 'provider_projection',

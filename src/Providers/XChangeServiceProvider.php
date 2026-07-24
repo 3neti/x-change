@@ -39,6 +39,10 @@ use LBHurtado\Voucher\Contracts\StoredValueExecutionGateway;
 use LBHurtado\Voucher\Events\VoucherDisbursementFailed;
 use LBHurtado\Voucher\Events\VoucherDisbursementSucceeded;
 use LBHurtado\Voucher\Services\ExecutionDriverRegistry;
+use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
+use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryPositionReadModelContract;
+use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
+use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
 use LBHurtado\XChange\Actions\Auth\AuthenticateMobileFirstUser;
 use LBHurtado\XChange\Actions\Auth\CreateNewMobileFirstUser;
 use LBHurtado\XChange\Console\Commands\Claim\LoadPayCodeRedemptionCompletionContextCommand;
@@ -65,6 +69,7 @@ use LBHurtado\XChange\Console\Commands\Revenue\ShowPendingRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Settlement\EvaluateSettlementEnvelopeCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\PreflightTreasuryCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\ProvisionTreasuryCommand;
+use LBHurtado\XChange\Console\Commands\Treasury\ReconcileOpeningTreasuryBalanceCommand;
 use LBHurtado\XChange\Console\Commands\Wallet\GetWalletBalanceCommand;
 use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\ApprovalWorkflowContract;
@@ -267,6 +272,7 @@ use LBHurtado\XChange\Services\Treasury\BavixTreasuryPositionLedgerResolver;
 use LBHurtado\XChange\Services\Treasury\DefaultTreasuryPrincipalReferenceResolver;
 use LBHurtado\XChange\Services\Treasury\TreasuryAccountBalanceReadModel;
 use LBHurtado\XChange\Services\Treasury\TreasuryAccountPortfolioProvisioningService;
+use LBHurtado\XChange\Services\Treasury\TreasuryOpeningBalanceReconciliationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XChange\Services\Treasury\TreasuryProvisioningService;
@@ -337,6 +343,18 @@ class XChangeServiceProvider extends ServiceProvider
             ),
         );
         $this->app->singleton(TreasuryProvisioningService::class);
+        $this->app->singleton(
+            TreasuryOpeningBalanceReconciliationService::class,
+            fn ($app): TreasuryOpeningBalanceReconciliationService => new TreasuryOpeningBalanceReconciliationService(
+                $app->make(TreasuryPreflightService::class),
+                $app->make(TreasuryProvisioningService::class),
+                $app->make(TreasuryInventoryOperationContract::class),
+                $app->make(TreasuryInventoryPositionReadModelContract::class),
+                $app->make(TreasuryPositionOperationContract::class),
+                $app->make(TreasuryPositionReadModelContract::class),
+                $app->tagged('emi.provider-balance-readers'),
+            ),
+        );
         $this->app->singleton(
             TreasuryPrincipalReferenceResolverContract::class,
             DefaultTreasuryPrincipalReferenceResolver::class,
@@ -925,6 +943,7 @@ class XChangeServiceProvider extends ServiceProvider
                 RunLifecycleScenarioGroupCommand::class,
                 PreflightTreasuryCommand::class,
                 ProvisionTreasuryCommand::class,
+                ReconcileOpeningTreasuryBalanceCommand::class,
                 InstallXChangeCommand::class,
                 DoctorXChangeCommand::class,
                 SeedCockpitDiagnosticActivityCommand::class,

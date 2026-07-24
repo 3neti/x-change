@@ -63,40 +63,45 @@ final readonly class TreasuryProvisioningService
                 continue;
             }
 
-            $positionReference = implode(':', [
-                'position',
-                'system',
-                $connection->provider,
-                $connection->reference,
-                mb_strtolower($connection->currency),
-                'clearing',
-            ]);
+            foreach ([
+                [TreasuryPositionPurpose::TreasuryClearing, 'clearing'],
+                [TreasuryPositionPurpose::LegacyUnattributed, 'unattributed'],
+            ] as [$purpose, $suffix]) {
+                $positionReference = implode(':', [
+                    'position',
+                    'system',
+                    $connection->provider,
+                    $connection->reference,
+                    mb_strtolower($connection->currency),
+                    $suffix,
+                ]);
 
-            $provisioned[] = $this->positions->provision(
-                $principal,
-                new TreasuryPositionDefinitionData(
-                    positionReference: $positionReference,
-                    principalReference: $principalReference,
-                    mandateReference: $mandateReference,
-                    settlementResourceReference: $connection->settlementResourceReference,
-                    settlementResourceType: $connection->settlementResourceType,
-                    provider: $connection->provider,
-                    connectionReference: $connection->reference,
-                    currency: $connection->currency,
-                    decimalPlaces: $connection->decimalPlaces,
-                    purpose: TreasuryPositionPurpose::TreasuryClearing,
-                    custodyMode: $connection->custodyMode,
-                    legalProfile: $legalProfile,
-                    legalProfileVersion: $legalProfileVersion,
-                    idempotencyKey: "position-registration:{$positionReference}",
-                    reconciliationReference: "reconciliation:{$connection->provider}:{$connection->reference}",
-                    metadata: [
-                        'provisioned_by' => 'x-change:treasury:provision',
-                        'legal_entity_reference' => $legalEntityReference,
-                        'opening_balance_minor' => 0,
-                    ],
-                ),
-            );
+                $provisioned[] = $this->positions->provision(
+                    $principal,
+                    new TreasuryPositionDefinitionData(
+                        positionReference: $positionReference,
+                        principalReference: $principalReference,
+                        mandateReference: $mandateReference,
+                        settlementResourceReference: $connection->settlementResourceReference,
+                        settlementResourceType: $connection->settlementResourceType,
+                        provider: $connection->provider,
+                        connectionReference: $connection->reference,
+                        currency: $connection->currency,
+                        decimalPlaces: $connection->decimalPlaces,
+                        purpose: $purpose,
+                        custodyMode: $connection->custodyMode,
+                        legalProfile: $legalProfile,
+                        legalProfileVersion: $legalProfileVersion,
+                        idempotencyKey: "position-registration:{$positionReference}",
+                        reconciliationReference: "reconciliation:{$connection->provider}:{$connection->reference}",
+                        metadata: [
+                            'provisioned_by' => 'x-change:treasury:provision',
+                            'legal_entity_reference' => $legalEntityReference,
+                            'opening_balance_minor' => 0,
+                        ],
+                    ),
+                );
+            }
         }
 
         return new TreasuryProvisioningData($preflight, $provisioned, $skipped);

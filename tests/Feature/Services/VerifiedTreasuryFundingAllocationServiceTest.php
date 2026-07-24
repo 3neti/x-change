@@ -54,6 +54,7 @@ it('recognizes and allocates verified funding exactly once through treasury posi
                 label: 'Future Bank',
                 capabilities: [
                     ProviderCapability::ReadinessProbe,
+                    ProviderCapability::BalanceRead,
                     ProviderCapability::FundingEvidenceRead,
                 ],
             );
@@ -74,6 +75,7 @@ it('recognizes and allocates verified funding exactly once through treasury posi
                 connectionReference: $request->connectionReference,
                 checks: [
                     ProviderCapability::ReadinessProbe->value => true,
+                    ProviderCapability::BalanceRead->value => true,
                     ProviderCapability::FundingEvidenceRead->value => true,
                 ],
                 issues: [],
@@ -87,11 +89,13 @@ it('recognizes and allocates verified funding exactly once through treasury posi
             'mode' => 'required',
             'currency' => 'PHP',
             'decimal_places' => 2,
+            'inventory_reference' => 'inventory:future-bank:primary:php',
             'settlement_resource_reference' => 'resource:future-bank:primary:php',
             'settlement_resource_type' => 'cash_at_bank',
             'custody_mode' => 'provider_projection',
             'required_capabilities' => [
                 'readiness_probe',
+                'balance_read',
                 'funding_evidence_read',
             ],
         ],
