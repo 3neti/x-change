@@ -22,6 +22,8 @@ it('documents the Standing Funding Address protocol and operator controls in pac
         ->toContain('observe_only')
         ->toContain('supervised')
         ->toContain('automatic')
+        ->toContain('XCHANGE_STANDING_FUNDING_CREDITABLE_STATUSES')
+        ->toContain('cannot create another Inventory recognition or Account credit')
         ->toContain('xchange:funding:sync-standing --provider=netbank --limit=100')
         ->toContain('NETBANK_FUNDING_CORPORATE_ACCOUNT_NAME')
         ->toContain('NETBANK_FUNDING_VCA_ALIAS_TOKEN')
@@ -34,5 +36,6 @@ it('documents the Standing Funding Address protocol and operator controls in pac
         ->toContain('STANDING_FUNDING_ADDRESS_PROTOCOL.md')
         ->and($runbook)
         ->toContain('Approve verified credit')
+        ->toContain('previously applied receipts were not applied again')
         ->toContain('never enters an amount, transaction ID, payer mobile, or destination');
 });

@@ -133,6 +133,8 @@ The Cockpit control is enabled by default outside production. Production require
 | Webhook arrived but balance did not change | Check Funding Intent and verification state; webhook receipt alone is not a credit |
 | Account Funding Address receipt remains Observed | Confirm recognition mode; `observe_only` deliberately makes no balance change |
 | Account Funding Address receipt awaits approval | Confirm NetBank evidence and limits, then use **Approve verified credit** as the address owner |
+| NetBank status is Pending but Applied is Yes | Pending recognition was explicitly enabled. The credit is provisional; monitor for a later settled or adverse provider status |
+| Repeated Check NetBank shows Applied is Yes | Expected idempotent replay. Confirm the notice says previously applied receipts were not applied again |
 | Unknown Standing Funding Address | Leave in suspense; never infer an Account from mobile, amount, or timing |
 | Mobile-derived address unavailable | Verify the operator mobile; do not substitute another user’s mobile |
 | Legacy address requires retirement | Stop; preserve the existing record and use an explicit migration/rotation procedure |

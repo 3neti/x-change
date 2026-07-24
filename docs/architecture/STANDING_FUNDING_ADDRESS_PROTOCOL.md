@@ -226,9 +226,11 @@ Settled evidence reaches `awaiting_approval`. The authenticated address owner ma
 
 ### `automatic`
 
-Settled evidence proceeds directly to recognition after every destination, status, currency, amount, and limit guard passes.
+Creditable evidence proceeds directly to recognition after every destination, status, currency, amount, activation-time, and limit guard passes.
 
-Changing the configured default affects new address bindings only. The persisted mode is the authority for an existing address.
+`settled` is always creditable. Additional normalized provider statuses may be enabled explicitly with `XCHANGE_STANDING_FUNDING_CREDITABLE_STATUSES`. For example, `settled,pending` applies a pending NetBank history transaction provisionally as soon as it is visible. The raw observation remains `pending`; x-change does not relabel it as settled.
+
+The persisted address mode is normally authoritative. Set `XCHANGE_STANDING_FUNDING_ENFORCE_RECOGNITION_MODE=true` only when the configured recognition mode must also be synchronized onto existing active addresses. The transition is locked, versioned, and audited before recognition runs.
 
 ## Receipt Lifecycle
 
@@ -237,7 +239,7 @@ provider observation
         │
         ▼
      observed
-        │ settled + exact destination/currency + limits
+        │ creditable status + exact destination/currency + limits
         ├──────── observe_only ────────→ observed (verified)
         ├──────── supervised ─────────→ awaiting_approval
         └──────── automatic ──────────→ ready
@@ -250,7 +252,9 @@ transaction before address activation ────→ ignored (no credit)
 post-settlement status change ─────────────→ suspense review
 ```
 
-A provider transaction key is derived from provider code and provider transaction ID. Pending and settled observations for the same provider transaction converge on one receipt. Provider replays cannot create another receipt.
+A provider transaction key is derived from provider code and provider transaction ID. Pending and settled observations for the same provider transaction converge on one receipt. The database enforces one receipt for that key; the Treasury operation and wallet transaction references are also unique. Provider replays and repeated **Check NetBank** requests therefore cannot create another Inventory recognition or Account credit.
+
+When pending recognition is enabled, a later settled observation updates the receipt’s latest immutable evidence without applying the amount again. A later adverse or incompatible status opens suspense for recovery review; it never creates a compensating debit implicitly.
 
 ## Settlement Transaction
 
@@ -259,10 +263,12 @@ The ready receipt is locked together with its Standing Funding Address and lates
 - address status is active;
 - address and receipt purpose are `account_funding`;
 - provider is identical;
-- provider status is `settled`;
+- provider status is present in the configured creditable-status policy;
 - provider occurrence time is at or after the address activation time;
 - exact hashed destination matches;
 - provider marked destination verification true;
+- receipt and address point to the same persisted Account reference;
+- provider transaction identity still resolves to the one existing receipt;
 - currency matches;
 - net amount is positive;
 - minimum, maximum, and daily limits pass.
@@ -349,6 +355,8 @@ If a provider cannot prove an exact destination, its observation enters suspense
 ```text
 XCHANGE_STANDING_FUNDING_ADDRESSES_ENABLED
 XCHANGE_STANDING_FUNDING_RECOGNITION_MODE
+XCHANGE_STANDING_FUNDING_ENFORCE_RECOGNITION_MODE
+XCHANGE_STANDING_FUNDING_CREDITABLE_STATUSES
 XCHANGE_STANDING_FUNDING_LOCK_SECONDS
 XCHANGE_STANDING_FUNDING_LOCK_WAIT_SECONDS
 XCHANGE_STANDING_FUNDING_SCHEDULED_SYNC_ENABLED
@@ -365,13 +373,24 @@ NetBank also requires its funding API/token endpoints, OAuth credentials, corpor
 NETBANK_FUNDING_CORPORATE_ACCOUNT_NUMBER
 NETBANK_FUNDING_CORPORATE_ACCOUNT_NAME
 NETBANK_FUNDING_VCA_ALIAS
+NETBANK_FUNDING_VCA_ALIAS_TOKEN
 NETBANK_FUNDING_STANDING_ADDRESS_SCHEME
 NETBANK_FUNDING_VCA_REFERENCE_LENGTH
 NETBANK_FUNDING_STANDING_HMAC_KEY_ID
 NETBANK_FUNDING_STANDING_HMAC_KEY
 ```
 
+The alias token is a provider-issued credential used for VCA operations that require authenticated alias control. A shared reusable address may be readable without it, but x-change must not manufacture, infer, or expose the token.
+
 Recommended production configuration:
+
+```text
+XCHANGE_STANDING_FUNDING_RECOGNITION_MODE=automatic
+XCHANGE_STANDING_FUNDING_ENFORCE_RECOGNITION_MODE=true
+XCHANGE_STANDING_FUNDING_CREDITABLE_STATUSES=settled,pending
+```
+
+This configuration prioritizes immediate Account availability when NetBank history first exposes the incoming credit. `pending` recognition is provisional and creates operational recovery exposure if the provider later rejects or reverses the transaction. Keep the default `settled`-only policy when that exposure is not acceptable.
 
 ```dotenv
 NETBANK_FUNDING_STANDING_ADDRESS_SCHEME=netbank-account-hmac-v2
@@ -432,7 +451,7 @@ The acceptance workflow never accepted an operator-supplied amount, destination,
 
 ## Rollout Gates
 
-1. Start with `observe_only`.
+1. Start with `observe_only`, or explicitly accept the provisional-credit exposure before enabling `pending`.
 2. Apply package migrations and publish package assets.
 3. Confirm the address is purpose-bound and absent from general page props.
 4. Scan with a small human-authorized amount.
@@ -441,6 +460,6 @@ The acceptance workflow never accepted an operator-supplied amount, destination,
 7. Prove replay produces one receipt, one Inventory operation, and one Account credit.
 8. Test below-minimum, above-maximum, currency mismatch, unknown destination, provider outage, and post-settlement status change.
 9. Move to `supervised`.
-10. Enable `automatic` only after operational review and live UAT.
+10. Enable `automatic` only after operational review and live UAT; prove that repeated checks leave the wallet transaction count unchanged.
 
 No automated test or Codex workflow initiates a real-money payment.
