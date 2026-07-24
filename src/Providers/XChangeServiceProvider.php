@@ -1613,33 +1613,27 @@ class XChangeServiceProvider extends ServiceProvider
 
     protected function alignAccountSystemUser(): void
     {
-        $currentIdentifier = config('account.system_user.identifier');
-        $currentColumn = config('account.system_user.identifier_column');
-        $currentModel = config('account.system_user.model');
+        $model = config('x-change.onboarding.issuer_model', User::class);
+        $identifier = config('x-change.payout.system_user_id');
+        $column = config('x-change.payout.system_user_column', 'id');
 
-        $walletDefaultIdentifier = env('SYSTEM_USER_ID', 'lester@hurtado.ph');
-        $walletDefaultColumn = 'email';
-        $walletDefaultModel = User::class;
+        $candidate = [
+            'model' => $model,
+            'identifier' => $identifier,
+            'identifier_column' => $column,
+        ];
 
-        if ($currentModel === $walletDefaultModel) {
-            config()->set(
-                'account.system_user.model',
-                config('x-change.onboarding.issuer_model', User::class)
-            );
-        }
+        $configuredCandidates = config('account.system_user.candidates', []);
 
-        if ($currentIdentifier === $walletDefaultIdentifier) {
-            config()->set(
-                'account.system_user.identifier',
-                config('x-change.payout.system_user_id')
-            );
-        }
+        config()->set('account.system_user.candidates', [
+            ...(is_array($configuredCandidates) ? $configuredCandidates : []),
+            'x-change' => $candidate,
+        ]);
 
-        if ($currentColumn === $walletDefaultColumn) {
-            config()->set(
-                'account.system_user.identifier_column',
-                config('x-change.payout.system_user_column', 'id')
-            );
-        }
+        // Preserve the wallet package's original configuration surface for
+        // integrations that have not yet adopted the resolver contract.
+        config()->set('account.system_user.model', $model);
+        config()->set('account.system_user.identifier', $identifier);
+        config()->set('account.system_user.identifier_column', $column);
     }
 }
