@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
 use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Models\DisbursementReconciliation;
@@ -108,6 +109,8 @@ it('runs a fake-provider live cash transfer through the voucher execution engine
     $exitCode = Artisan::call('xchange:lifecycle:run', [
         'scenario' => 'execution_engine_basic_cash_live_transfer',
         '--live-provider' => true,
+        '--confirm-live-transfer' => true,
+        '--run-reference' => 'engine-live-transfer-test',
         '--json' => true,
         '--poll' => 1,
         '--max-polls' => 1,
@@ -129,4 +132,32 @@ it('runs a fake-provider live cash transfer through the voucher execution engine
         ->and($reconciliation->account_number_masked)->toBe('*******1987');
 
     $provider->assertDisburseCalledTimes(1);
+});
+
+it('requires explicit transfer confirmation and a stable run reference', function () {
+    config([
+        'x-change.provider_runtime.lifecycle.allow_live_provider_scenarios' => true,
+    ]);
+
+    $withoutConfirmation = Artisan::call('xchange:lifecycle:run', [
+        'scenario' => 'execution_engine_basic_cash_live_transfer',
+        '--live-provider' => true,
+        '--json' => true,
+    ]);
+    $confirmationPayload = json_decode(Artisan::output(), true);
+
+    expect($withoutConfirmation)->toBe(Command::FAILURE)
+        ->and($confirmationPayload['message'])
+        ->toContain('--confirm-live-transfer');
+
+    $withoutRunReference = Artisan::call('xchange:lifecycle:run', [
+        'scenario' => 'execution_engine_basic_cash_live_transfer',
+        '--live-provider' => true,
+        '--confirm-live-transfer' => true,
+        '--json' => true,
+    ]);
+    $runReferencePayload = json_decode(Artisan::output(), true);
+
+    expect($withoutRunReference)->toBe(Command::FAILURE)
+        ->and($runReferencePayload['message'])->toContain('--run-reference');
 });

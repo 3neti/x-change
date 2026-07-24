@@ -20,6 +20,8 @@ final readonly class LifecycleScenarioRunOptions
         public bool $acceptPending = false,
         public bool $approvalPipeline = false,
         public bool $liveProvider = false,
+        public bool $confirmLiveTransfer = false,
+        public ?string $runReference = null,
     ) {}
 
     public static function fromConsoleOptions(array $options): self
@@ -38,6 +40,8 @@ final readonly class LifecycleScenarioRunOptions
             acceptPending: (bool) ($options['accept-pending'] ?? false),
             approvalPipeline: (bool) ($options['approval-pipeline'] ?? false),
             liveProvider: (bool) ($options['live-provider'] ?? false),
+            confirmLiveTransfer: (bool) ($options['confirm-live-transfer'] ?? false),
+            runReference: self::stringOrNull($options['run-reference'] ?? null),
         );
     }
 
@@ -104,6 +108,9 @@ final readonly class LifecycleScenarioRunOptions
             noClaim: (bool) ($payload['no_claim'] ?? false),
             acceptPending: (bool) ($payload['accept_pending'] ?? false),
             approvalPipeline: (bool) ($payload['approval_pipeline'] ?? false),
+            liveProvider: (bool) ($payload['live_provider'] ?? false),
+            confirmLiveTransfer: (bool) ($payload['confirm_live_transfer'] ?? false),
+            runReference: self::stringOrNull($payload['run_reference'] ?? null),
         );
     }
 }

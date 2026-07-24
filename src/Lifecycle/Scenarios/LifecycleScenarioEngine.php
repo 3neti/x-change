@@ -127,6 +127,20 @@ final class LifecycleScenarioEngine
             );
         }
 
+        if ($this->requiresConfirmedLiveTransfer($scenario) && ! $options->confirmLiveTransfer) {
+            return $this->liveProviderRefusal(
+                scenarioKey: $scenarioKey,
+                message: 'This lifecycle scenario can move real money. Pass --confirm-live-transfer to continue.',
+            );
+        }
+
+        if ($this->requiresConfirmedLiveTransfer($scenario) && $options->runReference === null) {
+            return $this->liveProviderRefusal(
+                scenarioKey: $scenarioKey,
+                message: 'Live transfer lifecycle scenarios require a stable --run-reference.',
+            );
+        }
+
         if (
             ! in_array($mode, ['turnkey_onboarding', 'live_provider_verification'], true)
             && $output->isJson()
@@ -247,6 +261,8 @@ final class LifecycleScenarioEngine
             'poll' => $bootstrap->poll,
             'max_polls' => $bootstrap->maxPolls,
             'approval_pipeline' => $options->approvalPipeline,
+            'confirm_live_transfer' => $options->confirmLiveTransfer,
+            'run_reference' => $options->runReference,
         ];
 
         $result = $resolution->runner->run(
@@ -294,6 +310,18 @@ final class LifecycleScenarioEngine
 
     /**
      * @param  array<string, mixed>  $scenario
+     */
+    private function requiresConfirmedLiveTransfer(array $scenario): bool
+    {
+        return (bool) data_get(
+            $scenario,
+            'execution_runtime.confirm_live_transfer',
+            false,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $scenario
      * @param  array<string, array<string, mixed>>  $attempts
      */
     private function runWithoutVoucherBootstrap(
@@ -318,6 +346,8 @@ final class LifecycleScenarioEngine
             ...(array) data_get($scenario, '_runtime', []),
             'selected_attempt' => $options->onlyAttempt,
             'approval_pipeline' => $options->approvalPipeline,
+            'confirm_live_transfer' => $options->confirmLiveTransfer,
+            'run_reference' => $options->runReference,
         ];
 
         $result = $runner->run(

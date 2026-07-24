@@ -1731,6 +1731,7 @@ return [
             ],
             'execution_runtime' => [
                 'live_provider' => true,
+                'confirm_live_transfer' => true,
                 'operation' => [
                     'operation' => 'claim_transfer',
                     'claim' => [

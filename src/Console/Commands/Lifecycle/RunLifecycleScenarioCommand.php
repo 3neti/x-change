@@ -31,6 +31,8 @@ class RunLifecycleScenarioCommand extends Command
         {--accept-pending : Treat a trusted pending provider transaction as good enough}
         {--approval-pipeline : Run claims through the shared approval pipeline instead of inline provider OTP prompts}
         {--live-provider : Allow live provider lifecycle verification scenarios}
+        {--confirm-live-transfer : Confirm that this run may initiate an irreversible provider transfer}
+        {--run-reference= : Stable operator reference used to prevent duplicate live-transfer runs}
         {--only-attempt= : Run only one named attempt from the scenario}
         {--json : Output JSON}';
 
