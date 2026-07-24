@@ -555,6 +555,66 @@ export type CockpitTreasuryPosition = {
     has_treasury_facts: boolean;
 };
 
+export type CockpitFundingTreasuryConnection = {
+    provider: string;
+    provider_label: string;
+    mode: string;
+    currency: string;
+    status: string;
+    client_funds_minor: number;
+    client_funds: string;
+    pay_code_reserve_minor: number;
+    pay_code_reserve: string;
+    account_position_minor: number;
+    account_position: string;
+    provider_inventory_minor: number | null;
+    provider_inventory: string | null;
+    provider_liquidity_minor: number | null;
+    provider_liquidity: string | null;
+    provider_liquidity_status: string;
+    provider_liquidity_is_stale: boolean;
+    provider_liquidity_checked_at?: string | null;
+    issuance_capacity_minor: number | null;
+    issuance_capacity: string | null;
+    inventory_matches_positions: boolean | null;
+    control_status: string;
+    provider_calls: false;
+};
+
+export type CockpitFundingTreasuryPortfolio = {
+    schema: string;
+    status: string;
+    read_only: true;
+    provider_calls: false;
+    currency: string;
+    vocabulary: Record<
+        string,
+        {
+            label: string;
+            description: string;
+        }
+    >;
+    totals: {
+        client_funds_minor: number;
+        client_funds: string;
+        pay_code_reserve_minor: number;
+        pay_code_reserve: string;
+        account_position_minor: number;
+        account_position: string;
+        provider_inventory_minor: number | null;
+        provider_inventory: string | null;
+        issuance_capacity_minor: number | null;
+        issuance_capacity: string | null;
+    };
+    connections: CockpitFundingTreasuryConnection[];
+    accounting_boundary: {
+        provider_outflow: 'provider_principal_only';
+        sender_system_charge: 'deferred_accounting_wave';
+        provider_liquidity_source: 'cached_projection_only';
+    };
+    redactions: Record<string, boolean>;
+};
+
 export type CockpitFundingReadModel = {
     schema: string;
     status: string;
@@ -567,6 +627,7 @@ export type CockpitFundingReadModel = {
     approval_queue: CockpitFundingApproval[];
     recovery_holds: CockpitFundingRecoveryHold[];
     treasury_positions: CockpitTreasuryPosition[];
+    treasury_portfolio: CockpitFundingTreasuryPortfolio;
     controls: Record<string, boolean | string>;
     redactions: CockpitReadModelRedactions;
 };

@@ -137,6 +137,86 @@ const fundingReadModel = {
             has_treasury_facts: true,
         },
     ],
+    treasury_portfolio: {
+        schema: 'x-change.cockpit.funding-treasury-portfolio.v1',
+        status: 'available',
+        read_only: true,
+        provider_calls: false,
+        currency: 'PHP',
+        vocabulary: {},
+        totals: {
+            client_funds_minor: 2_000_000,
+            client_funds: '₱20,000.00',
+            pay_code_reserve_minor: 495_000,
+            pay_code_reserve: '₱4,950.00',
+            account_position_minor: 2_495_000,
+            account_position: '₱24,950.00',
+            provider_inventory_minor: 2_495_000,
+            provider_inventory: '₱24,950.00',
+            issuance_capacity_minor: 1_505_000,
+            issuance_capacity: '₱15,050.00',
+        },
+        connections: [
+            {
+                provider: 'netbank',
+                provider_label: 'NetBank',
+                mode: 'live',
+                currency: 'PHP',
+                status: 'active',
+                client_funds_minor: 2_000_000,
+                client_funds: '₱20,000.00',
+                pay_code_reserve_minor: 495_000,
+                pay_code_reserve: '₱4,950.00',
+                account_position_minor: 2_495_000,
+                account_position: '₱24,950.00',
+                provider_inventory_minor: 2_495_000,
+                provider_inventory: '₱24,950.00',
+                provider_liquidity_minor: 3_000_000,
+                provider_liquidity: '₱30,000.00',
+                provider_liquidity_status: 'cached',
+                provider_liquidity_is_stale: false,
+                provider_liquidity_checked_at: '2026-07-24T09:00:00+08:00',
+                issuance_capacity_minor: 1_505_000,
+                issuance_capacity: '₱15,050.00',
+                inventory_matches_positions: true,
+                control_status: 'reconciled',
+                provider_calls: false,
+            },
+            {
+                provider: 'paynamics_constellation',
+                provider_label: 'Paynamics',
+                mode: 'disabled',
+                currency: 'PHP',
+                status: 'disabled',
+                client_funds_minor: 0,
+                client_funds: '₱0.00',
+                pay_code_reserve_minor: 0,
+                pay_code_reserve: '₱0.00',
+                account_position_minor: 0,
+                account_position: '₱0.00',
+                provider_inventory_minor: null,
+                provider_inventory: null,
+                provider_liquidity_minor: null,
+                provider_liquidity: null,
+                provider_liquidity_status: 'disabled',
+                provider_liquidity_is_stale: true,
+                provider_liquidity_checked_at: null,
+                issuance_capacity_minor: null,
+                issuance_capacity: null,
+                inventory_matches_positions: null,
+                control_status: 'not_registered',
+                provider_calls: false,
+            },
+        ],
+        accounting_boundary: {
+            provider_outflow: 'provider_principal_only',
+            sender_system_charge: 'deferred_accounting_wave',
+            provider_liquidity_source: 'cached_projection_only',
+        },
+        redactions: {
+            raw_evidence_exposed: false,
+        },
+    },
     controls: {
         funding_intent_required: true,
         manual_balance_adjustment_enabled: false,
@@ -309,7 +389,39 @@ describe('Cockpit Funding foundation', () => {
         expect(wrapper.text()).toContain(
             'amount and evidence inputs are disabled',
         );
-        expect(wrapper.text()).toContain('Treasury Inventory');
+        expect(
+            wrapper.get('[data-testid="funding-treasury-portfolio"]').text(),
+        ).toContain('Funding position');
+        expect(
+            wrapper.get('[data-testid="funding-treasury-portfolio"]').text(),
+        ).toContain('Client Funds');
+        expect(
+            wrapper.get('[data-testid="funding-treasury-portfolio"]').text(),
+        ).toContain('Reserved for Pay Codes');
+        expect(
+            wrapper.get('[data-testid="funding-treasury-portfolio"]').text(),
+        ).toContain('Provider Inventory');
+        expect(
+            wrapper.get('[data-testid="funding-treasury-portfolio"]').text(),
+        ).toContain('Issuance Capacity');
+        expect(
+            wrapper.get('[data-testid="funding-treasury-portfolio"]').text(),
+        ).toContain('₱15,050.00');
+        expect(
+            wrapper
+                .get('[data-testid="funding-treasury-provider-breakdown"]')
+                .attributes('open'),
+        ).toBeUndefined();
+        expect(
+            wrapper
+                .get('[data-testid="funding-treasury-provider-breakdown"]')
+                .text(),
+        ).toContain('Provider Liquidity');
+        expect(
+            wrapper
+                .get('[data-testid="funding-treasury-provider-breakdown"]')
+                .text(),
+        ).toContain('deferred Accounting Wave');
         expect(
             wrapper
                 .get('[data-testid="funding-provider-controls"]')
@@ -928,6 +1040,23 @@ describe('Cockpit Funding foundation', () => {
                     approval_queue: [],
                     recovery_holds: [],
                     treasury_positions: [],
+                    treasury_portfolio: {
+                        ...fundingReadModel.treasury_portfolio,
+                        status: 'not_configured',
+                        totals: {
+                            client_funds_minor: 0,
+                            client_funds: '₱0.00',
+                            pay_code_reserve_minor: 0,
+                            pay_code_reserve: '₱0.00',
+                            account_position_minor: 0,
+                            account_position: '₱0.00',
+                            provider_inventory_minor: null,
+                            provider_inventory: null,
+                            issuance_capacity_minor: null,
+                            issuance_capacity: null,
+                        },
+                        connections: [],
+                    },
                 },
             },
         });
@@ -939,8 +1068,10 @@ describe('Cockpit Funding foundation', () => {
         );
         expect(wrapper.text()).toContain('No active funding recovery holds.');
         expect(wrapper.text()).toContain(
-            'No Treasury Inventory has been recognized',
+            'No provider Treasury connection is configured.',
         );
+        expect(wrapper.text()).toContain('Provider InventoryNot available');
+        expect(wrapper.text()).toContain('Issuance CapacityNot available');
         expect(wrapper.text()).toContain(
             'Funding instructions will appear here once',
         );

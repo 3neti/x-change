@@ -49,7 +49,7 @@ const activeFundingMode = ref<FundingWorkspaceMode>('self_top_up');
 const fundingWorkspaceModes = computed(() => [
     {
         key: 'self_top_up' as const,
-        label: 'Reusable Funding Address',
+        label: 'Self Top-Up',
         description:
             'Reveal your reusable QR Ph address, then check NetBank for incoming funds.',
     },
@@ -234,6 +234,37 @@ const summaryCards = computed(() => [
         tone: 'text-rose-700 dark:text-rose-300',
     },
 ]);
+
+const treasuryPortfolioCards = computed(() => {
+    const totals = props.funding_read_model.treasury_portfolio.totals;
+
+    return [
+        {
+            key: 'client-funds',
+            label: 'Client Funds',
+            value: totals.client_funds ?? 'Not available',
+            helper: 'This Account’s provider-positioned funds.',
+        },
+        {
+            key: 'pay-code-reserve',
+            label: 'Reserved for Pay Codes',
+            value: totals.pay_code_reserve ?? 'Not available',
+            helper: 'This Account’s outstanding Pay Code obligation.',
+        },
+        {
+            key: 'provider-inventory',
+            label: 'Provider Inventory',
+            value: totals.provider_inventory ?? 'Not available',
+            helper: 'Recognized provider inventory across active connections.',
+        },
+        {
+            key: 'issuance-capacity',
+            label: 'Issuance Capacity',
+            value: totals.issuance_capacity ?? 'Not available',
+            helper: 'The lower of this Account’s position and fresh provider liquidity, after Pay Code reserve.',
+        },
+    ];
+});
 
 const safeguards = [
     'Every credit is bound to an exact Funding Intent or an immutable Account Funding Address.',
@@ -891,6 +922,214 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         {{ card.helper }}
                     </p>
                 </article>
+            </section>
+
+            <section
+                class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                data-testid="funding-treasury-portfolio"
+            >
+                <div
+                    class="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800"
+                >
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <p
+                                class="text-xs font-semibold tracking-[0.16em] text-sky-700 uppercase dark:text-sky-300"
+                            >
+                                Account Treasury
+                            </p>
+                            <span
+                                class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold text-slate-600 uppercase dark:bg-slate-800 dark:text-slate-300"
+                            >
+                                read-only
+                            </span>
+                        </div>
+                        <h2
+                            class="mt-0.5 text-base font-semibold text-slate-950 dark:text-white"
+                        >
+                            Funding position
+                        </h2>
+                    </div>
+                    <p
+                        class="text-xs text-slate-500 sm:text-right dark:text-slate-400"
+                    >
+                        Cached projections only · no provider call on page load
+                    </p>
+                </div>
+
+                <dl class="grid grid-cols-2 xl:grid-cols-4">
+                    <div
+                        v-for="(card, index) in treasuryPortfolioCards"
+                        :key="card.key"
+                        class="min-w-0 border-slate-200 px-3 py-3 text-center dark:border-slate-800"
+                        :class="[
+                            index % 2 === 1 ? 'border-l' : '',
+                            index >= 2 ? 'border-t xl:border-t-0' : '',
+                            index >= 1 ? 'xl:border-l' : '',
+                        ]"
+                    >
+                        <dt
+                            class="truncate text-[0.65rem] font-semibold tracking-[0.08em] text-slate-500 uppercase dark:text-slate-400"
+                        >
+                            {{ card.label }}
+                        </dt>
+                        <dd
+                            class="mt-1 truncate text-base font-semibold tracking-tight text-slate-950 dark:text-white"
+                        >
+                            {{ card.value }}
+                        </dd>
+                        <span class="sr-only">{{ card.helper }}</span>
+                    </div>
+                </dl>
+
+                <details
+                    class="border-t border-slate-200 px-4 py-2.5 dark:border-slate-800"
+                    data-testid="funding-treasury-provider-breakdown"
+                >
+                    <summary
+                        class="cursor-pointer text-xs font-semibold text-slate-700 marker:text-slate-400 dark:text-slate-300"
+                    >
+                        Provider breakdown
+                        <span class="font-normal text-slate-500">
+                            ({{
+                                funding_read_model.treasury_portfolio
+                                    .connections.length
+                            }})
+                        </span>
+                    </summary>
+                    <div
+                        v-if="
+                            funding_read_model.treasury_portfolio.connections
+                                .length
+                        "
+                        class="mt-3 grid gap-3 lg:grid-cols-2"
+                    >
+                        <article
+                            v-for="connection in funding_read_model
+                                .treasury_portfolio.connections"
+                            :key="`${connection.provider}-${connection.currency}`"
+                            class="rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-700 dark:bg-slate-950/40"
+                        >
+                            <div
+                                class="flex flex-wrap items-center justify-between gap-2"
+                            >
+                                <p
+                                    class="text-sm font-semibold text-slate-950 dark:text-white"
+                                >
+                                    {{ connection.provider_label }}
+                                </p>
+                                <span
+                                    class="rounded-full bg-white px-2 py-0.5 text-[0.65rem] font-semibold text-slate-600 uppercase ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700"
+                                >
+                                    {{ displayLabel(connection.status) }}
+                                </span>
+                            </div>
+                            <dl
+                                class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3"
+                            >
+                                <div>
+                                    <dt class="text-slate-500">Client Funds</dt>
+                                    <dd
+                                        class="mt-0.5 font-semibold text-slate-900 dark:text-white"
+                                    >
+                                        {{ connection.client_funds }}
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt class="text-slate-500">
+                                        Pay Code Reserve
+                                    </dt>
+                                    <dd
+                                        class="mt-0.5 font-semibold text-slate-900 dark:text-white"
+                                    >
+                                        {{ connection.pay_code_reserve }}
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt class="text-slate-500">
+                                        Provider Liquidity
+                                    </dt>
+                                    <dd
+                                        class="mt-0.5 font-semibold text-slate-900 dark:text-white"
+                                    >
+                                        {{
+                                            connection.provider_liquidity ??
+                                            'Not available'
+                                        }}
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt class="text-slate-500">
+                                        Provider Inventory
+                                    </dt>
+                                    <dd
+                                        class="mt-0.5 font-semibold text-slate-900 dark:text-white"
+                                    >
+                                        {{
+                                            connection.provider_inventory ??
+                                            'Not available'
+                                        }}
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt class="text-slate-500">
+                                        Issuance Capacity
+                                    </dt>
+                                    <dd
+                                        class="mt-0.5 font-semibold text-slate-900 dark:text-white"
+                                    >
+                                        {{
+                                            connection.issuance_capacity ??
+                                            'Not available'
+                                        }}
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt class="text-slate-500">Control</dt>
+                                    <dd
+                                        class="mt-0.5 font-semibold text-slate-900 dark:text-white"
+                                    >
+                                        {{
+                                            displayLabel(
+                                                connection.control_status,
+                                            )
+                                        }}
+                                    </dd>
+                                </div>
+                            </dl>
+                            <p
+                                class="mt-3 border-t border-slate-200 pt-2 text-[0.7rem] text-slate-500 dark:border-slate-800 dark:text-slate-400"
+                            >
+                                Liquidity:
+                                {{
+                                    displayLabel(
+                                        connection.provider_liquidity_status,
+                                    )
+                                }}
+                                · checked
+                                {{
+                                    displayTime(
+                                        connection.provider_liquidity_checked_at,
+                                    )
+                                }}
+                            </p>
+                        </article>
+                    </div>
+                    <p
+                        v-else
+                        class="mt-3 text-xs text-slate-500 dark:text-slate-400"
+                    >
+                        No provider Treasury connection is configured.
+                    </p>
+                    <p
+                        class="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400"
+                    >
+                        Provider outflow reflects principal only. Sender-side
+                        system charges remain in the deferred Accounting Wave
+                        until explicit Treasury debit and revenue allocation are
+                        implemented.
+                    </p>
+                </details>
             </section>
 
             <section
@@ -2467,56 +2706,6 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 No active funding recovery holds.
                             </p>
                         </article>
-                    </section>
-
-                    <section
-                        class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                    >
-                        <div
-                            class="flex flex-wrap items-center justify-between gap-3"
-                        >
-                            <div>
-                                <p
-                                    class="text-xs font-semibold tracking-[0.16em] text-slate-500 uppercase"
-                                >
-                                    provider-neutral Treasury grammar
-                                </p>
-                                <h2 class="mt-1 text-lg font-semibold">
-                                    Treasury Inventory
-                                </h2>
-                            </div>
-                            <span
-                                class="rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-                                >read-only positions</span
-                            >
-                        </div>
-                        <div
-                            v-if="funding_read_model.treasury_positions.length"
-                            class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
-                        >
-                            <div
-                                v-for="position in funding_read_model.treasury_positions"
-                                :key="`${position.provider}-${position.currency}`"
-                                class="rounded-lg border border-slate-200 p-4 dark:border-slate-700"
-                            >
-                                <p
-                                    class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
-                                >
-                                    {{ displayLabel(position.provider) }}
-                                </p>
-                                <p class="mt-1 text-xl font-semibold">
-                                    {{ position.recognized }}
-                                </p>
-                                <p class="mt-1 text-xs text-slate-500">
-                                    {{ displayLabel(position.status) }} ·
-                                    durable Inventory facts
-                                </p>
-                            </div>
-                        </div>
-                        <p v-else class="mt-4 text-sm text-slate-500">
-                            No Treasury Inventory has been recognized from
-                            verified funding yet.
-                        </p>
                     </section>
                 </div>
             </details>
