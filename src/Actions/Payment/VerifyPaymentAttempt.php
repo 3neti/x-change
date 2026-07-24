@@ -50,7 +50,11 @@ class VerifyPaymentAttempt
             return $attempt->load('events');
         }
 
-        if ($attempt->expires_at?->isPast()) {
+        $expiryBoundary = $attempt->expires_at?->addSeconds(
+            max(0, (int) config('x-change.payment.attempts.settlement_grace_seconds', 300)),
+        );
+
+        if ($expiryBoundary?->isPast()) {
             return $this->transition->handle(
                 $attempt,
                 PaymentAttemptStatus::Expired,

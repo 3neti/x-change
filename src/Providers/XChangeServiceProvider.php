@@ -57,6 +57,7 @@ use LBHurtado\XChange\Console\Commands\Onboarding\OnboardIssuerCommand;
 use LBHurtado\XChange\Console\Commands\Onboarding\OpenIssuerWalletCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\EstimatePayCodeCostCommand;
 use LBHurtado\XChange\Console\Commands\PayCode\GeneratePayCodeCommand;
+use LBHurtado\XChange\Console\Commands\Payment\VerifyOpenPaymentAttemptsCommand;
 use LBHurtado\XChange\Console\Commands\ReconcilePendingDisbursementsCommand;
 use LBHurtado\XChange\Console\Commands\Revenue\CollectRevenueCommand;
 use LBHurtado\XChange\Console\Commands\Revenue\ShowPendingRevenueCommand;
@@ -840,6 +841,7 @@ class XChangeServiceProvider extends ServiceProvider
         $this->decorateOnboardingCompletionHook();
         $this->bootConfig();
         $this->bootFundingVerificationRateLimiter();
+        $this->bootPaymentVerificationRateLimiter();
         $this->bootFundingVerificationSchedule();
         $this->bootFundingBroadcastChannel();
         $this->bootRoutes();
@@ -859,6 +861,7 @@ class XChangeServiceProvider extends ServiceProvider
                 SubmitPayCodeClaimCommand::class,
                 CheckDisbursementStatusCommand::class,
                 VerifyOpenFundingIntentsCommand::class,
+                VerifyOpenPaymentAttemptsCommand::class,
                 SyncStandingFundingAddressesCommand::class,
                 ReconcilePendingDisbursementsCommand::class,
 
@@ -902,6 +905,16 @@ class XChangeServiceProvider extends ServiceProvider
         });
     }
 
+    protected function bootPaymentVerificationRateLimiter(): void
+    {
+        RateLimiter::for('x-change-payment-verification', function (object $job): Limit {
+            return Limit::perMinute(max(
+                1,
+                (int) config('x-change.payment.attempts.verification_provider_rate_limit_per_minute', 30),
+            ))->by((string) data_get($job, 'providerCode', 'unknown'));
+        });
+    }
+
     protected function bootFundingBroadcastChannel(): void
     {
         Broadcast::channel(
@@ -914,6 +927,21 @@ class XChangeServiceProvider extends ServiceProvider
 
     protected function bootFundingVerificationSchedule(): void
     {
+        if ((bool) config('x-change.payment.attempts.scheduled_verification_enabled', true)) {
+            $batchSize = max(
+                1,
+                (int) config('x-change.payment.attempts.scheduled_batch_size', 100),
+            );
+
+            $this->callAfterResolving(Schedule::class, function (Schedule $schedule) use ($batchSize): void {
+                $schedule
+                    ->command("xchange:payments:verify-open --provider=netbank --limit={$batchSize}")
+                    ->name('xchange:payments:verify-open:netbank')
+                    ->everyMinute()
+                    ->withoutOverlapping(5);
+            });
+        }
+
         if ((bool) config('x-change.funding.scheduled_verification_enabled', true)) {
             $batchSize = max(
                 1,

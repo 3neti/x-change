@@ -1313,6 +1313,10 @@ return [
             'instruction_lock_wait_seconds' => 5,
             'verification_lock_seconds' => 120,
             'verification_lock_wait_seconds' => 5,
+            'verification_provider_rate_limit_per_minute' => 30,
+            'scheduled_verification_enabled' => true,
+            'scheduled_batch_size' => 100,
+            'settlement_grace_seconds' => 300,
             'public_read_middleware' => [
                 'throttle:60,1',
             ],

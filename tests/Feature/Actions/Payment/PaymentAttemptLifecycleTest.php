@@ -157,6 +157,23 @@ it('moves mismatched authoritative payment evidence to suspense', function (): v
         ->and(VoucherCollection::query()->count())->toBe(0);
 });
 
+it('expires an unpaid attempt after the configured settlement grace', function (): void {
+    config()->set('x-change.payment.attempts.settlement_grace_seconds', 300);
+    $voucher = paymentAttemptCollectibleVoucher();
+    $attempt = issuedPaymentAttempt($voucher);
+    $this->travelTo($attempt->expires_at->addMinutes(6));
+
+    $checked = app(VerifyPaymentAttempt::class)->handle(
+        $attempt,
+        PaymentVerificationTrigger::Schedule,
+    );
+
+    expect($checked->status)->toBe(PaymentAttemptStatus::Expired)
+        ->and($checked->expired_at)->not->toBeNull()
+        ->and($checked->events->last()->event_type)->toBe('payment_attempt_expired')
+        ->and(VoucherCollection::query()->count())->toBe(0);
+});
+
 function paymentAttemptCollectibleVoucher(): Voucher
 {
     return paymentAttemptCollectibleVoucherForUser(actingAsTestUser());
