@@ -63,6 +63,40 @@ return [
         ],
     ],
 
+    'treasury_live_basic_cash' => [
+        'enabled' => (bool) env(
+            'XCHANGE_LIFECYCLE_TREASURY_LIVE_BASIC_CASH_ENABLED',
+            env('APP_ENV') === 'local',
+        ),
+        'allowed_environments' => array_values(array_filter(array_map(
+            'trim',
+            explode(
+                ',',
+                (string) env(
+                    'XCHANGE_LIFECYCLE_TREASURY_LIVE_BASIC_CASH_ENVIRONMENTS',
+                    'local,testing',
+                ),
+            ),
+        ))),
+        'lock_seconds' => (int) env(
+            'XCHANGE_LIFECYCLE_TREASURY_LIVE_BASIC_CASH_LOCK_SECONDS',
+            600,
+        ),
+        'lock_wait_seconds' => (int) env(
+            'XCHANGE_LIFECYCLE_TREASURY_LIVE_BASIC_CASH_LOCK_WAIT_SECONDS',
+            5,
+        ),
+        'required_tables' => [
+            'x_change_lifecycle_money_runs',
+            'disbursement_reconciliations',
+            'treasury_inventories',
+            'treasury_inventory_operations',
+            'treasury_positions',
+            'treasury_position_operations',
+            'vouchers',
+        ],
+    ],
+
     'scenarios' => [
 
         /*
@@ -440,6 +474,70 @@ return [
                 'connection' => 'netbank-primary',
                 'funding_amount_minor' => 10_000,
                 'legal_entity_reference' => 'legal-entity:x-change:lifecycle',
+            ],
+        ],
+
+        'treasury_live_basic_cash' => [
+            'label' => 'Treasury Live Basic Cash',
+            'description' => 'Synchronizes authoritative provider liquidity, exposes system and Account positions, issues one basic_cash Pay Code, and claims it through the live payout provider under a replay-safe run reference.',
+            'category' => 'live-provider',
+            'tags' => ['treasury', 'accounting', 'basic_cash', 'live-provider', 'netbank'],
+            'mode' => 'treasury_live_basic_cash',
+            'amount' => 12.50,
+            'currency' => 'PHP',
+            'cash' => [
+                'settlement_rail' => 'INSTAPAY',
+                'fee_strategy' => 'absorb',
+                'validation' => [
+                    'country' => 'PH',
+                ],
+            ],
+            'inputs' => [
+                'fields' => [],
+            ],
+            'feedback' => [],
+            'execution' => [
+                'schema' => 'voucher.execution.v1',
+                'driver' => 'x_change_live_cash',
+                'metadata' => [
+                    'x_change_live_cash' => [
+                        'claim_owner' => 'x-change',
+                        'provider' => 'netbank',
+                        'settlement_rail' => 'INSTAPAY',
+                    ],
+                ],
+            ],
+            'execution_runtime' => [
+                'live_provider' => true,
+                'confirm_live_transfer' => true,
+                'operation' => [
+                    'operation' => 'claim_transfer',
+                    'claim' => [
+                        'mobile' => env('XCHANGE_LIFECYCLE_TURNKEY_MOBILE', env('XCHANGE_LIFECYCLE_TEST_USER_MOBILE', '09173011987')),
+                        'recipient_country' => 'PH',
+                        'bank_account' => [
+                            'bank_code' => env('XCHANGE_LIFECYCLE_BANK_CODE', 'GXCHPHM2XXX'),
+                            'account_number' => env('XCHANGE_LIFECYCLE_ACCOUNT_NUMBER', '09173011987'),
+                        ],
+                        'inputs' => [],
+                    ],
+                    'poll' => [
+                        'timeout' => 180,
+                        'poll' => 10,
+                        'accept_pending' => false,
+                    ],
+                ],
+            ],
+            'treasury' => [
+                'provider' => 'netbank',
+                'connection' => 'netbank-primary',
+                'report_connections' => [
+                    'netbank-primary',
+                    'paynamics-primary',
+                ],
+            ],
+            'expect' => [
+                'tariffs' => ['cash'],
             ],
         ],
 
