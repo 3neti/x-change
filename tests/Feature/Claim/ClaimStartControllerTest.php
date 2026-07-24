@@ -118,6 +118,23 @@ it('attaches claim experience shadow payload before starting form flow', functio
         ->assertRedirect('/form-flow/flow-shadow-test');
 });
 
+it('starts a canonical claim flow only through the explicit post route', function () {
+    $this->withoutMiddleware();
+
+    $voucher = claimVoucherWithoutRiderSplash();
+
+    mockDriverForClaimVoucher($this, $voucher);
+
+    assertClaimExperienceStartFlow($this, function (array $experience): void {
+        expect(data_get($experience, 'version'))->toBe(1)
+            ->and(data_get($experience, 'entry.mode'))->toBe('form_first');
+    }, 'flow-explicit-post-test');
+
+    $this->post(route('x-change.claim.flows.store', [
+        'code' => $voucher->code,
+    ]))->assertRedirect('/form-flow/flow-explicit-post-test');
+});
+
 it('persists claim experience inside started form flow state', function () {
     $this->withoutMiddleware();
 

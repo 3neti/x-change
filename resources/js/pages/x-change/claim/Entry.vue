@@ -12,8 +12,8 @@ import {
     submitCompiledClaimForm,
     toCompiledClaimFormPayload,
 } from '@/components/x-change/compiledClaimFormSubmission';
-import type {RawCompiledClaimFormPayload} from '@/components/x-change/compiledClaimFormSubmission';
-import { useXChangeRoutes } from '@/composables/useXChangeRoutes';
+import type { RawCompiledClaimFormPayload } from '@/components/x-change/compiledClaimFormSubmission';
+import { store as startClaimFlow } from '@/routes/x-change/claim/flows';
 
 defineOptions({ layout: null });
 
@@ -28,26 +28,24 @@ const compiledFormSubmitError = ref<string | null>(null);
 const provisioningRequirement = computed(() =>
     normalizeProvisioningRequirement(props.provisioning_requirement),
 );
-const hasProvisioningRequirement = computed(() => provisioningRequirement.value !== null);
-const routes = useXChangeRoutes();
-
+const hasProvisioningRequirement = computed(
+    () => provisioningRequirement.value !== null,
+);
 function resumeClaimFlow(): void {
-    const code = typeof props.initial_code === 'string' ? props.initial_code.trim() : '';
+    const code =
+        typeof props.initial_code === 'string' ? props.initial_code.trim() : '';
     const reference = provisioningRequirement.value?.onboarding?.reference;
 
     if (code === '') {
         return;
     }
 
-    const params = new URLSearchParams({
-        code,
+    router.post(startClaimFlow.url(code), {
+        onboarding_reference:
+            typeof reference === 'string' && reference.trim() !== ''
+                ? reference.trim()
+                : null,
     });
-
-    if (typeof reference === 'string' && reference.trim() !== '') {
-        params.set('onboarding_reference', reference);
-    }
-
-    router.visit(`${routes.claim.start()}?${params.toString()}`);
 }
 
 function submitCompiledForm(payload: RawCompiledClaimFormPayload): void {
@@ -59,7 +57,8 @@ function submitCompiledForm(payload: RawCompiledClaimFormPayload): void {
             compiledFormSubmitted.value = true;
         },
         onError: (errors) => {
-            compiledFormSubmitError.value = compiledClaimFormErrorMessage(errors);
+            compiledFormSubmitError.value =
+                compiledClaimFormErrorMessage(errors);
         },
     });
 }
@@ -72,7 +71,9 @@ function resetCompiledFormSubmitState(): void {
 
 <template>
     <Head title="Claim Pay Code" />
-    <div class="flex min-h-svh flex-col items-center justify-center gap-6 bg-gradient-to-b from-primary/5 via-background to-background p-6 md:p-10">
+    <div
+        class="flex min-h-svh flex-col items-center justify-center gap-6 bg-gradient-to-b from-primary/5 via-background to-background p-6 md:p-10"
+    >
         <div class="w-full max-w-md space-y-4">
             <ProvisioningSetup
                 :requirement="provisioningRequirement"

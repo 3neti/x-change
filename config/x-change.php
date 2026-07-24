@@ -1271,6 +1271,15 @@ return [
         ],
     ],
 
+    'claim' => [
+        'public_read_middleware' => [
+            'throttle:60,1',
+        ],
+        'public_start_middleware' => [
+            'throttle:12,1',
+        ],
+    ],
+
     'payment_qr' => [
         'renderer' => env('XCHANGE_PAYMENT_QR_RENDERER', 'json'),
 

@@ -17,6 +17,7 @@ use LBHurtado\XChange\Actions\Claim\PrepareCompiledClaimSubmission;
 use LBHurtado\XChange\Actions\Claim\ResolveClaimExperience;
 use LBHurtado\XChange\Actions\Claim\StorePreparedCompiledClaim;
 use LBHurtado\XChange\Actions\Claim\SubmitCompiledFormClaim;
+use LBHurtado\XChange\Contracts\VoucherFlowCapabilityResolverContract;
 use LBHurtado\XChange\Data\PreparedCompiledClaimData;
 use LBHurtado\XChange\Http\Responses\ClaimEntryResponseFactory;
 use LBHurtado\XChange\Services\BuildProvisioningRequirementViewData;
@@ -34,6 +35,7 @@ class ClaimStartController extends Controller
         protected FormFlowService $formFlowService,
         protected BuildProvisioningRequirementViewData $provisioning,
         protected NamedVoucherSliceService $namedSlices,
+        protected VoucherFlowCapabilityResolverContract $capabilities,
     ) {}
 
     public function __invoke(Request $request): RedirectResponse|Response
@@ -100,9 +102,12 @@ class ClaimStartController extends Controller
             );
         }
 
-        $code = strtoupper(trim((string) $request->query('code', '')));
+        $code = strtoupper(trim((string) (
+            $request->route('code')
+            ?? $request->query('code', '')
+        )));
         $onboardingReference = $this->normalizedOnboardingReference(
-            $request->query('onboarding_reference')
+            $request->input('onboarding_reference', $request->query('onboarding_reference'))
         );
 
         if ($code === '') {
@@ -128,6 +133,13 @@ class ClaimStartController extends Controller
         if (! $voucher) {
             return $this->claimEntryResponse()->error(
                 message: 'Invalid Pay Code.',
+                code: $code,
+            );
+        }
+
+        if (! $this->capabilities->resolve($voucher)->can_disburse) {
+            return $this->claimEntryResponse()->error(
+                message: 'This Pay Code accepts payment and cannot be claimed.',
                 code: $code,
             );
         }

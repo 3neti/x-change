@@ -158,9 +158,14 @@ Route::prefix('x')->middleware(['web', ShareXChangeBranding::class])->group(func
     Route::get('claim', ClaimStartController::class)->name('x-change.claim.start');
     Route::post('claim', ClaimStartController::class)->name('x-change.claim.start.submit');
     Route::get('claim/{code}', ClaimPageController::class)
+        ->middleware((array) config('x-change.claim.public_read_middleware', []))
         ->name('x-change.claim.show');
     Route::get('claim/{code}/experience', ClaimExperienceController::class)
+        ->middleware((array) config('x-change.claim.public_read_middleware', []))
         ->name('x-change.claim.experience');
+    Route::post('claim/{code}/flows', ClaimStartController::class)
+        ->middleware((array) config('x-change.claim.public_start_middleware', []))
+        ->name('x-change.claim.flows.store');
     Route::post('claim/{code}/complete', ClaimCompleteController::class)
         ->withoutMiddleware([VerifyCsrfToken::class])
         ->name('x-change.claim.complete');

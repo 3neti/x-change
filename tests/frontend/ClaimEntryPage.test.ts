@@ -2,8 +2,8 @@ import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import ClaimEntryPage from '../../resources/js/pages/x-change/claim/Entry.vue';
 
-const { routerVisit } = vi.hoisted(() => ({
-    routerVisit: vi.fn(),
+const { routerPost } = vi.hoisted(() => ({
+    routerPost: vi.fn(),
 }));
 
 vi.mock('@inertiajs/vue3', () => ({
@@ -11,7 +11,7 @@ vi.mock('@inertiajs/vue3', () => ({
         template: '<div><slot /></div>',
     },
     router: {
-        visit: routerVisit,
+        post: routerPost,
     },
 }));
 
@@ -48,7 +48,7 @@ vi.mock('lucide-vue-next', () => ({
 
 describe('ClaimEntryPage', () => {
     it('renders provisioning guidance from the page descriptor prop and hides the claim widget', () => {
-        routerVisit.mockReset();
+        routerPost.mockReset();
 
         const wrapper = mount(ClaimEntryPage, {
             props: {
@@ -62,7 +62,8 @@ describe('ClaimEntryPage', () => {
                     },
                     descriptor: {
                         title: 'Add payout destination',
-                        description: 'Complete your payout destination setup before continuing.',
+                        description:
+                            'Complete your payout destination setup before continuing.',
                         steps: ['bank_account', 'consent', 'ready'],
                     },
                 },
@@ -70,11 +71,13 @@ describe('ClaimEntryPage', () => {
         });
 
         expect(wrapper.text()).toContain('Add payout destination');
-        expect(wrapper.find('[data-testid="claim-widget"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="claim-widget"]').exists()).toBe(
+            false,
+        );
     });
 
     it('resumes the guarded claim flow with the onboarding reference path', async () => {
-        routerVisit.mockReset();
+        routerPost.mockReset();
 
         const wrapper = mount(ClaimEntryPage, {
             props: {
@@ -90,8 +93,13 @@ describe('ClaimEntryPage', () => {
             },
         });
 
-        await wrapper.findAll('button').find((button) => button.text().includes('Continue setup'))?.trigger('click');
+        await wrapper
+            .findAll('button')
+            .find((button) => button.text().includes('Continue setup'))
+            ?.trigger('click');
 
-        expect(routerVisit).toHaveBeenCalledWith('/x/claim?code=TEST123&onboarding_reference=onb-claim-123');
+        expect(routerPost).toHaveBeenCalledWith('/x/claim/TEST123/flows', {
+            onboarding_reference: 'onb-claim-123',
+        });
     });
 });

@@ -27,6 +27,7 @@ import { useCompiledClaimForm } from '@/components/x-change/useCompiledClaimForm
 import FormFlowRenderer from '@/components/x-change/FormFlowRenderer.vue';
 import { resolveClaimWidgetFormFlowSectionViewModel } from '@/components/x-change/claimWidgetFormFlowSectionViewModel';
 import { resolveClaimWidgetPreviewMode } from '@/components/x-change/claimWidgetPreviewMode';
+import { store as startClaimFlow } from '@/routes/x-change/claim/flows';
 
 initializeTheme();
 
@@ -100,7 +101,9 @@ const riderStages = computed<RawRiderStage[]>(() =>
 );
 
 function submit() {
-    submitLegacyClaimStart(form, code.value);
+    submitLegacyClaimStart(form, code.value, (claimCode) =>
+        startClaimFlow.url(claimCode),
+    );
 }
 
 const experienceStages = computed(() =>

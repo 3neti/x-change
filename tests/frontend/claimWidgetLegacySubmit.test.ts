@@ -15,38 +15,48 @@ describe('claim widget legacy claim start submit helper', () => {
     });
 
     it('preserves state when claim start response has no errors', () => {
-        expect(shouldPreserveClaimStartState({
-            props: {
-                errors: {},
-            },
-        })).toBe(true);
+        expect(
+            shouldPreserveClaimStartState({
+                props: {
+                    errors: {},
+                },
+            }),
+        ).toBe(true);
 
-        expect(shouldPreserveClaimStartState({
-            props: {},
-        })).toBe(true);
+        expect(
+            shouldPreserveClaimStartState({
+                props: {},
+            }),
+        ).toBe(true);
     });
 
     it('does not preserve state when claim start response has errors', () => {
-        expect(shouldPreserveClaimStartState({
-            props: {
-                errors: {
-                    code: 'Invalid Pay Code.',
+        expect(
+            shouldPreserveClaimStartState({
+                props: {
+                    errors: {
+                        code: 'Invalid Pay Code.',
+                    },
                 },
-            },
-        })).toBe(false);
+            }),
+        ).toBe(false);
     });
 
     it('submits normalized entered code to legacy claim start route', () => {
         const form: LegacyClaimStartForm = {
             code: '',
-            get: vi.fn(),
+            post: vi.fn(),
         };
 
-        submitLegacyClaimStart(form, ' test123 ');
+        submitLegacyClaimStart(
+            form,
+            ' test123 ',
+            (code) => `/x/claim/${code}/flows`,
+        );
 
         expect(form.code).toBe('TEST123');
 
-        expect(form.get).toHaveBeenCalledWith('/x/claim', {
+        expect(form.post).toHaveBeenCalledWith('/x/claim/TEST123/flows', {
             preserveState: shouldPreserveClaimStartState,
             preserveScroll: true,
         });
@@ -55,14 +65,14 @@ describe('claim widget legacy claim start submit helper', () => {
     it('falls back to existing form code when entered code is empty', () => {
         const form: LegacyClaimStartForm = {
             code: ' existing123 ',
-            get: vi.fn(),
+            post: vi.fn(),
         };
 
-        submitLegacyClaimStart(form, '');
+        submitLegacyClaimStart(form, '', (code) => `/x/claim/${code}/flows`);
 
         expect(form.code).toBe('EXISTING123');
 
-        expect(form.get).toHaveBeenCalledWith('/x/claim', {
+        expect(form.post).toHaveBeenCalledWith('/x/claim/EXISTING123/flows', {
             preserveState: shouldPreserveClaimStartState,
             preserveScroll: true,
         });

@@ -128,7 +128,7 @@ The entry page provides:
 - Live voucher preview ("x-ray") via `useVoucherPreview` composable — debounced API call to `GET /api/x/v1/vouchers/code/{code}`
 - Tabbed display: Instructions tab (amount, required inputs, validation, rider) and System Info tab (metadata)
 - Non-active states: redeemed/expired vouchers show a status stamp (no form, no submit)
-- On submit: `GET /x/claim?code={CODE}` which hits Phase 1
+- On submit: `POST /x/claim/{code}/flows` which hits Phase 1
 
 `GET /x/claim/{code}/experience` is the machine-readable compiled experience
 endpoint used by the frontend. It is not a human distribution link.
@@ -139,7 +139,7 @@ The `ClaimWidget.vue` is adapted from redeem-x's `RedeemWidget.vue`, stripped to
 
 ## Phase 1: Claim Start
 
-**Route**: `GET /x/claim?code=XXXX` → `ClaimStartController` (public, no auth)
+**Route**: `POST /x/claim/{code}/flows` → `ClaimStartController` (public, no auth)
 **Location**: `packages/x-change/src/Http/Controllers/Web/Claim/ClaimStartController.php`
 
 1. If no `?code=` parameter: renders `Entry.vue` (Phase 0)
@@ -151,8 +151,9 @@ The `ClaimWidget.vue` is adapted from redeem-x's `RedeemWidget.vue`, stripped to
 
 **Entry points**:
 - `GET /x/claim` — code entry page (claimant types code manually)
-- `GET /x/claim?code=XXXX` — direct link (from Show.vue, QR code, or shared URL)
-- Show.vue "Start Claim" button (for operators viewing their own vouchers)
+- `GET /x/claim/{code}` — canonical read-only human page
+- `POST /x/claim/{code}/flows` — explicit claim-flow start mutation
+- `GET /x/claim?code=XXXX` — legacy compatibility start URL
 
 ---
 

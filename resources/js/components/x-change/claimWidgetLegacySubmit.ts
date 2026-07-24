@@ -1,23 +1,23 @@
 export type LegacyClaimStartForm = {
     code: string;
-    get: (
+    post: (
         url: string,
         options: {
-            preserveState: (page: { props: { errors?: Record<string, unknown> } }) => boolean;
+            preserveState: (page: {
+                props: { errors?: Record<string, unknown> };
+            }) => boolean;
             preserveScroll: boolean;
         },
     ) => void;
 };
 
-export function normalizeClaimCode(
-    code: string | null | undefined,
-): string {
+export function normalizeClaimCode(code: string | null | undefined): string {
     return (code || '').trim().toUpperCase();
 }
 
-export function shouldPreserveClaimStartState(
-    page: { props: { errors?: Record<string, unknown> } },
-): boolean {
+export function shouldPreserveClaimStartState(page: {
+    props: { errors?: Record<string, unknown> };
+}): boolean {
     const hasErrors = Object.keys(page.props.errors || {}).length > 0;
 
     return !hasErrors;
@@ -26,12 +26,12 @@ export function shouldPreserveClaimStartState(
 export function submitLegacyClaimStart(
     form: LegacyClaimStartForm,
     enteredCode: string | null | undefined,
+    startUrl: (code: string) => string,
 ): void {
     form.code = normalizeClaimCode(enteredCode || form.code);
 
-    form.get('/x/claim', {
+    form.post(startUrl(form.code), {
         preserveState: shouldPreserveClaimStartState,
         preserveScroll: true,
     });
 }
-
