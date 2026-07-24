@@ -146,6 +146,17 @@ const scenarioResult = {
     ],
 };
 
+const fundingQrMerchantProfile = {
+    name: 'Treasury Operator',
+    city: 'Manila',
+    merchant_category_code: '0000',
+    merchant_name_template: '{name}',
+    category_options: [{ code: '0000', label: 'General/Personal' }],
+    presentation_only: true as const,
+    controls_routing: false as const,
+    controls_settlement: false as const,
+};
+
 afterEach(() => {
     vi.restoreAllMocks();
 });
@@ -155,6 +166,7 @@ describe('Cockpit Accounts foundation', () => {
         const wrapper = mount(Accounts, {
             props: {
                 account_read_model: accountReadModel,
+                funding_qr_merchant_profile: fundingQrMerchantProfile,
             },
         });
 
@@ -162,6 +174,15 @@ describe('Cockpit Accounts foundation', () => {
         expect(wrapper.text()).toContain('Verified provider settlement only');
         expect(wrapper.text()).toContain('•••• 0019 · VCA 91500');
         expect(wrapper.text()).toContain('•••• LLET01');
+        expect(wrapper.text()).toContain('Funding QR merchant profile');
+        expect(wrapper.text()).toContain('Presentation only');
+        expect(
+            (
+                wrapper.get(
+                    '[data-testid="funding-qr-merchant-name"]',
+                ).element as HTMLInputElement
+            ).value,
+        ).toBe('Treasury Operator');
         expect(wrapper.text()).not.toContain('test-vca-alias-token');
         expect(
             wrapper.find('[data-testid="netbank-token-field"]').exists(),
@@ -178,6 +199,7 @@ describe('Cockpit Accounts foundation', () => {
                         mode: 'dedicated' as const,
                     })),
                 },
+                funding_qr_merchant_profile: fundingQrMerchantProfile,
             },
         });
 
@@ -204,6 +226,7 @@ describe('Cockpit Accounts foundation', () => {
         const wrapper = mount(Accounts, {
             props: {
                 account_read_model: accountReadModel,
+                funding_qr_merchant_profile: fundingQrMerchantProfile,
                 account_scenario: {
                     enabled: false,
                     mode: 'rollback-only',
@@ -230,6 +253,7 @@ describe('Cockpit Accounts foundation', () => {
         const wrapper = mount(Accounts, {
             props: {
                 account_read_model: accountReadModel,
+                funding_qr_merchant_profile: fundingQrMerchantProfile,
                 account_scenario: {
                     enabled: true,
                     mode: 'rollback-only',

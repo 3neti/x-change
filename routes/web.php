@@ -21,6 +21,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingDestinationCont
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingInstructionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingIntentController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingQrMerchantProfileController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingReconciliationApprovalController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingReconciliationRequestController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingVerificationCheckController;
@@ -80,6 +81,10 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
                 'accounts/providers/netbank/token-rotation',
                 CockpitNetbankTokenRotationController::class,
             )->name('x-change.cockpit.accounts.providers.netbank.token-rotation.store');
+            Route::patch(
+                'accounts/funding-qr-merchant-profile',
+                CockpitFundingQrMerchantProfileController::class,
+            )->name('x-change.cockpit.accounts.funding-qr-merchant-profile.update');
         });
         Route::get('funding', CockpitFundingPageController::class)->name('x-change.cockpit.funding.index');
         Route::post('funding/intents', CockpitFundingIntentController::class)->name('x-change.cockpit.funding.intents.store');

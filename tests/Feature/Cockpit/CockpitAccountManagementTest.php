@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
+use LBHurtado\Merchant\Contracts\MerchantProfileRepositoryContract;
 use LBHurtado\PaymentGateway\Funding\NetbankFundingApiClient;
 use LBHurtado\XChange\Actions\Funding\RotateNetbankFundingToken;
 use LBHurtado\XChange\Actions\Funding\UpdateFundingDestination;
@@ -19,6 +20,9 @@ it('publishes package-owned Accounts routes with verified and PIN-confirmed muta
     $scenario = Route::getRoutes()->getByName(
         'x-change.cockpit.accounts.scenarios.funding-destinations.store',
     );
+    $merchantProfile = Route::getRoutes()->getByName(
+        'x-change.cockpit.accounts.funding-qr-merchant-profile.update',
+    );
 
     expect($page)->not->toBeNull()
         ->and($page->gatherMiddleware())->toContain('verified')
@@ -29,7 +33,11 @@ it('publishes package-owned Accounts routes with verified and PIN-confirmed muta
         ->and($scenario)->not->toBeNull()
         ->and($scenario->gatherMiddleware())->toContain('verified')
         ->and($scenario->gatherMiddleware())->toContain('throttle:3,1')
-        ->and($scenario->gatherMiddleware())->not->toContain('password.confirm:settings.security.confirm');
+        ->and($scenario->gatherMiddleware())->not->toContain('password.confirm:settings.security.confirm')
+        ->and($merchantProfile)->not->toBeNull()
+        ->and($merchantProfile->gatherMiddleware())->toContain('verified')
+        ->and($merchantProfile->gatherMiddleware())
+        ->toContain('password.confirm:settings.security.confirm');
 });
 
 it('renders the masked Accounts read model with encrypted Inertia history', function () {
@@ -47,9 +55,40 @@ it('renders the masked Accounts read model with encrypted Inertia history', func
         ->assertJsonPath('props.account_read_model.providers.0.shared.display_reference', '•••• 0019 · VCA 91500')
         ->assertJsonPath('props.account_scenario.enabled', true)
         ->assertJsonPath('props.account_scenario.mode', 'rollback-only')
+        ->assertJsonPath('props.funding_qr_merchant_profile.presentation_only', true)
+        ->assertJsonPath('props.funding_qr_merchant_profile.controls_routing', false)
+        ->assertJsonPath('props.funding_qr_merchant_profile.controls_settlement', false)
         ->assertJsonMissing(['113001000019', 'test-vca-alias-token']);
 
     expect($response->getContent())->toContain('"encryptHistory":true');
+});
+
+it('updates only the owner QR merchant presentation behind confirmation', function () {
+    $owner = actingAsTestUser();
+    $owner->forceFill(['email_verified_at' => now()])->save();
+
+    $this->withSession(['auth.password_confirmed_at' => time()])
+        ->patch(route(
+            'x-change.cockpit.accounts.funding-qr-merchant-profile.update',
+        ), [
+            'name' => 'My Store',
+            'city' => 'Makati',
+            'merchant_category_code' => '5999',
+            'merchant_name_template' => '{name} - {city}',
+        ])
+        ->assertRedirect()
+        ->assertSessionHas(
+            'funding_account_notice',
+            'QR merchant presentation updated. The next QR open will refresh its encrypted fixture.',
+        );
+
+    $merchant = app(MerchantProfileRepositoryContract::class)->findForUser($owner);
+
+    expect($merchant)->not->toBeNull()
+        ->and($merchant->name)->toBe('My Store')
+        ->and($merchant->city)->toBe('Makati')
+        ->and($merchant->merchant_category_code)->toBe('5999')
+        ->and($merchant->merchant_name_template)->toBe('{name} - {city}');
 });
 
 it('runs the protected Cockpit account-management walkthrough without durable state', function () {

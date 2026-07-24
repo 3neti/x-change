@@ -626,9 +626,7 @@ describe('Cockpit Funding foundation', () => {
             },
         });
 
-        await wrapper
-            .get('[data-testid="open-standing-funding-address"]')
-            .trigger('click');
+        await new Promise((resolve) => setTimeout(resolve, 0));
         await nextTick();
         await nextTick();
         await wrapper

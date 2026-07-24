@@ -10,7 +10,7 @@ import { store as checkStandingFundingHistoryRoute } from '@/routes/x-change/coc
 import { approve as approveStandingFundingReceiptRoute } from '@/routes/x-change/cockpit/funding/standing-addresses/netbank/receipts';
 import { store as runQrPhFundingSimulationRoute } from '@/routes/x-change/cockpit/funding/scenarios/qrph';
 import { store as storeReconciliationRequest } from '@/routes/x-change/cockpit/funding/suspense/reconciliation-requests';
-import { computed, onUnmounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import CockpitManualCopyButton from '../components/CockpitManualCopyButton.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
 import type {
@@ -128,6 +128,15 @@ useEcho<FundingProjectionChangedPayload>(
 onUnmounted(() => {
     if (realtimeRefreshTimer !== null) {
         clearTimeout(realtimeRefreshTimer);
+    }
+});
+
+onMounted(() => {
+    if (
+        props.standing_funding_address?.exists === true &&
+        props.standing_funding_address.available === true
+    ) {
+        void openStandingFundingAddress();
     }
 });
 const clientAmountError = computed(() => {

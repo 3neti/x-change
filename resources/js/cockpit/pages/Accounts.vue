@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
+import { update as updateFundingQrMerchantProfile } from '@/routes/x-change/cockpit/accounts/funding-qr-merchant-profile';
 import { store as runFundingDestinationScenario } from '@/routes/x-change/cockpit/accounts/scenarios/funding-destinations';
 import { update as updateFundingDestination } from '@/routes/x-change/cockpit/accounts/providers/funding-destination';
 import { store as storeNetbankTokenRotation } from '@/routes/x-change/cockpit/accounts/providers/netbank/token-rotation';
@@ -40,6 +41,14 @@ const paynamicsForm = useForm({
 });
 const rotationForm = useForm({
     confirm_rotation: false,
+});
+const merchantProfileForm = useForm({
+    name: props.funding_qr_merchant_profile.name,
+    city: props.funding_qr_merchant_profile.city,
+    merchant_category_code:
+        props.funding_qr_merchant_profile.merchant_category_code,
+    merchant_name_template:
+        props.funding_qr_merchant_profile.merchant_name_template,
 });
 
 function provider(
@@ -96,6 +105,12 @@ function rotateNetbankToken(): void {
     rotationForm.post(storeNetbankTokenRotation(), {
         preserveScroll: true,
         onSuccess: () => rotationForm.reset(),
+    });
+}
+
+function saveFundingQrMerchantProfile(): void {
+    merchantProfileForm.patch(updateFundingQrMerchantProfile(), {
+        preserveScroll: true,
     });
 }
 
@@ -280,6 +295,152 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         </dd>
                     </div>
                 </dl>
+            </section>
+
+            <section
+                class="overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm dark:border-emerald-950 dark:bg-slate-950"
+                data-testid="funding-qr-merchant-profile"
+            >
+                <div
+                    class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)]"
+                >
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <p
+                                class="text-xs font-semibold tracking-[0.16em] text-emerald-700 uppercase dark:text-emerald-300"
+                            >
+                                QR presentation
+                            </p>
+                            <span
+                                class="rounded-full bg-emerald-100 px-2 py-1 text-[0.65rem] font-semibold text-emerald-800 uppercase dark:bg-emerald-950 dark:text-emerald-200"
+                            >
+                                Presentation only
+                            </span>
+                        </div>
+                        <h2
+                            class="mt-1.5 text-lg font-semibold text-slate-950 dark:text-white"
+                        >
+                            Funding QR merchant profile
+                        </h2>
+                        <p
+                            class="mt-1 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-400"
+                        >
+                            These fields label the reusable QR Ph image. They
+                            never select the Account, recognize a payment, or
+                            authorize settlement; the immutable funding address
+                            does that.
+                        </p>
+                        <div
+                            class="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-600 dark:bg-slate-900 dark:text-slate-300"
+                        >
+                            Saving a change retires only the previous encrypted
+                            QR fixture. Opening Funding generates the replacement
+                            once and then keeps it ready for reuse.
+                        </div>
+                    </div>
+
+                    <form
+                        class="grid gap-4 sm:grid-cols-2"
+                        @submit.prevent="saveFundingQrMerchantProfile"
+                    >
+                        <label
+                            class="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                        >
+                            Merchant name
+                            <input
+                                v-model="merchantProfileForm.name"
+                                maxlength="25"
+                                autocomplete="organization"
+                                class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+                                data-testid="funding-qr-merchant-name"
+                            />
+                            <span
+                                v-if="merchantProfileForm.errors.name"
+                                class="mt-1 block font-normal text-rose-600"
+                                >{{ merchantProfileForm.errors.name }}</span
+                            >
+                        </label>
+                        <label
+                            class="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                        >
+                            City
+                            <input
+                                v-model="merchantProfileForm.city"
+                                maxlength="15"
+                                autocomplete="address-level2"
+                                class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+                            />
+                            <span
+                                v-if="merchantProfileForm.errors.city"
+                                class="mt-1 block font-normal text-rose-600"
+                                >{{ merchantProfileForm.errors.city }}</span
+                            >
+                        </label>
+                        <label
+                            class="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                        >
+                            Category
+                            <select
+                                v-model="
+                                    merchantProfileForm.merchant_category_code
+                                "
+                                class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+                            >
+                                <option
+                                    v-for="option in funding_qr_merchant_profile.category_options"
+                                    :key="option.code"
+                                    :value="option.code"
+                                >
+                                    {{ option.code }} · {{ option.label }}
+                                </option>
+                            </select>
+                        </label>
+                        <label
+                            class="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                        >
+                            QR label
+                            <select
+                                v-model="
+                                    merchantProfileForm.merchant_name_template
+                                "
+                                class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+                            >
+                                <option value="{name}">Merchant name</option>
+                                <option value="{name} - {city}">
+                                    Merchant name · City
+                                </option>
+                                <option value="{app_name} - {name}">
+                                    X-Change · Merchant name
+                                </option>
+                            </select>
+                            <span
+                                v-if="
+                                    merchantProfileForm.errors
+                                        .merchant_name_template
+                                "
+                                class="mt-1 block font-normal text-rose-600"
+                                >{{
+                                    merchantProfileForm.errors
+                                        .merchant_name_template
+                                }}</span
+                            >
+                        </label>
+                        <div class="sm:col-span-2 sm:flex sm:justify-end">
+                            <button
+                                type="submit"
+                                :disabled="merchantProfileForm.processing"
+                                class="h-10 w-full rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-50 sm:w-auto"
+                                data-testid="save-funding-qr-merchant-profile"
+                            >
+                                {{
+                                    merchantProfileForm.processing
+                                        ? 'Saving…'
+                                        : 'Save QR presentation'
+                                }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </section>
 
             <section

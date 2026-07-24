@@ -389,6 +389,19 @@ export type CockpitAccountReadModel = {
 export type CockpitAccountsPageProps = CockpitHeaderPageProps & {
     account_read_model: CockpitAccountReadModel;
     funding_account_notice?: string | null;
+    funding_qr_merchant_profile: {
+        name: string;
+        city: string;
+        merchant_category_code: string;
+        merchant_name_template: string;
+        category_options: Array<{
+            code: string;
+            label: string;
+        }>;
+        presentation_only: true;
+        controls_routing: false;
+        controls_settlement: false;
+    };
     account_scenario?: {
         enabled: boolean;
         mode: 'rollback-only';

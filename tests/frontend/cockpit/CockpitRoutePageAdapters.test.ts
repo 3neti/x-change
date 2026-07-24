@@ -37,6 +37,18 @@ describe('Cockpit route page adapters', () => {
                         credentials_exposed: false,
                     },
                 },
+                funding_qr_merchant_profile: {
+                    name: 'Treasury Operator',
+                    city: 'Manila',
+                    merchant_category_code: '0000',
+                    merchant_name_template: '{name}',
+                    category_options: [
+                        { code: '0000', label: 'General/Personal' },
+                    ],
+                    presentation_only: true,
+                    controls_routing: false,
+                    controls_settlement: false,
+                },
             },
         });
 
