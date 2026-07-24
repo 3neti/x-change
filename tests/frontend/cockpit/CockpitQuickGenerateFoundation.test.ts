@@ -1770,7 +1770,7 @@ describe('Cockpit Quick Generate foundation', () => {
                         },
                         {
                             key: 'issuer-wallet-identified',
-                            label: 'Issuer Wallet Identified',
+                            label: 'Issuer Account Identified',
                             status: 'runtime-diagnostic',
                             reason: 'Issuer funding details are evaluated by the existing issuance path and redacted from the Cockpit read model.',
                         },
@@ -1785,7 +1785,7 @@ describe('Cockpit Quick Generate foundation', () => {
         expect(wrapper.text()).toContain('Funding Runtime Diagnostics');
         expect(wrapper.text()).toContain('Funding Policy Known');
         expect(wrapper.text()).toContain('passed');
-        expect(wrapper.text()).toContain('Issuer Wallet Identified');
+        expect(wrapper.text()).toContain('Issuer Account Identified');
         expect(wrapper.text()).toContain('runtime-informational');
         expect(wrapper.text()).toContain(
             'Issuer funding details are evaluated by the existing issuance path and redacted from the Cockpit read model.',

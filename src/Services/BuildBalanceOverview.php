@@ -104,7 +104,7 @@ class BuildBalanceOverview
                 'label' => $authoritative ? 'Available Local Ledger Balance' : 'Local Ledger Projection',
                 'description' => $authoritative
                     ? 'This is the balance x-change uses for this provider topology.'
-                    : 'Shown for accounting context only. Paynamics wallet balance is authoritative.',
+                    : 'Shown for accounting context only. The Paynamics provider balance is authoritative.',
                 'authority' => 'local_ledger',
                 'source' => 'bavix_wallet',
                 'is_authoritative' => $authoritative,
@@ -118,7 +118,7 @@ class BuildBalanceOverview
             return [
                 'key' => 'local_ledger',
                 'label' => 'Local Ledger Balance',
-                'description' => 'The local wallet could not be resolved.',
+                'description' => 'The internal account balance could not be resolved.',
                 'authority' => 'local_ledger',
                 'source' => 'bavix_wallet',
                 'is_authoritative' => $authoritative,
@@ -181,8 +181,8 @@ class BuildBalanceOverview
 
         return [
             'key' => 'provider_wallet',
-            'label' => 'Paynamics Wallet Balance',
-            'description' => 'Externally funded Paynamics wallet balance. This is authoritative for Paynamics issuance.',
+            'label' => 'Paynamics Provider Balance',
+            'description' => 'Externally funded Paynamics provider account balance. This is authoritative for Paynamics issuance.',
             'authority' => 'provider_wallet',
             'source' => 'paynamics',
             'is_authoritative' => true,
@@ -204,7 +204,7 @@ class BuildBalanceOverview
     {
         return [
             'key' => 'provider_wallet',
-            'label' => ucfirst($provider).' Wallet Balance',
+            'label' => ucfirst($provider).' Provider Balance',
             'description' => $message,
             'authority' => 'provider_wallet',
             'source' => $provider,

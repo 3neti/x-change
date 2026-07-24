@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Number;
 use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\CockpitHeaderReadModelProviderContract;
+use LBHurtado\XChange\Contracts\TreasuryVocabularyReadModelContract;
 use LBHurtado\XChange\Contracts\VoucherLiabilitySummaryContract;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Data\Cockpit\CockpitDashboardMetricData;
@@ -17,11 +18,15 @@ use Throwable;
 
 class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProviderContract
 {
+    /** @var array<string, array<string, mixed>>|null */
+    private ?array $resolvedVocabulary = null;
+
     public function __construct(
         private readonly WalletAccessContract $wallets,
         private readonly ?BuildBalanceOverview $fundingOverview = null,
         private readonly ?VoucherLiabilitySummaryContract $liabilities = null,
         private readonly ?AccountBalanceReadModelContract $accountBalances = null,
+        private readonly ?TreasuryVocabularyReadModelContract $vocabulary = null,
     ) {}
 
     public function forOperator(mixed $operator = null): CockpitHeaderReadModelData
@@ -29,6 +34,7 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
         $internalBalance = $this->internalBalance($operator);
         $outstandingLiability = $this->outstandingLiability($operator);
         $providerBalance = $this->providerBalance($operator);
+        $vocabulary = $this->vocabulary();
 
         return new CockpitHeaderReadModelData(
             balances: [
@@ -42,6 +48,7 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
                 ),
                 $providerBalance['metric'],
             ],
+            vocabulary: $vocabulary,
             redactions: [
                 'payloads' => 'balance-summary-only',
                 'wallet_payloads_exposed' => false,
@@ -76,9 +83,9 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
                 return [
                     'metric' => new CockpitDashboardMetricData(
                         key: 'internal',
-                        label: 'Internal Balance',
+                        label: $this->termLabel('internal_balance'),
                         value: $this->formatMoney($positionBalanceMinor),
-                        helper: 'Read from active provider-specific Client Funds Positions.',
+                        helper: $this->termDescription('internal_balance'),
                         tone: 'healthy',
                     ),
                     'minor' => $positionBalanceMinor,
@@ -91,9 +98,9 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
             return [
                 'metric' => new CockpitDashboardMetricData(
                     key: 'internal',
-                    label: 'Internal Balance',
+                    label: $this->termLabel('internal_balance'),
                     value: $this->formatMoney($balanceMinor),
-                    helper: 'Read from the authenticated operator wallet.',
+                    helper: 'Read from the authenticated account balance compatibility bridge.',
                     tone: 'healthy',
                 ),
                 'minor' => $balanceMinor,
@@ -176,7 +183,7 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
             return [
                 'metric' => new CockpitDashboardMetricData(
                     key: 'outstanding',
-                    label: 'Outstanding Pay Codes',
+                    label: $this->termLabel('outstanding_pay_codes'),
                     value: 'Not connected',
                     helper: 'No operator is available for liability summary.',
                     tone: 'neutral',
@@ -196,9 +203,9 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
             return [
                 'metric' => new CockpitDashboardMetricData(
                     key: 'outstanding',
-                    label: 'Outstanding Pay Codes',
+                    label: $this->termLabel('outstanding_pay_codes'),
                     value: $this->formatMoney($summary->outstanding_liability_minor),
-                    helper: 'Read-only active Pay Code liability estimate.',
+                    helper: $this->termDescription('outstanding_pay_codes'),
                     tone: $summary->outstanding_liability_minor > 0 ? 'warning' : 'healthy',
                 ),
                 'minor' => max(0, $summary->outstanding_liability_minor),
@@ -222,7 +229,7 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
         ) {
             return new CockpitDashboardMetricData(
                 key: 'issuance',
-                label: 'Issuance Capacity',
+                label: $this->termLabel('issuance_capacity'),
                 value: 'Not available',
                 helper: 'Requires Internal Balance, Outstanding Pay Codes, and a fresh cached provider liquidity snapshot.',
                 tone: 'neutral',
@@ -236,20 +243,20 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
 
         return new CockpitDashboardMetricData(
             key: 'issuance',
-            label: 'Issuance Capacity',
+            label: $this->termLabel('issuance_capacity'),
             value: $this->formatMoney($issuanceCapacityMinor),
-            helper: 'Internal Balance capped by cached provider liquidity after Outstanding Pay Codes.',
+            helper: $this->termDescription('issuance_capacity'),
             tone: $issuanceCapacityMinor > 0 ? 'healthy' : 'warning',
         );
     }
 
     private function disconnectedProviderBalance(
         ?string $helper = null,
-        string $label = 'Provider Liquidity',
+        ?string $label = null,
     ): CockpitDashboardMetricData {
         return new CockpitDashboardMetricData(
             key: 'live',
-            label: $label,
+            label: $label ?? $this->termLabel('provider_liquidity'),
             value: 'Not available',
             helper: $helper ?? 'No cached provider liquidity snapshot is available.',
             tone: 'neutral',
@@ -260,9 +267,9 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
     {
         return new CockpitDashboardMetricData(
             key: 'internal',
-            label: 'Internal Balance',
+            label: $this->termLabel('internal_balance'),
             value: 'Internal balance not connected',
-            helper: 'No operator wallet balance is available for this view.',
+            helper: 'No recognized client-funds position is available for this view.',
             tone: 'neutral',
         );
     }
@@ -275,7 +282,7 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
         return [
             'metric' => new CockpitDashboardMetricData(
                 key: 'outstanding',
-                label: 'Outstanding Pay Codes',
+                label: $this->termLabel('outstanding_pay_codes'),
                 value: 'Not connected',
                 helper: 'Voucher liability summary is unavailable.',
                 tone: 'neutral',
@@ -330,8 +337,8 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
     {
         return match ($this->stringValue($balance['key'] ?? null)) {
             'netbank_source_account' => 'NetBank Liquidity',
-            'provider_wallet' => 'Provider Wallet',
-            default => 'Provider Liquidity',
+            'provider_wallet' => 'Provider Account Liquidity',
+            default => $this->termLabel('provider_liquidity'),
         };
     }
 
@@ -411,5 +418,33 @@ class WalletCockpitHeaderReadModelProvider implements CockpitHeaderReadModelProv
             'x-change.pricing.currency',
             config('x-change.product.default_currency', 'PHP'),
         );
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function vocabulary(): array
+    {
+        return $this->resolvedVocabulary ??= ($this->vocabulary
+            ?? app(TreasuryVocabularyReadModelContract::class))->terms([
+                'internal_balance',
+                'outstanding_pay_codes',
+                'issuance_capacity',
+                'provider_liquidity',
+                'account_funding',
+                'reusable_funding_address',
+                'provider_account',
+                'exact_funding_intent',
+            ]);
+    }
+
+    private function termLabel(string $key): string
+    {
+        return (string) ($this->vocabulary()[$key]['label'] ?? $key);
+    }
+
+    private function termDescription(string $key): string
+    {
+        return (string) ($this->vocabulary()[$key]['description'] ?? '');
     }
 }

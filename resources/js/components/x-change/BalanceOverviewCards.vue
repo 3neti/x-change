@@ -109,7 +109,7 @@ function relativeTime(value?: string | null): string {
 
 function authorityLabel(value?: string | null): string {
     const labels: Record<string, string> = {
-        provider_wallet: 'Provider wallet balance',
+        provider_wallet: 'Provider account balance',
         provider_source_account: 'Provider source account',
         local_ledger: 'Local ledger',
         manual: 'Manual ledger',
@@ -227,7 +227,7 @@ function projectionSectionDescription(): string {
                             Synced {{ relativeTime(authoritative.checked_at) }}
                         </span>
                         <span v-if="authoritative.provider_wallet_id">
-                            Wallet {{ authoritative.provider_wallet_id }}
+                            Provider account {{ authoritative.provider_wallet_id }}
                         </span>
                         <span v-if="authoritative.is_stale" class="inline-flex items-center gap-1 text-amber-700">
                             <AlertTriangle class="h-3.5 w-3.5" />

@@ -317,7 +317,18 @@ export type CockpitHeaderReadModel = {
     authorized?: boolean;
     read_only?: boolean;
     balances?: CockpitBalanceMetric[];
+    vocabulary?: Record<string, CockpitVocabularyTerm>;
     redactions?: CockpitReadModelRedactions;
+};
+
+export type CockpitVocabularyTerm = {
+    key: string;
+    label: string;
+    description: string;
+    source: string;
+    profile: string;
+    profile_version: string;
+    approved_for_public_display: boolean;
 };
 
 export type CockpitHeaderPageProps = {

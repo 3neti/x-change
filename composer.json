@@ -196,6 +196,9 @@
         "illuminate/support": "^13.0",
         "spatie/laravel-data": "^4.21"
     },
+    "suggest": {
+        "3neti/x-legal": "Provides jurisdiction-aware advisory Treasury vocabulary and policy traceability."
+    },
     "require-dev": {
         "dedoc/scramble": "^0.13.20",
         "inertiajs/inertia-laravel": "^3.0",

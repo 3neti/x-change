@@ -49,7 +49,7 @@ onMounted(async () => {
         <div class="space-y-1">
             <h2 class="text-lg font-semibold">Balances & Reconciliation</h2>
             <p class="text-sm text-muted-foreground">
-                Balance authority changes by provider. Paynamics uses the provider wallet; NetBank uses the local ledger.
+                Balance authority changes by provider. Paynamics uses its provider account; NetBank uses the local ledger.
             </p>
         </div>
 

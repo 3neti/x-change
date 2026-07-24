@@ -53,6 +53,9 @@ it('binds a read-only cockpit header balance read model with safe provider fallb
         ->and($readModel['balances'][3]['key'])->toBe('live')
         ->and($readModel['balances'][3]['label'])->toBe('Provider Liquidity')
         ->and($readModel['balances'][3]['value'])->toBe('Not available')
+        ->and($readModel['vocabulary']['internal_balance']['label'])->toBe('Internal Balance')
+        ->and($readModel['vocabulary']['internal_balance']['source'])->toBe('x-change')
+        ->and($readModel['vocabulary']['internal_balance']['approved_for_public_display'])->toBeFalse()
         ->and($readModel['redactions']['mutates_wallets'])->toBeFalse()
         ->and($readModel['redactions']['releases_funds'])->toBeFalse()
         ->and($readModel['redactions']['calls_providers'])->toBeFalse();

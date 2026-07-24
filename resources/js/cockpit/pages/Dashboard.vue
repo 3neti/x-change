@@ -768,7 +768,10 @@ function areIntegrationDetailsExpanded(key: string): boolean {
                     </div>
                 </section>
 
-                <CockpitLiquidityHero :metrics="metrics" />
+                <CockpitLiquidityHero
+                    :metrics="metrics"
+                    :vocabulary="props.cockpit_header_read_model?.vocabulary"
+                />
 
                 <div class="grid gap-4 xl:grid-cols-3">
                     <CockpitRedemptionPipeline

@@ -120,10 +120,10 @@ class SyncPaynamicsWalletBalance
             return EmiWallet::query()->create([
                 'holder_type' => $owner::class,
                 'holder_id' => $owner->getKey(),
-                'name' => 'Paynamics Wallet Balance',
+                'name' => 'Paynamics Provider Balance',
                 'slug' => Str::limit(Str::slug('paynamics-'.$walletId, '-'), 255, ''),
                 'uuid' => (string) Str::uuid(),
-                'description' => 'Provider wallet balance projection',
+                'description' => 'Provider account balance projection',
                 'balance' => 0,
                 'decimal_places' => 2,
                 ...$attributes,

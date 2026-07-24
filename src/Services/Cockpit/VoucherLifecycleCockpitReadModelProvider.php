@@ -512,13 +512,13 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
                     ),
                     new CockpitQuickGenerateFundingGateCheckData(
                         key: 'issuer-wallet-identified',
-                        label: 'Issuer Wallet Identified',
+                        label: 'Issuer Account Identified',
                         status: 'runtime-diagnostic',
                         reason: 'Issuer funding details are evaluated by the existing issuance path and redacted from the Cockpit read model.',
                     ),
                     new CockpitQuickGenerateFundingGateCheckData(
                         key: 'wallet-balance-available',
-                        label: 'Wallet Balance Available',
+                        label: 'Internal Balance Available',
                         status: 'runtime-diagnostic',
                         reason: 'The operator sees only the safe balance/funding preflight summary returned by the issuance runtime.',
                     ),

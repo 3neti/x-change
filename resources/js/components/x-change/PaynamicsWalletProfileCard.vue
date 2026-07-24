@@ -55,17 +55,17 @@ const formatMoney = (balance?: number | string | null) => {
                 <p
                     class="text-xs font-semibold tracking-[0.22em] text-slate-500 uppercase"
                 >
-                    Provider wallet
+                    Provider account
                 </p>
                 <h2
                     class="mt-1 text-lg font-semibold text-slate-950 dark:text-white"
                 >
-                    Paynamics wallet link
+                    Paynamics account link
                 </h2>
                 <p
                     class="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400"
                 >
-                    Link an existing Paynamics wallet ID so x-change can use
+                    Link an existing Paynamics account ID so x-change can use
                     provider-authoritative balance checks for Pay Code issuance.
                 </p>
             </div>
@@ -89,7 +89,7 @@ const formatMoney = (balance?: number | string | null) => {
                 <p
                     class="text-xs font-medium tracking-wide text-slate-500 uppercase"
                 >
-                    Wallet ID
+                    Provider account ID
                 </p>
                 <p
                     class="mt-1 font-mono text-sm break-all text-slate-950 dark:text-white"
@@ -131,14 +131,14 @@ const formatMoney = (balance?: number | string | null) => {
             v-if="wallet.ownership_verification_required"
             class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200"
         >
-            This scaffold only proves the wallet exists and can return a
+            This scaffold only proves the provider account exists and can return a
             balance. Ownership verification is still pending:
             {{ wallet.ownership_verification_note }}
         </p>
 
         <div class="mt-5 flex flex-wrap items-center justify-between gap-3">
             <p class="text-xs leading-5 text-slate-500 dark:text-slate-400">
-                This profile is a summary. Linking or selecting a funding wallet
+                This profile is a summary. Linking or selecting a provider account
                 is PIN-protected in Cockpit Accounts.
             </p>
             <Link

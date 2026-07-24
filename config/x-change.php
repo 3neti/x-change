@@ -422,6 +422,40 @@ return [
         'system_mandate_reference' => env('XCHANGE_TREASURY_SYSTEM_MANDATE_REFERENCE', 'mandate:system:treasury'),
         'legal_profile' => env('XCHANGE_TREASURY_LEGAL_PROFILE', 'treasury-settlement-ph-v1'),
         'legal_profile_version' => env('XCHANGE_TREASURY_LEGAL_PROFILE_VERSION', '2026-07-24.1'),
+        'vocabulary' => [
+            'internal_balance' => [
+                'label' => 'Internal Balance',
+                'description' => 'Recognized client funds attributed to this account across its provider positions.',
+            ],
+            'outstanding_pay_codes' => [
+                'label' => 'Outstanding Pay Codes',
+                'description' => 'Recognized client funds currently reserved by active Pay Code obligations.',
+            ],
+            'issuance_capacity' => [
+                'label' => 'Issuance Capacity',
+                'description' => 'The amount currently available for new Pay Codes after provider liquidity and outstanding obligations are considered.',
+            ],
+            'provider_liquidity' => [
+                'label' => 'Provider Liquidity',
+                'description' => 'The latest authoritative or cached provider-side liquidity observation.',
+            ],
+            'account_funding' => [
+                'label' => 'Account Funding',
+                'description' => 'Provider-verified value recognized for an account without implying a stored-value product.',
+            ],
+            'reusable_funding_address' => [
+                'label' => 'Reusable Funding Address',
+                'description' => 'A persistent provider destination used to attribute verified incoming funds to an account.',
+            ],
+            'provider_account' => [
+                'label' => 'Provider Account',
+                'description' => 'An external bank or EMI resource connected to an account or to the system Treasury.',
+            ],
+            'exact_funding_intent' => [
+                'label' => 'Exact Funding Intent',
+                'description' => 'A time-bound instruction for an exact provider-verified funding amount.',
+            ],
+        ],
         'reconciliation_lock_seconds' => (int) env(
             'XCHANGE_TREASURY_RECONCILIATION_LOCK_SECONDS',
             60,

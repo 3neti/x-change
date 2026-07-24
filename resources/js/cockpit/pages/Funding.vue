@@ -49,7 +49,7 @@ const activeFundingMode = ref<FundingWorkspaceMode>('self_top_up');
 const fundingWorkspaceModes = computed(() => [
     {
         key: 'self_top_up' as const,
-        label: 'Self Top-Up',
+        label: 'Reusable Funding Address',
         description:
             'Reveal your reusable QR Ph address, then check NetBank for incoming funds.',
     },
@@ -2479,7 +2479,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 <p
                                     class="text-xs font-semibold tracking-[0.16em] text-slate-500 uppercase"
                                 >
-                                    3neti/wallet grammar
+                                    provider-neutral Treasury grammar
                                 </p>
                                 <h2 class="mt-1 text-lg font-semibold">
                                     Treasury Inventory

@@ -217,7 +217,7 @@ describe('Cockpit Accounts foundation', () => {
 
         expect(
             wrapper.find('[data-testid="paynamics-ownership-warning"]').text(),
-        ).toContain('reachable wallet is not proof of ownership');
+        ).toContain('reachable provider account is not proof of ownership');
     });
 
     it('keeps the lifecycle walkthrough disabled when the environment gate is off', () => {

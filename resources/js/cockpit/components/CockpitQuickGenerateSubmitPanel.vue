@@ -5844,7 +5844,7 @@ function dataGet(source: unknown, path: string[]): unknown {
                                 <label
                                     class="grid min-w-0 gap-1 text-xs font-medium text-slate-700 dark:text-slate-300"
                                 >
-                                    Collection wallet ID
+                                    Collection provider account ID
                                     <input
                                         v-model="metadataCollectionWalletId"
                                         type="text"

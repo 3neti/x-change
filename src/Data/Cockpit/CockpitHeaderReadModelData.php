@@ -10,6 +10,7 @@ class CockpitHeaderReadModelData extends Data
 {
     /**
      * @param  array<int, CockpitDashboardMetricData>  $balances
+     * @param  array<string, array<string, mixed>>  $vocabulary
      * @param  array<string, mixed>  $redactions
      */
     public function __construct(
@@ -18,6 +19,7 @@ class CockpitHeaderReadModelData extends Data
         public readonly bool $authorized = true,
         public readonly bool $read_only = true,
         public readonly array $balances = [],
+        public readonly array $vocabulary = [],
         public readonly array $redactions = ['payloads' => 'balance-summary-only'],
     ) {}
 }

@@ -1,33 +1,58 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import CockpitDashboardMetricCard from './CockpitDashboardMetricCard.vue';
-import type { CockpitDashboardMetric } from '../types';
+import type { CockpitDashboardMetric, CockpitVocabularyTerm } from '../types';
 
 const props = defineProps<{
     metrics: CockpitDashboardMetric[];
+    vocabulary?: Record<string, CockpitVocabularyTerm>;
 }>();
 
-const fundingSemantics = [
+function term(
+    key: string,
+    fallbackLabel: string,
+    fallbackDescription: string,
+): Pick<CockpitVocabularyTerm, 'label' | 'description'> {
+    return props.vocabulary?.[key] ?? {
+        label: fallbackLabel,
+        description: fallbackDescription,
+    };
+}
+
+const fundingSemantics = computed(() => [
     {
         label: 'Accounting',
-        value: 'Internal Balance',
-        helper: 'Current wallet balance visible to Cockpit.',
+        value: term('internal_balance', 'Internal Balance', 'Recognized client funds.').label,
+        helper: term('internal_balance', 'Internal Balance', 'Recognized client funds.')
+            .description,
     },
     {
         label: 'Liability',
-        value: 'Outstanding Pay Codes',
-        helper: 'Active unredeemed Pay Code estimate.',
+        value: term(
+            'outstanding_pay_codes',
+            'Outstanding Pay Codes',
+            'Active Pay Code obligations.',
+        ).label,
+        helper: term(
+            'outstanding_pay_codes',
+            'Outstanding Pay Codes',
+            'Active Pay Code obligations.',
+        ).description,
     },
     {
         label: 'Estimate',
-        value: 'Issuance Capacity',
-        helper: 'Internal Balance capped by provider liquidity after Outstanding Pay Codes.',
+        value: term('issuance_capacity', 'Issuance Capacity', 'Capacity for new Pay Codes.').label,
+        helper: term('issuance_capacity', 'Issuance Capacity', 'Capacity for new Pay Codes.')
+            .description,
     },
     {
         label: 'External',
-        value: 'Provider Liquidity',
-        helper: 'Cached provider summary; dashboard page loads do not call the provider.',
+        value: term('provider_liquidity', 'Provider Liquidity', 'Cached provider liquidity.')
+            .label,
+        helper: term('provider_liquidity', 'Provider Liquidity', 'Cached provider liquidity.')
+            .description,
     },
-];
+]);
 
 function metricCount(): number {
     return props.metrics.length;

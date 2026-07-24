@@ -142,6 +142,7 @@ use LBHurtado\XChange\Contracts\SettlementReadinessGateContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\TreasuryPositionLedgerResolverContract;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
+use LBHurtado\XChange\Contracts\TreasuryVocabularyReadModelContract;
 use LBHurtado\XChange\Contracts\UserLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\VendorRegistryContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
@@ -270,6 +271,7 @@ use LBHurtado\XChange\Services\SettlementCollectionGate;
 use LBHurtado\XChange\Services\SettlementEnvelopeReadinessService;
 use LBHurtado\XChange\Services\StartProviderProvisioningFromOnboardingCompletion;
 use LBHurtado\XChange\Services\SystemWalletProxy;
+use LBHurtado\XChange\Services\Treasury\AdvisoryTreasuryVocabularyReadModel;
 use LBHurtado\XChange\Services\Treasury\BavixTreasuryPositionLedgerResolver;
 use LBHurtado\XChange\Services\Treasury\DefaultTreasuryPrincipalReferenceResolver;
 use LBHurtado\XChange\Services\Treasury\LegacyAccountBalanceMigrationService;
@@ -461,6 +463,10 @@ class XChangeServiceProvider extends ServiceProvider
                 moneyMovementDecision: $app->make(MoneyMovementAccountingDecisionContract::class),
             );
         });
+        $this->app->singleton(
+            TreasuryVocabularyReadModelContract::class,
+            AdvisoryTreasuryVocabularyReadModel::class,
+        );
         $this->app->singleton(CockpitHeaderReadModelProviderContract::class, WalletCockpitHeaderReadModelProvider::class);
         $this->app->singleton(CockpitRedactorContract::class, DefaultCockpitRedactor::class);
         $this->app->bind(CockpitOperatorIssuanceActivityRecorderContract::class, function ($app) {

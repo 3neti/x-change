@@ -111,7 +111,7 @@ const lastChecked = computed(() => {
             >
                 <p class="text-lg font-medium">No balance data available</p>
                 <p class="mt-2 text-sm">
-                    Balance data will appear once wallets are configured.
+                    Balance data will appear once provider accounts are configured.
                 </p>
             </div>
         </CardContent>
