@@ -19,12 +19,14 @@ use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Services\Funding\StandingFundingRecognitionPolicy;
+use LBHurtado\XChange\Services\Treasury\TreasuryInventoryRegistrationService;
 use Throwable;
 
 final class SettleAccountFundingReceipt
 {
     public function __construct(
         private readonly TreasuryInventoryOperationContract $treasury,
+        private readonly TreasuryInventoryRegistrationService $inventoryRegistration,
         private readonly VerifiedTreasuryFundingAllocationContract $allocations,
         private readonly AuditLoggerContract $audit,
         private readonly StandingFundingRecognitionPolicy $recognitionPolicy,
@@ -59,7 +61,7 @@ final class SettleAccountFundingReceipt
             ]));
             $operationReference = 'funding-recognition:'.$evidenceScope;
 
-            $this->treasury->registerInventory(new TreasuryInventoryData(
+            $this->inventoryRegistration->ensure(new TreasuryInventoryData(
                 inventoryReference: $treasury['inventory_reference'],
                 resourceType: $treasury['resource_type'],
                 currency: $locked->currency,
@@ -69,7 +71,6 @@ final class SettleAccountFundingReceipt
                 externalReference: $treasury['settlement_resource_reference'],
                 metadata: [
                     'provider' => $locked->provider_code,
-                    'source' => 'x-change.verified-provider-funding',
                 ],
             ));
 

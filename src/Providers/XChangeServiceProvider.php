@@ -277,6 +277,7 @@ use LBHurtado\XChange\Services\Treasury\DefaultTreasuryPrincipalReferenceResolve
 use LBHurtado\XChange\Services\Treasury\LegacyAccountBalanceMigrationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryAccountBalanceReadModel;
 use LBHurtado\XChange\Services\Treasury\TreasuryAccountPortfolioProvisioningService;
+use LBHurtado\XChange\Services\Treasury\TreasuryInventoryRegistrationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryOpeningBalanceReconciliationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
@@ -348,6 +349,7 @@ class XChangeServiceProvider extends ServiceProvider
             ),
         );
         $this->app->singleton(TreasuryProvisioningService::class);
+        $this->app->singleton(TreasuryInventoryRegistrationService::class);
         $this->app->singleton(LegacyAccountBalanceMigrationService::class);
         $this->app->singleton(
             TreasuryOpeningBalanceReconciliationService::class,
@@ -355,6 +357,7 @@ class XChangeServiceProvider extends ServiceProvider
                 $app->make(TreasuryPreflightService::class),
                 $app->make(TreasuryProvisioningService::class),
                 $app->make(TreasuryInventoryOperationContract::class),
+                $app->make(TreasuryInventoryRegistrationService::class),
                 $app->make(TreasuryInventoryPositionReadModelContract::class),
                 $app->make(TreasuryPositionOperationContract::class),
                 $app->make(TreasuryPositionReadModelContract::class),

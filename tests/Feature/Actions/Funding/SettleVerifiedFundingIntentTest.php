@@ -6,6 +6,8 @@ use Bavix\Wallet\Models\Transaction;
 use Bavix\Wallet\Models\Wallet;
 use Illuminate\Support\Str;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
+use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
+use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPositionOperation;
@@ -66,6 +68,36 @@ it('atomically recognizes verified net inventory and credits the Account once', 
         'provider' => 'netbank',
         'provider_transaction_id' => $observation->provider_transaction_id,
     ]);
+});
+
+it('reuses an existing compatible Inventory registered by another funding flow', function () {
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+
+    app(TreasuryInventoryOperationContract::class)->registerInventory(
+        new TreasuryInventoryData(
+            inventoryReference: 'inventory:netbank:vca-cash',
+            resourceType: 'cash_at_bank',
+            currency: 'PHP',
+            capacityMinor: 0,
+            status: 'requested',
+            idempotencyKey: 'register:inventory:netbank:vca-cash',
+            externalReference: 'resource:netbank:corporate-vca',
+            metadata: [
+                'provider' => 'netbank',
+                'source' => 'x-change.standing-funding-address',
+            ],
+        ),
+    );
+
+    $observation = providerFundingObservationForSettlement();
+    $intent = verifiedFundingIntentForSettlement($wallet, $observation);
+    $settlement = app(SettleVerifiedFundingIntent::class)->handle($intent);
+
+    expect($settlement->net_amount_minor)->toBe(24_950)
+        ->and(TreasuryInventory::query()->count())->toBe(1)
+        ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(24_950)
+        ->and(TreasuryInventoryOperation::query()->count())->toBe(1);
 });
 
 it('rolls back Treasury recognition when the Account credit fails', function () {

@@ -27,6 +27,7 @@ use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPositionOperation;
 use LBHurtado\XChange\Enums\TreasuryOpeningBalanceStatus;
+use LBHurtado\XChange\Services\Treasury\TreasuryInventoryRegistrationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryOpeningBalanceReconciliationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
@@ -262,6 +263,7 @@ function openingBalanceReconciliationService(
         $preflight,
         $provisioning,
         app(TreasuryInventoryOperationContract::class),
+        app(TreasuryInventoryRegistrationService::class),
         app(TreasuryInventoryPositionReadModelContract::class),
         app(TreasuryPositionOperationContract::class),
         app(TreasuryPositionReadModelContract::class),

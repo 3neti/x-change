@@ -17,11 +17,13 @@ use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingSettlement;
+use LBHurtado\XChange\Services\Treasury\TreasuryInventoryRegistrationService;
 
 class SettleVerifiedFundingIntent
 {
     public function __construct(
         private readonly TreasuryInventoryOperationContract $treasury,
+        private readonly TreasuryInventoryRegistrationService $inventoryRegistration,
         private readonly VerifiedTreasuryFundingAllocationContract $allocations,
         private readonly TreasuryPositionLedgerResolverContract $positionLedgers,
         private readonly FundingAccountCreditContract $accounts,
@@ -55,7 +57,7 @@ class SettleVerifiedFundingIntent
             $idempotencyKey = 'funding-recognition-key:'.$evidenceScope;
             $externalReference = $locked->provider_code.':'.$observation->provider_transaction_id;
 
-            $this->treasury->registerInventory(new TreasuryInventoryData(
+            $this->inventoryRegistration->ensure(new TreasuryInventoryData(
                 inventoryReference: $treasury['inventory_reference'],
                 resourceType: $treasury['resource_type'],
                 currency: $locked->currency,
@@ -65,7 +67,6 @@ class SettleVerifiedFundingIntent
                 externalReference: $treasury['settlement_resource_reference'],
                 metadata: [
                     'provider' => $locked->provider_code,
-                    'source' => 'x-change.verified-provider-funding',
                 ],
             ));
 

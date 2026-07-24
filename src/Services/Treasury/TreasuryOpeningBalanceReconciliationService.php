@@ -38,6 +38,7 @@ final class TreasuryOpeningBalanceReconciliationService
         private readonly TreasuryPreflightService $preflight,
         private readonly TreasuryProvisioningService $provisioning,
         private readonly TreasuryInventoryOperationContract $inventoryOperations,
+        private readonly TreasuryInventoryRegistrationService $inventoryRegistration,
         private readonly TreasuryInventoryPositionReadModelContract $inventories,
         private readonly TreasuryPositionOperationContract $positionOperations,
         private readonly TreasuryPositionReadModelContract $positions,
@@ -390,7 +391,7 @@ final class TreasuryOpeningBalanceReconciliationService
     private function registerInventory(
         TreasuryProviderConnectionData $connection,
     ): void {
-        $this->inventoryOperations->registerInventory(new TreasuryInventoryData(
+        $this->inventoryRegistration->ensure(new TreasuryInventoryData(
             inventoryReference: $connection->inventoryReference,
             resourceType: $connection->settlementResourceType,
             currency: $connection->currency,
@@ -400,8 +401,6 @@ final class TreasuryOpeningBalanceReconciliationService
             externalReference: $connection->settlementResourceReference,
             metadata: [
                 'provider' => $connection->provider,
-                'connection_reference' => $connection->reference,
-                'source' => 'x-change.treasury-opening-balance',
             ],
         ));
     }
