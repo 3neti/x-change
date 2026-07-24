@@ -26,6 +26,8 @@ use LBHurtado\XChange\Services\ResumeProviderProvisioningFromOnboarding;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('generates a pay code by resolving issuer, estimating cost, allocating revenue, and issuing voucher', function () {
+    config()->set('x-change.commercial.enabled', true);
+
     $issuer = new User;
     $issuer->id = 1;
     $issuer->name = 'Issuer';
@@ -185,7 +187,6 @@ it('throws when issuer cannot be resolved', function () {
     $issuance = Mockery::mock(PayCodeIssuanceContract::class);
 
     $allocator = Mockery::mock(InstructionRevenueAllocatorService::class);
-
     $action = new GeneratePayCode(
         $users,
         $wallets,
@@ -257,7 +258,6 @@ it('stops before issuance when wallet cannot afford the estimated cost', functio
     $issuance->shouldNotReceive('issue');
 
     $allocator = Mockery::mock(InstructionRevenueAllocatorService::class);
-
     $action = new GeneratePayCode(
         $users,
         $wallets,
@@ -307,6 +307,8 @@ it('throws provisioning required when issuer provider wallet is missing', functi
 
     $allocator = Mockery::mock(InstructionRevenueAllocatorService::class);
     $allocator->shouldNotReceive('allocate');
+    $commercialSales = Mockery::mock(PayCodeCommercialSaleService::class);
+    $commercialSales->shouldNotReceive('post');
 
     $readinessGuard = Mockery::mock(ProviderReadinessGuardContract::class);
     $readinessGuard->shouldReceive('evaluateIssuer')
@@ -367,6 +369,7 @@ it('throws provisioning required when issuer provider wallet is missing', functi
         $descriptors,
         $onboarding,
         $resume,
+        commercialSales: $commercialSales,
     );
 
     expect(fn () => $action->handle($input))

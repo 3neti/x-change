@@ -67,7 +67,8 @@ final class PayCodeCommercialQuoteService
             $componentsMinor[$line->category] = ($componentsMinor[$line->category] ?? 0)
                 + $line->totalPriceMinor;
             $charges[] = [
-                'index' => $line->catalogItemReference,
+                'index' => $this->compatibilityChargeIndex($line->catalogItemReference),
+                'catalog_item_reference' => $line->catalogItemReference,
                 'label' => $line->label,
                 'type' => $line->category,
                 'quantity' => $line->quantity,
@@ -99,6 +100,14 @@ final class PayCodeCommercialQuoteService
         ];
     }
 
+    private function compatibilityChargeIndex(string $catalogItemReference): string
+    {
+        return match ($catalogItemReference) {
+            'flow_type.collectible' => 'cash.amount',
+            default => $catalogItemReference,
+        };
+    }
+
     /**
      * @return list<CommercialQuoteLineInputData>
      */
@@ -111,6 +120,12 @@ final class PayCodeCommercialQuoteService
 
         if ((float) ($instructions->cash?->amount ?? 0) > 0) {
             $selected[] = 'cash.amount';
+        }
+
+        $flowType = mb_strtolower(trim((string) data_get($instructions, 'metadata.flow_type', '')));
+
+        if ($flowType === 'collectible') {
+            $selected[] = 'flow_type.collectible';
         }
 
         $voucherType = mb_strtolower(trim((string) data_get($instructions, 'voucher_type', '')));

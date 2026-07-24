@@ -219,10 +219,9 @@ class GeneratePayCode
         PricingEstimateData $estimate,
         FundingDecisionData $funding,
     ): array {
-        if ($this->commercialSales !== null
-            && (bool) config('x-change.commercial.enabled', true)
+        if ((bool) config('x-change.commercial.enabled', true)
             && $issuer instanceof Model) {
-            return $this->commercialSales->post(
+            return $this->commercialSales()->post(
                 issuer: $issuer,
                 input: $input,
                 issued: $issued,
@@ -239,6 +238,11 @@ class GeneratePayCode
             estimate: $estimate,
             context: $this->buildAllocationContext($input, $estimate),
         );
+    }
+
+    protected function commercialSales(): PayCodeCommercialSaleService
+    {
+        return $this->commercialSales ??= app(PayCodeCommercialSaleService::class);
     }
 
     protected function requiredIssuanceAmount(array $input, PricingEstimateData $estimate): float

@@ -146,6 +146,7 @@ abstract class TestCase extends Orchestra
             'email_feedback' => 0.0,
             'sms_feedback' => 0.0,
         ]);
+        $app['config']->set('x-change.commercial.enabled', false);
 
         $app['config']->set('payment-gateway.netbank.funding.corporate_account_number', '113001000019');
         $app['config']->set('payment-gateway.netbank.funding.corporate_account_name', 'X Change Treasury');
