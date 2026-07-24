@@ -610,11 +610,17 @@ export type CockpitStandingFundingReceipt = {
     gross_amount: string;
     net_amount: string;
     currency: string;
+    status: string;
     provider_status: string;
+    applied: boolean;
+    applied_amount_minor: number;
+    applied_amount: string;
+    applied_at?: string | null;
+    provisional: boolean;
     can_approve: boolean;
     approval_reference?: string | null;
     occurred_at?: string | null;
-    settled_at?: string | null;
+    provider_settled_at?: string | null;
 };
 
 export type CockpitQrPhFundingSimulation = {

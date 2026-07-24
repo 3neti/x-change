@@ -159,12 +159,19 @@ it('checks authoritative VCA history without exposing raw provider or payer fact
         ->assertJsonPath('schema', 'x-change.cockpit.standing-funding-history.v1')
         ->assertJsonPath('observations.0.gross_amount_minor', 2500)
         ->assertJsonPath('observations.0.gross_amount', '₱25.00')
-        ->assertJsonPath('observations.0.provider_status', 'awaiting_approval')
+        ->assertJsonPath('observations.0.status', 'awaiting_approval')
+        ->assertJsonPath('observations.0.provider_status', 'settled')
+        ->assertJsonPath('observations.0.applied', false)
+        ->assertJsonPath('observations.0.applied_amount_minor', 0)
+        ->assertJsonPath('observations.0.applied_amount', '₱0.00')
+        ->assertJsonPath('observations.0.applied_at', null)
+        ->assertJsonPath('observations.0.provisional', false)
         ->assertJsonPath(
             'observations.0.approval_reference',
             AccountFundingReceipt::query()->sole()->reference,
         )
         ->assertJsonPath('sync.awaiting_approval', 1)
+        ->assertJsonPath('sync.applied', 0)
         ->assertJsonPath('balance_changed', false)
         ->assertJsonPath('funding_intent_created', false);
 

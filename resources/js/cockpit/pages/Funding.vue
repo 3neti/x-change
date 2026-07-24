@@ -463,6 +463,12 @@ async function checkStandingFundingHistory(): Promise<void> {
             body.observations as CockpitStandingFundingReceipt[];
         standingHistoryCheckedAt.value =
             typeof body.checked_at === 'string' ? body.checked_at : null;
+        standingActionNotice.value =
+            body.balance_changed === true
+                ? 'New NetBank funding was applied to Internal Balance exactly once.'
+                : body.observations.length > 0
+                  ? 'NetBank history refreshed. Previously applied receipts were not applied again.'
+                  : null;
     } catch {
         standingAddressError.value =
             'The NetBank history check could not reach the provider.';
@@ -519,17 +525,21 @@ async function approveStandingFundingReceipt(
             receipt.reference === displayReference
                 ? {
                       ...receipt,
-                      provider_status: 'settled',
-                      can_approve: false,
-                      approval_reference: null,
-                      settled_at:
+                      status: 'settled',
+                      applied: true,
+                      applied_amount_minor: receipt.net_amount_minor,
+                      applied_amount: receipt.net_amount,
+                      applied_at:
                           typeof body.receipt === 'object' &&
                           body.receipt !== null &&
                           typeof (body.receipt as Record<string, unknown>)
                               .settled_at === 'string'
                               ? (body.receipt as Record<string, string>)
                                     .settled_at
-                              : receipt.settled_at,
+                              : receipt.applied_at,
+                      provisional: false,
+                      can_approve: false,
+                      approval_reference: null,
                   }
                 : receipt,
         );
@@ -693,9 +703,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 class="rounded-full bg-slate-100 px-2 py-1 text-[0.65rem] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                                 data-testid="standing-funding-address-scheme"
                             >
-                                {{
-                                    standing_funding_address.scheme_label
-                                }}
+                                {{ standing_funding_address.scheme_label }}
                             </span>
                         </div>
                         <h2 class="mt-1.5 text-lg font-semibold">
@@ -898,7 +906,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             class="overflow-x-auto"
                         >
                             <table
-                                class="w-full min-w-[42rem] text-left text-sm"
+                                class="w-full min-w-[52rem] text-left text-sm"
                             >
                                 <thead
                                     class="bg-slate-50 text-xs text-slate-500 uppercase dark:bg-slate-900"
@@ -906,7 +914,8 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                     <tr>
                                         <th class="px-4 py-2.5">Reference</th>
                                         <th class="px-4 py-2.5">Amount</th>
-                                        <th class="px-4 py-2.5">Status</th>
+                                        <th class="px-4 py-2.5">NetBank</th>
+                                        <th class="px-4 py-2.5">Applied</th>
                                         <th class="px-4 py-2.5">Observed</th>
                                         <th class="px-4 py-2.5 text-right">
                                             Control
@@ -934,12 +943,57 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                                 )
                                             }}
                                         </td>
+                                        <td class="px-4 py-3">
+                                            <div
+                                                v-if="receipt.applied"
+                                                class="flex flex-col gap-0.5"
+                                            >
+                                                <span
+                                                    class="font-semibold text-emerald-700 dark:text-emerald-300"
+                                                >
+                                                    Yes ·
+                                                    {{ receipt.applied_amount }}
+                                                </span>
+                                                <span
+                                                    v-if="receipt.provisional"
+                                                    class="text-[0.7rem] font-medium text-amber-700 dark:text-amber-300"
+                                                >
+                                                    Provisional provider status
+                                                </span>
+                                                <span
+                                                    v-else
+                                                    class="text-[0.7rem] text-slate-500"
+                                                >
+                                                    {{
+                                                        displayTime(
+                                                            receipt.applied_at,
+                                                        )
+                                                    }}
+                                                </span>
+                                            </div>
+                                            <div
+                                                v-else
+                                                class="flex flex-col gap-0.5"
+                                            >
+                                                <span
+                                                    class="font-medium text-slate-600 dark:text-slate-300"
+                                                >
+                                                    No
+                                                </span>
+                                                <span
+                                                    class="text-[0.7rem] text-slate-500"
+                                                >
+                                                    {{
+                                                        displayLabel(
+                                                            receipt.status,
+                                                        )
+                                                    }}
+                                                </span>
+                                            </div>
+                                        </td>
                                         <td class="px-4 py-3 text-slate-500">
                                             {{
-                                                displayTime(
-                                                    receipt.settled_at ??
-                                                        receipt.occurred_at,
-                                                )
+                                                displayTime(receipt.occurred_at)
                                             }}
                                         </td>
                                         <td class="px-4 py-3 text-right">

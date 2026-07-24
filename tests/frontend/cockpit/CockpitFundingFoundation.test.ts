@@ -257,9 +257,7 @@ describe('Cockpit Funding foundation', () => {
         expect(wrapper.text()).toContain('Check NetBank');
         expect(wrapper.text()).toContain('Account Funding Address');
         expect(wrapper.text()).toContain('Verified mobile suffix');
-        expect(wrapper.text()).toContain(
-            'production rejects this scheme',
-        );
+        expect(wrapper.text()).toContain('production rejects this scheme');
         expect(wrapper.text()).toContain('Create Account Funding QR');
         expect(wrapper.text()).toContain(
             'payer mobile, amount, timing, and merchant text never decide',
@@ -330,12 +328,17 @@ describe('Cockpit Funding foundation', () => {
                             gross_amount: '₱25.00',
                             net_amount: '₱25.00',
                             currency: 'PHP',
-                            provider_status: 'awaiting_approval',
+                            status: 'awaiting_approval',
+                            provider_status: 'settled',
+                            applied: false,
+                            applied_amount_minor: 0,
+                            applied_amount: '₱0.00',
+                            applied_at: null,
+                            provisional: false,
                             can_approve: true,
-                            approval_reference:
-                                '01KY8R71ZNS1Y8HTRPQ7QDD41Q',
+                            approval_reference: '01KY8R71ZNS1Y8HTRPQ7QDD41Q',
                             occurred_at: '2026-07-23T01:05:00+00:00',
-                            settled_at: '2026-07-23T01:06:00+00:00',
+                            provider_settled_at: '2026-07-23T01:06:00+00:00',
                         },
                     ],
                     checked_at: '2026-07-23T01:07:00+00:00',
@@ -412,6 +415,7 @@ describe('Cockpit Funding foundation', () => {
         expect(wrapper.text()).toContain('AF-ABC123');
         expect(wrapper.text()).toContain('₱25.00');
         expect(wrapper.text()).toContain('Awaiting Approval');
+        expect(wrapper.text()).toContain('No');
 
         await wrapper
             .get('[data-testid="approve-standing-funding-receipt"]')
@@ -430,7 +434,7 @@ describe('Cockpit Funding foundation', () => {
         expect(wrapper.text()).toContain(
             'Verified funding was recognized in Treasury Inventory',
         );
-        expect(wrapper.text()).toContain('Settled');
+        expect(wrapper.text()).toContain('Yes · ₱25.00');
 
         await wrapper
             .get('[data-testid="hide-standing-funding-address"]')
@@ -441,6 +445,139 @@ describe('Cockpit Funding foundation', () => {
                 .find('[data-testid="standing-funding-address-qr"]')
                 .exists(),
         ).toBe(false);
+    });
+
+    it('shows a pending NetBank receipt as applied once without confusing it with final settlement', async () => {
+        const automaticAddress = {
+            ...standingFundingAvailability,
+            exists: true,
+            recognition_mode: 'automatic' as const,
+            automatic_credit_enabled: true as const,
+        };
+        const appliedReceipt = {
+            reference: 'AF-PENDING123',
+            gross_amount_minor: 3000,
+            fee_amount_minor: 0,
+            net_amount_minor: 3000,
+            gross_amount: '₱30.00',
+            net_amount: '₱30.00',
+            currency: 'PHP',
+            status: 'settled',
+            provider_status: 'pending',
+            applied: true,
+            applied_amount_minor: 3000,
+            applied_amount: '₱30.00',
+            applied_at: '2026-07-24T01:05:00+00:00',
+            provisional: true,
+            can_approve: false,
+            approval_reference: null,
+            occurred_at: '2026-07-24T01:02:00+00:00',
+            provider_settled_at: null,
+        };
+        const fetch = vi
+            .fn()
+            .mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: async () => ({
+                    schema: 'x-change.cockpit.standing-funding-address.v1',
+                    address: {
+                        reference: '01J-STANDING-AUTO',
+                        provider: 'netbank',
+                        funding_address: '9150012345678901',
+                        masked_funding_address: '•••• 678901',
+                        purpose: 'account_funding',
+                        recognition_mode: 'automatic',
+                        status: 'active',
+                        currency: 'PHP',
+                        institution: 'NetBank',
+                        merchant_name: 'X Change',
+                        qr_code: 'data:image/png;base64,REUSABLE',
+                        qr_mode: 'static',
+                        transaction_type: 'p2m',
+                        embedded_amount: false,
+                        provider_generated: true,
+                        temporary: false,
+                        funding_intent_created: false,
+                        automatic_credit_enabled: true,
+                        minimum_amount_minor: 100,
+                        maximum_amount_minor: 5_000_000,
+                        daily_limit_minor: 10_000_000,
+                    },
+                }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: async () => ({
+                    schema: 'x-change.cockpit.standing-funding-history.v1',
+                    observations: [appliedReceipt],
+                    checked_at: '2026-07-24T01:06:00+00:00',
+                    balance_changed: true,
+                    funding_intent_created: false,
+                    sync: {
+                        observed: 0,
+                        settled: 1,
+                        applied: 1,
+                        awaiting_approval: 0,
+                        suspense: 0,
+                    },
+                }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: async () => ({
+                    schema: 'x-change.cockpit.standing-funding-history.v1',
+                    observations: [appliedReceipt],
+                    checked_at: '2026-07-24T01:07:00+00:00',
+                    balance_changed: false,
+                    funding_intent_created: false,
+                    sync: {
+                        observed: 0,
+                        settled: 1,
+                        applied: 0,
+                        awaiting_approval: 0,
+                        suspense: 0,
+                    },
+                }),
+            });
+        vi.stubGlobal('fetch', fetch);
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: fundingReadModel,
+                standing_funding_address: automaticAddress,
+            },
+        });
+
+        await wrapper
+            .get('[data-testid="open-standing-funding-address"]')
+            .trigger('click');
+        await nextTick();
+        await nextTick();
+        await wrapper
+            .get('[data-testid="check-standing-funding-history"]')
+            .trigger('click');
+        await nextTick();
+        await nextTick();
+
+        expect(wrapper.text()).toContain('Pending');
+        expect(wrapper.text()).toContain('Yes · ₱30.00');
+        expect(wrapper.text()).toContain('Provisional provider status');
+        expect(wrapper.text()).toContain(
+            'New NetBank funding was applied to Internal Balance exactly once.',
+        );
+
+        await wrapper
+            .get('[data-testid="check-standing-funding-history"]')
+            .trigger('click');
+        await nextTick();
+        await nextTick();
+
+        expect(wrapper.text()).toContain(
+            'Previously applied receipts were not applied again.',
+        );
+        expect(fetch).toHaveBeenCalledTimes(3);
     });
 
     it('reopens an owner-scoped QR without placing it in the general read model', async () => {
