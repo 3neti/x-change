@@ -19,7 +19,9 @@ x-change does not equate an Account balance with a bank balance. It maintains th
 For each enabled provider connection, the system principal owns:
 
 - a **Treasury Clearing Position** for verified value waiting to be attributed; and
-- a **Legacy Unattributed Position** for authoritative opening value whose Account ownership has not yet been established.
+- a **Legacy Unattributed Position** for authoritative opening value whose Account ownership has not yet been established;
+- a **Commercial Clearing Position** for accepted commercial charges waiting to be allocated; and
+- separate provider-cost payable, product revenue, partner commission payable, royalty payable, tax payable, and commercial revenue Positions.
 
 Each Account owns one **Client Funds Position** for every active provider connection and currency. An Account can therefore have NetBank and Paynamics positions at the same time without creating a separate application user for each provider.
 
@@ -27,10 +29,14 @@ Each Account owns one **Client Funds Position** for every active provider connec
 System principal
 ├── netbank-primary / PHP
 │   ├── Treasury Clearing
-│   └── Legacy Unattributed
+│   ├── Legacy Unattributed
+│   ├── Commercial Clearing
+│   └── Commercial payable and revenue Positions
 └── paynamics-primary / PHP
     ├── Treasury Clearing
-    └── Legacy Unattributed
+    ├── Legacy Unattributed
+    ├── Commercial Clearing
+    └── Commercial payable and revenue Positions
 
 Account principal
 ├── netbank-primary / PHP / Client Funds
@@ -200,6 +206,37 @@ max(0, min(Internal Balance, Provider Liquidity) - Outstanding Pay Codes)
 
 Capacity therefore cannot exceed either attributed client funds or provider liquidity, and it is reduced by outstanding Pay Codes.
 
+## Pay Code commercial waterfall
+
+`3neti/x-commerce` is the canonical price and waterfall-calculation authority. Its versioned Pay Code catalog prices the selected instruction, input, validation, feedback, and rider items in integer minor units. Both estimate screens and accepted sales call the same quote engine.
+
+The first implemented policy uses ordered fixed deductions and allocations followed by one exact residual:
+
+```text
+successful Pay Code issuance
+          │
+          ▼
+immutable x-commerce sale snapshot
+          │
+          ▼
+Account Client Funds → system Commercial Clearing
+          │
+          ├─→ Provider Cost Payable
+          ├─→ Product Revenue
+          ├─→ Partner Commission Payable
+          └─→ Commercial Revenue residual
+```
+
+The accepted snapshot contains the catalog version, policy version, attribution version, quote lines, and exact allocation plan. x-change persists that snapshot before posting the Treasury movements. It does not recompute old sales from current configuration.
+
+One database transaction creates the sale, charges Client Funds, and allocates every waterfall leg. Any failed leg rolls back the entire sale. The acceptance event and Treasury operation references are unique, so a repeated issuance handoff returns the original posting without a second debit. A reversal creates exact compensating Treasury movements; it never edits or deletes the original sale or ledger operations.
+
+Provider cost payable is a commercial classification, not proof that a bank has already deducted cash. Actual external settlement remains subject to provider evidence and reconciliation. Partner commission payable records the amount and recipient reference produced by the accepted attribution snapshot; a later controlled payout workflow is still required to discharge that payable.
+
+Percentage rules, caps, taxes, royalties, partner payment, invoice collection, and provider-wallet topology posting remain separately gated extensions. They must add versioned policy contracts and cannot mutate version 1 history.
+
+The posting boundary is controlled by `XCHANGE_COMMERCIAL_WATERFALL_ENABLED`. Keep it disabled while upgrading an existing installation until the migrations have run and `xchange:treasury:provision` has created exactly one active provider connection with all commercial Positions. Enabling it makes a missing or ambiguous connection a hard issuance failure; x-change will not silently fall back to unclassified revenue accounting.
+
 ## Legacy Account cutover
 
 Opening provider value is first reconciled into Legacy Unattributed. Only then may an existing Account balance be migrated:
@@ -253,7 +290,7 @@ The live Treasury lifecycle now pilots provider-aware Pay Code accounting. Each 
 
 The configured provider rail fee is informational unless authoritative provider evidence shows that the provider deducted it from the controlled account. NetBank's observed payout flow moves only the beneficiary principal. The sender's system charge is a separate economic leg and must never be posted as NetBank cash movement.
 
-The canonical Pay Code liability and existing execution ledger remain as a compatibility mirror during this pilot. Non-zero sender system-charge collection still uses its existing revenue-allocation ledger path. Before enabling non-zero production charges against migrated Accounts, that charge path must be moved to an explicit, separately classified Client Funds Position debit and system-revenue allocation. Reservation, release, and settlement must also be wired into every production Pay Code issue, cancel, expire, and claim path before the pilot becomes the system-wide accounting boundary.
+The canonical Pay Code liability and existing execution ledger remain as a compatibility mirror during this pilot. Non-zero sender commercial charges now debit the provider-specific Client Funds Position into Commercial Clearing and post the accepted x-commerce waterfall. Pay Code principal reservation, release, and settlement must still be wired into every production issue, cancel, expire, and claim path before the pilot becomes the system-wide accounting boundary.
 
 Post-transfer balance checks are deliberately observational. They never recognize a positive difference because the provider may briefly return a stale pre-payout balance. A positive difference is `provider_sync_pending`; rerunning the same lifecycle reference checks again without repeating the transfer. A provider balance below internal attribution, or any Inventory/Position mismatch, remains `review_required`.
 

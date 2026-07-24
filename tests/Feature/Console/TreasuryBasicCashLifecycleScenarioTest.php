@@ -24,6 +24,7 @@ function prepareTreasuryBasicCashIssuer(): FakeLifecycleUser
         FakeLifecycleUser::class,
     );
     config()->set('x-change.lifecycle.treasury_basic_cash.enabled', true);
+    config()->set('x-change.commercial.enabled', true);
     config()->set(
         'x-change.lifecycle.treasury_basic_cash.allowed_environments',
         ['testing'],
@@ -107,13 +108,13 @@ it('funds Treasury, issues basic_cash, proves replay safety, and rolls back', fu
         ->and(data_get(
             $result->payload,
             'basic_cash.instruction_fee_position_backed',
-        ))->toBeFalse()
+        ))->toBeTrue()
         ->and(data_get($result->payload, 'basic_cash.escrow_position_backed'))
         ->toBeFalse()
         ->and(data_get(
             $result->payload,
             'basic_cash.legacy_compatibility_amount_minor',
-        ))->toBeGreaterThan(1_250)
+        ))->toBe(1_250)
         ->and(data_get(
             $result->payload,
             'basic_cash.legacy_balance_after_minor',
@@ -123,7 +124,7 @@ it('funds Treasury, issues basic_cash, proves replay safety, and rolls back', fu
         ->and(data_get(
             $result->payload,
             'balances.after_issuance.wallet_balance_minor',
-        ))->toBe(10_000)
+        ))->toBe(8_500)
         ->and(data_get(
             $result->payload,
             'balances.after_issuance.outstanding_liability_minor',
@@ -131,12 +132,30 @@ it('funds Treasury, issues basic_cash, proves replay safety, and rolls back', fu
         ->and(data_get($result->payload, 'issuance_capacity.before_minor'))
         ->toBe(10_000)
         ->and(data_get($result->payload, 'issuance_capacity.after_minor'))
-        ->toBe(8_750)
+        ->toBe(7_250)
+        ->and(data_get($result->payload, 'commercial_sale.status'))
+        ->toBe('posted')
+        ->and(data_get($result->payload, 'commercial_sale.total_minor'))
+        ->toBe(1_500)
+        ->and(data_get(
+            $result->payload,
+            'commercial_sale.allocation_total_minor',
+        ))->toBe(1_500)
+        ->and(data_get($result->payload, 'commercial_sale.allocation_count'))
+        ->toBe(4)
+        ->and(data_get(
+            $result->payload,
+            'commercial_sale.catalog.reference',
+        ))->toBe('pay-code')
+        ->and(data_get(
+            $result->payload,
+            'commercial_sale.waterfall_policy.reference',
+        ))->toBe('pay-code-commercial-waterfall')
         ->and(data_get($result->payload, 'steps'))->toHaveCount(8)
         ->and(data_get($result->payload, 'steps.0.key'))
         ->toBe('provider_evidence_verified')
         ->and(data_get($result->payload, 'steps.4.key'))
-        ->toBe('pay_code_compatibility_boundary')
+        ->toBe('commercial_waterfall_posted')
         ->and(data_get($result->payload, 'steps.5.key'))
         ->toBe('basic_cash_issued')
         ->and(data_get($result->payload, 'steps.7.key'))

@@ -19,6 +19,7 @@ use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioBootstrapper;
 use LBHurtado\XChange\Lifecycle\Scenarios\LifecycleScenarioRepository;
+use LBHurtado\XChange\Models\CommercialSale;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
@@ -37,6 +38,8 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
         'treasury_inventory_operations',
         'treasury_positions',
         'treasury_position_operations',
+        'x_change_commercial_sales',
+        'x_change_commercial_allocations',
         'vouchers',
     ];
 
@@ -227,8 +230,7 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
         $basicCashAmountMinor = (int) round(
             (float) data_get($baseScenario, 'amount', 25) * 100,
         );
-        $legacyCompatibilityAmountMinor = $basicCashAmountMinor
-            + $compatibilityFeeMinor;
+        $legacyCompatibilityAmountMinor = $basicCashAmountMinor;
         $legacyBalanceBefore = (int) $this->wallets->getBalance($account);
         $liabilityBeforeFunding = $this->liabilities
             ->forIssuer($context->issuer)
@@ -291,6 +293,15 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
             issuerOption: (string) $context->issuer->getKey(),
             walletOption: (string) $context->issuer->getKey(),
         );
+        $commercialSale = CommercialSale::query()
+            ->with('allocations')
+            ->where(
+                'source_commercial_event_reference',
+                'pay-code-generation:voucher:'.$basicCash->voucher->getKey(),
+            )
+            ->sole();
+        $commercialAllocationMinor = (int) $commercialSale->allocations
+            ->sum('amount_minor');
         $liabilityAfterIssuance = $this->liabilities
             ->forIssuer($context->issuer)
             ->toArray();
@@ -325,10 +336,13 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
         $success = $settlement->net_amount_minor === $amountMinor
             && $balanceAfterFunding === $amountMinor
             && $balanceAfterReplay === $balanceAfterFunding
-            && $balanceAfterIssuance === $balanceAfterFunding
+            && $balanceAfterIssuance === $balanceAfterFunding - $compatibilityFeeMinor
             && $legacyBalanceAfterIssuance === $legacyBalanceBefore
             && $liabilityIncrease === $basicCashAmountMinor
-            && $capacityBefore - $capacityAfter === $basicCashAmountMinor;
+            && $capacityBefore - $capacityAfter === $basicCashAmountMinor + $compatibilityFeeMinor
+            && $commercialSale->status === 'posted'
+            && $commercialSale->total_price_minor === $compatibilityFeeMinor
+            && $commercialAllocationMinor === $compatibilityFeeMinor;
 
         return [
             'success' => $success,
@@ -384,13 +398,15 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
                     ],
                 ),
                 $this->step(
-                    'pay_code_compatibility_boundary',
-                    'basic_cash escrow and fees still use the legacy voucher ledger',
-                    'compatibility_boundary',
+                    'commercial_waterfall_posted',
+                    'The accepted Pay Code sale posts one x-commerce waterfall',
+                    'posted',
                     [
-                        'Pay Code escrow' => $this->money($basicCashAmountMinor),
-                        'Scenario fee' => $this->money($compatibilityFeeMinor),
-                        'Position backed' => 'No',
+                        'Quoted fee' => $this->money($compatibilityFeeMinor),
+                        'Allocated fee' => $this->money($commercialAllocationMinor),
+                        'Commercial Position backed' => 'Yes',
+                        'Allocation legs' => (string) $commercialSale->allocations->count(),
+                        'Pay Code escrow Position backed' => 'No',
                         'Fixture persisted' => 'No',
                     ],
                 ),
@@ -438,12 +454,36 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
             'basic_cash' => [
                 'amount_minor' => $basicCashAmountMinor,
                 'instruction_fee_minor' => $compatibilityFeeMinor,
-                'instruction_fee_position_backed' => false,
+                'instruction_fee_position_backed' => true,
                 'escrow_position_backed' => false,
                 'legacy_compatibility_amount_minor' => $legacyCompatibilityAmountMinor,
                 'legacy_balance_after_minor' => $legacyBalanceAfterIssuance,
                 'issued' => true,
                 'claimed' => false,
+            ],
+            'commercial_sale' => [
+                'status' => $commercialSale->status,
+                'total_minor' => $commercialSale->total_price_minor,
+                'allocation_total_minor' => $commercialAllocationMinor,
+                'allocation_count' => $commercialSale->allocations->count(),
+                'catalog' => [
+                    'reference' => $commercialSale->catalog_reference,
+                    'version' => $commercialSale->catalog_version,
+                ],
+                'waterfall_policy' => [
+                    'reference' => $commercialSale->waterfall_policy_reference,
+                    'version' => $commercialSale->waterfall_policy_version,
+                ],
+                'allocations' => $commercialSale->allocations
+                    ->map(static fn ($allocation): array => [
+                        'sequence' => $allocation->sequence,
+                        'category' => $allocation->category,
+                        'recipient_reference' => $allocation->recipient_reference,
+                        'amount_minor' => $allocation->amount_minor,
+                        'status' => $allocation->status,
+                    ])
+                    ->values()
+                    ->all(),
             ],
             'balances' => [
                 'before_funding' => $liabilityBeforeFunding,
@@ -587,6 +627,12 @@ final class TreasuryBasicCashScenarioRunner implements ScenarioRunnerContract
                 ->count(),
             'treasury_position_operations' => $connection
                 ->table('treasury_position_operations')
+                ->count(),
+            'commercial_sales' => $connection
+                ->table('x_change_commercial_sales')
+                ->count(),
+            'commercial_allocations' => $connection
+                ->table('x_change_commercial_allocations')
                 ->count(),
             'vouchers' => $connection->table('vouchers')->count(),
         ], JSON_THROW_ON_ERROR));

@@ -59,6 +59,8 @@ return [
             'treasury_inventory_operations',
             'treasury_positions',
             'treasury_position_operations',
+            'x_change_commercial_sales',
+            'x_change_commercial_allocations',
             'vouchers',
         ],
     ],
