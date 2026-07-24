@@ -71,6 +71,7 @@ use LBHurtado\XChange\Console\Commands\Treasury\MigrateLegacyAccountBalanceComma
 use LBHurtado\XChange\Console\Commands\Treasury\PreflightTreasuryCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\ProvisionTreasuryCommand;
 use LBHurtado\XChange\Console\Commands\Treasury\ReconcileOpeningTreasuryBalanceCommand;
+use LBHurtado\XChange\Console\Commands\Treasury\SimulateTreasuryProviderDepositCommand;
 use LBHurtado\XChange\Console\Commands\Wallet\GetWalletBalanceCommand;
 use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\ApprovalWorkflowContract;
@@ -948,6 +949,7 @@ class XChangeServiceProvider extends ServiceProvider
                 PreflightTreasuryCommand::class,
                 ProvisionTreasuryCommand::class,
                 ReconcileOpeningTreasuryBalanceCommand::class,
+                SimulateTreasuryProviderDepositCommand::class,
                 InstallXChangeCommand::class,
                 DoctorXChangeCommand::class,
                 SeedCockpitDiagnosticActivityCommand::class,

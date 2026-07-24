@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Treasury;
 
+use DateTimeImmutable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Contracts\ProviderBalanceReader;
@@ -91,6 +92,98 @@ final class TreasuryOpeningBalanceReconciliationService
         return new TreasuryOpeningBalanceReconciliationData($results);
     }
 
+    public function simulateDeposit(
+        string $connectionReference,
+        int $amountMinor,
+        string $simulationReference,
+    ): TreasuryOpeningBalanceConnectionData {
+        if (
+            ! (bool) config('x-change.treasury.simulator.enabled', false)
+            || ! in_array(
+                app()->environment(),
+                (array) config('x-change.treasury.simulator.allowed_environments', []),
+                true,
+            )
+        ) {
+            throw new TreasuryConfigurationException(
+                'Treasury provider deposit simulation is unavailable in this environment.',
+            );
+        }
+
+        $simulationReference = trim($simulationReference);
+
+        if ($amountMinor <= 0 || $simulationReference === '') {
+            throw new TreasuryConfigurationException(
+                'Treasury provider deposit simulation requires a positive amount and reference.',
+            );
+        }
+
+        $preflight = $this->preflight->run([trim($connectionReference)]);
+
+        if (
+            ! $preflight->passes()
+            || count($preflight->connections) !== 1
+            || ! $preflight->connections[0]->ready
+        ) {
+            throw new TreasuryPreflightFailed(
+                'Treasury provider connection did not pass simulation preflight.',
+            );
+        }
+
+        $connection = $preflight->connections[0]->connection;
+        $this->provisioning->provision([$connection->reference]);
+        $lock = Cache::lock(
+            'x-change:treasury:opening-balance:'.hash('sha256', $connection->reference),
+            max(1, (int) config('x-change.treasury.reconciliation_lock_seconds', 60)),
+        );
+
+        return $lock->block(
+            max(0, (int) config('x-change.treasury.reconciliation_lock_wait_seconds', 5)),
+            function () use (
+                $amountMinor,
+                $connection,
+                $simulationReference,
+            ): TreasuryOpeningBalanceConnectionData {
+                $simulationScope = hash('sha256', implode('|', [
+                    $connection->reference,
+                    $simulationReference,
+                    (string) $amountMinor,
+                ]));
+                $evidenceReference = 'simulation:'.$simulationScope;
+                $operationScope = hash('sha256', implode('|', [
+                    $connection->reference,
+                    $evidenceReference,
+                    (string) $amountMinor,
+                ]));
+                $inventoryOperationReference = 'opening-inventory-recognition:'.$operationScope;
+                $positionOperationReference = 'opening-position-recognition:'.$operationScope;
+
+                if (
+                    $this->inventories->operationExists($inventoryOperationReference)
+                    && $this->positions->operationExists($positionOperationReference)
+                ) {
+                    return $this->currentConnectionResult(
+                        $connection,
+                        $evidenceReference,
+                    );
+                }
+
+                $positionBalanceMinor = $this->connectionPositionBalance($connection);
+                $observation = new ProviderBalanceObservationData(
+                    provider: $connection->provider,
+                    connectionReference: $connection->reference,
+                    settlementResourceReference: $connection->settlementResourceReference,
+                    amountMinor: $positionBalanceMinor + $amountMinor,
+                    currency: $connection->currency,
+                    observedAt: DateTimeImmutable::createFromInterface(now()),
+                    evidenceReference: $evidenceReference,
+                );
+
+                return $this->reconcileObservation($connection, $observation);
+            },
+        );
+    }
+
     private function reconcileConnection(
         TreasuryProviderConnectionData $connection,
     ): TreasuryOpeningBalanceConnectionData {
@@ -108,6 +201,14 @@ final class TreasuryOpeningBalanceReconciliationService
             settlementResourceReference: $connection->settlementResourceReference,
             currency: $connection->currency,
         ));
+
+        return $this->reconcileObservation($connection, $observation);
+    }
+
+    private function reconcileObservation(
+        TreasuryProviderConnectionData $connection,
+        ProviderBalanceObservationData $observation,
+    ): TreasuryOpeningBalanceConnectionData {
         $this->assertObservationMatches($connection, $observation);
         $this->registerInventory($connection);
         $inventory = $this->inventories->find($connection->inventoryReference);
@@ -239,6 +340,51 @@ final class TreasuryOpeningBalanceReconciliationService
             inventoryOperationReference: $inventoryRecognition->operationReference,
             positionOperationReference: $positionRecognition->operationReference,
         );
+    }
+
+    private function currentConnectionResult(
+        TreasuryProviderConnectionData $connection,
+        string $evidenceReference,
+    ): TreasuryOpeningBalanceConnectionData {
+        $inventory = $this->inventories->find($connection->inventoryReference);
+        $inventoryBalanceMinor = $inventory?->balanceMinor ?? 0;
+        $positionBalanceMinor = $this->connectionPositionBalance($connection);
+        $status = $inventoryBalanceMinor === $positionBalanceMinor
+            ? TreasuryOpeningBalanceStatus::Reconciled
+            : TreasuryOpeningBalanceStatus::ReviewRequired;
+
+        return new TreasuryOpeningBalanceConnectionData(
+            connectionReference: $connection->reference,
+            provider: $connection->provider,
+            currency: $connection->currency,
+            status: $status,
+            providerBalanceMinor: $positionBalanceMinor,
+            inventoryBalanceMinor: $inventoryBalanceMinor,
+            positionBalanceMinor: $positionBalanceMinor,
+            differenceMinor: 0,
+            evidenceReference: $evidenceReference,
+            observedAt: now()->toAtomString(),
+            reason: $status === TreasuryOpeningBalanceStatus::ReviewRequired
+                ? 'internal-inventory-position-mismatch'
+                : null,
+        );
+    }
+
+    private function connectionPositionBalance(
+        TreasuryProviderConnectionData $connection,
+    ): int {
+        return array_sum(array_map(
+            static fn (TreasuryPositionData $position): int => $position->balanceMinor,
+            array_filter(
+                $this->positions->forConnection(
+                    $connection->provider,
+                    $connection->reference,
+                    $connection->currency,
+                ),
+                static fn (TreasuryPositionData $position): bool => $position->status === 'active'
+                    && $position->settlementResourceReference === $connection->settlementResourceReference,
+            ),
+        ));
     }
 
     private function registerInventory(

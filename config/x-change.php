@@ -438,6 +438,13 @@ return [
             'XCHANGE_TREASURY_MIGRATION_LOCK_WAIT_SECONDS',
             5,
         ),
+        'simulator' => [
+            'enabled' => (bool) env(
+                'XCHANGE_TREASURY_SIMULATOR_ENABLED',
+                env('APP_ENV') !== 'production',
+            ),
+            'allowed_environments' => ['local', 'testing'],
+        ],
         'connections' => [
             'netbank-primary' => [
                 'provider' => 'netbank',

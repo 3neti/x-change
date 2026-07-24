@@ -100,6 +100,49 @@ it('exposes opening reconciliation as an idempotent package command', function (
         ->assertExitCode(Command::SUCCESS);
 });
 
+it('simulates replay-safe provider deposits only through the opening reconciliation pipeline', function () {
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.treasury.simulator.enabled', true);
+
+    $first = app(TreasuryOpeningBalanceReconciliationService::class)
+        ->simulateDeposit('netbank-primary', 1_000_000_00, 'SIM-DEPOSIT-1');
+    $replay = app(TreasuryOpeningBalanceReconciliationService::class)
+        ->simulateDeposit('netbank-primary', 1_000_000_00, 'SIM-DEPOSIT-1');
+    $second = app(TreasuryOpeningBalanceReconciliationService::class)
+        ->simulateDeposit('netbank-primary', 500_000_00, 'SIM-DEPOSIT-2');
+
+    expect($first->status)->toBe(TreasuryOpeningBalanceStatus::Recognized)
+        ->and($first->differenceMinor)->toBe(1_000_000_00)
+        ->and($replay->status)->toBe(TreasuryOpeningBalanceStatus::Reconciled)
+        ->and($replay->positionBalanceMinor)->toBe(1_000_000_00)
+        ->and($second->status)->toBe(TreasuryOpeningBalanceStatus::Recognized)
+        ->and($second->positionBalanceMinor)->toBe(1_500_000_00)
+        ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(1_500_000_00)
+        ->and(TreasuryInventoryOperation::query()->count())->toBe(2)
+        ->and(TreasuryPositionOperation::query()->count())->toBe(2);
+});
+
+it('guards the local provider deposit simulation command', function () {
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.treasury.simulator.enabled', true);
+
+    $this->artisan('x-change:treasury:simulate-deposit', [
+        'connection' => 'netbank-primary',
+        'amount' => '100000000',
+        '--reference' => 'SIMULATED-MILLION-PESOS',
+    ])->assertExitCode(Command::FAILURE);
+
+    $this->artisan('x-change:treasury:simulate-deposit', [
+        'connection' => 'netbank-primary',
+        'amount' => '100000000',
+        '--reference' => 'SIMULATED-MILLION-PESOS',
+        '--commit' => true,
+        '--json' => true,
+    ])
+        ->expectsOutputToContain('"status":"recognized"')
+        ->assertExitCode(Command::SUCCESS);
+});
+
 /**
  * @return array{
  *     TreasuryOpeningBalanceReconciliationService,
