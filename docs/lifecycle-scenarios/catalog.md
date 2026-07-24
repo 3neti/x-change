@@ -518,7 +518,13 @@ php artisan xchange:lifecycle:run \
 
 This is a real-money scenario. It reads the actual provider balance, captures Provider Inventory, system Positions, the Account's NetBank and configured Paynamics Positions, the legacy Pay Code ledger, and Pay Code liabilities before issuing and claiming one Pay Code.
 
-The run reference is durable replay protection. Reusing it returns the first result without another provider transfer. Never switch to a new reference merely because the result says `accounting_status=review_required`; that state can mean the provider payout succeeded while outbound Treasury posting still requires reconciliation.
+Before issuance, the scenario reserves the beneficiary amount plus the provider rail fee from the issuer's provider-specific Client Funds Position. Provider success consumes the reserve and reduces Provider Inventory by the same total. The report exposes these sanitized references under `treasury_settlement`.
+
+The run reference is durable replay protection. Reusing it returns the durable result without another provider transfer. When `accounting_status=provider_sync_pending`, rerunning the same command checks the provider balance again; it never resubmits the payout. Never switch to a new reference merely because the provider balance has not updated yet.
+
+`accounting_status=review_required` is an accounting escalation for a provider shortage or internal Inventory/Position mismatch. It is not permission to submit a new run reference or type a balancing adjustment.
+
+Existing Accounts funded through the standing-address flow must first run the historical funding backfill in dry-run and committed modes. The backfill accepts only exact provider evidence, Inventory recognition, and the original Account credit; it cannot manufacture balance.
 
 The scenario omits raw provider payloads, credentials, full account numbers, and claimant mobile values from its report. Automated tests use fake providers only. A live run requires an explicit human decision and all three command controls shown above.
 

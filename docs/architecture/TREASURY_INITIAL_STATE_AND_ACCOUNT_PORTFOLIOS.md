@@ -249,9 +249,11 @@ The simulator is disabled in production, requires an allowed environment, requir
 
 This wave makes Treasury Positions authoritative for funding recognition, Account balance reads, provider-specific funding policy, and Cockpit capacity. Existing technical API names and legacy lifecycle diagnostics may still say `wallet` for backward compatibility.
 
-Pay Code face-value reservation and settlement remain represented by the existing Pay Code liability and execution subsystems. Non-zero instruction-fee collection still uses its existing revenue-allocation ledger path. Before enabling non-zero production fees against migrated Accounts, that charge path must be moved to an explicit Client Funds Position debit operation. This is a launch gate, not an invitation to mirror or manually synchronize two balances.
+The live Treasury lifecycle now pilots provider-aware Pay Code accounting. Each enabled Account portfolio has a Client Funds Position and a Pay Code Reserve Position per provider connection. Before the scenario issues a Pay Code, it atomically reserves the expected provider outflow—beneficiary amount plus the provider rail fee—from Client Funds. A successful payout derecognizes that reserve and reduces the matching Provider Inventory by the same total.
 
-Outbound provider payouts do not yet post a matching Treasury Inventory reduction and Position derecognition. Opening reconciliation therefore fails closed with `provider-balance-below-internal-attribution` when an authoritative provider balance falls after a payout while internal attribution remains unchanged. The payout result remains durable, but Treasury reports `review_required`; an operator must not hide the difference by typing an adjustment or rerunning the payment.
+The canonical Pay Code liability and existing execution ledger remain as a compatibility mirror during this pilot. Non-zero instruction-fee collection still uses its existing revenue-allocation ledger path. Before enabling non-zero production fees against migrated Accounts, that charge path must be moved to an explicit Client Funds Position debit operation. Reservation, release, and settlement must also be wired into every production Pay Code issue, cancel, expire, and claim path before the pilot becomes the system-wide accounting boundary.
+
+Post-transfer balance checks are deliberately observational. They never recognize a positive difference because the provider may briefly return a stale pre-payout balance. A positive difference is `provider_sync_pending`; rerunning the same lifecycle reference checks again without repeating the transfer. A provider balance below internal attribution, or any Inventory/Position mismatch, remains `review_required`.
 
 ## Accounted live basic_cash lifecycle
 
@@ -259,12 +261,32 @@ Outbound provider payouts do not yet post a matching Treasury Inventory reductio
 
 1. queries the configured NetBank connection through `ProviderBalanceReader`;
 2. reconciles the authoritative bank amount into Provider Inventory and system Positions;
-3. provisions the issuer's NetBank Client Funds Position;
+3. provisions the issuer's NetBank Client Funds and Pay Code Reserve Positions;
 4. captures provider, Inventory, system, Account, legacy compatibility, and Pay Code liability balances;
-5. issues one canonical `basic_cash` Pay Code;
+5. reserves the exact expected provider outflow before issuing one canonical `basic_cash` Pay Code;
 6. claims it through `x_change_live_cash` and the configured payout provider;
-7. reads the provider balance again; and
-8. stores the sanitized result under a hashed, caller-supplied run reference.
+7. posts the successful beneficiary amount and provider fee as one Position and Inventory outflow;
+8. observes the provider balance without recognizing stale positive differences; and
+9. stores the sanitized result under a hashed, caller-supplied run reference.
+
+For an existing Account funded before Treasury Positions became authoritative, migrate and backfill its verified standing-funding history first:
+
+```bash
+php artisan migrate --no-interaction
+
+php artisan x-change:treasury:backfill-standing-funding-positions \
+    <account-owner-id> \
+    --connection=netbank-primary \
+    --json
+
+php artisan x-change:treasury:backfill-standing-funding-positions \
+    <account-owner-id> \
+    --connection=netbank-primary \
+    --commit \
+    --json
+```
+
+The first backfill call is a dry run. The committed call accepts only provider-observed funding that already has exact Inventory recognition and the original legacy Account credit. It allocates the amount once, recovers only the duplicate compatibility credit, and records stable operation references.
 
 The scenario can move real money. It is disabled outside its configured environments and requires all three operator controls:
 
@@ -286,12 +308,16 @@ The command reports:
 - `inventory.balance_minor` — x-change's control total for the provider resource;
 - `system_positions` — Clearing and Legacy Unattributed attribution owned by the system principal;
 - `account_positions` — the issuer's provider-specific Client Funds balance, including `not_provisioned` for absent positions;
+- `account_positions.by_purpose.pay_code_reserve` — the amount held for the in-flight provider outflow;
 - `legacy_compatibility_balance_minor` — the existing Pay Code escrow and fee ledger balance;
 - `liability` — outstanding, redeemed, expired, and cancelled Pay Code amounts;
+- `treasury_settlement` — reservation, Position derecognition, Inventory adjustment, beneficiary amount, provider fee, and total provider outflow references;
 - Pay Code issuance and claim state; and
 - a sanitized payout reconciliation with no credentials, raw provider payload, full account number, or claimant mobile.
 
-`provider_transfer_succeeded=true` with `accounting_status=review_required` means the provider transfer completed but the provider balance is below internal attribution. This is an accounting escalation, not permission to submit another run reference. The durable run is closed specifically to prevent duplicate payment.
+`provider_transfer_succeeded=true` with `accounting_status=provider_sync_pending` means the payout and internal Treasury posting completed but NetBank has not yet returned the reduced balance. Rerun the exact same command with the exact same run reference. The scenario observes NetBank again and never repeats the payout.
+
+`provider_transfer_succeeded=true` with `accounting_status=review_required` means an internal invariant failed or the provider balance is below internal attribution. This is an accounting escalation, not permission to submit another run reference. The durable run is closed specifically to prevent duplicate payment.
 
 Configuration:
 
@@ -314,6 +340,7 @@ Provider credentials and destination configuration remain provider-package conce
 7. Run `x-change:install` or provision and reconcile explicitly.
 8. Review every `review_required` result before onboarding Accounts.
 9. Provision Account portfolios.
-10. Reconcile legacy provider value before migrating any legacy Account balance.
-11. Keep the simulator disabled outside local and testing environments.
-12. Do not enable non-zero production instruction fees until position-backed charge allocation is implemented and accepted.
+10. Backfill verified historical funding before running a live payout for a migrated Account.
+11. Reconcile legacy provider value before migrating any remaining legacy Account balance.
+12. Keep the simulator disabled outside local and testing environments.
+13. Do not enable non-zero production instruction fees until position-backed charge allocation is implemented and accepted.
