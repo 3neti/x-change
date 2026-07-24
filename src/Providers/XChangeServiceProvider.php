@@ -10,9 +10,11 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Pipeline\Pipeline;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
@@ -232,6 +234,7 @@ use LBHurtado\XChange\Services\Execution\XChangeSettlementEnvelopeExecutionGatew
 use LBHurtado\XChange\Services\Execution\XChangeStoredValueExecutionGateway;
 use LBHurtado\XChange\Services\Funding\BavixFundingAccountCredit;
 use LBHurtado\XChange\Services\Funding\DefaultFundingDestinationResolver;
+use LBHurtado\XChange\Services\Funding\FundingProjectionChannel;
 use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Services\Funding\QrPhSimulatorFundingProviderAdapter;
 use LBHurtado\XChange\Services\Funding\StandingFundingAddressProviderRegistry;
@@ -838,6 +841,7 @@ class XChangeServiceProvider extends ServiceProvider
         $this->bootConfig();
         $this->bootFundingVerificationRateLimiter();
         $this->bootFundingVerificationSchedule();
+        $this->bootFundingBroadcastChannel();
         $this->bootRoutes();
         $this->bootMobileFirstFortify();
         $this->bootExceptionRendering();
@@ -896,6 +900,16 @@ class XChangeServiceProvider extends ServiceProvider
                 (int) config('x-change.funding.verification_provider_rate_limit_per_minute', 30),
             ))->by((string) data_get($job, 'providerCode', 'unknown'));
         });
+    }
+
+    protected function bootFundingBroadcastChannel(): void
+    {
+        Broadcast::channel(
+            'x-change.funding.{token}',
+            fn (Model $user, string $token): bool => app(
+                FundingProjectionChannel::class,
+            )->authorizes($user, $token),
+        );
     }
 
     protected function bootFundingVerificationSchedule(): void

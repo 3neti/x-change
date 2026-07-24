@@ -3,12 +3,35 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
 import Funding from '../../../resources/js/cockpit/pages/Funding.vue';
 
-const { routerReloadMock, usePollMock } = vi.hoisted(() => ({
+const { echoCallback, routerReloadMock, usePollMock } = vi.hoisted(() => ({
+    echoCallback: {
+        current: null as null | ((payload: Record<string, string>) => void),
+    },
     routerReloadMock: vi.fn(),
     usePollMock: vi.fn(() => ({
         start: vi.fn(),
         stop: vi.fn(),
     })),
+}));
+
+vi.mock('@laravel/echo-vue', () => ({
+    useEcho: vi.fn(
+        (
+            _channel: string,
+            _event: string,
+            callback: (payload: Record<string, string>) => void,
+        ) => {
+            echoCallback.current = callback;
+
+            return {
+                leaveChannel: vi.fn(),
+                leave: vi.fn(),
+                stopListening: vi.fn(),
+                listen: vi.fn(),
+                channel: vi.fn(),
+            };
+        },
+    ),
 }));
 
 vi.mock('@inertiajs/vue3', async (importOriginal) => {
@@ -198,6 +221,12 @@ const standingFundingAvailability = {
     daily_limit_minor: 10_000_000,
 };
 
+const fundingRealtime = {
+    enabled: true,
+    channel: 'x-change.funding.opaque-owner-token',
+    event: '.FundingProjectionChanged' as const,
+};
+
 describe('Cockpit Funding foundation', () => {
     afterEach(() => {
         vi.unstubAllGlobals();
@@ -229,6 +258,7 @@ describe('Cockpit Funding foundation', () => {
                     sensitive: true,
                 },
                 standing_funding_address: standingFundingAvailability,
+                funding_realtime: fundingRealtime,
             },
         });
 
@@ -265,6 +295,7 @@ describe('Cockpit Funding foundation', () => {
         expect(wrapper.text()).toContain('Verified mobile suffix');
         expect(wrapper.text()).toContain('production rejects this scheme');
         expect(wrapper.text()).toContain('Create Account Funding QR');
+        expect(wrapper.text()).toContain('Live balance updates');
         expect(wrapper.text()).toContain(
             'payer mobile, amount, timing, and merchant text never decide',
         );
@@ -285,6 +316,39 @@ describe('Cockpit Funding foundation', () => {
                 mode: 'rest',
             },
         );
+    });
+
+    it('refreshes balance projections once for a valid private funding event', async () => {
+        vi.useFakeTimers();
+        mount(Funding, {
+            props: {
+                funding_read_model: fundingReadModel,
+                standing_funding_address: standingFundingAvailability,
+                funding_realtime: fundingRealtime,
+            },
+        });
+
+        echoCallback.current?.({
+            schema: 'x-change.funding-projection-changed.v1',
+            event_id: 'event-1',
+            reason: 'account_funding_settled',
+            occurred_at: '2026-07-24T09:00:00+08:00',
+        });
+        echoCallback.current?.({
+            schema: 'x-change.funding-projection-changed.v1',
+            event_id: 'event-1',
+            reason: 'account_funding_settled',
+            occurred_at: '2026-07-24T09:00:00+08:00',
+        });
+        await vi.runAllTimersAsync();
+
+        expect(routerReloadMock).toHaveBeenCalledOnce();
+        expect(routerReloadMock).toHaveBeenCalledWith({
+            only: ['cockpit_header_read_model', 'funding_read_model'],
+            preserveScroll: true,
+            preserveState: true,
+        });
+        vi.useRealTimers();
     });
 
     it('opens a standing QR, checks sanitized receipts, and approves supervised credit', async () => {

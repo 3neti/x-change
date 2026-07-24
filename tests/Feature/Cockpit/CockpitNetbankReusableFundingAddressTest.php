@@ -11,6 +11,7 @@ use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Models\StandingFundingQrArtifact;
+use LBHurtado\XChange\Services\Funding\FundingProjectionChannel;
 
 beforeEach(function () {
     Cache::clear();
@@ -274,8 +275,26 @@ it('keeps the sensitive QR and address out of initial Inertia props', function (
         ->assertJsonPath('props.standing_funding_address.purpose', 'account_funding')
         ->assertJsonPath('props.standing_funding_address.recognition_mode', 'observe_only')
         ->assertJsonPath('props.standing_funding_address.automatic_credit_enabled', false)
+        ->assertJsonPath('props.funding_realtime.enabled', true)
+        ->assertJsonPath('props.funding_realtime.event', '.FundingProjectionChanged')
         ->assertJsonMissingPath('props.standing_funding_address.funding_address')
         ->assertJsonMissingPath('props.standing_funding_address.qr_code');
+
+    $channel = (string) $this->withHeader('X-Inertia', 'true')
+        ->get(route('x-change.cockpit.funding.index'))
+        ->json('props.funding_realtime.channel');
+
+    expect($channel)->toMatch('/\Ax-change\.funding\.[a-f0-9]{64}\z/');
+});
+
+it('isolates each realtime funding channel to its owning operator', function () {
+    $owner = actingAsVerifiedFundingOperator();
+    $other = actingAsTestUser();
+    $channels = app(FundingProjectionChannel::class);
+    $token = str_replace('x-change.funding.', '', $channels->nameForOwner($owner));
+
+    expect($channels->authorizes($owner, $token))->toBeTrue()
+        ->and($channels->authorizes($other, $token))->toBeFalse();
 });
 
 it('fails closed when the configured corporate account name is missing', function () {

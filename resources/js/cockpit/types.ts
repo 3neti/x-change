@@ -552,6 +552,11 @@ export type CockpitFundingPageProps = CockpitHeaderPageProps & {
     funding_instruction?: CockpitFundingInstruction | null;
     funding_notice?: string | null;
     funding_poll_interval?: number;
+    funding_realtime?: {
+        enabled: boolean;
+        channel: string;
+        event: '.FundingProjectionChanged';
+    };
     funding_simulation?: CockpitQrPhFundingSimulation;
     standing_funding_address?: CockpitStandingFundingAddressAvailability;
 };

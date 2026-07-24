@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { router, useForm, usePoll } from '@inertiajs/vue3';
+import { useEcho } from '@laravel/echo-vue';
 import { approve as approveReconciliation } from '@/routes/x-change/cockpit/funding/reconciliations';
 import { show as showFundingInstructions } from '@/routes/x-change/cockpit/funding/intents/instructions';
 import { store as storeFundingIntent } from '@/routes/x-change/cockpit/funding/intents';
@@ -9,7 +10,7 @@ import { store as checkStandingFundingHistoryRoute } from '@/routes/x-change/coc
 import { approve as approveStandingFundingReceiptRoute } from '@/routes/x-change/cockpit/funding/standing-addresses/netbank/receipts';
 import { store as runQrPhFundingSimulationRoute } from '@/routes/x-change/cockpit/funding/scenarios/qrph';
 import { store as storeReconciliationRequest } from '@/routes/x-change/cockpit/funding/suspense/reconciliation-requests';
-import { computed, ref, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 import CockpitManualCopyButton from '../components/CockpitManualCopyButton.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
 import type {
@@ -42,6 +43,9 @@ const standingAddressError = ref<string | null>(null);
 const standingHistoryCheckedAt = ref<string | null>(null);
 const activeStandingReceiptApproval = ref<string | null>(null);
 const standingActionNotice = ref<string | null>(null);
+const processedFundingEvents = new Set<string>();
+let realtimeRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+let lastProjectionRefreshAt = 0;
 const activeSimulationStepIndex = ref(0);
 const activeSimulationStep = computed(
     () =>
@@ -88,6 +92,44 @@ const reconciliationForm = useForm({
 });
 const approvalForm = useForm({});
 const verificationForm = useForm({});
+type FundingProjectionChangedPayload = {
+    schema: string;
+    event_id: string;
+    reason: string;
+    occurred_at: string;
+};
+
+useEcho<FundingProjectionChangedPayload>(
+    props.funding_realtime?.channel ?? 'x-change.funding.unavailable',
+    props.funding_realtime?.event ?? '.FundingProjectionChanged',
+    (event) => {
+        if (
+            props.funding_realtime?.enabled !== true ||
+            event.schema !== 'x-change.funding-projection-changed.v1' ||
+            event.reason !== 'account_funding_settled' ||
+            processedFundingEvents.has(event.event_id)
+        ) {
+            return;
+        }
+
+        processedFundingEvents.add(event.event_id);
+
+        if (realtimeRefreshTimer !== null) {
+            clearTimeout(realtimeRefreshTimer);
+        }
+
+        realtimeRefreshTimer = setTimeout(() => {
+            refreshFundingProjections();
+            realtimeRefreshTimer = null;
+        }, 150);
+    },
+);
+
+onUnmounted(() => {
+    if (realtimeRefreshTimer !== null) {
+        clearTimeout(realtimeRefreshTimer);
+    }
+});
 const clientAmountError = computed(() => {
     if (amount.value === '' || amountToMinor(amount.value) !== null) {
         return null;
@@ -561,6 +603,13 @@ async function approveStandingFundingReceipt(
 }
 
 function refreshFundingProjections(): void {
+    const refreshedAt = Date.now();
+
+    if (refreshedAt - lastProjectionRefreshAt < 750) {
+        return;
+    }
+
+    lastProjectionRefreshAt = refreshedAt;
     router.reload({
         only: ['cockpit_header_read_model', 'funding_read_model'],
         preserveScroll: true,
@@ -711,6 +760,13 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 class="rounded-full bg-slate-100 px-2 py-1 text-[0.65rem] font-semibold text-slate-600 uppercase dark:bg-slate-800 dark:text-slate-300"
                             >
                                 Purpose bound
+                            </span>
+                            <span
+                                v-if="funding_realtime?.enabled"
+                                class="rounded-full bg-emerald-100 px-2 py-1 text-[0.65rem] font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                                data-testid="funding-realtime-status"
+                            >
+                                Live balance updates
                             </span>
                             <span
                                 class="rounded-full bg-slate-100 px-2 py-1 text-[0.65rem] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"

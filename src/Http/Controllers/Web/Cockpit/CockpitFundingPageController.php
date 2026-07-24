@@ -17,6 +17,7 @@ use LBHurtado\PaymentGateway\Funding\NetbankStandingAddressProfile;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Services\Cockpit\FundingCockpitReadModelProvider;
 use LBHurtado\XChange\Services\Funding\Base64PngQrPhFundingSimulationQrRenderer;
+use LBHurtado\XChange\Services\Funding\FundingProjectionChannel;
 use LBHurtado\XChange\Support\Auth\MobileNumber;
 use LBHurtado\XChange\Support\Cockpit\CockpitReadOnlyPageProps;
 use Throwable;
@@ -28,6 +29,7 @@ class CockpitFundingPageController extends Controller
         private readonly FundingCockpitReadModelProvider $funding,
         private readonly Base64PngQrPhFundingSimulationQrRenderer $simulationQr,
         private readonly NetbankStandingAddressProfile $standingAddressProfile,
+        private readonly FundingProjectionChannel $fundingChannels,
     ) {}
 
     /**
@@ -50,6 +52,11 @@ class CockpitFundingPageController extends Controller
                 1000,
                 (int) config('x-change.funding.ui_refresh_interval_milliseconds', 5000),
             ),
+            'funding_realtime' => [
+                'enabled' => (bool) config('x-change.funding.broadcast_enabled', true),
+                'channel' => $this->fundingChannels->nameForOwner($operator),
+                'event' => '.FundingProjectionChanged',
+            ],
             'standing_funding_address' => $this->standingFundingAddressAvailability($operator),
             'funding_simulation' => [
                 'enabled' => (bool) config('x-change.cockpit.qrph_funding_simulation.enabled', false),

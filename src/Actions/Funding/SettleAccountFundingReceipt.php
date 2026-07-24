@@ -15,6 +15,7 @@ use LBHurtado\XChange\Contracts\AuditLoggerContract;
 use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Enums\AccountFundingReceiptStatus;
 use LBHurtado\XChange\Enums\FundingAddressStatus;
+use LBHurtado\XChange\Events\FundingProjectionChanged;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\StandingFundingAddress;
@@ -31,13 +32,13 @@ final class SettleAccountFundingReceipt
 
     public function handle(AccountFundingReceipt $receipt): AccountFundingReceipt
     {
-        $settled = DB::transaction(function () use ($receipt): AccountFundingReceipt {
+        [$settled, $newlySettled] = DB::transaction(function () use ($receipt): array {
             $addressId = (int) $receipt->standing_funding_address_id;
             $address = StandingFundingAddress::query()->lockForUpdate()->findOrFail($addressId);
             $locked = AccountFundingReceipt::query()->lockForUpdate()->findOrFail($receipt->getKey());
 
             if ($locked->status === AccountFundingReceiptStatus::Settled) {
-                return $locked;
+                return [$locked, false];
             }
 
             if ($locked->status !== AccountFundingReceiptStatus::Ready) {
@@ -119,7 +120,7 @@ final class SettleAccountFundingReceipt
             ]);
             $locked->saveQuietly();
 
-            return $locked->refresh();
+            return [$locked->refresh(), true];
         }, attempts: 5);
 
         $this->audit->log('funding.standing_address.account_credited', [
@@ -138,6 +139,20 @@ final class SettleAccountFundingReceipt
                 false,
             ),
         ]);
+
+        if ($newlySettled
+            && (bool) config('x-change.funding.broadcast_enabled', true)) {
+            $address = StandingFundingAddress::query()->findOrFail(
+                $settled->standing_funding_address_id,
+            );
+            FundingProjectionChanged::dispatch(
+                ownerType: $address->owner_type,
+                ownerId: (string) $address->owner_id,
+                receiptReference: $settled->reference,
+                occurredAt: $settled->settled_at?->toRfc3339String()
+                    ?? now()->toRfc3339String(),
+            );
+        }
 
         return $settled;
     }

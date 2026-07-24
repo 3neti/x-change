@@ -487,6 +487,11 @@ return [
             ],
         ],
         'ui_refresh_interval_milliseconds' => (int) env('XCHANGE_FUNDING_UI_REFRESH_INTERVAL_MILLISECONDS', 5000),
+        'broadcast_enabled' => (bool) env('XCHANGE_FUNDING_BROADCAST_ENABLED', true),
+        'broadcast_reference_hash_key' => env(
+            'XCHANGE_FUNDING_BROADCAST_REFERENCE_HASH_KEY',
+            env('APP_KEY'),
+        ),
         'reference_hash_key' => env('XCHANGE_FUNDING_REFERENCE_HASH_KEY', env('APP_KEY')),
         'payer_identity_hash_key' => env('XCHANGE_FUNDING_PAYER_IDENTITY_HASH_KEY', env('APP_KEY')),
         'webhook_max_body_bytes' => (int) env('XCHANGE_FUNDING_WEBHOOK_MAX_BODY_BYTES', 262_144),

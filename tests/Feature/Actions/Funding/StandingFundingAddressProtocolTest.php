@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Bavix\Wallet\Models\Transaction;
+use Illuminate\Support\Facades\Event;
 use LBHurtado\EmiCore\Actions\Funding\RecordProviderFundingObservation;
 use LBHurtado\EmiCore\Contracts\StandingFundingAddressProvider;
 use LBHurtado\EmiCore\Data\Funding\FundingQrCodeData;
@@ -19,6 +20,7 @@ use LBHurtado\XChange\Actions\Funding\ProvisionStandingFundingAddress;
 use LBHurtado\XChange\Actions\Funding\SyncStandingFundingAddress;
 use LBHurtado\XChange\Enums\AccountFundingReceiptStatus;
 use LBHurtado\XChange\Enums\FundingRecognitionMode;
+use LBHurtado\XChange\Events\FundingProjectionChanged;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\FundingSuspenseCase;
 use LBHurtado\XChange\Models\StandingFundingAddress;
@@ -82,6 +84,7 @@ it('persists an immutable purpose-bound address without storing plaintext', func
 });
 
 it('recognizes settled provider evidence and credits an Account exactly once', function () {
+    Event::fake([FundingProjectionChanged::class]);
     $user = actingAsTestUser(0);
     $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
     $provider = new StandingFundingAddressProviderFake;
@@ -112,6 +115,13 @@ it('recognizes settled provider evidence and credits an Account exactly once', f
         ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(24_950)
         ->and(TreasuryInventoryOperation::query()->count())->toBe(1)
         ->and(Transaction::query()->where('type', Transaction::TYPE_DEPOSIT)->count())->toBe(1);
+
+    Event::assertDispatchedTimes(FundingProjectionChanged::class, 1);
+    Event::assertDispatched(
+        FundingProjectionChanged::class,
+        fn (FundingProjectionChanged $event): bool => $event->broadcastWith()['reason']
+            === 'account_funding_settled',
+    );
 });
 
 it('can recognize a pending NetBank observation exactly once when explicitly configured', function () {
