@@ -10,7 +10,7 @@ import { store as checkStandingFundingHistoryRoute } from '@/routes/x-change/coc
 import { approve as approveStandingFundingReceiptRoute } from '@/routes/x-change/cockpit/funding/standing-addresses/netbank/receipts';
 import { store as runQrPhFundingSimulationRoute } from '@/routes/x-change/cockpit/funding/scenarios/qrph';
 import { store as storeReconciliationRequest } from '@/routes/x-change/cockpit/funding/suspense/reconciliation-requests';
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 import CockpitManualCopyButton from '../components/CockpitManualCopyButton.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
 import type {
@@ -44,6 +44,38 @@ const standingAddressError = ref<string | null>(null);
 const standingHistoryCheckedAt = ref<string | null>(null);
 const activeStandingReceiptApproval = ref<string | null>(null);
 const standingActionNotice = ref<string | null>(null);
+type FundingWorkspaceMode = 'self_top_up' | 'funding_intent' | 'simulation';
+const activeFundingMode = ref<FundingWorkspaceMode>('self_top_up');
+const fundingWorkspaceModes = computed(() => [
+    {
+        key: 'self_top_up' as const,
+        label: 'Self Top-Up',
+        description:
+            'Reveal your reusable QR Ph address, then check NetBank for incoming funds.',
+    },
+    {
+        key: 'funding_intent' as const,
+        label: 'Exact Funding Intent',
+        description:
+            'Create one-time provider instructions for an exact amount.',
+    },
+    ...(props.funding_simulation
+        ? [
+              {
+                  key: 'simulation' as const,
+                  label: 'Simulation',
+                  description:
+                      'Walk through the local rollback-only funding lifecycle.',
+              },
+          ]
+        : []),
+]);
+const activeFundingModeDetails = computed(
+    () =>
+        fundingWorkspaceModes.value.find(
+            (mode) => mode.key === activeFundingMode.value,
+        ) ?? fundingWorkspaceModes.value[0],
+);
 const processedFundingEvents = new Set<string>();
 let realtimeRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 let standingHistoryCooldownTimer: ReturnType<typeof setInterval> | null = null;
@@ -138,14 +170,6 @@ onUnmounted(() => {
     }
 });
 
-onMounted(() => {
-    if (
-        props.standing_funding_address?.exists === true &&
-        props.standing_funding_address.available === true
-    ) {
-        void openStandingFundingAddress();
-    }
-});
 const clientAmountError = computed(() => {
     if (amount.value === '' || amountToMinor(amount.value) !== null) {
         return null;
@@ -863,7 +887,48 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
             </section>
 
             <section
+                class="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                data-testid="cockpit-funding-mode-switcher"
+            >
+                <div
+                    class="grid gap-2 sm:grid-cols-3"
+                    role="tablist"
+                    aria-label="Funding workspace mode"
+                >
+                    <button
+                        v-for="mode in fundingWorkspaceModes"
+                        :id="`funding-mode-${mode.key}`"
+                        :key="mode.key"
+                        type="button"
+                        role="tab"
+                        class="min-h-10 rounded-xl px-3 py-2 text-left text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+                        :class="
+                            activeFundingMode === mode.key
+                                ? 'bg-slate-950 text-white shadow-sm dark:bg-sky-300 dark:text-slate-950'
+                                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
+                        "
+                        :aria-selected="activeFundingMode === mode.key"
+                        :aria-controls="`funding-panel-${mode.key}`"
+                        :data-testid="`funding-mode-${mode.key}`"
+                        @click="activeFundingMode = mode.key"
+                    >
+                        {{ mode.label }}
+                    </button>
+                </div>
+                <p
+                    class="px-2 pt-2 pb-1 text-xs leading-5 text-slate-500 dark:text-slate-400"
+                    data-testid="funding-mode-description"
+                >
+                    {{ activeFundingModeDetails?.description }}
+                </p>
+            </section>
+
+            <section
                 v-if="standing_funding_address"
+                v-show="activeFundingMode === 'self_top_up'"
+                id="funding-panel-self_top_up"
+                role="tabpanel"
+                aria-labelledby="funding-mode-self_top_up"
                 class="overflow-hidden rounded-2xl border border-sky-200 bg-white shadow-sm dark:border-sky-950 dark:bg-slate-900"
                 data-testid="cockpit-standing-funding-address"
             >
@@ -940,10 +1005,10 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                         >
                             {{
                                 standingAddressLoading
-                                    ? 'Contacting NetBank…'
+                                    ? 'Loading secure QR…'
                                     : standing_funding_address.available
                                       ? standing_funding_address.exists
-                                          ? 'Open Account Funding QR'
+                                          ? 'Reveal Account Funding QR'
                                           : 'Create Account Funding QR'
                                       : 'Account Funding Address unavailable'
                             }}
@@ -1260,6 +1325,10 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
 
             <section
                 v-if="funding_simulation"
+                v-show="activeFundingMode === 'simulation'"
+                id="funding-panel-simulation"
+                role="tabpanel"
+                aria-labelledby="funding-mode-simulation"
                 class="overflow-hidden rounded-2xl border border-violet-200 bg-white shadow-sm dark:border-violet-950 dark:bg-slate-900"
                 data-testid="cockpit-qrph-funding-simulation"
             >
@@ -1457,6 +1526,10 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
             </section>
 
             <section
+                v-show="activeFundingMode === 'funding_intent'"
+                id="funding-panel-funding_intent"
+                role="tabpanel"
+                aria-labelledby="funding-mode-funding_intent"
                 class="grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]"
             >
                 <form

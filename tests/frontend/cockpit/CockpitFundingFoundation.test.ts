@@ -280,6 +280,16 @@ describe('Cockpit Funding foundation', () => {
                 .findAll('article'),
         ).toHaveLength(4);
         expect(
+            wrapper
+                .get('[data-testid="funding-mode-self_top_up"]')
+                .attributes('aria-selected'),
+        ).toBe('true');
+        expect(
+            wrapper
+                .get('[data-testid="funding-mode-funding_intent"]')
+                .attributes('aria-selected'),
+        ).toBe('false');
+        expect(
             wrapper.html().indexOf('cockpit-funding-summary-strip'),
         ).toBeLessThan(
             wrapper.html().indexOf('cockpit-standing-funding-address'),
@@ -335,6 +345,66 @@ describe('Cockpit Funding foundation', () => {
                 mode: 'rest',
             },
         );
+    });
+
+    it('keeps self top-up primary and changes funding modes without provider activity', async () => {
+        const fetch = vi.fn();
+        vi.stubGlobal('fetch', fetch);
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: fundingReadModel,
+                standing_funding_address: {
+                    ...standingFundingAvailability,
+                    exists: true,
+                },
+                funding_simulation: fundingSimulation,
+            },
+        });
+
+        expect(fetch).not.toHaveBeenCalled();
+        expect(
+            wrapper
+                .get('[data-testid="funding-mode-self_top_up"]')
+                .attributes('aria-selected'),
+        ).toBe('true');
+        expect(
+            wrapper
+                .get('[data-testid="cockpit-funding-intent-form"]')
+                .isVisible(),
+        ).toBe(false);
+
+        await wrapper
+            .get('[data-testid="funding-mode-funding_intent"]')
+            .trigger('click');
+        await nextTick();
+
+        expect(fetch).not.toHaveBeenCalled();
+        expect(
+            wrapper
+                .get('[data-testid="funding-mode-funding_intent"]')
+                .attributes('aria-selected'),
+        ).toBe('true');
+        expect(
+            wrapper.get('#funding-panel-funding_intent').attributes('style'),
+        ).not.toContain('display: none');
+        expect(
+            wrapper.get('[data-testid="funding-mode-description"]').text(),
+        ).toContain('one-time provider instructions');
+
+        await wrapper
+            .get('[data-testid="funding-mode-simulation"]')
+            .trigger('click');
+        await nextTick();
+
+        expect(
+            wrapper
+                .get('[data-testid="funding-mode-simulation"]')
+                .attributes('aria-selected'),
+        ).toBe('true');
+        expect(
+            wrapper.get('#funding-panel-simulation').attributes('style'),
+        ).not.toContain('display: none');
+        expect(fetch).not.toHaveBeenCalled();
     });
 
     it('refreshes balance projections once for a valid private funding event', async () => {
@@ -663,7 +733,10 @@ describe('Cockpit Funding foundation', () => {
             },
         });
 
-        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(fetch).not.toHaveBeenCalled();
+        await wrapper
+            .get('[data-testid="open-standing-funding-address"]')
+            .trigger('click');
         await nextTick();
         await nextTick();
         await wrapper
@@ -753,7 +826,10 @@ describe('Cockpit Funding foundation', () => {
             },
         });
 
-        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(fetch).not.toHaveBeenCalled();
+        await wrapper
+            .get('[data-testid="open-standing-funding-address"]')
+            .trigger('click');
         await nextTick();
         await wrapper
             .get('[data-testid="check-standing-funding-history"]')
