@@ -27,6 +27,7 @@ use LBHurtado\XChange\Providers\XChangeServiceProvider;
 use LBHurtado\XChange\Tests\Fakes\FakeAuditLogger;
 use LBHurtado\XChange\Tests\Fakes\FakePayoutProvider;
 use LBHurtado\XChange\Tests\Fakes\User;
+use LBHurtado\XCommerce\XCommerceServiceProvider;
 use LBHurtado\XRay\XRayServiceProvider;
 use LBHurtado\XRider\XRiderServiceProvider;
 use Mews\Purifier\PurifierServiceProvider;
@@ -85,6 +86,7 @@ abstract class TestCase extends Orchestra
             $this->optionalProvider('LBHurtado\\XAction\\XActionServiceProvider'),
             $this->optionalProvider('LBHurtado\\XFeedback\\XFeedbackServiceProvider'),
             $this->optionalProvider('LBHurtado\\XCampaign\\XCampaignServiceProvider'),
+            XCommerceServiceProvider::class,
             XChangeServiceProvider::class,
             PurifierServiceProvider::class,
             XRiderServiceProvider::class,

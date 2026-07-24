@@ -698,6 +698,58 @@ return [
         'minimum_balance_enforced' => env('XCHANGE_PRICING_MINIMUM_BALANCE_ENFORCED', true),
     ],
 
+    'commercial' => [
+        'enabled' => (bool) env('XCHANGE_COMMERCIAL_WATERFALL_ENABLED', true),
+        'pay_code' => [
+            'catalog' => 'pay_code',
+            'waterfall' => [
+                'reference' => 'pay-code-commercial-waterfall',
+                'version' => 1,
+                'currency' => 'PHP',
+                'rules' => [
+                    [
+                        'reference' => 'provider-transfer-cost',
+                        'sequence' => 10,
+                        'line_type' => 'deduction',
+                        'category' => 'provider_cost',
+                        'recipient_reference' => 'provider:settlement-rail',
+                        'fixed_amount_minor' => 1_000,
+                    ],
+                    [
+                        'reference' => 'product-revenue',
+                        'sequence' => 20,
+                        'line_type' => 'allocation',
+                        'category' => 'product_revenue',
+                        'recipient_reference' => 'product:pay-code',
+                        'fixed_amount_minor' => 300,
+                    ],
+                    [
+                        'reference' => 'partner-commission',
+                        'sequence' => 30,
+                        'line_type' => 'allocation',
+                        'category' => 'partner_commission',
+                        'recipient_reference' => 'partner:direct',
+                        'fixed_amount_minor' => 100,
+                    ],
+                    [
+                        'reference' => 'commercial-residual',
+                        'sequence' => 40,
+                        'line_type' => 'residual',
+                        'category' => 'commercial_revenue',
+                        'recipient_reference' => 'operator:x-change',
+                        'fixed_amount_minor' => null,
+                    ],
+                ],
+            ],
+            'destination_purposes' => [
+                'provider-transfer-cost' => 'provider_cost_payable',
+                'product-revenue' => 'product_revenue',
+                'partner-commission' => 'partner_commission_payable',
+                'commercial-residual' => 'commercial_revenue',
+            ],
+        ],
+    ],
+
     'onboarding' => [
         //        'issuer_model' => env('XCHANGE_ONBOARDING_DEFAULT_ISSUER_MODEL', \LBHurtado\XChange\Tests\Fakes\User::class),
         'issuer_model' => env('XCHANGE_ONBOARDING_DEFAULT_ISSUER_MODEL', User::class),

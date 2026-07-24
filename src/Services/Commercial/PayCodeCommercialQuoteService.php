@@ -1,0 +1,210 @@
+<?php
+
+declare(strict_types=1);
+
+namespace LBHurtado\XChange\Services\Commercial;
+
+use JsonException;
+use LBHurtado\Voucher\Data\VoucherInstructionsData;
+use LBHurtado\XCommerce\Data\CommercialAttributionSnapshotData;
+use LBHurtado\XCommerce\Data\CommercialCatalogData;
+use LBHurtado\XCommerce\Data\CommercialQuoteData;
+use LBHurtado\XCommerce\Data\CommercialQuoteLineInputData;
+use LBHurtado\XCommerce\Data\CommercialWaterfallPolicyData;
+use LBHurtado\XCommerce\Services\DeterministicCommercialQuoteBuilder;
+use LBHurtado\XCommerce\Services\DeterministicCommercialWaterfallCalculator;
+
+final class PayCodeCommercialQuoteService
+{
+    /**
+     * @throws JsonException
+     */
+    public function quote(
+        VoucherInstructionsData $instructions,
+        string $sourceCommercialEventReference,
+        ?CommercialAttributionSnapshotData $attribution = null,
+    ): CommercialQuoteData {
+        $catalog = CommercialCatalogData::fromArray(
+            (array) config('x-commerce.catalogs.pay_code', []),
+        );
+        $policy = CommercialWaterfallPolicyData::fromArray(
+            (array) config('x-change.commercial.pay_code.waterfall', []),
+        );
+
+        return (new DeterministicCommercialQuoteBuilder(
+            new DeterministicCommercialWaterfallCalculator,
+        ))->build(
+            sourceCommercialEventReference: $sourceCommercialEventReference,
+            catalog: $catalog,
+            waterfallPolicy: $policy,
+            attribution: $attribution ?? new CommercialAttributionSnapshotData(
+                reference: 'attribution:direct',
+                version: 1,
+            ),
+            lineInputs: $this->lineInputs($instructions, $catalog),
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     *
+     * @throws JsonException
+     */
+    public function estimate(VoucherInstructionsData $instructions): array
+    {
+        $sourceReference = 'pay-code-pricing-projection:'.hash(
+            'sha256',
+            json_encode(
+                $instructions->toArray(),
+                JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES,
+            ),
+        );
+        $quote = $this->quote($instructions, $sourceReference);
+        $componentsMinor = [];
+        $charges = [];
+
+        foreach ($quote->lines as $line) {
+            $componentsMinor[$line->category] = ($componentsMinor[$line->category] ?? 0)
+                + $line->totalPriceMinor;
+            $charges[] = [
+                'index' => $line->catalogItemReference,
+                'label' => $line->label,
+                'type' => $line->category,
+                'quantity' => $line->quantity,
+                'unit_price_minor' => $line->unitPriceMinor,
+                'unit_price' => $line->unitPriceMinor / 100,
+                'price_minor' => $line->totalPriceMinor,
+                'price' => $line->totalPriceMinor / 100,
+                'currency' => $line->currency,
+                'commercial_quote_reference' => $quote->reference,
+            ];
+        }
+
+        return [
+            'currency' => $quote->currency,
+            'base_fee_minor' => 0,
+            'base_fee' => 0.0,
+            'components_minor' => $componentsMinor,
+            'components' => collect($componentsMinor)
+                ->map(static fn (int $minor): float => $minor / 100)
+                ->all(),
+            'total_minor' => $quote->totalPriceMinor,
+            'total' => $quote->totalPriceMinor / 100,
+            'charges' => $charges,
+            'commercial_quote_reference' => $quote->reference,
+            'catalog_reference' => $quote->catalogSnapshot->reference,
+            'catalog_version' => $quote->catalogSnapshot->version,
+            'waterfall_policy_reference' => $quote->waterfallPolicySnapshot->reference,
+            'waterfall_policy_version' => $quote->waterfallPolicySnapshot->version,
+        ];
+    }
+
+    /**
+     * @return list<CommercialQuoteLineInputData>
+     */
+    private function lineInputs(
+        VoucherInstructionsData $instructions,
+        CommercialCatalogData $catalog,
+    ): array {
+        $selected = [];
+        $count = max(1, (int) ($instructions->count ?? 1));
+
+        if ((float) ($instructions->cash?->amount ?? 0) > 0) {
+            $selected[] = 'cash.amount';
+        }
+
+        $voucherType = mb_strtolower(trim((string) data_get($instructions, 'voucher_type', '')));
+
+        if ($voucherType !== '') {
+            $selected[] = 'voucher_type.'.$voucherType;
+        }
+
+        $fields = $this->fieldNames($instructions);
+
+        foreach ($fields as $field) {
+            $selected[] = 'inputs.fields.'.$field;
+        }
+
+        if (array_intersect($fields, ['selfie', 'id_card', 'government_id']) !== []) {
+            $selected[] = 'inputs.fields.kyc';
+        }
+
+        if (in_array('otp', $fields, true)
+            || data_get($instructions, 'cash.validation.payable') === 'otp'
+            || filled(data_get($instructions, 'cash.validation.otp'))) {
+            $selected[] = 'inputs.fields.otp';
+        }
+
+        foreach (['email', 'mobile', 'webhook'] as $channel) {
+            if (filled(data_get($instructions, "feedback.{$channel}"))) {
+                $selected[] = "feedback.{$channel}";
+            }
+        }
+
+        foreach (['secret', 'mobile'] as $validation) {
+            if (filled(data_get($instructions, "cash.validation.{$validation}"))) {
+                $selected[] = "cash.validation.{$validation}";
+            }
+        }
+
+        if (filled(data_get($instructions, 'cash.validation.payable'))
+            && data_get($instructions, 'cash.validation.payable') !== 'otp') {
+            $selected[] = 'cash.validation.payable';
+        }
+
+        if (filled(data_get($instructions, 'validation.time'))) {
+            $selected[] = 'validation.time';
+        }
+
+        if (filled(data_get($instructions, 'validation.location'))) {
+            $selected[] = 'validation.location';
+        }
+
+        foreach (['message', 'splash', 'url'] as $rider) {
+            if (filled(data_get($instructions, "rider.{$rider}"))) {
+                $selected[] = "rider.{$rider}";
+            }
+        }
+
+        $available = collect($catalog->items)
+            ->reject(static fn ($item): bool => $item->deprecated)
+            ->pluck('reference')
+            ->all();
+
+        return collect($selected)
+            ->unique()
+            ->filter(static fn (string $reference): bool => in_array($reference, $available, true))
+            ->map(static fn (string $reference): CommercialQuoteLineInputData => new CommercialQuoteLineInputData(
+                catalogItemReference: $reference,
+                quantity: $count,
+            ))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function fieldNames(VoucherInstructionsData $instructions): array
+    {
+        return collect((array) data_get($instructions, 'inputs.fields', []))
+            ->map(static function (mixed $field): ?string {
+                if (is_string($field)) {
+                    return mb_strtolower(trim($field));
+                }
+
+                foreach (['value', 'name', 'key', 'type', 'field'] as $candidate) {
+                    $value = data_get($field, $candidate);
+
+                    if (is_string($value) && trim($value) !== '') {
+                        return mb_strtolower(trim($value));
+                    }
+                }
+
+                return null;
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+}
