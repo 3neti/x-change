@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use Bavix\Wallet\Models\Wallet;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
+use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\FundingReconciliationRequest;
@@ -13,6 +15,8 @@ use LBHurtado\XChange\Models\FundingSuspenseCase;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('requires distinct maker and checker operators before compensating a verified posting', function () {
+    enableNetbankTreasuryForTests();
+
     $maker = actingAsTestUser(0);
     $makerWallet = $maker->wallet()->where('slug', 'platform')->firstOrFail();
     $case = cockpitVerifiedPostingCase($maker, $makerWallet);
@@ -32,12 +36,17 @@ it('requires distinct maker and checker operators before compensating a verified
         ->and((int) $makerWallet->refresh()->balanceInt)->toBe(0)
         ->and(FundingSettlement::query()->count())->toBe(0);
 
-    $this->from(route('x-change.cockpit.funding.index'))
+    $this->withoutExceptionHandling();
+
+    expect(fn () => $this->from(route('x-change.cockpit.funding.index'))
         ->post(route('x-change.cockpit.funding.reconciliations.approve', [
             'reconciliationRequest' => $reconciliation->reference,
-        ]))
-        ->assertRedirect(route('x-change.cockpit.funding.index'))
-        ->assertSessionHasErrors(['approval']);
+        ])))->toThrow(
+            ValidationException::class,
+            'The reconciliation requester cannot approve their own request.',
+        );
+
+    $this->withExceptionHandling();
 
     expect($reconciliation->refresh()->status)->toBe('pending_approval')
         ->and((int) $makerWallet->refresh()->balanceInt)->toBe(0);
@@ -59,7 +68,12 @@ it('requires distinct maker and checker operators before compensating a verified
         ->and($reconciliation->approved_by_id)->toBe((string) $checker->getAuthIdentifier())
         ->and($case->refresh()->status)->toBe('resolved')
         ->and(FundingSettlement::query()->count())->toBe(1)
-        ->and((int) $makerWallet->refresh()->balanceInt)->toBe(24_950);
+        ->and((int) $makerWallet->refresh()->balanceInt)->toBe(0)
+        ->and(app(AccountBalanceReadModelContract::class)->providerBalanceMinor(
+            $maker,
+            'netbank',
+            'PHP',
+        ))->toBe(24_950);
 });
 
 it('prohibits operator supplied amounts and provider evidence identifiers', function () {

@@ -1,5 +1,7 @@
 # Funding Account Management
 
+> The provider-neutral initial-state, multi-position, reconciliation, and deployment model is documented in [Treasury Initial State and Account Portfolios](TREASURY_INITIAL_STATE_AND_ACCOUNT_PORTFOLIOS.md). This document retains the detailed Funding Account UI and provider-destination design.
+
 ## Purpose
 
 This document defines how x-change accepts provider-funded money without creating a manual “add funds” path. It covers NetBank, Paynamics, and the adapter boundary for future banks and EMIs.

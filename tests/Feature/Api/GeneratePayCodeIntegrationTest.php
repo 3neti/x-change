@@ -68,8 +68,8 @@ it('generates a pay code end to end via api and debits the issuer wallet', funct
 
     expect($data['links']['redeem'])->toContain($data['code']);
     expect($data['links']['redeem_path'])->toContain($data['code']);
-    expect($data['links']['redeem'])->toBe("https://example.test/x/claim/{$data['code']}/experience");
-    expect($data['links']['redeem_path'])->toBe("/x/claim/{$data['code']}/experience");
+    expect($data['links']['redeem'])->toBe("https://example.test/x/claim/{$data['code']}");
+    expect($data['links']['redeem_path'])->toBe("/x/claim/{$data['code']}");
 
     $wallet->refresh();
     expect((float) $wallet->balance)->toBe((float) $data['wallet']['balance_after']);

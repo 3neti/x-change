@@ -36,7 +36,7 @@ delivery_enabled
 redactions
 ```
 
-The links are generated from the existing `x-change.claim.experience` route.
+The links are generated from the canonical `x-change.claim.show` route. That route owns the public claim entry and may hand off to the richer experience internally.
 
 ## Boundary
 

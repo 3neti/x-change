@@ -38,7 +38,8 @@ it('keeps the shared header read model wired across every cockpit page', functio
 
     expect($provider)
         ->toContain("config('x-change.cockpit.header_provider_balance.enabled', true)")
-        ->toContain('return $this->disconnectedProviderBalance();')
+        ->toContain('$this->disconnectedProviderBalance(')
+        ->toContain('TreasuryVocabularyReadModelContract')
         ->and($config)
         ->toContain("'enabled' => (bool) env('XCHANGE_COCKPIT_HEADER_PROVIDER_BALANCE_ENABLED', true)");
 });

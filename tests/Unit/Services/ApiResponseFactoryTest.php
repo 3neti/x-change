@@ -162,6 +162,7 @@ it('serializes OpenIssuerWalletResultData in a success response', function () {
                 'name' => 'Platform Wallet',
                 'balance' => 0,
             ],
+            'accountPortfolio' => null,
         ],
         'meta' => [],
     ]);

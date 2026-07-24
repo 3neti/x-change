@@ -17,12 +17,12 @@ it('documents the read model distribution links contract', function (): void {
         ->toContain('Cockpit Wave 54B')
         ->toContain('read_model.voucher.distribution_links')
         ->toContain('distribution_workspace_read_model.distribution_links')
-        ->toContain('x-change.claim.experience')
+        ->toContain('x-change.claim.show')
         ->and($voucherData)
         ->toContain('public readonly array $distribution_links')
         ->and($distributionData)
         ->toContain('public readonly array $distribution_links')
         ->and($providerTest)
         ->toContain('adds read only distribution links to voucher detail read models')
-        ->toContain('http://localhost/x/claim/PC-WAVE-54B/experience');
+        ->toContain('http://localhost/x/claim/PC-WAVE-54B');
 });
