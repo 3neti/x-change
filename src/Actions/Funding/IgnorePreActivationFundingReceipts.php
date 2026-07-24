@@ -28,8 +28,8 @@ final class IgnorePreActivationFundingReceipts
                 ->lockForUpdate()
                 ->findOrFail($address->getKey());
             $receipts = AccountFundingReceipt::query()
+                ->with('providerFundingObservation')
                 ->where('standing_funding_address_id', $lockedAddress->getKey())
-                ->where('observed_at', '<', $lockedAddress->activated_at)
                 ->whereNotIn('status', [
                     AccountFundingReceiptStatus::Settled,
                     AccountFundingReceiptStatus::Reversed,
@@ -37,7 +37,11 @@ final class IgnorePreActivationFundingReceipts
                 ])
                 ->whereNull('wallet_transaction_id')
                 ->lockForUpdate()
-                ->get();
+                ->get()
+                ->filter(fn (AccountFundingReceipt $receipt): bool => $receipt
+                    ->providerFundingObservation
+                    ?->occurredAtInstant()
+                    ?->lessThan($lockedAddress->activated_at) === true);
 
             foreach ($receipts as $receipt) {
                 $metadata = $receipt->metadata ?? [];

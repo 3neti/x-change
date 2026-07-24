@@ -74,7 +74,7 @@ final class SettleAccountFundingReceipt
                 currency: $locked->currency,
                 status: 'requested',
                 idempotencyKey: 'standing-funding-recognition-key:'.hash('sha256', $locked->reference),
-                effectiveAt: $observation->settled_at?->toRfc3339String(),
+                effectiveAt: $observation->settledAtInstant()?->toRfc3339String(),
                 externalReference: $locked->provider_code.':'.$observation->provider_transaction_id,
                 metadata: [
                     'account_funding_receipt_reference' => $locked->reference,
@@ -136,10 +136,10 @@ final class SettleAccountFundingReceipt
             && $observation->currency === $address->currency
             && $observation->net_amount_minor === $receipt->net_amount_minor
             && $observation->net_amount_minor > 0
-            && $observation->settled_at !== null
-            && $observation->occurred_at !== null
+            && $observation->settledAtInstant() !== null
+            && $observation->occurredAtInstant() !== null
             && $address->activated_at !== null
-            && $observation->occurred_at->greaterThanOrEqualTo($address->activated_at)
+            && $observation->occurredAtInstant()->greaterThanOrEqualTo($address->activated_at)
             && $observation->funding_address === 'sha256:'.$address->funding_address_hash
             && data_get($observation->metadata, 'destination_verified') === true;
 

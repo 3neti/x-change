@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Bavix\Wallet\Models\Transaction;
+use LBHurtado\EmiCore\Actions\Funding\RecordProviderFundingObservation;
 use LBHurtado\EmiCore\Contracts\StandingFundingAddressProvider;
 use LBHurtado\EmiCore\Data\Funding\FundingQrCodeData;
 use LBHurtado\EmiCore\Data\Funding\ProviderFundingObservationData;
@@ -283,6 +284,66 @@ it('does not record or recognize provider transactions from before address activ
         ->and(ProviderFundingObservation::query()->count())->toBe(0)
         ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
         ->and(TreasuryInventoryOperation::query()->count())->toBe(0);
+});
+
+it('recovers a corrected observation previously classified as changed evidence', function () {
+    $user = actingAsTestUser(0);
+    $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
+    $provider = new StandingFundingAddressProviderFake;
+    bindStandingFundingProvider($provider);
+    $address = provisionStandingAddress(
+        $user,
+        'wallet:'.$wallet->uuid,
+        FundingAddressPurpose::AccountFunding,
+        FundingRecognitionMode::ObserveOnly,
+    );
+    $occurredAt = $address->activated_at->addMinute()->toDateTimeImmutable();
+    $provider->observations = [
+        standingFundingObservation(
+            $provider->fundingAddress,
+            'previously-changed-evidence',
+            2_500,
+            feeAmountMinor: 2_500,
+            netAmountMinor: 0,
+            occurredAt: $occurredAt,
+        ),
+    ];
+
+    app(SyncStandingFundingAddress::class)->handle($address);
+    $receipt = AccountFundingReceipt::query()->sole();
+    $originalObservationId = $receipt->provider_funding_observation_id;
+    $correctedData = standingFundingObservation(
+        $provider->fundingAddress,
+        'previously-changed-evidence',
+        2_500,
+        feeAmountMinor: 0,
+        netAmountMinor: 2_500,
+        occurredAt: $occurredAt,
+        metadata: [
+            'destination_verified' => true,
+            'address_purpose' => FundingAddressPurpose::AccountFunding->value,
+            'normalization_version' => 'netbank-standing-credit-v2',
+            'incoming_credit_amount_is_net_received' => true,
+        ],
+    );
+    $correctedObservation = app(RecordProviderFundingObservation::class)
+        ->handle($correctedData);
+    $receipt->forceFill([
+        'provider_funding_observation_id' => $correctedObservation->getKey(),
+        'status' => AccountFundingReceiptStatus::Suspense,
+        'suspense_reason' => 'provider_evidence_changed',
+    ])->saveQuietly();
+    $provider->observations = [$correctedData];
+
+    $result = app(SyncStandingFundingAddress::class)->handle($address->refresh());
+
+    expect($result->awaitingApproval)->toBe(1)
+        ->and($receipt->refresh()->status)->toBe(AccountFundingReceiptStatus::AwaitingApproval)
+        ->and($receipt->provider_funding_observation_id)->toBe($correctedObservation->getKey())
+        ->and($receipt->metadata['normalization_correction']['original_observation_id'])
+        ->toBe($originalObservationId)
+        ->and($receipt->net_amount_minor)->toBe(2_500)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0);
 });
 
 it('quarantines previously imported pre-activation receipts without changing balances', function () {

@@ -57,22 +57,27 @@ final class CorrectNetbankStandingFundingReceiptNormalization
             }
 
             if ($receipt->status !== AccountFundingReceiptStatus::Suspense
-                || $receipt->suspense_reason !== 'non_positive_net_amount'
+                || ! in_array($receipt->suspense_reason, [
+                    'non_positive_net_amount',
+                    'provider_evidence_changed',
+                ], true)
                 || $receipt->wallet_transaction_id !== null
                 || $receipt->settled_at !== null) {
                 return null;
             }
 
-            $originalObservation = ProviderFundingObservation::query()
-                ->lockForUpdate()
-                ->findOrFail($receipt->provider_funding_observation_id);
-
-            if (! $this->isAuthorizedCorrection(
-                $lockedAddress,
+            $originalObservation = $this->originalObservation(
                 $receipt,
-                $originalObservation,
                 $correctedObservation,
-            )) {
+            );
+
+            if (! $originalObservation instanceof ProviderFundingObservation
+                || ! $this->isAuthorizedCorrection(
+                    $lockedAddress,
+                    $receipt,
+                    $originalObservation,
+                    $correctedObservation,
+                )) {
                 return null;
             }
 
@@ -162,13 +167,34 @@ final class CorrectNetbankStandingFundingReceiptNormalization
             && $receipt->currency === $corrected->currency
             && $corrected->currency === $address->currency
             && $corrected->provider_status === 'settled'
-            && $corrected->settled_at !== null
-            && $corrected->occurred_at !== null
+            && $corrected->settledAtInstant() !== null
+            && $corrected->occurredAtInstant() !== null
             && $address->activated_at !== null
-            && $corrected->occurred_at->greaterThanOrEqualTo($address->activated_at)
+            && $corrected->occurredAtInstant()->greaterThanOrEqualTo($address->activated_at)
             && $corrected->funding_address === 'sha256:'.$address->funding_address_hash
             && data_get($corrected->metadata, 'destination_verified') === true
             && data_get($corrected->metadata, 'normalization_version') === self::NormalizationVersion
             && data_get($corrected->metadata, 'incoming_credit_amount_is_net_received') === true;
+    }
+
+    private function originalObservation(
+        AccountFundingReceipt $receipt,
+        ProviderFundingObservation $corrected,
+    ): ?ProviderFundingObservation {
+        if ($receipt->suspense_reason === 'non_positive_net_amount') {
+            return ProviderFundingObservation::query()
+                ->lockForUpdate()
+                ->find($receipt->provider_funding_observation_id);
+        }
+
+        return ProviderFundingObservation::query()
+            ->where('provider_code', $corrected->provider_code)
+            ->where('provider_transaction_id', $corrected->provider_transaction_id)
+            ->where('payload_hash', $corrected->payload_hash)
+            ->where('provider_status', 'settled')
+            ->whereColumn('fee_amount_minor', 'gross_amount_minor')
+            ->where('net_amount_minor', 0)
+            ->lockForUpdate()
+            ->first();
     }
 }
