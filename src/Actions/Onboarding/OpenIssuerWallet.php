@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Actions\Onboarding;
 
+use Illuminate\Database\Eloquent\Model;
 use LBHurtado\XChange\Contracts\IssuerResolverContract;
+use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
 use LBHurtado\XChange\Contracts\WalletProvisioningContract;
 use LBHurtado\XChange\Data\IssuerData;
 use LBHurtado\XChange\Data\Onboarding\OpenIssuerWalletResultData;
@@ -16,6 +18,7 @@ class OpenIssuerWallet
     public function __construct(
         protected IssuerResolverContract $issuerResolver,
         protected WalletProvisioningContract $walletProvisioning,
+        protected ?TreasuryAccountPortfolioProvisioningContract $accountPortfolios = null,
     ) {}
 
     /**
@@ -30,6 +33,9 @@ class OpenIssuerWallet
         }
 
         $wallet = $this->walletProvisioning->open($issuer, $input);
+        $accountPortfolio = $issuer instanceof Model && $this->accountPortfolios !== null
+            ? $this->accountPortfolios->provision($issuer)
+            : null;
 
         return new OpenIssuerWalletResultData(
             issuer: new IssuerData(
@@ -41,6 +47,7 @@ class OpenIssuerWallet
                 name: is_object($wallet) ? ($wallet->name ?? null) : data_get($wallet, 'name'),
                 balance: is_object($wallet) ? ($wallet->balance ?? null) : data_get($wallet, 'balance'),
             ),
+            accountPortfolio: $accountPortfolio,
         );
     }
 }

@@ -131,6 +131,8 @@ use LBHurtado\XChange\Contracts\SettlementEnvelopeReadinessContract;
 use LBHurtado\XChange\Contracts\SettlementExecutionContract;
 use LBHurtado\XChange\Contracts\SettlementFlowPreparationContract;
 use LBHurtado\XChange\Contracts\SettlementReadinessGateContract;
+use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
+use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Contracts\UserLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\VendorRegistryContract;
 use LBHurtado\XChange\Contracts\VoucherAccessContract;
@@ -258,6 +260,8 @@ use LBHurtado\XChange\Services\SettlementCollectionGate;
 use LBHurtado\XChange\Services\SettlementEnvelopeReadinessService;
 use LBHurtado\XChange\Services\StartProviderProvisioningFromOnboardingCompletion;
 use LBHurtado\XChange\Services\SystemWalletProxy;
+use LBHurtado\XChange\Services\Treasury\DefaultTreasuryPrincipalReferenceResolver;
+use LBHurtado\XChange\Services\Treasury\TreasuryAccountPortfolioProvisioningService;
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XChange\Services\Treasury\TreasuryProvisioningService;
@@ -327,6 +331,14 @@ class XChangeServiceProvider extends ServiceProvider
             ),
         );
         $this->app->singleton(TreasuryProvisioningService::class);
+        $this->app->singleton(
+            TreasuryPrincipalReferenceResolverContract::class,
+            DefaultTreasuryPrincipalReferenceResolver::class,
+        );
+        $this->app->singleton(
+            TreasuryAccountPortfolioProvisioningContract::class,
+            TreasuryAccountPortfolioProvisioningService::class,
+        );
 
         $this->registerServices();
         $this->registerFundingAccountServices();

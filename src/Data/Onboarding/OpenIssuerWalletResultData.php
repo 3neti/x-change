@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Data\Onboarding;
 
 use LBHurtado\XChange\Data\IssuerData;
+use LBHurtado\XChange\Data\Treasury\TreasuryAccountPortfolioData;
 use LBHurtado\XChange\Data\WalletData;
 use Spatie\LaravelData\Data;
 
@@ -13,5 +14,6 @@ class OpenIssuerWalletResultData extends Data
     public function __construct(
         public IssuerData $issuer,
         public WalletData $wallet,
+        public ?TreasuryAccountPortfolioData $accountPortfolio = null,
     ) {}
 }

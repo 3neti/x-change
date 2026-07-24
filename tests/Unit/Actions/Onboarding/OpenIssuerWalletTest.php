@@ -43,6 +43,7 @@ it('opens issuer wallet through provisioning contract and returns normalized wal
     expect($result->wallet->slug)->toBe('platform');
     expect($result->wallet->name)->toBe('Platform Wallet');
     expect($result->wallet->balance)->toBe(0);
+    expect($result->accountPortfolio)->toBeNull();
 });
 
 it('throws when issuer cannot be resolved', function () {
