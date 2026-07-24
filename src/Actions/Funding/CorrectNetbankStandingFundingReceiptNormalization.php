@@ -155,10 +155,13 @@ final class CorrectNetbankStandingFundingReceiptNormalization
             && $corrected->provider_code === 'netbank'
             && $original->provider_code === $corrected->provider_code
             && $original->provider_transaction_id === $corrected->provider_transaction_id
-            && hash_equals($original->payload_hash, $corrected->payload_hash)
             && $original->provider_status === 'settled'
             && $corrected->provider_status === 'settled'
             && $original->gross_amount_minor === $corrected->gross_amount_minor
+            && $original->currency === $corrected->currency
+            && $original->funding_address === $corrected->funding_address
+            && $original->provider_account_reference === $corrected->provider_account_reference
+            && $original->occurredAtInstant()?->equalTo($corrected->occurredAtInstant()) === true
             && $original->fee_amount_minor === $original->gross_amount_minor
             && $original->net_amount_minor === 0
             && $corrected->fee_amount_minor === 0
@@ -190,7 +193,6 @@ final class CorrectNetbankStandingFundingReceiptNormalization
         return ProviderFundingObservation::query()
             ->where('provider_code', $corrected->provider_code)
             ->where('provider_transaction_id', $corrected->provider_transaction_id)
-            ->where('payload_hash', $corrected->payload_hash)
             ->where('provider_status', 'settled')
             ->whereColumn('fee_amount_minor', 'gross_amount_minor')
             ->where('net_amount_minor', 0)

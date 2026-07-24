@@ -325,6 +325,7 @@ it('recovers a corrected observation previously classified as changed evidence',
             'normalization_version' => 'netbank-standing-credit-v2',
             'incoming_credit_amount_is_net_received' => true,
         ],
+        payloadHash: hash('sha256', 'updated-provider-history-payload'),
     );
     $correctedObservation = app(RecordProviderFundingObservation::class)
         ->handle($correctedData);
@@ -530,6 +531,7 @@ function standingFundingObservation(
     ?int $netAmountMinor = null,
     ?DateTimeImmutable $occurredAt = null,
     ?array $metadata = null,
+    ?string $payloadHash = null,
 ): ProviderFundingObservationData {
     $effectiveOccurredAt = $occurredAt ?? now()->addMinute()->toDateTimeImmutable();
 
@@ -542,7 +544,7 @@ function standingFundingObservation(
         currency: 'PHP',
         providerStatus: 'settled',
         verificationSource: 'netbank-vca-transaction-history',
-        payloadHash: hash('sha256', $providerTransactionId.':settled'),
+        payloadHash: $payloadHash ?? hash('sha256', $providerTransactionId.':settled'),
         fundingAddress: 'sha256:'.hash('sha256', $fundingAddress),
         providerAccountReference: 'sha256:'.hash('sha256', 'corporate-account'),
         occurredAt: $effectiveOccurredAt,
