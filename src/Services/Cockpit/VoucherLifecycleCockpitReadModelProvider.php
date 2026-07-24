@@ -174,7 +174,7 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
      */
     private function distributionLinks(?string $code): array
     {
-        if ($code === null || trim($code) === '' || ! Route::has('x-change.claim.experience')) {
+        if ($code === null || trim($code) === '' || ! Route::has('x-change.claim.show')) {
             return [
                 'schema' => 'x-change.cockpit.distribution-links.v1',
                 'status' => 'unavailable',
@@ -192,9 +192,9 @@ class VoucherLifecycleCockpitReadModelProvider implements CockpitReadModelProvid
             'status' => 'available',
             'available' => true,
             'read_only' => true,
-            'redeem_url' => route('x-change.claim.experience', ['code' => $code]),
-            'redeem_path' => route('x-change.claim.experience', ['code' => $code], false),
-            'source' => 'x-change.claim.experience',
+            'redeem_url' => route('x-change.claim.show', ['code' => $code]),
+            'redeem_path' => route('x-change.claim.show', ['code' => $code], false),
+            'source' => 'x-change.claim.show',
             'delivery_enabled' => false,
             'redactions' => [
                 'payloads' => 'distribution-links-only',

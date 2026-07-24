@@ -92,8 +92,8 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
 
     protected function redeemPath(string $code): string
     {
-        if (Route::has('x-change.claim.experience')) {
-            return route('x-change.claim.experience', ['code' => $code], false);
+        if (Route::has('x-change.claim.show')) {
+            return route('x-change.claim.show', ['code' => $code], false);
         }
 
         $path = trim((string) config('x-change.routes.paths.redeem', 'disburse'), '/');

@@ -58,9 +58,9 @@ it('adds read only distribution links to voucher detail read models', function (
             'status' => 'available',
             'available' => true,
             'read_only' => true,
-            'redeem_url' => 'http://localhost/x/claim/PC-WAVE-54B/experience',
-            'redeem_path' => '/x/claim/PC-WAVE-54B/experience',
-            'source' => 'x-change.claim.experience',
+            'redeem_url' => 'http://localhost/x/claim/PC-WAVE-54B',
+            'redeem_path' => '/x/claim/PC-WAVE-54B',
+            'source' => 'x-change.claim.show',
             'delivery_enabled' => false,
         ])
         ->and($links['redactions'])

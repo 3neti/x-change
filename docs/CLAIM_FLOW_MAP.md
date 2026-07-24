@@ -1,7 +1,7 @@
 # /x/claim Endpoint — Claim Flow Map
 
-**Version**: 1.0
-**Last Updated**: 2026-05-09
+**Version**: 1.1
+**Last Updated**: 2026-07-24
 **Audience**: Human developers + AI agents
 
 This document maps the complete claim flow for x-change Pay Codes — from claim initiation to success page, including form-flow integration, the post-redemption pipeline, disbursement, and rollback behavior.
@@ -29,7 +29,7 @@ This document maps the complete claim flow for x-change Pay Codes — from claim
 │                                │                                      │
 │  Show.vue "Start Claim" button ─┘                                     │
 │  or Entry.vue submit                                                  │
-│  or shared URL: /x/claim?code=XXXX                                    │
+│  or canonical shared URL: /x/claim/{code}                              │
 │       │                                                               │
 │       ▼                                                               │
 │  ClaimStartController::__invoke()                                     │
@@ -118,12 +118,20 @@ This document maps the complete claim flow for x-change Pay Codes — from claim
 **Vue**: `pages/x-change/claim/Entry.vue` → wraps `ClaimWidget.vue`
 **Layout**: `null` (standalone page, no sidebar — bypasses `AppLayout` via `app.ts` layout resolver)
 
-The entry page is the canonical redemption URL — the link that goes on QR codes, SMS messages, and shared links. It provides:
+The canonical beneficiary URL is `GET /x/claim/{code}`. It renders the same
+read-only `Entry.vue` experience with the code and sanitized compiled claim
+experience already loaded. The legacy `/x/claim?code={code}` start URL remains
+available during compatibility migration, but it is no longer distributed.
+
+The entry page provides:
 - Code input field with auto-uppercase
 - Live voucher preview ("x-ray") via `useVoucherPreview` composable — debounced API call to `GET /api/x/v1/vouchers/code/{code}`
 - Tabbed display: Instructions tab (amount, required inputs, validation, rider) and System Info tab (metadata)
 - Non-active states: redeemed/expired vouchers show a status stamp (no form, no submit)
 - On submit: `GET /x/claim?code={CODE}` which hits Phase 1
+
+`GET /x/claim/{code}/experience` is the machine-readable compiled experience
+endpoint used by the frontend. It is not a human distribution link.
 
 The `ClaimWidget.vue` is adapted from redeem-x's `RedeemWidget.vue`, stripped to claim-only mode.
 
