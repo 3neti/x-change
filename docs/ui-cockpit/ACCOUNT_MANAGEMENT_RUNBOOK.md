@@ -68,7 +68,7 @@ Use the Account Funding Address when the payer must choose the amount on a stabl
 3. Check the scheme badge:
    - **Verified mobile suffix** is the readable development scheme and requires a verified `09XXXXXXXXX` mobile;
    - **Opaque Account reference** is the production-safe HMAC scheme.
-4. Choose **Create Account Funding QR** or **Open Account Funding QR**.
+4. Choose **Create Account Funding QR** for a new binding. An existing available QR opens automatically from its encrypted fixture; use **Open Account Funding QR** to reopen it after hiding it.
 5. Confirm the displayed VCA contains exactly 16 digits: the five-digit alias plus an eleven-digit reference.
 6. Let the human payer scan, enter the amount, and authorize payment outside x-change.
 7. Choose **Check NetBank** if webhook or scheduled confirmation has not appeared.
@@ -85,6 +85,29 @@ Recognition modes:
 The operator never enters an amount, transaction ID, payer mobile, or destination when checking or approving. The exact VCA binding determines the Account. Unknown destinations and limit breaches enter suspense.
 
 Default limits are PHP 1 minimum, PHP 50,000 maximum per transfer, and PHP 100,000 daily gross. Treat the configured values shown by the deployment as authoritative.
+
+## Funding QR Presentation
+
+Use **Funding QR merchant profile** on `/x/cockpit/accounts` to control the name, city, merchant category, and approved label template shown inside future Account Funding QR fixtures.
+
+- Save requires the same recent-PIN boundary as other Account mutations.
+- The next private QR open refreshes the encrypted fixture when the presentation changed.
+- The saved presentation does not rotate the funding address.
+- Presentation fields never route money or select an Account.
+- The full QR and VCA remain private to the owner-authorized `no-store` endpoint.
+
+## Reactive Balance Refresh
+
+After NetBank evidence produces the first successful Account credit, the open Funding page should refresh Internal Balance and Issuance Capacity automatically.
+
+The preferred path is a private Reverb/Echo invalidation event. **Check NetBank**, supervised approval, and Inertia polling remain fallback refresh paths. If the balance does not refresh automatically:
+
+1. Confirm the receipt says **Applied**.
+2. Confirm the queue worker, scheduler, and Reverb process are running.
+3. Confirm private-channel authentication succeeds for the signed-in owner.
+4. Refresh the page and verify the server projection before escalating.
+
+Never use the broadcast payload as financial evidence. It contains no authoritative amount or balance and exists only to request a fresh server read.
 
 ## Connection History
 
@@ -160,8 +183,11 @@ Check desktop and narrow mobile widths:
 - Walkthrough completion shows rollback, unchanged balance, and no persistence.
 - Blocked provider options are disabled on Funding.
 - Account Funding Address card names its purpose and recognition mode.
-- Full QR/VCA appears only after the explicit private open action.
+- An existing available Account Funding QR opens automatically through the private endpoint; a new binding still requires explicit creation.
+- Full QR/VCA never appears in the general Inertia page props.
+- Funding QR merchant-profile controls remain responsive and state that they are presentation-only.
 - Check NetBank renders sanitized receipts without payer or provider transaction data.
+- A successful credit refreshes Internal Balance and Issuance Capacity without a full browser reload; direct reload still works when WebSockets are unavailable.
 - Supervised approval is present only for `awaiting_approval` receipts.
 - The receipts table scrolls inside its own container at narrow widths.
 - Profile provider cards contain no mutation forms and link to Accounts.

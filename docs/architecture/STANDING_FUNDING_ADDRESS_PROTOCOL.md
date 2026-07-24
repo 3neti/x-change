@@ -328,6 +328,53 @@ The host must run its queue worker and Laravel scheduler.
 
 The QR and full VCA are returned only from the private `no-store` endpoint. They are absent from the general Inertia read model.
 
+## Reusable QR Fixture
+
+The first successful provider QR generation creates one encrypted QR artifact for the persisted Standing Funding Address. Reopening the Funding page reads that encrypted fixture through the owner-authorized `no-store` endpoint instead of asking NetBank to generate another QR.
+
+The fixture stores:
+
+- the encrypted provider QR payload;
+- the safe display snapshot needed by the private instruction card;
+- an artifact version;
+- a fingerprint of the resolved merchant presentation;
+- generation and last-open timestamps.
+
+The general Cockpit read model exposes only whether an artifact is available. It never contains the QR payload, full VCA, provider response, or merchant fingerprint.
+
+The fixture is regenerated under a per-address cache lock only when it is missing, its configured artifact version changes, or its merchant-presentation fingerprint changes. Concurrent opens therefore converge on one provider generation. Changing the Account’s QR presentation intentionally refreshes the fixture on its next private open; it does not rotate the Standing Funding Address or alter settlement routing.
+
+## Merchant Presentation Boundary
+
+`3neti/merchant` owns the reusable merchant profile associated with the authenticated Account owner. x-change resolves that profile into the provider-neutral QR instruction contract, and `3neti/emi-netbank` maps it to NetBank’s merchant name, city, and category fields.
+
+The operator may configure:
+
+- merchant display name;
+- city;
+- four-digit merchant category code;
+- one approved display-name template.
+
+These fields are presentation metadata only. They do not choose the owner, Account, VCA suffix, purpose, amount, classification, or settlement destination. The persisted Standing Funding Address remains the sole Account-routing key.
+
+When no saved merchant profile exists, x-change uses the Account-owner name plus the configured package defaults. Environment defaults are:
+
+```text
+MERCHANT_QR_DEFAULT_CITY
+MERCHANT_QR_DEFAULT_CATEGORY_CODE
+MERCHANT_QR_DEFAULT_NAME_TEMPLATE
+MERCHANT_QR_FALLBACK_NAME
+MERCHANT_QR_UPPERCASE
+```
+
+## Reactive Funding Projection
+
+The first successful Account credit dispatches a sanitized `FundingProjectionChanged` event only after the database transaction commits. It is delivered on a private, opaque owner channel and contains only a schema identifier, Account reference hash, receipt reference, outcome, and occurrence time.
+
+The Funding page treats this broadcast as an invalidation signal. It reloads the Internal Balance, Issuance Capacity, Standing Funding Address summary, and Funding activity props from the authoritative server projection. The event never carries a balance, amount, QR, VCA, provider transaction ID, payer detail, or credential.
+
+Repeated provider evidence cannot emit another successful-credit event because the receipt, Treasury operation, and Account deposit are idempotent. The existing **Check NetBank** success callback and Inertia polling remain direct fallback paths when WebSocket delivery is unavailable.
+
 ## Reversals and Changed Provider Status
 
 If a later provider observation changes a transaction that already produced a settled receipt, x-change opens `post_settlement_status_changed` suspense. It does not rewrite the receipt or silently debit the Account.
@@ -365,6 +412,11 @@ XCHANGE_STANDING_FUNDING_WEBHOOK_BATCH_SIZE
 XCHANGE_STANDING_FUNDING_MINIMUM_AMOUNT_MINOR
 XCHANGE_STANDING_FUNDING_MAXIMUM_AMOUNT_MINOR
 XCHANGE_STANDING_FUNDING_DAILY_LIMIT_MINOR
+XCHANGE_STANDING_FUNDING_QR_ARTIFACT_VERSION
+XCHANGE_STANDING_FUNDING_QR_LOCK_SECONDS
+XCHANGE_STANDING_FUNDING_QR_LOCK_WAIT_SECONDS
+XCHANGE_FUNDING_BROADCAST_ENABLED
+XCHANGE_FUNDING_BROADCAST_REFERENCE_HASH_KEY
 ```
 
 NetBank also requires its funding API/token endpoints, OAuth credentials, corporate account, five-digit VCA alias, reference key, QR endpoint, and merchant fields. The Cockpit control fails closed unless every prerequisite is present, including:
@@ -402,6 +454,24 @@ NETBANK_FUNDING_STANDING_HMAC_KEY=base64:<dedicated-secret-of-at-least-32-bytes>
 Keep the HMAC key stable and in managed secret storage. Back it up under the same recovery policy as provider credentials. Rotating it is safe for persisted addresses, but restoring a database without its matching address records and key history can orphan old QR destinations.
 
 The provider-issued VCA alias token is deliberately **not** required for the shared reusable QR because this flow does not register or mutate a VCA. It remains mandatory for one-time Funding Intents and for dedicated destinations that use registered VCA operations. It must never be guessed, exposed in the UI, or recorded in documentation.
+
+For reactive Cockpit refresh, configure Laravel broadcasting and a private-channel-capable driver such as Reverb:
+
+```text
+BROADCAST_CONNECTION=reverb
+REVERB_APP_ID
+REVERB_APP_KEY
+REVERB_APP_SECRET
+REVERB_HOST
+REVERB_PORT
+REVERB_SCHEME
+VITE_REVERB_APP_KEY
+VITE_REVERB_HOST
+VITE_REVERB_PORT
+VITE_REVERB_SCHEME
+```
+
+The host runs the Reverb process as infrastructure. All channel naming, authorization, payload sanitization, idempotency, and projection-refresh rules remain package-owned.
 
 ## Browser Acceptance
 

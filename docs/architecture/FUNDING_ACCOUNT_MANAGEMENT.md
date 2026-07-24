@@ -337,10 +337,15 @@ XCHANGE_FUNDING_SCHEDULED_VERIFICATION_BATCH_SIZE
 XCHANGE_FUNDING_SETTLEMENT_GRACE_SECONDS
 XCHANGE_FUNDING_VERIFICATION_PROVIDER_RATE_LIMIT_PER_MINUTE
 XCHANGE_FUNDING_UI_REFRESH_INTERVAL_MILLISECONDS
+XCHANGE_FUNDING_BROADCAST_ENABLED
+XCHANGE_FUNDING_BROADCAST_REFERENCE_HASH_KEY
 XCHANGE_STANDING_FUNDING_ADDRESSES_ENABLED
 XCHANGE_STANDING_FUNDING_RECOGNITION_MODE
 XCHANGE_STANDING_FUNDING_ENFORCE_RECOGNITION_MODE
 XCHANGE_STANDING_FUNDING_CREDITABLE_STATUSES
+XCHANGE_STANDING_FUNDING_QR_ARTIFACT_VERSION
+XCHANGE_STANDING_FUNDING_QR_LOCK_SECONDS
+XCHANGE_STANDING_FUNDING_QR_LOCK_WAIT_SECONDS
 XCHANGE_STANDING_FUNDING_SCHEDULED_SYNC_ENABLED
 XCHANGE_STANDING_FUNDING_SCHEDULED_BATCH_SIZE
 XCHANGE_STANDING_FUNDING_WEBHOOK_BATCH_SIZE
@@ -374,9 +379,19 @@ NETBANK_FUNDING_QR_MERCHANT_NAME
 NETBANK_FUNDING_QR_MERCHANT_CITY
 NETBANK_FUNDING_QR_PURPOSE
 NETBANK_FUNDING_WEBHOOK_ALLOWED_IPS
+
+MERCHANT_QR_DEFAULT_CITY
+MERCHANT_QR_DEFAULT_CATEGORY_CODE
+MERCHANT_QR_DEFAULT_NAME_TEMPLATE
+MERCHANT_QR_FALLBACK_NAME
+MERCHANT_QR_UPPERCASE
 ```
 
 `NETBANK_FUNDING_VCA_ALIAS_TOKEN` remains mandatory for registered one-time Funding Intents. A shared reusable Account Funding Address does not use that token. Its default scheme is `netbank-mobile-v1` outside production and `netbank-account-hmac-v2` in production; production rejects the mobile scheme. The HMAC key is dedicated, must be at least 32 bytes, and must never fall back to `APP_KEY`.
+
+The reusable Account Funding QR is persisted as an encrypted fixture and reopened through an owner-only `no-store` endpoint. A changed merchant profile invalidates that fixture on the next open but never changes the persisted funding address. Configure Reverb or another private-channel broadcaster when immediate Cockpit invalidation is required; direct post-action reload and polling remain supported fallbacks.
+
+Merchant name, city, category, and display template are presentation inputs. They must never participate in Account routing, observation classification, or settlement authorization.
 
 Before production, run adapter contract tests with HTTP fakes, verify the queue and scheduler in a non-production environment, and exercise browser acceptance without sending money. Live UAT is a separate explicit gate: a human scans a configured small exact-amount QR and authorizes the real payment. The acceptance result must contain exactly one Inventory recognition and one Account credit whether confirmation arrives through webhook or **Check NetBank**. Automated tests and Codex must never initiate the real-money payment.
 
