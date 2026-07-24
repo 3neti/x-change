@@ -17,6 +17,7 @@ use LBHurtado\XChange\Services\Cockpit\FundingCockpitReadModelProvider;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('presents operator scoped funding controls without exposing provider evidence', function () {
+    enableNetbankTreasuryForTests();
     config([
         'x-change.funding.providers.netbank.enabled' => true,
         'x-change.funding.providers.paynamics_constellation.enabled' => true,
@@ -35,7 +36,7 @@ it('presents operator scoped funding controls without exposing provider evidence
 
     $settledIntent = fundingCockpitVerifiedIntent($operator, $wallet);
     app(SettleVerifiedFundingIntent::class)->handle($settledIntent);
-    $wallet->withdraw(20_000, ['source' => 'simulated_spend']);
+    treasuryClientFundsLedger($operator)->withdraw(20_000, ['source' => 'simulated_spend']);
     app(ReverseSettledFundingIntent::class)->handle(
         $settledIntent->refresh(),
         fundingCockpitObservation('reversed', $settledIntent->matched_observation_id),

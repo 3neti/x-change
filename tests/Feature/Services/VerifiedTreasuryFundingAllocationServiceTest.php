@@ -25,6 +25,7 @@ use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XChange\Services\Treasury\TreasuryProvisioningService;
 use LBHurtado\XChange\Services\Treasury\VerifiedTreasuryFundingAllocationService;
+use LBHurtado\XChange\Support\Funding\QrPhFundingSimulatorGuard;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('recognizes and allocates verified funding exactly once through treasury positions', function () {
@@ -126,6 +127,7 @@ it('recognizes and allocates verified funding exactly once through treasury posi
             $positions,
         ),
         app(TreasuryPositionOperationContract::class),
+        app(QrPhFundingSimulatorGuard::class),
     );
 
     $first = $service->allocate(

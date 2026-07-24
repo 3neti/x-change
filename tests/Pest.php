@@ -6,16 +6,29 @@ use Bavix\Wallet\Interfaces\Wallet;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use LBHurtado\Contact\Models\Contact;
+use LBHurtado\EmiCore\Contracts\ProviderReadinessProbe;
+use LBHurtado\EmiCore\Contracts\SettlementProvider;
+use LBHurtado\EmiCore\Contracts\SettlementProviderRegistryContract;
 use LBHurtado\EmiCore\Data\PayoutRequestData;
 use LBHurtado\EmiCore\Data\PayoutResultData;
+use LBHurtado\EmiCore\Data\Providers\ProviderCapabilityManifestData;
+use LBHurtado\EmiCore\Data\Providers\ProviderCapabilityReadinessData;
+use LBHurtado\EmiCore\Data\Providers\ProviderReadinessRequestData;
 use LBHurtado\EmiCore\Enums\PayoutStatus;
+use LBHurtado\EmiCore\Enums\ProviderCapability;
+use LBHurtado\EmiCore\Support\SettlementProviderRegistry;
 use LBHurtado\Voucher\Actions\GenerateVouchers;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\Voucher\Models\Voucher;
-use LBHurtado\XChange\Actions\Payment\CollectVoucherFunds;
-use LBHurtado\XChange\Actions\Payment\RecordVoucherCollection;
-use LBHurtado\XChange\Data\Payment\VoucherPaymentResultData;
+use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
+use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
+use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
+use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
+use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Data\WithdrawalDisbursementExecutionData;
+use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
+use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
+use LBHurtado\XChange\Services\Treasury\TreasuryProvisioningService;
 use LBHurtado\XChange\Tests\Fakes\FakeAuditLogger;
 use LBHurtado\XChange\Tests\Fakes\FakePayoutProvider;
 use LBHurtado\XChange\Tests\Fakes\User;
@@ -157,6 +170,111 @@ function xchangeApi(string $path): string
     $path = ltrim($path, '/');
 
     return '/'.$prefix.'/'.$version.'/'.$path;
+}
+
+function enableNetbankTreasuryForTests(): User
+{
+    $system = User::query()->create([
+        'name' => 'Test System Treasury',
+        'email' => 'test-system-treasury+'.Str::uuid().'@example.com',
+        'password' => 'not-a-login-credential',
+    ]);
+    $provider = new class implements SettlementProvider
+    {
+        public function manifest(): ProviderCapabilityManifestData
+        {
+            return new ProviderCapabilityManifestData(
+                provider: 'netbank',
+                label: 'NetBank Test Provider',
+                capabilities: [
+                    ProviderCapability::ReadinessProbe,
+                    ProviderCapability::FundingEvidenceRead,
+                    ProviderCapability::FundingInstructionIssue,
+                ],
+            );
+        }
+    };
+    $probe = new class implements ProviderReadinessProbe
+    {
+        public function providerCode(): string
+        {
+            return 'netbank';
+        }
+
+        public function checkReadiness(
+            ProviderReadinessRequestData $request,
+        ): ProviderCapabilityReadinessData {
+            return new ProviderCapabilityReadinessData(
+                provider: $request->provider,
+                connectionReference: $request->connectionReference,
+                checks: collect($request->requiredCapabilities)
+                    ->mapWithKeys(static fn ($capability): array => [$capability->value => true])
+                    ->all(),
+                issues: [],
+                checkedAt: new DateTimeImmutable,
+            );
+        }
+    };
+    $systemResolver = new class($system) implements SystemUserResolverContract
+    {
+        public function __construct(private readonly User $system) {}
+
+        public function resolve(): Wallet
+        {
+            return $this->system;
+        }
+    };
+
+    config()->set('x-change.treasury.legal_entity_reference', 'legal-entity:x-change:test');
+    config()->set('x-change.treasury.connections', [
+        'netbank-primary' => [
+            'provider' => 'netbank',
+            'mode' => 'required',
+            'currency' => 'PHP',
+            'decimal_places' => 2,
+            'settlement_resource_reference' => 'resource:netbank:corporate-vca',
+            'settlement_resource_type' => 'cash_at_bank',
+            'custody_mode' => 'provider_projection',
+            'required_capabilities' => [
+                'readiness_probe',
+                'funding_evidence_read',
+                'funding_instruction_issue',
+            ],
+        ],
+    ]);
+    app()->instance(
+        SettlementProviderRegistryContract::class,
+        new SettlementProviderRegistry([$provider]),
+    );
+    app()->instance($probe::class, $probe);
+    app()->tag($probe::class, 'emi.provider-readiness-probes');
+    app()->instance(
+        SystemUserResolverContract::class,
+        $systemResolver,
+    );
+
+    foreach ([
+        TreasuryProviderConnectionCatalog::class,
+        TreasuryPreflightService::class,
+        TreasuryProvisioningService::class,
+        TreasuryAccountPortfolioProvisioningContract::class,
+        VerifiedTreasuryFundingAllocationContract::class,
+    ] as $abstract) {
+        app()->forgetInstance($abstract);
+    }
+
+    return $system;
+}
+
+function treasuryClientFundsLedger(User $owner, string $provider = 'netbank'): Bavix\Wallet\Models\Wallet
+{
+    $position = TreasuryPosition::query()
+        ->whereMorphedTo('principal', $owner)
+        ->where('provider', $provider)
+        ->where('purpose', TreasuryPositionPurpose::ClientFunds)
+        ->sole();
+
+    return Bavix\Wallet\Models\Wallet::query()->findOrFail($position->internal_ledger_id);
 }
 
 /**

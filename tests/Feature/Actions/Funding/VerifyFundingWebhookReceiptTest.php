@@ -38,6 +38,7 @@ use LBHurtado\XChange\Services\Funding\FundingProviderAdapterRegistry;
 use LBHurtado\XChange\Tests\Fakes\FakeFundingProviderAdapter;
 
 beforeEach(function () {
+    enableNetbankTreasuryForTests();
     config()->set('x-change.funding.providers.netbank.enabled', true);
     $this->fundingAdapter = new FakeFundingProviderAdapter;
     $this->app->instance(FakeFundingProviderAdapter::class, $this->fundingAdapter);
@@ -88,7 +89,8 @@ it('settles authoritative evidence through the retryable verification job', func
     app()->call([new VerifyFundingWebhookReceiptJob($receipt->getKey()), 'handle']);
 
     expect($intent->refresh()->status)->toBe(FundingIntentStatus::Settled)
-        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(24_950)
         ->and(FundingSettlement::query()->count())->toBe(1)
         ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(24_950)
         ->and($receipt->refresh()->processing_status)->toBe('processed');
@@ -108,7 +110,8 @@ it('recovers settlement after verification completed on an earlier attempt', fun
     app()->call([new VerifyFundingWebhookReceiptJob($receipt->getKey()), 'handle']);
 
     expect($intent->refresh()->status)->toBe(FundingIntentStatus::Settled)
-        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(24_950)
         ->and(FundingSettlement::query()->count())->toBe(1);
 });
 
@@ -124,7 +127,8 @@ it('re-queries settled funding and recovers an authoritative provider reversal',
     ]);
 
     expect($intent->refresh()->status)->toBe(FundingIntentStatus::Settled)
-        ->and((int) $wallet->refresh()->balanceInt)->toBe($balanceBefore + 24_950);
+        ->and((int) $wallet->refresh()->balanceInt)->toBe($balanceBefore)
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(24_950);
 
     $this->fundingAdapter->fundingObservation = fundingObservation([
         'providerStatus' => 'reversed',
@@ -138,6 +142,7 @@ it('re-queries settled funding and recovers an authoritative provider reversal',
 
     expect($intent->refresh()->status)->toBe(FundingIntentStatus::Reversed)
         ->and((int) $wallet->refresh()->balanceInt)->toBe($balanceBefore)
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(0)
         ->and(FundingRecovery::query()->sole()->status)->toBe('recovered')
         ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(0)
         ->and($reversalReceipt->refresh()->processing_status)->toBe('processed');
@@ -253,7 +258,8 @@ it('settles once when direct verification jobs are replayed', function (
     app()->call([$job, 'handle']);
 
     expect($intent->refresh()->status)->toBe(FundingIntentStatus::Settled)
-        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(24_950)
         ->and(FundingSettlement::query()->count())->toBe(1)
         ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(24_950);
 })->with([
@@ -398,7 +404,8 @@ it('requires dual control before queueing a preserved-evidence verification retr
     app()->call([new VerifyFundingWebhookReceiptJob($receipt->getKey()), 'handle']);
 
     expect($intent->refresh()->status)->toBe(FundingIntentStatus::Settled)
-        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and(treasuryClientFundsLedger($operator)->getBalanceIntAttribute())->toBe(24_950)
         ->and($case->refresh()->status)->toBe('resolved')
         ->and($case->resolution_code)->toBe('verification_retry_settled')
         ->and($case->resolution)->toBe([

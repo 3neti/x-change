@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventory;
 use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
+use LBHurtado\Wallet\Treasury\Models\TreasuryPositionOperation;
 use LBHurtado\Wallet\Treasury\Models\TreasurySettlementResource;
 use LBHurtado\XChange\Actions\Funding\ApproveFundingReconciliation;
 use LBHurtado\XChange\Actions\Funding\OpenFundingSuspenseCase;
@@ -15,9 +16,10 @@ use LBHurtado\XChange\Actions\Funding\RequestFundingReconciliation;
 use LBHurtado\XChange\Actions\Funding\ReverseSettledFundingIntent;
 use LBHurtado\XChange\Actions\Funding\SettleVerifiedFundingIntent;
 use LBHurtado\XChange\Actions\Funding\TransitionFundingIntent;
-use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
+use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Data\Funding\FundingIntentTransitionData;
+use LBHurtado\XChange\Data\Treasury\VerifiedTreasuryFundingAllocationData;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Enums\FundingReconciliationAction;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
@@ -30,6 +32,10 @@ use LBHurtado\XChange\Models\FundingRecoveryPayment;
 use LBHurtado\XChange\Models\FundingSettlement;
 use LBHurtado\XChange\Models\FundingSuspenseCase;
 
+beforeEach(function () {
+    enableNetbankTreasuryForTests();
+});
+
 it('atomically recognizes verified net inventory and credits the Account once', function () {
     $user = actingAsTestUser(0);
     $wallet = $user->wallet()->where('slug', 'platform')->firstOrFail();
@@ -41,7 +47,8 @@ it('atomically recognizes verified net inventory and credits the Account once', 
 
     expect($second->is($first))->toBeTrue()
         ->and($intent->refresh()->status)->toBe(FundingIntentStatus::Settled)
-        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(24_950)
         ->and($first->gross_amount_minor)->toBe(25_000)
         ->and($first->fee_amount_minor)->toBe(50)
         ->and($first->net_amount_minor)->toBe(24_950)
@@ -50,17 +57,14 @@ it('atomically recognizes verified net inventory and credits the Account once', 
         ->and(TreasurySettlementResource::query()->count())->toBe(1)
         ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(24_950)
         ->and(TreasuryInventoryOperation::query()->count())->toBe(1)
-        ->and(Transaction::query()->where('type', Transaction::TYPE_DEPOSIT)->count())->toBe(1);
+        ->and(TreasuryPositionOperation::query()->count())->toBe(2);
 
     $transaction = Transaction::query()->findOrFail($first->wallet_transaction_id);
 
     expect($transaction->meta)->toMatchArray([
         'source' => 'verified_provider_funding',
-        'funding_intent_reference' => $intent->reference,
         'provider' => 'netbank',
         'provider_transaction_id' => $observation->provider_transaction_id,
-        'provider_observation_id' => $observation->getKey(),
-        'treasury_operation_reference' => $first->treasury_operation_reference,
     ]);
 });
 
@@ -70,23 +74,22 @@ it('rolls back Treasury recognition when the Account credit fails', function () 
     $observation = providerFundingObservationForSettlement();
     $intent = verifiedFundingIntentForSettlement($wallet, $observation);
 
-    app()->instance(FundingAccountCreditContract::class, new class($wallet) implements FundingAccountCreditContract
+    app()->instance(VerifiedTreasuryFundingAllocationContract::class, new class implements VerifiedTreasuryFundingAllocationContract
     {
-        public function __construct(private readonly Wallet $wallet) {}
-
-        public function resolve(string $accountReference): object
-        {
-            return $this->wallet;
-        }
-
-        public function credit(object $account, int $amountMinor, array $metadata): object
-        {
-            throw new RuntimeException('simulated Account ledger failure');
+        public function allocate(
+            string $accountReference,
+            string $provider,
+            int $amountMinor,
+            string $currency,
+            string $evidenceReference,
+            array $metadata = [],
+        ): VerifiedTreasuryFundingAllocationData {
+            throw new RuntimeException('simulated Treasury allocation failure');
         }
     });
 
     expect(fn () => app(SettleVerifiedFundingIntent::class)->handle($intent))
-        ->toThrow(RuntimeException::class, 'simulated Account ledger failure');
+        ->toThrow(RuntimeException::class, 'simulated Treasury allocation failure');
 
     expect($intent->refresh()->status)->toBe(FundingIntentStatus::Verified)
         ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
@@ -127,6 +130,7 @@ it('reverses Treasury Inventory and fully recovers an unspent Account credit onc
     expect($second->is($first))->toBeTrue()
         ->and($intent->refresh()->status)->toBe(FundingIntentStatus::Reversed)
         ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(0)
         ->and($first->reversal_amount_minor)->toBe(24_950)
         ->and($first->recovered_amount_minor)->toBe(24_950)
         ->and($first->outstanding_amount_minor)->toBe(0)
@@ -143,7 +147,7 @@ it('recovers available funds and freezes issuance for a reversal deficit', funct
     $settledObservation = providerFundingObservationForSettlement();
     $intent = verifiedFundingIntentForSettlement($wallet, $settledObservation);
     app(SettleVerifiedFundingIntent::class)->handle($intent);
-    $wallet->withdraw(20_000, ['source' => 'simulated_spend']);
+    treasuryClientFundsLedger($user)->withdraw(20_000, ['source' => 'simulated_spend']);
 
     $recovery = app(ReverseSettledFundingIntent::class)->handle(
         $intent->refresh(),
@@ -155,6 +159,7 @@ it('recovers available funds and freezes issuance for a reversal deficit', funct
         ->and($recovery->outstanding_amount_minor)->toBe(20_000)
         ->and($recovery->status)->toBe('open')
         ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(0)
         ->and($hold->account_reference)->toBe('wallet:'.$wallet->uuid)
         ->and($hold->outstanding_amount_minor)->toBe(20_000)
         ->and($hold->status)->toBe('active')
@@ -181,7 +186,8 @@ it('rejects mismatched reversal evidence without changing Inventory or Account b
     ))->toThrow(FundingSettlementDenied::class, 'reversal evidence does not match');
 
     expect($intent->refresh()->status)->toBe(FundingIntentStatus::Settled)
-        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(24_950)
         ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(24_950)
         ->and(TreasuryInventoryOperation::query()->count())->toBe(1)
         ->and(FundingRecovery::query()->count())->toBe(0);
@@ -193,7 +199,7 @@ it('applies later verified funding to an outstanding recovery and releases the h
     $firstObservation = providerFundingObservationForSettlement();
     $firstIntent = verifiedFundingIntentForSettlement($wallet, $firstObservation);
     app(SettleVerifiedFundingIntent::class)->handle($firstIntent);
-    $wallet->withdraw(20_000, ['source' => 'simulated_spend']);
+    treasuryClientFundsLedger($user)->withdraw(20_000, ['source' => 'simulated_spend']);
     app(ReverseSettledFundingIntent::class)->handle(
         $firstIntent->refresh(),
         providerFundingReversalObservation($firstObservation),
@@ -215,7 +221,8 @@ it('applies later verified funding to an outstanding recovery and releases the h
         ->and($hold->released_by_type)->toBe('funding_recovery_runtime')
         ->and($payment->amount_minor)->toBe(20_000)
         ->and($payment->funding_settlement_id)->toBe($secondIntent->settlement()->sole()->getKey())
-        ->and((int) $wallet->refresh()->balanceInt)->toBe(4_950)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(4_950)
         ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(24_950)
         ->and(FundingAccountHold::query()->where('status', 'active')->count())->toBe(0);
 });
@@ -267,7 +274,8 @@ it('requires a second operator before matching exact provider evidence and settl
             'outcome' => 'observation_matched_and_settled',
         ])
         ->and($intent->refresh()->status)->toBe(FundingIntentStatus::Settled)
-        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(24_950)
         ->and(FundingSettlement::query()->count())->toBe(1)
         ->and(FundingSuspenseCase::query()->sole()->status)->toBe('resolved')
         ->and(FundingSuspenseCase::query()->sole()->resolved_by_id)->toBe('checker-2')
@@ -301,7 +309,8 @@ it('dual-controls compensation by retrying only an already verified posting', fu
 
     expect($approved->result['outcome'])->toBe('verified_posting_compensated')
         ->and($intent->refresh()->status)->toBe(FundingIntentStatus::Settled)
-        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(24_950)
         ->and(FundingSettlement::query()->count())->toBe(1)
         ->and($case->refresh()->status)->toBe('resolved');
 });

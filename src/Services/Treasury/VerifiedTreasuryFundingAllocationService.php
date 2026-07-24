@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Treasury;
 
+use Bavix\Wallet\Models\Transaction;
 use Illuminate\Database\Eloquent\Model;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionAllocationData;
@@ -16,6 +17,7 @@ use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Data\Treasury\TreasuryProviderConnectionData;
 use LBHurtado\XChange\Data\Treasury\VerifiedTreasuryFundingAllocationData;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
+use LBHurtado\XChange\Support\Funding\QrPhFundingSimulatorGuard;
 
 final readonly class VerifiedTreasuryFundingAllocationService implements VerifiedTreasuryFundingAllocationContract
 {
@@ -25,6 +27,7 @@ final readonly class VerifiedTreasuryFundingAllocationService implements Verifie
         private TreasuryProvisioningService $systemPositions,
         private TreasuryAccountPortfolioProvisioningContract $accountPortfolios,
         private TreasuryPositionOperationContract $operations,
+        private QrPhFundingSimulatorGuard $simulator,
     ) {}
 
     public function allocate(
@@ -41,6 +44,16 @@ final readonly class VerifiedTreasuryFundingAllocationService implements Verifie
         if ($amountMinor <= 0 || trim($evidenceReference) === '') {
             throw FundingSettlementDenied::because(
                 'the verified Treasury allocation request is invalid',
+            );
+        }
+
+        if ($provider === 'qrph_simulator') {
+            return $this->allocateSimulation(
+                $accountReference,
+                $amountMinor,
+                $currency,
+                $evidenceReference,
+                $metadata,
             );
         }
 
@@ -118,6 +131,46 @@ final readonly class VerifiedTreasuryFundingAllocationService implements Verifie
             destinationTransactionUuid: $allocation->destinationTransactionUuid,
             transferId: $allocation->transferId,
             transferUuid: $allocation->transferUuid,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $metadata
+     */
+    private function allocateSimulation(
+        string $accountReference,
+        int $amountMinor,
+        string $currency,
+        string $evidenceReference,
+        array $metadata,
+    ): VerifiedTreasuryFundingAllocationData {
+        $this->simulator->assertAvailable();
+        $scope = hash('sha256', $evidenceReference);
+        $account = $this->accounts->resolve($accountReference);
+        $transaction = $this->accounts->credit($account, $amountMinor, [
+            ...$metadata,
+            'simulation_only' => true,
+            'simulation_operation_reference' => 'simulation-allocation:'.$scope,
+        ]);
+
+        if (! $transaction instanceof Transaction) {
+            throw FundingSettlementDenied::because(
+                'the simulated Account allocation did not return a ledger transaction',
+            );
+        }
+
+        return new VerifiedTreasuryFundingAllocationData(
+            sourcePositionReference: 'simulation:qrph:local-clearing',
+            destinationPositionReference: $accountReference,
+            recognitionOperationReference: 'simulation-recognition:'.$scope,
+            allocationOperationReference: 'simulation-allocation:'.$scope,
+            amountMinor: $amountMinor,
+            currency: $currency,
+            destinationTransactionId: (int) $transaction->getKey(),
+            destinationTransactionUuid: (string) $transaction->uuid,
+            transferId: null,
+            transferUuid: null,
+            positionBased: false,
         );
     }
 

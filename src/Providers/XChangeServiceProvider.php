@@ -132,6 +132,7 @@ use LBHurtado\XChange\Contracts\SettlementExecutionContract;
 use LBHurtado\XChange\Contracts\SettlementFlowPreparationContract;
 use LBHurtado\XChange\Contracts\SettlementReadinessGateContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
+use LBHurtado\XChange\Contracts\TreasuryPositionLedgerResolverContract;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Contracts\UserLifecycleServiceContract;
 use LBHurtado\XChange\Contracts\VendorRegistryContract;
@@ -261,6 +262,7 @@ use LBHurtado\XChange\Services\SettlementCollectionGate;
 use LBHurtado\XChange\Services\SettlementEnvelopeReadinessService;
 use LBHurtado\XChange\Services\StartProviderProvisioningFromOnboardingCompletion;
 use LBHurtado\XChange\Services\SystemWalletProxy;
+use LBHurtado\XChange\Services\Treasury\BavixTreasuryPositionLedgerResolver;
 use LBHurtado\XChange\Services\Treasury\DefaultTreasuryPrincipalReferenceResolver;
 use LBHurtado\XChange\Services\Treasury\TreasuryAccountPortfolioProvisioningService;
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
@@ -344,6 +346,10 @@ class XChangeServiceProvider extends ServiceProvider
         $this->app->singleton(
             VerifiedTreasuryFundingAllocationContract::class,
             VerifiedTreasuryFundingAllocationService::class,
+        );
+        $this->app->singleton(
+            TreasuryPositionLedgerResolverContract::class,
+            BavixTreasuryPositionLedgerResolver::class,
         );
 
         $this->registerServices();

@@ -9,6 +9,7 @@ use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryOperationReversalData;
 use LBHurtado\XChange\Contracts\FundingAccountRecoveryContract;
+use LBHurtado\XChange\Contracts\TreasuryPositionLedgerResolverContract;
 use LBHurtado\XChange\Data\Funding\FundingIntentTransitionData;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
@@ -22,6 +23,7 @@ class ReverseSettledFundingIntent
     public function __construct(
         private readonly TreasuryInventoryOperationContract $treasury,
         private readonly FundingAccountRecoveryContract $accounts,
+        private readonly TreasuryPositionLedgerResolverContract $positionLedgers,
         private readonly TransitionFundingIntent $transition,
     ) {}
 
@@ -74,7 +76,13 @@ class ReverseSettledFundingIntent
                 ],
             ));
 
-            $account = $this->accounts->resolve($locked->account_reference);
+            $positionReference = data_get(
+                $settlement->metadata,
+                'treasury_destination_position_reference',
+            );
+            $account = is_string($positionReference) && trim($positionReference) !== ''
+                ? $this->positionLedgers->resolve($positionReference)
+                : $this->accounts->resolve($locked->account_reference);
             $accountRecovery = $this->accounts->recover($account, $settlement->net_amount_minor, [
                 'source' => 'provider_funding_reversal',
                 'funding_intent_reference' => $locked->reference,

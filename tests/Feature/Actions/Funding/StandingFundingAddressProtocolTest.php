@@ -24,6 +24,10 @@ use LBHurtado\XChange\Events\FundingProjectionChanged;
 use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\FundingSuspenseCase;
 use LBHurtado\XChange\Models\StandingFundingAddress;
+
+beforeEach(function () {
+    enableNetbankTreasuryForTests();
+});
 use LBHurtado\XChange\Services\Funding\StandingFundingAddressProviderRegistry;
 
 beforeEach(function () {
@@ -111,11 +115,12 @@ it('recognizes settled provider evidence and credits an Account exactly once', f
         ->and($receipt->status)->toBe(AccountFundingReceiptStatus::Settled)
         ->and($receipt->gross_amount_minor)->toBe(25_000)
         ->and($receipt->net_amount_minor)->toBe(24_950)
-        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(24_950)
         ->and(AccountFundingReceipt::query()->count())->toBe(1)
         ->and(TreasuryInventory::query()->sole()->balance_minor)->toBe(24_950)
         ->and(TreasuryInventoryOperation::query()->count())->toBe(1)
-        ->and(Transaction::query()->where('type', Transaction::TYPE_DEPOSIT)->count())->toBe(1);
+        ->and(Transaction::query()->where('type', Transaction::TYPE_DEPOSIT)->count())->toBe(2);
 
     Event::assertDispatchedTimes(FundingProjectionChanged::class, 1);
     Event::assertDispatched(
@@ -154,9 +159,10 @@ it('keeps a realtime broadcast outage outside the committed Account credit', fun
 
     expect($result->applied)->toBe(1)
         ->and($receipt->status)->toBe(AccountFundingReceiptStatus::Settled)
-        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(24_950)
         ->and(TreasuryInventoryOperation::query()->count())->toBe(1)
-        ->and(Transaction::query()->where('type', Transaction::TYPE_DEPOSIT)->count())->toBe(1)
+        ->and(Transaction::query()->where('type', Transaction::TYPE_DEPOSIT)->count())->toBe(2)
         ->and($audit->hasEvent('funding.projection.broadcast_failed'))->toBeTrue()
         ->and($serializedAudit)->not->toContain('signed-secret')
         ->and($serializedAudit)->not->toContain('unavailable-reverb.test');
@@ -193,10 +199,11 @@ it('can recognize a pending NetBank observation exactly once when explicitly con
         ->and($receipt->status)->toBe(AccountFundingReceiptStatus::Settled)
         ->and($receipt->metadata['provider_status_at_recognition'])->toBe('pending')
         ->and($receipt->metadata['provisional_recognition'])->toBeTrue()
-        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(24_950)
         ->and(AccountFundingReceipt::query()->count())->toBe(1)
         ->and(TreasuryInventoryOperation::query()->count())->toBe(1)
-        ->and(Transaction::query()->where('type', Transaction::TYPE_DEPOSIT)->count())->toBe(1);
+        ->and(Transaction::query()->where('type', Transaction::TYPE_DEPOSIT)->count())->toBe(2);
 });
 
 it('converges pending evidence to settled without applying the Account credit again', function () {
@@ -235,11 +242,12 @@ it('converges pending evidence to settled without applying the Account credit ag
         ->and($settled->applied)->toBe(0)
         ->and($receipt->status)->toBe(AccountFundingReceiptStatus::Settled)
         ->and($receipt->providerFundingObservation->provider_status)->toBe('settled')
-        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(24_950)
         ->and(AccountFundingReceipt::query()->count())->toBe(1)
         ->and(ProviderFundingObservation::query()->count())->toBe(2)
         ->and(TreasuryInventoryOperation::query()->count())->toBe(1)
-        ->and(Transaction::query()->where('type', Transaction::TYPE_DEPOSIT)->count())->toBe(1);
+        ->and(Transaction::query()->where('type', Transaction::TYPE_DEPOSIT)->count())->toBe(2);
 });
 
 it('can enforce the configured automatic mode for an existing observe-only address', function () {
@@ -274,9 +282,10 @@ it('can enforce the configured automatic mode for an existing observe-only addre
         ->and($address->version)->toBe(2)
         ->and(AccountFundingReceipt::query()->sole()->status)
         ->toBe(AccountFundingReceiptStatus::Settled)
-        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(24_950)
         ->and(TreasuryInventoryOperation::query()->count())->toBe(1)
-        ->and(Transaction::query()->where('type', Transaction::TYPE_DEPOSIT)->count())->toBe(1);
+        ->and(Transaction::query()->where('type', Transaction::TYPE_DEPOSIT)->count())->toBe(2);
 });
 
 it('refuses recognition when a receipt no longer points to its bound Account', function () {
@@ -377,7 +386,8 @@ it('requires owner approval before supervised recognition can credit the Account
         ->assertJsonPath('receipt.status', 'settled');
 
     expect($settled->status)->toBe(AccountFundingReceiptStatus::Settled)
-        ->and((int) $wallet->refresh()->balanceInt)->toBe(24_950)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(24_950)
         ->and(TreasuryInventoryOperation::query()->count())->toBe(1);
 });
 
@@ -463,9 +473,10 @@ it('preserves legacy evidence while correcting a post-activation NetBank credit 
     $response->assertOk()->assertJsonPath('receipt.status', 'settled');
     expect($replayed->settled)->toBe(1)
         ->and($receipt->refresh()->status)->toBe(AccountFundingReceiptStatus::Settled)
-        ->and((int) $wallet->refresh()->balanceInt)->toBe(2_500)
+        ->and((int) $wallet->refresh()->balanceInt)->toBe(0)
+        ->and(treasuryClientFundsLedger($user)->getBalanceIntAttribute())->toBe(2_500)
         ->and(TreasuryInventoryOperation::query()->count())->toBe(1)
-        ->and(Transaction::query()->where('type', Transaction::TYPE_DEPOSIT)->count())->toBe(1)
+        ->and(Transaction::query()->where('type', Transaction::TYPE_DEPOSIT)->count())->toBe(2)
         ->and(AccountFundingReceipt::query()->count())->toBe(1)
         ->and(ProviderFundingObservation::query()->count())->toBe(2);
 });

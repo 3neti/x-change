@@ -17,7 +17,8 @@ final class VerifiedTreasuryFundingAllocationData extends Data
         public readonly string $currency,
         public readonly int $destinationTransactionId,
         public readonly string $destinationTransactionUuid,
-        public readonly int $transferId,
-        public readonly string $transferUuid,
+        public readonly ?int $transferId,
+        public readonly ?string $transferUuid,
+        public readonly bool $positionBased = true,
     ) {}
 }

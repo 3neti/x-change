@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Actions\Funding;
 
-use Bavix\Wallet\Models\Transaction;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\EmiCore\Models\ProviderFundingObservation;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryInventoryOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryData;
 use LBHurtado\Wallet\Treasury\Data\TreasuryInventoryRecognitionData;
 use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
+use LBHurtado\XChange\Contracts\TreasuryPositionLedgerResolverContract;
+use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Data\Funding\FundingIntentTransitionData;
 use LBHurtado\XChange\Enums\FundingIntentStatus;
 use LBHurtado\XChange\Exceptions\FundingSettlementDenied;
@@ -21,6 +22,8 @@ class SettleVerifiedFundingIntent
 {
     public function __construct(
         private readonly TreasuryInventoryOperationContract $treasury,
+        private readonly VerifiedTreasuryFundingAllocationContract $allocations,
+        private readonly TreasuryPositionLedgerResolverContract $positionLedgers,
         private readonly FundingAccountCreditContract $accounts,
         private readonly TransitionFundingIntent $transition,
         private readonly ApplyFundingRecoveryToAccount $applyRecovery,
@@ -44,8 +47,12 @@ class SettleVerifiedFundingIntent
 
             $observation = $this->verifiedObservation($locked);
             $treasury = $this->treasuryConfiguration($locked->provider_code);
-            $operationReference = 'funding-recognition:'.hash('sha256', $locked->reference);
-            $idempotencyKey = 'funding-recognition-key:'.hash('sha256', $locked->reference);
+            $evidenceScope = hash('sha256', implode('|', [
+                $locked->provider_code,
+                $observation->provider_transaction_id,
+            ]));
+            $operationReference = 'funding-recognition:'.$evidenceScope;
+            $idempotencyKey = 'funding-recognition-key:'.$evidenceScope;
             $externalReference = $locked->provider_code.':'.$observation->provider_transaction_id;
 
             $this->treasury->registerInventory(new TreasuryInventoryData(
@@ -58,7 +65,7 @@ class SettleVerifiedFundingIntent
                 externalReference: $treasury['settlement_resource_reference'],
                 metadata: [
                     'provider' => $locked->provider_code,
-                    'source' => 'x-change.funding',
+                    'source' => 'x-change.verified-provider-funding',
                 ],
             ));
 
@@ -70,29 +77,27 @@ class SettleVerifiedFundingIntent
                 currency: $observation->currency,
                 status: 'requested',
                 idempotencyKey: $idempotencyKey,
-                effectiveAt: $observation->settled_at?->toRfc3339String(),
+                effectiveAt: $observation->occurred_at?->toRfc3339String(),
                 externalReference: $externalReference,
                 metadata: [
-                    'funding_intent_reference' => $locked->reference,
-                    'provider_observation_id' => $observation->getKey(),
+                    'provider_transaction_id' => $observation->provider_transaction_id,
                     'gross_amount_minor' => $observation->gross_amount_minor,
                     'fee_amount_minor' => $observation->fee_amount_minor,
                 ],
             ));
 
-            $account = $this->accounts->resolve($locked->account_reference);
-            $transaction = $this->accounts->credit($account, $observation->net_amount_minor, [
-                'source' => 'verified_provider_funding',
-                'funding_intent_reference' => $locked->reference,
-                'provider' => $locked->provider_code,
-                'provider_transaction_id' => $observation->provider_transaction_id,
-                'provider_observation_id' => $observation->getKey(),
-                'treasury_operation_reference' => $recognition->operationReference,
-            ]);
-
-            if (! $transaction instanceof Transaction) {
-                throw FundingSettlementDenied::because('the Account ledger did not return a wallet transaction');
-            }
+            $allocation = $this->allocations->allocate(
+                accountReference: $locked->account_reference,
+                provider: $locked->provider_code,
+                amountMinor: $observation->net_amount_minor,
+                currency: $observation->currency,
+                evidenceReference: $externalReference,
+                metadata: [
+                    'source' => 'verified_provider_funding',
+                    'provider' => $locked->provider_code,
+                    'provider_transaction_id' => $observation->provider_transaction_id,
+                ],
+            );
 
             $settlement = FundingSettlement::query()->create([
                 'funding_intent_id' => $locked->getKey(),
@@ -105,14 +110,25 @@ class SettleVerifiedFundingIntent
                 'currency' => $observation->currency,
                 'treasury_inventory_reference' => $treasury['inventory_reference'],
                 'treasury_operation_reference' => $recognition->operationReference,
-                'wallet_transaction_id' => $transaction->getKey(),
-                'wallet_transaction_uuid' => $transaction->uuid,
+                'wallet_transaction_id' => $allocation->destinationTransactionId,
+                'wallet_transaction_uuid' => $allocation->destinationTransactionUuid,
                 'settled_at' => now(),
                 'metadata' => [
                     'settlement_resource_reference' => $treasury['settlement_resource_reference'],
                     'provider_verification_source' => $observation->verification_source,
+                    'treasury_source_position_reference' => $allocation->sourcePositionReference,
+                    'treasury_destination_position_reference' => $allocation->destinationPositionReference,
+                    'treasury_position_recognition_reference' => $allocation->recognitionOperationReference,
+                    'treasury_position_allocation_reference' => $allocation->allocationOperationReference,
+                    'treasury_position_transfer_uuid' => $allocation->transferUuid,
+                    'treasury_position_based' => $allocation->positionBased,
                 ],
             ]);
+            $account = $allocation->positionBased
+                ? $this->positionLedgers->resolve(
+                    $allocation->destinationPositionReference,
+                )
+                : $this->accounts->resolve($locked->account_reference);
             $recoveryAppliedAmountMinor = $this->applyRecovery->handle(
                 accountReference: $locked->account_reference,
                 account: $account,
@@ -132,7 +148,7 @@ class SettleVerifiedFundingIntent
                     'net_amount_minor' => $observation->net_amount_minor,
                     'recovery_applied_amount_minor' => $recoveryAppliedAmountMinor,
                     'treasury_operation_reference' => $recognition->operationReference,
-                    'wallet_transaction_uuid' => $transaction->uuid,
+                    'wallet_transaction_uuid' => $allocation->destinationTransactionUuid,
                 ],
             ));
 
