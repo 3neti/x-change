@@ -43,6 +43,28 @@ beforeEach(function () {
     ]);
 });
 
+it('separates reusable QR opening from stricter provider verification throttling', function () {
+    $routes = app('router')->getRoutes();
+    $open = $routes->getByName(
+        'x-change.cockpit.funding.standing-addresses.netbank.store',
+    );
+    $history = $routes->getByName(
+        'x-change.cockpit.funding.standing-addresses.netbank.history-checks.store',
+    );
+    $approval = $routes->getByName(
+        'x-change.cockpit.funding.standing-addresses.netbank.receipts.approve',
+    );
+
+    expect($open)->not->toBeNull()
+        ->and($open?->gatherMiddleware())->toContain('throttle:12,1')
+        ->not->toContain('throttle:3,1')
+        ->and($history)->not->toBeNull()
+        ->and($history?->gatherMiddleware())->toContain('throttle:3,1')
+        ->not->toContain('throttle:12,1')
+        ->and($approval)->not->toBeNull()
+        ->and($approval?->gatherMiddleware())->toContain('throttle:3,1');
+});
+
 it('generates an owner-stable Account Funding Address without creating or crediting a Funding Intent', function () {
     $operator = actingAsVerifiedFundingOperator();
     $wallet = $operator->wallet;

@@ -344,6 +344,8 @@ The general Cockpit read model exposes only whether an artifact is available. It
 
 The fixture is regenerated under a per-address cache lock only when it is missing, its configured artifact version changes, or its merchant-presentation fingerprint changes. Concurrent opens therefore converge on one provider generation. Changing the Account’s QR presentation intentionally refreshes the fixture on its next private open; it does not rotate the Standing Funding Address or alter settlement routing.
 
+Private QR open/reopen requests use an independent throttle from provider-history checks and receipt approvals. Automatic reopening therefore cannot consume the stricter control budget that protects authoritative NetBank verification.
+
 ## Merchant Presentation Boundary
 
 `3neti/merchant` owns the reusable merchant profile associated with the authenticated Account owner. x-change resolves that profile into the provider-neutral QR instruction contract, and `3neti/emi-netbank` maps it to NetBank’s merchant name, city, and category fields.

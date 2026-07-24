@@ -100,11 +100,18 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
             ->name('x-change.cockpit.funding.intents.verification-checks.store');
         Route::controller(CockpitNetbankStandingFundingAddressController::class)
             ->prefix('funding/standing-addresses/netbank')
-            ->middleware((array) config('x-change.funding.standing_addresses.middleware', []))
             ->group(function (): void {
                 Route::post('/', 'store')
+                    ->middleware((array) config(
+                        'x-change.funding.standing_addresses.instruction_middleware',
+                        [],
+                    ))
                     ->name('x-change.cockpit.funding.standing-addresses.netbank.store');
                 Route::post('history-checks', 'history')
+                    ->middleware((array) config(
+                        'x-change.funding.standing_addresses.middleware',
+                        [],
+                    ))
                     ->name('x-change.cockpit.funding.standing-addresses.netbank.history-checks.store');
             });
         Route::post(
