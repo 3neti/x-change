@@ -63,6 +63,7 @@ final class CockpitNetbankStandingFundingAddressController extends Controller
                 'occurred_at' => $observation->occurredAt,
                 'settled_at' => $observation->settledAt,
                 'can_approve' => $observation->canApprove,
+                'approval_reference' => $observation->approvalReference,
                 'gross_amount' => Number::currency(
                     $observation->grossAmountMinor / 100,
                     in: $observation->currency,

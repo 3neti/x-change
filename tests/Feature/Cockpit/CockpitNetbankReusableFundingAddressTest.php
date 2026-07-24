@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use LBHurtado\XChange\Models\AccountFundingReceipt;
 use LBHurtado\XChange\Models\FundingIntent;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 
@@ -99,6 +100,10 @@ it('generates an owner-stable Account Funding Address without creating or credit
 });
 
 it('checks authoritative VCA history without exposing raw provider or payer facts', function () {
+    config()->set(
+        'x-change.funding.standing_addresses.default_recognition_mode',
+        'supervised',
+    );
     $operator = actingAsVerifiedFundingOperator();
     $wallet = $operator->wallet;
     $balanceBefore = (int) $wallet->balance;
@@ -154,8 +159,12 @@ it('checks authoritative VCA history without exposing raw provider or payer fact
         ->assertJsonPath('schema', 'x-change.cockpit.standing-funding-history.v1')
         ->assertJsonPath('observations.0.gross_amount_minor', 2500)
         ->assertJsonPath('observations.0.gross_amount', '₱25.00')
-        ->assertJsonPath('observations.0.provider_status', 'observed')
-        ->assertJsonPath('sync.observed', 1)
+        ->assertJsonPath('observations.0.provider_status', 'awaiting_approval')
+        ->assertJsonPath(
+            'observations.0.approval_reference',
+            AccountFundingReceipt::query()->sole()->reference,
+        )
+        ->assertJsonPath('sync.awaiting_approval', 1)
         ->assertJsonPath('balance_changed', false)
         ->assertJsonPath('funding_intent_created', false);
 

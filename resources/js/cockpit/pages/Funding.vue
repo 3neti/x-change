@@ -471,15 +471,24 @@ async function checkStandingFundingHistory(): Promise<void> {
     }
 }
 
-async function approveStandingFundingReceipt(reference: string): Promise<void> {
-    if (activeStandingReceiptApproval.value !== null) {
+async function approveStandingFundingReceipt(
+    receipt: CockpitStandingFundingReceipt,
+): Promise<void> {
+    if (
+        activeStandingReceiptApproval.value !== null ||
+        !receipt.approval_reference
+    ) {
         return;
     }
 
-    activeStandingReceiptApproval.value = reference;
+    const displayReference = receipt.reference;
+
+    activeStandingReceiptApproval.value = displayReference;
     standingAddressError.value = null;
     standingActionNotice.value = null;
-    const route = approveStandingFundingReceiptRoute(reference);
+    const route = approveStandingFundingReceiptRoute(
+        receipt.approval_reference,
+    );
 
     try {
         const response = await fetch(route.url, {
@@ -507,11 +516,12 @@ async function approveStandingFundingReceipt(reference: string): Promise<void> {
         }
 
         standingReceipts.value = standingReceipts.value.map((receipt) =>
-            receipt.reference === reference
+            receipt.reference === displayReference
                 ? {
                       ...receipt,
                       provider_status: 'settled',
                       can_approve: false,
+                      approval_reference: null,
                       settled_at:
                           typeof body.receipt === 'object' &&
                           body.receipt !== null &&
@@ -944,7 +954,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                                 data-testid="approve-standing-funding-receipt"
                                                 @click="
                                                     approveStandingFundingReceipt(
-                                                        receipt.reference,
+                                                        receipt,
                                                     )
                                                 "
                                             >

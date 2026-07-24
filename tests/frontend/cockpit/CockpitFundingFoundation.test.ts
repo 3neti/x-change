@@ -332,6 +332,8 @@ describe('Cockpit Funding foundation', () => {
                             currency: 'PHP',
                             provider_status: 'awaiting_approval',
                             can_approve: true,
+                            approval_reference:
+                                '01KY8R71ZNS1Y8HTRPQ7QDD41Q',
                             occurred_at: '2026-07-23T01:05:00+00:00',
                             settled_at: '2026-07-23T01:06:00+00:00',
                         },
@@ -419,7 +421,7 @@ describe('Cockpit Funding foundation', () => {
 
         expect(fetch).toHaveBeenNthCalledWith(
             3,
-            '/x/cockpit/funding/standing-addresses/netbank/receipts/AF-ABC123/approve',
+            '/x/cockpit/funding/standing-addresses/netbank/receipts/01KY8R71ZNS1Y8HTRPQ7QDD41Q/approve',
             expect.objectContaining({
                 method: 'POST',
                 credentials: 'same-origin',

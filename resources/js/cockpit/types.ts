@@ -612,6 +612,7 @@ export type CockpitStandingFundingReceipt = {
     currency: string;
     provider_status: string;
     can_approve: boolean;
+    approval_reference?: string | null;
     occurred_at?: string | null;
     settled_at?: string | null;
 };

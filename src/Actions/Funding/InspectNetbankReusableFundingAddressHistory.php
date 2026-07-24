@@ -36,6 +36,7 @@ final class InspectNetbankReusableFundingAddressHistory
         $sync = $this->sync->handle($address, 'operator');
 
         $observations = $address->receipts()
+            ->with('providerFundingObservation')
             ->where('status', '!=', 'ignored')
             ->latest('observed_at')
             ->limit(50)
@@ -47,9 +48,14 @@ final class InspectNetbankReusableFundingAddressHistory
                 netAmountMinor: $receipt->net_amount_minor,
                 currency: $receipt->currency,
                 providerStatus: $receipt->status->value,
-                occurredAt: $receipt->observed_at?->format(DATE_ATOM),
+                occurredAt: $receipt->providerFundingObservation
+                    ?->occurredAtInstant()
+                    ?->format(DATE_ATOM),
                 settledAt: $receipt->settled_at?->format(DATE_ATOM),
                 canApprove: $receipt->status->value === 'awaiting_approval',
+                approvalReference: $receipt->status->value === 'awaiting_approval'
+                    ? $receipt->reference
+                    : null,
             ))
             ->all();
 
