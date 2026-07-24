@@ -54,6 +54,11 @@ final readonly class PostCommercialSale
 
             if ($sale !== null) {
                 $this->assertReplayMatches($sale, $snapshotHash);
+                $this->assertPositionsMatch(
+                    $sale,
+                    $sourceClientFundsPositionReference,
+                    $commercialClearingPositionReference,
+                );
 
                 if ($sale->status === 'posted') {
                     return $sale->load('allocations');
@@ -211,6 +216,19 @@ final readonly class PostCommercialSale
         if (! hash_equals($sale->snapshot_hash, $snapshotHash)) {
             throw new CommercialSaleConflict(
                 'The commercial acceptance reference was replayed with a different immutable sale snapshot.',
+            );
+        }
+    }
+
+    private function assertPositionsMatch(
+        CommercialSale $sale,
+        string $sourceClientFundsPositionReference,
+        string $commercialClearingPositionReference,
+    ): void {
+        if ($sale->source_client_funds_position_reference !== $sourceClientFundsPositionReference
+            || $sale->commercial_clearing_position_reference !== $commercialClearingPositionReference) {
+            throw new CommercialSaleConflict(
+                'The commercial sale was replayed against different Treasury Positions.',
             );
         }
     }

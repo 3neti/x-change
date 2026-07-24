@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Actions\PayCode;
 
 use Bavix\Wallet\Interfaces\Wallet;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use LBHurtado\XChange\Contracts\PayCodeIssuanceContract;
 use LBHurtado\XChange\Contracts\ProviderFundingPolicyContract;
@@ -22,6 +23,7 @@ use LBHurtado\XChange\Data\PricingEstimateData;
 use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
+use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
 use LBHurtado\XChange\Services\InstructionRevenueAllocatorService;
 use LBHurtado\XChange\Services\ResumeProviderProvisioningFromOnboarding;
 use LBHurtado\XChange\Services\VoucherIssuancePayloadNormalizer;
@@ -41,6 +43,7 @@ class GeneratePayCode
         protected ?XChangeOnboardingGatewayContract $onboarding = null,
         protected ?ResumeProviderProvisioningFromOnboarding $onboardingProvisioning = null,
         protected ?ProviderFundingPolicyContract $funding = null,
+        protected ?PayCodeCommercialSaleService $commercialSales = null,
     ) {}
 
     /**
@@ -112,15 +115,10 @@ class GeneratePayCode
                 ],
             );
 
-            $allocation = $this->shouldAllocateLocalRevenue($funding->authority)
-                ? $this->allocator->allocate(
-                    issuer: $this->assertWalletableIssuer($issuer),
-                    estimate: $estimate,
-                    context: $this->buildAllocationContext($input, $estimate),
-                )
-                : $this->providerWalletAllocationPlaceholder($funding);
-
             $issued = $this->issuance->issue($issuer, $input);
+            $allocation = $this->shouldAllocateLocalRevenue($funding->authority)
+                ? $this->allocateCommercialRevenue($issuer, $input, $issued, $estimate, $funding)
+                : $this->providerWalletAllocationPlaceholder($funding);
 
             $balanceAfter = $this->wallets->getBalance($wallet);
 
@@ -207,6 +205,40 @@ class GeneratePayCode
     protected function shouldAllocateLocalRevenue(string $authority): bool
     {
         return in_array($authority, ['local_ledger', 'manual'], true);
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     * @param  array<string, mixed>  $issued
+     * @return array<string, mixed>
+     */
+    protected function allocateCommercialRevenue(
+        mixed $issuer,
+        array $input,
+        array $issued,
+        PricingEstimateData $estimate,
+        FundingDecisionData $funding,
+    ): array {
+        if ($this->commercialSales !== null
+            && (bool) config('x-change.commercial.enabled', true)
+            && $issuer instanceof Model) {
+            return $this->commercialSales->post(
+                issuer: $issuer,
+                input: $input,
+                issued: $issued,
+                provider: (string) data_get(
+                    $funding->meta,
+                    'provider',
+                    data_get($input, 'provider', 'manual'),
+                ),
+            );
+        }
+
+        return $this->allocator->allocate(
+            issuer: $this->assertWalletableIssuer($issuer),
+            estimate: $estimate,
+            context: $this->buildAllocationContext($input, $estimate),
+        );
     }
 
     protected function requiredIssuanceAmount(array $input, PricingEstimateData $estimate): float

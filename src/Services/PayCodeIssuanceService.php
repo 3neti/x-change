@@ -44,6 +44,7 @@ class PayCodeIssuanceService implements PayCodeIssuanceContract
             return [
                 'voucher_id' => $issued->id,
                 'code' => $code,
+                'issued_at' => $issued->created_at?->toRfc3339String() ?? now()->toRfc3339String(),
                 'amount' => data_get($instructions->toArray(), 'cash.amount'),
                 'currency' => data_get($instructions->toArray(), 'cash.currency'),
                 'links' => [

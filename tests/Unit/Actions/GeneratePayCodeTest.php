@@ -20,6 +20,7 @@ use LBHurtado\XChange\Exceptions\InsufficientWalletBalance;
 use LBHurtado\XChange\Exceptions\PayCodeIssuerNotResolved;
 use LBHurtado\XChange\Exceptions\ProviderProvisioningRequired;
 use LBHurtado\XChange\Services\BuildProvisioningFlowDescriptor;
+use LBHurtado\XChange\Services\Commercial\PayCodeCommercialSaleService;
 use LBHurtado\XChange\Services\InstructionRevenueAllocatorService;
 use LBHurtado\XChange\Services\ResumeProviderProvisioningFromOnboarding;
 use LBHurtado\XChange\Tests\Fakes\User;
@@ -114,8 +115,12 @@ it('generates a pay code by resolving issuer, estimating cost, allocating revenu
         ->andReturn($issued);
 
     $allocator = Mockery::mock(InstructionRevenueAllocatorService::class);
-    $allocator->shouldReceive('allocate')
+    $allocator->shouldNotReceive('allocate');
+
+    $commercialSales = Mockery::mock(PayCodeCommercialSaleService::class);
+    $commercialSales->shouldReceive('post')
         ->once()
+        ->with($issuer, $input, $issued, 'manual')
         ->andReturn([
             'debit' => [
                 'id' => 501,
@@ -144,6 +149,7 @@ it('generates a pay code by resolving issuer, estimating cost, allocating revenu
         $issuance,
         $allocator,
         funding: $funding,
+        commercialSales: $commercialSales,
     );
 
     $result = $action->handle($input);

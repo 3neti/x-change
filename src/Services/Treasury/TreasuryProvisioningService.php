@@ -66,6 +66,13 @@ final readonly class TreasuryProvisioningService
             foreach ([
                 [TreasuryPositionPurpose::TreasuryClearing, 'clearing'],
                 [TreasuryPositionPurpose::LegacyUnattributed, 'unattributed'],
+                [TreasuryPositionPurpose::CommercialClearing, 'commercial-clearing'],
+                [TreasuryPositionPurpose::ProviderCostPayable, 'provider-cost-payable'],
+                [TreasuryPositionPurpose::ProductRevenue, 'product-revenue'],
+                [TreasuryPositionPurpose::PartnerCommissionPayable, 'partner-commission-payable'],
+                [TreasuryPositionPurpose::RoyaltyPayable, 'royalty-payable'],
+                [TreasuryPositionPurpose::TaxPayable, 'tax-payable'],
+                [TreasuryPositionPurpose::CommercialRevenue, 'commercial-revenue'],
             ] as [$purpose, $suffix]) {
                 $positionReference = implode(':', [
                     'position',
