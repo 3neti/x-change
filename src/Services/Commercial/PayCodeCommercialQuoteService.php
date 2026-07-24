@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Services\Commercial;
 
+use BackedEnum;
 use JsonException;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\XCommerce\Data\CommercialAttributionSnapshotData;
@@ -103,7 +104,16 @@ final class PayCodeCommercialQuoteService
     private function compatibilityChargeIndex(string $catalogItemReference): string
     {
         return match ($catalogItemReference) {
-            'flow_type.collectible' => 'cash.amount',
+            'flow_type.collectible',
+            'voucher_type.payable',
+            'voucher_type.settlement',
+            'inputs.fields.reference_code',
+            'cash.validation.secret',
+            'cash.validation.mobile',
+            'cash.validation.payable',
+            'rider.message',
+            'rider.splash',
+            'rider.url' => 'cash.amount',
             default => $catalogItemReference,
         };
     }
@@ -128,7 +138,13 @@ final class PayCodeCommercialQuoteService
             $selected[] = 'flow_type.collectible';
         }
 
-        $voucherType = mb_strtolower(trim((string) data_get($instructions, 'voucher_type', '')));
+        $voucherType = data_get($instructions, 'voucher_type', '');
+
+        if ($voucherType instanceof BackedEnum) {
+            $voucherType = $voucherType->value;
+        }
+
+        $voucherType = mb_strtolower(trim((string) $voucherType));
 
         if ($voucherType !== '') {
             $selected[] = 'voucher_type.'.$voucherType;

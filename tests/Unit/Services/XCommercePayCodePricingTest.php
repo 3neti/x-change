@@ -42,7 +42,7 @@ it('uses the immutable x-commerce catalog for Pay Code pricing and projections',
         ->and($first['currency'])->toBe('PHP')
         ->and($first['total_minor'])->toBe(4_150)
         ->and($first['total'])->toBe(41.5)
-        ->and(collect($first['charges'])->pluck('index')->all())->toBe([
+        ->and(collect($first['charges'])->pluck('catalog_item_reference')->all())->toBe([
             'cash.amount',
             'inputs.fields.selfie',
             'inputs.fields.signature',
@@ -99,4 +99,34 @@ it('prices every Pay Code in a batch with the same catalog quantities', function
         ->and($estimate['charges'])->toHaveCount(1)
         ->and($estimate['charges'][0]['quantity'])->toBe(3)
         ->and($estimate['charges'][0]['price_minor'])->toBe(4_500);
+});
+
+it('preserves canonical catalog references behind the legacy allocation index', function () {
+    $instructions = validVoucherInstructions(100.00, 'INSTAPAY', [
+        'voucher_type' => 'payable',
+        'target_amount' => 100.00,
+        'cash' => [
+            'validation' => [
+                'secret' => 'required-secret',
+            ],
+        ],
+        'inputs' => [
+            'fields' => [],
+        ],
+        'feedback' => [
+            'email' => null,
+            'mobile' => null,
+            'webhook' => null,
+        ],
+        'rider' => [
+            'message' => 'Thank you',
+        ],
+    ]);
+
+    $charges = collect(app(PricingServiceContract::class)->estimate($instructions)['charges'])
+        ->keyBy('catalog_item_reference');
+
+    expect($charges->get('voucher_type.payable')['index'])->toBe('cash.amount')
+        ->and($charges->get('cash.validation.secret')['index'])->toBe('cash.amount')
+        ->and($charges->get('rider.message')['index'])->toBe('cash.amount');
 });
