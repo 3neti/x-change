@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "4babf346a332cea10136334d38517e6f",
+    "content-hash": "95e6b42fff454dbc55291a038a0e1b7a",
     "packages": [
         {
             "name": "3neti/cash",
@@ -129,7 +129,7 @@
             "dist": {
                 "type": "path",
                 "url": "/Users/rli/PhpstormProjects/packages/emi-core",
-                "reference": "0f2163e10538093f8db27c76ca7f5a0700e421ff"
+                "reference": "d3a4eda9b00eae96c5f96426c7e3b8dfbf6a26ee"
             },
             "require": {
                 "illuminate/support": "^12.0 || ^13.0",
@@ -186,7 +186,7 @@
             "dist": {
                 "type": "path",
                 "url": "/Users/rli/PhpstormProjects/packages/emi-netbank",
-                "reference": "550fe17c8361e93b8ce3d677b429f934af4f74f0"
+                "reference": "be3917976a24d6c82a7b5b9c0dfd344716acc79a"
             },
             "require": {
                 "3neti/emi-core": "^v1.0",
@@ -253,7 +253,7 @@
             "dist": {
                 "type": "path",
                 "url": "/Users/rli/PhpstormProjects/packages/emi-paynamics",
-                "reference": "1f7d198b50a2de4fe2400e431463db4e3bcff199"
+                "reference": "89ebc7336c43286bad5ff46b7a12ce9ff9a92e4a"
             },
             "require": {
                 "3neti/emi-core": "^v1.0.1",
@@ -999,7 +999,7 @@
             "dist": {
                 "type": "path",
                 "url": "/Users/rli/PhpstormProjects/packages/merchant",
-                "reference": "35f5b96d8a29fb51afed5d2b879f1bc65b73b0de"
+                "reference": "a5c6c888dae1e4171a91f06b247b5cd619297e0a"
             },
             "require": {
                 "illuminate/contracts": "^11.0|^12.0|^13.0",
@@ -1383,7 +1383,7 @@
             "dist": {
                 "type": "path",
                 "url": "/Users/rli/PhpstormProjects/packages/wallet",
-                "reference": "11f5d0cdd3c938bdafd7136a4458a8840dc675c1"
+                "reference": "0d7b39aeb5d1462cb12798d3be62cb2d6be100d5"
             },
             "require": {
                 "bavix/laravel-wallet": "^11.4",
@@ -1553,6 +1553,57 @@
                 }
             ],
             "description": "Beneficiary distribution and campaign orchestration package for the x-change Settlement Operating System",
+            "transport-options": {
+                "symlink": true,
+                "relative": false
+            }
+        },
+        {
+            "name": "3neti/x-commerce",
+            "version": "dev-main",
+            "dist": {
+                "type": "path",
+                "url": "/Users/rli/PhpstormProjects/packages/x-commerce",
+                "reference": "9c79145a6d9be5845b29586b960ee78918770257"
+            },
+            "require": {
+                "illuminate/support": "^11.0|^12.0|^13.0",
+                "php": "^8.2"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^10.5"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "LBHurtado\\XCommerce\\XCommerceServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "LBHurtado\\XCommerce\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "LBHurtado\\XCommerce\\Tests\\": "tests/"
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "Commercial architecture and knowledge system for packaging, pricing, licensing, metering, and sustaining outcomes delivered through the x-change ecosystem.",
+            "keywords": [
+                "commerce",
+                "commercial-architecture",
+                "laravel",
+                "licensing",
+                "metering",
+                "pricing",
+                "x-change"
+            ],
             "transport-options": {
                 "symlink": true,
                 "relative": false
@@ -1866,20 +1917,20 @@
         },
         {
             "name": "bavix/laravel-wallet",
-            "version": "11.5.0",
+            "version": "11.5.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/bavix/laravel-wallet.git",
-                "reference": "7aad6e4890639aa4b804d78ba4d3bddb4681dfb2"
+                "reference": "d6a25c95e14c18a6e1b8c5a16e0459de7af77e6a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/bavix/laravel-wallet/zipball/7aad6e4890639aa4b804d78ba4d3bddb4681dfb2",
-                "reference": "7aad6e4890639aa4b804d78ba4d3bddb4681dfb2",
+                "url": "https://api.github.com/repos/bavix/laravel-wallet/zipball/d6a25c95e14c18a6e1b8c5a16e0459de7af77e6a",
+                "reference": "d6a25c95e14c18a6e1b8c5a16e0459de7af77e6a",
                 "shasum": ""
             },
             "require": {
-                "brick/math": "~0.10",
+                "brick/math": ">=0.12.0 <0.19.0",
                 "ext-json": "*",
                 "ext-pdo": "*",
                 "illuminate/contracts": "^11.0|^12.0|^13.0",
@@ -1944,19 +1995,19 @@
             ],
             "support": {
                 "issues": "https://github.com/bavix/laravel-wallet/issues",
-                "source": "https://github.com/bavix/laravel-wallet/tree/11.5.0"
+                "source": "https://github.com/bavix/laravel-wallet/tree/11.5.1"
             },
             "funding": [
                 {
-                    "url": "https://www.tinkoff.ru/cf/1OkIPwTvTLf",
-                    "type": "custom"
+                    "url": "https://www.buymeacoffee.com/babichev",
+                    "type": "buy_me_a_coffee"
                 },
                 {
                     "url": "https://opencollective.com/laravel-wallet",
                     "type": "open_collective"
                 }
             ],
-            "time": "2026-03-18T21:19:55+00:00"
+            "time": "2026-06-30T18:56:41+00:00"
         },
         {
             "name": "brick/math",
@@ -7515,20 +7566,20 @@
         },
         {
             "name": "ramsey/uuid",
-            "version": "4.9.2",
+            "version": "4.9.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/ramsey/uuid.git",
-                "reference": "8429c78ca35a09f27565311b98101e2826affde0"
+                "reference": "1df15849d00943a67d677dc9cfd80795f038c9f8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/ramsey/uuid/zipball/8429c78ca35a09f27565311b98101e2826affde0",
-                "reference": "8429c78ca35a09f27565311b98101e2826affde0",
+                "url": "https://api.github.com/repos/ramsey/uuid/zipball/1df15849d00943a67d677dc9cfd80795f038c9f8",
+                "reference": "1df15849d00943a67d677dc9cfd80795f038c9f8",
                 "shasum": ""
             },
             "require": {
-                "brick/math": "^0.8.16 || ^0.9 || ^0.10 || ^0.11 || ^0.12 || ^0.13 || ^0.14",
+                "brick/math": ">=0.8.16 <=0.18",
                 "php": "^8.0",
                 "ramsey/collection": "^1.2 || ^2.0"
             },
@@ -7587,9 +7638,9 @@
             ],
             "support": {
                 "issues": "https://github.com/ramsey/uuid/issues",
-                "source": "https://github.com/ramsey/uuid/tree/4.9.2"
+                "source": "https://github.com/ramsey/uuid/tree/4.9.3"
             },
-            "time": "2025-12-14T04:43:48+00:00"
+            "time": "2026-06-18T03:57:49+00:00"
         },
         {
             "name": "setasign/fpdf",
@@ -15497,6 +15548,7 @@
         "3neti/voucher": 20,
         "3neti/x-action": 20,
         "3neti/x-campaign": 20,
+        "3neti/x-commerce": 20,
         "3neti/x-feedback": 20,
         "3neti/x-journal": 20,
         "3neti/x-ray": 20,

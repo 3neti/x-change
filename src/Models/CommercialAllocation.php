@@ -1,0 +1,40 @@
+<?php
+
+declare(strict_types=1);
+
+namespace LBHurtado\XChange\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+final class CommercialAllocation extends Model
+{
+    protected $table = 'x_change_commercial_allocations';
+
+    protected $guarded = [];
+
+    protected static function booted(): void
+    {
+        self::updating(function (): never {
+            throw new \LogicException('Commercial Allocations must be changed through guarded commercial actions.');
+        });
+
+        self::deleting(function (): never {
+            throw new \LogicException('Commercial Allocations cannot be deleted.');
+        });
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'sequence' => 'integer',
+            'amount_minor' => 'integer',
+            'metadata' => 'array',
+        ];
+    }
+
+    public function sale(): BelongsTo
+    {
+        return $this->belongsTo(CommercialSale::class, 'commercial_sale_id');
+    }
+}
