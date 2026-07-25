@@ -7,6 +7,7 @@ namespace LBHurtado\XChange\Services\Commercial;
 use BackedEnum;
 use JsonException;
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
+use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XCommerce\Data\CommercialAttributionSnapshotData;
 use LBHurtado\XCommerce\Data\CommercialCatalogData;
 use LBHurtado\XCommerce\Data\CommercialQuoteData;
@@ -132,9 +133,21 @@ final class PayCodeCommercialQuoteService
             [],
         ))
             ->map(static fn (mixed $destination): string => mb_strtolower(trim((string) $destination)))
+            ->filter()
+            ->unique()
+            ->values()
             ->all();
 
-        return in_array('account_funding', $destinations, true)
+        if (
+            in_array('account_funding', $destinations, true)
+            && $destinations !== ['account_funding']
+        ) {
+            throw new PayCodeIssuanceFailed(
+                'Dual-outcome Pay Codes remain disabled until execution-cost reserves are active.',
+            );
+        }
+
+        return $destinations === ['account_funding']
             && data_get(
                 $instructions,
                 'metadata.custom.settlement.account_funding.pricing_profile',

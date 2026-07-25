@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use LBHurtado\Voucher\Data\VoucherInstructionsData;
 use LBHurtado\XChange\Contracts\PricingServiceContract;
+use LBHurtado\XChange\Exceptions\PayCodeIssuanceFailed;
 use LBHurtado\XChange\Services\InstructionBackedPricingService;
 
 it('uses the immutable x-commerce catalog for Pay Code pricing and projections', function () {
@@ -107,6 +108,36 @@ it('uses a no-payout waterfall for Account Funding Pay Codes', function () {
     expect($estimate['total_minor'])->toBe(1_500)
         ->and($estimate['waterfall_policy_reference'])
         ->toBe('pay-code-account-funding-waterfall');
+});
+
+it('rejects dual-outcome pricing until execution-cost reserves are active', function () {
+    $instructions = validVoucherInstructions(100.00, 'INSTAPAY', [
+        'inputs' => ['fields' => []],
+        'feedback' => [
+            'email' => null,
+            'mobile' => null,
+            'webhook' => null,
+        ],
+        'metadata' => [
+            'custom' => [
+                'settlement' => [
+                    'destinations' => [
+                        'provider_payout',
+                        'account_funding',
+                    ],
+                    'account_funding' => [
+                        'pricing_profile' => 'account-funding-v1',
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
+    expect(fn () => app(PricingServiceContract::class)->estimate($instructions))
+        ->toThrow(
+            PayCodeIssuanceFailed::class,
+            'Dual-outcome Pay Codes remain disabled until execution-cost reserves are active.',
+        );
 });
 
 it('prices every Pay Code in a batch with the same catalog quantities', function () {

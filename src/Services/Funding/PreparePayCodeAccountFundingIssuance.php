@@ -30,6 +30,17 @@ final readonly class PreparePayCodeAccountFundingIssuance
         array $commercial,
         string $provider,
     ): void {
+        $destinations = $this->destinations($input);
+
+        if (
+            in_array(PayCodeSettlementDestination::AccountFunding->value, $destinations, true)
+            && $destinations !== [PayCodeSettlementDestination::AccountFunding->value]
+        ) {
+            throw new PayCodeIssuanceFailed(
+                'Dual-outcome Pay Codes remain disabled until execution-cost reserves are active.',
+            );
+        }
+
         if (! $this->isRequested($input)) {
             return;
         }
@@ -93,21 +104,29 @@ final readonly class PreparePayCodeAccountFundingIssuance
      */
     private function isRequested(array $input): bool
     {
-        $destinations = collect((array) data_get(
+        return $this->destinations($input) === [
+            PayCodeSettlementDestination::AccountFunding->value,
+        ] && data_get(
+            $input,
+            'metadata.custom.settlement.account_funding.pricing_profile',
+        ) === 'account-funding-v1';
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     * @return list<string>
+     */
+    private function destinations(array $input): array
+    {
+        return collect((array) data_get(
             $input,
             'metadata.custom.settlement.destinations',
             [],
         ))
             ->map(static fn (mixed $destination): string => mb_strtolower(trim((string) $destination)))
+            ->filter()
+            ->unique()
+            ->values()
             ->all();
-
-        return in_array(
-            PayCodeSettlementDestination::AccountFunding->value,
-            $destinations,
-            true,
-        ) && data_get(
-            $input,
-            'metadata.custom.settlement.account_funding.pricing_profile',
-        ) === 'account-funding-v1';
     }
 }
