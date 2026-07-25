@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use LBHurtado\XChange\Http\Requests\Concerns\SanitizesRiderSplashHtml;
 use LBHurtado\XChange\Http\Requests\Concerns\ValidatesMinimumWithdrawalPolicy;
 
@@ -65,6 +66,38 @@ class EstimatePayCodeRequest extends FormRequest
             'prefix' => ['nullable', 'string'],
             'mask' => ['nullable', 'string'],
             'ttl' => ['nullable'],
+            'claim' => ['nullable', 'array'],
+            'claim.outcomes' => ['required_with:claim', 'array', 'min:1'],
+            'claim.outcomes.*' => ['required', 'array'],
+            'claim.outcomes.*.key' => [
+                'required',
+                'string',
+                'regex:/^[a-z][a-z0-9_]*$/',
+                'distinct:strict',
+            ],
+            'claim.outcomes.*.pricing_profile' => ['nullable', 'string', 'max:120'],
+            'claim.outcomes.*.requirements' => ['nullable', 'array'],
+            'claim.selection' => ['nullable', 'string', 'in:claimant,server'],
+            'claim.consumption' => ['nullable', 'string', 'in:one_of'],
+            'claim.default_outcome' => [
+                'nullable',
+                'string',
+                'regex:/^[a-z][a-z0-9_]*$/',
+                Rule::in($this->declaredClaimOutcomeKeys()),
+            ],
+            'claim.onboarding' => ['nullable', 'array'],
+            'claim.onboarding.mode' => ['nullable', 'string', 'in:never,if_required,required'],
+            'claim.onboarding.profile' => ['nullable', 'string', 'max:120'],
+            'claim.claimant' => ['nullable', 'array'],
+            'claim.claimant.mode' => ['nullable', 'string', 'in:unbound,recipient'],
+            'claim.claimant.reference' => [
+                'nullable',
+                'string',
+                'max:255',
+                'required_if:claim.claimant.mode,recipient',
+                'prohibited_unless:claim.claimant.mode,recipient',
+            ],
+            'claim.profile' => ['nullable', 'string', 'in:voucher.claim.v1'],
             'metadata' => ['nullable', 'array'],
             'metadata.slices' => ['nullable', 'array'],
             'metadata.slices.*' => ['required', 'array'],
@@ -100,5 +133,17 @@ class EstimatePayCodeRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->sanitizeRiderSplashHtmlForValidation();
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function declaredClaimOutcomeKeys(): array
+    {
+        return collect($this->input('claim.outcomes', []))
+            ->pluck('key')
+            ->filter(static fn (mixed $key): bool => is_string($key) && $key !== '')
+            ->values()
+            ->all();
     }
 }
