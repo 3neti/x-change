@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionReadModelContract;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\XChange\Actions\Funding\ApproveFundingRequestAndIssueCode;
-use LBHurtado\XChange\Actions\Funding\ClaimAccountFundingCode;
+use LBHurtado\XChange\Actions\Funding\ClaimReviewedFundingPayCode;
 use LBHurtado\XChange\Actions\Funding\CreateFundingRequest;
 use LBHurtado\XChange\Actions\Funding\PrepareFundingRequest;
 use LBHurtado\XChange\Contracts\TreasuryPrincipalReferenceResolverContract;
 use LBHurtado\XChange\Contracts\VerifiedTreasuryFundingAllocationContract;
 use LBHurtado\XChange\Data\Funding\CreateFundingRequestData;
 use LBHurtado\XChange\Data\Funding\PrepareFundingRequestData;
-use LBHurtado\XChange\Enums\AccountFundingCodeStatus;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Enums\FundingRequestType;
-use LBHurtado\XChange\Models\AccountFundingCode;
 use LBHurtado\XChange\Models\FundingRequestNotice;
+use LBHurtado\XChange\Models\VoucherClaim;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('requires independent approval then moves reserved system value to the bound Account once', function () {
@@ -51,7 +51,7 @@ it('requires independent approval then moves reserved system value to the bound 
         requestedValueMinor: 250_000,
         currency: 'PHP',
         description: 'Cash accepted into controlled custody.',
-        idempotencyKey: 'account-funding-code-lifecycle-1001',
+        idempotencyKey: 'reviewed-funding-pay-code-lifecycle-1001',
     ));
     $prepared = app(PrepareFundingRequest::class)->handle(
         $request,
@@ -72,7 +72,7 @@ it('requires independent approval then moves reserved system value to the bound 
         (string) $maker->getKey(),
     ))->toThrow(RuntimeException::class, 'backing reviewer cannot approve');
 
-    $code = app(ApproveFundingRequestAndIssueCode::class)->handle(
+    $voucher = app(ApproveFundingRequestAndIssueCode::class)->handle(
         $prepared,
         $checker::class,
         (string) $checker->getKey(),
@@ -83,32 +83,37 @@ it('requires independent approval then moves reserved system value to the bound 
         (string) $checker->getKey(),
     );
 
-    expect($code->status)->toBe(AccountFundingCodeStatus::Issued)
-        ->and($code->metadata)->toMatchArray([
-            'capability' => 'account_funding',
-            'provider_payout_enabled' => false,
-        ])
-        ->and($replay->is($code))->toBeTrue()
-        ->and(AccountFundingCode::query()->count())->toBe(1)
+    expect($voucher)->toBeInstanceOf(Voucher::class)
+        ->and($voucher->instructions->claim?->outcomes[0]->key)
+        ->toBe('account_funding')
+        ->and($voucher->instructions->claim?->selection)->toBe('server')
+        ->and($voucher->instructions->claim?->claimant?->mode)
+        ->toBe('recipient')
+        ->and(data_get($voucher->metadata, 'treasury.account_funding.status'))
+        ->toBe('ready')
+        ->and($replay->is($voucher))->toBeTrue()
+        ->and(Voucher::query()->count())->toBe(1)
+        ->and($request->refresh()->voucher_id)->toBe($voucher->getKey())
+        ->and($request->status)->toBe(FundingRequestStatus::PayCodeIssued)
         ->and(FundingRequestNotice::query()->count())->toBe(1)
         ->and(positionBalance($system, TreasuryPositionPurpose::ClientFunds))->toBe(750_000)
         ->and(positionBalance($system, TreasuryPositionPurpose::PayCodeReserve))->toBe(250_000)
         ->and(positionBalance($requester, TreasuryPositionPurpose::ClientFunds))->toBe(0);
 
-    $claimed = app(ClaimAccountFundingCode::class)->handle(
-        $code,
-        $requester::class,
-        (string) $requester->getKey(),
+    $claimed = app(ClaimReviewedFundingPayCode::class)->handle(
+        $request,
+        $requester,
     );
-    $claimReplay = app(ClaimAccountFundingCode::class)->handle(
-        $code,
-        $requester::class,
-        (string) $requester->getKey(),
+    $claimReplay = app(ClaimReviewedFundingPayCode::class)->handle(
+        $request,
+        $requester,
     );
 
-    expect($claimed->status)->toBe(AccountFundingCodeStatus::Claimed)
-        ->and($claimReplay->status)->toBe(AccountFundingCodeStatus::Claimed)
+    expect($claimed)->toBeInstanceOf(VoucherClaim::class)
+        ->and($claimed->status)->toBe('succeeded')
+        ->and($claimReplay->is($claimed))->toBeTrue()
         ->and($request->refresh()->status)->toBe(FundingRequestStatus::Completed)
+        ->and($voucher->refresh()->redeemed_at)->not->toBeNull()
         ->and(positionBalance($system, TreasuryPositionPurpose::ClientFunds))->toBe(750_000)
         ->and(positionBalance($system, TreasuryPositionPurpose::PayCodeReserve))->toBe(0)
         ->and(positionBalance($requester, TreasuryPositionPurpose::ClientFunds))->toBe(250_000);
@@ -151,7 +156,7 @@ it('rejects a claim from another Account owner', function () {
         requestedValueMinor: 50_000,
         currency: 'PHP',
         description: 'Matched bank transfer.',
-        idempotencyKey: 'account-funding-code-lifecycle-1002',
+        idempotencyKey: 'reviewed-funding-pay-code-lifecycle-1002',
     ));
     app(PrepareFundingRequest::class)->handle($request, new PrepareFundingRequestData(
         recognizedValueMinor: 50_000,
@@ -161,16 +166,15 @@ it('rejects a claim from another Account owner', function () {
         reviewerType: $maker::class,
         reviewerId: (string) $maker->getKey(),
     ));
-    $code = app(ApproveFundingRequestAndIssueCode::class)->handle(
+    app(ApproveFundingRequestAndIssueCode::class)->handle(
         $request,
         $checker::class,
         (string) $checker->getKey(),
     );
 
-    expect(fn () => app(ClaimAccountFundingCode::class)->handle(
-        $code,
-        $other::class,
-        (string) $other->getKey(),
+    expect(fn () => app(ClaimReviewedFundingPayCode::class)->handle(
+        $request,
+        $other,
     ))->toThrow(RuntimeException::class, 'belongs to another Account');
 });
 

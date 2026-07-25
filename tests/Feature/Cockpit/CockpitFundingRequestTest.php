@@ -2,11 +2,13 @@
 
 declare(strict_types=1);
 
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Actions\Funding\CreateFundingRequest;
 use LBHurtado\XChange\Data\Funding\CreateFundingRequestData;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Enums\FundingRequestType;
 use LBHurtado\XChange\Models\FundingRequest;
+use LBHurtado\XChange\Services\Claim\VoucherClaimantReference;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('lets an Account owner submit a request without accepting monetary authority', function () {
@@ -92,7 +94,7 @@ it('keeps the review queue fail closed and scoped to configured reviewers', func
         );
 });
 
-it('binds Account Funding Code claims to the intended Account owner', function () {
+it('binds Reviewed Funding Pay Code claims to the intended Account owner', function () {
     $requester = actingAsTestUser();
     $other = User::query()->create([
         'name' => 'Other Funding User',
@@ -100,7 +102,40 @@ it('binds Account Funding Code claims to the intended Account owner', function (
         'password' => 'password',
     ]);
     fundTestUserWallet($other, 0);
+    $voucher = Voucher::query()->forceCreate([
+        'code' => 'OWNER-BOUND',
+        'metadata' => [
+            'instructions' => [
+                'cash' => [
+                    'amount' => 10,
+                    'currency' => 'PHP',
+                    'validation' => ['country' => 'PH'],
+                ],
+                'inputs' => ['fields' => []],
+                'feedback' => [],
+                'rider' => [],
+                'count' => 1,
+                'prefix' => 'OWNER',
+                'mask' => '****',
+                'claim' => [
+                    'outcomes' => [['key' => 'account_funding']],
+                    'selection' => 'server',
+                    'consumption' => 'one_of',
+                    'default_outcome' => 'account_funding',
+                    'claimant' => [
+                        'mode' => 'recipient',
+                        'reference' => app(VoucherClaimantReference::class)
+                            ->for($requester),
+                    ],
+                ],
+            ],
+        ],
+        'voucher_type' => 'redeemable',
+        'state' => 'active',
+        'expires_at' => now()->addHour(),
+    ]);
     $request = FundingRequest::query()->create([
+        'voucher_id' => $voucher->getKey(),
         'account_reference' => 'wallet:'.$requester->wallet->uuid,
         'requester_type' => $requester::class,
         'requester_id' => (string) $requester->getKey(),
@@ -108,37 +143,19 @@ it('binds Account Funding Code claims to the intended Account owner', function (
         'requested_value_minor' => 1_000,
         'approved_value_minor' => 1_000,
         'currency' => 'PHP',
-        'status' => FundingRequestStatus::CodeIssued,
+        'status' => FundingRequestStatus::PayCodeIssued,
         'version' => 3,
         'idempotency_key_hash' => hash('sha256', 'claim-owner-test'),
         'idempotency_fingerprint' => hash('sha256', 'claim-owner-fingerprint'),
         'description' => 'Owner binding test request.',
         'submitted_at' => now(),
     ]);
-    $code = $request->fundingCode()->create([
-        'code_hash' => hash('sha256', 'OWNERBOUND01'),
-        'code_ciphertext' => 'OWNERBOUND01',
-        'code_last_four' => 'ND01',
-        'recipient_type' => $requester::class,
-        'recipient_id' => (string) $requester->getKey(),
-        'account_reference' => $request->account_reference,
-        'amount_minor' => 1_000,
-        'currency' => 'PHP',
-        'connection_reference' => 'netbank-primary',
-        'source_position_reference' => 'position:source',
-        'reserve_position_reference' => 'position:reserve',
-        'destination_position_reference' => 'position:destination',
-        'reservation_operation_reference' => 'reservation:owner-binding',
-        'claim_operation_reference' => 'claim:owner-binding',
-        'status' => 'issued',
-        'version' => 1,
-        'issued_at' => now(),
-        'expires_at' => now()->addHour(),
-    ]);
-
     $this->actingAs($other)
-        ->post(route('x-change.cockpit.funding.codes.claims.store', $code))
+        ->post(route(
+            'x-change.cockpit.funding.requests.pay-code-claims.store',
+            $request,
+        ))
         ->assertForbidden();
 
-    expect($code->refresh()->status->value)->toBe('issued');
+    expect($voucher->refresh()->redeemed_at)->toBeNull();
 });

@@ -14,7 +14,6 @@ use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimRedirectController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimStartController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSubmitController;
 use LBHurtado\XChange\Http\Controllers\Web\Claim\ClaimSuccessPageController;
-use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountFundingCodeClaimController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitAccountScenarioController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDashboardPageController;
@@ -38,6 +37,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeFundingInspecti
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQrPhFundingSimulationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateMutationRouteShellController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGeneratePageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitReviewedFundingPayCodeClaimController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitRuntimeProfilePageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitStandingFundingReceiptApprovalController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitVoucherDetailPageController;
@@ -114,10 +114,10 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
         )->middleware((array) config('x-change.funding.requests.approval_middleware', []))
             ->name('x-change.cockpit.funding.requests.approvals.store');
         Route::post(
-            'funding/codes/{fundingCode:reference}/claims',
-            CockpitAccountFundingCodeClaimController::class,
+            'funding/requests/{fundingRequest:reference}/pay-code-claims',
+            CockpitReviewedFundingPayCodeClaimController::class,
         )->middleware((array) config('x-change.funding.requests.claim_middleware', []))
-            ->name('x-change.cockpit.funding.codes.claims.store');
+            ->name('x-change.cockpit.funding.requests.pay-code-claims.store');
         Route::post(
             'funding/pay-code-inspections',
             CockpitPayCodeFundingInspectionController::class,

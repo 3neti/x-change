@@ -28,7 +28,7 @@ class CockpitFundingRequestApprovalController extends Controller
             ->route('x-change.cockpit.funding.index')
             ->with(
                 'funding_notice',
-                'Account Funding Code issued. Reserved value remains stationary until the recipient claims it.',
+                'Reviewed Funding Pay Code issued. Reserved value remains stationary until the recipient claims it.',
             );
     }
 }

@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace LBHurtado\XChange\Actions\Funding;
 
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionOperationContract;
 use LBHurtado\Wallet\Treasury\Data\TreasuryPositionData;
@@ -14,10 +15,9 @@ use LBHurtado\Wallet\Treasury\Data\TreasuryPositionReservationData;
 use LBHurtado\Wallet\Treasury\Enums\TreasuryPositionPurpose;
 use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Contracts\TreasuryAccountPortfolioProvisioningContract;
-use LBHurtado\XChange\Enums\AccountFundingCodeStatus;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
-use LBHurtado\XChange\Models\AccountFundingCode;
 use LBHurtado\XChange\Models\FundingRequest;
+use LBHurtado\XChange\Services\Claim\VoucherClaimantReference;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use RuntimeException;
 
@@ -29,25 +29,27 @@ final readonly class ApproveFundingRequestAndIssueCode
         private TreasuryProviderConnectionCatalog $connections,
         private TreasuryAccountPortfolioProvisioningContract $portfolios,
         private TreasuryPositionOperationContract $operations,
+        private IssueTreasuryBackedPayCode $issuance,
+        private VoucherClaimantReference $claimantReferences,
     ) {}
 
     public function handle(
         FundingRequest $fundingRequest,
         string $approverType,
         string $approverId,
-    ): AccountFundingCode {
+    ): Voucher {
         return DB::transaction(function () use (
             $fundingRequest,
             $approverType,
             $approverId,
-        ): AccountFundingCode {
+        ): Voucher {
             $locked = FundingRequest::query()
-                ->with('fundingCode')
+                ->with('voucher')
                 ->lockForUpdate()
                 ->findOrFail($fundingRequest->getKey());
 
-            if ($locked->fundingCode instanceof AccountFundingCode) {
-                return $locked->fundingCode;
+            if ($locked->voucher instanceof Voucher) {
+                return $locked->voucher;
             }
 
             if ($locked->status !== FundingRequestStatus::AwaitingApproval) {
@@ -74,7 +76,12 @@ final readonly class ApproveFundingRequestAndIssueCode
             $account = $this->accounts->resolve($locked->account_reference);
             $recipient = data_get($account, 'holder');
 
-            if (! $system instanceof Model || ! $recipient instanceof Model) {
+            if (
+                ! $system instanceof Model
+                || ! $system instanceof Authenticatable
+                || ! $recipient instanceof Model
+                || ! $recipient instanceof Authenticatable
+            ) {
                 throw new RuntimeException('Funding Request principals could not be resolved.');
             }
 
@@ -85,8 +92,11 @@ final readonly class ApproveFundingRequestAndIssueCode
                 throw new RuntimeException('Funding Request recipient binding is invalid.');
             }
 
-            $systemPortfolio = $this->portfolios->provision($system, [$connection->reference]);
-            $recipientPortfolio = $this->portfolios->provision($recipient, [$connection->reference]);
+            $systemPortfolio = $this->portfolios->provision(
+                $system,
+                [$connection->reference],
+            );
+            $this->portfolios->provision($recipient, [$connection->reference]);
             $source = $this->position(
                 $systemPortfolio->positions,
                 TreasuryPositionPurpose::ClientFunds,
@@ -95,13 +105,57 @@ final readonly class ApproveFundingRequestAndIssueCode
                 $systemPortfolio->positions,
                 TreasuryPositionPurpose::PayCodeReserve,
             );
-            $destination = $this->position(
-                $recipientPortfolio->positions,
-                TreasuryPositionPurpose::ClientFunds,
-            );
-            $scope = hash('sha256', 'account-funding-code|'.$locked->reference);
-            $reservationReference = 'account-funding-reservation:'.$scope;
-            $claimReference = 'account-funding-claim:'.$scope;
+            $scope = hash('sha256', 'reviewed-funding-pay-code|'.$locked->reference);
+            $reservationReference = 'reviewed-funding-reservation:'.$scope;
+            $claimantReference = $this->claimantReferences->for($recipient);
+            $expiresAt = now()->addSeconds((int) config(
+                'x-change.funding.requests.code_ttl_seconds',
+                604800,
+            ));
+            $voucher = $this->issuance->handle($system, [
+                'cash' => [
+                    'amount' => $amountMinor / 100,
+                    'currency' => $locked->currency,
+                    'validation' => ['country' => 'PH'],
+                ],
+                'inputs' => ['fields' => []],
+                'feedback' => [],
+                'rider' => [],
+                'count' => 1,
+                'prefix' => 'FUND',
+                'mask' => '****',
+                'expires_at' => $expiresAt,
+                'voucher_type' => 'redeemable',
+                'claim' => [
+                    'outcomes' => [[
+                        'key' => 'account_funding',
+                        'pricing_profile' => 'account-funding-v1',
+                    ]],
+                    'selection' => 'server',
+                    'consumption' => 'one_of',
+                    'default_outcome' => 'account_funding',
+                    'onboarding' => ['mode' => 'if_required'],
+                    'claimant' => [
+                        'mode' => 'recipient',
+                        'reference' => $claimantReference,
+                    ],
+                ],
+                'metadata' => [
+                    'issuer_id' => (string) $system->getAuthIdentifier(),
+                    'source' => 'manual',
+                    'custom' => [
+                        'settlement' => [
+                            'destinations' => ['account_funding'],
+                            'account_funding' => [
+                                'pricing_profile' => 'account-funding-v1',
+                            ],
+                        ],
+                        'reviewed_funding' => [
+                            'request_reference' => $locked->reference,
+                        ],
+                    ],
+                ],
+            ], $expiresAt);
 
             $this->operations->reserve(new TreasuryPositionReservationData(
                 operationReference: $reservationReference,
@@ -109,47 +163,39 @@ final readonly class ApproveFundingRequestAndIssueCode
                 destinationPositionReference: $reserve->positionReference,
                 amountMinor: $amountMinor,
                 currency: $locked->currency,
-                idempotencyKey: 'account-funding-reservation-key:'.$scope,
+                idempotencyKey: 'reviewed-funding-reservation-key:'.$scope,
                 externalReference: (string) $locked->evidence_reference,
                 metadata: [
                     'funding_request_reference' => $locked->reference,
-                    'purpose' => 'account_funding_code',
+                    'pay_code_id' => (int) $voucher->getKey(),
+                    'purpose' => 'account_funding',
                     'provider_calls' => false,
                 ],
             ));
 
-            $plainCode = Str::upper(Str::random(12));
-            $code = AccountFundingCode::query()->create([
-                'funding_request_id' => $locked->getKey(),
-                'code_hash' => hash('sha256', $plainCode),
-                'code_ciphertext' => $plainCode,
-                'code_last_four' => substr($plainCode, -4),
-                'recipient_type' => $recipient::class,
-                'recipient_id' => (string) $recipient->getKey(),
-                'account_reference' => $locked->account_reference,
+            $metadata = is_array($voucher->metadata) ? $voucher->metadata : [];
+            data_set($metadata, 'treasury.account_funding', [
+                'status' => 'ready',
+                'destinations' => ['account_funding'],
+                'pricing_profile' => 'account-funding-v1',
+                'provider_cost_minor' => 0,
+                'provider_calls' => false,
+                'funding_request_reference' => $locked->reference,
+            ]);
+            data_set($metadata, 'treasury.pay_code_reservation', [
+                'status' => 'reserved',
+                'provider' => $connection->provider,
+                'connection_reference' => $connection->reference,
+                'operation_reference' => $reservationReference,
                 'amount_minor' => $amountMinor,
                 'currency' => $locked->currency,
-                'connection_reference' => $connection->reference,
-                'source_position_reference' => $source->positionReference,
-                'reserve_position_reference' => $reserve->positionReference,
-                'destination_position_reference' => $destination->positionReference,
-                'reservation_operation_reference' => $reservationReference,
-                'claim_operation_reference' => $claimReference,
-                'status' => AccountFundingCodeStatus::Issued,
-                'version' => 1,
-                'issued_at' => now(),
-                'expires_at' => now()->addSeconds((int) config(
-                    'x-change.funding.requests.code_ttl_seconds',
-                    604800,
-                )),
-                'metadata' => [
-                    'capability' => 'account_funding',
-                    'provider_payout_enabled' => false,
-                ],
             ]);
+            $voucher->forceFill(['metadata' => $metadata])->saveQuietly();
+
             $nextVersion = $locked->version + 1;
             $locked->forceFill([
-                'status' => FundingRequestStatus::CodeIssued,
+                'voucher_id' => $voucher->getKey(),
+                'status' => FundingRequestStatus::PayCodeIssued,
                 'version' => $nextVersion,
                 'approved_by_type' => $approverType,
                 'approved_by_id' => $approverId,
@@ -157,14 +203,14 @@ final readonly class ApproveFundingRequestAndIssueCode
             ])->saveQuietly();
             $locked->events()->create([
                 'sequence' => $nextVersion,
-                'event_type' => 'account_funding_code_issued',
+                'event_type' => 'reviewed_funding_pay_code_issued',
                 'from_status' => FundingRequestStatus::AwaitingApproval,
-                'to_status' => FundingRequestStatus::CodeIssued,
+                'to_status' => FundingRequestStatus::PayCodeIssued,
                 'actor_type' => $approverType,
                 'actor_id' => $approverId,
                 'evidence_reference' => $locked->evidence_reference,
                 'metadata' => [
-                    'account_funding_code_reference' => $code->reference,
+                    'pay_code_id' => (int) $voucher->getKey(),
                     'reservation_operation_reference' => $reservationReference,
                     'provider_calls' => false,
                 ],
@@ -173,16 +219,16 @@ final readonly class ApproveFundingRequestAndIssueCode
             $locked->notices()->create([
                 'recipient_type' => $locked->requester_type,
                 'recipient_id' => $locked->requester_id,
-                'notice_type' => 'account_funding_code_ready',
-                'title' => 'Account Funding Code ready',
+                'notice_type' => 'reviewed_funding_pay_code_ready',
+                'title' => 'Reviewed Funding Pay Code ready',
                 'message' => 'Verified value is reserved and ready for your one-time claim.',
                 'action' => [
-                    'type' => 'claim_account_funding_code',
-                    'reference' => $code->reference,
+                    'type' => 'claim_reviewed_funding_pay_code',
+                    'funding_request_reference' => $locked->reference,
                 ],
             ]);
 
-            return $code;
+            return $voucher->refresh();
         }, 5);
     }
 

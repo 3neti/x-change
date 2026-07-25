@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
+use LBHurtado\Voucher\Models\Voucher;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Enums\FundingRequestType;
 use LogicException;
@@ -68,9 +69,9 @@ class FundingRequest extends Model
         return $this->hasMany(FundingRequestEvent::class)->orderBy('sequence');
     }
 
-    public function fundingCode(): HasOne
+    public function voucher(): BelongsTo
     {
-        return $this->hasOne(AccountFundingCode::class);
+        return $this->belongsTo(Voucher::class);
     }
 
     public function notices(): HasMany

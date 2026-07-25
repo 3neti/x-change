@@ -6,7 +6,6 @@ namespace LBHurtado\XChange\Services\Cockpit;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Number;
-use LBHurtado\XChange\Enums\AccountFundingCodeStatus;
 use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Models\FundingRequest;
 use LBHurtado\XChange\Models\FundingRequestNotice;
@@ -29,7 +28,7 @@ final readonly class FundingRequestCockpitReadModel
         $requests = FundingRequest::query()
             ->where('requester_type', $actorType)
             ->where('requester_id', $actorId)
-            ->with('fundingCode')
+            ->with('voucher')
             ->latest('submitted_at')
             ->limit(20)
             ->get();
@@ -57,18 +56,22 @@ final readonly class FundingRequestCockpitReadModel
                 'status' => $request->status->value,
                 'description' => $request->description,
                 'submitted_at' => $request->submitted_at?->toIso8601String(),
-                'funding_code' => $request->fundingCode === null ? null : [
-                    'reference' => $request->fundingCode->reference,
-                    'last_four' => $request->fundingCode->code_last_four,
-                    'status' => $request->fundingCode->status->value,
+                'pay_code' => $request->voucher === null ? null : [
+                    'request_reference' => $request->reference,
+                    'code' => $request->voucher->code,
+                    'last_four' => mb_substr($request->voucher->code, -4),
+                    'status' => $request->voucher->redeemed_at !== null
+                        ? 'claimed'
+                        : ($request->voucher->isExpired() ? 'expired' : 'issued'),
                     'amount' => $this->money(
-                        $request->fundingCode->amount_minor,
-                        $request->fundingCode->currency,
+                        (int) round(
+                            (float) $request->voucher->instructions->cash->amount * 100,
+                        ),
+                        $request->voucher->instructions->cash->currency,
                     ),
-                    'can_claim' => $request->fundingCode->status
-                        === AccountFundingCodeStatus::Issued
-                        && $request->fundingCode->expires_at?->isFuture() === true,
-                    'expires_at' => $request->fundingCode->expires_at?->toIso8601String(),
+                    'can_claim' => $request->status === FundingRequestStatus::PayCodeIssued
+                        && $request->voucher->canRedeem(),
+                    'expires_at' => $request->voucher->expires_at?->toIso8601String(),
                 ],
             ])->all(),
             'notices' => $notices->map(fn (FundingRequestNotice $notice): array => [

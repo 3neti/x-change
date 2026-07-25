@@ -10,7 +10,7 @@ enum FundingRequestStatus: string
     case UnderReview = 'under_review';
     case NeedsInformation = 'needs_information';
     case AwaitingApproval = 'awaiting_approval';
-    case CodeIssued = 'funding_code_issued';
+    case PayCodeIssued = 'funding_code_issued';
     case Completed = 'completed';
     case Rejected = 'rejected';
     case Withdrawn = 'withdrawn';
