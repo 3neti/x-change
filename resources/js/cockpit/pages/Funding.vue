@@ -289,35 +289,29 @@ const summaryCards = computed(() => [
     },
 ]);
 
-const treasuryPortfolioCards = computed(() => {
-    const totals = props.funding_read_model.treasury_portfolio.totals;
+const treasuryPositionControl = computed(() => {
+    const activeConnections =
+        props.funding_read_model.treasury_portfolio.connections.filter(
+            (connection) => connection.mode !== 'disabled',
+        );
 
-    return [
-        {
-            key: 'client-funds',
-            label: 'Client Funds',
-            value: totals.client_funds ?? 'Not available',
-            helper: 'This Account’s provider-positioned funds.',
-        },
-        {
-            key: 'pay-code-reserve',
-            label: 'Reserved for Pay Codes',
-            value: totals.pay_code_reserve ?? 'Not available',
-            helper: 'This Account’s outstanding Pay Code obligation.',
-        },
-        {
-            key: 'provider-inventory',
-            label: 'Provider Inventory',
-            value: totals.provider_inventory ?? 'Not available',
-            helper: 'Recognized provider inventory across active connections.',
-        },
-        {
-            key: 'issuance-capacity',
-            label: 'Issuance Capacity',
-            value: totals.issuance_capacity ?? 'Not available',
-            helper: 'The lower of this Account’s position and fresh provider liquidity, after Pay Code reserve.',
-        },
-    ];
+    if (activeConnections.length === 0) {
+        return 'No active provider connection';
+    }
+
+    const controlsNeedingReview = activeConnections.filter(
+        (connection) => connection.control_status !== 'reconciled',
+    );
+
+    if (controlsNeedingReview.length === 0) {
+        return 'Internal positions reconciled';
+    }
+
+    if (controlsNeedingReview.length === 1) {
+        return controlStatusLabel(controlsNeedingReview[0].control_status);
+    }
+
+    return `${controlsNeedingReview.length} provider controls need review`;
 });
 
 const safeguards = [
@@ -1039,18 +1033,18 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             <p
                                 class="text-xs font-semibold tracking-[0.16em] text-sky-700 uppercase dark:text-sky-300"
                             >
-                                Account Treasury
+                                Treasury controls
                             </p>
                             <span
                                 class="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold text-slate-600 uppercase dark:bg-slate-800 dark:text-slate-300"
                             >
-                                read-only
+                                cached projection
                             </span>
                         </div>
                         <h2
                             class="mt-0.5 text-base font-semibold text-slate-950 dark:text-white"
                         >
-                            Funding position
+                            Liquidity &amp; reconciliation
                         </h2>
                     </div>
                     <div
@@ -1079,11 +1073,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             data-testid="funding-liquidity-freshness"
                         >
                             {{ refreshableProviderLiquidity.provider_label }}
-                            liquidity
-                            {{
-                                refreshableProviderLiquidity.provider_liquidity
-                            }}
-                            · checked
+                            liquidity fresh · checked
                             {{
                                 displayTime(
                                     refreshableProviderLiquidity.provider_liquidity_checked_at,
@@ -1122,28 +1112,35 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     </div>
                 </div>
 
-                <dl class="grid grid-cols-2 xl:grid-cols-4">
-                    <div
-                        v-for="(card, index) in treasuryPortfolioCards"
-                        :key="card.key"
-                        class="min-w-0 border-slate-200 px-3 py-3 text-center dark:border-slate-800"
-                        :class="[
-                            index % 2 === 1 ? 'border-l' : '',
-                            index >= 2 ? 'border-t xl:border-t-0' : '',
-                            index >= 1 ? 'xl:border-l' : '',
-                        ]"
-                    >
+                <dl class="grid sm:grid-cols-2">
+                    <div class="min-w-0 px-4 py-3">
                         <dt
-                            class="truncate text-[0.65rem] font-semibold tracking-[0.08em] text-slate-500 uppercase dark:text-slate-400"
+                            class="text-[0.65rem] font-semibold tracking-[0.08em] text-slate-500 uppercase dark:text-slate-400"
                         >
-                            {{ card.label }}
+                            Provider Inventory
                         </dt>
                         <dd
-                            class="mt-1 truncate text-base font-semibold tracking-tight text-slate-950 dark:text-white"
+                            class="mt-1 text-base font-semibold tracking-tight text-slate-950 dark:text-white"
                         >
-                            {{ card.value }}
+                            {{
+                                funding_read_model.treasury_portfolio.totals
+                                    .provider_inventory ?? 'Not available'
+                            }}
                         </dd>
-                        <span class="sr-only">{{ card.helper }}</span>
+                    </div>
+                    <div
+                        class="min-w-0 border-t border-slate-200 px-4 py-3 sm:border-t-0 sm:border-l dark:border-slate-800"
+                    >
+                        <dt
+                            class="text-[0.65rem] font-semibold tracking-[0.08em] text-slate-500 uppercase dark:text-slate-400"
+                        >
+                            Position control
+                        </dt>
+                        <dd
+                            class="mt-1 text-sm font-semibold text-slate-950 dark:text-white"
+                        >
+                            {{ treasuryPositionControl }}
+                        </dd>
                     </div>
                 </dl>
 
@@ -1154,7 +1151,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     <summary
                         class="cursor-pointer text-xs font-semibold text-slate-700 marker:text-slate-400 dark:text-slate-300"
                     >
-                        Provider breakdown
+                        Provider controls
                         <span class="font-normal text-slate-500">
                             ({{
                                 funding_read_model.treasury_portfolio

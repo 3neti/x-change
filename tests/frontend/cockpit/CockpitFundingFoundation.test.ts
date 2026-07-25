@@ -457,22 +457,25 @@ describe('Cockpit Funding foundation', () => {
         );
         expect(
             wrapper.get('[data-testid="funding-treasury-portfolio"]').text(),
-        ).toContain('Funding position');
+        ).toContain('Liquidity & reconciliation');
         expect(
             wrapper.get('[data-testid="funding-treasury-portfolio"]').text(),
-        ).toContain('Client Funds');
-        expect(
-            wrapper.get('[data-testid="funding-treasury-portfolio"]').text(),
-        ).toContain('Reserved for Pay Codes');
+        ).toContain('NetBank liquidity fresh');
         expect(
             wrapper.get('[data-testid="funding-treasury-portfolio"]').text(),
         ).toContain('Provider Inventory');
         expect(
             wrapper.get('[data-testid="funding-treasury-portfolio"]').text(),
-        ).toContain('Issuance Capacity');
+        ).toContain('Position control');
         expect(
             wrapper.get('[data-testid="funding-treasury-portfolio"]').text(),
-        ).toContain('₱15,050.00');
+        ).toContain('₱24,950.00');
+        expect(
+            wrapper.get('[data-testid="funding-treasury-portfolio"]').text(),
+        ).toContain('Internal positions reconciled');
+        expect(
+            wrapper.get('[data-testid="funding-liquidity-control"]').text(),
+        ).not.toContain('₱30,000.00');
         expect(
             wrapper
                 .get('[data-testid="funding-treasury-provider-breakdown"]')
@@ -636,7 +639,7 @@ describe('Cockpit Funding foundation', () => {
 
         expect(
             wrapper.get('[data-testid="funding-liquidity-freshness"]').text(),
-        ).toContain('NetBank liquidity ₱30,000.00');
+        ).toContain('NetBank liquidity fresh');
 
         await wrapper
             .get('[data-testid="funding-liquidity-refresh"]')
@@ -1294,8 +1297,12 @@ describe('Cockpit Funding foundation', () => {
         expect(wrapper.text()).toContain(
             'No provider Treasury connection is configured.',
         );
-        expect(wrapper.text()).toContain('Provider InventoryNot available');
-        expect(wrapper.text()).toContain('Issuance CapacityNot available');
+        expect(
+            wrapper.get('[data-testid="funding-treasury-portfolio"]').text(),
+        ).toContain('Provider Inventory Not available');
+        expect(
+            wrapper.get('[data-testid="funding-treasury-portfolio"]').text(),
+        ).not.toContain('Issuance Capacity');
     });
 
     it('shows installed providers without exposing exact-amount intake', () => {
