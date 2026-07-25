@@ -177,10 +177,17 @@ function payCodeAccountFundingVoucher(User $issuer): Voucher
         'owner_id' => $issuer->getKey(),
         'metadata' => [
             'instructions' => [
-                'cash' => ['amount' => 125, 'currency' => 'PHP'],
+                'cash' => [
+                    'amount' => 125,
+                    'currency' => 'PHP',
+                    'validation' => ['country' => 'PH'],
+                ],
                 'inputs' => ['fields' => []],
                 'feedback' => [],
                 'rider' => [],
+                'count' => 1,
+                'prefix' => 'FUND',
+                'mask' => '****',
                 'metadata' => [
                     'custom' => [
                         'settlement' => [
