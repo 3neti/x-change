@@ -14,6 +14,7 @@ class VoucherClaim extends Model
         'voucher_id',
         'claim_number',
         'claim_type',
+        'settlement_mode',
         'status',
         'requested_amount_minor',
         'disbursed_amount_minor',
@@ -28,6 +29,10 @@ class VoucherClaim extends Model
         'attempted_at',
         'completed_at',
         'failure_message',
+        'claimant_type',
+        'claimant_id',
+        'account_funding_scope',
+        'treasury_operation_reference',
         'meta',
     ];
 

@@ -33,6 +33,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingRequestReviewCo
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingVerificationCheckController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitNetbankStandingFundingAddressController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeExplorerPageController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeFundingClaimController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitPayCodeFundingInspectionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQrPhFundingSimulationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitQuickGenerateMutationRouteShellController;
@@ -122,6 +123,11 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
             CockpitPayCodeFundingInspectionController::class,
         )->middleware((array) config('x-change.funding.pay_code_claims.inspect_middleware', []))
             ->name('x-change.cockpit.funding.pay-code-inspections.store');
+        Route::post(
+            'funding/pay-code-claims',
+            CockpitPayCodeFundingClaimController::class,
+        )->middleware((array) config('x-change.funding.pay_code_claims.claim_middleware', []))
+            ->name('x-change.cockpit.funding.pay-code-claims.store');
         Route::post('funding/intents', CockpitFundingIntentController::class)->name('x-change.cockpit.funding.intents.store');
         Route::get(
             'funding/intents/{intent:reference}/instructions',

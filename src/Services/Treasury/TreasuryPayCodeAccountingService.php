@@ -57,7 +57,7 @@ final readonly class TreasuryPayCodeAccountingService
         );
         $scope = $this->scope($connection, $voucher, $providerPrincipalMinor);
 
-        return $this->positionOperations->reserve(
+        $reservation = $this->positionOperations->reserve(
             new TreasuryPositionReservationData(
                 operationReference: 'pay-code-position-reservation:'.$scope,
                 sourcePositionReference: $source->positionReference,
@@ -75,6 +75,19 @@ final readonly class TreasuryPayCodeAccountingService
                 ],
             ),
         );
+
+        $metadata = is_array($voucher->metadata) ? $voucher->metadata : [];
+        data_set($metadata, 'treasury.pay_code_reservation', [
+            'status' => 'reserved',
+            'provider' => $connection->provider,
+            'connection_reference' => $connection->reference,
+            'operation_reference' => $reservation->operationReference,
+            'amount_minor' => $providerPrincipalMinor,
+            'currency' => $connection->currency,
+        ]);
+        $voucher->forceFill(['metadata' => $metadata])->saveQuietly();
+
+        return $reservation;
     }
 
     public function release(
