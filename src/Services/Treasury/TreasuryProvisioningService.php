@@ -17,6 +17,7 @@ final readonly class TreasuryProvisioningService
 {
     public function __construct(
         private TreasuryPreflightService $preflight,
+        private TreasuryConfigurationValidator $configuration,
         private SystemUserResolverContract $systemPrincipal,
         private TreasuryPositionProvisioningContract $positions,
     ) {}
@@ -26,6 +27,8 @@ final readonly class TreasuryProvisioningService
      */
     public function provision(array $connectionReferences = []): TreasuryProvisioningData
     {
+        $this->configuration->assertConfigured($connectionReferences);
+
         $preflight = $this->preflight->run($connectionReferences);
 
         if (! $preflight->passes()) {

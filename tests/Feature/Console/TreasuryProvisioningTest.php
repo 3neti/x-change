@@ -16,6 +16,7 @@ use LBHurtado\Wallet\Contracts\SystemUserResolverContract;
 use LBHurtado\Wallet\Treasury\Contracts\TreasuryPositionProvisioningContract;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\XChange\Console\Commands\InstallXChangeCommand;
+use LBHurtado\XChange\Services\Treasury\TreasuryConfigurationValidator;
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XChange\Services\Treasury\TreasuryProvisioningService;
@@ -82,29 +83,31 @@ it('provisions an idempotent zero-balance system treasury position', function ()
         }
     };
 
-    $preflight = new TreasuryPreflightService(
-        new TreasuryProviderConnectionCatalog([
-            'future-primary' => [
-                'provider' => 'future_emi',
-                'mode' => 'required',
-                'currency' => 'PHP',
-                'decimal_places' => 2,
-                'inventory_reference' => 'inventory:future_emi:primary:php',
-                'settlement_resource_reference' => 'resource:future_emi:primary:php',
-                'settlement_resource_type' => 'regulated_stored_value',
-                'custody_mode' => 'provider_projection',
-                'required_capabilities' => [
-                    'readiness_probe',
-                    'balance_read',
-                    'funding_evidence_read',
-                ],
+    $connections = new TreasuryProviderConnectionCatalog([
+        'future-primary' => [
+            'provider' => 'future_emi',
+            'mode' => 'required',
+            'currency' => 'PHP',
+            'decimal_places' => 2,
+            'inventory_reference' => 'inventory:future_emi:primary:php',
+            'settlement_resource_reference' => 'resource:future_emi:primary:php',
+            'settlement_resource_type' => 'regulated_stored_value',
+            'custody_mode' => 'provider_projection',
+            'required_capabilities' => [
+                'readiness_probe',
+                'balance_read',
+                'funding_evidence_read',
             ],
-        ]),
+        ],
+    ]);
+    $preflight = new TreasuryPreflightService(
+        $connections,
         new SettlementProviderRegistry([$provider]),
         [$probe],
     );
     $service = new TreasuryProvisioningService(
         $preflight,
+        new TreasuryConfigurationValidator($connections),
         $resolver,
         app(TreasuryPositionProvisioningContract::class),
     );
@@ -148,4 +151,18 @@ it('registers treasury commands and keeps installation safe when no connection i
         ->getDefaultProperties()['signature'];
 
     expect($signature)->toContain('{--no-treasury');
+});
+
+it('fails installation before side effects when treasury identity is missing', function () {
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.treasury.legal_entity_reference', null);
+
+    $this->artisan('x-change:install', ['--no-interaction' => true])
+        ->expectsOutputToContain(
+            'Treasury configuration [legal_entity_reference] is required. '
+            .'Set [XCHANGE_TREASURY_LEGAL_ENTITY_REFERENCE] to a stable deployment identifier, '
+            .'run [php artisan optimize:clear], and retry.',
+        )
+        ->expectsOutputToContain('--no-treasury')
+        ->assertExitCode(Command::FAILURE);
 });

@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Console\Commands;
 
 use Illuminate\Console\Command;
+use LBHurtado\XChange\Exceptions\TreasuryConfigurationException;
 use LBHurtado\XChange\Services\PublishedAssetDriftDetector;
+use LBHurtado\XChange\Services\Treasury\TreasuryConfigurationValidator;
 
 class InstallXChangeCommand extends Command
 {
@@ -24,9 +26,24 @@ class InstallXChangeCommand extends Command
 
     protected $description = 'Install the X-Change package UI, assets, and run migrations';
 
-    public function handle(PublishedAssetDriftDetector $publishedAssets): int
-    {
+    public function handle(
+        PublishedAssetDriftDetector $publishedAssets,
+        TreasuryConfigurationValidator $treasuryConfiguration,
+    ): int {
         $this->components->info('Installing X-Change...');
+
+        if (! $this->option('no-treasury')) {
+            try {
+                $treasuryConfiguration->assertConfigured();
+            } catch (TreasuryConfigurationException $exception) {
+                $this->components->error($exception->getMessage());
+                $this->components->warn(
+                    'Use [--no-treasury] only when Treasury initialization is intentionally deferred.',
+                );
+
+                return self::FAILURE;
+            }
+        }
 
         $force = (bool) $this->option('force');
 

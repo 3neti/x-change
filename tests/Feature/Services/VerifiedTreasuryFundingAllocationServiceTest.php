@@ -22,6 +22,7 @@ use LBHurtado\XChange\Contracts\AccountBalanceReadModelContract;
 use LBHurtado\XChange\Contracts\FundingAccountCreditContract;
 use LBHurtado\XChange\Services\Treasury\DefaultTreasuryPrincipalReferenceResolver;
 use LBHurtado\XChange\Services\Treasury\TreasuryAccountPortfolioProvisioningService;
+use LBHurtado\XChange\Services\Treasury\TreasuryConfigurationValidator;
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
 use LBHurtado\XChange\Services\Treasury\TreasuryProviderConnectionCatalog;
 use LBHurtado\XChange\Services\Treasury\TreasuryProvisioningService;
@@ -125,7 +126,12 @@ it('recognizes and allocates verified funding exactly once through treasury posi
     $service = new VerifiedTreasuryFundingAllocationService(
         app(FundingAccountCreditContract::class),
         $connections,
-        new TreasuryProvisioningService($preflight, $systemResolver, $positions),
+        new TreasuryProvisioningService(
+            $preflight,
+            new TreasuryConfigurationValidator($connections),
+            $systemResolver,
+            $positions,
+        ),
         new TreasuryAccountPortfolioProvisioningService(
             $preflight,
             new DefaultTreasuryPrincipalReferenceResolver,

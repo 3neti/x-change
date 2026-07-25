@@ -27,6 +27,7 @@ use LBHurtado\Wallet\Treasury\Models\TreasuryInventoryOperation;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPosition;
 use LBHurtado\Wallet\Treasury\Models\TreasuryPositionOperation;
 use LBHurtado\XChange\Enums\TreasuryOpeningBalanceStatus;
+use LBHurtado\XChange\Services\Treasury\TreasuryConfigurationValidator;
 use LBHurtado\XChange\Services\Treasury\TreasuryInventoryRegistrationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryOpeningBalanceReconciliationService;
 use LBHurtado\XChange\Services\Treasury\TreasuryPreflightService;
@@ -256,6 +257,7 @@ function openingBalanceReconciliationService(
     config()->set('x-change.treasury.legal_profile_version', '2026-07-24.1');
     $provisioning = new TreasuryProvisioningService(
         $preflight,
+        new TreasuryConfigurationValidator($catalog),
         $systemResolver,
         app(TreasuryPositionProvisioningContract::class),
     );
