@@ -86,7 +86,7 @@ XCHANGE_TREASURY_LEGAL_ENTITY_REFERENCE=entity:example-ph
 XCHANGE_TREASURY_SYSTEM_PRINCIPAL_REFERENCE=principal:system
 XCHANGE_TREASURY_SYSTEM_MANDATE_REFERENCE=mandate:system:treasury
 XCHANGE_TREASURY_LEGAL_PROFILE=treasury-settlement-ph-v1
-XCHANGE_TREASURY_LEGAL_PROFILE_VERSION=2026-07-25.1
+XCHANGE_TREASURY_LEGAL_PROFILE_VERSION=2026-07-24.1
 
 XCHANGE_TREASURY_NETBANK_MODE=required
 XCHANGE_TREASURY_PAYNAMICS_MODE=disabled
@@ -108,7 +108,11 @@ The installer:
 6. idempotently provisions zero-balance Treasury Positions; and
 7. reads authoritative provider balances and performs opening reconciliation.
 
-`XCHANGE_TREASURY_LEGAL_ENTITY_REFERENCE` must be an explicit, stable identifier for the deployment's legal entity, such as `legal-entity:example-ph`. Do not derive it from `APP_NAME` or silently default it: the reference is persisted with Treasury Position metadata and must remain stable across deployments. After changing environment configuration, run `php artisan optimize:clear` before retrying installation.
+`XCHANGE_TREASURY_LEGAL_ENTITY_REFERENCE` must be an explicit, stable identifier for the deployment's legal entity, such as `legal-entity:example-ph`. Do not derive it from `APP_NAME` or silently default it: the reference is persisted with Treasury Position metadata and must remain stable across deployments.
+
+`XCHANGE_TREASURY_LEGAL_PROFILE_VERSION` must also be explicitly pinned. It is part of the immutable Treasury Position definition, so a package upgrade must not silently advance it. Changing an existing deployment's profile version requires a controlled accounting migration; it is not an installer retry mechanism.
+
+After changing environment configuration, run `php artisan optimize:clear` before retrying installation.
 
 Use `--no-treasury` only for build or recovery workflows where Treasury initialization is intentionally deferred.
 

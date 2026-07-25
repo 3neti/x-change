@@ -421,7 +421,7 @@ return [
         'principal_reference' => env('XCHANGE_TREASURY_SYSTEM_PRINCIPAL_REFERENCE', 'principal:system'),
         'system_mandate_reference' => env('XCHANGE_TREASURY_SYSTEM_MANDATE_REFERENCE', 'mandate:system:treasury'),
         'legal_profile' => env('XCHANGE_TREASURY_LEGAL_PROFILE', 'treasury-settlement-ph-v1'),
-        'legal_profile_version' => env('XCHANGE_TREASURY_LEGAL_PROFILE_VERSION', '2026-07-25.1'),
+        'legal_profile_version' => env('XCHANGE_TREASURY_LEGAL_PROFILE_VERSION'),
         'vocabulary' => [
             'internal_balance' => [
                 'label' => 'Client Funds',

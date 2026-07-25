@@ -166,3 +166,17 @@ it('fails installation before side effects when treasury identity is missing', f
         ->expectsOutputToContain('--no-treasury')
         ->assertExitCode(Command::FAILURE);
 });
+
+it('requires an explicitly pinned treasury legal profile version', function () {
+    enableNetbankTreasuryForTests();
+    config()->set('x-change.treasury.legal_profile_version', null);
+
+    $this->artisan('x-change:install', ['--no-interaction' => true])
+        ->expectsOutputToContain(
+            'Treasury configuration [legal_profile_version] is required. '
+            .'Set [XCHANGE_TREASURY_LEGAL_PROFILE_VERSION] to a stable deployment identifier, '
+            .'run [php artisan optimize:clear], and retry.',
+        )
+        ->expectsOutputToContain('--no-treasury')
+        ->assertExitCode(Command::FAILURE);
+});
