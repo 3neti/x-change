@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { useEcho } from '@laravel/echo-vue';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
@@ -302,6 +302,41 @@ const standingFundingAvailability = {
     daily_limit_minor: 10_000_000,
 };
 
+const standingFundingAddress = {
+    reference: '01J-STANDING-1',
+    provider: 'netbank',
+    funding_address: '915001234567890123456',
+    masked_funding_address: '•••• 123456',
+    purpose: 'account_funding',
+    recognition_mode: 'supervised',
+    status: 'active',
+    currency: 'PHP',
+    institution: 'NetBank',
+    merchant_name: 'X Change',
+    qr_code: 'data:image/png;base64,REUSABLE',
+    qr_mode: 'static',
+    transaction_type: 'p2m',
+    embedded_amount: false,
+    provider_generated: true,
+    temporary: false,
+    funding_intent_created: false,
+    automatic_credit_enabled: false,
+    minimum_amount_minor: 100,
+    maximum_amount_minor: 5_000_000,
+    daily_limit_minor: 10_000_000,
+};
+
+const fundingQrMerchantProfile = {
+    name: 'Treasury Desk',
+    city: 'Manila',
+    merchant_category_code: '0000',
+    merchant_name_template: '{name} - {city}',
+    category_options: [],
+    presentation_only: true as const,
+    controls_routing: false as const,
+    controls_settlement: false as const,
+};
+
 const fundingRealtime = {
     enabled: true,
     channel: 'x-change.funding.opaque-owner-token',
@@ -352,33 +387,25 @@ describe('Cockpit Funding foundation', () => {
         echoCallback.current = null;
     });
 
-    it('renders provider-verified funding posture and operational facts', () => {
+    it('renders provider-verified funding posture and opens the reusable QR immediately', async () => {
+        const fetch = vi.fn().mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({
+                schema: 'x-change.cockpit.standing-funding-address.v1',
+                address: standingFundingAddress,
+            }),
+        });
+        vi.stubGlobal('fetch', fetch);
         const wrapper = mount(Funding, {
             props: {
                 funding_read_model: fundingReadModel,
-                funding_instruction: {
-                    reference: '01J-FUNDING-1',
-                    provider: 'netbank',
-                    amount: '₱250.00',
-                    currency: 'PHP',
-                    status: 'awaiting_funds',
-                    expires_at: '2026-07-23T08:30:00+08:00',
-                    funding_address: '915001234567890123456',
-                    institution: 'NetBank',
-                    account_name: 'X-Change Treasury',
-                    delivery: 'manual-bank-or-wallet-transfer',
-                    qr_code: 'data:image/png;base64,AA==',
-                    qr_mode: 'dynamic',
-                    transaction_type: 'p2m',
-                    embedded_amount: true,
-                    provider_generated: true,
-                    balance_changed: false,
-                    sensitive: true,
-                },
                 standing_funding_address: standingFundingAvailability,
+                funding_qr_merchant_profile: fundingQrMerchantProfile,
                 funding_realtime: fundingRealtime,
             },
         });
+        await flushPromises();
 
         expect(
             wrapper.get('[data-testid="cockpit-funding-page"]').text(),
@@ -475,15 +502,11 @@ describe('Cockpit Funding foundation', () => {
         expect(
             wrapper.get('[data-testid="cockpit-funding-activity"]').text(),
         ).toContain('Funding Activity');
-        expect(wrapper.text()).toContain('Top up an exact amount');
-        expect(wrapper.text()).toContain('Create one-time instructions');
-        expect(wrapper.text()).toContain('Transfer exactly ₱250.00');
-        expect(wrapper.text()).toContain('Scan to pay exactly ₱250.00');
         expect(
             wrapper
-                .get('[data-testid="cockpit-funding-qr"] img')
+                .get('[data-testid="standing-funding-address-qr"]')
                 .attributes('src'),
-        ).toBe('data:image/png;base64,AA==');
+        ).toBe('data:image/png;base64,REUSABLE');
         expect(wrapper.text()).toContain('915001234567890123456');
         expect(wrapper.text()).toContain('Check NetBank');
         expect(wrapper.text()).toContain('Account Funding Address');
@@ -500,15 +523,23 @@ describe('Cockpit Funding foundation', () => {
         expect(
             wrapper.get('[data-testid="funding-provider-controls"]').text(),
         ).toContain('production rejects this scheme');
-        expect(wrapper.text()).toContain('Create Account Funding QR');
         expect(wrapper.text()).toContain('Live funding updates');
         expect(wrapper.text()).toContain(
             'payer mobile, amount, timing, and merchant text never decide',
         );
-        expect(wrapper.text()).toContain('Reopen QR');
-        expect(wrapper.text()).toContain(
-            'The Account changes only after independent provider verification',
-        );
+        expect(
+            wrapper.get('[data-testid="funding-qr-merchant-profile"]').text(),
+        ).toContain('Save & regenerate QR');
+        expect(
+            wrapper
+                .get('[data-testid="funding-qr-merchant-profile"]')
+                .findAll('input')
+                .map((input) => (input.element as HTMLInputElement).value),
+        ).toEqual(['Treasury Desk', 'Manila']);
+        expect(wrapper.text()).not.toContain('Reveal Account Funding QR');
+        expect(wrapper.text()).not.toContain('Hide sensitive QR');
+        expect(wrapper.text()).not.toContain('Top up an exact amount');
+        expect(wrapper.text()).not.toContain('Create one-time instructions');
         expect(wrapper.text()).not.toContain('provider transaction');
         expect(wrapper.findAll('table tbody tr')).toHaveLength(1);
         expect(wrapper.get('table').classes()).toContain('min-w-[56rem]');
@@ -553,7 +584,10 @@ describe('Cockpit Funding foundation', () => {
                             ),
                     },
                 },
-                standing_funding_address: standingFundingAvailability,
+                standing_funding_address: {
+                    ...standingFundingAvailability,
+                    available: false,
+                },
             },
         });
 
@@ -565,7 +599,7 @@ describe('Cockpit Funding foundation', () => {
         ).toContain('Jul 23, 2026');
     });
 
-    it('keeps two funding paths primary and places provider tooling in advanced controls', async () => {
+    it('keeps two funding paths primary and removes exact-amount tooling', async () => {
         const fetch = vi.fn();
         vi.stubGlobal('fetch', fetch);
         const wrapper = mount(Funding, {
@@ -573,7 +607,8 @@ describe('Cockpit Funding foundation', () => {
                 funding_read_model: fundingReadModel,
                 standing_funding_address: {
                     ...standingFundingAvailability,
-                    exists: true,
+                    available: false,
+                    status: 'not_configured',
                 },
                 funding_simulation: fundingSimulation,
             },
@@ -586,10 +621,8 @@ describe('Cockpit Funding foundation', () => {
                 .attributes('aria-selected'),
         ).toBe('true');
         expect(
-            wrapper
-                .get('[data-testid="exact-amount-self-top-up"]')
-                .attributes('open'),
-        ).toBeUndefined();
+            wrapper.find('[data-testid="exact-amount-self-top-up"]').exists(),
+        ).toBe(false);
         expect(
             wrapper
                 .find('[data-testid="funding-mode-funding_intent"]')
@@ -628,7 +661,10 @@ describe('Cockpit Funding foundation', () => {
             props: {
                 funding_read_model: fundingReadModel,
                 funding_requests: fundingRequestReadModel,
-                standing_funding_address: standingFundingAvailability,
+                standing_funding_address: {
+                    ...standingFundingAvailability,
+                    available: false,
+                },
             },
         });
 
@@ -668,7 +704,10 @@ describe('Cockpit Funding foundation', () => {
         mount(Funding, {
             props: {
                 funding_read_model: fundingReadModel,
-                standing_funding_address: standingFundingAvailability,
+                standing_funding_address: {
+                    ...standingFundingAvailability,
+                    available: false,
+                },
                 funding_realtime: fundingRealtime,
             },
         });
@@ -704,7 +743,10 @@ describe('Cockpit Funding foundation', () => {
         const wrapper = mount(Funding, {
             props: {
                 funding_read_model: fundingReadModel,
-                standing_funding_address: standingFundingAvailability,
+                standing_funding_address: {
+                    ...standingFundingAvailability,
+                    available: false,
+                },
                 funding_realtime: {
                     ...fundingRealtime,
                     enabled: false,
@@ -805,11 +847,7 @@ describe('Cockpit Funding foundation', () => {
             },
         });
 
-        await wrapper
-            .get('[data-testid="open-standing-funding-address"]')
-            .trigger('click');
-        await nextTick();
-        await nextTick();
+        await flushPromises();
 
         expect(fetch).toHaveBeenNthCalledWith(
             1,
@@ -838,8 +876,7 @@ describe('Cockpit Funding foundation', () => {
         await wrapper
             .get('[data-testid="check-standing-funding-history"]')
             .trigger('click');
-        await nextTick();
-        await nextTick();
+        await flushPromises();
 
         expect(fetch).toHaveBeenNthCalledWith(
             2,
@@ -857,7 +894,7 @@ describe('Cockpit Funding foundation', () => {
         await wrapper
             .get('[data-testid="approve-standing-funding-receipt"]')
             .trigger('click');
-        await nextTick();
+        await flushPromises();
         await nextTick();
 
         expect(fetch).toHaveBeenNthCalledWith(
@@ -883,13 +920,9 @@ describe('Cockpit Funding foundation', () => {
             preserveState: true,
         });
 
-        await wrapper
-            .get('[data-testid="hide-standing-funding-address"]')
-            .trigger('click');
-
         expect(
             wrapper
-                .find('[data-testid="standing-funding-address-qr"]')
+                .find('[data-testid="hide-standing-funding-address"]')
                 .exists(),
         ).toBe(false);
     });
@@ -997,12 +1030,7 @@ describe('Cockpit Funding foundation', () => {
             },
         });
 
-        expect(fetch).not.toHaveBeenCalled();
-        await wrapper
-            .get('[data-testid="open-standing-funding-address"]')
-            .trigger('click');
-        await nextTick();
-        await nextTick();
+        await flushPromises();
         await wrapper
             .get('[data-testid="check-standing-funding-history"]')
             .trigger('click');
@@ -1094,11 +1122,7 @@ describe('Cockpit Funding foundation', () => {
             },
         });
 
-        expect(fetch).not.toHaveBeenCalled();
-        await wrapper
-            .get('[data-testid="open-standing-funding-address"]')
-            .trigger('click');
-        await nextTick();
+        await flushPromises();
         await wrapper
             .get('[data-testid="check-standing-funding-history"]')
             .trigger('click');
@@ -1118,53 +1142,6 @@ describe('Cockpit Funding foundation', () => {
 
         expect(fetch).toHaveBeenCalledTimes(2);
         wrapper.unmount();
-    });
-
-    it('reopens an owner-scoped QR without placing it in the general read model', async () => {
-        const fetch = vi.fn().mockResolvedValue({
-            ok: true,
-            status: 200,
-            json: async () => ({
-                instruction: {
-                    reference: '01J-FUNDING-1',
-                    provider: 'netbank',
-                    amount: '₱250.00',
-                    currency: 'PHP',
-                    status: 'awaiting_funds',
-                    expires_at: '2026-07-23T08:30:00+08:00',
-                    qr_code: 'data:image/png;base64,REOPENED',
-                    embedded_amount: true,
-                    provider_generated: true,
-                    balance_changed: false,
-                    sensitive: true,
-                },
-            }),
-        });
-        vi.stubGlobal('fetch', fetch);
-        const wrapper = mount(Funding, {
-            props: {
-                funding_read_model: fundingReadModel,
-            },
-        });
-
-        await wrapper
-            .get('[data-testid="reopen-funding-instructions-01J-FUNDING-1"]')
-            .trigger('click');
-        await nextTick();
-        await nextTick();
-
-        expect(fetch).toHaveBeenCalledWith(
-            '/x/cockpit/funding/intents/01J-FUNDING-1/instructions',
-            expect.objectContaining({
-                method: 'GET',
-                credentials: 'same-origin',
-            }),
-        );
-        expect(
-            wrapper
-                .get('[data-testid="cockpit-funding-qr"] img')
-                .attributes('src'),
-        ).toBe('data:image/png;base64,REOPENED');
     });
 
     it('renders safe empty states when no funding records exist', () => {
@@ -1204,41 +1181,18 @@ describe('Cockpit Funding foundation', () => {
             },
         });
 
-        expect(wrapper.text()).toContain('No exact-amount top-ups yet');
-        expect(wrapper.text()).toContain('No open funding exceptions.');
-        expect(wrapper.text()).toContain(
-            'No reconciliation requests are awaiting approval.',
-        );
-        expect(wrapper.text()).toContain('No active funding recovery holds.');
+        expect(wrapper.text()).toContain('No funding activity yet');
+        expect(
+            wrapper.find('[data-testid="funding-exception-controls"]').exists(),
+        ).toBe(false);
         expect(wrapper.text()).toContain(
             'No provider Treasury connection is configured.',
         );
         expect(wrapper.text()).toContain('Provider InventoryNot available');
         expect(wrapper.text()).toContain('Issuance CapacityNot available');
-        expect(wrapper.text()).toContain(
-            'Funding instructions will appear here once',
-        );
     });
 
-    it('rejects a malformed amount before submitting the intent', async () => {
-        const wrapper = mount(Funding, {
-            props: {
-                funding_read_model: fundingReadModel,
-            },
-        });
-
-        await wrapper
-            .get('[data-testid="cockpit-funding-amount"]')
-            .setValue('25.999');
-        await wrapper
-            .get('[data-testid="cockpit-funding-submit"]')
-            .trigger('click');
-        await nextTick();
-
-        expect(wrapper.text()).toContain('no more than two decimal places');
-    });
-
-    it('shows installed providers while keeping disabled funding intake locked', () => {
+    it('shows installed providers without exposing exact-amount intake', () => {
         const wrapper = mount(Funding, {
             props: {
                 funding_read_model: {
@@ -1251,25 +1205,18 @@ describe('Cockpit Funding foundation', () => {
             },
         });
 
-        const provider = wrapper.get(
-            '[data-testid="cockpit-funding-provider"]',
+        const providerControls = wrapper.get(
+            '[data-testid="funding-provider-controls"]',
         );
-        const providerText = provider.text().replace(/\s+/g, ' ');
-
-        expect(providerText).toContain('No funding provider enabled');
-        expect(providerText).toContain('NetBank · Shared (disabled)');
-        expect(providerText).toContain('Paynamics · Shared (disabled)');
+        expect(providerControls.text()).toContain('NetBank');
+        expect(providerControls.text()).toContain('Paynamics');
         expect(wrapper.text()).toContain('2 installed');
-        expect(wrapper.text()).toContain('Funding Intake stays locked');
-        expect(provider.attributes('disabled')).toBeUndefined();
         expect(
-            wrapper
-                .get('[data-testid="cockpit-funding-submit"]')
-                .attributes('disabled'),
-        ).toBeDefined();
+            wrapper.find('[data-testid="cockpit-funding-submit"]').exists(),
+        ).toBe(false);
     });
 
-    it('offers a local Funding Intent happy path without enabling live providers', () => {
+    it('keeps simulation providers out of operational funding activity', () => {
         const wrapper = mount(Funding, {
             props: {
                 funding_read_model: {
@@ -1304,20 +1251,11 @@ describe('Cockpit Funding foundation', () => {
         });
 
         expect(
-            wrapper.get('[data-testid="cockpit-funding-provider"]').element,
-        ).toHaveProperty('value', 'qrph_simulator');
-        expect(wrapper.text()).toContain('Local happy path');
-        expect(wrapper.text()).toContain(
-            'Create simulated funding instructions',
-        );
-        expect(
-            wrapper
-                .get('[data-testid="cockpit-funding-submit"]')
-                .attributes('disabled'),
-        ).toBeUndefined();
+            wrapper.get('[data-testid="funding-provider-controls"]').text(),
+        ).toContain('QR Ph Simulator');
         expect(
             wrapper.get('[data-testid="cockpit-funding-activity"]').text(),
-        ).toContain('No exact-amount top-ups yet');
+        ).toContain('No funding activity yet');
         expect(
             wrapper
                 .get('[data-testid="cockpit-funding-activity"]')

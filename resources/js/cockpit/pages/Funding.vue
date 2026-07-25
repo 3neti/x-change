@@ -1,25 +1,23 @@
 <script setup lang="ts">
 import { router, useForm, usePoll } from '@inertiajs/vue3';
 import { useEcho } from '@laravel/echo-vue';
+import { update as updateFundingQrMerchantProfile } from '@/routes/x-change/cockpit/accounts/funding-qr-merchant-profile';
 import { approve as approveReconciliation } from '@/routes/x-change/cockpit/funding/reconciliations';
 import { store as claimAccountFundingCode } from '@/routes/x-change/cockpit/funding/codes/claims';
 import { store as approveFundingRequest } from '@/routes/x-change/cockpit/funding/requests/approvals';
 import { store as storeFundingRequest } from '@/routes/x-change/cockpit/funding/requests';
 import { store as prepareFundingRequest } from '@/routes/x-change/cockpit/funding/requests/reviews';
-import { show as showFundingInstructions } from '@/routes/x-change/cockpit/funding/intents/instructions';
-import { store as storeFundingIntent } from '@/routes/x-change/cockpit/funding/intents';
 import { store as storeVerificationCheck } from '@/routes/x-change/cockpit/funding/intents/verification-checks';
 import { store as openStandingFundingAddressRoute } from '@/routes/x-change/cockpit/funding/standing-addresses/netbank';
 import { store as checkStandingFundingHistoryRoute } from '@/routes/x-change/cockpit/funding/standing-addresses/netbank/history-checks';
 import { approve as approveStandingFundingReceiptRoute } from '@/routes/x-change/cockpit/funding/standing-addresses/netbank/receipts';
 import { store as runQrPhFundingSimulationRoute } from '@/routes/x-change/cockpit/funding/scenarios/qrph';
 import { store as storeReconciliationRequest } from '@/routes/x-change/cockpit/funding/suspense/reconciliation-requests';
-import { computed, onUnmounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import CockpitManualCopyButton from '../components/CockpitManualCopyButton.vue';
 import CockpitLayout from '../layouts/CockpitLayout.vue';
 import type {
     CockpitFundingPageProps,
-    CockpitFundingInstruction,
     CockpitQrPhFundingSimulationResult,
     CockpitStandingFundingAddress,
     CockpitStandingFundingReceipt,
@@ -43,16 +41,9 @@ const fundingRequests = computed(
             redactions: {},
         },
 );
-const currentInstruction = ref<CockpitFundingInstruction | null>(
-    props.funding_instruction ?? null,
-);
-const amount = ref('');
-const amountError = ref<string | null>(null);
 const activeReconciliationCase = ref<string | null>(null);
 const activeApproval = ref<string | null>(null);
 const activeVerificationCheck = ref<string | null>(null);
-const activeInstructionRequest = ref<string | null>(null);
-const instructionError = ref<string | null>(null);
 const simulationRunning = ref(false);
 const simulationError = ref<string | null>(null);
 const simulationResult = ref<CockpitQrPhFundingSimulationResult | null>(null);
@@ -72,6 +63,19 @@ const fundingReviewAmount = ref('');
 const fundingRequestAmountError = ref<string | null>(null);
 type FundingWorkspaceMode = 'self_top_up' | 'funding_code' | 'simulation';
 const activeFundingMode = ref<FundingWorkspaceMode>('self_top_up');
+const fundingQrMerchantProfile = computed(
+    () =>
+        props.funding_qr_merchant_profile ?? {
+            name: 'Account Holder',
+            city: 'Manila',
+            merchant_category_code: '0000',
+            merchant_name_template: '{name} - {city}',
+            category_options: [],
+            presentation_only: true as const,
+            controls_routing: false as const,
+            controls_settlement: false as const,
+        },
+);
 const fundingWorkspaceModes = computed(() => [
     {
         key: 'self_top_up' as const,
@@ -155,20 +159,14 @@ const { start: startFundingPoll, stop: stopFundingPoll } = usePoll(
         mode: 'rest',
     },
 );
-const form = useForm({
-    provider: availableFundingProviders.value[0]?.code ?? '',
-    amount_minor: 0,
-    currency: 'PHP',
-    idempotency_key: newIdempotencyKey(),
+const merchantProfileForm = useForm({
+    name: fundingQrMerchantProfile.value.name,
+    city: fundingQrMerchantProfile.value.city,
+    merchant_category_code:
+        fundingQrMerchantProfile.value.merchant_category_code,
+    merchant_name_template:
+        fundingQrMerchantProfile.value.merchant_name_template,
 });
-const selectedFundingProvider = computed(() =>
-    props.funding_read_model.providers.find(
-        (provider) => provider.code === form.provider,
-    ),
-);
-const simulationIntentSelected = computed(
-    () => selectedFundingProvider.value?.simulation_only === true,
-);
 const reconciliationForm = useForm({
     action: '',
 });
@@ -237,12 +235,10 @@ onUnmounted(() => {
     }
 });
 
-const clientAmountError = computed(() => {
-    if (amount.value === '' || amountToMinor(amount.value) !== null) {
-        return null;
+onMounted(() => {
+    if (props.standing_funding_address?.available === true) {
+        void openStandingFundingAddress();
     }
-
-    return 'Enter an amount greater than zero with no more than two decimal places.';
 });
 
 watch(hasOpenFundingWork, (hasOpenWork) => {
@@ -254,15 +250,6 @@ watch(hasOpenFundingWork, (hasOpenWork) => {
 
     stopFundingPoll();
 });
-
-watch(
-    () => props.funding_instruction,
-    (instruction) => {
-        if (instruction) {
-            currentInstruction.value = instruction;
-        }
-    },
-);
 
 const summaryCards = computed(() => [
     {
@@ -387,30 +374,6 @@ function amountToMinor(value: string): number | null {
         : null;
 }
 
-function submitFundingIntent(): void {
-    form.clearErrors();
-    amountError.value = null;
-
-    const amountMinor = amountToMinor(amount.value);
-
-    if (amountMinor === null) {
-        amountError.value =
-            'Enter an amount greater than zero with no more than two decimal places.';
-
-        return;
-    }
-
-    form.amount_minor = amountMinor;
-    form.post(storeFundingIntent(), {
-        preserveScroll: true,
-        onSuccess: () => {
-            amount.value = '';
-            form.amount_minor = 0;
-            form.idempotency_key = newIdempotencyKey();
-        },
-    });
-}
-
 function submitFundingRequest(): void {
     fundingRequestForm.clearErrors();
     fundingRequestAmountError.value = null;
@@ -511,49 +474,6 @@ function checkNetBank(reference: string): void {
             activeVerificationCheck.value = null;
         },
     });
-}
-
-async function reopenFundingInstructions(reference: string): Promise<void> {
-    if (activeInstructionRequest.value !== null) {
-        return;
-    }
-
-    activeInstructionRequest.value = reference;
-    instructionError.value = null;
-    const route = showFundingInstructions(reference);
-
-    try {
-        const response = await fetch(route.url, {
-            method: route.method.toUpperCase(),
-            credentials: 'same-origin',
-            headers: {
-                Accept: 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-        });
-        const body = await safeJson(response);
-
-        if (
-            !response.ok ||
-            typeof body.instruction !== 'object' ||
-            body.instruction === null
-        ) {
-            instructionError.value =
-                response.status === 410
-                    ? 'These one-time instructions have expired.'
-                    : 'The one-time instructions could not be reopened.';
-
-            return;
-        }
-
-        currentInstruction.value =
-            body.instruction as CockpitFundingInstruction;
-    } catch {
-        instructionError.value =
-            'The one-time instructions could not reach the Cockpit service.';
-    } finally {
-        activeInstructionRequest.value = null;
-    }
 }
 
 function reconciliationActionLabel(action: string): string {
@@ -872,7 +792,19 @@ function refreshFundingProjections(): void {
     });
 }
 
-function hideStandingFundingAddress(): void {
+function saveFundingQrMerchantProfile(): void {
+    merchantProfileForm.patch(updateFundingQrMerchantProfile(), {
+        preserveScroll: true,
+        onSuccess: () => {
+            resetStandingFundingAddress();
+            standingActionNotice.value =
+                'QR presentation saved. Refreshing the reusable QR…';
+            void openStandingFundingAddress();
+        },
+    });
+}
+
+function resetStandingFundingAddress(): void {
     standingAddress.value = null;
     standingReceipts.value = [];
     standingHistoryCheckedAt.value = null;
@@ -1401,56 +1333,57 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             credit goes.
                         </p>
                     </div>
-                    <div class="flex flex-wrap gap-2 lg:justify-end">
+                    <div
+                        class="flex flex-wrap items-center gap-2 lg:justify-end"
+                    >
+                        <span
+                            v-if="standingAddressLoading"
+                            class="inline-flex h-10 items-center rounded-lg bg-sky-100 px-4 text-sm font-semibold text-sky-800 dark:bg-sky-950 dark:text-sky-200"
+                            data-testid="standing-funding-address-loading"
+                        >
+                            Preparing reusable QR…
+                        </span>
                         <button
-                            v-if="standingAddress === null"
-                            type="button"
-                            class="h-10 rounded-lg bg-sky-700 px-4 text-sm font-semibold text-white transition hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50"
-                            :disabled="
-                                standingAddressLoading ||
-                                standing_funding_address.available !== true
+                            v-else-if="
+                                standingAddress === null &&
+                                standing_funding_address.available === true
                             "
+                            type="button"
+                            class="h-10 rounded-lg border border-sky-300 bg-white px-4 text-sm font-semibold text-sky-800 transition hover:bg-sky-50 dark:border-sky-800 dark:bg-slate-950 dark:text-sky-200 dark:hover:bg-sky-950"
                             data-testid="open-standing-funding-address"
                             @click="openStandingFundingAddress"
                         >
+                            Try again
+                        </button>
+                        <button
+                            v-if="standingAddress"
+                            type="button"
+                            class="h-10 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-sky-400 dark:text-slate-950 dark:hover:bg-sky-300"
+                            :disabled="
+                                standingHistoryLoading ||
+                                standingHistoryCooldownSeconds > 0
+                            "
+                            data-testid="check-standing-funding-history"
+                            @click="checkStandingFundingHistory"
+                        >
                             {{
-                                standingAddressLoading
-                                    ? 'Loading secure QR…'
-                                    : standing_funding_address.available
-                                      ? standing_funding_address.exists
-                                          ? 'Reveal Account Funding QR'
-                                          : 'Create Account Funding QR'
-                                      : 'Account Funding Address unavailable'
+                                standingHistoryLoading
+                                    ? 'Checking NetBank…'
+                                    : standingHistoryCooldownSeconds > 0
+                                      ? `Try again in ${standingHistoryCooldownSeconds}s`
+                                      : 'Check NetBank'
                             }}
                         </button>
-                        <template v-else>
-                            <button
-                                type="button"
-                                class="h-10 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-sky-400 dark:text-slate-950 dark:hover:bg-sky-300"
-                                :disabled="
-                                    standingHistoryLoading ||
-                                    standingHistoryCooldownSeconds > 0
-                                "
-                                data-testid="check-standing-funding-history"
-                                @click="checkStandingFundingHistory"
-                            >
-                                {{
-                                    standingHistoryLoading
-                                        ? 'Checking NetBank…'
-                                        : standingHistoryCooldownSeconds > 0
-                                          ? `Try again in ${standingHistoryCooldownSeconds}s`
-                                          : 'Check NetBank'
-                                }}
-                            </button>
-                            <button
-                                type="button"
-                                class="h-10 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
-                                data-testid="hide-standing-funding-address"
-                                @click="hideStandingFundingAddress"
-                            >
-                                Hide sensitive QR
-                            </button>
-                        </template>
+                        <span
+                            v-if="
+                                !standingAddressLoading &&
+                                standingAddress === null &&
+                                standing_funding_address.available !== true
+                            "
+                            class="rounded-lg bg-slate-100 px-3 py-2 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                        >
+                            Self top-up unavailable
+                        </span>
                     </div>
                 </div>
 
@@ -1459,7 +1392,7 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     class="border-t border-sky-100 bg-sky-50/50 p-5 dark:border-sky-950 dark:bg-sky-950/10"
                 >
                     <div
-                        class="grid gap-5 md:grid-cols-[12rem_minmax(0,1fr)] md:items-start"
+                        class="grid gap-5 md:grid-cols-[12rem_minmax(0,1fr)] md:items-start xl:grid-cols-[12rem_minmax(0,1fr)_minmax(17rem,0.72fr)]"
                     >
                         <div
                             class="mx-auto rounded-xl border border-sky-200 bg-white p-2 shadow-sm md:mx-0 dark:border-sky-900"
@@ -1545,6 +1478,84 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                 currency, status, and limit check passes.
                             </p>
                         </div>
+                        <form
+                            class="rounded-xl border border-sky-200 bg-white p-4 shadow-sm md:col-span-2 xl:col-span-1 dark:border-sky-900 dark:bg-slate-950"
+                            data-testid="funding-qr-merchant-profile"
+                            @submit.prevent="saveFundingQrMerchantProfile"
+                        >
+                            <p
+                                class="text-xs font-semibold tracking-[0.14em] text-sky-700 uppercase dark:text-sky-300"
+                            >
+                                QR presentation
+                            </p>
+                            <h3 class="mt-1 text-sm font-semibold">
+                                Merchant label
+                            </h3>
+                            <p
+                                class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400"
+                            >
+                                These fields label the QR only. They never
+                                choose the Account, authorize funding, or change
+                                settlement.
+                            </p>
+                            <div class="mt-4 grid gap-3">
+                                <label class="grid gap-1.5 text-xs font-medium">
+                                    <span>Merchant name</span>
+                                    <input
+                                        v-model="merchantProfileForm.name"
+                                        type="text"
+                                        maxlength="25"
+                                        autocomplete="organization"
+                                        class="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 transition outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:ring-sky-950"
+                                    />
+                                    <span
+                                        v-if="merchantProfileForm.errors.name"
+                                        class="text-rose-700 dark:text-rose-300"
+                                    >
+                                        {{ merchantProfileForm.errors.name }}
+                                    </span>
+                                </label>
+                                <label class="grid gap-1.5 text-xs font-medium">
+                                    <span>City</span>
+                                    <input
+                                        v-model="merchantProfileForm.city"
+                                        type="text"
+                                        maxlength="15"
+                                        autocomplete="address-level2"
+                                        class="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 transition outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:ring-sky-950"
+                                    />
+                                    <span
+                                        v-if="merchantProfileForm.errors.city"
+                                        class="text-rose-700 dark:text-rose-300"
+                                    >
+                                        {{ merchantProfileForm.errors.city }}
+                                    </span>
+                                </label>
+                            </div>
+                            <p
+                                v-if="
+                                    merchantProfileForm.errors
+                                        .merchant_name_template
+                                "
+                                class="mt-2 text-xs text-rose-700 dark:text-rose-300"
+                            >
+                                {{
+                                    merchantProfileForm.errors
+                                        .merchant_name_template
+                                }}
+                            </p>
+                            <button
+                                type="submit"
+                                class="mt-4 h-10 w-full rounded-lg bg-sky-700 px-4 text-sm font-semibold text-white transition hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                :disabled="merchantProfileForm.processing"
+                            >
+                                {{
+                                    merchantProfileForm.processing
+                                        ? 'Saving…'
+                                        : 'Save & regenerate QR'
+                                }}
+                            </button>
+                        </form>
                     </div>
 
                     <div
@@ -1726,10 +1737,18 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
 
                 <div
                     v-if="standingAddressError"
-                    class="border-t border-rose-200 bg-rose-50 px-5 py-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/20 dark:text-rose-200"
+                    class="flex flex-wrap items-center justify-between gap-3 border-t border-rose-200 bg-rose-50 px-5 py-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/20 dark:text-rose-200"
                     role="alert"
                 >
-                    {{ standingAddressError }}
+                    <span>{{ standingAddressError }}</span>
+                    <button
+                        v-if="standing_funding_address.available"
+                        type="button"
+                        class="h-9 rounded-lg border border-rose-300 bg-white px-3 text-xs font-semibold text-rose-800 transition hover:bg-rose-100 dark:border-rose-800 dark:bg-slate-950 dark:text-rose-200 dark:hover:bg-rose-950"
+                        @click="openStandingFundingAddress"
+                    >
+                        Try again
+                    </button>
                 </div>
             </section>
 
@@ -2189,390 +2208,6 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
             </section>
 
             <details
-                v-show="activeFundingMode === 'self_top_up'"
-                class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                data-testid="exact-amount-self-top-up"
-            >
-                <summary
-                    class="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 marker:hidden"
-                >
-                    <div>
-                        <p
-                            class="text-xs font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400"
-                        >
-                            Optional
-                        </p>
-                        <h2 class="mt-0.5 text-sm font-semibold">
-                            Top up an exact amount
-                        </h2>
-                        <p class="mt-1 text-xs text-slate-500">
-                            Create one-time provider instructions instead of
-                            using the reusable QR.
-                        </p>
-                    </div>
-                    <span
-                        class="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-                    >
-                        One-time
-                    </span>
-                </summary>
-                <div
-                    class="grid gap-5 border-t border-slate-200 p-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] dark:border-slate-800"
-                >
-                    <form
-                        class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
-                        data-testid="cockpit-funding-intent-form"
-                        @submit.prevent="submitFundingIntent"
-                    >
-                        <p
-                            class="text-xs font-semibold tracking-[0.16em] text-sky-700 uppercase dark:text-sky-300"
-                        >
-                            Exact-amount self top-up
-                        </p>
-                        <h2 class="mt-1 text-lg font-semibold">
-                            Create one-time instructions
-                        </h2>
-                        <p
-                            class="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400"
-                        >
-                            {{
-                                simulationIntentSelected
-                                    ? 'This creates exact local simulation instructions with zero provider calls.'
-                                    : 'This creates exact provider instructions.'
-                            }}
-                            It does not change Client Funds or Issuance
-                            Capacity.
-                        </p>
-
-                        <div
-                            class="mt-5 grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
-                        >
-                            <label class="block">
-                                <span
-                                    class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
-                                    >Provider</span
-                                >
-                                <select
-                                    v-model="form.provider"
-                                    class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm transition outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-950"
-                                    :disabled="form.processing"
-                                    data-testid="cockpit-funding-provider"
-                                >
-                                    <option
-                                        v-if="
-                                            availableFundingProviders.length ===
-                                            0
-                                        "
-                                        disabled
-                                        value=""
-                                    >
-                                        No funding provider enabled
-                                    </option>
-                                    <option
-                                        v-for="provider in funding_read_model.providers"
-                                        :key="provider.code"
-                                        :value="provider.code"
-                                        :disabled="
-                                            provider.status !== 'available'
-                                        "
-                                    >
-                                        {{ provider.label }} ·
-                                        {{
-                                            displayLabel(
-                                                provider.destination_mode ??
-                                                    'shared',
-                                            )
-                                        }}
-                                        {{
-                                            provider.status === 'available'
-                                                ? ''
-                                                : ` (${provider.status})`
-                                        }}
-                                    </option>
-                                </select>
-                                <span
-                                    v-if="form.errors.provider"
-                                    class="mt-1 block text-xs text-rose-600"
-                                    >{{ form.errors.provider }}</span
-                                >
-                                <span
-                                    v-else-if="simulationIntentSelected"
-                                    class="mt-1 block text-xs leading-5 text-emerald-700 dark:text-emerald-300"
-                                >
-                                    Local happy path: creates a real Funding
-                                    Intent in x-change without contacting a bank
-                                    or EMI.
-                                </span>
-                                <span
-                                    v-else-if="
-                                        availableFundingProviders.length === 0
-                                    "
-                                    class="mt-1 block text-xs leading-5 text-amber-700 dark:text-amber-300"
-                                >
-                                    NetBank and Paynamics are installed, but
-                                    Funding Intake stays locked until a provider
-                                    is explicitly enabled.
-                                </span>
-                            </label>
-
-                            <label class="block">
-                                <span
-                                    class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
-                                    >Exact amount</span
-                                >
-                                <div
-                                    class="mt-1.5 flex rounded-lg border border-slate-300 bg-white focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-950"
-                                >
-                                    <span
-                                        class="flex items-center border-r border-slate-200 px-3 text-sm font-semibold text-slate-500 dark:border-slate-700"
-                                        >PHP</span
-                                    >
-                                    <input
-                                        v-model="amount"
-                                        inputmode="decimal"
-                                        autocomplete="off"
-                                        placeholder="0.00"
-                                        class="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm outline-none"
-                                        :disabled="form.processing"
-                                        data-testid="cockpit-funding-amount"
-                                    />
-                                </div>
-                                <span
-                                    v-if="
-                                        amountError ??
-                                        clientAmountError ??
-                                        form.errors.amount_minor
-                                    "
-                                    class="mt-1 block text-xs text-rose-600"
-                                    >{{
-                                        amountError ??
-                                        clientAmountError ??
-                                        form.errors.amount_minor
-                                    }}</span
-                                >
-                            </label>
-                        </div>
-
-                        <div class="mt-5 flex flex-wrap items-center gap-3">
-                            <button
-                                type="submit"
-                                class="rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
-                                :disabled="
-                                    form.processing ||
-                                    availableFundingProviders.length === 0
-                                "
-                                data-testid="cockpit-funding-submit"
-                            >
-                                {{
-                                    form.processing
-                                        ? 'Creating instructions…'
-                                        : simulationIntentSelected
-                                          ? 'Create simulated funding instructions'
-                                          : 'Create funding instructions'
-                                }}
-                            </button>
-                            <p class="text-xs text-slate-500">
-                                No Treasury position changes on submit.
-                            </p>
-                        </div>
-                    </form>
-
-                    <article
-                        class="rounded-xl border p-5 shadow-sm"
-                        :class="
-                            currentInstruction
-                                ? 'border-sky-200 bg-sky-50/70 dark:border-sky-900 dark:bg-sky-950/20'
-                                : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'
-                        "
-                        data-testid="cockpit-funding-instruction"
-                    >
-                        <div v-if="currentInstruction">
-                            <div
-                                class="flex flex-wrap items-start justify-between gap-3"
-                            >
-                                <div>
-                                    <p
-                                        class="text-xs font-semibold tracking-[0.16em] text-sky-700 uppercase dark:text-sky-300"
-                                    >
-                                        One-time instructions
-                                    </p>
-                                    <h2 class="mt-1 text-lg font-semibold">
-                                        Transfer exactly
-                                        {{ currentInstruction.amount }}
-                                    </h2>
-                                </div>
-                                <span
-                                    class="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-sky-700 shadow-sm dark:bg-slate-900 dark:text-sky-300"
-                                >
-                                    {{
-                                        displayLabel(currentInstruction.status)
-                                    }}
-                                </span>
-                            </div>
-
-                            <div
-                                v-if="currentInstruction.qr_code"
-                                class="mt-4 flex flex-col items-center gap-4 rounded-xl border border-sky-200 bg-white p-4 text-center sm:flex-row sm:text-left dark:border-sky-900 dark:bg-slate-950"
-                                data-testid="cockpit-funding-qr"
-                            >
-                                <img
-                                    :src="currentInstruction.qr_code"
-                                    :alt="`Exact ${currentInstruction.amount} NetBank QR Ph code`"
-                                    class="size-40 shrink-0 rounded-lg bg-white object-contain"
-                                />
-                                <div>
-                                    <p class="text-sm font-semibold">
-                                        Scan to pay exactly
-                                        {{ currentInstruction.amount }}
-                                    </p>
-                                    <p
-                                        class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400"
-                                    >
-                                        Dynamic P2M QR · one Funding Intent ·
-                                        one destination. Payment does not credit
-                                        the Account until NetBank transaction
-                                        history confirms settlement.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <dl class="mt-4 grid gap-3 sm:grid-cols-2">
-                                <div>
-                                    <dt
-                                        class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
-                                    >
-                                        Provider
-                                    </dt>
-                                    <dd class="mt-1 text-sm font-medium">
-                                        {{
-                                            currentInstruction.institution ??
-                                            displayLabel(
-                                                currentInstruction.provider,
-                                            )
-                                        }}
-                                    </dd>
-                                </div>
-                                <div>
-                                    <dt
-                                        class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
-                                    >
-                                        Expires
-                                    </dt>
-                                    <dd class="mt-1 text-sm font-medium">
-                                        {{
-                                            displayTime(
-                                                currentInstruction.expires_at,
-                                            )
-                                        }}
-                                    </dd>
-                                </div>
-                                <div v-if="currentInstruction.account_name">
-                                    <dt
-                                        class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
-                                    >
-                                        Account name
-                                    </dt>
-                                    <dd class="mt-1 text-sm font-medium">
-                                        {{ currentInstruction.account_name }}
-                                    </dd>
-                                </div>
-                                <div>
-                                    <dt
-                                        class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
-                                    >
-                                        Instruction reference
-                                    </dt>
-                                    <dd class="mt-1 font-mono text-xs">
-                                        {{ currentInstruction.reference }}
-                                    </dd>
-                                </div>
-                            </dl>
-
-                            <div
-                                v-if="currentInstruction.funding_address"
-                                class="mt-4 rounded-lg border border-sky-200 bg-white p-3 dark:border-sky-900 dark:bg-slate-950"
-                            >
-                                <p
-                                    class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
-                                >
-                                    Destination account
-                                </p>
-                                <div
-                                    class="mt-1 flex flex-wrap items-center justify-between gap-3"
-                                >
-                                    <p
-                                        class="font-mono text-sm font-semibold break-all"
-                                    >
-                                        {{ currentInstruction.funding_address }}
-                                    </p>
-                                    <CockpitManualCopyButton
-                                        :value="
-                                            currentInstruction.funding_address
-                                        "
-                                        label="Copy account"
-                                        helper="Browser-local copy only."
-                                    />
-                                </div>
-                            </div>
-
-                            <a
-                                v-if="currentInstruction.action_url"
-                                :href="currentInstruction.action_url"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="mt-4 inline-flex rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-700"
-                            >
-                                Open provider payment page
-                            </a>
-
-                            <p
-                                v-if="currentInstruction.simulation_only"
-                                class="mt-4 text-xs leading-5 text-emerald-700 dark:text-emerald-300"
-                            >
-                                Local simulation only. Do not transfer money to
-                                this address. No bank or EMI was contacted, and
-                                no Client Funds position changed.
-                            </p>
-                            <p
-                                v-else
-                                class="mt-4 text-xs leading-5 text-slate-600 dark:text-slate-400"
-                            >
-                                Sensitive settlement access material. Transfer
-                                the exact amount before expiry. The Account
-                                changes only after independent provider
-                                verification.
-                            </p>
-                        </div>
-                        <div
-                            v-else
-                            class="flex min-h-52 flex-col items-center justify-center text-center"
-                        >
-                            <p
-                                class="text-sm font-semibold text-slate-700 dark:text-slate-200"
-                            >
-                                Funding instructions will appear here once
-                            </p>
-                            <p
-                                class="mt-1 max-w-md text-xs leading-5 text-slate-500"
-                            >
-                                Create an intent to receive the exact bank
-                                destination or provider payment link. Refreshing
-                                later will show the sanitized activity record,
-                                not the sensitive instruction payload.
-                            </p>
-                        </div>
-                        <p
-                            v-if="instructionError"
-                            class="mt-3 text-xs font-medium text-rose-700 dark:text-rose-300"
-                            role="alert"
-                        >
-                            {{ instructionError }}
-                        </p>
-                    </article>
-                </div>
-            </details>
-
-            <details
                 class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 data-testid="funding-provider-controls"
             >
@@ -2808,30 +2443,6 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                                         class="flex min-w-52 flex-wrap items-center gap-2"
                                     >
                                         <button
-                                            v-if="
-                                                intent.can_reopen_instructions
-                                            "
-                                            type="button"
-                                            class="h-8 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-sky-400 hover:text-sky-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
-                                            :disabled="
-                                                activeInstructionRequest !==
-                                                null
-                                            "
-                                            :data-testid="`reopen-funding-instructions-${intent.reference}`"
-                                            @click="
-                                                reopenFundingInstructions(
-                                                    intent.reference,
-                                                )
-                                            "
-                                        >
-                                            {{
-                                                activeInstructionRequest ===
-                                                intent.reference
-                                                    ? 'Opening…'
-                                                    : 'Reopen QR'
-                                            }}
-                                        </button>
-                                        <button
                                             v-if="intent.can_check_provider"
                                             type="button"
                                             class="h-8 rounded-lg bg-sky-600 px-3 text-xs font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
@@ -2866,16 +2477,17 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     <p
                         class="text-sm font-medium text-slate-700 dark:text-slate-200"
                     >
-                        No exact-amount top-ups yet
+                        No funding activity yet
                     </p>
                     <p class="mt-1 text-xs text-slate-500">
-                        Reusable QR deposits and one-time instructions will
-                        appear here after provider verification begins.
+                        Reusable QR deposits appear here after provider
+                        verification begins.
                     </p>
                 </div>
             </section>
 
             <details
+                v-if="hasFundingExceptions"
                 class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 data-testid="funding-exception-controls"
             >
@@ -2883,22 +2495,15 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                     class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:hidden"
                 >
                     <div>
-                        <p
-                            class="text-xs font-semibold tracking-[0.14em] text-slate-500 uppercase dark:text-slate-400"
-                        >
-                            Controlled operations
-                        </p>
-                        <h2 class="mt-0.5 text-sm font-semibold">
-                            Exceptions & accounting
+                        <h2 class="text-sm font-semibold">
+                            Funding exceptions
                         </h2>
+                        <p class="mt-1 text-xs text-slate-500">
+                            Provider evidence or accounting needs review.
+                        </p>
                     </div>
                     <span
-                        class="rounded-full px-2.5 py-1 text-xs font-semibold"
-                        :class="
-                            hasFundingExceptions
-                                ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
-                                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
-                        "
+                        class="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"
                     >
                         {{ fundingExceptionCount }} open
                     </span>

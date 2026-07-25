@@ -5,15 +5,13 @@ declare(strict_types=1);
 namespace LBHurtado\XChange\Http\Controllers\Web\Cockpit;
 
 use Illuminate\Auth\AuthenticationException;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
-use LBHurtado\Merchant\Contracts\MerchantProfileRepositoryContract;
-use LBHurtado\Merchant\Models\Merchant;
 use LBHurtado\XChange\Contracts\WalletAccessContract;
 use LBHurtado\XChange\Services\Cockpit\CockpitAccountReadModelProvider;
+use LBHurtado\XChange\Services\Cockpit\FundingQrMerchantProfileReadModel;
 use LBHurtado\XChange\Support\Cockpit\CockpitReadOnlyPageProps;
 use RuntimeException;
 
@@ -23,7 +21,7 @@ class CockpitAccountPageController extends Controller
         private readonly CockpitReadOnlyPageProps $props,
         private readonly CockpitAccountReadModelProvider $accounts,
         private readonly WalletAccessContract $wallets,
-        private readonly MerchantProfileRepositoryContract $merchantProfiles,
+        private readonly FundingQrMerchantProfileReadModel $merchantProfiles,
     ) {}
 
     /**
@@ -45,7 +43,7 @@ class CockpitAccountPageController extends Controller
             ...$this->props->toArray(),
             'account_read_model' => $this->accounts->forOwner($owner, $accountReference),
             'funding_account_notice' => $request->session()->pull('funding_account_notice'),
-            'funding_qr_merchant_profile' => $this->merchantProfile($owner),
+            'funding_qr_merchant_profile' => $this->merchantProfiles->forOwner($owner),
             'account_scenario' => [
                 'enabled' => (bool) config('x-change.cockpit.account_scenario.enabled', false),
                 'mode' => 'rollback-only',
@@ -53,41 +51,6 @@ class CockpitAccountPageController extends Controller
                 'balance_changes' => false,
             ],
         ]);
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function merchantProfile(Model $owner): array
-    {
-        $merchant = $this->merchantProfiles->findForUser($owner);
-        $ownerName = trim((string) $owner->getAttribute('name'));
-
-        return [
-            'name' => $merchant?->name
-                ?? ($ownerName !== ''
-                    ? $ownerName
-                    : (string) config('merchant.qr_profile.fallback_name', 'Account Holder')),
-            'city' => $merchant?->city
-                ?? (string) config('merchant.qr_profile.default_city', 'Manila'),
-            'merchant_category_code' => $merchant?->merchant_category_code
-                ?? (string) config('merchant.qr_profile.default_category_code', '0000'),
-            'merchant_name_template' => $merchant?->merchant_name_template
-                ?? (string) config(
-                    'merchant.qr_profile.default_name_template',
-                    '{name} - {city}',
-                ),
-            'category_options' => collect(Merchant::getCategoryCodes())
-                ->map(fn (string $label, string|int $code): array => [
-                    'code' => (string) $code,
-                    'label' => $label,
-                ])
-                ->values()
-                ->all(),
-            'presentation_only' => true,
-            'controls_routing' => false,
-            'controls_settlement' => false,
-        ];
     }
 
     private function accountReference(mixed $wallet): string

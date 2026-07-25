@@ -76,7 +76,7 @@ it('updates only the owner QR merchant presentation behind confirmation', functi
         ->assertRedirect()
         ->assertSessionHas(
             'funding_account_notice',
-            'QR merchant presentation updated. The next QR open will refresh its encrypted fixture.',
+            'QR presentation updated. Funding is refreshing the reusable QR.',
         );
 
     $merchant = app(MerchantProfileRepositoryContract::class)->findForUser($owner);

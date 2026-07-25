@@ -16,6 +16,7 @@ use LBHurtado\PaymentGateway\Enums\NetbankStandingAddressScheme;
 use LBHurtado\PaymentGateway\Funding\NetbankStandingAddressProfile;
 use LBHurtado\XChange\Models\StandingFundingAddress;
 use LBHurtado\XChange\Services\Cockpit\FundingCockpitReadModelProvider;
+use LBHurtado\XChange\Services\Cockpit\FundingQrMerchantProfileReadModel;
 use LBHurtado\XChange\Services\Cockpit\FundingRequestCockpitReadModel;
 use LBHurtado\XChange\Services\Funding\Base64PngQrPhFundingSimulationQrRenderer;
 use LBHurtado\XChange\Services\Funding\FundingProjectionChannel;
@@ -29,6 +30,7 @@ class CockpitFundingPageController extends Controller
         private readonly CockpitReadOnlyPageProps $props,
         private readonly FundingCockpitReadModelProvider $funding,
         private readonly FundingRequestCockpitReadModel $fundingRequests,
+        private readonly FundingQrMerchantProfileReadModel $merchantProfiles,
         private readonly Base64PngQrPhFundingSimulationQrRenderer $simulationQr,
         private readonly NetbankStandingAddressProfile $standingAddressProfile,
         private readonly FundingProjectionChannel $fundingChannels,
@@ -50,7 +52,8 @@ class CockpitFundingPageController extends Controller
             'funding_read_model' => $this->funding->forOperator($operator)->toArray(),
             'funding_requests' => $this->fundingRequests->forOperator($operator),
             'funding_instruction' => $request->session()->pull('funding_instruction'),
-            'funding_notice' => $request->session()->pull('funding_notice'),
+            'funding_notice' => $request->session()->pull('funding_notice')
+                ?? $request->session()->pull('funding_account_notice'),
             'funding_poll_interval' => max(
                 1000,
                 (int) config('x-change.funding.ui_refresh_interval_milliseconds', 5000),
@@ -61,6 +64,7 @@ class CockpitFundingPageController extends Controller
                 'event' => '.FundingProjectionChanged',
             ],
             'standing_funding_address' => $this->standingFundingAddressAvailability($operator),
+            'funding_qr_merchant_profile' => $this->merchantProfiles->forOwner($operator),
             'funding_simulation' => [
                 'enabled' => (bool) config('x-change.cockpit.qrph_funding_simulation.enabled', false),
                 'mode' => 'rollback-only',

@@ -86,6 +86,11 @@ it('hydrates funding operations with secure read-only controls', function () {
         ->assertJsonPath('props.funding_read_model.redactions.payloads', 'funding-operations-summary-only')
         ->assertJsonPath('props.funding_read_model.redactions.webhook_payloads_exposed', false)
         ->assertJsonPath('props.funding_read_model.redactions.raw_evidence_exposed', false)
+        ->assertJsonPath('props.funding_qr_merchant_profile.name', fn (mixed $name): bool => is_string($name) && trim($name) !== '')
+        ->assertJsonPath('props.funding_qr_merchant_profile.city', fn (mixed $city): bool => is_string($city) && trim($city) !== '')
+        ->assertJsonPath('props.funding_qr_merchant_profile.presentation_only', true)
+        ->assertJsonPath('props.funding_qr_merchant_profile.controls_routing', false)
+        ->assertJsonPath('props.funding_qr_merchant_profile.controls_settlement', false)
         ->assertJsonMissingPath('props.funding_read_model.provider_transaction_id')
         ->assertJsonMissingPath('props.funding_read_model.provider_request_id')
         ->assertJsonMissingPath('props.funding_read_model.funding_address')
@@ -1202,6 +1207,10 @@ it('registers only the guarded issuance, funding, and Account Cockpit mutation r
         'x-change.cockpit.accounts.scenarios.funding-destinations.store',
         'x-change.cockpit.accounts.providers.funding-destination.update',
         'x-change.cockpit.accounts.funding-qr-merchant-profile.update',
+        'x-change.cockpit.funding.requests.store',
+        'x-change.cockpit.funding.requests.reviews.store',
+        'x-change.cockpit.funding.requests.approvals.store',
+        'x-change.cockpit.funding.codes.claims.store',
         'x-change.cockpit.funding.intents.store',
         'x-change.cockpit.funding.intents.verification-checks.store',
         'x-change.cockpit.funding.standing-addresses.netbank.store',

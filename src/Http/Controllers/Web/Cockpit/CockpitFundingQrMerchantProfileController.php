@@ -19,7 +19,7 @@ class CockpitFundingQrMerchantProfileController extends Controller
 
         return back()->with(
             'funding_account_notice',
-            'QR merchant presentation updated. The next QR open will refresh its encrypted fixture.',
+            'QR presentation updated. Funding is refreshing the reusable QR.',
         );
     }
 }
