@@ -369,7 +369,7 @@ const fundingRequestReadModel = {
             requested_value: '₱20,000.00',
             recognized_value: '₱20,000.00',
             currency: 'PHP',
-            status: 'funding_code_issued',
+            status: 'pay_code_issued',
             description: 'Matched corporate bank transfer.',
             submitted_at: '2026-07-25T08:00:00+08:00',
             pay_code: {

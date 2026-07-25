@@ -136,7 +136,7 @@ const hasOpenFundingWork = computed(
                 'under_review',
                 'needs_information',
                 'awaiting_approval',
-                'funding_code_issued',
+                'pay_code_issued',
             ].includes(request.status),
         ),
 );

@@ -53,7 +53,7 @@ final readonly class FundingRequestCockpitReadModel
                     ? null
                     : $this->money($request->approved_value_minor, $request->currency),
                 'currency' => $request->currency,
-                'status' => $request->status->value,
+                'status' => $this->status($request->status),
                 'description' => $request->description,
                 'submitted_at' => $request->submitted_at?->toIso8601String(),
                 'pay_code' => $request->voucher === null ? null : [
@@ -133,6 +133,7 @@ final readonly class FundingRequestCockpitReadModel
             'redactions' => [
                 'account_references_exposed' => false,
                 'code_secret_exposed' => false,
+                'reviewed_pay_code_exposed_to_owner' => true,
                 'requester_notes_exposed' => false,
                 'review_notes_exposed' => false,
             ],
@@ -142,5 +143,12 @@ final readonly class FundingRequestCockpitReadModel
     private function money(int $minor, string $currency): string
     {
         return Number::currency($minor / 100, in: $currency, locale: 'en_PH');
+    }
+
+    private function status(FundingRequestStatus $status): string
+    {
+        return $status === FundingRequestStatus::PayCodeIssued
+            ? 'pay_code_issued'
+            : $status->value;
     }
 }

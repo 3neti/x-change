@@ -534,8 +534,8 @@ return [
                 explode(',', (string) env('XCHANGE_FUNDING_REQUEST_REVIEWER_IDS', '')),
             ))),
             'code_ttl_seconds' => (int) env(
-                'XCHANGE_ACCOUNT_FUNDING_CODE_TTL_SECONDS',
-                604800,
+                'XCHANGE_REVIEWED_FUNDING_PAY_CODE_TTL_SECONDS',
+                env('XCHANGE_ACCOUNT_FUNDING_CODE_TTL_SECONDS', 604800),
             ),
             'create_middleware' => ['throttle:6,1'],
             'review_middleware' => ['throttle:30,1'],

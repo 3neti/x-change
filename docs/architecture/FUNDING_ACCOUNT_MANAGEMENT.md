@@ -14,12 +14,13 @@ An Account is credited only after x-change has either an exact Funding Intent or
 
 An issuer may also create an explicitly eligible Pay Code whose reserved
 principal can be added to another user's Client Funds without a provider
-payout. For a large transfer or controlled non-QR funding source, x-change
-supports a separately reviewed Account Funding Code. It does not treat a user
-request or uploaded proof as settlement authority. A maker verifies backing, a
-different checker reserves already-recognized system Client Funds, and the
-recipient claims the exact reserved value once. See
-[`ACCOUNT_FUNDING_CODE_PROTOCOL.md`](ACCOUNT_FUNDING_CODE_PROTOCOL.md).
+payout. For a large transfer or controlled non-QR funding source, a reviewed
+Funding Request issues a recipient-bound Voucher with an `account_funding`
+claim outcome. It does not treat a user request or uploaded proof as settlement
+authority. A maker verifies backing, a different checker reserves
+already-recognized system Client Funds, and the recipient claims the exact
+reserved value once. See
+[`VOUCHER_CLAIM_OUTCOME_PROTOCOL.md`](VOUCHER_CLAIM_OUTCOME_PROTOCOL.md).
 
 The long-lived destination design is specified in [Standing Funding Address Protocol](STANDING_FUNDING_ADDRESS_PROTOCOL.md).
 

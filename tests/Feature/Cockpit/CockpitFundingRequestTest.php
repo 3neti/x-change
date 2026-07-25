@@ -9,6 +9,7 @@ use LBHurtado\XChange\Enums\FundingRequestStatus;
 use LBHurtado\XChange\Enums\FundingRequestType;
 use LBHurtado\XChange\Models\FundingRequest;
 use LBHurtado\XChange\Services\Claim\VoucherClaimantReference;
+use LBHurtado\XChange\Services\Cockpit\FundingRequestCockpitReadModel;
 use LBHurtado\XChange\Tests\Fakes\User;
 
 it('lets an Account owner submit a request without accepting monetary authority', function () {
@@ -150,6 +151,17 @@ it('binds Reviewed Funding Pay Code claims to the intended Account owner', funct
         'description' => 'Owner binding test request.',
         'submitted_at' => now(),
     ]);
+    $readModel = app(FundingRequestCockpitReadModel::class)
+        ->forOperator($requester);
+
+    expect(data_get($readModel, 'requests.0.status'))->toBe('pay_code_issued')
+        ->and(data_get($readModel, 'requests.0.pay_code.code'))
+        ->toBe('OWNER-BOUND')
+        ->and(data_get(
+            $readModel,
+            'redactions.reviewed_pay_code_exposed_to_owner',
+        ))->toBeTrue();
+
     $this->actingAs($other)
         ->post(route(
             'x-change.cockpit.funding.requests.pay-code-claims.store',
