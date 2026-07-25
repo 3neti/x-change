@@ -22,6 +22,7 @@ use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitDistributionWorkspaceP
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingDestinationController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingInstructionController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingIntentController;
+use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingLiquidityRefreshController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingPageController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingQrMerchantProfileController;
 use LBHurtado\XChange\Http\Controllers\Web\Cockpit\CockpitFundingReconciliationApprovalController;
@@ -90,6 +91,11 @@ Route::prefix('x')->middleware([...$middleware, ShareXChangeBranding::class])->g
             )->name('x-change.cockpit.accounts.funding-qr-merchant-profile.update');
         });
         Route::get('funding', CockpitFundingPageController::class)->name('x-change.cockpit.funding.index');
+        Route::post(
+            'funding/liquidity-refreshes',
+            CockpitFundingLiquidityRefreshController::class,
+        )->middleware((array) config('x-change.funding.liquidity_refresh.middleware', []))
+            ->name('x-change.cockpit.funding.liquidity-refreshes.store');
         Route::post(
             'funding/requests',
             CockpitFundingRequestController::class,

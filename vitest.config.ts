@@ -86,6 +86,11 @@ export default defineConfig({
                 __dirname,
                 'tests/frontend/stubs/funding-intent-route.ts',
             ),
+            '@/routes/x-change/cockpit/funding/liquidity-refreshes':
+                path.resolve(
+                    __dirname,
+                    'tests/frontend/stubs/funding-liquidity-refresh-route.ts',
+                ),
             '@/routes/x-change/cockpit/funding/requests/approvals':
                 path.resolve(
                     __dirname,

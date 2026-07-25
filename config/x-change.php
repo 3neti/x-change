@@ -548,6 +548,13 @@ return [
         'instruction_lock_wait_seconds' => (int) env('XCHANGE_FUNDING_INSTRUCTION_LOCK_WAIT_SECONDS', 5),
         'instruction_access_middleware' => ['throttle:30,1'],
         'manual_check_middleware' => ['throttle:6,1'],
+        'liquidity_refresh' => [
+            'middleware' => ['throttle:2,1'],
+            'lock_seconds' => (int) env(
+                'XCHANGE_FUNDING_LIQUIDITY_REFRESH_LOCK_SECONDS',
+                30,
+            ),
+        ],
         'standing_addresses' => [
             'enabled' => (bool) env(
                 'XCHANGE_STANDING_FUNDING_ADDRESSES_ENABLED',

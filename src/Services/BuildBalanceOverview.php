@@ -29,8 +29,12 @@ class BuildBalanceOverview
     /**
      * @return array<string, mixed>
      */
-    public function handle(mixed $owner, ?string $provider = null, bool $syncIfStale = true): array
-    {
+    public function handle(
+        mixed $owner,
+        ?string $provider = null,
+        bool $syncIfStale = true,
+        bool $forceSync = false,
+    ): array {
         $provider = $this->effectiveProviderForOwner($owner, $provider);
         $topology = $this->settings->topology($provider);
         $authority = $topology === 'provider_customer_wallet'
@@ -39,7 +43,12 @@ class BuildBalanceOverview
 
         $local = $this->localBalance($owner, $authority !== 'provider_wallet');
         $providerBalance = $topology === 'provider_customer_wallet'
-            ? $this->providerWalletBalance($owner, $provider, $syncIfStale)
+            ? $this->providerWalletBalance(
+                $owner,
+                $provider,
+                $syncIfStale,
+                $forceSync,
+            )
             : null;
         $netbankSourceBalance = $this->netbankSourceAccountBalance($provider, $topology, $syncIfStale);
 
@@ -136,8 +145,12 @@ class BuildBalanceOverview
     /**
      * @return array<string, mixed>
      */
-    protected function providerWalletBalance(mixed $owner, string $provider, bool $syncIfStale): array
-    {
+    protected function providerWalletBalance(
+        mixed $owner,
+        string $provider,
+        bool $syncIfStale,
+        bool $forceSync,
+    ): array {
         $link = $this->links->findReadyForOwner($owner, $provider);
 
         if ($link === null || blank($link->provider_wallet_id)) {
@@ -151,7 +164,7 @@ class BuildBalanceOverview
             ? 'Provider wallet projection is stale.'
             : 'Provider wallet projection is fresh.';
 
-        if ($syncIfStale && $wasStale) {
+        if ($forceSync || ($syncIfStale && $wasStale)) {
             try {
                 $refresh = $provider === 'paynamics'
                     ? $this->syncPaynamicsWallet($link->provider_wallet_id, $owner)
@@ -166,9 +179,9 @@ class BuildBalanceOverview
                     $syncStatus = 'sync_failed';
                     $syncMessage = 'Provider wallet refresh did not complete.';
                 }
-            } catch (Throwable $e) {
+            } catch (Throwable) {
                 $syncStatus = 'sync_failed';
-                $syncMessage = $e->getMessage();
+                $syncMessage = 'Provider wallet balance refresh failed.';
             }
         }
 
@@ -258,7 +271,7 @@ class BuildBalanceOverview
             $snapshot = $this->providerBalanceSnapshots->recordFailure(
                 'netbank',
                 'netbank_source_account',
-                (string) ($readiness['message'] ?? 'NetBank source account refresh failed.'),
+                'NetBank source account refresh failed.',
             );
 
             if ($snapshot !== null) {
@@ -297,7 +310,9 @@ class BuildBalanceOverview
             'provider_as_of' => $readiness['as_of'] ?? null,
             'account_number_masked' => $readiness['account_number_masked'] ?? null,
             'sync_status' => $syncStatus,
-            'sync_message' => $readiness['message'] ?? 'NetBank source account readiness was not checked.',
+            'sync_message' => $checked && ! $ready
+                ? 'NetBank source account refresh failed.'
+                : ($readiness['message'] ?? 'NetBank source account readiness was not checked.'),
         ];
     }
 

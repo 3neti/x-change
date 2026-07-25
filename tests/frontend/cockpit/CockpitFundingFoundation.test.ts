@@ -4,16 +4,18 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
 import Funding from '../../../resources/js/cockpit/pages/Funding.vue';
 
-const { echoCallback, routerReloadMock, usePollMock } = vi.hoisted(() => ({
-    echoCallback: {
-        current: null as null | ((payload: Record<string, string>) => void),
-    },
-    routerReloadMock: vi.fn(),
-    usePollMock: vi.fn(() => ({
-        start: vi.fn(),
-        stop: vi.fn(),
-    })),
-}));
+const { echoCallback, routerPostMock, routerReloadMock, usePollMock } =
+    vi.hoisted(() => ({
+        echoCallback: {
+            current: null as null | ((payload: Record<string, string>) => void),
+        },
+        routerPostMock: vi.fn(),
+        routerReloadMock: vi.fn(),
+        usePollMock: vi.fn(() => ({
+            start: vi.fn(),
+            stop: vi.fn(),
+        })),
+    }));
 
 vi.mock('@laravel/echo-vue', () => ({
     useEcho: vi.fn(
@@ -42,6 +44,7 @@ vi.mock('@inertiajs/vue3', async (importOriginal) => {
         ...actual,
         router: {
             ...actual.router,
+            post: routerPostMock,
             reload: routerReloadMock,
         },
         usePoll: usePollMock,
@@ -381,6 +384,7 @@ const fundingRequestReadModel = {
 describe('Cockpit Funding foundation', () => {
     afterEach(() => {
         vi.unstubAllGlobals();
+        routerPostMock.mockClear();
         routerReloadMock.mockClear();
         usePollMock.mockClear();
         vi.mocked(useEcho).mockClear();
@@ -614,6 +618,36 @@ describe('Cockpit Funding foundation', () => {
         expect(
             wrapper.get('[data-testid="funding-liquidity-freshness"]').text(),
         ).toContain('Jul 23, 2026');
+        expect(
+            wrapper.get('[data-testid="funding-liquidity-refresh"]').text(),
+        ).toBe('Refresh liquidity');
+    });
+
+    it('requests a server-resolved liquidity refresh without financial input', async () => {
+        const wrapper = mount(Funding, {
+            props: {
+                funding_read_model: fundingReadModel,
+                standing_funding_address: {
+                    ...standingFundingAvailability,
+                    available: false,
+                },
+            },
+        });
+
+        expect(
+            wrapper.get('[data-testid="funding-liquidity-freshness"]').text(),
+        ).toContain('NetBank liquidity ₱30,000.00');
+
+        await wrapper
+            .get('[data-testid="funding-liquidity-refresh"]')
+            .trigger('click');
+
+        expect(routerPostMock).toHaveBeenCalledOnce();
+        expect(routerPostMock.mock.calls[0]?.[0]).toMatchObject({
+            url: '/x/cockpit/funding/liquidity-refreshes',
+            method: 'post',
+        });
+        expect(routerPostMock.mock.calls[0]?.[1]).toEqual({});
     });
 
     it('keeps two funding paths primary and removes exact-amount tooling', async () => {

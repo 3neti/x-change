@@ -1207,6 +1207,7 @@ it('registers only the guarded issuance, funding, and Account Cockpit mutation r
         'x-change.cockpit.accounts.scenarios.funding-destinations.store',
         'x-change.cockpit.accounts.providers.funding-destination.update',
         'x-change.cockpit.accounts.funding-qr-merchant-profile.update',
+        'x-change.cockpit.funding.liquidity-refreshes.store',
         'x-change.cockpit.funding.requests.store',
         'x-change.cockpit.funding.requests.reviews.store',
         'x-change.cockpit.funding.requests.approvals.store',

@@ -4,6 +4,7 @@ import { useEcho } from '@laravel/echo-vue';
 import { update as updateFundingQrMerchantProfile } from '@/routes/x-change/cockpit/accounts/funding-qr-merchant-profile';
 import { approve as approveReconciliation } from '@/routes/x-change/cockpit/funding/reconciliations';
 import { store as claimAccountFundingCode } from '@/routes/x-change/cockpit/funding/codes/claims';
+import { store as refreshFundingLiquidityRoute } from '@/routes/x-change/cockpit/funding/liquidity-refreshes';
 import { store as approveFundingRequest } from '@/routes/x-change/cockpit/funding/requests/approvals';
 import { store as storeFundingRequest } from '@/routes/x-change/cockpit/funding/requests';
 import { store as prepareFundingRequest } from '@/routes/x-change/cockpit/funding/requests/reviews';
@@ -55,6 +56,8 @@ const standingAddressError = ref<string | null>(null);
 const standingHistoryCheckedAt = ref<string | null>(null);
 const activeStandingReceiptApproval = ref<string | null>(null);
 const standingActionNotice = ref<string | null>(null);
+const liquidityRefreshRunning = ref(false);
+const liquidityRefreshError = ref<string | null>(null);
 const showFundingRequestModal = ref(false);
 const activeFundingRequestReview = ref<string | null>(null);
 const fundingRequestAmount = ref('');
@@ -117,8 +120,13 @@ const operationalFundingIntents = computed(() =>
 const staleProviderLiquidity = computed(() =>
     props.funding_read_model.treasury_portfolio.connections.find(
         (connection) =>
-            connection.status === 'active' &&
+            connection.mode !== 'disabled' &&
             connection.provider_liquidity_is_stale,
+    ),
+);
+const refreshableProviderLiquidity = computed(() =>
+    props.funding_read_model.treasury_portfolio.connections.find(
+        (connection) => connection.mode !== 'disabled',
     ),
 );
 const hasOpenFundingIntents = computed(() =>
@@ -473,6 +481,36 @@ function checkNetBank(reference: string): void {
             activeVerificationCheck.value = null;
         },
     });
+}
+
+function refreshLiquidity(): void {
+    if (
+        liquidityRefreshRunning.value ||
+        refreshableProviderLiquidity.value === undefined
+    ) {
+        return;
+    }
+
+    liquidityRefreshError.value = null;
+    router.post(
+        refreshFundingLiquidityRoute(),
+        {},
+        {
+            preserveScroll: true,
+            onStart: () => {
+                liquidityRefreshRunning.value = true;
+            },
+            onError: (errors) => {
+                liquidityRefreshError.value =
+                    typeof errors.liquidity_refresh === 'string'
+                        ? errors.liquidity_refresh
+                        : 'Provider liquidity could not be refreshed.';
+            },
+            onFinish: () => {
+                liquidityRefreshRunning.value = false;
+            },
+        },
+    );
 }
 
 function reconciliationActionLabel(action: string): string {
@@ -1015,25 +1053,73 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             Funding position
                         </h2>
                     </div>
-                    <p
-                        v-if="staleProviderLiquidity"
-                        class="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 sm:text-right dark:bg-amber-950/40 dark:text-amber-300"
-                        data-testid="funding-liquidity-freshness"
+                    <div
+                        class="flex flex-col items-start gap-2 sm:items-end"
+                        data-testid="funding-liquidity-control"
                     >
-                        {{ staleProviderLiquidity.provider_label }} liquidity
-                        stale · checked
-                        {{
-                            displayTime(
-                                staleProviderLiquidity.provider_liquidity_checked_at,
-                            )
-                        }}
-                    </p>
-                    <p
-                        v-else
-                        class="text-xs text-slate-500 sm:text-right dark:text-slate-400"
-                    >
-                        Cached projections only · no provider call on page load
-                    </p>
+                        <p
+                            v-if="staleProviderLiquidity"
+                            class="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 sm:text-right dark:bg-amber-950/40 dark:text-amber-300"
+                            data-testid="funding-liquidity-freshness"
+                        >
+                            {{ staleProviderLiquidity.provider_label }}
+                            liquidity stale · checked
+                            {{
+                                displayTime(
+                                    staleProviderLiquidity.provider_liquidity_checked_at,
+                                )
+                            }}
+                        </p>
+                        <p
+                            v-else-if="
+                                refreshableProviderLiquidity?.provider_liquidity !=
+                                null
+                            "
+                            class="text-xs text-slate-500 sm:text-right dark:text-slate-400"
+                            data-testid="funding-liquidity-freshness"
+                        >
+                            {{ refreshableProviderLiquidity.provider_label }}
+                            liquidity
+                            {{
+                                refreshableProviderLiquidity.provider_liquidity
+                            }}
+                            · checked
+                            {{
+                                displayTime(
+                                    refreshableProviderLiquidity.provider_liquidity_checked_at,
+                                )
+                            }}
+                        </p>
+                        <p
+                            v-else
+                            class="text-xs text-slate-500 sm:text-right dark:text-slate-400"
+                            data-testid="funding-liquidity-freshness"
+                        >
+                            Cached projections only · no provider call on page
+                            load
+                        </p>
+                        <button
+                            v-if="refreshableProviderLiquidity"
+                            type="button"
+                            class="inline-flex min-h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-sky-400 hover:text-sky-700 focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-wait disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-sky-600 dark:hover:text-sky-300 dark:focus-visible:ring-offset-slate-900"
+                            data-testid="funding-liquidity-refresh"
+                            :disabled="liquidityRefreshRunning"
+                            @click="refreshLiquidity"
+                        >
+                            {{
+                                liquidityRefreshRunning
+                                    ? 'Refreshing…'
+                                    : 'Refresh liquidity'
+                            }}
+                        </button>
+                        <p
+                            v-if="liquidityRefreshError"
+                            class="max-w-sm text-xs font-medium text-rose-600 sm:text-right dark:text-rose-300"
+                            role="alert"
+                        >
+                            {{ liquidityRefreshError }}
+                        </p>
+                    </div>
                 </div>
 
                 <dl class="grid grid-cols-2 xl:grid-cols-4">

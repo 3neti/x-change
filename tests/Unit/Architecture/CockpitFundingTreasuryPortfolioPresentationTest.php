@@ -16,6 +16,8 @@ it('presents the package-owned funding treasury portfolio without duplicate lega
         ->toContain('Reserved for Pay Codes')
         ->toContain('Provider Inventory')
         ->toContain('Issuance Capacity')
+        ->toContain('Refresh liquidity')
+        ->toContain('refreshFundingLiquidityRoute')
         ->toContain('funding_read_model.treasury_portfolio.connections')
         ->toContain('Cached projections only')
         ->toContain('Self Top-Up')
