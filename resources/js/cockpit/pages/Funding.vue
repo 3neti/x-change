@@ -195,6 +195,11 @@ const payCodeInspectionForm = useForm({
 const payCodeFundingClaimForm = useForm({
     inspection_token: props.pay_code_funding_preview?.inspection_token ?? '',
 });
+const payCodeFundingClaimError = computed(
+    () =>
+        (payCodeFundingClaimForm.errors as Record<string, string | undefined>)
+            .pay_code_funding ?? null,
+);
 type FundingProjectionChangedPayload = {
     schema: string;
     event_id: string;
@@ -438,7 +443,7 @@ function claimFundingCode(reference: string): void {
 }
 
 function inspectPayCodeFunding(): void {
-    payCodeInspectionForm.post(inspectPayCodeFundingRoute(), {
+    payCodeInspectionForm.post(inspectPayCodeFundingRoute.url(), {
         preserveScroll: true,
         onSuccess: () => {
             payCodeInspectionForm.reset('code');
@@ -455,7 +460,7 @@ function claimPayCodeFunding(): void {
     }
 
     payCodeFundingClaimForm.inspection_token = inspectionToken;
-    payCodeFundingClaimForm.post(claimPayCodeFundingRoute(), {
+    payCodeFundingClaimForm.post(claimPayCodeFundingRoute.url(), {
         preserveScroll: true,
     });
 }
@@ -1862,15 +1867,11 @@ async function safeJson(response: Response): Promise<Record<string, unknown>> {
                             </button>
                         </div>
                         <p
-                            v-if="
-                                payCodeFundingClaimForm.errors.pay_code_funding
-                            "
+                            v-if="payCodeFundingClaimError"
                             class="mt-2 text-xs font-medium text-rose-600 dark:text-rose-300"
                             role="alert"
                         >
-                            {{
-                                payCodeFundingClaimForm.errors.pay_code_funding
-                            }}
+                            {{ payCodeFundingClaimError }}
                         </p>
                     </div>
                 </article>
