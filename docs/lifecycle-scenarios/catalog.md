@@ -98,7 +98,7 @@ Every lifecycle scenario may define the following metadata:
 | settlement_envelope_evaluation | Settlement readiness evaluation |
 | settlement_three_party_flow | Multi-party settlement orchestration |
 | treasury_basic_cash | Rollback-only Treasury funding and Pay Code issuance accounting |
-| treasury_live_basic_cash | Replay-safe provider balance synchronization, Pay Code issuance, live claim, and full accounting report |
+| treasury_live_basic_cash | Replay-safe provider balance synchronization, ₱150 open-slice issuance, three live claims, and per-slice Treasury accounting |
 
 ---
 
@@ -516,9 +516,22 @@ php artisan xchange:lifecycle:run \
     --json
 ```
 
-This is a real-money scenario. It reads the actual provider balance, captures Provider Inventory, system Positions, the Account's NetBank and configured Paynamics Positions, the legacy Pay Code ledger, and Pay Code liabilities before issuing and claiming one Pay Code.
+This is a real-money scenario. It reads the actual provider balance, captures Provider Inventory, system Positions, the Account's NetBank and configured Paynamics Positions, the legacy Pay Code ledger, and Pay Code liabilities before issuing one ₱150 open-slice Pay Code.
 
-Before issuance, the scenario reserves only the beneficiary principal from the issuer's provider-specific Client Funds Position. Provider success consumes that reserve and reduces Provider Inventory by the same principal amount. The configured rail fee remains informational unless authoritative provider evidence shows a separate bank deduction. The sender's system charge is reported as a distinct accounting leg and is not presented as provider cash movement. The report exposes these sanitized facts under `treasury_settlement`.
+The Pay Code is claimed through three real provider submissions: ₱75, ₱50, and ₱25. Production runs wait ten seconds before the second and third claims, matching `divisible_open_three_slices_enforced_interval`. Automated tests replace the waits with zero seconds and use a fake provider.
+
+Before issuance, the scenario reserves the full ₱150 beneficiary principal from the issuer's provider-specific Client Funds Position. Each provider success consumes only that slice of the reserve and reduces Provider Inventory by the same amount:
+
+| Checkpoint | Client Funds | Pay Code Reserve | Cumulative Provider/Inventory outflow |
+|---|---:|---:|---:|
+| After issuance | unchanged by the principal reserve | ₱150 | ₱0 |
+| After ₱75 claim | unchanged | ₱75 | ₱75 |
+| After ₱50 claim | unchanged | ₱25 | ₱125 |
+| After ₱25 claim | unchanged | ₱0 | ₱150 |
+
+The report exposes the ordered sanitized slice evidence under `claims`, full Treasury checkpoints under `accounting.after_claims`, and the three posting pairs under `treasury_settlement.settlements`. All three settlement rows retain the same original ₱150 reservation reference.
+
+The configured rail fee remains informational unless authoritative provider evidence shows a separate bank deduction. In the current sliced NetBank path, Treasury posts only the ₱150 beneficiary principal. The ₱15 sender system charge remains a separate compatibility/commercial accounting fact and is not presented as provider cash movement or multiplied by the three claims.
 
 The run reference is durable replay protection. Reusing it returns the durable result without another provider transfer. When `accounting_status=provider_sync_pending`, rerunning the same command checks the provider balance again; it never resubmits the payout. Never switch to a new reference merely because the provider balance has not updated yet.
 

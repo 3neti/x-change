@@ -309,11 +309,12 @@ Post-transfer balance checks are deliberately observational. They never recogniz
 2. reconciles the authoritative bank amount into Provider Inventory and system Positions;
 3. provisions the issuer's NetBank Client Funds and Pay Code Reserve Positions;
 4. captures provider, Inventory, system, Account, legacy compatibility, and Pay Code liability balances;
-5. reserves the exact beneficiary principal before issuing one canonical `basic_cash` Pay Code;
-6. claims it through `x_change_live_cash` and the configured payout provider;
-7. posts the successful beneficiary principal as the Position and Inventory outflow;
-8. observes the provider balance without recognizing stale positive differences; and
-9. stores the sanitized result under a hashed, caller-supplied run reference.
+5. reserves the full ₱150 beneficiary principal before issuing one canonical open-slice Pay Code;
+6. submits three ordered claims for ₱75, ₱50, and ₱25 through the canonical x-change withdrawal pipeline;
+7. enforces ten seconds before the second and third live claims;
+8. posts each successful slice as its own Pay Code Reserve derecognition and Provider Inventory outflow;
+9. observes the provider balance without recognizing stale positive differences; and
+10. stores the sanitized result under a hashed, caller-supplied run reference.
 
 For an existing Account funded before Treasury Positions became authoritative, migrate and backfill its verified standing-funding history first:
 
@@ -334,7 +335,7 @@ php artisan x-change:treasury:backfill-standing-funding-positions \
 
 The first backfill call is a dry run. The committed call accepts only provider-observed funding that already has exact Inventory recognition and the original legacy Account credit. It allocates the amount once, recovers only the duplicate compatibility credit, and records stable operation references.
 
-The scenario can move real money. It is disabled outside its configured environments and requires all three operator controls:
+The scenario can move real money. One successful run submits three provider transfers totalling ₱150, not one transfer. It is disabled outside its configured environments and requires all three operator controls:
 
 ```bash
 php artisan xchange:lifecycle:run \
@@ -369,9 +370,14 @@ The command reports:
 - `account_positions.by_purpose.pay_code_reserve` — the beneficiary principal held for the in-flight provider transfer;
 - `legacy_compatibility_balance_minor` — the existing Pay Code escrow and fee ledger balance;
 - `liability` — outstanding, redeemed, expired, and cancelled Pay Code amounts;
-- `treasury_settlement` — reservation, Position derecognition, Inventory adjustment, beneficiary principal, configured rail-fee context, and separately classified sender system-charge facts;
+- `claims` — the ordered ₱75, ₱50, and ₱25 claim ledger, sanitized execution result, Treasury settlement, and accounting checkpoint for each slice;
+- `accounting.after_claims` — the three complete Treasury snapshots showing Pay Code Reserve and Inventory after each provider transfer;
+- `treasury_settlement.settlements` — the three Position derecognition and Inventory adjustment pairs tied back to the single ₱150 issuance reservation;
+- `treasury_settlement` totals — ₱150 beneficiary principal and Provider Inventory outflow, any provider-evidenced rail-fee context, and the separately classified sender system charge;
 - Pay Code issuance and claim state; and
 - a sanitized payout reconciliation with no credentials, raw provider payload, full account number, or claimant mobile.
+
+For the current NetBank contract, each slice derecognizes only the amount sent to the beneficiary. The scenario does not invent a bank fee when the slice reconciliation has none. The ₱15 issuance charge remains a separate compatibility/commercial fact and is not added to Provider Inventory outflow. Moving that charge into explicit Treasury commercial Positions belongs to the later accounting wave.
 
 `provider_transfer_succeeded=true` with `accounting_status=provider_sync_pending` means the payout and internal Treasury posting completed but NetBank has not yet returned the reduced balance. Rerun the exact same command with the exact same run reference. The scenario observes NetBank again and never repeats the payout.
 
